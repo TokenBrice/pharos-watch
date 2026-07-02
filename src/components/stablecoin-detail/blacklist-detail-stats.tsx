@@ -35,7 +35,7 @@ export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDeta
   const destroyedTotal = stats.perCoinDestroyedTotal[symbol] ?? 0;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5 animate-in fade-in duration-300">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
       <MetricStatCard
         title="Frozen addresses"
         value={frozenAddresses}

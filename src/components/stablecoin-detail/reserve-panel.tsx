@@ -35,7 +35,7 @@ function ReserveStatusNotice({
       role="status"
       aria-live="polite"
       aria-busy={isFetching || undefined}
-      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${notice.toneClass}`}
+      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed ${notice.toneClass}`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

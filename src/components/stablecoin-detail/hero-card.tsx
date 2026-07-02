@@ -120,11 +120,11 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         <Link
           href={model.caseStudyCallout.href}
           aria-label={`Read the case study: ${model.caseStudyCallout.title} (outcome: ${model.caseStudyCallout.outcomeLabel})`}
-          className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-frost-blue/20 bg-frost-blue/5 px-4 py-2.5 transition-colors hover:bg-frost-blue/10 sm:gap-3 sm:px-5"
+          className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-border/60 bg-muted/30 px-4 py-2.5 transition-colors hover:bg-muted/50 sm:gap-3 sm:px-5"
         >
-          <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-frost-blue" />
-          <span className="pharos-kicker shrink-0 text-frost-blue">Case study</span>
-          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-frost-blue/25" />
+          <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="pharos-kicker shrink-0">Case study</span>
+          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-border" />
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
             {model.caseStudyCallout.title}
           </span>
@@ -136,7 +136,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
           </Badge>
           <ArrowRight
             aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-frost-blue/70 transition-all group-hover:translate-x-0.5 group-hover:text-frost-blue motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+            className="h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
           />
         </Link>
       ) : null}

@@ -360,7 +360,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                       />
                     ))
                   ) : (
-                    <Area type="monotone" dataKey="score" stroke={bandHex} fill={`url(#${dewsGradientId})`} strokeWidth={2} />
+                    <Area
+                      type="monotone"
+                      dataKey="score"
+                      stroke={bandHex}
+                      fill={`url(#${dewsGradientId})`}
+                      strokeWidth={2}
+                      isAnimationActive={false}
+                    />
                   )}
                 </AreaChart>
               ) : (

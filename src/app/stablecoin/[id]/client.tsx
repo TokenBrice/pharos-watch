@@ -369,6 +369,14 @@ export default function StablecoinDetailClient({
 
   return (
     <div>
+      {/* The hero renders the coin name as an h2, so the hydrated dossier
+          needs its own h1 (the sr-only h1 in the Suspense fallback unmounts
+          after hydration). Mirrors StablecoinDetailSeoContent's h1. */}
+      <h1 className="sr-only">
+        {viewModel.coin.status === "frozen"
+          ? `${viewModel.coin.name} (${viewModel.coin.symbol}) frozen stablecoin archive`
+          : `${viewModel.coin.name} (${viewModel.coin.symbol}) stablecoin analytics`}
+      </h1>
       <BackToSource className="mb-2" />
       <QueryFreshnessNotices
         error={viewModel.supplyError}

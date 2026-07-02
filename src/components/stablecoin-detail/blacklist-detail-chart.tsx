@@ -47,7 +47,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
 
   if (chartData.length === 0) {
     return (
-      <Card className="pharos-card-shell animate-in fade-in duration-300">
+      <Card className="pharos-card-shell animate-in fade-in duration-[220ms] motion-reduce:animate-none">
         <CardHeader>
           <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
         </CardHeader>
@@ -61,7 +61,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
   }
 
   return (
-    <Card className="pharos-card-shell animate-in fade-in duration-300">
+    <Card className="pharos-card-shell animate-in fade-in duration-[220ms] motion-reduce:animate-none">
       <CardHeader>
         <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
         <p className="text-xs text-muted-foreground">

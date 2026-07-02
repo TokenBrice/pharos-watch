@@ -85,11 +85,7 @@ export function ClassificationAndLinks({ meta }: { meta: StablecoinMeta }) {
             key={value}
             href={href}
             aria-label={`Browse ${label} infrastructure stablecoins`}
-            className={
-              value === "m0"
-                ? "pharos-focus-ring inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 transition-colors hover:brightness-110 dark:text-violet-400"
-                : "pharos-focus-ring inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue transition-colors hover:brightness-110"
-            }
+            className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             {label}
           </Link>

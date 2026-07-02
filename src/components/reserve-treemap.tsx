@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { Treemap, Tooltip } from "recharts";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -166,9 +165,11 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
+  // Rendered flat (no Card chrome): the treemap lives inside the report-card
+  // panel's right column, and a nested card would violate Flat-By-Default.
   return (
-    <Card className="min-w-0 overflow-hidden rounded-xl">
-      <CardHeader className="min-w-0 pb-2">
+    <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0">
         <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2">
           Reserve Composition
           {badge && (
@@ -185,8 +186,8 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             </div>
           ))}
         </div>
-      </CardHeader>
-      <CardContent className="min-w-0 overflow-hidden">
+      </div>
+      <div className="mt-3 min-w-0 overflow-hidden">
         <div
           ref={chartContainerRef}
           className="h-48 min-w-0 overflow-hidden"
@@ -214,7 +215,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             <ChartSkeleton className="h-full w-full" />
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

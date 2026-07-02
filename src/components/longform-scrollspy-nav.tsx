@@ -352,7 +352,7 @@ export function LongformScrollspyNav({
       </div>
       {showDepthHint && (
         <div
-          className="pointer-events-none h-6 bg-gradient-to-b from-border/20 to-transparent motion-safe:animate-[pharos-fade-in-up_0.6s_ease-out_0.3s_both]"
+          className="pointer-events-none h-6 bg-gradient-to-b from-border/20 to-transparent motion-safe:animate-[pharos-fade-in-up_220ms_var(--motion-ease-standard)_both]"
           aria-hidden="true"
         />
       )}

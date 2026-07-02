@@ -228,7 +228,14 @@ export function McapChart({
             allowDataOverflow={useLog}
           />
           <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
-          <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill={`url(#${mcapGradientId})`} strokeWidth={2} />
+          <Area
+            type="monotone"
+            dataKey="mcap"
+            stroke={CHART_BLUE}
+            fill={`url(#${mcapGradientId})`}
+            strokeWidth={2}
+            isAnimationActive={false}
+          />
           {readout ? (
             <ReferenceDot
               x={readout.ts}

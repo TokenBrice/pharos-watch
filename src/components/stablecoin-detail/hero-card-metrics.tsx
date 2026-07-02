@@ -72,9 +72,12 @@ function MetricChip({
   const methodologyMetric = metricKey ? METRIC_TO_METHODOLOGY[metricKey] : undefined;
 
   return (
+    // Passive stat chip — deliberately NOT .pharos-control-pill, which is
+    // reserved for interactive controls; accentClass stays a data-driven
+    // severity border (allowed carve-out).
     <div
-      className={`pharos-control-pill ${
-        mobile ? `w-full min-w-0 !justify-start gap-1.5 !px-2.5 !py-1.5 ${mobileFull ? "col-span-2" : ""}` : "flex items-center gap-2"
+      className={`rounded-lg border border-border/60 bg-background/45 ${
+        mobile ? `flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${mobileFull ? "col-span-2" : ""}` : "flex items-center gap-2 px-3 py-2"
       } ${accentClass ?? ""}`}
     >
       {label ? (
@@ -83,7 +86,7 @@ function MetricChip({
         </span>
       ) : null}
       <span
-        className={`${mobile ? "text-lg" : "text-base"} font-bold font-mono ${colorClass}`}
+        className={`${mobile ? "text-lg" : "text-base"} font-bold pharos-numeric ${colorClass}`}
         aria-hidden={isEmpty ? "true" : undefined}
       >
         {value}
@@ -218,12 +221,12 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
           </span>
           <SignalValue
             value={hero.primary}
-            className={`font-mono font-black leading-none tracking-tight ${
+            className={`pharos-numeric font-black leading-none tracking-tight ${
               hero.primary.length > 2 ? "text-4xl" : "text-5xl"
             }`}
           />
           {hero.secondary ? (
-            <span className="font-mono text-xs text-muted-foreground">{hero.secondary}</span>
+            <span className="pharos-numeric text-xs text-muted-foreground">{hero.secondary}</span>
           ) : null}
         </Link>
       )}
@@ -239,10 +242,10 @@ export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
           <span className="flex items-baseline gap-1.5">
             <SignalValue
               value={item.primary}
-              className={`font-mono tabular-nums text-sm font-semibold ${item.colorClass}`}
+              className={`pharos-numeric text-sm font-semibold ${item.colorClass}`}
             />
             {item.secondary ? (
-              <span className="font-mono text-[10px] text-muted-foreground">{item.secondary}</span>
+              <span className="pharos-numeric text-[10px] text-muted-foreground">{item.secondary}</span>
             ) : null}
           </span>
         </Link>
@@ -293,14 +296,14 @@ export function HeroPriceCard({
             Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
           </p>
           <p
-            className={`font-extrabold font-mono tracking-tight ${confidenceClass(coinData.priceConfidence)} ${
+            className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} ${
               mobile ? "text-xl" : "text-2xl xl:text-3xl"
             }`}
           >
             {price}
           </p>
           <p
-            className={`font-mono ${mobile ? "mt-1 text-xs" : "mt-0.5 text-xs"} ${
+            className={`pharos-numeric ${mobile ? "mt-1 text-xs" : "mt-0.5 text-xs"} ${
               pegReferenceUnavailable
                 ? "text-muted-foreground"
                 : isNavToken
@@ -355,7 +358,7 @@ export function HeroMarketCapCard({
       <p className="pharos-kicker">
         Market Cap
       </p>
-      <p className={`font-bold font-mono tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
+      <p className={`font-bold pharos-numeric tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
         {formatCurrency(mcap)}
       </p>
       {coin.flags.pegCurrency !== "USD" && (
@@ -366,7 +369,7 @@ export function HeroMarketCapCard({
           Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}
         </p>
       )}
-      <p className={`mt-1 text-xs font-mono ${prevDayTrendClass}`}>
+      <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
         {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}
         <span className="text-muted-foreground">24h</span>
       </p>
@@ -403,18 +406,18 @@ export function HeroSupplyCard({
             <p className="pharos-kicker">
               Supply
             </p>
-            <p className="text-base font-bold font-mono">
+            <p className="text-base font-bold pharos-numeric">
               {supply != null ? formatSupply(supply) : "—"}{" "}
               <span className="text-xs text-muted-foreground">{coinSymbol}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className={`text-xs font-mono ${prevWeekTrendClass}`}>
+            <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
               {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}{" "}
               <span className="text-muted-foreground">7d</span>
             </p>
             {hasPrevMonth && (
-              <p className={`text-xs font-mono ${prevMonthTrendClass}`}>
+              <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
                 {safePrevMonth == null ? "—" : formatPercentChange(mcap, safePrevMonth)}{" "}
                 <span className="text-muted-foreground">30d</span>
               </p>
@@ -430,11 +433,11 @@ export function HeroSupplyCard({
       <p className="pharos-kicker">
         Supply
       </p>
-      <p className="text-2xl font-bold font-mono tracking-tight">
+      <p className="text-2xl font-bold pharos-numeric tracking-tight">
         {supply != null ? formatSupply(supply) : "—"}{" "}
         <span className="text-sm text-muted-foreground">{coinSymbol}</span>
       </p>
-      <p className="mt-1 whitespace-nowrap text-xs font-mono">
+      <p className="mt-1 whitespace-nowrap text-xs pharos-numeric">
         <span className={prevWeekTrendClass}>
           {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}
         </span>

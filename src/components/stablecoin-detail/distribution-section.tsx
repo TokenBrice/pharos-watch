@@ -83,10 +83,7 @@ function buildDonutData(
 
 function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
   return (
-    <div
-      className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-300"
-      style={{ animationDelay: "400ms", animationFillMode: "backwards" }}
-    >
+    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-[220ms] motion-reduce:animate-none">
       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {subtitle}
       </span>
@@ -157,9 +154,7 @@ function DonutCard({
                   paddingAngle={3}
                   strokeWidth={0}
                   activeShape={renderActiveShape}
-                  animationBegin={0}
-                  animationDuration={600}
-                  animationEasing="ease-out"
+                  isAnimationActive={false}
                 >
                   {data.map((d) => (
                     <Cell key={d.name} fill={d.hex} />

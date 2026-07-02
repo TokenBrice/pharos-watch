@@ -311,7 +311,7 @@ function ContractChainButton({
       type="button"
       onClick={onToggle}
       className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
-        isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"
+        isOpen ? "ring-foreground" : "ring-transparent hover:ring-muted-foreground/30"
       }`}
       title={chain?.name ?? chainKey}
       aria-label={`${chain?.name ?? chainKey} contract ${address}`}

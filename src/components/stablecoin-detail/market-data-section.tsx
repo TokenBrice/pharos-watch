@@ -121,7 +121,7 @@ function MarketDataSectionBody({
         />
       </div>
       {frozenNote}
-      <div className="overflow-hidden rounded-xl border border-border/50 bg-card/40 animate-in fade-in duration-300">
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
         <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
           <LazySection className="min-h-[340px] sm:min-h-[420px]">
             <McapChart

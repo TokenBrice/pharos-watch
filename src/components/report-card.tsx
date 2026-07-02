@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type {
   BridgeRouteRiskConfidence,
   DimensionKey,
@@ -67,7 +67,7 @@ function RiskSourceLinks({ links }: { links: readonly RiskSourceLink[] }) {
           href={source.url}
           target="_blank"
           rel="noreferrer"
-          className="pharos-focus-ring rounded-sm text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
         >
           {source.label}
         </a>
@@ -539,7 +539,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
     <TooltipProvider>
       <Card className="overflow-hidden" style={{ borderTopWidth: "3px", borderTopColor: topBorderColor }}>
         <CardHeader>
-          <CardTitle as="h2" className="text-xl font-bold tracking-tight">
+          <DetailSectionTitle>
             <span className="flex items-center justify-between gap-2">
               <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
               {updatedAtMs != null ? (
@@ -550,7 +550,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
                 />
               ) : null}
             </span>
-          </CardTitle>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {hasRightColumn ? (
@@ -578,7 +578,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
                       {i > 0 && ", "}
                       <Link
                         href={buildStablecoinUrl(dep.id)}
-                        className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="pharos-focus-ring rounded-sm font-medium text-frost-blue underline-offset-2 transition-colors hover:underline"
                       >
                         {name}
                       </Link>

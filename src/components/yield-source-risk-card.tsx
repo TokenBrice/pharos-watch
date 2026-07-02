@@ -59,7 +59,7 @@ function RiskMetric({
   title?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-md border border-border/50 bg-background/45 px-2.5 py-2" title={title}>
+    <div className="min-w-0 rounded-md bg-muted/40 px-2.5 py-2" title={title}>
       <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 truncate font-mono text-xs tabular-nums text-foreground">{value}</dd>
     </div>
@@ -145,11 +145,9 @@ export function YieldSourceRiskCard({
             TVL {formatCurrency(sourceTvlUsd)}
           </span>
         ) : null}
-        {sourceChanged ? (
-          <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2 py-0.5 text-sky-700 dark:text-sky-300">
-            source changed
-          </span>
-        ) : null}
+        {/* No standalone "source changed" chip here: getYieldSourceRiskDrivers
+            already emits a source-changed driver chip below, and rendering both
+            duplicated the state in two palettes. */}
       </div>
 
       <div className="mt-3">

@@ -92,9 +92,12 @@ export function YieldHistoryChart({
   const showSourceStrip = distinctSourceCount > 1 && sourceSegments.length > 0;
   const sourceStripStart = sourceSegments[0]?.startTs ?? 0;
   const sourceStripEnd = sourceSegments[sourceSegments.length - 1]?.endTs ?? 0;
+  /* insideRight keeps the inline benchmark/peer-median labels within the plot
+     bounds — position "right" rendered them into the margin, truncating them
+     at the chart edge. */
   const referenceLabelStyle = compact
     ? undefined
-    : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "right" as const };
+    : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "insideRight" as const };
 
   if (model.historyQuery.isLoading) {
     return (

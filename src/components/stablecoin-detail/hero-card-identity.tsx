@@ -11,6 +11,7 @@ import {
   GOVERNANCE_PROSE_LABELS,
   PEG_LABELS,
   PEG_LABELS_SHORT,
+  PEG_METADATA,
 } from "@shared/lib/classification";
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
@@ -55,20 +56,15 @@ function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
 
 function InfrastructureBadge({ value }: { value: Infrastructure }) {
   const label = getInfrastructureLabel(value);
-  const isM0 = value === "m0";
-  const colorClass = isM0
-    ? "text-violet-700 dark:text-violet-400"
-    : "text-frost-blue";
-  const borderClass = isM0
-    ? "border-violet-500/30 bg-violet-500/10"
-    : "border-frost-blue/30 bg-frost-blue/10";
 
+  // Neutral chip: infrastructure is categorical identity, which structure and
+  // the mono value carry — not a saturated hue (Semantic-Color Rule).
   return (
-    <div className={`inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-full border ${borderClass} px-2.5 py-0.5 text-[11px]`}>
+    <div className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[11px]">
       <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Infrastructure
       </span>
-      <span className={`min-w-0 break-words font-mono text-[11px] font-semibold ${colorClass}`}>{label}</span>
+      <span className="min-w-0 break-words font-mono text-[11px] font-semibold text-foreground/80">{label}</span>
     </div>
   );
 }
@@ -198,7 +194,7 @@ function HeroClassificationLine({
       {showPegBadge && (
         <span
           aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
-          className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
+          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${PEG_METADATA[coin.flags.pegCurrency].badge.cls}`}
         >
           Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
         </span>
@@ -366,7 +362,7 @@ export function HeroMobileIdentity({
         </div>
         <div className="min-w-0 flex-1">
           <h2
-            className="text-2xl font-black tracking-tighter"
+            className="pharos-page-title text-2xl"
             {...(showVerdict ? { "aria-describedby": verdictId } : {})}
           >
             {coin.name}
@@ -437,7 +433,7 @@ export function HeroDesktopIdentity({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-3">
           <h2
-            className="text-3xl font-black tracking-tighter"
+            className="pharos-page-title text-3xl"
             {...(showVerdict ? { "aria-describedby": verdictId } : {})}
           >
             {coin.name}

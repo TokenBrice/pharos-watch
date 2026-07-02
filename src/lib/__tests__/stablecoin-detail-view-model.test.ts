@@ -1277,7 +1277,7 @@ describe("stablecoin detail hero view-model builder", () => {
       href: "/learn/case-studies/usdc-svb-2023/",
       title: "USDC and the Silicon Valley Bank weekend",
       outcomeLabel: "Survived",
-      outcomeChipClass: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+      outcomeChipClass: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
     });
   });
 

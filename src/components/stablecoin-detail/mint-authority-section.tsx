@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
-  minimized: "bg-[var(--brand-accent)]",
+  minimized: "bg-[var(--severity-healthy)]",
   neutral: "bg-[var(--text-tertiary)]",
   elevated: "bg-[var(--severity-mild)]",
 };

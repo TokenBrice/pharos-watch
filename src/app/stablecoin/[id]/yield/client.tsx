@@ -57,6 +57,17 @@ interface WarningSignalEvent {
   sourceLabel: string | null;
 }
 
+/** One timeline row: consecutive identical signals collapse into a single
+ * entry with a count and time range so repeats don't drown the timeline. */
+interface WarningSignalGroup {
+  signal: string;
+  apy: number;
+  sourceLabel: string | null;
+  count: number;
+  latestTimestamp: number;
+  earliestTimestamp: number;
+}
+
 interface SourceSwitchEvent {
   timestamp: number;
   apy: number;
@@ -97,7 +108,7 @@ function StablecoinYieldDetailHeader({
             <StablecoinLogo src={logoSrc} name={staticCoin.name} size={56} />
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-extrabold tracking-tighter text-foreground sm:text-3xl">
+                <h1 className="pharos-page-title text-2xl sm:text-3xl">
                   {staticCoin.name}
                 </h1>
                 <span className="font-mono tabular-nums text-base text-muted-foreground">{staticCoin.symbol}</span>
@@ -156,7 +167,7 @@ function EmptyStateCard({ title, message }: { title: string; message: string }) 
   );
 }
 
-function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalEvent[] {
+function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[] {
   const events: WarningSignalEvent[] = [];
   for (const point of history) {
     if (!point.warningSignals || point.warningSignals.length === 0) continue;
@@ -171,7 +182,31 @@ function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalEvent[]
       });
     }
   }
-  return events.sort((a, b) => b.timestamp - a.timestamp);
+  events.sort((a, b) => b.timestamp - a.timestamp);
+
+  const groups: WarningSignalGroup[] = [];
+  for (const event of events) {
+    const last = groups[groups.length - 1];
+    if (
+      last &&
+      last.signal === event.signal &&
+      last.sourceLabel === event.sourceLabel &&
+      last.apy === event.apy
+    ) {
+      last.count += 1;
+      last.earliestTimestamp = event.timestamp;
+    } else {
+      groups.push({
+        signal: event.signal,
+        apy: event.apy,
+        sourceLabel: event.sourceLabel,
+        count: 1,
+        latestTimestamp: event.timestamp,
+        earliestTimestamp: event.timestamp,
+      });
+    }
+  }
+  return groups;
 }
 
 function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEvent[] {
@@ -428,15 +463,20 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             <ul className="space-y-2">
               {warningEvents.map((event, index) => (
                 <li
-                  key={`${event.timestamp}-${event.signal}-${index}`}
+                  key={`${event.latestTimestamp}-${event.signal}-${index}`}
                   className="flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2"
                 >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <span className="font-medium">{formatYieldWarningSignal(event.signal)}</span>
+                      {event.count > 1 ? (
+                        <span className="pharos-numeric text-xs font-medium">×{event.count}</span>
+                      ) : null}
                       <span className="pharos-numeric text-xs text-amber-700/80 dark:text-amber-300/75">
-                        {formatChartDate(event.timestamp, "with-time")}
+                        {event.count > 1
+                          ? `${formatChartDate(event.earliestTimestamp, "with-time")} – ${formatChartDate(event.latestTimestamp, "with-time")}`
+                          : formatChartDate(event.latestTimestamp, "with-time")}
                       </span>
                     </div>
                     <p className="text-xs text-amber-700/80 dark:text-amber-300/75">
