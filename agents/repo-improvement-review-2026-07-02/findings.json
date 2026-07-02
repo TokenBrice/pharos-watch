@@ -4435,6 +4435,18 @@
      "src/components/homepage-tape.tsx",
      "public/_redirects"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the methodology tape projector's hardcoded changelog hrefs with shared methodology path constants so Liquidity Score and PSI events now use the canonical changelog routes. Added focused projector coverage for those source URLs and a backward-compatible D1 migration to repair already-persisted bad `tape_events.source_url` values.",
+    "validation": [
+     "cd worker && npx vitest run src/lib/tape-projectors/__tests__/methodology.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:migrations",
+     "rg -n \"/methodology/liquidity-changelog/|/methodology/psi-changelog/\" worker shared src public scripts docs",
+     "git diff --check -- worker/src/lib/tape-projectors/methodology.ts worker/src/lib/tape-projectors/__tests__/methodology.test.ts worker/migrations/0171_tape_methodology_source_url_repair.sql worker/migrations/MANIFEST.md"
+    ]
    }
   },
   {

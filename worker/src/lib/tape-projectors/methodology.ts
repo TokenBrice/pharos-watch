@@ -23,6 +23,18 @@ import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/stability-index-version";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/redemption-backstop-version";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
 import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/yield-methodology-version";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+  PSI_METHODOLOGY_CHANGELOG_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+} from "@shared/lib/methodology-versions/constants";
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
 
 import {
@@ -48,61 +60,61 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
   {
     domain: "blacklist-tracker",
     label: "Blacklist Tracker",
-    href: "/methodology/blacklist-tracker-changelog/",
+    href: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
     changelog: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "chain-health",
     label: "Chain Health",
-    href: "/methodology/chain-health-changelog/",
+    href: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
     changelog: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "depeg-dews",
     label: "Depeg & DEWS",
-    href: "/methodology/depeg-changelog/",
+    href: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     changelog: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "liquidity-score",
     label: "Liquidity Score",
-    href: "/methodology/liquidity-changelog/",
+    href: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     changelog: LIQUIDITY_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "mint-burn-flow",
     label: "Mint/Burn Flow",
-    href: "/methodology/mint-burn-flow-changelog/",
+    href: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
     changelog: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "pricing-pipeline",
     label: "Pricing Pipeline",
-    href: "/methodology/pricing-pipeline-changelog/",
+    href: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
     changelog: PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "redemption-backstop",
     label: "Redemption Backstop",
-    href: "/methodology/#safety-scores-methodology",
+    href: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     changelog: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "safety-score",
     label: "Safety Score",
-    href: "/methodology/scoring-changelog/",
+    href: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     changelog: SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "stability-index",
     label: "Pharos Stability Index",
-    href: "/methodology/psi-changelog/",
+    href: PSI_METHODOLOGY_CHANGELOG_PATH,
     changelog: PSI_METHODOLOGY_CHANGELOG,
   },
   {
     domain: "yield",
     label: "Yield Intelligence",
-    href: "/methodology/yield-changelog/",
+    href: YIELD_METHODOLOGY_CHANGELOG_PATH,
     changelog: YIELD_METHODOLOGY_CHANGELOG,
   },
 ];

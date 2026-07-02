@@ -114,6 +114,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0168     | `0168_surface_publication_generations.sql`               | Add a generic publication-generation ledger for migrated cache-backed and generated Worker surfaces                                                |
 | 0169     | `0169_lusd_ddr_event_90410_split.sql`                    | Ledger LUSD event 90410 as a fresh DDR incident and close the resolved repair-debt task                                                           |
 | 0170     | `0170_dex_liquidity_history_unique_snapshot.sql`         | Deduplicate DEX liquidity daily history rows and enforce one row per stablecoin/day so repair writes replace stale snapshots                       |
+| 0171     | `0171_tape_methodology_source_url_repair.sql`            | Repair persisted Tape methodology source URLs for the Liquidity Score and PSI changelog route renames                                             |
 
 ## Retired Individual Migrations
 
