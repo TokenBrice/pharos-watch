@@ -344,6 +344,7 @@ function TrackedCoinList({
     .length;
   const frozenCount = getCoinsByLifecycleStatus(archetype, "frozen").length;
   const { parents, childrenByParentId } = nestVariants(coins);
+  const trackedCoinCount = coins.length;
   const screenerHref = `/screener/?mechanisms=${archetype}`;
 
   if (parents.length === 0 && preLaunchCount === 0 && frozenCount === 0) {
@@ -383,9 +384,9 @@ function TrackedCoinList({
       <div className="space-y-2">
         <SectionKicker className={kickerClass}>Tracked universe</SectionKicker>
         <SectionHeading>
-          {parents.length === 1
+          {trackedCoinCount === 1
             ? "1 tracked stablecoin in this archetype"
-            : `${coins.length} tracked stablecoins in this archetype`}
+            : `${trackedCoinCount} tracked stablecoins in this archetype`}
         </SectionHeading>
       </div>
       {parents.length > 0 ? (

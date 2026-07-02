@@ -4039,6 +4039,19 @@
     "description": "TrackedCoinList renders \"1 tracked stablecoin in this archetype\" when parents.length === 1, otherwise \"`${coins.length}` tracked stablecoins\" (lines 385-389). parents come from nestVariants(coins), so an archetype with one parent coin plus N variant children would claim \"1 tracked stablecoin\" while the list below renders 1+N rows. The two branches count different collections; the singular guard should test coins.length === 1. Currently latent (needs an archetype whose only parent has variants), but data changes — adding a variant to a single-parent archetype — would silently produce a wrong count.",
     "recommendation": "Change the condition to coins.length === 1 (and keep the plural branch as-is). Output changes only in the mismatch case, which is exactly the wrong-count case, so this is a correctness fix rather than a redesign.",
     "estImpact": "1-line fix; prevents wrong coin count on explainer pages"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the mechanism explainer tracked-universe heading to pluralize from the total tracked coin count instead of parent row count.",
+    "validation": [
+     "npx vitest run src/app/learn/mechanisms/__tests__/explainer-shell.test.tsx",
+     "npm run typecheck",
+     "npm run typecheck:tests",
+     "npx eslint src/app/learn/mechanisms/explainer-shell.tsx src/app/learn/mechanisms/__tests__/explainer-shell.test.tsx --max-warnings=0",
+     "git diff --check -- src/app/learn/mechanisms/explainer-shell.tsx src/app/learn/mechanisms/__tests__/explainer-shell.test.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a regression for one parent row with two tracked coins."
    }
   },
   {
