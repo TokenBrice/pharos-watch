@@ -393,13 +393,6 @@ export function formatPlannedSubscribers(
   return planned.map((plan) => formatPlannedSubscriber(plan, resolveDisableNotification));
 }
 
-export function buildSubscriberQueue(
-  alertsByChat: Map<string, AlertsByChatEntry>,
-  resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
-): RoutedSubscriberAlert[] {
-  return formatPlannedSubscribers(planSubscriberQueue(alertsByChat), resolveDisableNotification);
-}
-
 export function splitFreshQueue(
   subscriberQueue: RoutedSubscriberAlert[],
   freshBudget: number,

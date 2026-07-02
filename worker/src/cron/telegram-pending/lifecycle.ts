@@ -110,16 +110,6 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
   }
 }
 
-export async function resetChatOnSuccess(
-  db: D1Database,
-  chatId: string,
-  chatsResetThisRun: Set<string>,
-): Promise<void> {
-  if (chatsResetThisRun.has(chatId)) return;
-  chatsResetThisRun.add(chatId);
-  await resetSubscriberBlockCount(db, chatId);
-}
-
 export async function flushChatSuccessResets(
   db: D1Database,
   chatIds: Iterable<string>,

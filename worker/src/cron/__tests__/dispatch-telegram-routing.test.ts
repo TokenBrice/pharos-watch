@@ -6,9 +6,9 @@ import type {
   SafetyChange,
 } from "../../lib/telegram-alerts";
 import {
-  buildSubscriberQueue,
   collapseBurstChats,
   expandSubscriberChunks,
+  formatPlannedSubscribers,
   planSubscriberQueue,
   routeAlertEvents,
   selectChatsToFormat,
@@ -201,8 +201,8 @@ describe("dispatch telegram routing helpers", () => {
     expect([...alertsByChat.keys()]).toEqual(["specific-on", "global-on"]);
   });
 
-  it("builds a newest-first queue with dominant alert type and notification flags", () => {
-    const queue = buildSubscriberQueue(
+  it("formats the selected newest-first plan with dominant alert type and notification flags", () => {
+    const planned = planSubscriberQueue(
       new Map([
         [
           "older",
@@ -224,9 +224,14 @@ describe("dispatch telegram routing helpers", () => {
           }),
         ],
       ]),
+    );
+    const selected = selectChatsToFormat(planned, 10);
+    const queue = formatPlannedSubscribers(
+      selected.toFormat,
       (entry) => entry.quietHoursEnabled,
     );
 
+    expect(selected.overflow).toEqual([]);
     expect(queue.map((entry) => entry.chatId)).toEqual(["newer", "older"]);
     expect(queue[0].alertType).toBe("depeg");
     expect(queue[0].disableNotification).toBe(true);

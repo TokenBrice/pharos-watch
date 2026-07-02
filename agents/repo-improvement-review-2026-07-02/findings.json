@@ -1569,6 +1569,17 @@
     "description": "buildSubscriberQueue (dispatch-telegram-routing.ts:396-401) is referenced only by a test (dispatch-telegram-routing.test.ts); production code now goes through planSubscriberQueue → selectChatsToFormat → formatPlannedSubscribers (the C102 split path), making this composition wrapper vestigial. resetChatOnSuccess (telegram-pending/lifecycle.ts:113-121) has zero references anywhere in worker/, src/, shared/, functions/, scripts/, including tests — its callers were replaced by the batched flushChatSuccessResets. Both are re-exported via barrel `export *` (telegram-pending/index.ts), verified not consumed through the barrel either.",
     "recommendation": "Delete resetChatOnSuccess outright. For buildSubscriberQueue, either delete it and update the test to compose planSubscriberQueue+formatPlannedSubscribers (which is what production exercises), or inline it into the test file. No runtime path changes.",
     "estImpact": "-20 LOC, removes a stale API from the routing surface"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `buildSubscriberQueue` and `resetChatOnSuccess` exports, and updated routing helper coverage to compose the production planning, selection, and formatting helpers directly.",
+    "validation": [
+     "rg -n \"buildSubscriberQueue|resetChatOnSuccess\" worker/src shared src functions scripts --glob '!node_modules/**'",
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-routing.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "No runtime route changed; production already uses the underlying helpers and batched success-reset path."
    }
   },
   {
