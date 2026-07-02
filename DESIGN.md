@@ -234,13 +234,16 @@ Pharos draws its metaphors rather than naming them (every shape encodes a data f
 
 ### Homepage Composition (signature surface — the locked layout)
 
-The redesigned homepage is an ordered workbench. Sections, order, and rhythm are the contract; below-fold bands lazy-mount but the **sequence is fixed**:
+The redesigned homepage is an ordered workbench. Sections, order, and rhythm are the contract; below-fold bands lazy-mount but the **sequence is fixed** (eight bands, owner-sanctioned 2026-07-02):
 
 1. **Market Pulse hero** — frost-blue total market cap + cohorts + live chart.
 2. **Pulse band (bento)** — Row 1: Peg Health · (Stability Index + Mint/Burn stacked) · Daily Digest editorial promo; Row 2: Biggest Supply Moves · Recent Freezes · Total Active Depegs.
 3. **Saved Shortcuts** (localStorage, per-device).
 4. **Stablecoin Overview** — the directory table + Browse By Peg.
 5. **On The Horizon** — upcoming-stablecoins constellation.
+6. **Depeg Duration Resolver overview** — DDR forecast band with accuracy-by-horizon read.
+7. **Yield Intelligence overview** — risk-adjusted yield teaser for `/yield/`.
+8. **Status & Telegram strip** — pipeline-health pulse + PharosWatchBot entry.
 
 Vertical rhythm: `space-y-5`/`6` within bands, `mt-5`/`6`/`8`/`10` between them; bento gaps `gap-3` (12px); panels pad `p-5`–`p-7` (20–28px).
 

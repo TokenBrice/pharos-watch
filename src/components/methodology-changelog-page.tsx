@@ -84,7 +84,7 @@ export function MethodologyChangelogPage({
       )}
 
       <div className="space-y-3">
-        <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.2rem]">{title}</h1>
+        <h1 className="pharos-page-title">{title}</h1>
 
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{lead}</p>
       </div>
