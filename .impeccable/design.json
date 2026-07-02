@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-06-27T16:31:51Z",
+  "generatedAt": "2026-07-02T06:30:31Z",
   "title": "Design System: Pharos",
   "extensions": {
     "colorMeta": {
@@ -8,68 +8,201 @@
         "role": "primary",
         "displayName": "Frost Blue",
         "canonical": "#4bc4de",
-        "tonalRamp": ["oklch(0.30 0.06 215)", "oklch(0.40 0.08 215)", "oklch(0.50 0.10 215)", "oklch(0.60 0.11 215)", "oklch(0.70 0.11 215)", "oklch(0.78 0.10 215)", "oklch(0.86 0.07 215)", "oklch(0.94 0.04 215)"]
+        "tonalRamp": [
+          "oklch(0.30 0.06 215)",
+          "oklch(0.40 0.08 215)",
+          "oklch(0.50 0.10 215)",
+          "oklch(0.60 0.11 215)",
+          "oklch(0.70 0.11 215)",
+          "oklch(0.78 0.10 215)",
+          "oklch(0.86 0.07 215)",
+          "oklch(0.94 0.04 215)"
+        ]
       },
       "severity-healthy": {
         "role": "tertiary",
         "displayName": "Healthy",
         "canonical": "#22c55e",
-        "tonalRamp": ["oklch(0.30 0.07 155)", "oklch(0.38 0.10 155)", "oklch(0.46 0.13 155)", "oklch(0.54 0.16 155)", "oklch(0.62 0.18 155)", "oklch(0.76 0.14 155)", "oklch(0.87 0.08 155)", "oklch(0.95 0.04 155)"]
+        "tonalRamp": [
+          "oklch(0.30 0.07 155)",
+          "oklch(0.38 0.10 155)",
+          "oklch(0.46 0.13 155)",
+          "oklch(0.54 0.16 155)",
+          "oklch(0.62 0.18 155)",
+          "oklch(0.76 0.14 155)",
+          "oklch(0.87 0.08 155)",
+          "oklch(0.95 0.04 155)"
+        ]
       },
       "severity-mild": {
         "role": "tertiary",
         "displayName": "Mild (light: amber-700, dark: amber-400)",
         "canonical": "#b45309",
-        "tonalRamp": ["oklch(0.30 0.06 84)", "oklch(0.37 0.07 84)", "oklch(0.45 0.09 84)", "oklch(0.54 0.11 84)", "oklch(0.72 0.15 84)", "oklch(0.83 0.19 84)", "oklch(0.90 0.12 90)", "oklch(0.96 0.05 90)"]
+        "tonalRamp": [
+          "oklch(0.30 0.06 84)",
+          "oklch(0.37 0.07 84)",
+          "oklch(0.45 0.09 84)",
+          "oklch(0.54 0.11 84)",
+          "oklch(0.72 0.15 84)",
+          "oklch(0.83 0.19 84)",
+          "oklch(0.90 0.12 90)",
+          "oklch(0.96 0.05 90)"
+        ]
       },
       "severity-moderate": {
         "role": "tertiary",
         "displayName": "Moderate",
         "canonical": "#f97316",
-        "tonalRamp": ["oklch(0.30 0.07 50)", "oklch(0.40 0.10 50)", "oklch(0.50 0.13 50)", "oklch(0.62 0.16 50)", "oklch(0.70 0.18 50)", "oklch(0.82 0.16 55)", "oklch(0.90 0.10 60)", "oklch(0.96 0.04 60)"]
+        "tonalRamp": [
+          "oklch(0.30 0.07 50)",
+          "oklch(0.40 0.10 50)",
+          "oklch(0.50 0.13 50)",
+          "oklch(0.62 0.16 50)",
+          "oklch(0.70 0.18 50)",
+          "oklch(0.82 0.16 55)",
+          "oklch(0.90 0.10 60)",
+          "oklch(0.96 0.04 60)"
+        ]
       },
       "severity-severe": {
         "role": "tertiary",
         "displayName": "Severe",
         "canonical": "#ef4444",
-        "tonalRamp": ["oklch(0.30 0.10 27)", "oklch(0.38 0.13 27)", "oklch(0.46 0.16 27)", "oklch(0.55 0.20 27)", "oklch(0.64 0.22 27)", "oklch(0.78 0.16 27)", "oklch(0.88 0.09 27)", "oklch(0.96 0.04 27)"]
+        "tonalRamp": [
+          "oklch(0.30 0.10 27)",
+          "oklch(0.38 0.13 27)",
+          "oklch(0.46 0.16 27)",
+          "oklch(0.55 0.20 27)",
+          "oklch(0.64 0.22 27)",
+          "oklch(0.78 0.16 27)",
+          "oklch(0.88 0.09 27)",
+          "oklch(0.96 0.04 27)"
+        ]
       },
       "text-primary": {
         "role": "neutral",
         "displayName": "Ink",
         "canonical": "oklch(0.145 0 0)",
-        "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.27 0 0)", "oklch(0.37 0 0)", "oklch(0.44 0 0)", "oklch(0.556 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.985 0 0)"]
+        "tonalRamp": [
+          "oklch(0.145 0 0)",
+          "oklch(0.27 0 0)",
+          "oklch(0.37 0 0)",
+          "oklch(0.44 0 0)",
+          "oklch(0.556 0 0)",
+          "oklch(0.708 0 0)",
+          "oklch(0.87 0 0)",
+          "oklch(0.985 0 0)"
+        ]
       },
       "surface-base": {
         "role": "neutral",
         "displayName": "Base Surface",
         "canonical": "oklch(0.985 0 0)",
-        "tonalRamp": ["oklch(0.085 0 0)", "oklch(0.145 0 0)", "oklch(0.20 0.015 260)", "oklch(0.37 0 0)", "oklch(0.556 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)", "oklch(0.985 0 0)"]
+        "tonalRamp": [
+          "oklch(0.085 0 0)",
+          "oklch(0.145 0 0)",
+          "oklch(0.20 0.015 260)",
+          "oklch(0.37 0 0)",
+          "oklch(0.556 0 0)",
+          "oklch(0.87 0 0)",
+          "oklch(0.97 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "score-tier-blue": {
+        "role": "semantic",
+        "displayName": "Score-Tier Info Blue",
+        "canonical": "#3b82f6",
+        "tonalRamp": [
+          "oklch(25% 0.09 259)",
+          "oklch(35% 0.13 259)",
+          "oklch(45% 0.17 259)",
+          "oklch(55% 0.21 259)",
+          "oklch(62% 0.21 259)",
+          "oklch(72% 0.16 259)",
+          "oklch(84% 0.09 259)",
+          "oklch(94% 0.03 259)"
+        ],
+        "note": "Owner-ratified 2026-07-02: the Score-tier B band is the one sanctioned exception to the green-to-red state ramp (blue-500 tint family in shared/lib/report-card-core.ts). Grade badges only - never state chips or controls."
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Route/page titles + top-nav wordmark. Bricolage Grotesque ink-trap, 800." },
-      "headline": { "displayName": "Headline", "purpose": "Section titles (Market Pulse, Stablecoin Overview). Bricolage 700." },
-      "title": { "displayName": "Title", "purpose": "Card and sub-section headings. Geist Sans 600." },
-      "body": { "displayName": "Body", "purpose": "UI text and prose. Geist Sans 400, 14px base." },
-      "numeric": { "displayName": "Numeric", "purpose": "Every digit-bearing cell. JetBrains Mono, tabular-nums slashed-zero." },
-      "label": { "displayName": "Label / Kicker", "purpose": "Uppercase eyebrows over data groups. Geist Sans 600, 0.12em tracking." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Route/page titles + top-nav wordmark. Bricolage Grotesque ink-trap, 800."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles (Market Pulse, Stablecoin Overview). Bricolage 700."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and sub-section headings. Geist Sans 600."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "UI text and prose. Geist Sans 400, 14px base."
+      },
+      "numeric": {
+        "displayName": "Numeric",
+        "purpose": "Every digit-bearing cell. JetBrains Mono, tabular-nums slashed-zero."
+      },
+      "label": {
+        "displayName": "Label / Kicker",
+        "purpose": "Uppercase eyebrows over data groups. Geist Sans 600, 0.12em tracking."
+      }
     },
     "shadows": [
-      { "name": "elevation-rest", "value": "0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%)", "purpose": "Applied on card hover only, paired with a -2px lift. Never at rest." },
-      { "name": "elevation-raised", "value": "0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%)", "purpose": "Overlays, popovers, sticky table columns." },
-      { "name": "elevation-featured", "value": "0 16px 36px rgba(148, 163, 184, 0.18)", "purpose": "Rare promoted/featured surface." }
+      {
+        "name": "elevation-rest",
+        "value": "0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%)",
+        "purpose": "Applied on card hover only, paired with a -2px lift. Never at rest."
+      },
+      {
+        "name": "elevation-raised",
+        "value": "0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%)",
+        "purpose": "Overlays, popovers, sticky table columns."
+      },
+      {
+        "name": "elevation-featured",
+        "value": "0 16px 36px rgba(148, 163, 184, 0.18)",
+        "purpose": "Rare promoted/featured surface."
+      }
     ],
     "motion": [
-      { "name": "duration-fast", "value": "160ms", "purpose": "State/hover transitions." },
-      { "name": "duration-base", "value": "220ms", "purpose": "Default UI transitions." },
-      { "name": "ease-standard", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Decelerating standard easing — no bounce, no elastic." }
+      {
+        "name": "duration-fast",
+        "value": "160ms",
+        "purpose": "State/hover transitions."
+      },
+      {
+        "name": "duration-base",
+        "value": "220ms",
+        "purpose": "Default UI transitions."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Decelerating standard easing — no bounce, no elastic."
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
     ]
   },
   "components": [
@@ -116,41 +249,62 @@
   ],
   "narrative": {
     "northStar": "The Lighthouse Watch",
-    "overview": "Pharos is a lighthouse — it watches every peg so the user doesn't have to. The interface is a calm, dense instrument for crypto-native practitioners: a Bloomberg Terminal scoped to stablecoins. Color stays still by default; what moves is the frost-blue beam (#4bc4de, sampled from the Figma Market Pulse frame), which lights live data and the drawn lighthouse/nautical metaphor. As-built after the Figma redesign: light-default with a full dark theme, a global top-nav (the watch-column sidebar retired), Bricolage/Geist/JetBrains Mono, flat cards, two-mode density. Frost-blue and the lighthouse identity were deliberately kept (PRODUCT.md: 'Pharos is a lighthouse — draw it'); a Figma proposal to retire them for a neutral/Radix palette was overruled by the owner.",
+    "overview": "Pharos is a lighthouse — it watches every peg so the user doesn't have to. The interface is a calm, dense instrument for crypto-native practitioners: a Bloomberg Terminal scoped to stablecoins. It earns trust through completeness and precision, not decoration. Color stays still by default; what moves is the **frost-blue beam** (`#4bc4de`, sampled from the Figma \"Market Pulse\" frame), which lights live data and the lighthouse metaphor. Everything else is neutral, flat, and tabular.\n\nThis is the as-built system after the designer's Figma redesign. It is **light-default** with a full dark theme. The redesign delivered a global **top-nav** (the old left \"watch column\" sidebar is retired), ABC Whyte Inktrap as the licensed ink-trap display face (with Bricolage Grotesque as the tracked fallback), JetBrains Mono for every figure, flat cards, and a two-mode density (spacious default / compact). **Frost-blue and the drawn lighthouse/nautical identity were deliberately kept** — they are the brand, per PRODUCT.md's \"Pharos is a lighthouse — _draw it_.\" Density is calibrated by surface tier: discovery breathes, the analytics core holds default, power-user tables compress.\n\nIt explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic. The lighthouse is the only metaphor, and it is drawn, not decorated.\n\n**Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.",
     "keyCharacteristics": [
       "Light-default financial dashboard with a parallel dark theme; semantic tokens switch, hues don't.",
-      "One brand color (frost-blue); it lights live data and the drawn lighthouse metaphor, not chrome.",
-      "Flat cards: fill + hairline border, no resting shadow. Depth is a hover response.",
+      "One brand color (frost-blue); it lights live data and the lighthouse/nautical metaphor — not chrome.",
+      "Flat cards: fill + hairline border, no resting shadow. Depth is a hover response, not a default.",
       "Mono + tabular + slashed-zero on every digit-bearing cell.",
       "Global top-nav, full-width content (no sidebar); fixed rem type scale; two-mode density.",
-      "Color is reinforced with structure and iconography, never the sole signal."
+      "Color is reinforced with structure and iconography; never the sole signal."
     ],
     "rules": [
-      { "name": "The One Beam Rule", "body": "Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal.", "section": "colors" },
-      { "name": "The Semantic-Color Rule", "body": "Color encodes state, never identity or decoration. Inactive states never take a full-saturation accent.", "section": "colors" },
-      { "name": "The Tabular-Figure Rule", "body": "Numbers always use .pharos-numeric (JetBrains Mono + tabular-nums slashed-zero). Proportional digits in a data column are a bug.", "section": "typography" },
-      { "name": "The Fixed-Scale Rule", "body": "Headings use the fixed rem scale, not fluid clamp() (digest/editorial display excepted). The viewport changes layout, not type size.", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. A shadow appears only as a response to state — hover, an overlay, or a deliberately featured block. Nested cards are forbidden.", "section": "elevation" }
+      {
+        "name": "The One Beam Rule",
+        "body": "Frost-blue lights live data and the drawn lighthouse metaphor — not chrome, not the global nav, never a gradient or background. Its rarity is what makes it read as a signal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic-Color Rule",
+        "body": "Color encodes state, never identity or decoration. If a color isn't carrying a risk band, a data series, or the beam, it shouldn't be saturated. Inactive states never take a full-saturation accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular-Figure Rule",
+        "body": "Numbers always use `.pharos-numeric` (JetBrains Mono + `tabular-nums slashed-zero`). Proportional digits in a data column are a bug — columns must align on the decimal and the zero must never read as an O.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed-Scale Rule",
+        "body": "Headings use the fixed rem scale, not fluid `clamp()` (digest/editorial display is the carve-out). A heading that shrinks inside a panel looks worse, not designed. The viewport changes layout, not type size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. A shadow appears only as a response to state — hover, overlay, or a deliberately featured block. If a card has a drop shadow sitting still, it's wrong. Nested cards are forbidden.",
+        "section": "elevation"
+      }
     ],
     "dos": [
-      "Do reserve frost-blue (#4bc4de) for live data and the drawn lighthouse metaphor — the One Beam Rule.",
-      "Do render every digit with .pharos-numeric (JetBrains Mono, tabular-nums slashed-zero).",
-      "Do keep cards flat: surface-overlay fill + 1px border-default, shadow none at rest; lift only on hover.",
-      "Do encode state with the semantic ramp and reinforce it with structure or an icon — never color alone.",
-      "Do draw new metaphors (every shape encodes a data field; inline SVG, semantic vars, reduced-motion-gated) over a data-table workbench.",
-      "Do use the fixed rem type scale; keep informational text at or above text-muted-foreground/70 for WCAG AA.",
-      "Do gate every animation behind prefers-reduced-motion."
+      "Do reserve frost-blue (`#4bc4de`) for live data and the drawn lighthouse metaphor — the One Beam Rule.",
+      "Do render every digit with `.pharos-numeric` (JetBrains Mono, `tabular-nums slashed-zero`).",
+      "Do keep cards flat: `surface-overlay` fill + 1px `border-default`, `shadow: none` at rest; lift only on hover.",
+      "Do encode state with the semantic ramp (severity / PSI / DEWS / score) and reinforce it with structure or an icon — never color alone.",
+      "Do draw new metaphors (every shape encodes a data field; inline SVG, semantic vars, reduced-motion-gated) — and keep the underlying data table as the workbench beneath the hero.",
+      "Do use the fixed rem type scale for headings; keep informational text at or above `text-muted-foreground/70` for WCAG AA.",
+      "Do gate every animation behind `prefers-reduced-motion`."
     ],
     "donts": [
-      "Don't reintroduce the left watch-column sidebar — the global desktop nav is the full-width top-nav.",
-      "Don't use border-left/right greater than 1px as a colored accent stripe on card chrome (reserved for data-driven indicators).",
+      "Don't reintroduce the left \"watch column\" sidebar — the global desktop nav is the full-width top-nav.",
+      "Don't use `border-left`/`border-right` greater than 1px as a colored accent stripe on card chrome — it's reserved for data-driven indicators (depeg severity, detail hero accents).",
       "Don't ship Web3-marketing tropes: purple gradients, glassmorphism, gradient text, or buzzwords.",
-      "Don't fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles.",
+      "Don't fall into corporate-fintech blandness or the generic-SaaS grid of interchangeable KPI tiles and big empty cards.",
       "Don't reskin DefiLlama or a generic trading-terminal clone.",
-      "Don't give frost-blue or any full-saturation accent to controls, inactive states, the top-nav, or decoration.",
+      "Don't soften data surfaces with mascots or chunky illustrations; keep the practitioner register inside the data.",
+      "Don't give frost-blue (or any full-saturation accent) to controls, inactive states, the top-nav, or decoration.",
       "Don't put a resting drop shadow on a card, or nest a card inside a card.",
-      "Don't use fluid clamp() headings (outside digest/editorial) or proportional figures in a data column.",
-      "Don't reorder the homepage bands, or introduce a new serif outside the authored editorial carve-out."
+      "Don't use fluid `clamp()` headings (outside digest/editorial) or proportional figures in a data column.",
+      "Don't reorder the homepage bands or introduce a new serif outside the authored editorial carve-out."
     ]
   }
 }
