@@ -6689,6 +6689,18 @@
      "worker/src/cron/dispatch-telegram-alerts.ts",
      "worker/src/lib/db-cache.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added `setCacheMany` and routed Telegram alert snapshot persistence through one retried D1 batch, preserving the 5 non-safety snapshots, optional safety snapshot, JSON payloads, shared `updated_at`, and reserve baseline `null` serialization.",
+    "validation": [
+     "cd worker && npx vitest run src/cron/__tests__/telegram-alert-snapshots.test.ts src/cron/__tests__/dispatch-telegram-alerts.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/cron/telegram-alert-snapshots.ts worker/src/lib/db-cache.ts worker/src/cron/__tests__/telegram-alert-snapshots.test.ts worker/src/test-helpers/cron/mock-db-cache.ts"
+    ],
+    "notes": "Batching makes the snapshot group transactional, avoiding mixed partial snapshot writes if a batch fails."
    }
   },
   {

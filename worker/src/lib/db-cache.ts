@@ -47,6 +47,24 @@ export async function setCache(db: D1Database, key: string, value: string, signa
   throwIfAborted(signal);
 }
 
+export interface CacheEntryWrite {
+  key: string;
+  value: string;
+}
+
+export async function setCacheMany(
+  db: D1Database,
+  entries: readonly CacheEntryWrite[],
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  if (entries.length === 0) return;
+  const updatedAt = Math.floor(Date.now() / 1000);
+  const statement = db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+  await batchExecute(db, entries.map((entry) => statement.bind(entry.key, entry.value, updatedAt)), { signal });
+  throwIfAborted(signal);
+}
+
 export async function deleteCache(db: D1Database, key: string): Promise<void> {
   await runWithOverloadRetry(() => db.prepare("DELETE FROM cache WHERE key = ?").bind(key).run());
 }

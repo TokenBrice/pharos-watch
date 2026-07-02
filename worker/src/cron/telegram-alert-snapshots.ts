@@ -1,5 +1,5 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
-import { setCache } from "../lib/db-cache";
+import { setCacheMany } from "../lib/db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getReportCardGradeRank,
@@ -204,17 +204,17 @@ export async function writeSnapshots(
     reserveDispatched: string[] | null;
   },
 ): Promise<void> {
-  const writes: Promise<unknown>[] = [
-    setCache(db, SNAPSHOT_KEYS.dews, JSON.stringify(snapshots.dews)),
-    setCache(db, SNAPSHOT_KEYS.dewsAlertable, JSON.stringify(snapshots.dewsAlertable)),
-    setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
-    setCache(db, SNAPSHOT_KEYS.launch, JSON.stringify(snapshots.launch)),
-    setCache(db, SNAPSHOT_KEYS.reserveDispatched, JSON.stringify(snapshots.reserveDispatched)),
+  const writes: Array<{ key: string; value: string }> = [
+    { key: SNAPSHOT_KEYS.dews, value: JSON.stringify(snapshots.dews) },
+    { key: SNAPSHOT_KEYS.dewsAlertable, value: JSON.stringify(snapshots.dewsAlertable) },
+    { key: SNAPSHOT_KEYS.depeg, value: JSON.stringify(snapshots.depeg) },
+    { key: SNAPSHOT_KEYS.launch, value: JSON.stringify(snapshots.launch) },
+    { key: SNAPSHOT_KEYS.reserveDispatched, value: JSON.stringify(snapshots.reserveDispatched) },
   ];
 
   if (snapshots.safety) {
-    writes.push(setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)));
+    writes.push({ key: SNAPSHOT_KEYS.safety, value: JSON.stringify(snapshots.safety) });
   }
 
-  await Promise.all(writes);
+  await setCacheMany(db, writes);
 }

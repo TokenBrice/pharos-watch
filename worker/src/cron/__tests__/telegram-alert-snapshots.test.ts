@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   buildDewsSnapshot,
   buildDewsAlertableSnapshot,
@@ -9,11 +10,17 @@ import {
   isSnapshotMissingOrStale,
   extractTopSignals,
   isSafetyDeescalation,
+  writeSnapshots,
+  SNAPSHOT_KEYS,
   SNAPSHOT_MAX_AGE_SEC,
   type DewsRow,
   type ActiveDepegRow,
   type SafetyRow,
 } from "../telegram-alert-snapshots";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("parseSnapshotMap", () => {
   it("parses valid JSON into a record", () => {
@@ -234,5 +241,65 @@ describe("isSafetyDeescalation", () => {
 
   it("returns false for equal grades", () => {
     expect(isSafetyDeescalation("B", "B")).toBe(false);
+  });
+});
+
+describe("writeSnapshots", () => {
+  it("persists the non-safety snapshots in one D1 batch with shared metadata", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
+    const db = mockD1([]);
+    const originalBatch = db.batch.bind(db);
+    const batchSizes: number[] = [];
+    db.batch = (async (statements: D1PreparedStatement[]) => {
+      batchSizes.push(statements.length);
+      return originalBatch(statements);
+    }) as D1Database["batch"];
+
+    await writeSnapshots(db, {
+      dews: { "usdc-circle": "CALM" },
+      dewsAlertable: {},
+      depeg: {},
+      launch: ["usdc-circle"],
+      reserveDispatched: null,
+    });
+
+    expect(batchSizes).toEqual([5]);
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(writes.map((entry) => entry.binds[0])).toEqual([
+      SNAPSHOT_KEYS.dews,
+      SNAPSHOT_KEYS.dewsAlertable,
+      SNAPSHOT_KEYS.depeg,
+      SNAPSHOT_KEYS.launch,
+      SNAPSHOT_KEYS.reserveDispatched,
+    ]);
+    expect(new Set(writes.map((entry) => entry.binds[2]))).toEqual(new Set([1776945600]));
+    expect(writes.find((entry) => entry.binds[0] === SNAPSHOT_KEYS.reserveDispatched)?.binds[1]).toBe("null");
+  });
+
+  it("includes the safety snapshot in the same D1 batch when present", async () => {
+    const db = mockD1([]);
+    const originalBatch = db.batch.bind(db);
+    const batchSizes: number[] = [];
+    db.batch = (async (statements: D1PreparedStatement[]) => {
+      batchSizes.push(statements.length);
+      return originalBatch(statements);
+    }) as D1Database["batch"];
+
+    await writeSnapshots(db, {
+      dews: {},
+      dewsAlertable: {},
+      depeg: {},
+      safety: { generation: "test", snapshot: { "usdc-circle": { grade: "A", score: 90, methodologyVersion: "v1" } } },
+      launch: [],
+      reserveDispatched: [],
+    });
+
+    expect(batchSizes).toEqual([6]);
+    const keys = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .map((entry) => entry.binds[0]);
+    expect(keys).toContain(SNAPSHOT_KEYS.safety);
   });
 });

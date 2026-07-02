@@ -3,8 +3,8 @@
  *
  * Captures the common shape used inline by `sync-yield-data.test.ts`,
  * `sync-stablecoins.test.ts`, and `dispatch-telegram-alerts.test.ts`:
- * benign no-op stubs for `getCache`/`setCache`/`deleteCache`/`setCacheIfNewer`/
- * `writeFreshnessSentinel`, returned as `vi.fn()` mocks so tests can
+ * benign no-op stubs for `getCache`/`setCache`/`setCacheMany`/`deleteCache`/
+ * `setCacheIfNewer`/`writeFreshnessSentinel`, returned as `vi.fn()` mocks so tests can
  * override per-call via `vi.mocked(getCache).mockImplementation(...)`.
  *
  * Tests can pass `getCacheFn` / `setCacheFn` to inject specific spies
@@ -19,6 +19,8 @@ export interface MockDbCacheOptions {
   getCacheFn?: Mock;
   /** Optional pre-built spy for `setCache`. Defaults to `vi.fn(async () => {})`. */
   setCacheFn?: Mock;
+  /** Optional pre-built spy for `setCacheMany`. Defaults to forwarding entries through `setCacheFn`. */
+  setCacheManyFn?: Mock;
   /** Optional pre-built spy for `deleteCache`. Defaults to `vi.fn(async () => {})`. */
   deleteCacheFn?: Mock;
   /** Optional pre-built spy for `setCacheIfNewer`. */
@@ -30,6 +32,7 @@ export interface MockDbCacheOptions {
 export interface MockDbCacheExports {
   getCache: Mock;
   setCache: Mock;
+  setCacheMany: Mock;
   deleteCache: Mock;
   setCacheIfNewer: Mock;
   writeFreshnessSentinel: Mock;
@@ -50,9 +53,17 @@ export interface MockDbCacheExports {
  *   }));
  */
 export function mockDbCache(options: MockDbCacheOptions = {}): MockDbCacheExports {
+  const setCache = options.setCacheFn ?? vi.fn(async () => {});
   return {
     getCache: options.getCacheFn ?? vi.fn(async () => null),
-    setCache: options.setCacheFn ?? vi.fn(async () => {}),
+    setCache,
+    setCacheMany:
+      options.setCacheManyFn ??
+      vi.fn(async (db: D1Database, entries: Array<{ key: string; value: string }>, signal?: AbortSignal) => {
+        for (const entry of entries) {
+          await setCache(db, entry.key, entry.value, signal);
+        }
+      }),
     deleteCache: options.deleteCacheFn ?? vi.fn(async () => {}),
     setCacheIfNewer:
       options.setCacheIfNewerFn ??
