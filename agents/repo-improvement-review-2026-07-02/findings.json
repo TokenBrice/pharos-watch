@@ -3895,6 +3895,18 @@
     "description": "The gate (home-alt-hero-chart-gate.tsx:10) and the live-chart wrapper (home-alt-hero-live-chart.tsx:15) each define a private HomeAltHeroChartFallback with the same wrapper div, role/aria-label, and size classes; the only difference is one passes className=\"h-full w-full\" to HomeAltInlineChartSkeleton and the other does not — an accidental divergence in what should be the same skeleton (both fill the same hero slot at the same dimensions). Because the fallback renders during the idle-gated two-stage dynamic load, a styling drift here shows as a visible skeleton jump between load phases.",
     "recommendation": "Move the fallback into home-alt-inline-chart-skeleton.tsx (or its own tiny module) and import it in both files, standardizing on one skeleton className. The two-level dynamic() gating itself is deliberate perf work and should not be touched.",
     "estImpact": "-12 LOC; consistent skeleton across load phases"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted the duplicated home hero chart fallback into a shared component and reused it from both the idle gate and live chart dynamic-loading layer.",
+    "validation": [
+     "npx eslint src/components/home-alt-hero-chart-fallback.tsx src/components/home-alt-hero-chart-gate.tsx src/components/home-alt-hero-live-chart.tsx --max-warnings=0",
+     "npx vitest run src/components/__tests__/home-alt-hero-chart.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/home-alt-hero-chart-fallback.tsx src/components/home-alt-hero-chart-gate.tsx src/components/home-alt-hero-live-chart.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The shared fallback relies on HomeAltInlineChartSkeleton's existing `h-full w-full` default, so both loading layers now render the same skeleton."
    }
   },
   {

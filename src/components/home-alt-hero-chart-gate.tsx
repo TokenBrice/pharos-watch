@@ -2,22 +2,10 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
+import { HomeAltHeroChartFallback } from "@/components/home-alt-hero-chart-fallback";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 import { scheduleIdle } from "@/lib/browser-utils";
-
-function HomeAltHeroChartFallback() {
-  return (
-    <div
-      className="h-[260px] w-full p-5 sm:h-[320px] lg:h-auto lg:min-h-[305px]"
-      role="figure"
-      aria-label="Stablecoin market cap history by major cohort"
-    >
-      <HomeAltInlineChartSkeleton />
-    </div>
-  );
-}
 
 const HomeAltHeroLiveChart = dynamic(
   () => import("@/components/home-alt-hero-live-chart").then((mod) => mod.HomeAltHeroLiveChart),
