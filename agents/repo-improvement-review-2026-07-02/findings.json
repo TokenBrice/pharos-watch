@@ -4061,6 +4061,18 @@
     "alsoFiles": [
      "src/components/faq-section.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the about page's manual FAQ JSON-LD script and delegated FAQPage structured data emission to `FaqSection includeJsonLd`, matching the shared pattern.",
+    "validation": [
+     "npx vitest run src/app/about/page.test.tsx",
+     "npm run typecheck",
+     "npm run typecheck:tests",
+     "git diff --check -- src/app/about/page.tsx src/app/about/page.test.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Updated the about page test to assert exactly one FAQPage JSON-LD block while keeping visible FAQ content aligned with the emitted structured data."
    }
   },
   {

@@ -66,10 +66,12 @@ describe("AboutPage", () => {
     const document = parseStaticDocument(html);
     document.querySelectorAll("script").forEach((script) => script.remove());
     const visibleText = document.body.textContent ?? "";
-    const faqJsonLd = extractJsonLd(parseStaticDocument(html)).find((block) => {
+    const faqJsonLdBlocks = extractJsonLd(parseStaticDocument(html)).filter((block) => {
       return Boolean(block && typeof block === "object" && (block as { "@type"?: string })["@type"] === "FAQPage");
-    }) as { mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> } | undefined;
+    }) as Array<{ mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> }>;
+    const [faqJsonLd] = faqJsonLdBlocks;
 
+    expect(faqJsonLdBlocks).toHaveLength(1);
     expect(faqJsonLd).toBeDefined();
     expect(visibleText).toContain("About Pharos FAQ");
 

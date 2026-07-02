@@ -11,7 +11,6 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { buildFaqJsonLd } from "@/lib/faq";
 import {
   COMPANION_FEATURES,
   COMPUTED_FEATURES,
@@ -267,20 +266,12 @@ export default function AboutPage() {
       title="About Pharos"
       leadParagraphs={leadParagraphs}
       preface={
-        <>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: safeJsonLd(ABOUT_PAGE_JSON_LD),
-            }}
-          />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: safeJsonLd(buildFaqJsonLd(faqItems)),
-            }}
-          />
-        </>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(ABOUT_PAGE_JSON_LD),
+          }}
+        />
       }
     >
       <div className="space-y-8">
@@ -606,7 +597,7 @@ export default function AboutPage() {
           </Button>
         </AboutSection>
 
-        <FaqSection items={faqItems} title="About Pharos FAQ" />
+        <FaqSection items={faqItems} title="About Pharos FAQ" includeJsonLd />
 
         <aside className="border-y border-border/60 py-5 text-xs leading-relaxed text-muted-foreground">
           <p>
