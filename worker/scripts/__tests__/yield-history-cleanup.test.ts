@@ -7,6 +7,7 @@ import {
   createYieldHistoryCleanupArtifact,
   deleteCleanupRowsFromSqlite,
   loadCleanupRowsFromSqlite,
+  parseYieldHistoryCleanupCliOptions,
   restoreCleanupRowsToSqlite,
   summarizeYieldHistoryCleanupRows,
 } from "../yield-history-cleanup";
@@ -62,7 +63,68 @@ afterEach(() => {
   }
 });
 
-describe("yield-history-cleanup sqlite helpers", () => {
+describe("yield-history-cleanup", () => {
+  it("parses destructive mode through the shared guard with remote dry-run as the default", () => {
+    const options = parseYieldHistoryCleanupCliOptions(["--export", "cleanup.json", "--operator", "ops"]);
+
+    expect(options).toMatchObject({
+      exportPath: "cleanup.json",
+      operator: "ops",
+      remote: true,
+      execute: false,
+      armWriterPause: false,
+      clearWriterPause: false,
+    });
+    expect(options.operationMode).toEqual({
+      dryRun: true,
+      remote: true,
+      targetFlag: "--remote",
+    });
+  });
+
+  it("accepts the yield-history-cleanup confirmation token for live local D1 mode", () => {
+    const options = parseYieldHistoryCleanupCliOptions([
+      "--local",
+      "--execute",
+      "--confirm",
+      "yield-history-cleanup",
+    ]);
+
+    expect(options).toMatchObject({
+      remote: false,
+      execute: true,
+    });
+    expect(options.operationMode).toEqual({
+      dryRun: false,
+      remote: false,
+      targetFlag: "--local",
+    });
+  });
+
+  it("rejects live mode without the cleanup confirmation token", () => {
+    expect(() => parseYieldHistoryCleanupCliOptions(["--execute"])).toThrow(
+      "live mutation requires --execute --confirm yield-history-cleanup",
+    );
+  });
+
+  it("preserves sqlite restore exemption from live confirmation", () => {
+    const options = parseYieldHistoryCleanupCliOptions([
+      "--sqlite",
+      "test.sqlite",
+      "--restore",
+      "cleanup.json",
+      "--execute",
+    ]);
+
+    expect(options).toMatchObject({
+      sqlitePath: "test.sqlite",
+      restorePath: "cleanup.json",
+      remote: true,
+      execute: false,
+    });
+    expect(options.operationMode.dryRun).toBe(true);
+  });
+
   it("loads only the targeted parent-owned wrapper rows", () => {
     const path = createTempDbPath();
     tempPaths.push(path);

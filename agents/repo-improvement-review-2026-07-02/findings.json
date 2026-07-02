@@ -6394,6 +6394,20 @@
     "alsoFiles": [
      "worker/scripts/lib/destructive-operation-guard.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Routed `yield-history-cleanup` live-mutation parsing through the shared `parseDestructiveOperationMode` guard, preserving the `yield-history-cleanup` confirmation token, default remote dry-run behavior, and the local SQLite restore exemption.",
+    "validation": [
+     "rg -n \"parseFlag|parseValue\" worker/scripts/yield-history-cleanup.ts",
+     "npx vitest run worker/scripts/__tests__/yield-history-cleanup.test.ts worker/scripts/lib/__tests__/destructive-operation-guard.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/scripts/yield-history-cleanup.ts worker/scripts/__tests__/yield-history-cleanup.test.ts"
+    ],
+    "notes": "Added parser coverage for default remote dry-run mode, live local D1 confirmation, missing confirmation refusal, and the SQLite restore carveout."
    }
   },
   {

@@ -9,9 +9,14 @@ import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../src/lib/yield-history-ownership-handoffs";
+import {
+  parseDestructiveOperationMode,
+  type DestructiveOperationMode,
+} from "./lib/destructive-operation-guard";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
+const SCRIPT_NAME = "yield-history-cleanup";
 
 const YIELD_HISTORY_COLUMNS = [
   "stablecoin_id",
@@ -64,6 +69,18 @@ export interface YieldHistoryCleanupSummary {
   byStablecoinSource: Record<string, number>;
 }
 
+export interface YieldHistoryCleanupCliOptions {
+  sqlitePath: string | null;
+  exportPath: string | null;
+  restorePath: string | null;
+  operator: string | null;
+  remote: boolean;
+  execute: boolean;
+  armWriterPause: boolean;
+  clearWriterPause: boolean;
+  operationMode: DestructiveOperationMode;
+}
+
 function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
   return Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS).map(([stablecoinId, sourceKeys]) => ({
     stablecoinId,
@@ -72,7 +89,7 @@ function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
 }
 
 function buildYieldHistoryWriterPausePayload(
-  reason = "yield-history-cleanup",
+  reason = SCRIPT_NAME,
   operator: string | null = null,
   pausedAt = Math.floor(Date.now() / 1000),
 ) {
@@ -204,7 +221,7 @@ function queryRemoteRows(sql: string, remote: boolean): Array<Record<string, unk
 function execRemoteStatements(statements: string[], remote: boolean): void {
   createWorkerD1Client(DB_NAME, remote ? "remote" : "local").executeStatements(
     statements.map((statement) => (statement.endsWith(";") ? statement : `${statement};`)),
-    "yield-history-cleanup",
+    SCRIPT_NAME,
   );
 }
 
@@ -249,7 +266,7 @@ function readWriterPauseFromWrangler(remote: boolean): ReturnType<typeof parseYi
 }
 
 function setWriterPauseInWrangler(remote: boolean, operator: string | null): void {
-  const payload = buildYieldHistoryWriterPausePayload("yield-history-cleanup", operator);
+  const payload = buildYieldHistoryWriterPausePayload(SCRIPT_NAME, operator);
   execRemoteStatements(
     [
       `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)}, ${sqlValue(JSON.stringify(payload))}, ${payload.pausedAt})`,
@@ -276,14 +293,65 @@ function isYieldWriterActiveInWrangler(remote: boolean): boolean {
   return leaseUntil != null && leaseUntil >= now;
 }
 
-function parseFlag(argv: string[], flag: string): boolean {
-  return argv.includes(flag);
+function parseCliArgs(argv: string[]): Map<string, string | true> {
+  const args = new Map<string, string | true>();
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (!arg.startsWith("--")) continue;
+
+    const inlineValueIndex = arg.indexOf("=");
+    if (inlineValueIndex > 2) {
+      args.set(arg.slice(0, inlineValueIndex), arg.slice(inlineValueIndex + 1));
+      continue;
+    }
+
+    const next = argv[index + 1];
+    if (next && !next.startsWith("--")) {
+      args.set(arg, next);
+      index++;
+      continue;
+    }
+
+    args.set(arg, true);
+  }
+  return args;
 }
 
-function parseValue(argv: string[], flag: string): string | null {
-  const index = argv.indexOf(flag);
-  if (index === -1) return null;
-  return argv[index + 1] ?? null;
+function getCliString(args: Map<string, string | true>, flag: string): string | null {
+  const value = args.get(flag);
+  return typeof value === "string" ? value : null;
+}
+
+function getCliBoolean(args: Map<string, string | true>, flag: string): boolean {
+  return args.has(flag);
+}
+
+function getDestructiveModeArgv(argv: string[], sqlitePath: string | null, restorePath: string | null): string[] {
+  if (!sqlitePath || !restorePath) return argv;
+  return argv.filter((arg) => arg !== "--execute");
+}
+
+export function parseYieldHistoryCleanupCliOptions(argv: string[]): YieldHistoryCleanupCliOptions {
+  const args = parseCliArgs(argv);
+  const sqlitePath = getCliString(args, "--sqlite");
+  const restorePath = getCliString(args, "--restore");
+  const operationMode = parseDestructiveOperationMode({
+    argv: getDestructiveModeArgv(argv, sqlitePath, restorePath),
+    defaultTarget: "--remote",
+    scriptName: SCRIPT_NAME,
+  });
+
+  return {
+    sqlitePath,
+    exportPath: getCliString(args, "--export"),
+    restorePath,
+    operator: getCliString(args, "--operator"),
+    remote: operationMode.remote,
+    execute: !operationMode.dryRun,
+    armWriterPause: getCliBoolean(args, "--arm-writer-pause"),
+    clearWriterPause: getCliBoolean(args, "--clear-writer-pause"),
+    operationMode,
+  };
 }
 
 function printJson(value: unknown): void {
@@ -291,15 +359,16 @@ function printJson(value: unknown): void {
 }
 
 async function main(argv: string[]): Promise<void> {
-  const sqlitePath = parseValue(argv, "--sqlite");
-  const exportPath = parseValue(argv, "--export");
-  const restorePath = parseValue(argv, "--restore");
-  const operator = parseValue(argv, "--operator");
-  const remote = !parseFlag(argv, "--local");
-  const execute = parseFlag(argv, "--execute");
-  const armWriterPause = parseFlag(argv, "--arm-writer-pause");
-  const clearWriterPause = parseFlag(argv, "--clear-writer-pause");
-  const confirmation = parseValue(argv, "--confirm");
+  const {
+    sqlitePath,
+    exportPath,
+    restorePath,
+    operator,
+    remote,
+    execute,
+    armWriterPause,
+    clearWriterPause,
+  } = parseYieldHistoryCleanupCliOptions(argv);
 
   if (armWriterPause && sqlitePath) {
     throw new Error("--arm-writer-pause is only supported with Wrangler D1 mode");
@@ -333,9 +402,6 @@ async function main(argv: string[]): Promise<void> {
     if (!sqlitePath) {
       if (!execute) {
         throw new Error("Refusing remote restore without --execute");
-      }
-      if (confirmation !== "yield-history-cleanup") {
-        throw new Error("Refusing remote restore without --confirm yield-history-cleanup");
       }
       const writerPause = readWriterPauseFromWrangler(remote);
       if (!writerPause) {
@@ -383,10 +449,6 @@ async function main(argv: string[]): Promise<void> {
       before: beforeSummary,
     });
     return;
-  }
-
-  if (confirmation !== "yield-history-cleanup") {
-    throw new Error("Refusing to mutate without --confirm yield-history-cleanup");
   }
 
   if (!sqlitePath) {
