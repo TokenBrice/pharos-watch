@@ -94,7 +94,9 @@ export default function ChangelogPage() {
         </>,
       ]}
     >
-      {changelogs.length >= 4 && <ChangelogWeekNav entries={changelogs} />}
+      {changelogs.length >= 4 && (
+        <ChangelogWeekNav entries={changelogs.map(({ dateRange }) => ({ dateRange }))} />
+      )}
       <ol className="relative ml-1.5 border-l border-border/50">
         {changelogs.map((entry, i) => {
           const year = new Date(entry.dateRange.to + "T00:00:00").getFullYear();

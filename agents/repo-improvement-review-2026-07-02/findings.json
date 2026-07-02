@@ -3291,6 +3291,16 @@
     "alsoFiles": [
      "src/components/changelog-week-nav.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the `/changelog/` page to pass `ChangelogWeekNav` only the `dateRange` fields it consumes, leaving the server-rendered changelog entries intact while avoiding serialization of field notes, summaries, and commit lists into the client nav prop.",
+    "validation": [
+     "npx vitest run src/app/changelog/page.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/app/changelog/page.tsx src/components/changelog-week-nav.tsx"
+    ]
    }
   },
   {
