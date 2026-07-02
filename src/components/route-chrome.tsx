@@ -2,10 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-
-function isChromelessPath(pathname: string | null): boolean {
-  return pathname === "/pharoswatchbot/app" || pathname?.startsWith("/pharoswatchbot/app/") === true;
-}
+import { isChromelessPath } from "@/lib/chromeless-routes";
 
 function isDigestPath(pathname: string | null): boolean {
   return pathname === "/digest" || pathname?.startsWith("/digest/") === true;

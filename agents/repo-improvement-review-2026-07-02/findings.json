@@ -3826,6 +3826,19 @@
     "description": "The identical 2-line isChromelessPath() predicate (matching /pharoswatchbot/app routes) is defined privately in both route-chrome.tsx:6 and core-top-rail.tsx:6. Both gate global chrome off the same route set, so if a second chromeless route is ever added (as /digest already required a separate isDigestPath carve-out in route-chrome), one copy will drift and the tape rail and page chrome will disagree about which routes are chromeless.",
     "recommendation": "Export isChromelessPath from route-chrome.tsx (or a tiny src/lib/route-chrome-paths.ts) and import it in core-top-rail.tsx. Identical bodies, so the swap is behavior-preserving.",
     "estImpact": "-3 LOC; single source of truth for chromeless routes"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted the duplicated chromeless-route predicate into `src/lib/chromeless-routes.ts` and rewired both route chrome and the core top rail to use the shared helper.",
+    "validation": [
+     "rg -n \"function isChromelessPath\" src/components src/lib",
+     "npx vitest run src/lib/chromeless-routes.test.ts src/components/__tests__/core-top-rail.test.tsx",
+     "npm run typecheck",
+     "npx prettier --check src/lib/chromeless-routes.ts src/lib/chromeless-routes.test.ts src/components/route-chrome.tsx src/components/core-top-rail.tsx",
+     "npx eslint --max-warnings=0 src/lib/chromeless-routes.ts src/lib/chromeless-routes.test.ts src/components/route-chrome.tsx src/components/core-top-rail.tsx",
+     "git diff --check -- src/lib/chromeless-routes.ts src/lib/chromeless-routes.test.ts src/components/route-chrome.tsx src/components/core-top-rail.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

@@ -2,10 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { HomepageTape } from "@/components/homepage-tape";
-
-function isChromelessPath(pathname: string | null): boolean {
-  return pathname === "/pharoswatchbot/app" || pathname?.startsWith("/pharoswatchbot/app/") === true;
-}
+import { isChromelessPath } from "@/lib/chromeless-routes";
 
 // The horizontal core-nav pills were retired with the top-nav redesign. This
 // sticky strip keeps just the live events tape beneath the nav: desktop-wide,
