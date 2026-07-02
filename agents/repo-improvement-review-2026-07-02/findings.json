@@ -5407,6 +5407,17 @@
     "description": "src/app/liquidity/client.tsx imports only PEG_FILTERS, buildLiquidityViewModel, formatLiquidityWarningMessage, and normalizePegFilter. buildLiquidityRows (lines 37–54) and buildLiquidityStats (lines 116–124) are called nowhere — not by client.tsx, not by model.test.ts (verified by grep across all roots; the single hit for each name is its own declaration). buildLiquidityViewModel duplicates and replaces both in a single pass.",
     "recommendation": "Delete both functions. Safe: zero call sites; the page's rendered rows/stats come exclusively from buildLiquidityViewModel.",
     "estImpact": "-28 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed the superseded buildLiquidityRows and buildLiquidityStats exports are absent; the liquidity page model now exposes buildLiquidityViewModel as the row/stat path.",
+    "validation": [
+     "rg -n \"buildLiquidityRows|buildLiquidityStats\" src/app/liquidity src shared worker functions --glob '!agents/**' || true",
+     "npm exec -- vitest run src/app/liquidity/model.test.ts",
+     "npm run typecheck",
+     "git diff --check -- agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
