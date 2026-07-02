@@ -184,6 +184,51 @@ describe("resolveRedemptionCapacity — fixed USD capacity", () => {
   });
 });
 
+describe("resolveRedemptionCapacity — supply ratio capacity", () => {
+  const now = 1_780_000_000;
+  const db = {} as D1Database;
+
+  it("labels scoring horizon immediate when the configured daily limit does not bind", async () => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "test-stablecoin",
+      { kind: "supply-ratio", ratio: 0.2, dailyLimitUsd: 25_000_000 },
+      100_000_000,
+      now,
+    );
+
+    expect(result.immediateCapacityUsd).toBe(20_000_000);
+    expect(result.scoringCapacityUsd).toBe(20_000_000);
+    expect(result.scoringCapacityRatio).toBe(0.2);
+    expect(result.capacityProfile).toMatchObject({
+      immediateUsd: 20_000_000,
+      dailyLimitUsd: 25_000_000,
+      scoringUsd: 20_000_000,
+      scoringHorizon: "immediate",
+    });
+  });
+
+  it("labels scoring horizon daily when the configured daily limit caps capacity", async () => {
+    const result = await resolveRedemptionCapacity(
+      db,
+      "test-stablecoin",
+      { kind: "supply-ratio", ratio: 0.2, dailyLimitUsd: 5_000_000 },
+      100_000_000,
+      now,
+    );
+
+    expect(result.immediateCapacityUsd).toBe(20_000_000);
+    expect(result.scoringCapacityUsd).toBe(5_000_000);
+    expect(result.scoringCapacityRatio).toBe(0.05);
+    expect(result.capacityProfile).toMatchObject({
+      immediateUsd: 20_000_000,
+      dailyLimitUsd: 5_000_000,
+      scoringUsd: 5_000_000,
+      scoringHorizon: "daily",
+    });
+  });
+});
+
 describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
   const now = 1_780_000_000;
   const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({

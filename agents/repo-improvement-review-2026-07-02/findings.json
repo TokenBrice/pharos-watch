@@ -2264,6 +2264,18 @@
      "worker/src/lib/redemption-backstop-capacity/fixed-usd.ts",
      "worker/src/lib/redemption-backstop-capacity/reserve-sync.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed supply-ratio redemption capacity profiles to label scoringHorizon as daily only when the configured daily limit actually caps immediate capacity, matching the fixed-USD and reserve-sync resolvers.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/redemption-backstop-capacity.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/lib/redemption-backstop-capacity/supply-ratio.ts worker/src/lib/__tests__/redemption-backstop-capacity.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added regression coverage for both non-binding and binding daily limits on supply-ratio capacity profiles."
    }
   },
   {

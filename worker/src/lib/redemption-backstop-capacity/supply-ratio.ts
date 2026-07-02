@@ -24,6 +24,7 @@ export async function resolveSupplyRatioCapacity(
     );
   }
   const immediateUsd = supplyUsd * model.ratio;
+  const dailyLimitCapsCapacity = model.dailyLimitUsd != null && model.dailyLimitUsd < immediateUsd;
   const scoringUsd = model.dailyLimitUsd != null ? Math.min(immediateUsd, model.dailyLimitUsd) : immediateUsd;
   return {
     immediateCapacityUsd: immediateUsd,
@@ -37,7 +38,7 @@ export async function resolveSupplyRatioCapacity(
       immediateUsd,
       ...(model.dailyLimitUsd != null ? { dailyLimitUsd: model.dailyLimitUsd } : {}),
       scoringUsd,
-      scoringHorizon: model.dailyLimitUsd != null ? "daily" : "immediate",
+      scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
       capacityProfileConfidence: capacityConfidence,
     },
     provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
