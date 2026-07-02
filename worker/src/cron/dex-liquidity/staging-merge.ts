@@ -411,8 +411,7 @@ export async function mergeStagedPools(
     if (
       stagedPool.priceUsd != null &&
       stagedPool.priceUsd > 0 &&
-      adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-      isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd, references)
+      adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
     ) {
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({

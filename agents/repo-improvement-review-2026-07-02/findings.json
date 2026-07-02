@@ -1115,6 +1115,15 @@
     "description": "Any staged pool with priceUsd != null && > 0 that fails isPlausibleDexObservationPrice is skipped at lines 359-367 (invalid_price). The price-observation block at lines 384-402 then re-evaluates the exact same predicate (same id, price, references) for pools that already passed it, so the second call is always true and does per-row reference lookups for nothing.",
     "recommendation": "Drop the isPlausibleDexObservationPrice term from the second condition (keep the priceUsd and adjustedTvl gates). Logically unreachable branch removal; outputs unchanged.",
     "estImpact": "-2 LOC, one fewer plausibility lookup per staged pool"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the redundant staged price-observation plausibility predicate after the earlier invalid-price gate. Pools with implausible staged prices still skip before observation extraction.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
