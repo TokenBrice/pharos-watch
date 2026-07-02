@@ -315,29 +315,7 @@ async function claimDuePendingRows(
 }
 
 /** The Telegram send result enriched with the originating pending row's id/chat/attempts. */
-type PendingSendResult = { id: number; chatId: string; attempts: number; attempted?: boolean } & SendToChatResult;
-
-function buildSkippedChatRateLimitResult(
-  row: PendingAlertRow,
-  rateLimit: { notBeforeAt: number },
-  nowSec: number,
-): PendingSendResult {
-  return {
-    id: row.id,
-    chatId: row.chat_id,
-    attempts: row.attempts,
-    ok: false,
-    blocked: false,
-    retryable: true,
-    permanentFailure: false,
-    statusCode: 429,
-    errorClass: "rate_limit",
-    delivery: "retryable_failure",
-    retryAfterSec: Math.max(1, rateLimit.notBeforeAt - nowSec),
-    rateLimitScope: "chat",
-    attempted: false,
-  };
-}
+type PendingSendResult = { id: number; chatId: string; attempts: number } & SendToChatResult;
 
 /**
  * Pure classification of a single send result into the mutually-exclusive
@@ -458,7 +436,6 @@ export async function drainPendingQueue(
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
     if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) break;
-    const skippedRateLimitResults: PendingSendResult[] = [];
     const batch = pending.slice(i, i + SEND_BATCH_SIZE).filter((row) => {
       if (!isPendingRowSnoozed(row, nowSec)) return true;
       deferred++;
@@ -469,10 +446,13 @@ export async function drainPendingQueue(
     }).filter((row) => {
       const chatRateLimit = chatRateLimitedThisLoop.get(row.chat_id);
       if (!chatRateLimit) return true;
-      skippedRateLimitResults.push(buildSkippedChatRateLimitResult(row, chatRateLimit, nowSec));
+      deferred++;
+      deferUpdates.push({ id: row.id, notBeforeAt: chatRateLimit.notBeforeAt });
+      appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
+      completedIds.add(row.id);
       return false;
     });
-    if (batch.length === 0 && skippedRateLimitResults.length === 0) continue;
+    if (batch.length === 0) continue;
     if (batch.length > 0) options.markTelegramDeliveryStarted?.();
     const results = await Promise.all(
       batch.map(async (row) => {
@@ -482,13 +462,13 @@ export async function drainPendingQueue(
           replyMarkup: SNOOZE_REPLY_MARKUP,
           signal,
         });
-        return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result, attempted: true };
+        return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result };
       }),
     );
 
-    for (const result of [...skippedRateLimitResults, ...results]) {
+    for (const result of results) {
       throwIfAborted(signal);
-      if (result.attempted !== false) attempted++;
+      attempted++;
       const pendingRow = pendingById.get(result.id);
       const pushTargetStatus = (
         status: TelegramAlertTargetStatusUpdate["status"],

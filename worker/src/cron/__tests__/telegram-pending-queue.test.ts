@@ -1270,17 +1270,25 @@ describe("drainPendingQueue", () => {
 
     expect(result.attempted).toBe(4);
     expect(result.sent).toBe(3);
-    expect(result.retryQueued).toBe(2);
+    expect(result.retryQueued).toBe(1);
+    expect(result.deferred).toBe(1);
     expect(result.rateLimited).toBe(true);
     expect(result.retryAfterSec).toBe(45);
     expect(mockSendToChat).toHaveBeenCalledTimes(4);
 
+    const now = Math.floor(Date.now() / 1000);
     const retryUpdates = db.getHistory().filter((entry) =>
       entry.sql.includes("UPDATE telegram_pending_alerts") &&
       entry.sql.includes("SET attempts = attempts + 1")
     );
-    expect(retryUpdates.map((entry) => entry.binds[4])).toEqual([1, 5]);
-    expect(retryUpdates.every((entry) => entry.binds[0] === Math.floor(Date.now() / 1000) + 45)).toBe(true);
+    expect(retryUpdates.map((entry) => entry.binds[4])).toEqual([1]);
+    expect(retryUpdates[0]?.binds[0]).toBe(now + 45);
+
+    const deferUpdate = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET not_before_at = ?")
+    );
+    expect(deferUpdate?.binds).toEqual([now + 45, now, 5]);
   });
 
   it("escalates repeated pending 429s across distinct chats to global backoff", async () => {

@@ -1527,6 +1527,17 @@
     "description": "When one row for a chat gets a 429, later claimed rows for that chat are skipped via buildSkippedChatRateLimitResult (attempted:false, line 471) but are then fed through classifyPendingSendResult, which classifies them as 'retry'. persistPendingRetries executes `attempts = attempts + 1` (line 287) for them, so rows accrue attempts toward the PENDING_MAX_ATTEMPTS=20 dead-letter ceiling without any Telegram call being made, and they inflate retryQueued/rateLimited in the drain result while `attempted` correctly excludes them. A chat with a large backlog under sustained 429s burns ~2 attempts per 5-min run (one real, one skip) per row. The not_before_at deferral itself is correct; only the attempts increment and counters misattribute.",
     "recommendation": "Route skipped chat-rate-limit rows through the existing deferral path instead: push a PendingDeferUpdate (not_before_at = chat rate-limit notBeforeAt, no attempts bump, persistPendingDeferrals) and count them under `deferred`, mirroring how snoozed rows are handled at lines 461-467. Delivered-message behavior is unchanged; only the internal attempts ledger and result counters become accurate.",
     "estImpact": "accurate attempts ledger; avoids premature max-attempts dead-letters"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Routed rows skipped behind an in-run chat rate limit through the pending deferral path instead of the retry classifier, so they keep the chat backoff timestamp without incrementing attempts or retry counters.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Actual 429 sends still increment retry attempts; only rows not sent because the chat was already rate-limited are deferred."
    }
   },
   {
