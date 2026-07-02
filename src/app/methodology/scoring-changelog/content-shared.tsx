@@ -25,7 +25,7 @@ export function getScoringEntry(version: string): MethodologyChangelogEntry {
 
 function Pill({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+    <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs pharos-numeric font-medium text-foreground">
       {children}
     </span>
   );
@@ -35,6 +35,8 @@ export const changelogTableClassNames = {
   head: "h-auto whitespace-normal px-0 py-2 pr-4 text-left font-medium text-foreground last:pr-0",
   cell: "whitespace-normal px-0 py-2 pr-4 align-top last:pr-0",
   rowHeader: "whitespace-normal px-0 py-2 pr-4 align-top font-medium text-foreground last:pr-0",
+  numericHead: "h-auto whitespace-normal px-0 py-2 pr-4 text-right font-medium text-foreground last:pr-0",
+  numericCell: "pharos-numeric whitespace-normal px-0 py-2 pr-4 text-right align-top last:pr-0",
 };
 
 export function ChangelogTable({
@@ -91,7 +93,7 @@ export function WeightRow({ values }: { values: [string, string, string, string,
       <TableHeader>
         <TableRow>
           {headers.map((h) => (
-            <TableHead key={h} scope="col" className={changelogTableClassNames.head}>
+            <TableHead key={h} scope="col" className={changelogTableClassNames.numericHead}>
               {h}
             </TableHead>
           ))}
@@ -100,7 +102,7 @@ export function WeightRow({ values }: { values: [string, string, string, string,
       <TableBody>
         <TableRow>
           {values.map((v, i) => (
-            <TableCell key={headers[i]} className={changelogTableClassNames.cell}>
+            <TableCell key={headers[i]} className={changelogTableClassNames.numericCell}>
               {v}
             </TableCell>
           ))}

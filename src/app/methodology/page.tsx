@@ -111,7 +111,7 @@ export default function MethodologyPage() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] xl:items-end">
           <div className="space-y-3">
             <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.4rem]">Methodology</h1>
+              <h1 className="pharos-page-title">Methodology</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint authority,
                 liquidity, yield, and contagion risk. Treat this page like a reference manual, not a marketing

@@ -12,10 +12,10 @@ export function PegScoreDewsMethodologySection() {
     <MethodologySectionShell
       id={PEGSCORE_DEWS_SECTION_CONTENT.id}
       title={PEGSCORE_DEWS_SECTION_CONTENT.title}
-      versionBadge={{ label: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" }}
+      versionBadge={{ label: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL }}
       changelogPath={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics change."
-      changelogClassName="hover:text-amber-700 dark:text-amber-400"
+      changelogClassName="hover:text-amber-700 dark:hover:text-amber-400"
     >
       <PegScoreDewsOverview />
       <PegScoreDewsTechnicalDetails />

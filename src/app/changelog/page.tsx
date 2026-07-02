@@ -78,7 +78,7 @@ export default function ChangelogPage() {
       leadParagraphs={[
         <>
           Weekly release notes. Follow{" "}
-          <Link href="/pharoswatchbot/" className="underline underline-offset-4 hover:text-foreground">
+          <Link href="/pharoswatchbot/" className="pharos-prose-link">
             @PharosWatch on Telegram
           </Link>{" "}
           for real-time alerts, or browse the{" "}
@@ -86,7 +86,7 @@ export default function ChangelogPage() {
             href="https://github.com/TokenBrice/pharos-watch/commits/main/"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-4 hover:text-foreground"
+            className="pharos-prose-link"
           >
             full commit history
           </a>{" "}

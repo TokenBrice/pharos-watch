@@ -76,7 +76,7 @@ export function CoverageFeatureSnapshotCard({
           <div className="space-y-4">
             <div className="space-y-1.5">
               <p className="pharos-kicker">Coverage Overview</p>
-              <CardTitle as="h2" className="text-xl font-semibold leading-tight tracking-tight sm:text-[1.6rem]">
+              <CardTitle as="h2" className="pharos-display text-2xl font-bold leading-tight tracking-tight">
                 Feature breadth by surface
               </CardTitle>
             </div>
@@ -85,13 +85,13 @@ export function CoverageFeatureSnapshotCard({
                 <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                   {activeCoinTotal}
                 </p>
-                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="mt-1.5 pharos-kicker">
                   active coins tracked
                 </p>
               </div>
               <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 pb-0.5">
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <dt className="pharos-kicker">
                     Avg. reach
                   </dt>
                   <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
@@ -101,7 +101,7 @@ export function CoverageFeatureSnapshotCard({
                 </div>
                 <span aria-hidden="true" className="h-3 w-px bg-border/60" />
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <dt className="pharos-kicker">
                     Surfaces
                   </dt>
                   <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">

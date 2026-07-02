@@ -32,10 +32,10 @@ export function MintBurnFlowMethodologySection() {
           <MethodologySectionShell
             id={MINT_BURN_FLOW_SECTION_CONTENT.id}
             title={MINT_BURN_FLOW_SECTION_CONTENT.title}
-            versionBadge={{ label: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL, className: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400" }}
+            versionBadge={{ label: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL }}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
-            changelogClassName="hover:text-orange-700 dark:text-orange-400"
+            changelogClassName="hover:text-orange-700 dark:hover:text-orange-400"
           >
               <p>
                 Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns

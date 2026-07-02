@@ -79,10 +79,10 @@ export function StabilityIndexMethodologySection() {
           <MethodologySectionShell
             id={STABILITY_INDEX_SECTION_CONTENT.id}
             title={STABILITY_INDEX_SECTION_CONTENT.title}
-            versionBadge={{ label: PSI_METHODOLOGY_VERSION_LABEL, className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400" }}
+            versionBadge={{ label: PSI_METHODOLOGY_VERSION_LABEL }}
             changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
-            changelogClassName="hover:text-cyan-700 dark:text-cyan-400"
+            changelogClassName="hover:text-cyan-700 dark:hover:text-cyan-400"
           >
               <p>
                 The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It

@@ -139,10 +139,10 @@ export function MethodologyChangelogPage({
                 <div className="space-y-3">
                   <p className="pharos-kicker">Latest Version</p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
                       {toMethodologyVersionLabel(latestEntry.version)}
                     </span>
-                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
                       {formatMethodologyDisplayDate(latestEntry.date)}
                     </span>
                     {latestEntry.reconstructed && (

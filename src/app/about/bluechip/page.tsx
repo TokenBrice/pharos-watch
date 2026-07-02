@@ -39,7 +39,7 @@ function BluechipSection({
         <p className="pharos-kicker">{eyebrow}</p>
         <h2
           id={headingId}
-          className="text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.65rem]"
+          className="pharos-display text-2xl font-bold leading-tight tracking-tight text-foreground"
         >
           {title}
         </h2>

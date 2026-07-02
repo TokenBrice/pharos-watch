@@ -39,7 +39,7 @@ export default function CoveragePageClient() {
         <CardContent className="space-y-3">
           {COVERAGE_FAQ_ITEMS.map((item, i) => (
             <details key={i} className="group rounded-lg border border-border/50 bg-background/40">
-              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground select-none flex items-center justify-between">
+              <summary className="pharos-focus-ring cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-foreground select-none flex items-center justify-between">
                 {item.q}
                 <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
               </summary>

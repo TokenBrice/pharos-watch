@@ -40,7 +40,9 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
       </div>
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <p className="pharos-kicker">Market Share In View</p>
-        <p className="mt-1 text-sm text-foreground">{filteredMcapSharePct.toFixed(0)}% of active market cap</p>
+        <p className="mt-1 text-sm text-foreground">
+          <span className="pharos-numeric">{filteredMcapSharePct.toFixed(0)}%</span> of active market cap
+        </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {formatCurrency(filteredTrackedMcap)} in the current result set.
         </p>

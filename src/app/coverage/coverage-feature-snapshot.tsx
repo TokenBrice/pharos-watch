@@ -146,8 +146,8 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
                 {showLabel ? (
                   <span
                     className={cn(
-                      "truncate text-[10px] font-semibold leading-none tracking-[0.02em] tabular-nums",
-                      BAR_TEXT_CLASS,
+                      "truncate text-[10px] font-semibold leading-none tracking-[0.02em] pharos-numeric",
+                      visual?.barText ?? BAR_TEXT_CLASS,
                     )}
                   >
                     {visibleLabel} {item.count}
@@ -168,7 +168,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
               {missingPct >= BAR_LABEL_MIN_PCT ? (
                 <span
                   className={cn(
-                    "truncate text-[10px] font-semibold leading-none tracking-[0.02em] tabular-nums",
+                    "truncate text-[10px] font-semibold leading-none tracking-[0.02em] pharos-numeric",
                     BAR_TEXT_CLASS,
                   )}
                 >
@@ -186,15 +186,15 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             {summary.availableCount}
             <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
-          <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {summary.coveragePct.toFixed(0)}% count
+          <div className="mt-1.5 pharos-kicker">
+            <span className="pharos-numeric">{summary.coveragePct.toFixed(0)}%</span> count
           </div>
         </div>
         <div className="min-w-0 md:text-right">
           <div className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
             {marketCapLabel}
           </div>
-          <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <div className="mt-1.5 pharos-kicker">
             of cap
           </div>
         </div>
@@ -215,7 +215,7 @@ export function FeatureSnapshotInsight({ label, title, detail, accent }: Feature
 
   return (
     <div className={cn("rounded-lg border px-3 py-2.5", accentClasses.tile)}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className="pharos-kicker">{label}</div>
       <div className={cn("mt-1 truncate text-sm font-semibold leading-tight", accentClasses.title)}>{title}</div>
       <div className="mt-1 pharos-numeric text-xs text-muted-foreground">{detail}</div>
     </div>

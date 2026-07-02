@@ -10,10 +10,10 @@ export function LiquidityMethodologySection() {
     <MethodologySectionShell
       id={LIQUIDITY_SECTION_CONTENT.id}
       title={LIQUIDITY_SECTION_CONTENT.title}
-      versionBadge={{ label: LIQUIDITY_METHODOLOGY_VERSION_LABEL, className: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400" }}
+      versionBadge={{ label: LIQUIDITY_METHODOLOGY_VERSION_LABEL }}
       changelogPath={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes."
-      changelogClassName="hover:text-sky-700 dark:text-sky-400"
+      changelogClassName="hover:text-sky-700 dark:hover:text-sky-400"
     >
       <p>
         Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes. Aggregates

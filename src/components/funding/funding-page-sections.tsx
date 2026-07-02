@@ -172,7 +172,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
             <p className="pharos-kicker text-muted-foreground">Previous months</p>
             <ul className="flex flex-wrap gap-1.5">
               {monthlyHistory.map((m) => (
-                <li key={m.monthKey} className="pharos-control-pill gap-2">
+                <li key={m.monthKey} className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium">
                   <span className="text-muted-foreground">{m.label}</span>
                   <span className="pharos-numeric font-semibold text-foreground">
                     {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
@@ -378,9 +378,9 @@ export function SupportCtas() {
 
 function PrimaryGivethTile() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-lg border border-frost-blue/30 bg-frost-blue/8 p-5 lg:col-span-2 dark:bg-frost-blue/6">
+    <div className="flex h-full flex-col gap-3 rounded-lg border border-border/60 bg-background/40 p-5 lg:col-span-2">
       <div className="flex items-center gap-2">
-        <Heart className="h-4 w-4 text-sky-700 dark:text-frost-blue/82" />
+        <Heart className="h-4 w-4 text-foreground" />
         <p className="pharos-kicker text-muted-foreground">Recommended</p>
       </div>
       <p className="text-base font-semibold text-foreground">Recurring via Giveth</p>
@@ -391,7 +391,7 @@ function PrimaryGivethTile() {
       <div className="mt-auto pt-2">
         <Button
           asChild
-          className="min-h-10 w-full justify-between bg-frost-blue text-zinc-950 hover:bg-frost-blue/90 sm:w-auto"
+          className="min-h-10 w-full justify-between bg-foreground text-background hover:bg-foreground/90 sm:w-auto"
         >
           <a href={GIVETH_URL} target="_blank" rel="noopener noreferrer">
             Set up Giveth support

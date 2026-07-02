@@ -18,7 +18,7 @@ export function FaqSection({
         <h2 className="text-lg font-semibold">{title}</h2>
         {items.map((item) => (
           <details key={item.question} className="group border border-border/50 rounded-lg">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            <summary className="pharos-focus-ring cursor-pointer rounded-lg px-4 py-3 text-sm font-medium">
               {item.question}
             </summary>
             <p className="px-4 pb-4 text-sm text-muted-foreground">

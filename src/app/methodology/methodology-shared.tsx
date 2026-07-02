@@ -56,7 +56,7 @@ export function MethodologySectionShell({
 }: {
   id: string;
   title: string;
-  versionBadge?: { label: string; className: string };
+  versionBadge?: { label: string };
   changelogPath?: string;
   versionNote?: string;
   changelogClassName?: string;
@@ -71,7 +71,7 @@ export function MethodologySectionShell({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle as="h2">{title}</CardTitle>
           {versionBadge && (
-            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs pharos-numeric font-semibold", versionBadge.className)}>
+            <span className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs pharos-numeric font-semibold text-foreground">
               {versionBadge.label}
             </span>
           )}
@@ -121,7 +121,9 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
       {facts.map((fact) => (
         <div key={fact.label} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
           <p className="pharos-kicker">{fact.label}</p>
-          <p className="mt-2 text-sm text-foreground">{fact.value}</p>
+          <p className={cn("mt-2 text-sm text-foreground", /^\d/.test(fact.value) && "pharos-numeric")}>
+            {fact.value}
+          </p>
         </div>
       ))}
     </div>

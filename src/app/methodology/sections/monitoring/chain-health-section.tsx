@@ -16,7 +16,7 @@ export function ChainHealthMethodologySection() {
     <MethodologySectionShell
       id={CHAIN_HEALTH_SECTION_CONTENT.id}
       title={CHAIN_HEALTH_SECTION_CONTENT.title}
-      versionBadge={{ label: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, className: "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-400" }}
+      versionBadge={{ label: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL }}
       changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."
       changelogClassName="hover:text-teal-700 dark:hover:text-teal-400"

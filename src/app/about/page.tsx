@@ -295,7 +295,7 @@ export default function AboutPage() {
             <div className="space-y-3">
               <p
                 id="about-lede"
-                className="w-full max-w-none text-[clamp(1.35rem,2.35vw,2rem)] font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance]"
+                className="w-full max-w-none text-xl font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance] sm:text-2xl"
               >
                 Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
                 at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains
@@ -305,7 +305,7 @@ export default function AboutPage() {
               <p className="font-mono text-xs text-muted-foreground/80">
                 Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
               </p>
-              <p className="font-mono text-3xs uppercase tracking-[0.18em] text-muted-foreground/70">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
                 Watching the peg.
               </p>
             </div>

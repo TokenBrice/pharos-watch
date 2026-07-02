@@ -8,7 +8,7 @@ export type { MethodologyChangelogEntry };
 
 function Pill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
+    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
       {children}
     </span>
   );
@@ -31,7 +31,7 @@ export function MethodologyVersionCard({
       open={defaultOpen}
       className="pharos-card-shell group"
     >
-      <summary className="cursor-pointer list-none px-5 py-4 sm:px-6">
+      <summary className="pharos-focus-ring cursor-pointer list-none rounded-xl px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
