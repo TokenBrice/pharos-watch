@@ -150,11 +150,20 @@ function runNpmScript(args) {
 }
 
 try {
-  smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]);
-  if (smokeExit === 0 && shouldRunMobileSmoke()) {
-    smokeExit = await runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", staticExportBaseUrl]);
-  } else if (smokeExit === 0) {
-    console.log("[pages-smoke] Skipping mobile smoke (PAGES_SMOKE_INCLUDE_MOBILE=0).");
+  if (shouldRunMobileSmoke()) {
+    // Desktop and mobile smokes target the same already-running server and are
+    // independent; running them concurrently matches the CI pre-publish block
+    // and roughly halves this phase's wall-clock.
+    const [desktopExit, mobileExit] = await Promise.all([
+      runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]),
+      runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", staticExportBaseUrl]),
+    ]);
+    smokeExit = desktopExit !== 0 ? desktopExit : mobileExit;
+  } else {
+    smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]);
+    if (smokeExit === 0) {
+      console.log("[pages-smoke] Skipping mobile smoke (PAGES_SMOKE_INCLUDE_MOBILE=0).");
+    }
   }
 } finally {
   if (smokeExit !== 0) {

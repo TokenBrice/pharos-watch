@@ -10,6 +10,7 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
 import { createExecutionUnit, runCommandBatches, runShellCommand } from "../lib/command-runner.mjs";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
@@ -30,6 +31,12 @@ const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
 const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);
 const PRODUCTION_PUBLIC_ENV_PREFIXES = ["NEXT_PUBLIC_PHAROS_"];
 const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
+// Gate builds skip the prebuild artifact regeneration: every id below is
+// byte-verified fresh by check:generated-artifacts in the prebuild batch that
+// runs (and must pass) before the build batch in the same gate invocation, so
+// regenerating them again inside `npm run build` is guaranteed no-op work.
+const GATE_BUILD_GENERATED_ARTIFACTS_SKIP = GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id).join(",");
+const MERGE_GATE_DEFAULT_BUDGET_MINUTES = 8;
 const DEPENDENCY_AUDIT_COMMAND = "npm run audit:deps";
 const PRICING_PROVIDER_AUDIT_COMMAND = "npm run audit:pricing-providers";
 const DEPENDENCY_AUDIT_INPUT_PATHS = new Set(["package.json", "package-lock.json", "worker/package.json"]);
@@ -282,6 +289,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     return {
       ...baseEnv,
       ...pagesValidationEnv,
+      GENERATED_ARTIFACTS_SKIP: GATE_BUILD_GENERATED_ARTIFACTS_SKIP,
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_API_KEY: "",
@@ -322,9 +330,11 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
       ...(env.SMOKE_MOBILE_UI_SKIP_DESKTOP ? {} : { SMOKE_MOBILE_UI_SKIP_DESKTOP: "1" }),
       ...(env.SMOKE_MOBILE_UI_WORKERS ? {} : { SMOKE_MOBILE_UI_WORKERS: "3" }),
       // Local gate runs share the machine with the parallel validate matrix
-      // (and often other agent sessions); 1500 ms after-load settle flaked on
-      // data-driven tables (/flows 0/5 columns) purely under CPU contention.
-      // CI deploy lanes set their own env on idle runners and are unaffected.
+      // (and often other agent sessions); the 1500 ms default settle cap
+      // flaked on data-driven tables (/flows 0/5 columns) purely under CPU
+      // contention. The settle is adaptive (network idle + stable sample), so
+      // this generous cap costs nothing once hydration lands; CI deploy lanes
+      // set their own env on idle runners and are unaffected.
       ...(env.SMOKE_MOBILE_UI_WAIT_MS ? {} : { SMOKE_MOBILE_UI_WAIT_MS: "5000" }),
     };
   }
@@ -436,6 +446,26 @@ export async function runExecutionBatches(
   });
 }
 
+export function printMergeGateTimingSummary(commandTimings, totalMs, env = process.env, { log = console.log, warn = console.warn } = {}) {
+  if (commandTimings.length === 0) {
+    return;
+  }
+
+  const totalMinutes = totalMs / 60000;
+  log(`[merge-gate] Timing summary (wall-clock ${totalMinutes.toFixed(1)} min):`);
+  for (const { cmd, ms } of [...commandTimings].sort((a, b) => b.ms - a.ms)) {
+    log(`  ${`${(ms / 1000).toFixed(1)}s`.padStart(8)}  ${cmd}`);
+  }
+
+  const budgetMinutes = Number.parseFloat(env.MERGE_GATE_BUDGET_MINUTES ?? `${MERGE_GATE_DEFAULT_BUDGET_MINUTES}`);
+  if (Number.isFinite(budgetMinutes) && budgetMinutes > 0 && totalMinutes > budgetMinutes) {
+    warn(
+      `[merge-gate] WARNING: gate wall-clock ${totalMinutes.toFixed(1)} min exceeded the ${budgetMinutes} min budget. ` +
+        "Investigate the slowest commands above before the runtime regresses further (MERGE_GATE_BUDGET_MINUTES overrides; 0 disables).",
+    );
+  }
+}
+
 export function fetchBaseRef({ baseRef, execFile = execFileSync } = {}) {
   if (!baseRef || !baseRef.startsWith("origin/")) {
     return;
@@ -523,8 +553,26 @@ export async function runMergeGate({
     return;
   }
 
-  await runExecutionBatches(plan, changedFiles, env, { runCommandImpl });
+  const commandTimings = [];
+  const timedRunCommandImpl = async (cmd, extraEnv, opts) => {
+    const startedAt = Date.now();
+    const result = await runCommandImpl(cmd, extraEnv, opts);
+    commandTimings.push({ cmd, ms: Date.now() - startedAt });
+    return result;
+  };
+  const gateStartedAt = Date.now();
 
+  await runExecutionBatches(plan, changedFiles, env, {
+    runCommandImpl: timedRunCommandImpl,
+    // Print the timing summary on failure exits too, so slow-and-broken runs
+    // still leave a per-command cost trail.
+    exit: (status) => {
+      printMergeGateTimingSummary(commandTimings, Date.now() - gateStartedAt, env);
+      process.exit(status);
+    },
+  });
+
+  printMergeGateTimingSummary(commandTimings, Date.now() - gateStartedAt, env);
   console.log("[merge-gate] All checks passed.");
 }
 

@@ -6,8 +6,11 @@ const staticExportBaseUrl = `http://${staticExportHost}:${staticExportPort}`;
 
 export default defineConfig({
   testDir: "tests/visual",
-  fullyParallel: false,
-  workers: 1,
+  // The a11y specs are one-route-per-test with no shared state, so they can
+  // spread within a single file; 3 workers keeps the hydrated lane's API load
+  // in the same range as the smoke-ui runs that share its server.
+  fullyParallel: true,
+  workers: 3,
   use: {
     baseURL: staticExportBaseUrl,
     headless: true,

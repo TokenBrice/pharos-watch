@@ -101,10 +101,12 @@ export async function runExecutionUnit(
     }
 
     console.log(`[${label}] Running: ${cmd}`);
+    const startedAt = Date.now();
     const result = normalizeCommandResult(await runCommandImpl(cmd, getCommandEnv(command), { signal }));
     if (result.status !== 0) {
       return { status: result.status, failedCmd: cmd, aborted: result.aborted };
     }
+    console.log(`[${label}] Finished: ${cmd} (${((Date.now() - startedAt) / 1000).toFixed(1)}s)`);
   }
 
   return { status: 0, failedCmd: null, aborted: false };

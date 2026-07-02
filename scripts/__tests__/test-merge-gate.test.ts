@@ -20,10 +20,12 @@ import {
   getProductionPagesPublicEnv,
   getValidatePrebuildSkipCommands,
   getValidatePrebuildSurface,
+  printMergeGateTimingSummary,
   runExecutionBatches,
   runMergeGate,
 } from "../maintenance/test-merge-gate.mjs";
 import { getCommandEnv } from "../maintenance/test-merge-gate.mjs";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   buildCiValidateCommands,
   buildCiValidateStepPlan,
@@ -47,6 +49,7 @@ import {
 } from "../maintenance/run-merge-gate-discovery.mjs";
 
 const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
+const GATE_BUILD_GENERATED_ARTIFACTS_SKIP = GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id).join(",");
 
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
@@ -196,6 +199,7 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
+      GENERATED_ARTIFACTS_SKIP: GATE_BUILD_GENERATED_ARTIFACTS_SKIP,
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_API_KEY: "",
@@ -218,6 +222,7 @@ describe("buildCommandPlan", () => {
       CI: "true",
       NEXT_PUBLIC_GA_ID: undefined,
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: undefined,
+      GENERATED_ARTIFACTS_SKIP: GATE_BUILD_GENERATED_ARTIFACTS_SKIP,
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_API_KEY: "",
@@ -255,6 +260,7 @@ describe("buildCommandPlan", () => {
       NEXT_PUBLIC_GA_ID: "G-PROD",
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
+      GENERATED_ARTIFACTS_SKIP: GATE_BUILD_GENERATED_ARTIFACTS_SKIP,
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_API_KEY: "",
@@ -270,6 +276,37 @@ describe("buildCommandPlan", () => {
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
     });
+  });
+
+  it("prints a slowest-first timing summary and warns past the runtime budget", () => {
+    const logged: string[] = [];
+    const warned: string[] = [];
+    const io = { log: (line: string) => logged.push(line), warn: (line: string) => warned.push(line) };
+
+    printMergeGateTimingSummary(
+      [
+        { cmd: "npm run validate:prebuild", ms: 40_000 },
+        { cmd: "npm run build", ms: 193_000 },
+      ],
+      540_000,
+      testEnv(),
+      io,
+    );
+
+    expect(logged[0]).toBe("[merge-gate] Timing summary (wall-clock 9.0 min):");
+    expect(logged[1]).toContain("193.0s");
+    expect(logged[1]).toContain("npm run build");
+    expect(logged[2]).toContain("npm run validate:prebuild");
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toContain("exceeded the 8 min budget");
+
+    warned.length = 0;
+    printMergeGateTimingSummary([{ cmd: "npm run build", ms: 540_000 }], 540_000, testEnv({ MERGE_GATE_BUDGET_MINUTES: "0" }), io);
+    expect(warned).toHaveLength(0);
+
+    logged.length = 0;
+    printMergeGateTimingSummary([], 540_000, testEnv(), io);
+    expect(logged).toHaveLength(0);
   });
 
   it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {

@@ -37,7 +37,9 @@ describe("command runner", () => {
       { cmd: "coverage", env: { COVERAGE_ONLY: "1" } },
     ]);
     expect(logSpy).toHaveBeenNthCalledWith(1, "[unit] Running: first");
-    expect(logSpy).toHaveBeenNthCalledWith(2, "[unit] Running: coverage");
+    expect(logSpy).toHaveBeenNthCalledWith(2, expect.stringMatching(/^\[unit\] Finished: first \(\d+\.\ds\)$/));
+    expect(logSpy).toHaveBeenNthCalledWith(3, "[unit] Running: coverage");
+    expect(logSpy).toHaveBeenNthCalledWith(4, expect.stringMatching(/^\[unit\] Finished: coverage \(\d+\.\ds\)$/));
   });
 
   it("reports serial failures and returns the failed status", async () => {

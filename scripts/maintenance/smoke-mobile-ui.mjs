@@ -201,12 +201,38 @@ function sanitizeLabel(label) {
   return label.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "route";
 }
 
+const SETTLE_POLL_INTERVAL_MS = 250;
+
 async function waitForSettledPage(page, waitMs) {
-  if (typeof page.waitForTimeout === "function") {
-    await page.waitForTimeout(waitMs);
+  if (typeof page.waitForLoadState !== "function") {
+    await page.evaluate((timeoutMs) => new Promise((resolve) => window.setTimeout(resolve, timeoutMs)), waitMs);
     return;
   }
-  await page.evaluate((timeoutMs) => new Promise((resolve) => window.setTimeout(resolve, timeoutMs)), waitMs);
+
+  // Adaptive settle: the fixed post-load sleep this replaces existed to let
+  // client hydration land data-driven table rows before the geometry scan
+  // (/flows captured 0/5 columns under CPU contention). Waiting for network
+  // idle plus one stable row/text sample pays only the real hydration time;
+  // waitMs remains the hard cap so slow machines degrade to the old behavior
+  // instead of flaking.
+  const deadline = Date.now() + waitMs;
+  try {
+    await page.waitForLoadState("networkidle", { timeout: waitMs });
+  } catch {
+    return;
+  }
+
+  let previous = null;
+  while (Date.now() < deadline) {
+    const sample = await page.evaluate(
+      () => `${document.querySelectorAll("tbody tr").length}:${(document.body?.innerText ?? "").length}`,
+    );
+    if (previous !== null && sample === previous) {
+      return;
+    }
+    previous = sample;
+    await page.waitForTimeout(Math.min(SETTLE_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
+  }
 }
 
 function buildRouteCaptureScript() {

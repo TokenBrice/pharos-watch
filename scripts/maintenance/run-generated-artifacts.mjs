@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from "node:url";
-import { createExecutionUnit, runCommandBatches, runShellCommand } from "../lib/command-runner.mjs";
+import { createExecutionUnit, runParallelExecutionUnits, runShellCommand } from "../lib/command-runner.mjs";
 import { buildGeneratedArtifactCommands } from "../lib/automation-registry.mjs";
 
-export function buildGeneratedArtifactExecutionBatches({ check = false, skip = [] } = {}) {
-  return buildGeneratedArtifactCommands({ check, skip }).map((cmd) => [createExecutionUnit([cmd])]);
+// Each generator owns a disjoint committed artifact, so they can run
+// concurrently. 4-way keeps the browser-rendering OG builders from stacking up
+// on constrained runners while cutting the serial tail (~63s) roughly in half.
+export const GENERATED_ARTIFACTS_MAX_PARALLEL = 4;
+
+export function buildGeneratedArtifactExecutionUnits({ check = false, skip = [] } = {}) {
+  return buildGeneratedArtifactCommands({ check, skip }).map((cmd) => createExecutionUnit([cmd]));
 }
 
 function parseSkipFromEnv(env = process.env) {
@@ -29,9 +34,10 @@ export async function runGeneratedArtifacts({
     console.log(`[generated-artifacts] Skipping (verified separately by check:generated-artifacts): ${skip.join(", ")}`);
   }
 
-  await runCommandBatches(buildGeneratedArtifactExecutionBatches({ check, skip }), {
+  await runParallelExecutionUnits(buildGeneratedArtifactExecutionUnits({ check, skip }), {
     exit,
     label: check ? "generated-artifacts:check" : "generated-artifacts",
+    maxParallel: GENERATED_ARTIFACTS_MAX_PARALLEL,
     runCommandImpl,
   });
 }
