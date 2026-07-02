@@ -5966,6 +5966,18 @@
      "worker/src/lib/tape-projectors/methodology.ts",
      "shared/lib/methodology-versions/registry.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed src/lib/see-also-graph.ts no longer contains hardcoded methodology changelog route literals, so the drift-prone duplication is already absent in this checkout.",
+    "validation": [
+     "rg -n \"/methodology/.*-changelog/\" src/lib/see-also-graph.ts || true",
+     "npx vitest run src/app/coverage/page.test.tsx",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "git diff --check -- agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
@@ -6075,6 +6087,18 @@
     "recommendation": "Delete worker/src/cron/yield-history-backfill.ts together with its now-purposeless test file. Behavior-preserving by construction: no runtime code path imports it. If yield-history backfill is expected to return, the logic is trivially reconstructable from git history.",
     "estImpact": "-52 LOC product code (+~40 LOC orphan test)",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed the dead yield-history-backfill cron module and its orphan test are already absent, with no remaining buildBackfillRows/yield-history-backfill references.",
+    "validation": [
+     "test ! -e worker/src/cron/yield-history-backfill.ts && test ! -e worker/src/cron/__tests__/yield-history-backfill.test.ts && echo yield-history-backfill-files-absent",
+     "rg -n \"buildBackfillRows|yield-history-backfill|DlChartPoint|BackfillRow\" worker/src src shared functions scripts || true",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "git diff --check -- agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
