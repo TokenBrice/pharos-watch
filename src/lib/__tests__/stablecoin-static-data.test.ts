@@ -13,7 +13,6 @@ import {
   ACTIVE_PEG_CURRENCY_COUNTS,
   ACTIVE_STABLECOIN_IDS,
   ACTIVE_STABLECOIN_COUNT,
-  ACTIVE_STABLECOIN_GOVERNANCE_COUNTS,
   DEAD_STABLECOIN_COUNT,
   FROZEN_STABLECOIN_COUNT,
   HOMEPAGE_TOP_ACTIVE_STABLECOINS,
@@ -65,18 +64,13 @@ describe("static stablecoin projections", () => {
     expect(DEAD_STABLECOIN_COUNT).toBe(DEAD_STABLECOINS.length);
   });
 
-  it("keeps active governance and peg counts synced with the active registry", () => {
-    const governanceCounts = Object.fromEntries(
-      Object.entries(ACTIVE_STABLECOIN_GOVERNANCE_COUNTS).map(([key]) => [key, 0]),
-    );
+  it("keeps active peg counts synced with the active registry", () => {
     const pegCounts: Record<string, number> = {};
 
     for (const coin of ACTIVE_STABLECOINS) {
-      governanceCounts[coin.flags.governance] += 1;
       pegCounts[coin.flags.pegCurrency] = (pegCounts[coin.flags.pegCurrency] ?? 0) + 1;
     }
 
-    expect(ACTIVE_STABLECOIN_GOVERNANCE_COUNTS).toEqual(governanceCounts);
     expect(ACTIVE_PEG_CURRENCIES).toEqual(PEG_ORDER.filter((peg) => pegCounts[peg] != null));
     expect(ACTIVE_PEG_CURRENCY_COUNT).toBe(ACTIVE_PEG_CURRENCIES.length);
     expect(ACTIVE_PEG_CURRENCY_COUNTS).toEqual(pegCounts);

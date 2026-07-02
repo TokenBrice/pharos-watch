@@ -1728,6 +1728,16 @@
     "recommendation": "Delete the constant and the corresponding assertions in the sync test (the peg-count assertions in the same test block stay). Behavior-preserving: no production code imports it, so no rendered output or computed figure changes; it just removes one hand-sync obligation per registry change.",
     "estImpact": "-15 LOC; one fewer manual edit per coin addition/freeze",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the unused hand-maintained `ACTIVE_STABLECOIN_GOVERNANCE_COUNTS` export and removed the corresponding self-sync assertion while preserving the active peg-count sync checks.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/stablecoin-static-data.test.ts",
+     "npm run typecheck",
+     "rg -n \"ACTIVE_STABLECOIN_GOVERNANCE_COUNTS\" src shared worker functions tests scripts docs -g '!node_modules'"
+    ]
    }
   },
   {

@@ -8,12 +8,6 @@ export const PRE_LAUNCH_STABLECOIN_COUNT = 33;
 export const FROZEN_STABLECOIN_COUNT = 11;
 export const DEAD_STABLECOIN_COUNT = 88;
 
-export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
-  "centralized": 179,
-  "centralized-dependent": 168,
-  "decentralized": 17,
-} as const;
-
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
   "USD": 263,
   "RUB": 1,
