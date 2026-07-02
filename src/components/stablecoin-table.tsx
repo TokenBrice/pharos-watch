@@ -91,16 +91,16 @@ const OVERVIEW_ICON_SIZE_PX = 18;
 const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   rank: 40,
   name: 168,
-  price: 88,
+  price: 116,
   peg: 92,
-  mcap: 112,
+  mcap: 144,
   change24h: 92,
   change7d: 144,
-  grade: 76,
-  stability: 96,
-  liquidity: 72,
-  blacklistable: 108,
-  mintAuthority: 116,
+  grade: 124,
+  stability: 156,
+  liquidity: 104,
+  blacklistable: 124,
+  mintAuthority: 160,
   backing: 92,
   type: 92,
   flags: 72,
@@ -185,18 +185,19 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     sortKey: "price",
     // Pinned to content width below xl: fixed-layout leftover sharing otherwise
     // inflates the column past the 390px first viewport and clips the fourth
-    // peg-price decimal at rest.
-    className: "w-[88px] text-right xl:w-auto",
+    // peg-price decimal at rest. At xl+ it pins wider so four-digit prices
+    // (gold pegs, ~$4,030.1234) never overflow into the Peg column.
+    className: "w-[88px] text-right xl:w-[116px]",
   },
   {
     id: "peg",
     label: "Peg",
     sortKey: "peg",
-    className: "text-right",
+    className: "w-[92px] text-right",
     title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
   },
-  { id: "mcap", label: "Market Cap", sortKey: "mcap", className: "text-right" },
-  { id: "change24h", label: "24h", sortKey: "change24h", className: "text-right", title: "24-hour market cap change" },
+  { id: "mcap", label: "Market Cap", sortKey: "mcap", className: "w-[144px] text-right" },
+  { id: "change24h", label: "24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
   {
     id: "change7d",
     label: "7d",
@@ -209,7 +210,7 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Grade",
     headerAdornment: <MethodologyHint topic="safetyScore" />,
     sortKey: "grade",
-    className: "text-center",
+    className: "w-[124px] text-center",
     title:
       "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
   },
@@ -218,7 +219,7 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Peg Score",
     headerAdornment: <MethodologyHint topic="pegScore" />,
     sortKey: "stability",
-    className: "text-right",
+    className: "w-[156px] text-right",
     title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
   },
   {
@@ -226,14 +227,14 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Liq",
     headerAdornment: <MethodologyHint topic="liquidityScore" />,
     sortKey: "liquidity",
-    className: "text-right",
+    className: "w-[104px] text-right",
     title: "DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges",
   },
   {
     id: "blacklistable",
-    label: "Blacklistable",
+    label: "Blacklist",
     sortKey: "blacklistable",
-    className: "text-center",
+    className: "w-[124px] text-center",
     title: "Issuer blacklist/freeze control risk, including inherited dependency exposure where applicable",
   },
   {
@@ -241,17 +242,16 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Mint Score",
     headerAdornment: <MethodologyHint topic="mintAuthorityScore" />,
     sortKey: "mintAuthority",
-    className: "text-center",
+    className: "w-[160px] text-center",
     title: "Mint Authority Score (0-100): privileged-mint risk score that can drag Safety Score v8 Decentralization.",
   },
-  { id: "backing", label: "Backing", className: "text-center", title: "Collateral backing type" },
-  { id: "type", label: "Type", className: "text-center", title: "Stablecoin mechanism type" },
-  { id: "flags", label: "Flags", className: "text-center" },
+  { id: "backing", label: "Backing", className: "w-[92px] text-center", title: "Collateral backing type" },
+  { id: "type", label: "Type", className: "w-[92px] text-center", title: "Stablecoin mechanism type" },
+  { id: "flags", label: "Flags", className: "w-[72px] text-center" },
 ] as const;
 
 const OVERVIEW_HEADER_LABELS: Partial<Record<ColumnId, string>> = {
   mcap: "MC",
-  blacklistable: "Blacklist",
 };
 
 const OVERVIEW_HEADER_CLASS_NAMES: Partial<Record<ColumnId, string>> = {
