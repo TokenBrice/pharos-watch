@@ -55,14 +55,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Reassess after the owning surface stabilizes."
   },
-  "src/components/stablecoin-table-row.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Stablecoin table row now appears in the hotspot candidate set because it owns row rendering, hover/prefetch behavior, classification chips, and responsive metric cells for the main stablecoin table. This markets hero release does not touch that table surface, so keep it explicitly owned for a focused table-row decomposition pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-28",
-    "reviewAfter": "2026-09-28",
-    "nextAction": "Split stablecoin row metric cells, classification badge composition, and interaction handling into focused helpers while preserving table virtualization behavior."
-  },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
@@ -174,5 +166,13 @@
     "createdAt": "2026-06-16",
     "reviewAfter": "2026-09-16",
     "nextAction": "Extract provider metadata normalization and projection helpers from the live redemption-backstop metadata module."
+  },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Entered the maxFunctionLines candidate set during the 2026-07-02 design-consistency pass: the Analyze-group alignment added a CompareScopeHero band (already extracted as its own component), nudging the file over the top-12 line. CompareClient() itself predates the pass at ~370 lines - it owns selection state, cohort toggles, share-url sync, and live-refresh timers.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-07-02",
+    "reviewAfter": "2026-09-30",
+    "nextAction": "Extract CompareClient selection/cohort state and the live-refresh timer wiring into hooks so the component drops back under the function-lines threshold."
   }
 }
