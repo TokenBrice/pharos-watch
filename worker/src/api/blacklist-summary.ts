@@ -292,11 +292,10 @@ interface ActiveBlacklistRecords {
  * releases, so they are only used to hydrate amounts for event-derived active
  * records and must not define the active address set.
  */
-async function resolveActiveBlacklistRecords(
-  db: D1Database,
+function resolveActiveBlacklistRecords(
+  activeHistory: BlacklistEvent[],
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
-): Promise<ActiveBlacklistRecords> {
-  const activeHistory = await queryLatestEventTypeHistory(db);
+): ActiveBlacklistRecords {
   const activeRecordEvents = activeHistory;
   const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances);
   const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
@@ -438,77 +437,90 @@ async function buildBlacklistSummaryPayload(
   now = Math.floor(Date.now() / 1000),
   options?: { freshnessTsOverride?: number },
 ): Promise<BuiltBlacklistSummary> {
-    const perCoinResult = await db
-      .prepare(
-        `/* blacklist-summary-per-coin-event-counts */
-         SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
-         FROM blacklist_events
-         WHERE suppression_reason IS NULL
-         GROUP BY stablecoin, event_type`,
-      )
-      .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>();
-
-    // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
-    // page chart. Bucketing matches the JS helper in
-    // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
-    // align with the main-page chart.
-    const perCoinQuarterlyResult = await db
-      .prepare(
-        `/* blacklist-summary-quarterly-event-counts */
-         SELECT
-           stablecoin,
-           (CAST(strftime('%Y', datetime(timestamp, 'unixepoch')) AS INTEGER) * 4 +
-            CAST((CAST(strftime('%m', datetime(timestamp, 'unixepoch')) AS INTEGER) - 1) / 3 AS INTEGER)) AS quarter_sort_key,
-           event_type,
-           COUNT(*) AS n
-         FROM blacklist_events
-         WHERE suppression_reason IS NULL
-         GROUP BY stablecoin, quarter_sort_key, event_type`,
-      )
-      .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>();
-
-    // Per-coin, per-event-type counts for the last 7 days. Powers the detail-page
-    // RecentBlacklistBanner without forcing the client to fetch a 250-row event
-    // payload just to compute three counters. Time window mirrors the 7d cutoff
-    // applied client-side previously.
     const sevenDayCutoffSec = now - 7 * 86400;
-    const perCoinRecentResult = await db
-      .prepare(
-        `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
-         SELECT stablecoin, event_type, COUNT(*) AS n
-         FROM blacklist_events
-         WHERE suppression_reason IS NULL
-           AND timestamp >= ?
-         GROUP BY stablecoin, event_type`,
-      )
-      .bind(sevenDayCutoffSec)
-      .all<{ stablecoin: string; event_type: string; n: number }>();
+    const [
+      perCoinResult,
+      perCoinQuarterlyResult,
+      perCoinRecentResult,
+      aggregateRow,
+      currentBalances,
+      activeHistory,
+      gapMetrics,
+    ] = await Promise.all([
+      db
+        .prepare(
+          `/* blacklist-summary-per-coin-event-counts */
+           SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
+           FROM blacklist_events
+           WHERE suppression_reason IS NULL
+           GROUP BY stablecoin, event_type`,
+        )
+        .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>(),
 
-    // Collapse total / max(timestamp) / recoverable-gap / recent-30d / recent-24h
-    // into a single aggregate pass so we don't hit the public-events table five
-    // separate times under the WHERE suppression_reason IS NULL predicate.
-    const aggregateRow = await db
-      .prepare(
-        `/* blacklist-summary-public-aggregate */
-         SELECT
-           COUNT(*) AS total,
-           MAX(timestamp) AS max_ts,
-           SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
-           SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
-         FROM blacklist_events
-         WHERE suppression_reason IS NULL`,
-      )
-      .bind(now - 30 * 86400, now - 86400)
-      .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>();
+      // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
+      // page chart. Bucketing matches the JS helper in
+      // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
+      // align with the main-page chart.
+      db
+        .prepare(
+          `/* blacklist-summary-quarterly-event-counts */
+           SELECT
+             stablecoin,
+             (CAST(strftime('%Y', datetime(timestamp, 'unixepoch')) AS INTEGER) * 4 +
+              CAST((CAST(strftime('%m', datetime(timestamp, 'unixepoch')) AS INTEGER) - 1) / 3 AS INTEGER)) AS quarter_sort_key,
+             event_type,
+             COUNT(*) AS n
+           FROM blacklist_events
+           WHERE suppression_reason IS NULL
+           GROUP BY stablecoin, quarter_sort_key, event_type`,
+        )
+        .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>(),
+
+      // Per-coin, per-event-type counts for the last 7 days. Powers the
+      // detail-page RecentBlacklistBanner without forcing the client to fetch
+      // a 250-row event payload just to compute three counters. Time window
+      // mirrors the 7d cutoff applied client-side previously.
+      db
+        .prepare(
+          `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
+           SELECT stablecoin, event_type, COUNT(*) AS n
+           FROM blacklist_events
+           WHERE suppression_reason IS NULL
+             AND timestamp >= ?
+           GROUP BY stablecoin, event_type`,
+        )
+        .bind(sevenDayCutoffSec)
+        .all<{ stablecoin: string; event_type: string; n: number }>(),
+
+      // Collapse total / max(timestamp) / recoverable-gap / recent-30d /
+      // recent-24h into a single aggregate pass so we don't hit the
+      // public-events table five separate times under the
+      // WHERE suppression_reason IS NULL predicate.
+      db
+        .prepare(
+          `/* blacklist-summary-public-aggregate */
+           SELECT
+             COUNT(*) AS total,
+             MAX(timestamp) AS max_ts,
+             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
+             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
+           FROM blacklist_events
+           WHERE suppression_reason IS NULL`,
+        )
+        .bind(now - 30 * 86400, now - 86400)
+        .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
+
+      loadBlacklistCurrentBalanceMap(db),
+      queryLatestEventTypeHistory(db),
+      queryBlacklistGapMetrics(db, now, {
+        producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
+        cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+      }),
+    ]);
     const latestTs = aggregateRow?.max_ts ?? now;
 
-    const currentBalances = await loadBlacklistCurrentBalanceMap(db);
     const { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats } =
-      await resolveActiveBlacklistRecords(db, currentBalances);
-    const gapMetrics = await queryBlacklistGapMetrics(db, now, {
-      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
-      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
-    });
+      resolveActiveBlacklistRecords(activeHistory, currentBalances);
     const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
     const coverage = buildCoverage();
     const freezeLedgerMeta = buildFreezeLedgerMeta(currentBalances, gapMetrics, trackedStats.trackedAmountGapCount, now);

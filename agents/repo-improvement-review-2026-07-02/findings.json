@@ -2094,6 +2094,18 @@
     "description": "The payload builder awaits perCoinResult (470), perCoinQuarterlyResult (484), perCoinRecentResult (504), aggregateRow (519), loadBlacklistCurrentBalanceMap (534), queryLatestEventTypeHistory (via resolveActiveBlacklistRecords, 536), and queryBlacklistGapMetrics (537) one after another. None depends on another's result except buildBlacklistActiveRecords needing both currentBalances and the event history (which are themselves independent queries). This path runs on every snapshot-miss request and inside materializeBlacklistSummarySnapshot on the producer cron, so the build takes ~7 serial D1 round-trips where ~1-2 parallel waves would do.",
     "recommendation": "Group the independent reads in one or two Promise.all batches (the four aggregate SELECTs + currentBalances + event history + gap metrics), then compute derived values. Pure latency change; result rows and payload are identical. This is a request handler, not a cron fetch loop, so the 6-connection cron rule does not constrain it.",
     "estImpact": "~4-5 fewer serial D1 round-trips per summary build"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Batched blacklist-summary's independent event aggregate queries, current-balance load, active-history query, and gap metrics query in one Promise.all, then resolved active records after both balances and history were available.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/blacklist-summary.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/blacklist-summary.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Converted resolveActiveBlacklistRecords into a pure helper over active history and current balances so the two source reads can run concurrently."
    }
   },
   {
