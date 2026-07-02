@@ -2019,6 +2019,19 @@
     "description": "resolveActiveBlacklistRecords computes `latestByAddr = deriveLatestByIdentity(activeHistory)` then `activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr`. When activeHistory is non-empty the ternary picks activeHistory and latestByAddr is unused; when it is empty, deriveLatestByIdentity([]) is also [], so both branches are equal. The expression is always equivalent to `activeRecordEvents = activeHistory`. deriveLatestByIdentity (lines 141-153) and isLaterBlacklistEvent (lines 134-139) have no other callers in worker/ or shared/ (verified by grep), and buildBlacklistActiveRecords in shared/lib/blacklist-active-records.ts already replays the full ordered event stream itself, so passing raw history is the correct behavior.",
     "recommendation": "Delete deriveLatestByIdentity, isLaterBlacklistEvent, and the ternary; assign activeRecordEvents = activeHistory directly. Output is provably identical; also saves a full Map pass over the active-history result set on the fallback/materialize path.",
     "estImpact": "-~30 LOC; skips an O(n) pass per summary build"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unreachable deriveLatestByIdentity fallback and isLaterBlacklistEvent helper, passing active blacklist history directly into active-record construction.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/blacklist-summary.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "if rg -n \"deriveLatestByIdentity|isLaterBlacklistEvent\" worker/src/api/blacklist-summary.ts worker/src/api/__tests__/blacklist-summary.test.ts shared src functions scripts; then exit 1; fi",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/blacklist-summary.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The removed fallback returned the same empty array when history was empty and was ignored whenever history was non-empty."
    }
   },
   {

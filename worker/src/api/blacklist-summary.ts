@@ -38,7 +38,6 @@ import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import {
   buildBlacklistActiveRecords,
-  buildBlacklistRecordIdentityKey,
   computeBlacklistActiveSummaryStats,
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
@@ -128,27 +127,6 @@ function sourceCategory(source: string): "bootstrap" | "current" | "destroy" | "
   if (source === "destroy_event") return "destroy";
   if (source === "current_balance") return "current";
   return "other";
-}
-
-function isLaterBlacklistEvent(candidate: BlacklistEvent, current: BlacklistEvent): boolean {
-  if (candidate.timestamp !== current.timestamp) {
-    return candidate.timestamp > current.timestamp;
-  }
-  return candidate.id.localeCompare(current.id) > 0;
-}
-
-function deriveLatestByIdentity(events: BlacklistEvent[]): BlacklistEvent[] {
-  const latest = new Map<string, BlacklistEvent>();
-
-  for (const event of events) {
-    const key = buildBlacklistRecordIdentityKey(event);
-    const current = latest.get(key);
-    if (!current || isLaterBlacklistEvent(event, current)) {
-      latest.set(key, event);
-    }
-  }
-
-  return [...latest.values()];
 }
 
 function isDestroySnapshot(snapshot: BlacklistCurrentBalanceSnapshot): boolean {
@@ -319,8 +297,7 @@ async function resolveActiveBlacklistRecords(
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
 ): Promise<ActiveBlacklistRecords> {
   const activeHistory = await queryLatestEventTypeHistory(db);
-  const latestByAddr = deriveLatestByIdentity(activeHistory);
-  const activeRecordEvents = activeHistory.length > 0 ? activeHistory : latestByAddr;
+  const activeRecordEvents = activeHistory;
   const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances);
   const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
   const frozenAddresses = activeRecords.filter((record) => record.destroyedAt == null).length;
