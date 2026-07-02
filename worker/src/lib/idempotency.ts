@@ -13,6 +13,7 @@ interface IdempotencyRecord {
 const PENDING_RESPONSE_STATUS = -1;
 const FAILED_RESPONSE_STATUS = -2;
 const FAILED_RESPONSE_HTTP_STATUS = 500;
+const PENDING_TAKEOVER_AFTER_SECONDS = 20 * 60;
 const FAILED_RESPONSE_MESSAGE =
   "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.";
 
@@ -61,6 +62,38 @@ async function loadIdempotencyRecord(db: D1Database, action: string, key: string
     .first<IdempotencyRecord>();
 }
 
+async function takeOverAbandonedPendingReservation(
+  db: D1Database,
+  action: string,
+  key: string,
+  fingerprint: string,
+  now: number,
+): Promise<boolean> {
+  const cutoff = now - PENDING_TAKEOVER_AFTER_SECONDS;
+
+  try {
+    const takeoverResult = await db
+      .prepare(
+        "UPDATE admin_idempotency_keys SET request_hash = ?, response_status = ?, response_body = ?, created_at = ? WHERE action = ? AND idempotency_key = ? AND response_status = ? AND created_at < ?",
+      )
+      .bind(fingerprint, PENDING_RESPONSE_STATUS, "", now, action, key, PENDING_RESPONSE_STATUS, cutoff)
+      .run();
+
+    return (takeoverResult.meta?.changes ?? 0) > 0;
+  } catch (e) {
+    logWorkerEvent({
+      scope: "admin",
+      level: "warn",
+      event: "idempotency_pending_takeover_failed",
+      route: action,
+      source: "admin_idempotency_keys",
+      message: "Idempotency pending reservation takeover failed",
+      error: e,
+    });
+    return false;
+  }
+}
+
 export async function runIdempotentAdminAction(
   db: D1Database,
   action: string,
@@ -88,6 +121,16 @@ export async function runIdempotentAdminAction(
     return errorResponse(500, "Failed to reserve idempotency key");
   }
 
+  let ownsReservation = insertedReservation;
+  if (existing.response_status === PENDING_RESPONSE_STATUS && !ownsReservation) {
+    ownsReservation = await takeOverAbandonedPendingReservation(db, action, key, fingerprint, now);
+    if (ownsReservation) {
+      existing.request_hash = fingerprint;
+      existing.response_body = "";
+      existing.created_at = now;
+    }
+  }
+
   if (existing.request_hash !== fingerprint) {
     if (insertedReservation) {
       await db
@@ -109,7 +152,7 @@ export async function runIdempotentAdminAction(
     return errorResponse(409, "Idempotency key reuse with different request payload");
   }
 
-  if (existing.response_status === PENDING_RESPONSE_STATUS && !insertedReservation) {
+  if (existing.response_status === PENDING_RESPONSE_STATUS && !ownsReservation) {
     return withIdempotencyHeaders(errorResponse(409, "Idempotency key is currently in progress"), key, true);
   }
 

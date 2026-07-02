@@ -8,19 +8,25 @@ interface TestIdempotencyRecord {
   created_at: number;
 }
 
-function makeIdempotencyDb(options: {
-  failExecutionCleanupDeleteOnce?: boolean;
-  failFailureStateUpdateOnce?: boolean;
-} = {}): D1Database & {
+function makeIdempotencyDb(
+  options: {
+    failExecutionCleanupDeleteOnce?: boolean;
+    failFailureStateUpdateOnce?: boolean;
+  } = {},
+): D1Database & {
   getHistory(): Array<{ sql: string; binds: unknown[] }>;
   getRecord(action: string, key: string): TestIdempotencyRecord | undefined;
+  setRecord(action: string, key: string, record: TestIdempotencyRecord): void;
 } {
-  const store = new Map<string, {
-    request_hash: string;
-    response_status: number;
-    response_body: string;
-    created_at: number;
-  }>();
+  const store = new Map<
+    string,
+    {
+      request_hash: string;
+      response_status: number;
+      response_body: string;
+      created_at: number;
+    }
+  >();
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   let failExecutionCleanupDeleteOnce = options.failExecutionCleanupDeleteOnce ?? false;
   let failFailureStateUpdateOnce = options.failFailureStateUpdateOnce ?? false;
@@ -58,6 +64,30 @@ function makeIdempotencyDb(options: {
           }
           return { success: true, meta: { changes: 0 } };
         }
+        if (sql.includes("UPDATE admin_idempotency_keys SET request_hash")) {
+          const [requestHash, status, body, createdAt, action, idemKey, expectedStatus, createdBefore] = args as [
+            string,
+            number,
+            string,
+            number,
+            string,
+            string,
+            number,
+            number,
+          ];
+          const key = `${action}:${idemKey}`;
+          const existing = store.get(key);
+          if (!existing || existing.response_status !== expectedStatus || existing.created_at >= createdBefore) {
+            return { success: true, meta: { changes: 0 } };
+          }
+          store.set(key, {
+            request_hash: requestHash,
+            response_status: status,
+            response_body: body,
+            created_at: createdAt,
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
         if (sql.includes("UPDATE admin_idempotency_keys SET response_status")) {
           const [status, body, createdAt, action, idemKey, requestHash, expectedStatus] = args as [
             number,
@@ -75,9 +105,9 @@ function makeIdempotencyDb(options: {
           const key = `${action}:${idemKey}`;
           const existing = store.get(key);
           if (
-            !existing
-            || existing.request_hash !== requestHash
-            || (typeof expectedStatus === "number" && existing.response_status !== expectedStatus)
+            !existing ||
+            existing.request_hash !== requestHash ||
+            (typeof expectedStatus === "number" && existing.response_status !== expectedStatus)
           ) {
             return { success: true, meta: { changes: 0 } };
           }
@@ -91,14 +121,19 @@ function makeIdempotencyDb(options: {
         }
         if (sql.includes("DELETE FROM admin_idempotency_keys")) {
           if (
-            sql.includes("request_hash = ?")
-            && sql.includes("response_status = ?")
-            && failExecutionCleanupDeleteOnce
+            sql.includes("request_hash = ?") &&
+            sql.includes("response_status = ?") &&
+            failExecutionCleanupDeleteOnce
           ) {
             failExecutionCleanupDeleteOnce = false;
             throw new Error("pending cleanup delete failed");
           }
-          const [action, idemKey, requestHash, expectedStatus] = args as [string, string, string | undefined, number | undefined];
+          const [action, idemKey, requestHash, expectedStatus] = args as [
+            string,
+            string,
+            string | undefined,
+            number | undefined,
+          ];
           const key = `${action}:${idemKey}`;
           const existing = store.get(key);
           if (!existing) {
@@ -125,9 +160,13 @@ function makeIdempotencyDb(options: {
     dump: async () => new ArrayBuffer(0),
     getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
     getRecord: (action: string, key: string) => store.get(`${action}:${key}`),
+    setRecord: (action: string, key: string, record: TestIdempotencyRecord) => {
+      store.set(`${action}:${key}`, { ...record });
+    },
   } as unknown as D1Database & {
     getHistory(): Array<{ sql: string; binds: unknown[] }>;
     getRecord(action: string, key: string): TestIdempotencyRecord | undefined;
+    setRecord(action: string, key: string, record: TestIdempotencyRecord): void;
   };
 }
 
@@ -160,11 +199,12 @@ describe("runIdempotentAdminAction", () => {
 
   it("returns 409 for in-flight key and does not execute again", async () => {
     const db = makeIdempotencyDb();
-    const makeRequest = () => new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-inflight" },
-      body: JSON.stringify({ batch: 1 }),
-    });
+    const makeRequest = () =>
+      new Request("https://x/api/backfill-depegs?batch=1", {
+        method: "POST",
+        headers: { "Idempotency-Key": "abc-inflight" },
+        body: JSON.stringify({ batch: 1 }),
+      });
 
     let calls = 0;
     let markFirstStarted: (() => void) | null = null;
@@ -197,6 +237,58 @@ describe("runIdempotentAdminAction", () => {
     const firstResponse = await first;
     expect(firstResponse.status).toBe(200);
     expect(calls).toBe(1);
+  });
+
+  it("takes over an abandoned pending reservation older than the execution window", async () => {
+    const now = 1_800_000_000;
+    const dateSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+
+    try {
+      const db = makeIdempotencyDb();
+      db.setRecord("backfill-depegs", "abc-abandoned", {
+        request_hash: "stale-request-hash",
+        response_status: -1,
+        response_body: "",
+        created_at: now - 20 * 60 - 1,
+      });
+
+      const request = new Request("https://x/api/backfill-depegs?batch=2", {
+        method: "POST",
+        headers: { "Idempotency-Key": "abc-abandoned" },
+        body: JSON.stringify({ batch: 2 }),
+      });
+
+      let calls = 0;
+      const execute = async () => {
+        calls++;
+        return new Response(JSON.stringify({ ok: true, calls }), {
+          status: 202,
+          headers: { "Content-Type": "application/json" },
+        });
+      };
+
+      const response = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
+
+      expect(response.status).toBe(202);
+      expect(response.headers.get("X-Idempotent-Replay")).toBe("false");
+      expect(calls).toBe(1);
+
+      const record = db.getRecord("backfill-depegs", "abc-abandoned");
+      expect(record?.request_hash).not.toBe("stale-request-hash");
+      expect(record?.response_status).toBe(202);
+      expect(record?.created_at).toBe(now);
+
+      const takeover = db
+        .getHistory()
+        .find((entry) => entry.sql.includes("UPDATE admin_idempotency_keys SET request_hash"));
+      expect(takeover?.binds[3]).toBe(now);
+      expect(takeover?.binds[4]).toBe("backfill-depegs");
+      expect(takeover?.binds[5]).toBe("abc-abandoned");
+      expect(takeover?.binds[6]).toBe(-1);
+      expect(takeover?.binds[7]).toBe(now - 20 * 60);
+    } finally {
+      dateSpy.mockRestore();
+    }
   });
 
   it("treats equivalent query params with different ordering as the same request", async () => {
@@ -338,12 +430,16 @@ describe("runIdempotentAdminAction", () => {
     await expect(runIdempotentAdminAction(db, "backfill-depegs", request, execute)).rejects.toThrow("boom");
 
     const history = db.getHistory();
-    expect(history.some((entry) =>
-      entry.sql.includes("UPDATE admin_idempotency_keys SET response_status")
-      && entry.binds[0] === -2)).toBe(true);
-    expect(history.filter((entry) =>
-      entry.sql.includes("DELETE FROM admin_idempotency_keys")
-      && entry.sql.includes("request_hash = ?")).length).toBeGreaterThanOrEqual(2);
+    expect(
+      history.some(
+        (entry) => entry.sql.includes("UPDATE admin_idempotency_keys SET response_status") && entry.binds[0] === -2,
+      ),
+    ).toBe(true);
+    expect(
+      history.filter(
+        (entry) => entry.sql.includes("DELETE FROM admin_idempotency_keys") && entry.sql.includes("request_hash = ?"),
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
     expect(JSON.parse(warnSpy.mock.calls[0]?.[0] as string)).toMatchObject({
       scope: "admin",
       level: "warn",

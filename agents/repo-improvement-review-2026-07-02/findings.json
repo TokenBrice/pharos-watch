@@ -7012,6 +7012,18 @@
     "description": "runIdempotentAdminAction reserves the key with response_status=-1 (PENDING), then runs execute(). Every failure path that runs code cleans up, but if the isolate dies mid-execute (Cloudflare wall-clock kill — plausible for 'trigger-digest' in admin-actions.ts:24, which runs a multi-minute digest inline — eviction, or crash), the PENDING row survives with no TTL. All subsequent retries with the same key hit line 112 (existing PENDING, insertedReservation=false) and get 409 'Idempotency key is currently in progress'. The only cleanup is the 7-day created_at prune at line 244, which itself only runs on the success path of some other keyed request. The client's documented recovery ('retry with a new Idempotency-Key') is only messaged for the FAILED state, not this one.",
     "recommendation": "Treat PENDING rows older than a bounded max execution time (e.g., 20 min > any admin action) as abandoned: before returning the 409, attempt a single-statement takeover UPDATE ... SET request_hash=?, created_at=? WHERE action=? AND idempotency_key=? AND response_status=-1 AND created_at<? and proceed as the reservation owner if changes>0. Normal-path responses are byte-identical; only the currently-wedged state changes (from a permanent 409 to a working retry).",
     "estImpact": "unwedges admin idempotency keys after isolate death"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a bounded 20-minute takeover path for abandoned admin idempotency `PENDING` rows. Retries now attempt one guarded D1 update on action, idempotency key, pending status, and stale `created_at`; only a successful `changes > 0` takeover proceeds as the reservation owner.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/idempotency.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/idempotency.ts worker/src/lib/__tests__/idempotency.test.ts"
+    ],
+    "notes": "Fresh in-flight pending requests still return 409, and completed replay/conflicting reuse behavior remains unchanged."
    }
   },
   {
