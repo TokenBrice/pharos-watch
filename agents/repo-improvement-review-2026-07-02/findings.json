@@ -4757,6 +4757,18 @@
     "alsoFiles": [
      "shared/lib/redemption-backstop-configs/shared.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Redemption backstop doc-source, capacity, cost, and top-level config schemas now carry ZodType annotations tied to the runtime TypeScript shapes.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/redemption-backstop-consistency.test.ts",
+     "npm run typecheck",
+     "npm run typecheck:worker",
+     "npx eslint shared/lib/redemption-backstop-configs/schema.ts --max-warnings=0",
+     "git diff --check -- shared/lib/redemption-backstop-configs/schema.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
@@ -4830,6 +4842,18 @@
     "description": "schema.ts:19-32 defines NonNegativeNumberSchema, PositiveNumberSchema, and a 13-line HttpUrlSchema (url + http/https-protocol refine) that are character-for-character identical to shared/types/validators.ts (re-exported through shared/types/index.ts, which schema.ts already imports from at line 2-15). Only RatioSchema genuinely differs (gt(0).lte(1) here vs min(0).max(1) in redemption.ts) and must stay local.",
     "recommendation": "Import HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema from \"../../types\" and delete the local copies, keeping RatioSchema local. Identical zod chains, so parse behavior and error messages are unchanged; this file is only consumed by the validation scripts.",
     "estImpact": "-16 LOC, one canonical URL validator"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "schema.ts now reuses the shared HttpUrl, NonNegativeNumber, and PositiveNumber validators while keeping the redemption-specific RatioSchema local.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/redemption-backstop-consistency.test.ts",
+     "npm run typecheck",
+     "npm run typecheck:worker",
+     "npx eslint shared/lib/redemption-backstop-configs/schema.ts --max-warnings=0",
+     "git diff --check -- shared/lib/redemption-backstop-configs/schema.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

@@ -12,24 +12,17 @@ import {
   RedemptionRouteExitCorrelationSchema,
   RedemptionRouteFamilySchema,
   RedemptionSettlementModelSchema,
+  HttpUrlSchema,
+  NonNegativeNumberSchema,
+  PositiveNumberSchema,
 } from "../../types";
+import type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel } from "./shared";
+
+type RedemptionBackstopDocSourceConfig = NonNullable<RedemptionBackstopConfig["docs"]>[number];
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const RatioSchema = z.number().finite().gt(0).lte(1);
-const NonNegativeNumberSchema = z.number().finite().nonnegative();
-const PositiveNumberSchema = z.number().finite().positive();
 const StaticCapacityConfidenceSchema = RedemptionCapacityConfidenceSchema.exclude(["live-direct", "live-proxy"]);
-const HttpUrlSchema = z
-  .string()
-  .url()
-  .refine((value) => {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, "Expected an http(s) URL");
 const ReviewedAtSchema = z
   .string()
   .regex(REVIEWED_AT_PATTERN, "Expected YYYY-MM-DD")
@@ -53,13 +46,13 @@ const RedemptionDocSourceSupportsSchema = z.array(RedemptionDocSourceSupportSche
   }
 });
 
-const RedemptionDocSourceSchema = z.strictObject({
+const RedemptionDocSourceSchema: z.ZodType<RedemptionBackstopDocSourceConfig> = z.strictObject({
   label: z.string().min(1),
   url: HttpUrlSchema,
   supports: RedemptionDocSourceSupportsSchema.optional(),
 });
 
-const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
+const RedemptionCapacityModelSchema: z.ZodType<RedemptionCapacityModel> = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("supply-full"),
     confidence: StaticCapacityConfidenceSchema.optional(),
@@ -99,7 +92,7 @@ const RedemptionCostShapeSchema = {
   feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
-const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
+const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
     feeBps: NonNegativeNumberSchema,
@@ -116,7 +109,7 @@ const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export const RedemptionBackstopConfigSchema = z
+export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig> = z
   .strictObject({
     routeFamily: RedemptionRouteFamilySchema,
     accessModel: RedemptionAccessModelSchema,
