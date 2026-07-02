@@ -27,7 +27,7 @@ vi.mock("../../yield-sync/cache", () => ({
 
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
-import { fetchDataSources } from "../fetch-primary";
+import { buildCurveLookups, fetchDataSources } from "../fetch-primary";
 
 function createMockDb(): D1Database {
   return {
@@ -205,5 +205,100 @@ describe("fetchDataSources", () => {
     const result = await fetchDataSources(null, createMockDb());
     expect(result).not.toBeNull();
     expect(result!.dlYieldsAvailable).toBe(true);
+  });
+});
+
+describe("buildCurveLookups", () => {
+  it("uses one computed Curve USD balance surface for ratio and balance details", async () => {
+    const curvePayloads = [
+      {
+        data: {
+          poolData: [
+            {
+              address: "0x1111111111111111111111111111111111111111",
+              name: "USDC/USDT",
+              amplificationCoefficient: "1000",
+              coins: [
+                {
+                  symbol: "USDC",
+                  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                  poolBalance: "120000000000",
+                  usdPrice: 1,
+                  decimals: "6",
+                },
+                {
+                  symbol: "USDT",
+                  address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                  poolBalance: "80000000000",
+                  usdPrice: 1,
+                  decimals: "6",
+                },
+              ],
+              usdTotal: 200_000,
+              isMetaPool: false,
+              assetTypeName: "USD",
+              totalSupply: 0,
+              registryId: "factory-stable-ng",
+              isBroken: false,
+              virtualPrice: "1",
+              usdTotalExcludingBasePool: 0,
+              creationTs: 123,
+              basePoolAddress: null,
+              gaugeCrvApy: null,
+            },
+          ],
+        },
+      },
+    ];
+    const symbolToIds = new Map([
+      ["USDC", ["usd-coin"]],
+      ["USDT", ["tether"]],
+    ]);
+    const symbolToChainScopedIds = new Map([
+      ["USDC", new Map([["ethereum", ["usd-coin"]]])],
+      ["USDT", new Map([["ethereum", ["tether"]]])],
+    ]);
+    const chainAddressToId = new Map([
+      ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usd-coin"],
+      ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "tether"],
+    ]);
+
+    const { curvePoolMap, priceObservations } = await buildCurveLookups(
+      curvePayloads,
+      symbolToIds,
+      symbolToChainScopedIds,
+      chainAddressToId,
+    );
+
+    const entry = curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111");
+    expect(entry).toBeDefined();
+    expect(curvePoolMap.get("ethereum:USDC-USDT")).toBe(entry);
+    expect(entry!.balanceRatio).toBeCloseTo(80_000 / 120_000, 5);
+    expect(entry!.balanceDetails).toEqual([
+      { symbol: "USDC", balancePct: 60, isTracked: true },
+      { symbol: "USDT", balancePct: 40, isTracked: true },
+    ]);
+    expect(priceObservations.get("usd-coin")).toEqual([
+      expect.objectContaining({
+        price: 1,
+        tvl: 200_000,
+        chain: "ethereum",
+        protocol: "curve",
+        poolKey: "ethereum:0x1111111111111111111111111111111111111111",
+        identityConfidence: "exact",
+        sourceFamily: "dl",
+      }),
+    ]);
+    expect(priceObservations.get("tether")).toEqual([
+      expect.objectContaining({
+        price: 1,
+        tvl: 200_000,
+        chain: "ethereum",
+        protocol: "curve",
+        poolKey: "ethereum:0x1111111111111111111111111111111111111111",
+        identityConfidence: "exact",
+        sourceFamily: "dl",
+      }),
+    ]);
   });
 });

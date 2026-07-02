@@ -245,18 +245,16 @@ export async function buildCurveLookups(
         const A = parseInt(pool.amplificationCoefficient, 10);
         if (isNaN(A)) continue;
 
-        // Compute balance ratio (min/max) — 1.0 = perfectly balanced
-        const totalUsd = pool.coins.reduce((sum, c) => {
-          const raw = parseFloat(c.poolBalance);
-          const decimals = parseInt(c.decimals, 10);
-          return sum + (isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (c.usdPrice || 1));
-        }, 0);
+        const coinBalances = pool.coins.map((coin) => {
+          const raw = parseFloat(coin.poolBalance);
+          const decimals = parseInt(coin.decimals, 10);
+          const usdBalance = isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (coin.usdPrice || 1);
+          return { coin, usdBalance };
+        });
 
-        const balances = pool.coins.map((c) => {
-          const raw = parseFloat(c.poolBalance);
-          const decimals = parseInt(c.decimals, 10);
-          return isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (c.usdPrice || 1);
-        }).filter((b) => b > 0);
+        // Compute balance ratio (min/max) — 1.0 = perfectly balanced
+        const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + usdBalance, 0);
+        const balances = coinBalances.map(({ usdBalance }) => usdBalance).filter((balance) => balance > 0);
 
         let balanceRatio = 1;
         if (balances.length >= 2) {
@@ -266,16 +264,11 @@ export async function buildCurveLookups(
         }
 
         // v2: Per-token balance details
-        const balanceDetails = pool.coins.map((c) => {
-          const raw = parseFloat(c.poolBalance);
-          const decimals = parseInt(c.decimals, 10);
-          const usdBal = isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (c.usdPrice || 1);
-          return {
-            symbol: c.symbol,
-            balancePct: totalUsd > 0 ? Math.round((usdBal / totalUsd) * 1000) / 10 : 0,
-            isTracked: symbolToIds.has(normalizeDexSymbol(c.symbol)),
-          };
-        });
+        const balanceDetails = coinBalances.map(({ coin, usdBalance }) => ({
+          symbol: coin.symbol,
+          balancePct: totalUsd > 0 ? Math.round((usdBalance / totalUsd) * 1000) / 10 : 0,
+          isTracked: symbolToIds.has(normalizeDexSymbol(coin.symbol)),
+        }));
 
         // v2: Use metapool-adjusted TVL when available
         const metapoolAdjustedTvl =

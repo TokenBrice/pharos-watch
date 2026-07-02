@@ -1031,6 +1031,15 @@
     "description": "For every Curve pool across all CURVE_CHAINS, the same `parseFloat(poolBalance)/10**decimals * usdPrice` expression is evaluated three separate times over pool.coins: for totalUsd (lines 250-254), for balances/balanceRatio (lines 256-260), and for balanceDetails (lines 270-279). Curve returns thousands of pools per run, so this triples parseFloat/parseInt work in the hot parsing loop.",
     "recommendation": "Compute `usdBalances = pool.coins.map(...)` once and derive totalUsd, the >0-filtered balances, and balanceDetails from it. Identical arithmetic and outputs; pure dedup.",
     "estImpact": "-15 LOC, ~3x fewer parses in the Curve loop"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Computed each Curve coin's USD balance once per pool in buildCurveLookups and reused that balance surface for total USD, balance ratio, and balance detail percentages.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/fetch-primary.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
