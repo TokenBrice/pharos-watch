@@ -14,28 +14,6 @@ import {
   START_HERE_SHORTCUTS,
 } from "@/lib/start-here-content";
 
-const GOAL_TONE_MAP = {
-  amber: {
-    badge:
-      "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:border-amber-400/35 dark:bg-amber-400/10 dark:text-amber-100",
-    chip: "border-amber-500/25 bg-amber-500/10 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-100/92",
-  },
-  emerald: {
-    badge:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/35 dark:bg-emerald-400/10 dark:text-emerald-100",
-    chip: "border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-100/92",
-  },
-  violet: {
-    badge:
-      "border-violet-500/30 bg-violet-500/10 text-violet-800 dark:border-violet-400/35 dark:bg-violet-400/10 dark:text-violet-100",
-    chip: "border-violet-500/25 bg-violet-500/10 text-violet-800 dark:border-violet-400/25 dark:bg-violet-400/10 dark:text-violet-100/92",
-  },
-  frost: {
-    badge: "border-frost-blue/35 bg-frost-blue/10 text-sky-900 dark:text-white",
-    chip: "border-frost-blue/25 bg-frost-blue/10 text-sky-900 dark:text-white/92",
-  },
-} as const;
-
 /** Index boundary: glossary items before this index are foundational terms (larger type). */
 const GLOSSARY_FOUNDATION_COUNT = 2;
 
@@ -47,28 +25,21 @@ function GoalCard({
   href,
   cta,
   destinations,
-  tone: toneName,
   icon: Icon,
 }: (typeof START_HERE_GOALS)[number] & { order: number }) {
   const goalId = slugifyId(title);
   const titleId = `start-goal-${goalId}-title`;
-  const tone = GOAL_TONE_MAP[toneName];
 
   return (
     <Link
       href={href}
       aria-label={`${title} — ${cta}`}
       aria-labelledby={titleId}
-      className="pharos-focus-ring pharos-interactive-card group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-black/8 bg-[linear-gradient(180deg,oklch(0.995_0.006_248_/_0.92),oklch(0.945_0.01_248_/_0.98))] p-4 text-left transition-[transform,border-color,box-shadow] duration-300 hover:border-black/14 dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.018_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] dark:hover:border-white/16 sm:p-5"
+      className="pharos-focus-ring pharos-interactive-card pharos-card-shell group flex min-w-0 flex-col gap-2.5 p-4 text-left sm:p-5"
     >
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-3">
-          <span
-            className={cn(
-              "inline-flex rounded-full border px-2.5 py-1 pharos-numeric text-[11px] font-semibold tracking-[0.16em]",
-              tone.badge,
-            )}
-          >
+          <span className="inline-flex rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 pharos-numeric text-[11px] font-semibold tracking-[0.16em] text-muted-foreground">
             {String(order + 1).padStart(2, "0")}
           </span>
           <h3
@@ -78,23 +49,22 @@ function GoalCard({
             {title}
           </h3>
         </div>
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-black/8 bg-black/[0.025] text-muted-foreground transition-colors group-hover:text-foreground dark:border-white/10 dark:bg-white/[0.03]">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground transition-colors group-hover:text-foreground">
           <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
       </div>
 
-      <p className="relative text-sm leading-7 text-muted-foreground">
+      <p className="text-sm leading-7 text-muted-foreground">
         <span className="sm:hidden">{mobileDescription ?? description}</span>
         <span className="hidden sm:inline">{description}</span>
       </p>
 
-      <div className="relative flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {destinations.map((destination, index) => (
           <span
             key={destination}
             className={cn(
-              "rounded-full border border-black/8 bg-black/[0.025] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]",
-              index === 0 && tone.chip,
+              "rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
               index > 1 && "hidden sm:inline-flex",
             )}
           >
@@ -103,7 +73,7 @@ function GoalCard({
         ))}
       </div>
 
-      <span className="relative mt-auto inline-flex items-center gap-1 text-sm font-medium text-foreground">
+      <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-foreground">
         {cta}
         <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
       </span>
@@ -146,21 +116,16 @@ function HeroEscapeHatch({ className, desktop = false }: { className?: string; d
 
 function StartHeroSection() {
   return (
-    <section
-      aria-label="Route planner"
-      className="pharos-card-shell relative overflow-hidden border-black/8 bg-[linear-gradient(128deg,oklch(0.975_0.01_248_/_0.98),oklch(0.93_0.018_248_/_0.99)_56%,oklch(0.95_0.024_52_/_0.98))] px-4 py-5 text-foreground dark:border-white/8 dark:bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] sm:px-6 sm:py-7 lg:px-7 lg:py-8"
-    >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(oklch(0_0_0_/_0.05)_1px,transparent_1px),linear-gradient(90deg,oklch(0_0_0_/_0.04)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.18] dark:bg-[linear-gradient(oklch(1_0_0_/_0.06)_1px,transparent_1px),linear-gradient(90deg,oklch(1_0_0_/_0.05)_1px,transparent_1px)]" />
-
-      <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(25rem,1.05fr)] lg:gap-8 xl:grid-cols-[minmax(0,0.6fr)_minmax(32rem,1.4fr)]">
+    <section aria-label="Route planner" className="text-foreground">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(25rem,1.05fr)] lg:gap-8 xl:grid-cols-[minmax(0,0.6fr)_minmax(32rem,1.4fr)]">
         <div className="space-y-6 lg:self-center lg:space-y-7">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">New to Pharos?</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+              <p className="pharos-kicker">New to Pharos?</p>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
-            <h2 className="flex max-w-full flex-col gap-1 text-[clamp(1.85rem,5.4vw,4.7rem)] font-extrabold leading-[1.02] tracking-[-0.05em] lg:max-w-none">
+            <h2 className="pharos-page-title flex max-w-full flex-col gap-1 lg:max-w-none">
               <span className="block text-muted-foreground/80">Most trackers show price.</span>
               <span className="block text-foreground">Pharos shows risk.</span>
             </h2>
@@ -212,35 +177,33 @@ function StartHeroSection() {
         </div>
 
         {/* Goal cards */}
-        <div className="relative p-1 sm:p-2">
-          <div className="relative space-y-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Choose your goal</p>
-                <span className="rounded-full border border-black/8 bg-white/55 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
-                  {START_HERE_GOALS.length} routes
-                </span>
-              </div>
-              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Pick one route. The rest can stay peripheral until you need them.
-              </p>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="pharos-kicker">Choose your goal</p>
+              <span className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {START_HERE_GOALS.length} routes
+              </span>
             </div>
+            <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+              Pick one route. The rest can stay peripheral until you need them.
+            </p>
+          </div>
 
-            <div className="pharos-stagger-entrance grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-              {START_HERE_GOALS.map((goal, index) => (
-                <div
-                  key={goal.title}
-                  style={{ "--stagger-index": index } as CSSProperties}
-                >
-                  <GoalCard {...goal} order={index} />
-                </div>
-              ))}
-            </div>
+          <div className="pharos-stagger-entrance grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            {START_HERE_GOALS.map((goal, index) => (
+              <div
+                key={goal.title}
+                style={{ "--stagger-index": index } as CSSProperties}
+              >
+                <GoalCard {...goal} order={index} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="mt-6 space-y-5 border-t border-white/10 pt-5 lg:hidden">
+      <div className="mt-6 space-y-5 border-t border-border/60 pt-5 lg:hidden">
         <HeroEscapeHatch />
       </div>
     </section>
@@ -478,7 +441,7 @@ function PharosVilleSection() {
   return (
     <section aria-labelledby="start-pharosville-title" className="mt-12 space-y-4 md:mt-16">
         <div className="max-w-3xl space-y-2">
-          <p className="pharos-kicker text-[oklch(0.42_0.10_60)] dark:text-[oklch(0.82_0.13_84)]">Immersive data visualization</p>
+          <p className="pharos-kicker">Immersive data visualization</p>
           <h2 id="start-pharosville-title" className="text-2xl font-semibold tracking-tight text-foreground">
             See it visually on PharosVille.
           </h2>
@@ -494,9 +457,9 @@ function PharosVilleSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Explore PharosVille (opens in new tab)"
-          className="pharos-focus-ring pharos-interactive-card group grid overflow-hidden rounded-xl border border-[color:oklch(0.55_0.11_82)] bg-[linear-gradient(135deg,oklch(0.94_0.07_88)_0%,oklch(0.88_0.13_82)_55%,oklch(0.80_0.16_78)_100%)] text-[oklch(0.18_0.04_60)] transition-[border-color,box-shadow,transform] duration-300 hover:border-[color:oklch(0.42_0.09_70)] dark:border-[color:oklch(0.50_0.10_84)] dark:bg-[linear-gradient(135deg,oklch(0.34_0.08_62)_0%,oklch(0.26_0.06_50)_55%,oklch(0.20_0.04_42)_100%)] dark:text-[oklch(0.92_0.05_88)] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]"
+          className="pharos-focus-ring pharos-interactive-card pharos-card-shell group grid overflow-hidden text-foreground md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]"
         >
-          <div className="relative aspect-[16/9] w-full overflow-hidden bg-[oklch(0.18_0.02_248)] md:aspect-auto md:h-full">
+          <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted md:aspect-auto md:h-full">
             <img
               src="/pharosville-teaser.webp"
               alt="PharosVille pixel-art harbor with stablecoins as ships in DEWS zones"
@@ -507,11 +470,11 @@ function PharosVilleSection() {
           </div>
           <div className="flex flex-col justify-between gap-4 p-5 sm:p-6">
             <div className="space-y-3">
-              <p className="pharos-kicker text-[oklch(0.42_0.10_60)] dark:text-[oklch(0.82_0.13_84)]">PharosVille</p>
+              <p className="pharos-kicker">PharosVille</p>
               <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
                 The stablecoin universe as a working harbor
               </h3>
-              <p className="text-sm leading-relaxed text-[oklch(0.30_0.05_50)] dark:text-[oklch(0.85_0.05_84)]">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Calm Anchorage, Ledger Mooring, Watch Breakwater, Alert Channel, Warning Shoals — the same DEWS bands
                 you read in tables, drawn as a place. Pulls from the same risk feeds; no extra data.
               </p>
