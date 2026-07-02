@@ -114,7 +114,6 @@ export const RedemptionModelConfidenceSchema = z.enum(["high", "medium", "low"])
 export type RedemptionModelConfidence = z.infer<typeof RedemptionModelConfidenceSchema>;
 
 export const RedemptionCapacityScoringHorizonSchema = z.enum(["immediate", "daily", "queued", "eventual", "unknown"]);
-export type RedemptionCapacityScoringHorizon = z.infer<typeof RedemptionCapacityScoringHorizonSchema>;
 
 export const RedemptionRouteExitCorrelationSchema = z.enum([
   "independent-issuer-rail",
@@ -196,7 +195,6 @@ export const RedemptionCostScenarioScoresSchema = z.object({
   activeUser: ScoreSchema.nullable().optional(),
   institutional: ScoreSchema.nullable().optional(),
 });
-export type RedemptionCostScenarioScores = z.infer<typeof RedemptionCostScenarioScoresSchema>;
 
 export const RedemptionConfidenceDetailsSchema = z.object({
   capacityEvidenceQuality: ScoreSchema,
@@ -350,7 +348,6 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
     offchainIssuer: ScoreSchema,
   }),
 });
-export type RedemptionBackstopMethodology = z.infer<typeof RedemptionBackstopMethodologySchema>;
 
 export const RedemptionSnapshotSourceSchema = z.enum(["run-rows", "legacy-current"]);
 export type RedemptionSnapshotSource = z.infer<typeof RedemptionSnapshotSourceSchema>;

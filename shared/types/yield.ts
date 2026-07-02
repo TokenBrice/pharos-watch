@@ -48,7 +48,6 @@ export const YIELD_PYS_NULL_REASONS = [
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety" | "opportunity-safety";
-export type YieldPublicationStatus = "staged" | "published" | "failed";
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
 export type YieldTrancheSide = "senior" | "junior";
 export type YieldMarketStatus = "normal" | "protected" | "unhealthy" | "critical";
@@ -399,7 +398,6 @@ export type YieldBenchmarkRegistry = z.infer<typeof YieldBenchmarkRegistrySchema
 export type YieldSourceInputMeta = z.infer<typeof YieldSourceInputMetaSchema>;
 export type YieldSafetySnapshotMeta = z.infer<typeof YieldSafetySnapshotMetaSchema>;
 export type YieldRankingProvenance = z.infer<typeof YieldRankingProvenanceSchema>;
-export type YieldRankingsProvenance = z.infer<typeof YieldRankingsProvenanceSchema>;
 
 const YieldRankingSchema = z.object({
   id: z.string(),
@@ -453,7 +451,6 @@ const YieldResponseWarningSchema = z.object({
   message: z.string(),
   reasons: z.array(z.string()).optional(),
 });
-export type YieldResponseWarning = z.infer<typeof YieldResponseWarningSchema>;
 
 export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),

@@ -4891,8 +4891,21 @@
      "shared/types/live-reserves.ts",
      "shared/types/yield.ts",
      "shared/types/redemption.ts",
-     "shared/types/depeg-resolver.ts",
-     "shared/types/depeg-resolver-review.ts"
+    "shared/types/depeg-resolver.ts",
+    "shared/types/depeg-resolver-review.ts"
+   ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Pruned the unreferenced standalone shared type aliases and constants while documenting the DDR/DDRR z.infer companion aliases as retained public schema contract types.",
+    "validation": [
+     "rg -n \"TapeEventsResponse|TapeEventsResponseMeta|MintBurnScope|MintBurnSync|LIVE_RESERVE_RISK_VALUES|ReserveCompositionHistoryWriteGap|YieldPublicationStatus|YieldRankingsProvenance|YieldResponseWarning|RedemptionCapacityScoringHorizon|RedemptionCostScenarioScores|RedemptionBackstopMethodology|DdrV2FrozenPayload|DdrrMeta|DdrAgeStatus\" shared src worker functions scripts docs || true",
+     "npm run typecheck",
+     "npm run typecheck:worker",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/types/tape-event.ts shared/types/mint-burn.ts shared/types/live-reserves.ts shared/types/yield.ts shared/types/redemption.ts shared/types/depeg-resolver.ts shared/types/depeg-resolver-review.ts"
     ]
    }
   },

@@ -20,6 +20,8 @@ import { MethodologyEnvelopeSchema } from "./methodology-envelope";
  * incidents, and it keeps no-prediction coverage separate from accuracy.
  */
 
+// Public Zod schemas keep exported companion aliases as the contract type surface.
+
 export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v3";
 export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
 export const DDRR_PUBLIC_WARNING =

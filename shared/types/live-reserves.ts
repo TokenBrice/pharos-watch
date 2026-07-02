@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
-import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveSlice } from "./reserves";
+import { ReserveSliceSchema, type ReserveSlice } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import {
   RedemptionHolderEligibilitySchema,
@@ -41,7 +41,6 @@ export const LIVE_RESERVE_SEMANTICS_VALUES = [
 ] as const;
 
 export const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
-export const LIVE_RESERVE_RISK_VALUES = RESERVE_RISK_VALUES;
 
 export type LiveReserveSourceModel = (typeof LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
 export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
@@ -194,7 +193,6 @@ export const ReserveCompositionHistoryWriteGapSchema = z.object({
   compositionHistoryMissing: z.boolean(),
   attemptHistoryMissing: z.boolean(),
 });
-export type ReserveCompositionHistoryWriteGap = z.infer<typeof ReserveCompositionHistoryWriteGapSchema>;
 
 export const ReserveCompositionOverviewSchema = z.object({
   configuredCoins: z.number(),

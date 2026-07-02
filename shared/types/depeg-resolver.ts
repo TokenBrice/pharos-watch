@@ -15,6 +15,8 @@ import { DepegDirectionSchema } from "./market";
  * not fitted probabilities and not a credit rating.
  */
 
+// Public Zod schemas keep exported companion aliases as the contract type surface.
+
 // --- Stage 1: resolution tiers ---------------------------------------------
 
 export const DDR_RESOLUTION_TIER_VALUES = [

@@ -28,7 +28,6 @@ const MintBurnScopeSchema = z.object({
   chainIds: z.array(z.string()),
   label: z.string(),
 });
-export type MintBurnScope = z.infer<typeof MintBurnScopeSchema>;
 
 const MintBurnSyncSchema = z.object({
   lastSuccessfulSyncAt: z.number().nullable(),
@@ -37,7 +36,6 @@ const MintBurnSyncSchema = z.object({
   classificationWarning: z.string().nullable().optional(),
   criticalLaneHealthy: z.boolean(),
 });
-export type MintBurnSync = z.infer<typeof MintBurnSyncSchema>;
 
 const MintBurnCoverageStatusSchema = z.enum([
   "full",

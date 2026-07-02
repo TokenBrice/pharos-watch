@@ -41,7 +41,6 @@ const TapeEventsResponseMetaSchema = z.object({
   ageSeconds: z.number(),
   status: z.enum(["fresh", "degraded", "stale"]),
 });
-export type TapeEventsResponseMeta = z.infer<typeof TapeEventsResponseMetaSchema>;
 
 export const TapeEventsResponseSchema = z.object({
   events: z.array(TapeEventSchema),
@@ -50,4 +49,3 @@ export const TapeEventsResponseSchema = z.object({
   totalExact: z.boolean(),
   _meta: TapeEventsResponseMetaSchema,
 });
-export type TapeEventsResponse = z.infer<typeof TapeEventsResponseSchema>;
