@@ -1,7 +1,7 @@
 /**
  * DEWS source-state orchestrator.
  *
- * Loads each upstream slice in sequence and assembles the `DewsSourceState`
+ * Loads each upstream slice and assembles the `DewsSourceState`
  * consumed by downstream scoring. Each slice's loader lives in
  * `source-state/hydration.ts`. Two narrower concerns live in companion modules:
  *
@@ -45,6 +45,47 @@ interface LoadDewsSourceStateOptions {
   }) => void;
 }
 
+type HydrationEvent =
+  | {
+      kind: "sourceFailure";
+      source: string;
+      error: unknown;
+      options?: { bootstrapAllowed?: boolean };
+    }
+  | {
+      kind: "malformedPersistedInput";
+      options: Parameters<HydrationContext["registerMalformedPersistedInput"]>[0];
+    };
+
+async function hydrateSource<T>(
+  ctx: HydrationContext,
+  loader: (ctx: HydrationContext) => Promise<T>,
+): Promise<{ result: T; events: HydrationEvent[] }> {
+  const events: HydrationEvent[] = [];
+  const bufferedCtx: HydrationContext = {
+    ...ctx,
+    registerSourceFailure: (source, error, options) => {
+      events.push({ kind: "sourceFailure", source, error, options });
+    },
+    registerMalformedPersistedInput: (options) => {
+      events.push({ kind: "malformedPersistedInput", options });
+    },
+  };
+  return { result: await loader(bufferedCtx), events };
+}
+
+function replayHydrationEvents(hydrations: readonly { events: HydrationEvent[] }[], ctx: HydrationContext): void {
+  for (const hydration of hydrations) {
+    for (const event of hydration.events) {
+      if (event.kind === "sourceFailure") {
+        ctx.registerSourceFailure(event.source, event.error, event.options);
+      } else {
+        ctx.registerMalformedPersistedInput(event.options);
+      }
+    }
+  }
+}
+
 export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): Promise<DewsSourceState> {
   const ctx: HydrationContext = {
     db: options.db,
@@ -54,15 +95,52 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     registerMalformedPersistedInput: options.registerMalformedPersistedInput,
   };
 
-  const dexLiq = await hydrateDexLiquidity(ctx);
-  const dexPrices = await hydrateDexPrices(ctx);
-  const dexLiqHistory = await hydrateDexLiquidityHistory(ctx);
-  const blacklist = await hydrateBlacklistEvents(ctx);
-  const prevSignals = await hydratePreviousStressSignals(ctx);
-  const mintBurn = await hydrateMintBurn(ctx);
-  const yieldWarnings = await hydrateYieldWarnings(ctx);
-  const yieldRankings = await hydrateYieldRankingsCache(ctx);
-  const latestPsiScore = await hydrateLatestPsiScore(ctx);
+  // These hydrators are D1/cache-only and each owns its degraded fallback
+  // handling. Run them concurrently, then replay diagnostics in legacy order
+  // so metadata shape is stable even when D1 reads finish out of order.
+  const [
+    dexLiqHydration,
+    dexPricesHydration,
+    dexLiqHistoryHydration,
+    blacklistHydration,
+    prevSignalsHydration,
+    mintBurnHydration,
+    yieldWarningsHydration,
+    yieldRankingsHydration,
+    latestPsiScoreHydration,
+  ] = await Promise.all([
+    hydrateSource(ctx, hydrateDexLiquidity),
+    hydrateSource(ctx, hydrateDexPrices),
+    hydrateSource(ctx, hydrateDexLiquidityHistory),
+    hydrateSource(ctx, hydrateBlacklistEvents),
+    hydrateSource(ctx, hydratePreviousStressSignals),
+    hydrateSource(ctx, hydrateMintBurn),
+    hydrateSource(ctx, hydrateYieldWarnings),
+    hydrateSource(ctx, hydrateYieldRankingsCache),
+    hydrateSource(ctx, hydrateLatestPsiScore),
+  ]);
+  const orderedHydrations = [
+    dexLiqHydration,
+    dexPricesHydration,
+    dexLiqHistoryHydration,
+    blacklistHydration,
+    prevSignalsHydration,
+    mintBurnHydration,
+    yieldWarningsHydration,
+    yieldRankingsHydration,
+    latestPsiScoreHydration,
+  ];
+  replayHydrationEvents(orderedHydrations, ctx);
+
+  const dexLiq = dexLiqHydration.result;
+  const dexPrices = dexPricesHydration.result;
+  const dexLiqHistory = dexLiqHistoryHydration.result;
+  const blacklist = blacklistHydration.result;
+  const prevSignals = prevSignalsHydration.result;
+  const mintBurn = mintBurnHydration.result;
+  const yieldWarnings = yieldWarningsHydration.result;
+  const yieldRankings = yieldRankingsHydration.result;
+  const latestPsiScore = latestPsiScoreHydration.result;
 
   // Source-coverage keys are emitted in the same order the legacy orchestrator
   // produced them so downstream diagnostics (`Object.assign` consumers) see an

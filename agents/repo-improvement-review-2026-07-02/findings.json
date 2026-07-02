@@ -6641,6 +6641,18 @@
     "description": "loadDewsSourceState awaits nine hydrators one-by-one (lines 57-65): dexLiquidity (2 queries incl. publication diagnostics), dexPrices, dexLiquidityHistory, blacklistEvents, previousStressSignals, mintBurn (2 queries: 24h + 30d aggregates), yieldWarnings, yieldRankingsCache, latestPsiScore. Each hydrator only takes the shared ctx and reads a distinct table; none depends on another's output (source-state.ts assembles results only after all complete). That is ~10-11 serial D1 round trips per compute-dews run (every 30 min, chained in the dewsPsiOffset slot), several of which are aggregation queries whose D1-side compute could overlap.",
     "recommendation": "Run the nine hydrators via Promise.all. To keep cron metadata byte-identical, give each hydrator a local failure collector and flush registerSourceFailure entries in the current fixed order after the join (the sourceCoverage object is already assembled in fixed order post-hydration), preserving the documented legacy key/ordering contract.",
     "estImpact": "~0.3-1s saved per run; ~480 serialized D1 round trips/day become ~48"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Parallelized the independent DEWS D1/cache source hydrators with `Promise.all`, buffering source-failure and malformed-input diagnostics per hydrator and replaying them in the previous fixed order before assembling the source state.",
+    "validation": [
+     "npx vitest run worker/src/cron/dews/__tests__/source-state-legacy.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/cron/dews/source-state.ts worker/src/cron/dews/__tests__/source-state-legacy.test.ts"
+    ],
+    "notes": "Added coverage proving later independent D1 hydrators start before the first query resolves while preserving source coverage assembly and diagnostic replay order."
    }
   },
   {
