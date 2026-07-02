@@ -576,6 +576,15 @@
     "description": "The CIRCUIT_SOURCE.TREASURY_RATES breaker is fed exclusively by the USD source outcome (lines 739-743: FRED DGS3MO / Treasury XML success or failure), yet the circuit-open branch at line 693 short-circuits the ENTIRE run: EUR/CHF/GBP/JPY/AUD/MXN/BRL/CAD/RUB/TRY/USD_EFFR providers (ECB, SIX, FRED-SONIA, BoJ, RBA, Banxico, BCB, BoC, CBR, CBRT) are never attempted and every benchmark is forced to `buildRetainedBenchmark(..., \"circuit-open\")` (lines 697-705). A FRED/Treasury outage lasting CIRCUIT_OPEN_THRESHOLD runs thus freezes all non-USD risk-free rates at stale retained values and advances the GBP retained-fallback alert streak, even though those central-bank sources are healthy and independently reachable. Their per-provider failures are already handled per-key via retained fallbacks, so the whole-run gate adds no protection for them.",
     "recommendation": "Scope the circuit-open branch to the USD benchmark only: on open circuit, use the retained/hardcoded USD benchmark but still run the BENCHMARK_PROVIDER_ORDER loop for the other keys. If the whole-run gate was a deliberate cost-bounding decision, record success/failure per provider family instead of only the USD outcome so the gate reflects what it actually protects. Flagging behaviorChange because the fix restores fresh non-USD rates during USD-source outages (evidence: fallbackMode metadata reports \"circuit-open\" for currencies whose providers were never consulted).",
     "estImpact": "keeps 11 currency benchmarks live during USD-source outages"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Scoped the TREASURY_RATES circuit-open path to the USD benchmark only. The branch now retains or hardcodes USD while continuing to resolve the non-USD benchmark provider order, using the same registry and degradation-reason helpers as the normal path.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/fetch-tbill-rate.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

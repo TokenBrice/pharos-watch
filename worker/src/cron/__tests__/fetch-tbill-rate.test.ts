@@ -306,18 +306,31 @@ describe("fetchTbillRate", () => {
 
   it("returns degraded when circuit is already open", async () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const calls: string[] = [];
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+    }, calls);
 
-    const result = await fetchTbillRate(db);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("circuit-open");
+    expect(metadata.fallbackMode).toBe("usd:circuit-open");
+    expect(metadata.eurSource).toBe("ecb-estr-3m");
+    expect(metadata.usdEffrSource).toBe("nyfed-effr");
+    expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
     expect(latestCachePayload()).toMatchObject({
       rate: RISK_FREE_RATE_FALLBACK,
       source: "hardcoded-fallback",
       fallbackMode: "circuit-open",
       isFallback: true,
     });
+    expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(false);
+    expect(calls.some((url) => url.includes("treasury.gov"))).toBe(false);
+    expect(calls.some((url) => url.includes("data-api.ecb.europa.eu"))).toBe(true);
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 

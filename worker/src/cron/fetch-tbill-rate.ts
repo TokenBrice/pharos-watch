@@ -681,6 +681,66 @@ async function resolveMxnBenchmarkProvider(params: {
   };
 }
 
+async function resolveBenchmarkProviderMap(params: {
+  previous: ParsedYieldBenchmarkRegistry;
+  fetchedAt: number;
+  env?: Pick<Env, "BANXICO_TOKEN" | "ALERT_WEBHOOK_URL">;
+  signal?: AbortSignal;
+}): Promise<Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>> {
+  const resolvedProviders: ResolvedBenchmarkProvider[] = [];
+  for (const key of BENCHMARK_PROVIDER_ORDER) {
+    throwIfAborted(params.signal);
+    resolvedProviders.push(
+      key === "MXN"
+        ? await resolveMxnBenchmarkProvider(params)
+        : await resolveBenchmarkProvider({
+          provider: BENCHMARK_PROVIDER_BY_KEY[key],
+          previous: params.previous,
+          fetchedAt: params.fetchedAt,
+          signal: params.signal,
+        }),
+    );
+  }
+
+  return Object.fromEntries(
+    resolvedProviders.map((entry) => [entry.key, entry]),
+  ) as Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>;
+}
+
+function buildBenchmarkRegistry(
+  usdMeta: ParsedYieldBenchmarkMeta,
+  resolvedByKey: Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>,
+): ParsedYieldBenchmarkRegistry {
+  return {
+    USD: usdMeta,
+    USD_EFFR: resolvedByKey.USD_EFFR.meta,
+    EUR: resolvedByKey.EUR.meta,
+    CHF: resolvedByKey.CHF.meta,
+    GBP: resolvedByKey.GBP.meta,
+    JPY: resolvedByKey.JPY.meta,
+    MXN: resolvedByKey.MXN.meta,
+    BRL: resolvedByKey.BRL.meta,
+    AUD: resolvedByKey.AUD.meta,
+    CAD: resolvedByKey.CAD.meta,
+    RUB: resolvedByKey.RUB.meta,
+    TRY: resolvedByKey.TRY.meta,
+    SGD: null,
+  };
+}
+
+function buildBenchmarkDegradationReasons(
+  usdMeta: ParsedYieldBenchmarkMeta,
+  resolvedByKey: Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>,
+): string[] {
+  const degradationReasons: string[] = [];
+  if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
+  for (const key of BENCHMARK_DEGRADATION_ORDER) {
+    const failureMode = resolvedByKey[key].failureMode;
+    if (failureMode) degradationReasons.push(`${key.toLowerCase()}:${failureMode}`);
+  }
+  return degradationReasons;
+}
+
 export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
@@ -694,15 +754,8 @@ export async function fetchTbillRate(
     throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
     const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
-    const uniformBenchmarks = {} as Record<BenchmarkProviderKey, ParsedYieldBenchmarkMeta | null>;
-    for (const key of BENCHMARK_PROVIDER_ORDER) {
-      uniformBenchmarks[key] = buildRetainedBenchmark(previous[key] ?? null, "circuit-open");
-    }
-    const benchmarks: ParsedYieldBenchmarkRegistry = {
-      USD: usdBenchmark,
-      ...uniformBenchmarks,
-      SGD: null,
-    };
+    const resolvedByKey = await resolveBenchmarkProviderMap({ previous, fetchedAt, env, signal });
+    const benchmarks = buildBenchmarkRegistry(usdBenchmark, resolvedByKey);
     const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
       db,
       benchmark: benchmarks.GBP,
@@ -711,10 +764,12 @@ export async function fetchTbillRate(
       signal,
     });
     await writeStructuredBenchmarks(db, benchmarks);
+    const degradationReasons = buildBenchmarkDegradationReasons(usdBenchmark, resolvedByKey);
     return {
       status: "degraded",
+      itemCount: BENCHMARK_METADATA_KEYS.filter((key) => benchmarks[key] != null).length,
       metadata: buildBenchmarkRunMetadata({
-        fallbackMode: "circuit-open",
+        fallbackMode: degradationReasons.join(","),
         benchmarks,
         extraFields: gbpRetainedFallbackMonitor,
       }),
@@ -742,40 +797,10 @@ export async function fetchTbillRate(
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
   }
 
-  const resolvedProviders: ResolvedBenchmarkProvider[] = [];
-  for (const key of BENCHMARK_PROVIDER_ORDER) {
-    throwIfAborted(signal);
-    resolvedProviders.push(
-      key === "MXN"
-        ? await resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal })
-        : await resolveBenchmarkProvider({
-          provider: BENCHMARK_PROVIDER_BY_KEY[key],
-          previous,
-          fetchedAt,
-          signal,
-        }),
-    );
-  }
-  const resolvedByKey = Object.fromEntries(
-    resolvedProviders.map((entry) => [entry.key, entry]),
-  ) as Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>;
+  const resolvedByKey = await resolveBenchmarkProviderMap({ previous, fetchedAt, env, signal });
 
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
-  const benchmarks: ParsedYieldBenchmarkRegistry = {
-    USD: usdMeta,
-    USD_EFFR: resolvedByKey.USD_EFFR.meta,
-    EUR: resolvedByKey.EUR.meta,
-    CHF: resolvedByKey.CHF.meta,
-    GBP: resolvedByKey.GBP.meta,
-    JPY: resolvedByKey.JPY.meta,
-    MXN: resolvedByKey.MXN.meta,
-    BRL: resolvedByKey.BRL.meta,
-    AUD: resolvedByKey.AUD.meta,
-    CAD: resolvedByKey.CAD.meta,
-    RUB: resolvedByKey.RUB.meta,
-    TRY: resolvedByKey.TRY.meta,
-    SGD: null,
-  };
+  const benchmarks = buildBenchmarkRegistry(usdMeta, resolvedByKey);
 
   const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
     db,
@@ -786,12 +811,7 @@ export async function fetchTbillRate(
   });
   await writeStructuredBenchmarks(db, benchmarks);
 
-  const degradationReasons: string[] = [];
-  if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
-  for (const key of BENCHMARK_DEGRADATION_ORDER) {
-    const failureMode = resolvedByKey[key].failureMode;
-    if (failureMode) degradationReasons.push(`${key.toLowerCase()}:${failureMode}`);
-  }
+  const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
