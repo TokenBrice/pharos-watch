@@ -156,6 +156,17 @@
     "recommendation": "Replace the per-market loops with two/three fetchOnchainMulticall3 batches: one for the factory index arrays, one for per-market metadata (symbol/decimals/bands range/totalSupply). Same contracts, same selectors, same decoded values — outputs are byte-identical, so it is behavior-preserving. preview_emergency_withdraw with a custom gas limit can stay as an individual call.",
     "estImpact": "removes ~150-250 RPC round-trips per cron run",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Batched crvUSD LLAMMA factory and metadata discovery through Multicall3, and batched Yield Basis market and metadata reads while keeping preview_emergency_withdraw as bounded individual calls because it depends on totalSupply and a custom gas limit.",
+    "validation": [
+     "npx vitest run worker/src/cron/reserve-adapters/__tests__/crvusd.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:cron-connections",
+     "git diff --check -- worker/src/cron/reserve-adapters/crvusd.ts worker/src/cron/reserve-adapters/__tests__/crvusd.test.ts"
+    ]
    }
   },
   {

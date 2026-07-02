@@ -20,6 +20,8 @@ import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainMulticall3 } from
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
 import { adaptCrvUsd, adaptCrvUsdOnchain, fetchCrvUsdReserves } from "../crvusd";
 
+type FetchOnchainMulticall3Options = Parameters<typeof fetchOnchainMulticall3>[0];
+
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const BTC_ASSET = "0x00000000000000000000000000000000000000b0";
@@ -53,7 +55,37 @@ const signal = AbortSignal.timeout(5_000);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(mockMulticallFromEvmCalls);
 });
+
+async function mockMulticallFromEvmCalls(options: FetchOnchainMulticall3Options) {
+  return Promise.all(
+    options.calls.map(async (call) => {
+      const returnData = await vi.mocked(fetchEvmCallHexAtBlock)(options.chain, call.contract, call.data, "latest");
+      return {
+        label: call.label,
+        success: returnData != null,
+        returnData: (returnData ?? "0x") as `0x${string}`,
+      };
+    }),
+  );
+}
+
+function isLlammaBandMulticall(options: FetchOnchainMulticall3Options): boolean {
+  return options.calls.some((call) => /^\d+:[xy]:/.test(call.label));
+}
+
+function mockLlammaBandMulticall(options: FetchOnchainMulticall3Options, y: bigint, x: bigint) {
+  return options.calls.map((call) => ({
+    label: call.label,
+    success: true,
+    returnData: encodeFunctionResult({
+      abi: CURVE_AMM_ABI,
+      functionName: call.label.includes(":y:") ? "bands_y" : "bands_x",
+      result: call.label.includes(":y:") ? y : x,
+    }),
+  }));
+}
 
 function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
   let resolve!: (value: T) => void;
@@ -330,7 +362,9 @@ describe("fetchCrvUsdReserves", () => {
       "crvUSD LLAMMA band span exceeds operational cap for market 0: 2049 > 2048",
     );
     expect(fetchDefiLlamaPrices).not.toHaveBeenCalled();
-    expect(fetchOnchainMulticall3).not.toHaveBeenCalled();
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls.some(([options]) => isLlammaBandMulticall(options))).toBe(
+      false,
+    );
   });
 
   it("rejects aggregate LLAMMA band multicalls above the adapter cap before dispatch", async () => {
@@ -402,7 +436,9 @@ describe("fetchCrvUsdReserves", () => {
       "crvUSD LLAMMA band multicall exceeds operational cap: 9006 > 8192",
     );
     expect(fetchDefiLlamaPrices).not.toHaveBeenCalled();
-    expect(fetchOnchainMulticall3).not.toHaveBeenCalled();
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls.some(([options]) => isLlammaBandMulticall(options))).toBe(
+      false,
+    );
   });
 
   it("drops Yield Basis when its untrusted market count exceeds the adapter cap before scheduling market reads", async () => {
@@ -565,17 +601,12 @@ describe("fetchCrvUsdReserves", () => {
         [ETH_ASSET, 10],
       ]),
     );
-    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) =>
-      options.calls.map((call) => ({
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: CURVE_AMM_ABI,
-          functionName: call.label.includes(":y:") ? "bands_y" : "bands_x",
-          result: call.label.includes(":y:") ? 1n * 10n ** 18n : 0n,
-        }),
-      })),
-    );
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
+      if (isLlammaBandMulticall(options)) {
+        return mockLlammaBandMulticall(options, 1n * 10n ** 18n, 0n);
+      }
+      return mockMulticallFromEvmCalls(options);
+    });
 
     const firstCollateral = createDeferred<`0x${string}`>();
     let resolveSecondCollateralStarted!: () => void;
@@ -898,28 +929,12 @@ describe("fetchCrvUsdReserves", () => {
 
   it("loads direct LLAMMA bands onchain when configured for onchain input", async () => {
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[BTC_ASSET, 10]]));
-    vi.mocked(fetchOnchainMulticall3).mockResolvedValue([
-      {
-        label: "0:y:0",
-        success: true,
-        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_y", result: 5n * 10n ** 18n }),
-      },
-      {
-        label: "0:x:0",
-        success: true,
-        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_x", result: 1n * 10n ** 18n }),
-      },
-      {
-        label: "0:y:1",
-        success: true,
-        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_y", result: 5n * 10n ** 18n }),
-      },
-      {
-        label: "0:x:1",
-        success: true,
-        returnData: encodeFunctionResult({ abi: CURVE_AMM_ABI, functionName: "bands_x", result: 1n * 10n ** 18n }),
-      },
-    ]);
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
+      if (isLlammaBandMulticall(options)) {
+        return mockLlammaBandMulticall(options, 5n * 10n ** 18n, 1n * 10n ** 18n);
+      }
+      return mockMulticallFromEvmCalls(options);
+    });
     vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
       const normalizedAddress = address.toLowerCase();
       const callData = data as `0x${string}`;

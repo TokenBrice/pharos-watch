@@ -23,6 +23,7 @@ import {
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import type { OnchainMulticall3Call } from "./helpers";
 import { validateDecimals, worseRisk } from "./slice-math";
 
 interface CurveMarketEntry {
@@ -52,6 +53,15 @@ interface YieldBasisMarketPosition {
   assetAddress: string;
   assetDecimals: number;
   assetAmount: bigint;
+}
+
+interface YieldBasisMarketWithdrawCandidate {
+  marketId: number;
+  symbol: string;
+  assetAddress: string;
+  assetDecimals: number;
+  ltAddress: string;
+  supply: bigint;
 }
 
 interface LlammaMarketDescriptor {
@@ -293,6 +303,49 @@ async function readEthereumContract(
   });
 }
 
+async function fetchCrvUsdMulticallResults(
+  calls: readonly OnchainMulticall3Call[],
+  label: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<Map<string, `0x${string}`>> {
+  if (calls.length === 0) return new Map();
+
+  const results = await fetchOnchainMulticall3({
+    calls,
+    chain: ETHEREUM_CHAIN,
+    signal,
+    ctx,
+    rpcUrl: ETHEREUM_RPC_URLS[0],
+    fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
+    timeoutMs: 12_000,
+  });
+  if (!results) {
+    throw new Error(`crvUSD ${label} multicall failed`);
+  }
+
+  const byLabel = new Map<string, `0x${string}`>();
+  for (const result of results) {
+    if (!result.success) {
+      throw new Error(`crvUSD ${label} multicall entry failed: ${result.label}`);
+    }
+    byLabel.set(result.label, result.returnData);
+  }
+  return byLabel;
+}
+
+function requireCrvUsdMulticallResult(
+  results: ReadonlyMap<string, `0x${string}`>,
+  label: string,
+  groupLabel: string,
+): `0x${string}` {
+  const data = results.get(label);
+  if (!data) {
+    throw new Error(`crvUSD ${groupLabel} multicall missing result: ${label}`);
+  }
+  return data;
+}
+
 function safeInt256ToNumber(value: bigint, label: string): number {
   const asNumber = Number(value);
   if (!Number.isSafeInteger(asNumber)) {
@@ -339,46 +392,121 @@ async function fetchLlammaMarketDescriptors(
     "ControllerFactory n_collaterals",
     CRVUSD_MAX_LLAMMA_MARKETS,
   );
+  if (marketCount === 0) return [];
 
-  const descriptors = await mapWithConcurrency(
-    Array.from({ length: marketCount }, (_, marketId) => marketId),
-    CRVUSD_MARKET_READ_CONCURRENCY,
-    async (marketId): Promise<LlammaMarketDescriptor | null> => {
-      throwIfAborted(signal);
-      const [collateralAddress, controllerAddress, ammAddress] = await Promise.all([
-        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "collaterals", signal, ctx, [
-          BigInt(marketId),
-        ]) as Promise<string>,
-        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "controllers", signal, ctx, [
-          BigInt(marketId),
-        ]) as Promise<string>,
-        readEthereumContract(CURVE_CONTROLLER_FACTORY, CURVE_CONTROLLER_FACTORY_ABI, "amms", signal, ctx, [
-          BigInt(marketId),
-        ]) as Promise<string>,
-      ]);
-      const [symbolRaw, minBandRaw, maxBandRaw] = await Promise.all([
-        readEthereumContract(collateralAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
-        readEthereumContract(ammAddress, CURVE_AMM_ABI, "min_band", signal, ctx),
-        readEthereumContract(ammAddress, CURVE_AMM_ABI, "max_band", signal, ctx),
-      ]);
-      if (typeof symbolRaw !== "string") {
-        throw new Error(`crvUSD LLAMMA symbol unreadable for market ${marketId}`);
-      }
-      const minBand = safeInt256ToNumber(minBandRaw as bigint, `market ${marketId} min_band`);
-      const maxBand = safeInt256ToNumber(maxBandRaw as bigint, `market ${marketId} max_band`);
-      if (maxBand < minBand) return null;
-      validateLlammaBandCount(minBand, maxBand, marketId);
-      return {
-        marketId,
-        collateralAddress,
-        controllerAddress,
-        ammAddress,
-        symbol: symbolRaw,
-        minBand,
-        maxBand,
-      };
-    },
+  const marketIds = Array.from({ length: marketCount }, (_, marketId) => marketId);
+  const factoryResults = await fetchCrvUsdMulticallResults(
+    marketIds.flatMap((marketId): OnchainMulticall3Call[] => [
+      {
+        label: `${marketId}:collateral`,
+        contract: CURVE_CONTROLLER_FACTORY,
+        data: encodeFunctionData({
+          abi: CURVE_CONTROLLER_FACTORY_ABI,
+          functionName: "collaterals",
+          args: [BigInt(marketId)],
+        }),
+      },
+      {
+        label: `${marketId}:controller`,
+        contract: CURVE_CONTROLLER_FACTORY,
+        data: encodeFunctionData({
+          abi: CURVE_CONTROLLER_FACTORY_ABI,
+          functionName: "controllers",
+          args: [BigInt(marketId)],
+        }),
+      },
+      {
+        label: `${marketId}:amm`,
+        contract: CURVE_CONTROLLER_FACTORY,
+        data: encodeFunctionData({
+          abi: CURVE_CONTROLLER_FACTORY_ABI,
+          functionName: "amms",
+          args: [BigInt(marketId)],
+        }),
+      },
+    ]),
+    "LLAMMA factory",
+    signal,
+    ctx,
   );
+
+  const factoryDescriptors = marketIds.map((marketId) => ({
+    marketId,
+    collateralAddress: decodeFunctionResult({
+      abi: CURVE_CONTROLLER_FACTORY_ABI,
+      functionName: "collaterals",
+      data: requireCrvUsdMulticallResult(factoryResults, `${marketId}:collateral`, "LLAMMA factory"),
+    }) as string,
+    controllerAddress: decodeFunctionResult({
+      abi: CURVE_CONTROLLER_FACTORY_ABI,
+      functionName: "controllers",
+      data: requireCrvUsdMulticallResult(factoryResults, `${marketId}:controller`, "LLAMMA factory"),
+    }) as string,
+    ammAddress: decodeFunctionResult({
+      abi: CURVE_CONTROLLER_FACTORY_ABI,
+      functionName: "amms",
+      data: requireCrvUsdMulticallResult(factoryResults, `${marketId}:amm`, "LLAMMA factory"),
+    }) as string,
+  }));
+
+  const metadataResults = await fetchCrvUsdMulticallResults(
+    factoryDescriptors.flatMap((market): OnchainMulticall3Call[] => [
+      {
+        label: `${market.marketId}:symbol`,
+        contract: market.collateralAddress,
+        data: encodeFunctionData({ abi: ERC20_METADATA_ABI, functionName: "symbol" }),
+      },
+      {
+        label: `${market.marketId}:min_band`,
+        contract: market.ammAddress,
+        data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "min_band" }),
+      },
+      {
+        label: `${market.marketId}:max_band`,
+        contract: market.ammAddress,
+        data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "max_band" }),
+      },
+    ]),
+    "LLAMMA metadata",
+    signal,
+    ctx,
+  );
+
+  const descriptors = factoryDescriptors.map((market): LlammaMarketDescriptor | null => {
+    throwIfAborted(signal);
+    const symbolRaw = decodeFunctionResult({
+      abi: ERC20_METADATA_ABI,
+      functionName: "symbol",
+      data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:symbol`, "LLAMMA metadata"),
+    });
+    if (typeof symbolRaw !== "string") {
+      throw new Error(`crvUSD LLAMMA symbol unreadable for market ${market.marketId}`);
+    }
+    const minBand = safeInt256ToNumber(
+      decodeFunctionResult({
+        abi: CURVE_AMM_ABI,
+        functionName: "min_band",
+        data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:min_band`, "LLAMMA metadata"),
+      }) as bigint,
+      `market ${market.marketId} min_band`,
+    );
+    const maxBand = safeInt256ToNumber(
+      decodeFunctionResult({
+        abi: CURVE_AMM_ABI,
+        functionName: "max_band",
+        data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:max_band`, "LLAMMA metadata"),
+      }) as bigint,
+      `market ${market.marketId} max_band`,
+    );
+    if (maxBand < minBand) return null;
+    validateLlammaBandCount(minBand, maxBand, market.marketId);
+    return {
+      ...market,
+      symbol: symbolRaw,
+      minBand,
+      maxBand,
+    };
+  });
 
   return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
 }
@@ -513,51 +641,119 @@ async function fetchYieldBasisMarketPositions(
     "Yield Basis market_count",
     CRVUSD_MAX_YIELD_BASIS_MARKETS,
   );
+  if (marketCount === 0) return [];
 
-  const positions = await mapWithConcurrency(
-    Array.from({ length: marketCount }, (_, marketId) => marketId),
-    CRVUSD_MARKET_READ_CONCURRENCY,
-    async (marketId): Promise<YieldBasisMarketPosition | null> => {
+  const marketIds = Array.from({ length: marketCount }, (_, marketId) => marketId);
+  const marketResults = await fetchCrvUsdMulticallResults(
+    marketIds.map((marketId) => ({
+      label: `${marketId}:market`,
+      contract: YIELD_BASIS_FACTORY,
+      data: encodeFunctionData({ abi: YIELD_BASIS_FACTORY_ABI, functionName: "markets", args: [BigInt(marketId)] }),
+    })),
+    "Yield Basis markets",
+    signal,
+    ctx,
+  );
+
+  const marketContracts = marketIds.map((marketId) => {
+    const market = decodeFunctionResult({
+      abi: YIELD_BASIS_FACTORY_ABI,
+      functionName: "markets",
+      data: requireCrvUsdMulticallResult(marketResults, `${marketId}:market`, "Yield Basis markets"),
+    }) as readonly [string, string, string, string, string, string, string];
+    return {
+      marketId,
+      assetAddress: market[0],
+      ltAddress: market[3],
+    };
+  });
+
+  const metadataResults = await fetchCrvUsdMulticallResults(
+    marketContracts.flatMap((market): OnchainMulticall3Call[] => [
+      {
+        label: `${market.marketId}:symbol`,
+        contract: market.assetAddress,
+        data: encodeFunctionData({ abi: ERC20_METADATA_ABI, functionName: "symbol" }),
+      },
+      {
+        label: `${market.marketId}:decimals`,
+        contract: market.assetAddress,
+        data: encodeFunctionData({ abi: ERC20_METADATA_ABI, functionName: "decimals" }),
+      },
+      {
+        label: `${market.marketId}:totalSupply`,
+        contract: market.ltAddress,
+        data: encodeFunctionData({ abi: YIELD_BASIS_LT_ABI, functionName: "totalSupply" }),
+      },
+    ]),
+    "Yield Basis metadata",
+    signal,
+    ctx,
+  );
+
+  const withdrawCandidates = marketContracts
+    .map((market): YieldBasisMarketWithdrawCandidate | null => {
       throwIfAborted(signal);
-      const market = (await readEthereumContract(YIELD_BASIS_FACTORY, YIELD_BASIS_FACTORY_ABI, "markets", signal, ctx, [
-        BigInt(marketId),
-      ])) as readonly [string, string, string, string, string, string, string];
-      const assetAddress = market[0];
-      const ltAddress = market[3];
-      const [symbolRaw, decimalsRaw, totalSupply] = await Promise.all([
-        readEthereumContract(assetAddress, ERC20_METADATA_ABI, "symbol", signal, ctx),
-        readEthereumContract(assetAddress, ERC20_METADATA_ABI, "decimals", signal, ctx),
-        readEthereumContract(ltAddress, YIELD_BASIS_LT_ABI, "totalSupply", signal, ctx),
-      ]);
-
+      const symbolRaw = decodeFunctionResult({
+        abi: ERC20_METADATA_ABI,
+        functionName: "symbol",
+        data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:symbol`, "Yield Basis metadata"),
+      });
       if (typeof symbolRaw !== "string") {
-        throw new Error(`crvUSD Yield Basis symbol unreadable for market ${marketId}`);
+        throw new Error(`crvUSD Yield Basis symbol unreadable for market ${market.marketId}`);
       }
 
-      const assetDecimals = validateDecimals(decimalsRaw, `crvUSD Yield Basis decimals for market ${marketId}`);
+      const assetDecimals = validateDecimals(
+        decodeFunctionResult({
+          abi: ERC20_METADATA_ABI,
+          functionName: "decimals",
+          data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:decimals`, "Yield Basis metadata"),
+        }),
+        `crvUSD Yield Basis decimals for market ${market.marketId}`,
+      );
 
-      const supply = totalSupply as bigint;
+      const supply = decodeFunctionResult({
+        abi: YIELD_BASIS_LT_ABI,
+        functionName: "totalSupply",
+        data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:totalSupply`, "Yield Basis metadata"),
+      }) as bigint;
       if (supply <= 0n) return null;
 
+      return {
+        marketId: market.marketId,
+        symbol: symbolRaw,
+        assetAddress: market.assetAddress,
+        assetDecimals,
+        ltAddress: market.ltAddress,
+        supply,
+      };
+    })
+    .filter((market): market is YieldBasisMarketWithdrawCandidate => market != null);
+
+  const positions = await mapWithConcurrency(
+    withdrawCandidates,
+    CRVUSD_MARKET_READ_CONCURRENCY,
+    async (market): Promise<YieldBasisMarketPosition | null> => {
+      throwIfAborted(signal);
       // Newer YB markets can revert on preview_withdraw(totalSupply); preview_emergency_withdraw
       // still exposes the full-market external asset balance without relying on that swap path.
       const emergencyWithdraw = (await readEthereumContract(
-        ltAddress,
+        market.ltAddress,
         YIELD_BASIS_LT_ABI,
         "preview_emergency_withdraw",
         signal,
         ctx,
-        [supply],
+        [market.supply],
         YIELD_BASIS_VIEW_GAS,
       )) as readonly [bigint, bigint];
       const assetAmount = emergencyWithdraw[0];
       if (assetAmount <= 0n) return null;
 
       return {
-        marketId,
-        symbol: symbolRaw,
-        assetAddress,
-        assetDecimals,
+        marketId: market.marketId,
+        symbol: market.symbol,
+        assetAddress: market.assetAddress,
+        assetDecimals: market.assetDecimals,
         assetAmount,
       };
     },
