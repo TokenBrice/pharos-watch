@@ -23,6 +23,7 @@
 import type { ConditionBand } from "@shared/lib/psi-colors";
 export type { ConditionBand } from "@shared/lib/psi-colors";
 import { bandFromThresholds, clampScore, round1, roundTo } from "@shared/lib/math";
+import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
@@ -42,7 +43,6 @@ export interface StabilityResult {
   };
 }
 
-const K = 60;
 const GRACE_DAYS = 30;
 
 /** Stress-breadth scale: multiplied by sqrt(mcapUsd/1e9) for each DEWS-stressed coin.
@@ -64,19 +64,20 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
     return null;
   }
 
-  const severityRaw = depegs.reduce((sum, d) => {
-    const share = d.mcapUsd / totalMcapUsd;
-    const amplifier = Math.log2(1 + d.mcapUsd / 1e9);
+  const contributionTotals = depegs.reduce((totals, d) => {
     const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
-    return sum + (Math.abs(d.bps) / 100) * share * amplifier * K * factor;
-  }, 0);
-  const severity = Math.min(68, severityRaw);
-
-  const breadthRaw = depegs.reduce((sum, d) => {
-    const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
-    return sum + Math.sqrt(d.mcapUsd / 1e9) * 3 * factor;
-  }, 0);
-  const breadth = Math.min(17, breadthRaw);
+    const contribution = computePsiDepegContribution({
+      bps: d.bps,
+      mcapUsd: d.mcapUsd,
+      totalMcapUsd,
+      factor,
+    });
+    totals.severity += contribution.severity;
+    totals.breadth += contribution.breadth;
+    return totals;
+  }, { severity: 0, breadth: 0 });
+  const severity = Math.min(68, contributionTotals.severity);
+  const breadth = Math.min(17, contributionTotals.breadth);
 
   const safePct = Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : 0;
   const trend = Math.max(-5, Math.min(5, safePct));

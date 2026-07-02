@@ -3074,6 +3074,18 @@
     "alsoFiles": [
      "worker/src/lib/stability-index.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted the PSI per-coin severity and breadth contribution constants/formula into shared/lib/psi-contribution.ts and reused it from both the worker Stability Index engine and the /stability-index contributor view model. Added shared formula coverage to pin the single source of truth.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/psi-contribution.test.ts src/app/stability-index/view-model.test.ts",
+     "npx vitest run worker/src/cron/__tests__/stability-index.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- shared/lib/psi-contribution.ts shared/lib/__tests__/psi-contribution.test.ts src/app/stability-index/view-model.ts worker/src/lib/stability-index.ts"
+    ]
    }
   },
   {

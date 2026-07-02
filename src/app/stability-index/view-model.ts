@@ -1,5 +1,6 @@
 import { formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
+import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import type { PsiChartPoint } from "@shared/lib/psi-view-model";
 import type { StabilityContributor } from "@/hooks/api-hooks";
@@ -194,11 +195,13 @@ export function buildPsiContributorRows(
   if (!contributors.length) return [];
   return contributors
     .map((contributor) => {
-      const share = totalMcapUsd > 0 ? contributor.mcapUsd / totalMcapUsd : 0;
-      const amplifier = Math.log2(1 + contributor.mcapUsd / 1e9);
-      const severity = (Math.abs(contributor.bps) / 100) * share * amplifier * 60 * contributor.factor;
-      const breadth = Math.sqrt(contributor.mcapUsd / 1e9) * 3 * contributor.factor;
-      return { ...contributor, severity, breadth, total: severity + breadth };
+      const contribution = computePsiDepegContribution({
+        bps: contributor.bps,
+        mcapUsd: contributor.mcapUsd,
+        totalMcapUsd,
+        factor: contributor.factor,
+      });
+      return { ...contributor, ...contribution };
     })
     .sort((a, b) => b.total - a.total);
 }
