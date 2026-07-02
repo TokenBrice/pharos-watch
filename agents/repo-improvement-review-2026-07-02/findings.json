@@ -7030,6 +7030,22 @@
      "worker/src/cron/prune-cron-history.ts",
      "worker/src/handlers/scheduled/daily-0300.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added explicit owner retention rulings for the audited append-only archive tables, guarded `runPruneCronHistory` against accidentally deleting them, documented source-specific archive decisions, and queued the stale `feedback_submissions` table for a future destructive cleanup rollout.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/prune-cron-history.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run check:doc-source-paths && npm run check:verified-doc-links && npm run check:doc-counts",
+     "npm run check:doc-sync",
+     "npm run check:migrations",
+     "rg -n -P \"feedback_submissions\" worker/src functions shared || true",
+     "git diff --check -- docs/worker-infrastructure.md worker/migrations/MANIFEST.md docs/digest-pipeline.md docs/depeg-detection.md docs/tape-page.md docs/feedback-pipeline.md worker/src/cron/prune-cron-history.ts worker/src/cron/__tests__/prune-cron-history.test.ts"
+    ],
+    "notes": "Storage growth remains intentionally accepted for the keep-forever archive tables. `feedback_submissions` remains schema-retained until a separate destructive D1 cleanup rollout with backup / Time Travel verification."
    }
   },
   {

@@ -145,6 +145,8 @@ The full `input_data` JSON is stored verbatim so detail pages can reconstruct th
 
 The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 
+Retention policy: `daily_digest` is a product archive kept forever. The public archive/detail pages, static digest sync, recent-copy context, cross-day trends, and the total-mcap ATH collector all read historical rows. Do not add age-based pruning unless ATH and archive dependencies are materialized first or an explicit public-output change is accepted.
+
 ---
 
 ## API Endpoints

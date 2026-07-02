@@ -231,6 +231,20 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 The kill switches are for observability degradation only. They do not disable API-key auth, D1-backed quota enforcement, public self-serve request throttles, feedback throttles, admin audit logs, or Telegram security checks. Per-key `api_key_request_stats` remain enabled when Worker route/source attribution is disabled so operators can still see keyed public API load driving limiter pressure. Setting `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` disables only those per-key stats rows and should be reserved for public API spikes where D1 pressure is already visible elsewhere.
 
+### Append-only D1 Retention Policy
+
+The daily `prune-cron-history` job owns bounded cleanup for cron observability, quota, cache, canary, job-attempt, and repair-task rows only. These append-only product/audit tables are intentionally not pruned by that job:
+
+| Table | Retention owner ruling | Why |
+| --- | --- | --- |
+| `daily_digest` | Product archive - keep forever | Digest detail pages, archive rows, recent-copy context, cross-day trends, and the total-mcap ATH collector read historical `input_data`. Do not add age-based pruning unless ATH and archive dependencies are materialized or an explicit output change is accepted. |
+| `admin_action_audit` | Operator audit archive - keep forever | Admin mutations need a durable operator audit trail. |
+| `api_key_audit_log` | API-key audit archive - keep forever | API key create/update/deactivate/rotate events need a durable credential lifecycle audit trail. |
+| `tape_events` | Product timeline archive - keep forever | `/timeline/` all-time filters, permalinks, homepage event reads, and DDRR review evidence depend on historical projected events. |
+| `status_transitions` | Operational incident archive - keep forever | Public and admin status endpoints window their reads with query bounds instead of deleting the incident timeline. |
+| `depeg_backfill_runs` | Backfill audit archive - keep forever | Replay manifests preserve repair provenance, expected fingerprints, and incomplete-run evidence for historical depeg repairs. |
+| `feedback_submissions` | Stale schema-retained, no active runtime pruning | The current feedback runtime writes GitHub issues directly and does not write this table. It remains a destructive-cleanup candidate unless durable feedback D1 persistence is deliberately reintroduced with privacy and retention docs. |
+
 ### Stale D1 Schema Inventory
 
 Several migration-era tables are intentionally schema-retained until a separate destructive D1 cleanup rollout runs. Current Worker code does not read or write:
@@ -240,7 +254,7 @@ Several migration-era tables are intentionally schema-retained until a separate 
 | `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` | stale schema-retained table |
 | `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
 | `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup after the completed May 2026 v2 rollout; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
-| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | stale schema-retained table unless feedback D1 persistence is deliberately reintroduced |
+| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup unless feedback D1 persistence is deliberately reintroduced; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
 
 Do not drop these in a normal migration. Destructive cleanup requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated rollout after compatible Worker code has soaked.
 

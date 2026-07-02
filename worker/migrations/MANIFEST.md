@@ -130,6 +130,21 @@ These are not active migration rows. They record stale tables with no current ru
 | --- | --- | --- | --- |
 | `api_request_source_stats` | `0085_total_request_attribution.sql` backfilled `api_request_consumer_stats`; current runtime writes `api_request_consumer_stats` and `api_key_request_stats` | 2026-07-02: `rg` found no readers or writers outside historical migrations and docs | Dedicated destructive D1 cleanup rollout after production backup / Time Travel verification |
 | `api_key_request_rate_limit` | `0112_api_key_self_serve_hardening.sql` introduced `api_key_request_rate_limit_v2`; May 2026 v2 rollout is complete | 2026-07-02: `rg` found no v1 readers or writers outside historical migrations and docs | Dedicated destructive D1 cleanup rollout after production backup / Time Travel verification |
+| `feedback_submissions` | Current `POST /api/feedback` writes GitHub issues directly and uses `feedback_rate_limit` only for D1 persistence | 2026-07-02: `rg` found no runtime readers or writers outside historical migrations and docs | Dedicated destructive D1 cleanup rollout after production backup / Time Travel verification, unless durable feedback D1 persistence is deliberately reintroduced with privacy/retention docs and tests |
+
+## Append-only Retention Policy
+
+Current owner rulings for append-only operational/product tables that are intentionally absent from `runPruneCronHistory`:
+
+| Table | Retention policy | Reason |
+| --- | --- | --- |
+| `daily_digest` | Product archive - keep forever | The digest archive, detail snapshots, recent-copy context, cross-day trends, and total-mcap ATH collector depend on historical `input_data`. Do not age-prune until those dependencies are materialized or an explicit output change is accepted. |
+| `admin_action_audit` | Operator audit archive - keep forever | Durable audit trail for admin mutations. |
+| `api_key_audit_log` | API-key audit archive - keep forever | Durable audit trail for credential lifecycle events. |
+| `tape_events` | Product timeline archive - keep forever | `/timeline/` all-time reads, permalinks, homepage event reads, and downstream review evidence depend on historical projections. |
+| `status_transitions` | Operational incident archive - keep forever | Public/admin status endpoints window reads with query bounds instead of deleting the incident timeline. |
+| `depeg_backfill_runs` | Backfill audit archive - keep forever | Replay manifests preserve repair provenance, expected fingerprints, and incomplete-run evidence. |
+| `feedback_submissions` | Stale schema-retained, no active runtime pruning | Current runtime has no writer. It is queued above for dedicated destructive cleanup unless durable feedback D1 persistence returns. |
 
 ## Known Anomalies
 

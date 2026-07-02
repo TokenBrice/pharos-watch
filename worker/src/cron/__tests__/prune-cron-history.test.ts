@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runPruneCronHistory } from "../prune-cron-history";
+import { ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE, runPruneCronHistory } from "../prune-cron-history";
 
 interface CronRunRow {
   job: string;
@@ -40,6 +40,7 @@ interface BlockTimestampCacheRow {
  */
 function createStubDb(): {
   db: D1Database;
+  preparedSqls: string[];
   cronRuns: CronRunRow[];
   jobAttempts: JobAttemptRow[];
   repairTasks: RepairTaskRow[];
@@ -55,8 +56,10 @@ function createStubDb(): {
   const selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[] = [];
   const blockTimestampCacheRows: BlockTimestampCacheRow[] = [];
   const slotExecs: SlotExecRow[] = [];
+  const preparedSqls: string[] = [];
 
   function prepare(sql: string): D1PreparedStatement {
+    preparedSqls.push(sql);
     let bound: unknown[] = [];
     const stmt = {
       bind: (...args: unknown[]) => {
@@ -160,6 +163,7 @@ function createStubDb(): {
 
   return {
     db,
+    preparedSqls,
     cronRuns,
     jobAttempts,
     repairTasks,
@@ -177,6 +181,10 @@ const NINETY_DAYS_SEC = 90 * 24 * 60 * 60;
 
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 describe("runPruneCronHistory", () => {
@@ -285,6 +293,18 @@ describe("runPruneCronHistory", () => {
     expect(blockTimestampCacheRows).toEqual([{ updated_at: now - 3600 }]);
     const metadata = JSON.parse(result.metadata!) as { blockTimestampCacheDeleted: number };
     expect(metadata.blockTimestampCacheDeleted).toBe(1);
+  });
+
+  it("does not prune explicit append-only archive tables", async () => {
+    const { db, preparedSqls } = createStubDb();
+
+    await runPruneCronHistory(db);
+
+    const deleteSqls = preparedSqls.filter((sql) => /\bDELETE\s+FROM\b/i.test(sql));
+    for (const { table } of ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE) {
+      const tablePattern = new RegExp(`\\b${escapeRegExp(table)}\\b`, "i");
+      expect(deleteSqls.some((sql) => tablePattern.test(sql))).toBe(false);
+    }
   });
 
   it("reports all deleted counts in metadata", async () => {

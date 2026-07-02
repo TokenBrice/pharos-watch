@@ -14,6 +14,46 @@ const SLOT_EXECUTION_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const BLOCK_TIMESTAMP_CACHE_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 
+// Owner rulings for append-only archive/stale tables audited with this prune
+// job. They are intentionally absent from the DELETE statements below.
+export const ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE = [
+  {
+    table: "daily_digest",
+    policy: "product archive - keep forever",
+    reason: "Digest snapshots, archive pages, recent-copy context, and total-mcap ATH reads depend on historical rows.",
+  },
+  {
+    table: "admin_action_audit",
+    policy: "operator audit archive - keep forever",
+    reason: "Admin mutation history is the durable audit trail for operator actions.",
+  },
+  {
+    table: "api_key_audit_log",
+    policy: "API-key audit archive - keep forever",
+    reason: "API key lifecycle events are the durable audit trail for credential issuance and revocation.",
+  },
+  {
+    table: "tape_events",
+    policy: "product timeline archive - keep forever",
+    reason: "Timeline permalinks, all-time browsing, and downstream review evidence depend on historical events.",
+  },
+  {
+    table: "status_transitions",
+    policy: "operational incident archive - keep forever",
+    reason: "Public/admin status history queries window reads rather than deleting the incident timeline.",
+  },
+  {
+    table: "feedback_submissions",
+    policy: "stale schema-retained - no active runtime prune",
+    reason: "The current feedback path writes GitHub issues directly and has no runtime writer for this table.",
+  },
+  {
+    table: "depeg_backfill_runs",
+    policy: "backfill audit archive - keep forever",
+    reason: "Replay manifests preserve repair provenance and incomplete-run evidence for historical depeg repairs.",
+  },
+] as const;
+
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
 }
