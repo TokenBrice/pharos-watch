@@ -5787,6 +5787,17 @@
      "functions/lib/site-api-env.ts",
      "scripts/maintenance/register-telegram.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added @cloudflare/workers-types 4.20260626.1 to root devDependencies and refreshed the lockfile so root typecheck owns the types imported by functions and scripts.",
+    "validation": [
+     "npm ls @cloudflare/workers-types",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "git diff --check -- package.json package-lock.json agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
