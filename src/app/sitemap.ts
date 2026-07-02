@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -22,7 +20,10 @@ import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 import { changelogs } from "@/data/changelogs";
-import { selectIndexableDepegEvents, selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
+import {
+  DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
+} from "@/app/depeg/[event]/page-data";
 
 export const dynamic = "force-static";
 
@@ -35,13 +36,6 @@ const DIGEST_ENTRIES = digests as readonly DigestContentEntry[];
 const fundingCosts = costsData as CostsFile;
 const fundingDonations = donationsData as DonationsFile;
 
-interface DepegEventSitemapEntry {
-  slug: string;
-  startedAt: number;
-  endedAt: number | null;
-  peakDeviationBps: number;
-}
-
 type SitemapChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
 type StaticPageSpec = readonly [
   path: string,
@@ -52,13 +46,8 @@ type StaticPageSpec = readonly [
 
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
-function readDepegEventEntries(): readonly DepegEventSitemapEntry[] {
-  const filePath = join(process.cwd(), "data/depeg-events.json");
-  return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventSitemapEntry[];
-}
-
-const depegEventEntries = selectStaticDepegEventPages(readDepegEventEntries());
-const indexableDepegEventEntries = selectIndexableDepegEvents(depegEventEntries);
+const depegEventEntries = DEPEG_EVENT_ENTRIES;
+const indexableDepegEventEntries = INDEXABLE_DEPEG_EVENT_ENTRIES;
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
 function lastEdited(path: string): Date {

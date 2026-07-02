@@ -4224,6 +4224,16 @@
     "alsoFiles": [
      "src/app/depeg/[event]/page-data.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Reused the depeg event page-data exports in the sitemap instead of re-reading and re-filtering `data/depeg-events.json` locally.",
+    "validation": [
+     "npx vitest run src/app/__tests__/sitemap-frozen.test.ts 'src/app/depeg/[event]/config.test.ts'",
+     "npm run typecheck",
+     "git diff --check -- src/app/sitemap.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
