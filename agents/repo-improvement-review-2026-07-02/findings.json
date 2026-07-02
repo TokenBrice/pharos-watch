@@ -1585,6 +1585,17 @@
      "worker/src/cron/snapshot-safety-grade-history.ts",
      "worker/src/api/backfill-tape.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added same-timestamp tie expansion to the score tape projector before advancing the grade-change watermark. A regression test now covers maxRows cutting through day-quantized safety grade rows so all rows at the cutoff timestamp are projected.",
+    "validation": [
+     "cd worker && npx vitest run src/lib/tape-projectors/__tests__/score.test.ts",
+     "cd worker && npx vitest run src/lib/tape-projectors/__tests__",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/lib/tape-projectors/score.ts worker/src/lib/tape-projectors/__tests__/score.test.ts"
+    ]
    }
   },
   {

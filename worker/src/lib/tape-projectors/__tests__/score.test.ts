@@ -85,6 +85,32 @@ describe("score projector", () => {
     expect(extractCacheWriteBinds(db, "score.upgraded")[0]?.[1]).toBe(String(SEC));
   });
 
+  it("expands a full batch through same-timestamp grade rows before advancing the watermark", async () => {
+    const limitedRows = [
+      gradeRow({ stablecoin_id: "usdt-tether", rowid: 1 }),
+      gradeRow({ stablecoin_id: "usdc-circle", rowid: 2 }),
+    ];
+    const expandedRows = [
+      ...limitedRows,
+      gradeRow({ stablecoin_id: "dai-makerdao", rowid: 3 }),
+    ];
+    const db = mockD1([
+      { match: "FROM cache WHERE key", rows: [] },
+      { match: MATCH_GRADE_HISTORY, matchBinds: [0, 2], rows: limitedRows },
+      { match: MATCH_GRADE_HISTORY, matchBinds: [0, SEC], rows: expandedRows },
+    ]) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db, { maxRows: 2 });
+
+    expect(result).toEqual({ projected: 3, advanced: SEC });
+    expect(extractInsertBinds(db).map((binds) => binds[13])).toEqual([
+      "usdt-tether:1700000000",
+      "usdc-circle:1700000000",
+      "dai-makerdao:1700000000",
+    ]);
+    expect(extractCacheWriteBinds(db, "score.upgraded")[0]?.[1]).toBe(String(SEC));
+  });
+
   it("treats unknown grades as lower than NR for guarded fallback ordering", async () => {
     const db = mockD1(tables([gradeRow({ grade: "NR", score: null, prev_grade: "UNKNOWN", prev_score: null })])) as MockD1Database;
 

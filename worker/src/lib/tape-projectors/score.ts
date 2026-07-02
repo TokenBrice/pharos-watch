@@ -31,14 +31,12 @@ function coinSourceUrl(coinId: string): string {
   return `/stablecoin/${encodeURIComponent(coinId)}/#report-card`;
 }
 
-async function projectScoreByVariant(
+async function fetchGradeRowsSince(
   db: D1Database,
-  variant: "upgraded" | "downgraded",
-  options: ProjectorOptions | undefined,
-): Promise<ProjectorResult> {
-  const cursorKey = variant === "upgraded" ? "score.upgraded" : "score.downgraded";
-  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
-
+  since: number,
+  until: number | null,
+  limit: number,
+): Promise<SafetyGradeSourceRow[]> {
   const untilClause = until != null ? " AND recorded_at <= ?" : "";
   const sql = `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
                       methodology_version, rowid as rowid
@@ -47,9 +45,31 @@ async function projectScoreByVariant(
                  ORDER BY recorded_at ASC, rowid ASC
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
-
   const rowsResult = await db.prepare(sql).bind(...binds).all<SafetyGradeSourceRow>();
   const rows = rowsResult.results ?? [];
+  if (rows.length < limit) return rows;
+
+  const cutoff = rows[rows.length - 1]?.recorded_at;
+  if (cutoff == null) return rows;
+  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
+  const expandedSql = `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
+                              methodology_version, rowid as rowid
+                         FROM safety_grade_history
+                         WHERE prev_grade IS NOT NULL AND recorded_at > ? AND recorded_at <= ?
+                         ORDER BY recorded_at ASC, rowid ASC`;
+  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<SafetyGradeSourceRow>();
+  return expanded.results ?? [];
+}
+
+async function projectScoreByVariant(
+  db: D1Database,
+  variant: "upgraded" | "downgraded",
+  options: ProjectorOptions | undefined,
+): Promise<ProjectorResult> {
+  const cursorKey = variant === "upgraded" ? "score.upgraded" : "score.downgraded";
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
+
+  const rows = await fetchGradeRowsSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];
