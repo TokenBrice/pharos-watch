@@ -4611,6 +4611,21 @@
      "scripts/maintenance/generate-sitemap-dates.ts",
      "scripts/maintenance/generate-docs-metadata.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Sitemap and docs metadata generators now emit their committed .d.ts sidecars with accurate maintenance script headers, matching the existing generated-artifact pattern.",
+    "validation": [
+     "npx tsx scripts/maintenance/generate-sitemap-dates.ts",
+     "npx tsx scripts/maintenance/generate-docs-metadata.ts",
+     "npx tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+     "npx tsx scripts/maintenance/generate-docs-metadata.ts --check",
+     "npm run typecheck",
+     "npm run check:doc-source-paths",
+     "git diff --check -- docs/architecture.md docs/scripts.md scripts/maintenance/generate-docs-metadata.ts scripts/maintenance/generate-sitemap-dates.ts src/generated/docs-metadata.json.d.ts src/generated/sitemap-dates.json src/generated/sitemap-dates.json.d.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Running the sitemap generator also refreshed committed sitemap-dates.json lastmod values from the current git history."
    }
   },
   {
