@@ -3679,6 +3679,17 @@
     "description": "runAuthoritativeValidation() spawns `npm run -s check:stablecoin-data` unconditionally — including in `--check` mode, where the script only needs to compare the emitted TS snapshot (a pure function of coins.generated.json's FNV fingerprint) against the committed file. `check:stablecoin-data` is already a standalone blocking command in VALIDATION_COMMAND_DESCRIPTORS (validation-command-registry.mjs:279), so every `check:generated-artifacts` run pays a duplicate npm+tsx+Zod validation of 408 coins on top of the gate's own run. Validation is only load-bearing in write mode, where it guards emitting an unvalidated snapshot.",
     "recommendation": "Wrap the runAuthoritativeValidation() call in `if (!CHECK_MODE)`. Check mode remains a pure string comparison; any invalid catalog edit still fails the gate through the existing standalone check:stablecoin-data command, and drift still fails on fingerprint mismatch. Write-mode behavior is unchanged.",
     "estImpact": "~-4-7s per check:generated-artifacts run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Skipped the authoritative `check:stablecoin-data` subprocess when `generate-stablecoin-prevalidated-registry.mjs` runs in `--check` mode, keeping check mode as a pure snapshot comparison while leaving write-mode validation unchanged.",
+    "validation": [
+     "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
+     "npm run check:stablecoin-data",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs"
+    ]
    }
   },
   {

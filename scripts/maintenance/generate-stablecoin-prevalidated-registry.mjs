@@ -59,7 +59,9 @@ function runAuthoritativeValidation() {
   }
 }
 
-runAuthoritativeValidation();
+if (!CHECK_MODE) {
+  runAuthoritativeValidation();
+}
 
 const fingerprint = computeFingerprint(parsed);
 
