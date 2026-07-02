@@ -5180,6 +5180,17 @@
     "description": "l2beat-audit.ts:525 defines BRIDGE_ROUTE_RISK_TIER_RANK, an 8-entry Record<BridgeRouteRiskTier, number> whose values (100/90/85/80/65/55/40/20) are byte-identical to the scoring map BRIDGE_ROUTE_RISK_SCORE in shared/lib/report-card-governance.ts:76. The audit copy is used only to pick the weakest suggested tier (ordering), so if the governance scoring ladder is ever re-tuned, the audit's 'weakest tier' ordering silently diverges from the real scoring order.",
     "recommendation": "Import BRIDGE_ROUTE_RISK_SCORE from ../report-card-governance and delete the local map (report-card-governance is runtime-neutral shared lib, so the import is legal). Identical values today, ordering-only consumer — strictly behavior-preserving.",
     "estImpact": "-12 LOC, one scoring ladder instead of two"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "L2BEAT bridge-route audit ordering now reuses BRIDGE_ROUTE_RISK_SCORE instead of a duplicate local risk-tier rank map.",
+    "validation": [
+     "npm run test -- shared/lib/__tests__/l2beat-audit.test.ts",
+     "npm run typecheck",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/chains/l2beat-audit.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

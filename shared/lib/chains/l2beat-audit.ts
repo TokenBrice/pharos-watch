@@ -1,4 +1,5 @@
 import type { BridgeRouteRiskTier, ChainTier, ContractDeployment, DeploymentModel, StablecoinMeta } from "../../types";
+import { BRIDGE_ROUTE_RISK_SCORE } from "../report-card-governance";
 import { CHAIN_META } from "./index";
 import {
   L2BEAT_INTEROP_SNAPSHOT_META,
@@ -520,22 +521,11 @@ function stablecoinRouteSearchText(coin: StablecoinMeta): string {
   return pieces.join("\n");
 }
 
-const BRIDGE_ROUTE_RISK_TIER_RANK: Record<BridgeRouteRiskTier, number> = {
-  "single-chain-or-native": 100,
-  "issuer-native-burn-mint": 90,
-  "canonical-rollup-bridge": 85,
-  "issuer-native-lock-mint": 80,
-  "external-validated-network": 65,
-  "liquidity-or-intent-route": 55,
-  "external-lock-mint": 40,
-  "opaque-or-unknown": 20,
-};
-
 function weakestSuggestedBridgeTier(protocols: readonly L2BeatInteropProtocolSnapshot[]): BridgeRouteRiskTier | null {
   let weakest: BridgeRouteRiskTier | null = null;
   for (const protocol of protocols) {
     const tier = suggestBridgeRouteRiskTierFromL2BeatProtocol(protocol);
-    if (!weakest || BRIDGE_ROUTE_RISK_TIER_RANK[tier] < BRIDGE_ROUTE_RISK_TIER_RANK[weakest]) weakest = tier;
+    if (!weakest || BRIDGE_ROUTE_RISK_SCORE[tier] < BRIDGE_ROUTE_RISK_SCORE[weakest]) weakest = tier;
   }
   return weakest;
 }
