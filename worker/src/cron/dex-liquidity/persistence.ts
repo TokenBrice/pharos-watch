@@ -111,7 +111,6 @@ interface CandidateGenerationCoverage {
   rowCount: number;
   activeAssetRows: number;
   globalRows: number;
-  scoredAssetRows: number;
 }
 
 async function stageDexLiquidityPublicationGeneration(
@@ -224,8 +223,7 @@ async function loadCandidateGenerationCoverage(
           `SELECT
              COUNT(*) AS row_count,
              SUM(CASE WHEN stablecoin_id != '__global__' THEN 1 ELSE 0 END) AS active_asset_rows,
-             SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows,
-             SUM(CASE WHEN stablecoin_id != '__global__' AND liquidity_score IS NOT NULL THEN 1 ELSE 0 END) AS scored_asset_rows
+             SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows
            FROM dex_liquidity_run_rows
            WHERE generation_id = ?`,
         )
@@ -234,7 +232,6 @@ async function loadCandidateGenerationCoverage(
           row_count: number | null;
           active_asset_rows: number | null;
           global_rows: number | null;
-          scored_asset_rows: number | null;
         }>(),
     3,
     signal,
@@ -244,7 +241,6 @@ async function loadCandidateGenerationCoverage(
     rowCount: row?.row_count ?? 0,
     activeAssetRows: row?.active_asset_rows ?? 0,
     globalRows: row?.global_rows ?? 0,
-    scoredAssetRows: row?.scored_asset_rows ?? 0,
   };
 }
 

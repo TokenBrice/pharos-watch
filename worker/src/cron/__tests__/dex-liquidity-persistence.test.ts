@@ -39,7 +39,6 @@ function makeDb(options: {
     row_count: number;
     active_asset_rows: number;
     global_rows: number;
-    scored_asset_rows: number;
   };
   currentGenerationRows?: number;
   newerCurrentRows?: number;
@@ -63,7 +62,6 @@ function makeDb(options: {
             row_count: ACTIVE_STABLECOINS.length + 1,
             active_asset_rows: ACTIVE_STABLECOINS.length,
             global_rows: 1,
-            scored_asset_rows: 1,
           }) as T;
         }
         if (sql.includes("updated_at > ?") && sql.includes("FROM dex_liquidity")) {
@@ -438,7 +436,6 @@ describe("dex-liquidity persistence", () => {
         row_count: ACTIVE_STABLECOINS.length,
         active_asset_rows: ACTIVE_STABLECOINS.length - 1,
         global_rows: 1,
-        scored_asset_rows: 1,
       },
     });
 

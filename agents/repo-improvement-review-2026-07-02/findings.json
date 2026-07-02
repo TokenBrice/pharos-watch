@@ -911,6 +911,15 @@
     "description": "loadCandidateGenerationCoverage selects `scored_asset_rows` (SUM CASE at line 228) and returns it as CandidateGenerationCoverage.scoredAssetRows (line 247), but assertCandidateGenerationComplete checks only rowCount/activeAssetRows/globalRows, and persistScores uses only coverage.rowCount. No other reader exists in the repo.",
     "recommendation": "Drop the SUM column, the interface field, and the row-type field. Behavior-preserving (unused diagnostic).",
     "estImpact": "-8 LOC, slightly cheaper coverage query"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused scoredAssetRows diagnostic from DEX liquidity publication coverage, including the SQL aggregate, row mapping, interface field, and test fixtures.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/scoring-helpers.test.ts worker/src/cron/__tests__/dex-liquidity-persistence.test.ts worker/src/cron/dex-liquidity/__tests__/persistence-frozen.test.ts worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
