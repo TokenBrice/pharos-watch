@@ -292,7 +292,7 @@ export function TopNav() {
               <Link href="/status/" prefetch={false}>
                 <Activity className="size-4 text-muted-foreground" aria-hidden />
                 <span className="text-sm font-medium">Pharos is Healthy</span>
-                <span className="ml-auto size-2 rounded-full bg-emerald-500" aria-hidden />
+                <span className="ml-auto size-2 rounded-full bg-[var(--severity-healthy)]" aria-hidden />
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -6,9 +6,11 @@ import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-hea
 import { usePegSummary } from "@/hooks/api-hooks";
 import { bucketByDeviationBps } from "@/lib/home-alt-aggregates";
 
+// Segment colors follow the shared severity ramp (see deviationBgClass in
+// src/lib/severity-colors.ts): healthy green → mild amber → moderate orange → severe red.
 const SEGMENTS = [
-  { key: "tight", label: "≤25", legend: "Good", colorClass: "bg-emerald-500" },
-  { key: "loose", label: "25–100", legend: "Alert", colorClass: "bg-yellow-400" },
+  { key: "tight", label: "≤25", legend: "Good", colorClass: "bg-green-500" },
+  { key: "loose", label: "25–100", legend: "Alert", colorClass: "bg-amber-500" },
   { key: "stressed", label: "100–250", legend: "Warning", colorClass: "bg-orange-500" },
   { key: "severe", label: ">250", legend: "Danger", colorClass: "bg-red-500" },
 ] as const;

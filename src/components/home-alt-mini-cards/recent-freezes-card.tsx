@@ -136,20 +136,13 @@ export function RecentFreezesCard(): React.JSX.Element {
         expandLabel="Open FreezeWatch"
         label="Recent Freezes"
         aside={
-          <div
-            role="group"
-            aria-label="Freeze window"
-            className="inline-flex items-stretch overflow-hidden rounded-md border border-border/60 font-mono text-[11px] leading-none"
-          >
+          <div role="group" aria-label="Freeze window" className="inline-flex items-center gap-1">
             <button
               type="button"
               onClick={() => setWindowKey("24h")}
               aria-pressed={windowKey === "24h"}
-              className={
-                windowKey === "24h"
-                  ? "inline-flex min-h-6 items-center bg-muted px-2 py-1 text-foreground"
-                  : "inline-flex min-h-6 items-center px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              }
+              data-state={windowKey === "24h" ? "on" : "off"}
+              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               24h
             </button>
@@ -157,11 +150,8 @@ export function RecentFreezesCard(): React.JSX.Element {
               type="button"
               onClick={() => setWindowKey("7d")}
               aria-pressed={windowKey === "7d"}
-              className={
-                windowKey === "7d"
-                  ? "inline-flex min-h-6 items-center border-l border-border/60 bg-muted px-2 py-1 text-foreground"
-                  : "inline-flex min-h-6 items-center border-l border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              }
+              data-state={windowKey === "7d" ? "on" : "off"}
+              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               7d
             </button>

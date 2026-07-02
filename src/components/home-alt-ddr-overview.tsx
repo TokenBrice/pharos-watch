@@ -178,7 +178,7 @@ function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
           <span className="inline-flex shrink-0 items-center rounded-md bg-frost-blue/15 px-2 py-1 font-display text-sm font-black tracking-tight text-frost-blue ring-1 ring-inset ring-frost-blue/30 sm:text-base">
             DDR
           </span>
-          <p className="font-display text-lg font-bold leading-tight text-foreground sm:text-3xl">
+          <p className="font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
             Depeg Duration Resolver
           </p>
         </div>
@@ -305,7 +305,7 @@ function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] 
               <span className="pharos-numeric text-[11px] font-bold text-foreground">{pct}%</span>
               <div className="flex h-16 w-full items-end overflow-hidden rounded-md bg-muted/50">
                 <div
-                  className="w-full rounded-md bg-gradient-to-t from-frost-blue to-sky-400"
+                  className="w-full rounded-md bg-[var(--chart-primary)]/80"
                   style={{ height: `${Math.max(8, pct)}%` }}
                 />
               </div>

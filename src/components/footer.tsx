@@ -29,7 +29,7 @@ const FOOTER_META: ReadonlyArray<{ href: string; label: string; external?: boole
 export function Footer() {
   return (
     <footer className="border-t border-border/70 py-1 sm:py-2">
-      <div className="container mx-auto space-y-1 px-2 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
+      <div className="mx-auto w-full max-w-[120rem] space-y-1 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0 lg:px-5 xl:px-9">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground sm:text-xs lg:whitespace-nowrap">
             Pharos tracks stablecoin cap, peg stability, liquidity, and dependency risk. Not financial advice.

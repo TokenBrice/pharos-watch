@@ -720,8 +720,8 @@ export function StablecoinTable({
       surfaceRef={tableRef}
       className={
         isFigmaOverview
-          ? "pharos-overview-table-shell animate-in fade-in duration-300"
-          : "animate-in fade-in duration-300"
+          ? "pharos-overview-table-shell animate-in fade-in duration-200"
+          : "animate-in fade-in duration-200"
       }
       density={density}
       viewportRef={scrollRef}

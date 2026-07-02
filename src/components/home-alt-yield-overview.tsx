@@ -57,7 +57,7 @@ function OverviewHeader({ coveredCount }: { coveredCount: number | null }): Reac
   return (
     <div className="space-y-1 sm:space-y-1.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-display text-base font-bold text-foreground sm:text-3xl">Yield Intelligence</p>
+        <p className="font-display text-2xl font-bold text-foreground sm:text-3xl">Yield Intelligence</p>
         <div className="flex shrink-0 items-center gap-3 sm:pt-0">
           {coveredCount !== null && (
             <>

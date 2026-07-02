@@ -81,13 +81,13 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   return (
     <div className="space-y-5">
       <header className="space-y-1.5">
-        <h2 id={titleId} className="pharos-display text-2xl font-semibold tracking-tight text-foreground">
+        <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           Stablecoin Overview
         </h2>
         <p className="text-sm text-muted-foreground">
           Showing{" "}
-          <span className="font-mono tabular-nums text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
-          active stablecoins — pre-launch and frozen excluded,{" "}
+          <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
+          active stablecoins with live market data — pre-launch and frozen excluded,{" "}
           <Link
             href="/screener/"
             className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"

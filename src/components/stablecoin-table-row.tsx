@@ -186,7 +186,7 @@ function StablecoinVirtualRowBase({
     <TableRow
       ref={measureElement}
       key={coin.id}
-      className={`group cursor-pointer ${isFigmaOverview ? "pharos-overview-table-row" : "data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)]"} ${riskClass}`}
+      className={`group cursor-pointer data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)] ${isFigmaOverview ? "pharos-overview-table-row" : ""} ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
       data-cursor={isCursor ? "true" : undefined}
       data-index={virtualIndex}

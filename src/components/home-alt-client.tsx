@@ -65,41 +65,44 @@ const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
   Grade: "hidden md:table-cell",
 };
 
+/* Mirrors the loaded section's order — header, external toolbar, table shell,
+ * peg browse strip beneath — so content doesn't jump when the chunk mounts. */
 function RankingsSectionFallback() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Section header placeholder (title + subhead) */}
+      <div className="space-y-1.5">
+        <Skeleton className="h-8 w-64 max-w-full" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </div>
+      <div className="space-y-3">
+        {/* External toolbar placeholder (figmaOverview renders it above the shell) */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Skeleton className="h-9 w-64 max-w-full" />
+          <Skeleton className="h-9 w-40" />
+        </div>
+        <TableFrame tableId="stablecoin-overview-loading">
+          <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
+          <TableHeader className="bg-muted">
+            <TableRow rowIntent="static">
+              {RANKINGS_SKELETON_HEADERS.map((label) => (
+                <TableHead key={label} scope="col" className={RANKINGS_HEADER_VISIBILITY[label]}>
+                  {label}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={10} />
+          </TableBody>
+        </TableFrame>
+      </div>
       {/* Peg browse strip placeholder */}
       <div className="flex flex-wrap gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-24 rounded-full" />
         ))}
       </div>
-      <TableFrame
-        tableId="stablecoin-overview-loading"
-        topSlot={
-          <div className="pharos-table-toolbar flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1.5">
-              <Skeleton className="h-3 w-32" />
-              <Skeleton className="h-5 w-48" />
-            </div>
-            <Skeleton className="h-8 w-40" />
-          </div>
-        }
-      >
-        <TableCaption className="sr-only">Stablecoin data table loading</TableCaption>
-        <TableHeader className="bg-muted">
-          <TableRow rowIntent="static">
-            {RANKINGS_SKELETON_HEADERS.map((label) => (
-              <TableHead key={label} scope="col" className={RANKINGS_HEADER_VISIBILITY[label]}>
-                {label}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableSkeletonRows columns={RANKINGS_SKELETON_COLUMNS} rowCount={10} />
-        </TableBody>
-      </TableFrame>
     </div>
   );
 }
