@@ -11,6 +11,7 @@ import {
   DIRECT_API_DEFAULT_MAX_PAGES,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
+import { isDexApiRecord } from "./direct-api-json";
 import { toErrorMessage } from "../../lib/error-utils";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
@@ -30,14 +31,41 @@ interface OrcaPool {
 }
 
 interface OrcaResponse {
-  data: OrcaPool[];
-  meta?: {
-    next?: string | null;
-    cursor?: {
-      next?: string | null;
-      previous?: string | null;
-    } | null;
-  };
+  data: unknown[];
+  meta?: unknown;
+}
+
+function isOrcaToken(value: unknown): value is OrcaPool["tokenA"] {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    typeof value.symbol === "string" &&
+    typeof value.decimals === "number" &&
+    Number.isFinite(value.decimals);
+}
+
+function isOrcaPool(value: unknown): value is OrcaPool {
+  return isDexApiRecord(value) &&
+    typeof value.address === "string" &&
+    typeof value.price === "string" &&
+    typeof value.tvlUsdc === "string" &&
+    typeof value.feeRate === "number" &&
+    Number.isFinite(value.feeRate) &&
+    isOrcaToken(value.tokenA) &&
+    isOrcaToken(value.tokenB) &&
+    typeof value.tokenBalanceA === "string" &&
+    typeof value.tokenBalanceB === "string" &&
+    (value.stats == null || isDexApiRecord(value.stats));
+}
+
+function isOrcaResponse(value: unknown): value is OrcaResponse {
+  return isDexApiRecord(value) && Array.isArray(value.data);
+}
+
+function getOrcaNextCursor(meta: unknown): string | null {
+  if (!isDexApiRecord(meta)) return null;
+  const cursor = meta.cursor;
+  if (isDexApiRecord(cursor) && typeof cursor.next === "string") return cursor.next;
+  return typeof meta.next === "string" ? meta.next : null;
 }
 
 export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
@@ -94,8 +122,8 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       break;
     }
 
-    const json = await res.json() as OrcaResponse;
-    if (!Array.isArray(json.data)) {
+    const json = await res.json() as unknown;
+    if (!isOrcaResponse(json)) {
       errors.push("returned malformed body");
       break;
     }
@@ -104,7 +132,14 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
     if (json.data.length === 0) break;
 
     let pageHasEligiblePool = false;
-    for (const pool of json.data) {
+    let malformedRows = 0;
+    for (const rawPool of json.data) {
+      if (!isOrcaPool(rawPool)) {
+        malformedRows++;
+        continue;
+      }
+
+      const pool = rawPool;
       const tvlUsd = parseFloat(pool.tvlUsdc);
       const price = parseFloat(pool.price);
       const volume = parseFloat(pool.stats?.["24h"]?.volume ?? "0");
@@ -135,6 +170,10 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
           : null,
       });
     }
+    if (malformedRows > 0) {
+      degraded = true;
+      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+    }
 
     if (!pageHasEligiblePool) {
       degraded = true;
@@ -142,7 +181,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
     }
 
     // Cursor-based pagination
-    const nextCursor = json.meta?.cursor?.next ?? json.meta?.next ?? null;
+    const nextCursor = getOrcaNextCursor(json.meta);
     if (nextCursor && seenCursors.has(nextCursor)) {
       degraded = true;
       errors.push("cursor loop detected");

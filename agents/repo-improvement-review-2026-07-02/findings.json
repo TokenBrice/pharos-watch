@@ -4537,6 +4537,16 @@
     "alsoFiles": [
      "worker/src/cron/dex-liquidity/orchestrator-phases/direct-api.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added Orca response, token, and pool row guards before dereferencing API payload fields. Malformed pool rows are now skipped with a degraded-page error while valid rows from the same page remain in the direct-API result.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dex-liquidity-direct-api.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/dex-liquidity/fetch-orca.ts worker/src/cron/__tests__/dex-liquidity-direct-api.test.ts"
+    ]
    }
   },
   {

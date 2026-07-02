@@ -932,6 +932,54 @@ describe("fetchOrcaPools", () => {
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001); // 100 / 1_000_000
   });
 
+  it("skips malformed Orca pool rows while preserving valid rows from the same page", async () => {
+    mockJsonFetch({
+      data: [
+        {
+          address: "brokenPoolMissingToken",
+          price: "1.0",
+          tvlUsdc: "100000",
+          feeRate: 100,
+          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+          tokenBalanceA: "50000",
+          tokenBalanceB: "50000",
+          stats: { "24h": { volume: "1000" } },
+        },
+        {
+          address: "brokenPoolBadDecimals",
+          price: "1.0",
+          tvlUsdc: "100000",
+          feeRate: 100,
+          tokenA: { address: "mintA", symbol: "USDC", decimals: "6" },
+          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+          tokenBalanceA: "50000",
+          tokenBalanceB: "50000",
+          stats: { "24h": { volume: "1000" } },
+        },
+        {
+          address: "validPool",
+          price: "1.0",
+          tvlUsdc: "100000",
+          feeRate: 100,
+          tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
+          tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+          tokenBalanceA: "50000",
+          tokenBalanceB: "50000",
+          stats: { "24h": { volume: "1000" } },
+        },
+      ],
+      meta: { cursor: { next: null } },
+    });
+
+    const pools = await fetchOrcaPools();
+
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
+    expect(pools.pools).toHaveLength(1);
+    expect(pools.pools[0].poolAddress).toBe("validPool");
+    expect(pools.errors).toContain("page 1 skipped 2 malformed pool rows");
+  });
+
   it("handles 429 rate limit gracefully", async () => {
     mockTextFetch("rate limited", 429);
     const pools = await fetchOrcaPools();
