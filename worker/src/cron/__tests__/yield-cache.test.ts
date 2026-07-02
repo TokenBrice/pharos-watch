@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   parseRiskFreeRateCache,
+  parseRiskFreeRatesCache,
   parseDlStablecoinPoolsCache,
   buildRiskFreeRateCachePayload,
+  buildRiskFreeRatesCachePayload,
   serializeRiskFreeRateCache,
   buildDlStablecoinPoolsCache,
   buildYieldSupplementalSourcesCache,
@@ -45,6 +47,64 @@ describe("parseRiskFreeRateCache", () => {
 
   it("returns null for empty string", () => {
     expect(parseRiskFreeRateCache("", nowSec, nowSec)).toBeNull();
+  });
+});
+
+describe("parseRiskFreeRatesCache", () => {
+  const nowSec = 1710500000;
+
+  it("parses bundled benchmark records without reserializing nested payloads", () => {
+    const raw = JSON.stringify(buildRiskFreeRatesCachePayload({
+      USD: buildRiskFreeRateCachePayload({
+        key: "USD",
+        rate: 4.25,
+        source: "fred",
+        recordDate: "2026-03-14",
+        fetchedAt: nowSec - 3600,
+      }),
+      USD_EFFR: null,
+      EUR: buildRiskFreeRateCachePayload({
+        key: "EUR",
+        rate: 2.5,
+        source: "ecb",
+        recordDate: "2026-03-14",
+        fetchedAt: nowSec - 7200,
+      }),
+      CHF: null,
+      GBP: null,
+      JPY: null,
+      MXN: null,
+      BRL: null,
+      AUD: null,
+      CAD: null,
+      RUB: null,
+      TRY: null,
+      SGD: null,
+    }));
+
+    const result = parseRiskFreeRatesCache(raw, nowSec - 10_000, nowSec);
+
+    expect(result?.USD.rate).toBe(4.25);
+    expect(result?.USD.source).toBe("fred");
+    expect(result?.EUR?.rate).toBe(2.5);
+    expect(result?.EUR?.key).toBe("EUR");
+    expect(result?.EUR?.source).toBe("ecb");
+  });
+
+  it("keeps legacy scalar behavior for unusual bundled scalar values", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      benchmarks: {
+        USD: 3.75,
+        EUR: "2.5",
+      },
+    });
+
+    const result = parseRiskFreeRatesCache(raw, nowSec - 86400, nowSec);
+
+    expect(result?.USD.rate).toBe(3.75);
+    expect(result?.USD.source).toBe("legacy-scalar");
+    expect(result?.EUR).toBeNull();
   });
 });
 

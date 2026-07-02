@@ -141,6 +141,13 @@ interface RiskFreeRatesCachePayload {
   };
 }
 
+type RiskFreeRateParseDefaults = {
+  key?: YieldBenchmarkKey;
+  label?: string;
+  currency?: string;
+  isProxy?: boolean;
+};
+
 export function buildRiskFreeRateCachePayload(
   fields: Partial<RiskFreeRateCachePayload> & Pick<RiskFreeRateCachePayload, "rate" | "source">,
 ): RiskFreeRateCachePayload {
@@ -195,61 +202,53 @@ export function serializeRiskFreeRatesCache(payload: RiskFreeRatesCachePayload):
   return JSON.stringify(payload);
 }
 
-export function parseRiskFreeRateCache(
-  raw: string,
+function parseRiskFreeRateRecord(
+  parsed: unknown,
   cacheUpdatedAt: number,
-  nowSec = Math.floor(Date.now() / 1000),
-  defaults?: {
-    key?: YieldBenchmarkKey;
-    label?: string;
-    currency?: string;
-    isProxy?: boolean;
-  },
+  nowSec: number,
+  defaults?: RiskFreeRateParseDefaults,
+  legacyFallbackValue: unknown = parsed,
 ): ParsedYieldBenchmarkMeta | null {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (isRecord(parsed)) {
-      const rate = toFiniteNumber(parsed.rate);
-      const fetchedAt = toFiniteNumber(parsed.fetchedAt);
-      if (rate != null) {
-        const effectiveFetchedAt = fetchedAt ?? cacheUpdatedAt;
-        const isFallback = parsed.isFallback === true;
-        const source = toNullableString(parsed.source) ?? "unknown";
-        const parsedKey = toNullableString(parsed.key) as YieldBenchmarkKey | null;
-        const key = defaults?.key ?? parsedKey ?? "USD";
-        const staticMeta = getYieldBenchmarkStaticMeta(key);
-        const lastMarketRate =
-          toFiniteNumber(parsed.lastMarketRate) ??
-          (!isFallback && source !== "hardcoded-fallback" ? rate : null);
-        return {
-          key,
-          label: defaults?.label ?? toNullableString(parsed.label) ?? staticMeta.label,
-          currency: defaults?.currency ?? toNullableString(parsed.currency) ?? staticMeta.currency,
-          rate,
-          recordDate: toNullableString(parsed.recordDate),
-          fetchedAt: effectiveFetchedAt,
-          ageSeconds: effectiveFetchedAt != null ? Math.max(0, nowSec - effectiveFetchedAt) : null,
-          source,
-          isFallback,
-          fallbackMode: toNullableString(parsed.fallbackMode),
-          isProxy: defaults?.isProxy ?? (typeof parsed.isProxy === "boolean" ? parsed.isProxy : staticMeta.isProxy),
-          lastMarketRate,
-          lastMarketRecordDate:
-            toNullableString(parsed.lastMarketRecordDate) ??
-            (lastMarketRate != null ? toNullableString(parsed.recordDate) : null),
-          lastMarketFetchedAt:
-            toFiniteNumber(parsed.lastMarketFetchedAt) ??
-            (lastMarketRate != null ? effectiveFetchedAt : null),
-          lastMarketSource:
-            toNullableString(parsed.lastMarketSource) ??
-            (lastMarketRate != null ? source : null),
-        };
-      }
+  if (isRecord(parsed)) {
+    const rate = toFiniteNumber(parsed.rate);
+    const fetchedAt = toFiniteNumber(parsed.fetchedAt);
+    if (rate != null) {
+      const effectiveFetchedAt = fetchedAt ?? cacheUpdatedAt;
+      const isFallback = parsed.isFallback === true;
+      const source = toNullableString(parsed.source) ?? "unknown";
+      const parsedKey = toNullableString(parsed.key) as YieldBenchmarkKey | null;
+      const key = defaults?.key ?? parsedKey ?? "USD";
+      const staticMeta = getYieldBenchmarkStaticMeta(key);
+      const lastMarketRate =
+        toFiniteNumber(parsed.lastMarketRate) ??
+        (!isFallback && source !== "hardcoded-fallback" ? rate : null);
+      return {
+        key,
+        label: defaults?.label ?? toNullableString(parsed.label) ?? staticMeta.label,
+        currency: defaults?.currency ?? toNullableString(parsed.currency) ?? staticMeta.currency,
+        rate,
+        recordDate: toNullableString(parsed.recordDate),
+        fetchedAt: effectiveFetchedAt,
+        ageSeconds: effectiveFetchedAt != null ? Math.max(0, nowSec - effectiveFetchedAt) : null,
+        source,
+        isFallback,
+        fallbackMode: toNullableString(parsed.fallbackMode),
+        isProxy: defaults?.isProxy ?? (typeof parsed.isProxy === "boolean" ? parsed.isProxy : staticMeta.isProxy),
+        lastMarketRate,
+        lastMarketRecordDate:
+          toNullableString(parsed.lastMarketRecordDate) ??
+          (lastMarketRate != null ? toNullableString(parsed.recordDate) : null),
+        lastMarketFetchedAt:
+          toFiniteNumber(parsed.lastMarketFetchedAt) ??
+          (lastMarketRate != null ? effectiveFetchedAt : null),
+        lastMarketSource:
+          toNullableString(parsed.lastMarketSource) ??
+          (lastMarketRate != null ? source : null),
+      };
     }
-  } catch { /* expected: legacy scalar format — fall through to numeric parsing */
   }
 
-  const legacyRate = toFiniteNumber(raw);
+  const legacyRate = toFiniteNumber(legacyFallbackValue);
   if (legacyRate == null) return null;
   const key = defaults?.key ?? "USD";
   const staticMeta = getYieldBenchmarkStaticMeta(key);
@@ -272,6 +271,21 @@ export function parseRiskFreeRateCache(
   };
 }
 
+export function parseRiskFreeRateCache(
+  raw: string,
+  cacheUpdatedAt: number,
+  nowSec = Math.floor(Date.now() / 1000),
+  defaults?: RiskFreeRateParseDefaults,
+): ParsedYieldBenchmarkMeta | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parseRiskFreeRateRecord(parsed, cacheUpdatedAt, nowSec, defaults, raw);
+  } catch { /* expected: legacy scalar format — fall through to numeric parsing */
+  }
+
+  return parseRiskFreeRateRecord(raw, cacheUpdatedAt, nowSec, defaults, raw);
+}
+
 export function parseRiskFreeRatesCache(
   raw: string,
   cacheUpdatedAt: number,
@@ -284,12 +298,15 @@ export function parseRiskFreeRatesCache(
     const usdRaw = benchmarks.USD;
     if (!usdRaw) return null;
 
-    const usd = parseRiskFreeRateCache(
-      JSON.stringify(usdRaw),
-      cacheUpdatedAt,
-      nowSec,
-      { key: "USD" },
-    );
+    const parseBundledBenchmark = (
+      raw: unknown,
+      key: YieldBenchmarkKey,
+    ): ParsedYieldBenchmarkMeta | null => {
+      const legacyFallbackValue = isRecord(raw) ? raw : JSON.stringify(raw);
+      return parseRiskFreeRateRecord(raw, cacheUpdatedAt, nowSec, { key }, legacyFallbackValue);
+    };
+
+    const usd = parseBundledBenchmark(usdRaw, "USD");
     if (!usd) return null;
 
     const parseOptional = (
@@ -297,7 +314,7 @@ export function parseRiskFreeRatesCache(
     ): ParsedYieldBenchmarkMeta | null => {
       const raw = benchmarks[key];
       if (raw == null) return null;
-      return parseRiskFreeRateCache(JSON.stringify(raw), cacheUpdatedAt, nowSec, { key });
+      return parseBundledBenchmark(raw, key);
     };
 
     return {

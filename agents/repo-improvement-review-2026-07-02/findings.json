@@ -1372,6 +1372,15 @@
     "description": "parseRiskFreeRatesCache parses the registry JSON once, then for USD and each of the 12 optional benchmark keys calls `parseRiskFreeRateCache(JSON.stringify(raw), ...)` (lines 287-301), which immediately JSON.parses the string again — 13 serialize/parse round trips of already-parsed objects on every registry load (at least once per hourly yield run plus fetch-tbill-rate). parseRiskFreeRateCache genuinely needs string input only for its legacy-scalar fallback path, which cannot apply to these nested records.",
     "recommendation": "Split parseRiskFreeRateCache's record-handling body into a parseRiskFreeRateRecord(parsed: unknown, ...) helper that both the string entrypoint and parseRiskFreeRatesCache call, passing the already-parsed object directly. Output values are bit-identical (JSON round-tripping a JSON.parse result is identity here), so this is behavior-neutral.",
     "estImpact": "Removes 13 JSON round trips per registry load"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted shared risk-free benchmark record normalization so bundled registry parsing passes already-parsed benchmark values directly instead of JSON re-stringifying and re-parsing each nested record. Kept legacy scalar fallback behavior covered for unusual scalar registry values.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-cache.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
