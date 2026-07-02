@@ -353,7 +353,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chains/l2beat-audit.ts` - L2BeatAliasIntegrityIssue, L2BeatAliasIntegrityIssueKind, L2BeatBridgeRouteReviewAudit, L2BeatBridgeRouteReviewReason, L2BeatBridgeRouteReviewRow, L2BeatChainCoverageAudit
 - `shared/lib/chains/l2beat-interop.ts` - L2BEAT_INTEROP_PROTOCOLS, L2BEAT_INTEROP_SNAPSHOT_META, L2BeatInteropBridgeType, L2BeatInteropProtocolId, L2BeatInteropProtocolSnapshot, L2BeatInteropProtocolType
 - `shared/lib/chains/l2beat-risk.ts` - L2BEAT_CHAIN_ALIASES, L2BEAT_CHAIN_RISK_FIELDS, L2BEAT_CHAIN_RISK_FIELD_LABELS, L2BEAT_CHAIN_RISK_SNAPSHOT, L2BEAT_CHAIN_RISK_SNAPSHOT_META, L2BEAT_RISK_SENTIMENT_SCORES
-- `shared/lib/citation/formats.ts` - CitationInput, deriveCiteKey, formatAPA7, formatBibTeX, formatChicago, formatPlain
 - `shared/lib/citation/urn.ts` - PharosUrn, PharosUrnEntityClass, formatPharosUrn, parsePharosUrn
 - `shared/lib/classification.ts`
 - `shared/lib/classification/badges.ts` - BACKING_BADGE_STYLES, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES, PEG_BADGE_STYLES
@@ -377,7 +376,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- ... 260 more files omitted; use `rg --files shared/lib` for the full list.
+- `shared/lib/depeg-resolver-version.ts`
+- ... 259 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 

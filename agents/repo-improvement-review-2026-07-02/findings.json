@@ -3745,6 +3745,18 @@
     "description": "Commit dbb6c7a15 'Remove cite this page blocks' deleted the UI, but the citation formatter library (109 LOC: deriveCiteKey, formatBibTeX, formatAPA7, formatChicago, formatPlain) and its test file were left behind. Grep for every exported name and for 'citation/formats' across src/, shared/, worker/, functions/, scripts/ finds zero consumers outside shared/lib/citation/__tests__/formats.test.ts. The sibling urn.ts IS still used (src/lib/pharos-urn-json-ld.ts) and must be kept.",
     "recommendation": "Delete shared/lib/citation/formats.ts and shared/lib/citation/__tests__/formats.test.ts; keep urn.ts. Safe under the behavior freeze: the feature that rendered these strings was already removed, so no page or API output changes.",
     "estImpact": "-109 LOC + test file"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the orphaned citation format renderer module and its self-test while keeping the live Pharos URN parser/formatter. Removed stale documentation/code-map references to the deleted formatter.",
+    "validation": [
+     "rg -n \"citation/formats|deriveCiteKey|formatBibTeX|formatAPA7|formatChicago|formatPlain|CitationInput\" src shared worker functions tests scripts docs -g '!node_modules'",
+     "npm run check:doc-source-paths",
+     "npm run check:unused-code",
+     "npx vitest run shared/lib/citation/__tests__/urn.test.ts",
+     "npm run typecheck"
+    ]
    }
   },
   {
