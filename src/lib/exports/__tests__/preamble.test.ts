@@ -3,7 +3,6 @@ import {
   formatPreambleCsv,
   formatPreambleMarkdown,
   formatPreambleNdjson,
-  getMethodologyLabel,
   type ExportPreamble,
 } from "@/lib/exports/preamble";
 
@@ -38,23 +37,5 @@ describe("ExportPreamble formatters", () => {
     expect(formatPreambleMarkdown(FIXTURE)).toBe(
       "> Pharos pharos.watch | Endpoint: stablecoins | As of: 2026-05-16T12:00:00.000Z | URL: https://pharos.watch/ | Methodology: safety-score v7.25",
     );
-  });
-});
-
-describe("getMethodologyLabel", () => {
-  it("returns a label for known endpoints", () => {
-    const label = getMethodologyLabel("stablecoins");
-    expect(label).not.toBeNull();
-    expect(label).toMatch(/^safety-score v/);
-  });
-
-  it("returns the depeg-dews label for peg-summary", () => {
-    const label = getMethodologyLabel("peg-summary");
-    expect(label).not.toBeNull();
-    expect(label).toMatch(/^depeg-dews v/);
-  });
-
-  it("returns null for unknown endpoints", () => {
-    expect(getMethodologyLabel("not-a-real-endpoint")).toBeNull();
   });
 });

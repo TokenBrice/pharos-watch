@@ -1819,6 +1819,16 @@
      "src/app/screener/client.tsx",
      "src/components/table-export-menu.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused methodology-label endpoint map, its resolver export, the nine methodology-version imports that only fed that map, and the dedicated helper tests. Export preamble formatting remains unchanged.",
+    "validation": [
+     "rg -n \"getMethodologyLabel|METHODOLOGY_LABEL_BY_ENDPOINT\" src tests shared functions -g '!node_modules'",
+     "npx vitest run src/lib/exports/__tests__/preamble.test.ts src/lib/exports/__tests__/csv.test.ts src/lib/exports/__tests__/markdown.test.ts src/lib/exports/__tests__/ndjson.test.ts src/components/__tests__/table-export-menu.test.tsx",
+     "npm run typecheck"
+    ]
    }
   },
   {
