@@ -1,3 +1,4 @@
+import { formatDatedExportFilename, triggerFileDownload } from "./download";
 import type { ExportPreamble } from "./preamble";
 import { formatPreambleCsv } from "./preamble";
 import { buildCsv as buildSharedCsv, buildCsvBody } from "@shared/lib/csv";
@@ -31,18 +32,11 @@ export function buildCsvWithPreamble<T>(
  * auto-detects UTF-8.
  */
 function triggerCsvDownload(csv: string, filename: string): void {
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().split("T")[0]}.csv`;
-    // a.click() requires a user-activation context; some browsers silently
-    // suppress programmatic clicks, but the URL is still revoked below.
-    a.click();
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
+  triggerFileDownload(
+    ["﻿" + csv],
+    "text/csv;charset=utf-8;",
+    formatDatedExportFilename(filename, "csv"),
+  );
 }
 
 /** Trigger a browser download of the CSV (no preamble). */

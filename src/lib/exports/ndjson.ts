@@ -1,3 +1,4 @@
+import { formatDatedExportFilename, triggerFileDownload } from "./download";
 import type { CsvColumn } from "./csv";
 import type { ExportPreamble } from "./preamble";
 import { formatPreambleNdjson } from "./preamble";
@@ -36,11 +37,9 @@ export function downloadNdjsonWithPreamble<T>(
   preamble: ExportPreamble,
 ): void {
   const ndjson = buildNdjsonWithPreamble(data, columns, preamble);
-  const blob = new Blob([ndjson], { type: "application/x-ndjson;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${filename}-${new Date().toISOString().split("T")[0]}.ndjson`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  triggerFileDownload(
+    [ndjson],
+    "application/x-ndjson;charset=utf-8;",
+    formatDatedExportFilename(filename, "ndjson"),
+  );
 }

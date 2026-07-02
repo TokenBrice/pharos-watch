@@ -3327,6 +3327,19 @@
     "alsoFiles": [
      "src/lib/exports/csv.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted a shared export download helper for dated filenames and Blob anchor downloads, then routed both CSV and NDJSON downloads through it so NDJSON inherits the same try/finally object-URL revocation behavior as CSV.",
+    "validation": [
+     "npx vitest run src/lib/exports/__tests__/csv.test.ts src/lib/exports/__tests__/ndjson.test.ts src/lib/__tests__/csv-export.test.ts",
+     "npm run typecheck",
+     "npm run typecheck:tests",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- src/lib/exports/csv.ts src/lib/exports/ndjson.ts src/lib/exports/download.ts src/lib/exports/__tests__/csv.test.ts src/lib/exports/__tests__/ndjson.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added filename/content assertions and click-throw revoke coverage. Test-typecheck reported no new diagnostics after typing the createObjectURL mocks."
    }
   },
   {

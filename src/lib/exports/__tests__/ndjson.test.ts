@@ -11,6 +11,10 @@ const PREAMBLE: ExportPreamble = {
   methodologyLabel: "safety-score v7.25",
 };
 
+function expectBlob(value: Blob | MediaSource | undefined): asserts value is Blob {
+  expect(value).toBeInstanceOf(Blob);
+}
+
 describe("buildNdjsonWithPreamble", () => {
   it("emits one `_meta` line followed by one JSON object per row", () => {
     const ndjson = buildNdjsonWithPreamble(
@@ -51,7 +55,7 @@ describe("buildNdjsonWithPreamble", () => {
 });
 
 describe("downloadNdjsonWithPreamble", () => {
-  const createObjectURL = vi.fn(() => "blob:pharos-ndjson");
+  const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:pharos-ndjson");
   const revokeObjectURL = vi.fn();
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
@@ -74,7 +78,7 @@ describe("downloadNdjsonWithPreamble", () => {
     revokeObjectURL.mockClear();
   });
 
-  it("triggers a download with the expected MIME type and dated filename", () => {
+  it("triggers a download with the expected MIME type and dated filename", async () => {
     downloadNdjsonWithPreamble(
       [{ name: "USDC" }],
       [{ header: "Name", accessor: (row) => row.name }],
@@ -84,8 +88,40 @@ describe("downloadNdjsonWithPreamble", () => {
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = createObjectURL.mock.calls[0]?.[0];
-    expect(blob).toBeInstanceOf(Blob);
-    expect((blob as Blob).type).toBe("application/x-ndjson;charset=utf-8;");
+    expectBlob(blob);
+    expect(blob.type).toBe("application/x-ndjson;charset=utf-8;");
+    await expect(blob.text()).resolves.toBe(
+      [
+        '{"_meta":{"endpoint":"stablecoins","asOfISO":"2026-05-16T12:00:00.000Z","sourceUrl":"https://pharos.watch/","methodologyLabel":"safety-score v7.25"}}',
+        '{"Name":"USDC"}',
+      ].join("\n"),
+    );
     expect(clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(anchor?.download).toBe("stablecoins-2026-05-16.ndjson");
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-ndjson");
+  });
+
+  it("still revokes the object URL when the anchor click throws", async () => {
+    clickSpy.mockImplementation(() => {
+      throw new Error("click blocked by browser policy");
+    });
+
+    expect(() =>
+      downloadNdjsonWithPreamble(
+        [{ name: "USDC" }],
+        [{ header: "Name", accessor: (row) => row.name }],
+        "stablecoins",
+        PREAMBLE,
+      ),
+    ).toThrow("click blocked by browser policy");
+
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-ndjson");
   });
 });

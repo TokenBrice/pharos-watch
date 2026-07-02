@@ -11,6 +11,10 @@ const PREAMBLE: ExportPreamble = {
   methodologyLabel: "safety-score v7.25",
 };
 
+function expectBlob(value: Blob | MediaSource | undefined): asserts value is Blob {
+  expect(value).toBeInstanceOf(Blob);
+}
+
 describe("buildCsvWithPreamble", () => {
   it("prepends the `#` preamble, then header, then escaped rows", () => {
     const csv = buildCsvWithPreamble(
@@ -79,7 +83,7 @@ describe("buildCsvWithPreamble", () => {
 });
 
 describe("downloadCsvWithPreamble", () => {
-  const createObjectURL = vi.fn(() => "blob:pharos-csv");
+  const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:pharos-csv");
   const revokeObjectURL = vi.fn();
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
@@ -112,11 +116,13 @@ describe("downloadCsvWithPreamble", () => {
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = createObjectURL.mock.calls[0]?.[0];
-    expect(blob).toBeInstanceOf(Blob);
-    expect((blob as Blob).type).toBe("text/csv;charset=utf-8;");
-    const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
+    expectBlob(blob);
+    expect(blob.type).toBe("text/csv;charset=utf-8;");
+    const bytes = new Uint8Array(await blob.arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([239, 187, 191]); // UTF-8 BOM
     expect(clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(anchor?.download).toBe("stablecoins-2026-05-16.csv");
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
     await vi.runOnlyPendingTimersAsync();
