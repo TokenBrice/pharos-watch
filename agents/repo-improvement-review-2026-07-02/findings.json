@@ -784,6 +784,15 @@
     "description": "fetchBeefySources fetches https://api.beefy.finance/tvl into `tvlMap` typed Record<string, number|null> and reads `tvlMap[vault.id]` (line 445). But the live endpoint returns a payload keyed by numeric chain id with a nested vaultId→tvl object per chain: `{\"1\":{\"curve-usdc-usdf\":1246237.6,...},\"56\":{...}}` (verified against the live API during this review; /apy is flat but /tvl is not). So `tvlMap[vault.id]` is always undefined, `typeof tvl !== \"number\"` fails for every vault (line 446), and fetchBeefySources always returns []. The Beefy family therefore reports status \"ok\" with 0 candidates every run — it is listed in REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS and its three fetches (apy/vaults/tvl) are pure waste. Evidence the output is wrong (not just different): the code clearly intends to include active single-asset Beefy vaults with TVL ≥ $100k (BEEFY_MIN_TVL_USD gate), and includes none.",
     "recommendation": "Index TVL through the vault's chain: build a chain-name→evmChainId map (CHAIN_META already has evmChainId) and read `tvlMap[String(evmChainId)]?.[vault.id]`, or flatten the nested response by merging the per-chain objects. behaviorChange=true: fixing it will introduce Beefy yield candidates that are currently absent, so it needs an owner-reviewed rollout.",
     "estImpact": "Unbreaks an entire source family; removes 3 wasted fetches/run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Resolved Beefy's chain-nested /tvl payload by mapping Beefy chain names/aliases to canonical chains, reading TVL through CHAIN_META evmChainId, and retaining a flat-payload fallback. Updated Beefy fixtures to cover nested TVL and the avax-to-avalanche alias.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-beefy-source.test.ts"
+    ],
+    "notes": "cd worker && npx tsc --noEmit was not counted for this scoped commit because a concurrent uncommitted frontend/data-splitting change currently adds shared/lib/stablecoins/genius-compliance-registry.ts without its generated JSON dependency."
    }
   },
   {

@@ -15,7 +15,7 @@ describe("fetchBeefySources", () => {
   it("joins APY and vault metadata for stablecoin single-asset vaults", async () => {
     mockFetch([
       { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
-      { match: "api.beefy.finance/tvl", body: { "aave-usdc": 12_500_000 } },
+      { match: "api.beefy.finance/tvl", body: { "43114": { "aave-usdc": 12_500_000 } } },
       {
         match: "api.beefy.finance/vaults",
         body: [
@@ -25,7 +25,7 @@ describe("fetchBeefySources", () => {
             token: "USDC",
             assets: ["USDC"],
             status: "active",
-            chain: "ethereum",
+            chain: "avax",
             platformId: "aave",
             tokenAddress: "0x123",
             earnContractAddress: "0x456",
@@ -42,6 +42,7 @@ describe("fetchBeefySources", () => {
     expect(results.length).toBe(1);
     expect(results[0]).toEqual(
       expect.objectContaining({
+        chain: "avalanche",
         symbol: "USDC",
         yield: expect.objectContaining({
           currentApy: expect.closeTo(3.7, 0),
@@ -56,7 +57,7 @@ describe("fetchBeefySources", () => {
   it("skips EOL vaults", async () => {
     mockFetch([
       { match: "api.beefy.finance/apy", body: { "old-usdc": 0.05 } },
-      { match: "api.beefy.finance/tvl", body: { "old-usdc": 1_000_000 } },
+      { match: "api.beefy.finance/tvl", body: { "1": { "old-usdc": 1_000_000 } } },
       {
         match: "api.beefy.finance/vaults",
         body: [
@@ -84,7 +85,7 @@ describe("fetchBeefySources", () => {
   it("skips multi-asset LP vaults", async () => {
     mockFetch([
       { match: "api.beefy.finance/apy", body: { "curve-usdc-usdt": 0.06 } },
-      { match: "api.beefy.finance/tvl", body: { "curve-usdc-usdt": 1_000_000 } },
+      { match: "api.beefy.finance/tvl", body: { "1": { "curve-usdc-usdt": 1_000_000 } } },
       {
         match: "api.beefy.finance/vaults",
         body: [
@@ -112,7 +113,7 @@ describe("fetchBeefySources", () => {
   it("skips vaults without enough Beefy TVL to pass size gates", async () => {
     mockFetch([
       { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
-      { match: "api.beefy.finance/tvl", body: { "aave-usdc": 99_999 } },
+      { match: "api.beefy.finance/tvl", body: { "1": { "aave-usdc": 99_999 } } },
       {
         match: "api.beefy.finance/vaults",
         body: [

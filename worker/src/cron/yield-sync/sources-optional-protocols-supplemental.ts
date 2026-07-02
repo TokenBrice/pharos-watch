@@ -1,3 +1,4 @@
+import { CHAIN_META } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
@@ -44,6 +45,14 @@ interface BeefyVault {
   tokenAddress: string;
 }
 
+type BeefyTvlPayload = Record<string, number | null | Record<string, number | null>>;
+
+const BEEFY_CHAIN_ALIASES: Record<string, string> = {
+  avax: "avalanche",
+  one: "harmony",
+  zkevm: "polygon-zkevm",
+};
+
 interface TrackedMorphoAsset {
   stablecoinId: string;
   symbol: string;
@@ -56,6 +65,25 @@ interface TrackedMorphoFilters {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function resolveBeefyCanonicalChain(chain: string | null | undefined): string | null {
+  if (!isNonEmptyString(chain)) return null;
+  const alias = BEEFY_CHAIN_ALIASES[chain.toLowerCase()];
+  return resolveCanonicalChain(alias ?? chain);
+}
+
+function resolveBeefyTvl(tvlMap: BeefyTvlPayload, chain: string, vaultId: string): number | null {
+  const evmChainId = CHAIN_META[chain]?.evmChainId;
+  if (evmChainId != null) {
+    const chainTvlMap = tvlMap[String(evmChainId)];
+    if (chainTvlMap && typeof chainTvlMap === "object" && !Array.isArray(chainTvlMap)) {
+      return chainTvlMap[vaultId] ?? null;
+    }
+  }
+
+  const flatTvl = tvlMap[vaultId];
+  return typeof flatTvl === "number" ? flatTvl : null;
 }
 
 const MORPHO_PAGE_SIZE = 100;
@@ -417,7 +445,7 @@ export async function fetchBeefySources(
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
-      fetchJsonWithRetry<Record<string, number | null>>(
+      fetchJsonWithRetry<BeefyTvlPayload>(
         "https://api.beefy.finance/tvl",
         { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
         0,
@@ -436,13 +464,13 @@ export async function fetchBeefySources(
       if (!vault || !isNonEmptyString(vault.id)) continue;
       if (vault.status !== "active") continue;
       if (!vault.assets || vault.assets.length !== 1 || !isNonEmptyString(vault.assets[0])) continue;
-      const chain = resolveCanonicalChain(vault.chain);
+      const chain = resolveBeefyCanonicalChain(vault.chain);
       if (!chain) continue;
       if (!isNonEmptyString(vault.tokenAddress)) continue;
 
       const apy = apyMap[vault.id];
       if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > BEEFY_MAX_APY) continue;
-      const tvl = tvlMap[vault.id];
+      const tvl = resolveBeefyTvl(tvlMap, chain, vault.id);
       if (typeof tvl !== "number" || !Number.isFinite(tvl) || tvl < BEEFY_MIN_TVL_USD) continue;
 
       results.push({
