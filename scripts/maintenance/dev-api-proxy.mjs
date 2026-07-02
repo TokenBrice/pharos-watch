@@ -139,6 +139,21 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
+server.on("error", (err) => {
+  const code = err && typeof err === "object" && "code" in err ? err.code : undefined;
+  if (code === "EADDRINUSE") {
+    console.warn(
+      `[dev-proxy] localhost:${PORT} is already in use; skipping local API proxy.\n` +
+        "            Stop the existing process or set DEV_PROXY_PORT to run another proxy.",
+    );
+    process.exit(0);
+  }
+
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(`[dev-proxy] Failed to listen on localhost:${PORT}: ${message}`);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log(`[dev-proxy] localhost:${PORT} → ${UPSTREAM_ORIGIN}`);
 });
