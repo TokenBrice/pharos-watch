@@ -22,7 +22,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 import { useHealth } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
@@ -222,7 +222,7 @@ describe("query polling policy", () => {
       retry: number;
     };
 
-    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_REGISTRY.stabilityIndex.queryKey);
+    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex.queryKey);
     expect(options.staleTime).toBe(CRON_30MIN);
     expect(options.refetchInterval).toBe(2 * CRON_30MIN);
     expect(options.retry).toBe(2);

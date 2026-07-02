@@ -4925,6 +4925,21 @@
      "shared/types/report-cards.ts",
      "src/hooks/use-stablecoins.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Kept runtime API response validation but moved browser hook descriptors to a lazy schema registry. The eager zod-backed registry remains available for build-time homepage bootstrap validation, while hydrated hooks now dynamic-import endpoint schemas on first query instead of loading zod in the initial page graph.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/query-option-builders.test.ts src/hooks/__tests__/query-polling-policy.test.ts src/hooks/__tests__/stability-index-light.test.ts src/hooks/__tests__/use-usds-status.test.ts src/hooks/__tests__/use-mint-burn-flows.test.tsx src/hooks/__tests__/use-blacklist-events.test.ts src/hooks/__tests__/use-chains.test.tsx src/hooks/__tests__/use-safety-score-history.test.ts src/hooks/__tests__/use-recent-blacklist-7d.test.tsx",
+     "npm run typecheck",
+     "npm run build",
+     "npm run check:build-size",
+     "npm run check:build-attribution",
+     "npm run check:generated-artifacts",
+     "node script confirmed out/index.html initial script chunks contain no ZodError/ZodObject/zod markers"
+    ],
+    "notes": "This avoids a wide shared-types zod/mini rewrite while preserving validation semantics. Zod still exists in lazy endpoint schema chunks and build-time validation code, but is no longer in the homepage initial script graph."
    }
   },
   {

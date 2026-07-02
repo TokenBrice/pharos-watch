@@ -8,7 +8,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import type { SchemaLike } from "@/lib/schema-like";
+import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
@@ -29,7 +29,7 @@ export interface PollingQueryControlOptions {
 }
 
 export interface ApiQueryOptions<T> extends PollingQueryControlOptions {
-  schema?: SchemaLike<T>;
+  schema?: SchemaLikeSource<T>;
   fetchInit?: RequestInit;
   metaMaxAgeSec?: number;
   contractMode?: ApiContractMode;
@@ -85,27 +85,36 @@ function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortS
 
 export function createApiQueryFn<T>(
   path: string,
-  schema?: SchemaLike<T>,
+  schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<T> {
-  return (context) => {
+  return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetch<T>(path, schema, requestInit, contractMode);
+    return apiFetch<T>(path, await resolveSchema(schema), requestInit, contractMode);
   };
 }
 
 export function createApiQueryFnWithMeta<T>(
   path: string,
-  schema?: SchemaLike<T>,
+  schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
   metaMaxAgeSec?: number,
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
-  return (context) => {
+  return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetchWithMeta<T>(path, schema, requestInit, metaMaxAgeSec, contractMode);
+    return apiFetchWithMeta<T>(path, await resolveSchema(schema), requestInit, metaMaxAgeSec, contractMode);
   };
+}
+
+function isSchemaLike<T>(value: SchemaLikeSource<T>): value is SchemaLike<T> {
+  return typeof value === "object" && value !== null && typeof value.safeParse === "function";
+}
+
+async function resolveSchema<T>(schema: SchemaLikeSource<T> | undefined): Promise<SchemaLike<T> | undefined> {
+  if (!schema) return undefined;
+  return isSchemaLike(schema) ? schema : schema();
 }
 
 export function createPollingQueryOptions<T>(

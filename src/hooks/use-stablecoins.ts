@@ -7,13 +7,13 @@ import {
   useRegisteredApiQueryWithMeta,
   type QueryControlOverrides,
 } from "./api-hooks";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 
 export type { SupplyHistoryPoint } from "@shared/types";
 
 export function useStablecoins() {
   return useRegisteredApiQueryWithMeta<StablecoinListResponse>(
-    FRONTEND_API_QUERY_REGISTRY.stablecoins,
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stablecoins,
     {
       // M1: home + screener filter/sort the cached list client-side, so keep the
       // prior payload visible during the 15-min background refetch instead of
@@ -29,7 +29,7 @@ export function supplyHistoryQueryOptions(
   overrides?: QueryControlOverrides,
 ) {
   return createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
-    FRONTEND_API_QUERY_REGISTRY.supplyHistory(id, days),
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.supplyHistory(id, days),
     { enabled: !!id, ...overrides },
   );
 }

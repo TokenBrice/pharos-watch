@@ -39,10 +39,13 @@ import {
   type FrontendApiQueryBaseDescriptor,
   type FrontendStaticApiQueryBaseDescriptor,
   type MintBurnEventsDescriptorOptions,
+  type NonUsdSharePoint,
 } from "@/lib/api-query-base-registry";
-import { z, type ZodType } from "zod";
+import { NonUsdShareResponseSchema } from "@/lib/non-usd-share-schema";
+import type { ZodType } from "zod";
 
 export type { MintBurnEventsDescriptorOptions };
+export type { NonUsdSharePoint };
 
 export interface FrontendApiQueryDescriptor<T> extends FrontendApiQueryBaseDescriptor {
   schema?: ZodType<T>;
@@ -51,24 +54,6 @@ export interface FrontendApiQueryDescriptor<T> extends FrontendApiQueryBaseDescr
 export interface FrontendStaticApiQueryDescriptor<T> extends FrontendStaticApiQueryBaseDescriptor {
   schema?: ZodType<T>;
 }
-
-export interface NonUsdSharePoint {
-  date: number;
-  commodityShare: number | null;
-  fiatNonUsdShare: number | null;
-  commodity: number | null;
-  fiatNonUsd: number | null;
-  total: number;
-}
-
-const NonUsdSharePointSchema = z.object({
-  date: z.number(),
-  commodityShare: z.number().nullable(),
-  fiatNonUsdShare: z.number().nullable(),
-  commodity: z.number().nullable(),
-  fiatNonUsd: z.number().nullable(),
-  total: z.number(),
-});
 
 const base = FRONTEND_API_QUERY_BASE_REGISTRY;
 
@@ -115,7 +100,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
   safetyScoreHistory: (...args: Parameters<typeof base.safetyScoreHistory>) =>
     withSchema(base.safetyScoreHistory(...args), SafetyScoreHistoryResponseSchema),
   stablecoinCharts: withSchema(base.stablecoinCharts, StablecoinChartResponseSchema),
-  nonUsdShare: withSchema(base.nonUsdShare, z.array(NonUsdSharePointSchema)),
+  nonUsdShare: withSchema(base.nonUsdShare, NonUsdShareResponseSchema),
   stabilityIndex: withSchema(base.stabilityIndex, StabilityIndexResponseSchema),
   stabilityIndexDetail: withSchema(base.stabilityIndexDetail, StabilityIndexResponseSchema),
   usdsStatus: withSchema(base.usdsStatus, UsdsStatusResponseSchema),

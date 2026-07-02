@@ -4,7 +4,7 @@ import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { isBlacklistBannerEnabled } from "@/lib/feature-flags";
 import { useRegisteredApiQueryWithMeta } from "./api-hooks";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 
 export interface RecentBlacklistAggregate {
   freezes: number;
@@ -15,7 +15,7 @@ export interface RecentBlacklistAggregate {
 export function useRecentBlacklist7d(symbol: string): RecentBlacklistAggregate | null {
   const isSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(symbol);
   const isEnabled = isBlacklistBannerEnabled() && isSupported;
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.blacklistSummary;
+  const descriptor = FRONTEND_API_QUERY_RUNTIME_REGISTRY.blacklistSummary;
 
   // Share the summary query key with `useBlacklistSummary` so the request is
   // de-duplicated when both hooks mount on the same page.

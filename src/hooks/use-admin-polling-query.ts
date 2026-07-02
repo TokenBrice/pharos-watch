@@ -2,8 +2,7 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath } from "@/lib/admin-access";
-import { apiFetch } from "@/lib/api";
-import { usePollingQuery, type ApiQueryOptions } from "./use-api-query";
+import { createApiQueryFn, usePollingQuery, type ApiQueryOptions } from "./use-api-query";
 
 type AdminPollingOptions<T> = Pick<ApiQueryOptions<T>, "enabled" | "retry" | "schema">;
 
@@ -17,7 +16,10 @@ export function useAdminPollingQuery<T>(
 ): UseQueryResult<T, Error> {
   return usePollingQuery<T>(
     [...key, ADMIN_QUERY_SCOPE],
-    () => apiFetch<T>(buildAdminApiPath(typeof path === "function" ? path() : path), options?.schema),
+    () => createApiQueryFn<T>(
+      buildAdminApiPath(typeof path === "function" ? path() : path),
+      options?.schema,
+    )(),
     cronInterval,
     {
       enabled: options?.enabled,

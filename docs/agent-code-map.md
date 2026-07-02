@@ -193,7 +193,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
 - `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
 - `src/hooks/use-shortcuts.ts` - DEFAULT_SHORTCUT_HREFS, SHORTCUTS_STORAGE_KEY, ShortcutsState, decodeShortcuts, useShortcuts
-- ... 26 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 25 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -210,9 +210,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-request-admin-view-model.ts` - API_KEY_REQUEST_ACTION_LABELS, API_KEY_REQUEST_STATUS_FILTERS, API_KEY_REQUEST_STATUS_LABELS, ApiKeyRequestAction, ApiKeyRequestCardViewModel, ApiKeyRequestSummaryItem
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
 - `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripQueryVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
-- `src/lib/api-query-base-registry.ts` - FRONTEND_API_QUERY_BASE_REGISTRY, FrontendApiQueryBaseDescriptor, FrontendStaticApiQueryBaseDescriptor, MintBurnEventsDescriptorOptions
-- `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, NonUsdSharePoint
-- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor
+- `src/lib/api-query-base-registry.ts` - FRONTEND_API_QUERY_BASE_REGISTRY, FrontendApiQueryBaseDescriptor, FrontendStaticApiQueryBaseDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
+- `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor
+- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
 - `src/lib/api-url.ts` - API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
@@ -367,6 +367,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/compliance-regime-state.ts` - GENIUS_REGIME_STATE, GeniusRegimeState, GeniusRulemakingPhase, isGeniusRegimeEffective
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
+- `shared/lib/csv.ts` - CsvColumn, buildCsv, buildCsvBody, escapeCsvField
 - `shared/lib/data-dependency-registry.ts` - DATA_DEPENDENCY_BY_ID, DATA_DEPENDENCY_REGISTRY, DataDependencyDefinition
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- `shared/lib/depeg-resolver-version.ts`
-- ... 259 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -614,10 +614,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
 - `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS, DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun
 - `worker/src/cron/dex-discovery/persistence.ts` - cleanupStaging, hasValidStagedPoolTvl, incrementRunSeq, isValidStagedPoolId, readDiscoveryMeta, updateDiscoveryMeta
-- `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, toStagedPool
+- `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, knownPoolIdKey
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- ... 343 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 342 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

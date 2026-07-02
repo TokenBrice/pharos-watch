@@ -13,7 +13,7 @@ vi.mock("../use-api-query", async () => {
 });
 
 import { CRON_15MIN } from "@/lib/cron-intervals";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 import { useUsdsStatus } from "../api-hooks";
 
 describe("useUsdsStatus", () => {
@@ -36,7 +36,7 @@ describe("useUsdsStatus", () => {
       "/api/usds-status",
       CRON_15MIN,
       expect.objectContaining({
-        schema: FRONTEND_API_QUERY_REGISTRY.usdsStatus.schema,
+        schema: FRONTEND_API_QUERY_RUNTIME_REGISTRY.usdsStatus.schema,
       }),
     );
   });

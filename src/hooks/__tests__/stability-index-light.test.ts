@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 import { useStabilityIndexLight } from "../use-stability-index-light";
 
 type CapturedQueryOptions = {
@@ -47,7 +47,7 @@ describe("useStabilityIndexLight", () => {
   });
 
   it("uses the registered stability index key and meta-compatible cached value", async () => {
-    const descriptor = FRONTEND_API_QUERY_REGISTRY.stabilityIndex;
+    const descriptor = FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex;
     const cachedValue = {
       data: { current: null, history: [] },
       meta: { ageSeconds: 0, status: "fresh", updatedAt: 1 },
@@ -65,7 +65,7 @@ describe("useStabilityIndexLight", () => {
     await expect(options.queryFn()).resolves.toBe(cachedValue);
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       descriptor.path,
-      descriptor.schema,
+      expect.objectContaining({ safeParse: expect.any(Function) }),
       undefined,
       descriptor.metaMaxAgeSec,
       undefined,

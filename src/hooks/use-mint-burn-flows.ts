@@ -15,9 +15,9 @@ import { normalizeToSignedFlowIntensity, type FlowIntensitySemantics } from "@/l
 import { inferHas24hActivity } from "@/lib/mint-burn-coin-helpers";
 import { getNetFlowDirection24h, getPressureShiftState } from "@shared/lib/mint-burn-signals";
 import {
-  FRONTEND_API_QUERY_REGISTRY,
+  FRONTEND_API_QUERY_RUNTIME_REGISTRY,
   type MintBurnEventsDescriptorOptions,
-} from "@/lib/api-query-registry";
+} from "@/lib/api-query-runtime-registry";
 
 function resolveFlowSemantics(response: MintBurnFlowsResponse): FlowIntensitySemantics {
   return response.gauge.intensitySemantics ?? "midpoint-v1";
@@ -67,7 +67,7 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
   const query = useRegisteredApiQueryWithMeta<MintBurnFlowsResponse>(
-    FRONTEND_API_QUERY_REGISTRY.mintBurnFlows(hours),
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.mintBurnFlows(hours),
     { enabled: opts?.enabled },
   );
   const normalizedData = useMemo(
@@ -82,7 +82,7 @@ export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
 
 export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
   return createRegisteredApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
-    FRONTEND_API_QUERY_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours),
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours),
     { enabled: !!stablecoinId && (opts?.enabled ?? true) },
   );
 }
@@ -101,6 +101,6 @@ export function useMintBurnEvents(
   opts?: MintBurnEventsDescriptorOptions,
 ) {
   return useRegisteredApiQueryWithMeta<MintBurnEventsResponse>(
-    FRONTEND_API_QUERY_REGISTRY.mintBurnEvents(stablecoinId, opts),
+    FRONTEND_API_QUERY_RUNTIME_REGISTRY.mintBurnEvents(stablecoinId, opts),
   );
 }
