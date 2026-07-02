@@ -4262,6 +4262,16 @@
     "description": "The effectiveExitScore fallback chain ends with `(dex as { effectiveExitScore?: number | null } | undefined)?.effectiveExitScore`. DexLiquidityDataSchema (shared/types/market.ts:219-265) has no effectiveExitScore field, and no worker code writes that key into the dex-liquidity payload (it only exists in report-cards rawInputs and the redemption-backstops store, both already earlier in the chain). The cast permanently evaluates to undefined, so the branch is dead code that also punches a hole in the type: if the field name ever drifts on the real sources, this cast would keep compiling while silently returning nothing.",
     "recommendation": "Delete the cast branch, leaving `rawInputs?.effectiveExitScore ?? redemption?.effectiveExitScore ?? null`. Since the removed term is always undefined, the merged rows and the datasetHash are unchanged.",
     "estImpact": "-3 LOC, closes a cast-based type hole"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the impossible DEX-payload `effectiveExitScore` fallback cast from the screener picker adapter, leaving the real report-card/raw-input and redemption backstop sources.",
+    "validation": [
+     "npx vitest run src/app/screener/picker/selector-data-adapter.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/app/screener/picker/selector-data-adapter.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

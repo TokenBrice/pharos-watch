@@ -132,7 +132,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       effectiveExitScore:
         rawInputs?.effectiveExitScore
         ?? redemption?.effectiveExitScore
-        ?? (dex as { effectiveExitScore?: number | null } | undefined)?.effectiveExitScore
         ?? null,
 
       pharosYieldScore: yieldEntry?.pharosYieldScore ?? null,
