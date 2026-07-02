@@ -44,6 +44,7 @@ interface DeliverTelegramSubscriberQueueOptions {
   dispatchStartedAtMs: number;
   terminalTargetKeys?: ReadonlySet<string>;
   signal?: AbortSignal;
+  markTelegramDeliveryStarted?: () => void;
 }
 
 export interface DeliverTelegramSubscriberQueueResult {
@@ -209,6 +210,7 @@ export async function deliverTelegramSubscriberQueue({
   dispatchStartedAtMs,
   terminalTargetKeys = new Set(),
   signal,
+  markTelegramDeliveryStarted,
 }: DeliverTelegramSubscriberQueueOptions): Promise<DeliverTelegramSubscriberQueueResult> {
   const filterTerminalMessages = (messages: BatchMessage[]): BatchMessage[] =>
     terminalTargetKeys.size === 0
@@ -269,6 +271,7 @@ export async function deliverTelegramSubscriberQueue({
   );
   const sendList = filterTerminalMessages(expandSubscriberChunks(toSend));
   const toSendForDeliveryOutcome = filterTerminalSubscriberChunksForOutcome(toSend);
+  if (sendList.length > 0) markTelegramDeliveryStarted?.();
   const {
     subscribersNotified,
     freshSent,

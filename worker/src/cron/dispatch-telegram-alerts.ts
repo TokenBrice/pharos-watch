@@ -136,6 +136,24 @@ function safetySourceFields(
   };
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
+}
+
+function shouldRecordTelegramDispatchFailure(
+  error: unknown,
+  signal: AbortSignal | undefined,
+  telegramDeliveryStarted: boolean,
+): boolean {
+  if (signal?.aborted || isAbortError(error)) return false;
+  return telegramDeliveryStarted;
+}
+
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
 
@@ -168,6 +186,7 @@ interface EventlessFastPathContext {
   signal?: AbortSignal;
   sharedState?: TelegramDispatchSharedState;
   reportProgress?: CronProgressReporter;
+  markTelegramDeliveryStarted?: () => void;
 }
 
 interface FullFanoutPathContext {
@@ -184,6 +203,7 @@ interface FullFanoutPathContext {
   signal?: AbortSignal;
   sharedState?: TelegramDispatchSharedState;
   reportProgress?: CronProgressReporter;
+  markTelegramDeliveryStarted?: () => void;
 }
 
 interface CircuitOpenQueuePathContext {
@@ -362,6 +382,7 @@ async function executeEventlessFastPath({
   signal,
   sharedState,
   reportProgress,
+  markTelegramDeliveryStarted,
 }: EventlessFastPathContext): Promise<DispatchResult> {
   await reportDigestProgress(reportProgress, {
     stage: "pending-drain",
@@ -374,11 +395,13 @@ async function executeEventlessFastPath({
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
-  const drainResult = pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
+  let drainResult = emptyDrainResult();
+  if (pendingCapacityBefore.due > 0) {
+    drainResult = await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
       softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-    })
-    : emptyDrainResult();
+      markTelegramDeliveryStarted,
+    });
+  }
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
@@ -389,6 +412,7 @@ async function executeEventlessFastPath({
     drainResult,
     nowSec,
     signal,
+    markTelegramDeliveryStarted,
   });
   await persistEventlessOverflowBacklog(db, overflowDeliveryResult, overflowBacklog, nowSec);
   const pendingCapacityAfter =
@@ -475,6 +499,7 @@ async function executeFullFanoutPath({
   signal,
   sharedState,
   reportProgress,
+  markTelegramDeliveryStarted,
 }: FullFanoutPathContext): Promise<DispatchResult> {
   const {
     dewsChanges,
@@ -630,6 +655,7 @@ async function executeFullFanoutPath({
     {
       maxPriority: drainOnlyRiskPriority,
       softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+      markTelegramDeliveryStarted,
     },
   );
 
@@ -658,6 +684,7 @@ async function executeFullFanoutPath({
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
+  const terminalTargetKeys = await pruneAlreadyTerminalSubscribers(db, subscriberQueue);
   const {
     subscribersNotified,
     freshSent,
@@ -685,8 +712,9 @@ async function executeFullFanoutPath({
     chatsInBackoff,
     globalBackoffUntil,
     dispatchStartedAtMs,
-    terminalTargetKeys: await pruneAlreadyTerminalSubscribers(db, subscriberQueue),
+    terminalTargetKeys,
     signal,
+    markTelegramDeliveryStarted,
   });
   await persistFanoutOverflowBacklog(db, remainingOverflowPlanned, overflowBacklog, overflowPlanned, nowSec);
   await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
@@ -854,6 +882,11 @@ export async function dispatchTelegramAlerts(
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   }
 
+  let telegramDeliveryStarted = false;
+  const markTelegramDeliveryStarted = () => {
+    telegramDeliveryStarted = true;
+  };
+
   try {
     throwIfAborted(signal);
 
@@ -1004,6 +1037,7 @@ export async function dispatchTelegramAlerts(
         signal,
         sharedState,
         reportProgress,
+        markTelegramDeliveryStarted,
       });
       return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
     }
@@ -1036,11 +1070,14 @@ export async function dispatchTelegramAlerts(
       signal,
       sharedState,
       reportProgress,
+      markTelegramDeliveryStarted,
     });
 
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   } catch (error) {
-    await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
+    if (shouldRecordTelegramDispatchFailure(error, signal, telegramDeliveryStarted)) {
+      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
+    }
     throw error;
   }
 }

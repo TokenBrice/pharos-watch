@@ -50,6 +50,7 @@ const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 interface PendingDrainOptions {
   maxPriority?: number | null;
   softDeadlineAtMs?: number | null;
+  markTelegramDeliveryStarted?: () => void;
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
@@ -472,6 +473,7 @@ export async function drainPendingQueue(
       return false;
     });
     if (batch.length === 0 && skippedRateLimitResults.length === 0) continue;
+    if (batch.length > 0) options.markTelegramDeliveryStarted?.();
     const results = await Promise.all(
       batch.map(async (row) => {
         const result = await sendToChat(row.chat_id, row.message_html, botToken, {

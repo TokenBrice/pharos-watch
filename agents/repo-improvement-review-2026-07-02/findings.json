@@ -402,6 +402,16 @@
     "alsoFiles": [
      "worker/src/cron/discovery-scan.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed Telegram dispatch failure recording so aborts and pre-delivery source/D1 failures no longer increment the Telegram API circuit. Delivery-start tracking is marked immediately before non-empty pending, overflow, or subscriber send batches, with regressions for pre-delivery abort and source-load failure.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:cron-connections"
+    ]
    }
   },
   {

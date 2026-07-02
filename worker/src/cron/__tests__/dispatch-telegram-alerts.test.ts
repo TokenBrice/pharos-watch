@@ -534,6 +534,34 @@ describe("dispatchTelegramAlerts", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
   });
 
+  it("does not record a Telegram API circuit failure when dispatch is aborted before delivery", async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException("dispatch deadline", "AbortError"));
+    const db = mockD1([]);
+
+    await expect(dispatchTelegramAlerts(db, "bot-token", controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+
+    expect(mockRecordOutcome).not.toHaveBeenCalled();
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
+  it("does not record a Telegram API circuit failure for source-loading D1 errors", async () => {
+    const db = mockD1([
+      {
+        match: "pharos:telegram-dispatch:active-snoozes",
+        rows: [],
+        throwError: new Error("D1_ERROR: source load failed"),
+      },
+    ]);
+
+    await expect(dispatchTelegramAlerts(db, "bot-token")).rejects.toThrow("D1_ERROR: source load failed");
+
+    expect(mockRecordOutcome).not.toHaveBeenCalled();
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
   it("seeds snapshots on first run", async () => {
     mockGetCache.mockResolvedValue(null);
 

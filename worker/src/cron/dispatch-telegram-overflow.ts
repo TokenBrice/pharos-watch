@@ -180,6 +180,7 @@ export async function drainOverflowBacklogOnly(args: {
   drainResult: PendingDrainResult;
   nowSec: number;
   signal?: AbortSignal;
+  markTelegramDeliveryStarted?: () => void;
 }): Promise<DeliverTelegramSubscriberQueueResult | null> {
   if (args.overflowBacklog.length === 0) return null;
   const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
@@ -199,6 +200,7 @@ export async function drainOverflowBacklogOnly(args: {
     globalBackoffUntil,
     dispatchStartedAtMs: Date.now(),
     signal: args.signal,
+    markTelegramDeliveryStarted: args.markTelegramDeliveryStarted,
   });
 }
 
