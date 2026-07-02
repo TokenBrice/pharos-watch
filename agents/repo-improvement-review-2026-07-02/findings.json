@@ -1837,6 +1837,16 @@
      "src/app/coverage/page.tsx",
      "src/components/see-also-footer.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Pruned `SEE_ALSO_GRAPH` to the single `/coverage/` entry that is actually read by the coverage page, removing the unreachable methodology, learn, and API route entries while preserving the rendered coverage footer links.",
+    "validation": [
+     "npx vitest run src/app/coverage/page.test.tsx src/components/__tests__/see-also-footer.test.tsx",
+     "npm run typecheck",
+     "rg -n \"SEE_ALSO_GRAPH\\\\[\" src shared worker functions tests -g '!node_modules' && wc -l src/lib/see-also-graph.ts"
+    ]
    }
   },
   {
