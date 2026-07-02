@@ -106,7 +106,7 @@ describe("handleBlacklistSummary", () => {
 
     expect(body).toEqual(payload);
     expect(waitUntilPromises).toHaveLength(0);
-    expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-summary-snapshot-read"))).toHaveLength(2);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-summary-snapshot-read"))).toHaveLength(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });

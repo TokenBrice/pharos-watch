@@ -1956,6 +1956,18 @@
     "description": "Lines 676-684: the handler first calls readBlacklistSummarySnapshot(db, now) (TTL-gated), and on null immediately calls readBlacklistSummarySnapshot(db, now, {allowStale:true}) — an identical `SELECT value, updated_at FROM cache WHERE key = ?` for the same key. Both hits are served identically (same payload, same blacklistSummaryHeaders(freshnessTs)), so the two-step is exactly equivalent to a single allowStale read: whenever the snapshot exists and parses, it is served regardless of TTL. The BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC gate therefore has zero observable effect, and every request where the producer snapshot is stale or missing pays a duplicate D1 round-trip.",
     "recommendation": "Collapse to one readBlacklistSummarySnapshot(db, now, {allowStale:true}) call (and drop the now-unused TTL branch/param if nothing else uses it). Responses are provably identical in all cases, so this is safe under the freeze. If the original intent was 'rebuild inline when stale', that is NOT what ships today — flag to the owner before 'fixing' toward that intent, since it would change latency/behavior.",
     "estImpact": "-1 D1 query/request on stale-or-missing path; ~10 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Collapsed blacklist-summary producer snapshot handling to one snapshot read that serves any valid cached producer payload, removing the dead TTL-gated read and stale fallback branch.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/blacklist-summary.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/blacklist-summary.ts worker/src/api/__tests__/blacklist-summary.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Updated the stale producer snapshot regression to assert a single blacklist-summary-snapshot-read while preserving no live scan or snapshot write."
    }
   },
   {
