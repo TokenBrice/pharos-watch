@@ -14,6 +14,7 @@
  */
 import { PROFILE_DEFINING_EXCLUSIONS } from "./exclusions";
 import { round1 } from "../math";
+import { percentileLinear } from "../stats";
 import { resolveRowsById } from "./output-helpers";
 import { getLowerRankedText } from "./what-to-watch-templates";
 import type {
@@ -47,18 +48,6 @@ export function userEmphasizedDimension(input: SelectorInput): WeightKey | null 
   }
   if (input.profile === "yield" && input.minApy != null) return "pharosYieldScore";
   return "safetyOverall";
-}
-
-function quantile(values: number[], q: number): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const pos = (sorted.length - 1) * q;
-  const base = Math.floor(pos);
-  const rest = pos - base;
-  if (sorted[base + 1] != null) {
-    return sorted[base]! + rest * (sorted[base + 1]! - sorted[base]!);
-  }
-  return sorted[base]!;
 }
 
 interface SlotACandidate {
@@ -156,7 +145,8 @@ export function selectLowerRanked(
     .map((c) => c.components.find((x) => x.key === dim)?.normalizedValue ?? null)
     .filter((v): v is number => v != null);
   if (dimValues.length === 0) return out;
-  const cutoff = quantile(dimValues, 0.25);
+  const cutoff = percentileLinear(dimValues, 25);
+  if (cutoff == null) return out;
   const bottomQuartile = candidates.filter((c) => {
     const v = c.components.find((x) => x.key === dim)?.normalizedValue ?? null;
     return v != null && v <= cutoff;

@@ -5214,6 +5214,17 @@
     "description": "lower-ranked.ts:52 defines quantile() with linear interpolation at position (n−1)·q — mathematically identical to shared/lib/stats.ts percentileLinear(values, q*100) for the non-empty, finite inputs the caller guarantees (dimValues is length-checked at line 158 and contains validated 0-100 normalizedValues). This is the fourth percentile implementation in the repo (stats.ts has two, depeg-resolver/duration.ts:36 has a third round()-based variant that is intentionally different and must NOT be swapped — its Math.round((n−1)p) semantics differ from percentileNearestRank for e.g. n=4, p=0.5).",
     "recommendation": "Replace lower-ranked's quantile(values, 0.25) with percentileLinear(values, 25) (identical result on the guarded inputs) and delete the local function. Leave duration.ts alone; optionally add a comment there noting its rounding is deliberately distinct so nobody 'deduplicates' it into a behavior change.",
     "estImpact": "-11 LOC, one fewer percentile variant"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Lower-ranked selector Slot B now uses shared percentileLinear for its bottom-quartile cutoff instead of a local quantile implementation.",
+    "validation": [
+     "npx vitest run shared/lib/selector/__tests__/lower-ranked.test.ts",
+     "npx vitest run shared/lib/selector",
+     "npm run typecheck",
+     "git diff --check -- shared/lib/selector/lower-ranked.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
