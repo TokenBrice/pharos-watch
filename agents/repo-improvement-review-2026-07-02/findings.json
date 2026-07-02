@@ -2488,6 +2488,16 @@
     "description": "The four sidebar signal hooks (useSidebarPegSummarySignal, useSidebarBlacklistSignal, useSidebarHealthSignal, useSidebarDailyDigestSignal, lines 49-66) have no non-test consumers — the sidebar they fed was retired for the global top-nav. That also makes the private useLightApiQuery (lines 17-36) dead, since only the sidebar hooks call it. The file's sole live export is useLightApiQueryWithMeta, which after its metaMaxAgeSec assertion just delegates to useRegisteredApiQueryWithMeta(descriptor, options); its only consumer is useStabilityIndexLight (use-stability-index-light.ts:7), whose stabilityIndex descriptor always has metaMaxAgeSec set, so the assertion can never fire in the surviving path.",
     "recommendation": "Point useStabilityIndexLight directly at useRegisteredApiQueryWithMeta(FRONTEND_API_QUERY_REGISTRY.stabilityIndex, { retry: 1 }) — identical query key, path, polling window and options as today — and delete use-sidebar-nav-signal-data.ts plus the sidebar-specific tests (sidebar-light-query-cache-shape.test.ts, the sidebar cases in query-polling-policy.test.ts). Same cache shape and network behavior, one fewer indirection layer.",
     "estImpact": "-67 LOC product code"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Pointed `useStabilityIndexLight` directly at `useRegisteredApiQueryWithMeta` with the same empty override object, deleted the retired sidebar signal hook module, removed sidebar-only tests, and kept a focused stability-index-light cache-shape regression.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/query-polling-policy.test.ts src/hooks/__tests__/stability-index-light.test.ts",
+     "npm run typecheck",
+     "npm run check:unused-code"
+    ]
    }
   },
   {

@@ -21,13 +21,12 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 });
 
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
-import { CRON_1MIN, CRON_24H, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
+import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { useHealth } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
-import { useSidebarDailyDigestSignal } from "../use-sidebar-nav-signal-data";
 import { useStabilityIndexLight } from "../use-stability-index-light";
 import { useTelegramPulse } from "../use-telegram-pulse";
 
@@ -211,21 +210,6 @@ describe("query polling policy", () => {
 
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.retry).toBe(1);
-  });
-
-  it("useSidebarDailyDigestSignal follows the daily digest producer cadence", () => {
-    useSidebarDailyDigestSignal();
-    const options = useQueryMock.mock.calls[0][0] as {
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      retry: number;
-    };
-
-    expect(options.queryKey).toEqual(FRONTEND_API_QUERY_REGISTRY.dailyDigest.queryKey);
-    expect(options.staleTime).toBe(CRON_24H);
-    expect(options.refetchInterval).toBe(2 * CRON_24H);
     expect(options.retry).toBe(1);
   });
 
