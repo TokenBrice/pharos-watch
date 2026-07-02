@@ -5036,6 +5036,18 @@
     "description": "This script generates a reviewer diff \"comparing v3.997-style static scoring against current-capacity scoring\" — the redemption-backstop v4 migration, which shipped and was applied in June 2026. It has no package.json entry, no CI wiring, no test, and its only repo reference is its docs/scripts.md row (line 81), which exists to satisfy check-script-entrypoints' reverse check. Last touched 2026-06-16 (commit 4fd945c5b), the same day as its sibling. The sibling audit-redemption-registry-parity.ts is framed as a durable refactor-parity harness and is more defensible to keep.",
     "recommendation": "Ask the owner to confirm the v3.997→v4 comparison has no remaining audience, then delete the script plus its docs/scripts.md row (check:script-entrypoints requires removing the doc reference in the same change). Read-only research tool — no runtime, artifact, or score impact.",
     "estImpact": "-546 LOC + one docs row"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the completed redemption v4 score-diff reviewer script and removed its docs/scripts inventory row so script-entrypoint checks stay aligned.",
+    "validation": [
+     "rg -n \"audit-redemption-v4-score-diff|redemption-v4-score-diff\" scripts src shared worker functions docs package.json .github || true",
+     "npm run check:script-entrypoints",
+     "npm run check:doc-source-paths",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/audit-redemption-v4-score-diff.ts docs/scripts.md agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
