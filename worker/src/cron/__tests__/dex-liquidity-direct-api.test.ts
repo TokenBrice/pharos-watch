@@ -158,6 +158,55 @@ describe("fetchFluidPools", () => {
     expect(mockFetch.mock.calls.some(([input]) => String(input) === "https://rpc.example")).toBe(true);
   });
 
+  it("keeps Fluid source healthy when retained-pool enrichment fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetch.mockImplementation((input) => {
+      const url = String(input);
+      if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
+        return Promise.resolve(jsonResponse([
+          {
+            ticker_id: "0xbase_0xquote",
+            base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            target_currency: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            last_price: "0.9999",
+            base_volume: "100000",
+            target_volume: "100000",
+            pool_id: FLUID_POOL_ADDRESS,
+            liquidity_in_usd: "500000",
+          },
+        ]));
+      }
+      if (url.startsWith("https://api.fluid.instadapp.io/v2/")) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url === "https://rpc.example") {
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: `0x${"z".repeat(64)}` }));
+      }
+      return Promise.resolve(new Response("unexpected", { status: 500 }));
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+
+    const pools = await fetchFluidPools(undefined, chainRpcs);
+
+    expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
+    expect(pools.errors).toEqual([]);
+    expect(pools.warnings).toHaveLength(1);
+    expect(pools.warnings?.[0]).toContain("enrichment failed");
+    expect(warnSpy).toHaveBeenCalledWith("[fetch-fluid] Pool enrichment failed:", expect.any(String));
+    warnSpy.mockRestore();
+  });
+
   it("skips malformed Fluid pool IDs while preserving valid pools", async () => {
     const malformedPoolAddress = "not-a-20-byte-hex-address";
     mockFetch.mockImplementation((input, init) => {

@@ -38,4 +38,5 @@ export interface DexApiFetchResult {
   ok: boolean;
   degraded: boolean;
   errors: string[];
+  warnings?: string[];
 }

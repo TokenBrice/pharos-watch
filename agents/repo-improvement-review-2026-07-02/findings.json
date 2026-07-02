@@ -785,6 +785,15 @@
      "worker/src/cron/dex-liquidity/fetch-fluid.ts",
      "worker/src/cron/dex-liquidity/orchestrator-phases/authoritative.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a warning-only result channel for direct API fetches and moved Fluid retained-pool enrichment failures out of errors/degraded. Malformed rows and invalid Fluid pool IDs still degrade the source because those rows are dropped, preserving the conservative authoritative staged-pool gate for incomplete source results.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/orchestrator-phases-direct-api-fetch.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-phases-authoritative.test.ts worker/src/cron/dex-liquidity/__tests__/fetch-fluid.test.ts worker/src/cron/__tests__/dex-liquidity-direct-api.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

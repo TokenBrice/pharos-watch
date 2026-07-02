@@ -126,4 +126,23 @@ describe("runDirectApiFetchPhase", () => {
     ]);
     expect(getCircuitRecord).not.toHaveBeenCalled();
   });
+
+  it("does not mark warning-only direct API results as failed", async () => {
+    const fetchers = [
+      makeFetcher("warning-only", async () =>
+        makeDexApiFetchResult([], {
+          ok: true,
+          degraded: false,
+          errors: [],
+          warnings: ["retained pool enrichment failed"],
+        }),
+      ),
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.failedSources).toEqual([]);
+    expect(result.fallbackSignals).toEqual([]);
+    expect(result.results[0]?.result.warnings).toEqual(["retained pool enrichment failed"]);
+  });
 });

@@ -4,7 +4,7 @@ import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";
-import type { DexApiPool, DexApiPoolToken } from "./dex-api-types";
+import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
   derivePoolVolume24hUsd,
   deriveTokenUsdPrice,
@@ -29,9 +29,9 @@ const NATIVE_PLACEHOLDER_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 export function makeDexApiFetchResult(
   pools: DexApiPool[],
-  meta: { ok: boolean; degraded: boolean; errors: string[] },
-): { pools: DexApiPool[]; ok: boolean; degraded: boolean; errors: string[] } {
-  return { pools, ...meta };
+  meta: { ok: boolean; degraded: boolean; errors: string[]; warnings?: string[] },
+): DexApiFetchResult {
+  return { pools, ...meta, warnings: meta.warnings ?? [] };
 }
 
 export function isEligibleDirectApiPool(

@@ -164,6 +164,7 @@ export async function fetchFluidPools(
 ): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   let successfulChains = 0;
   const resolvedChainRpcs = chainRpcs ?? buildChainRpcs();
 
@@ -229,7 +230,7 @@ export async function fetchFluidPools(
         } catch (error) {
           rethrowIfAborted(error, signal);
           const reason = toErrorMessage(error);
-          errors.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
+          warnings.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
           console.warn("[fetch-fluid] Pool enrichment failed:", reason);
         }
       }
@@ -246,5 +247,6 @@ export async function fetchFluidPools(
     ok: successfulChains > 0,
     degraded: errors.length > 0,
     errors,
+    warnings,
   });
 }
