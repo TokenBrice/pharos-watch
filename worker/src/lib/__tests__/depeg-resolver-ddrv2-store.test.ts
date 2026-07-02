@@ -18,7 +18,6 @@ import {
   sealPublicPrediction,
   writePublicationManifest,
 } from "../depeg-resolver-publication-store";
-import { appendPredictionErratum } from "../depeg-resolver-errata-store";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-resolver-repair-store";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import {
@@ -266,6 +265,45 @@ async function sealPredictionFixture(db: SqliteD1) {
     runId: "ddr:test",
   });
   return { incident, prediction };
+}
+
+function insertPredictionErratum(
+  db: SqliteD1,
+  input: {
+    publicPredictionId: number;
+    incidentKey: string;
+    eventId: number;
+    assessmentId: number;
+    reason: string;
+    operatorNote: string;
+    replacementAssessmentId?: number | null;
+    replacementRowHash?: string | null;
+    rowHashBefore?: string | null;
+    createdAt: number;
+    createdBy: string;
+  },
+): number {
+  const result = db.sqlite
+    .prepare(
+      `INSERT INTO depeg_resolver_prediction_errata
+       (public_prediction_id, incident_key, event_id, assessment_id, reason, operator_note,
+        replacement_assessment_id, replacement_row_hash, row_hash_before, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.publicPredictionId,
+      input.incidentKey,
+      input.eventId,
+      input.assessmentId,
+      input.reason,
+      input.operatorNote,
+      input.replacementAssessmentId ?? null,
+      input.replacementRowHash ?? null,
+      input.rowHashBefore ?? null,
+      input.createdAt,
+      input.createdBy,
+    );
+  return Number(result.lastInsertRowid ?? 0);
 }
 
 describe("DDRv2 storage migrations and stores", () => {
@@ -1747,7 +1785,7 @@ describe("DDRv2 storage migrations and stores", () => {
     const db = makeSqliteD1();
     try {
       const { incident, prediction } = await sealPredictionFixture(db);
-      const erratum = await appendPredictionErratum(db, {
+      const erratumId = insertPredictionErratum(db, {
         publicPredictionId: prediction.id,
         incidentKey: incident.incidentKey,
         eventId: 1,
@@ -1758,7 +1796,7 @@ describe("DDRv2 storage migrations and stores", () => {
         createdAt: 190000,
         createdBy: "vitest",
       });
-      expect(erratum.id).toBeGreaterThan(0);
+      expect(erratumId).toBeGreaterThan(0);
       expect(() => db.sqlite.exec("UPDATE depeg_resolver_prediction_errata SET operator_note = 'mutated'")).toThrow(
         /prediction errata are append-only/,
       );
@@ -1805,12 +1843,12 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
-  it("rejects malformed optional erratum hashes", async () => {
+  it("rejects malformed optional erratum hashes at the database boundary", async () => {
     const db = makeSqliteD1();
     try {
       const { incident, prediction } = await sealPredictionFixture(db);
-      await expect(
-        appendPredictionErratum(db, {
+      expect(() =>
+        insertPredictionErratum(db, {
           publicPredictionId: prediction.id,
           incidentKey: incident.incidentKey,
           eventId: 1,
@@ -1821,7 +1859,7 @@ describe("DDRv2 storage migrations and stores", () => {
           createdAt: 190000,
           createdBy: "vitest",
         }),
-      ).rejects.toThrow(/replacementRowHash must be a 64-character lowercase hex hash/);
+      ).toThrow(/CHECK constraint failed/);
     } finally {
       db.close();
     }

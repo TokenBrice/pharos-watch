@@ -1,5 +1,4 @@
-import { insertReturningMapped, runChunkedInRead } from "./db";
-import { assertNonEmpty, assertOptionalHash, assertPositiveInteger } from "./depeg-resolver-store-validators";
+import { runChunkedInRead } from "./db";
 
 export type DdrPredictionErratumReason =
   | "false_positive"
@@ -10,20 +9,6 @@ export type DdrPredictionErratumReason =
   | "lifecycle_status_error"
   | "implementation_bug"
   | "hash_mismatch";
-
-export interface AppendPredictionErratumInput {
-  publicPredictionId: number;
-  incidentKey: string;
-  eventId: number;
-  assessmentId: number;
-  reason: DdrPredictionErratumReason;
-  operatorNote: string;
-  replacementAssessmentId?: number | null;
-  replacementRowHash?: string | null;
-  rowHashBefore?: string | null;
-  createdAt: number;
-  createdBy: string;
-}
 
 export interface DdrPredictionErratum {
   id: number;
@@ -76,47 +61,6 @@ function mapErratum(row: ErratumRow): DdrPredictionErratum {
     createdAt: row.created_at,
     createdBy: row.created_by,
   };
-}
-
-export async function appendPredictionErratum(
-  db: D1Database,
-  input: AppendPredictionErratumInput,
-): Promise<DdrPredictionErratum> {
-  assertPositiveInteger(input.publicPredictionId, "publicPredictionId");
-  assertPositiveInteger(input.eventId, "eventId");
-  assertPositiveInteger(input.assessmentId, "assessmentId");
-  assertPositiveInteger(input.createdAt, "createdAt");
-  assertNonEmpty(input.incidentKey, "incidentKey");
-  assertNonEmpty(input.operatorNote, "operatorNote");
-  assertNonEmpty(input.createdBy, "createdBy");
-  if (input.replacementAssessmentId != null)
-    assertPositiveInteger(input.replacementAssessmentId, "replacementAssessmentId");
-  assertOptionalHash(input.replacementRowHash, "replacementRowHash");
-  assertOptionalHash(input.rowHashBefore, "rowHashBefore");
-
-  return insertReturningMapped(
-    db,
-    `INSERT INTO depeg_resolver_prediction_errata
-     (public_prediction_id, incident_key, event_id, assessment_id, reason, operator_note,
-      replacement_assessment_id, replacement_row_hash, row_hash_before, created_at, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     RETURNING *`,
-    [
-      input.publicPredictionId,
-      input.incidentKey,
-      input.eventId,
-      input.assessmentId,
-      input.reason,
-      input.operatorNote,
-      input.replacementAssessmentId ?? null,
-      input.replacementRowHash ?? null,
-      input.rowHashBefore ?? null,
-      input.createdAt,
-      input.createdBy,
-    ],
-    mapErratum,
-    "prediction erratum",
-  );
 }
 
 export async function loadPredictionErrata(

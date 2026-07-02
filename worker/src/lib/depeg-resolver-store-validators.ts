@@ -112,11 +112,6 @@ export function assertHash(value: string, name: string): void {
   if (!/^[0-9a-f]{64}$/.test(value)) throw new Error(`${name} must be a 64-character lowercase hex hash`);
 }
 
-export function assertOptionalHash(value: string | null | undefined, name: string): void {
-  if (value == null) return;
-  assertHash(value, name);
-}
-
 export function assertLockMetadata(input: DdrStoreLockMetadataInput): void {
   if (input.forecastReadinessScore != null) {
     assertUnitIntervalNumber(input.forecastReadinessScore, "forecastReadinessScore");

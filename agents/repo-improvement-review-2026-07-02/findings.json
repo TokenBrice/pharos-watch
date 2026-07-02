@@ -1242,6 +1242,17 @@
     "description": "appendPredictionErratum (input validation + append-only INSERT into depeg_resolver_prediction_errata, ~45 LOC incl. AppendPredictionErratumInput) has no caller outside tests anywhere in the repo. Meanwhile the read side is fully wired: worker/src/api/depeg-resolver.ts:32 imports loadPredictionErrata to overlay errata on public predictions, and worker/src/cron/depeg-resolver/publication.ts + compute-depeg-resolver-review.ts read errata via the stores contract. worker/src/api/audit-depeg-history.ts:382 tells operators to 'create... repair authorization with the required lineage and errata, then run a dedicated repair path', but neither the repair-task runner (worker/src/cron/repair-task-runner.ts) nor any admin route/ops script calls the append function — errata rows can only ever appear via manual SQL.",
     "recommendation": "Surface to the owner: either wire appendPredictionErratum into the sealed-incident repair path it was designed for (per the audit-depeg-history guidance), or delete the function and its input type as dead code. Deleting is behavior-preserving (the errata overlay is already permanently empty absent manual SQL); wiring it is a product decision, not a freeze-safe cleanup.",
     "estImpact": "-45 LOC or closes an unwired operator flow"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused appendPredictionErratum write API, its input type, and the now-unused optional hash validator. Remaining DDR errata tests seed fixture rows directly so the append-only and database constraint coverage stays in place without keeping a production-dead writer.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/depeg-resolver-ddrv2-store.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/lib/depeg-resolver-errata-store.ts worker/src/lib/depeg-resolver-store-validators.ts worker/src/lib/__tests__/depeg-resolver-ddrv2-store.test.ts",
+     "rg -n \"appendPredictionErratum|AppendPredictionErratumInput|assertOptionalHash\" worker/src/lib shared src scripts"
+    ]
    }
   },
   {
