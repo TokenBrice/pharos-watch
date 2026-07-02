@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
-  createD1JobAttemptStore,
   createWorkerJobAttempt,
   finishWorkerJobAttempt,
   loadWorkerJobAttemptHealth,
@@ -51,46 +50,6 @@ describe("worker job attempt ledger", () => {
       1_775_890_010,
       1_775_890_010,
     ]);
-  });
-
-  it("exposes a D1-backed queue-ready attempt store contract", async () => {
-    const db = mockD1();
-    const store = createD1JobAttemptStore(db);
-
-    const identity = await store.createAttempt({
-      scheduleKey: "daily0800Utc",
-      job: "snapshot-public-dataset",
-      slotStartedAt: 1_775_900_000,
-      producerKind: "workflow-probe",
-      nowSec: 1_775_900_010,
-    });
-    await store.claimAttempt({
-      attemptId: identity.attemptId,
-      owner: "future-consumer",
-      nowSec: 1_775_900_020,
-    });
-    await store.heartbeatAttempt({
-      attemptId: identity.attemptId,
-      progress: { stage: "queued-adapter-smoke", itemsDone: 1 },
-      nowSec: 1_775_900_030,
-    });
-    await store.finishAttempt({
-      attemptId: identity.attemptId,
-      startedAtMs: Date.now(),
-      nowSec: 1_775_900_040,
-      result: { status: "ok", itemCount: 1 },
-    });
-
-    expect(identity).toEqual({
-      attemptId: "attempt|workflow-probe|daily0800Utc|1775900000|snapshot-public-dataset|1",
-      idempotencyKey: "workflow-probe|daily0800Utc|1775900000|snapshot-public-dataset|1",
-      attemptNo: 1,
-    });
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO worker_job_attempts"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("SET state = 'running'"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("last_heartbeat_at = ?"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("status_class = ?"))).toBe(true);
   });
 
   it("classifies budget-truncated cron results as deferred attempts", async () => {

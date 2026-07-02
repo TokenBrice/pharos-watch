@@ -6975,6 +6975,19 @@
     "description": "The production consumer (handlers/scheduled/context.ts) calls the standalone functions createWorkerJobAttempt / recordWorkerJobAttemptLease / heartbeatWorkerJobAttempt / finishWorkerJobAttempt directly; scheduled-slot-fence, status/cron-health, and prune-cron-history use the other standalone exports. Grep across worker/, src/, shared/, functions/, scripts/ shows JobProducer, JobConsumer, JobAttemptStore (lines 60-82), claimWorkerJobAttempt (336-365, the only 'claimed'-state writer), D1JobAttemptStore, and createD1JobAttemptStore (611-660) are referenced only by job-ledger's own test file. Because claimWorkerJobAttempt is the sole writer of state='claimed', that state in ACTIVE_ATTEMPT_STATES can also never occur in production rows.",
     "recommendation": "Delete claimWorkerJobAttempt, the three interfaces, D1JobAttemptStore, and createD1JobAttemptStore, plus their test coverage. Pure dead-code removal — no production call path touches them, so ledger rows and status output are unchanged. (Keep 'claimed' in ACTIVE_ATTEMPT_STATES for forward-compat of the schema if preferred; the abstraction itself carries no behavior.)",
     "estImpact": "-120 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the dead job-attempt store abstraction (`JobProducer`/`JobConsumer`/`JobAttemptStore`, `claimWorkerJobAttempt`, `D1JobAttemptStore`, and `createD1JobAttemptStore`) and its only test coverage while preserving the live standalone job-ledger functions.",
+    "validation": [
+     "rg -n \"JobProducer|JobConsumer|JobAttemptStore|claimWorkerJobAttempt|D1JobAttemptStore|createD1JobAttemptStore\" worker/src/lib/job-ledger.ts worker/src/lib/__tests__/job-ledger.test.ts worker/src shared src functions scripts",
+     "npx vitest run worker/src/lib/__tests__/job-ledger.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/job-ledger.ts worker/src/lib/__tests__/job-ledger.test.ts"
+    ],
+    "notes": "No verified docs were changed because the public scheduled-job ledger behavior and documented standalone functions remain unchanged."
    }
   },
   {
