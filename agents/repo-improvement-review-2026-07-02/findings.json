@@ -6350,6 +6350,20 @@
      "worker/src/cron/blacklist/evm-source.ts",
      "worker/src/lib/blacklist-contracts.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the reconciler's local receipt-log decoder fork and routed receipt rows through the shared cron `parseEvmLogs` parser, copying viem's readonly topics at the mapping boundary.",
+    "validation": [
+     "rg -n \"parseReceiptLogs|computeBlacklistAmountUsdAtEvent|getBlacklistTrackerMethodologyVersionAt|decodeUint256|decodeAddress\" worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts || true",
+     "npx vitest run worker/scripts/__tests__/reconcile-blacklist-events-from-kyc-rip.test.ts worker/src/cron/blacklist/__tests__/evm-source.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:script-entrypoints",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts"
+    ],
+    "notes": "The cron parser was already exported; the script now receives the same addressDataIndex, amount index, address-array, event-type override, and null-address handling as the scheduled blacklist sync."
    }
   },
   {

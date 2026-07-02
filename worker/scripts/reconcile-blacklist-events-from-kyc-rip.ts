@@ -1,15 +1,12 @@
 import { pathToFileURL } from "node:url";
 import { createPublicClient, http, toHex } from "viem";
 import { mainnet } from "viem/chains";
-import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
-import { getBlacklistTrackerMethodologyVersionAt } from "../../shared/lib/blacklist-tracker-version";
+import { parseEvmLogs } from "../src/cron/blacklist/evm-source";
 import type { BlacklistRow } from "../src/cron/blacklist/shared";
 import {
   getBlacklistConfigsForSymbolAndChain,
-  getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../src/lib/blacklist-contracts";
-import { decodeAddress, decodeUint256 } from "../src/lib/evm-logs";
 import {
   fetchKycRipRows,
   parseKycRipCliArgs,
@@ -31,7 +28,7 @@ type ExistingRow = {
 
 type ParsedReceiptLog = {
   address: `0x${string}`;
-  topics: readonly `0x${string}`[];
+  topics: `0x${string}`[];
   data: `0x${string}`;
   blockNumber: `0x${string}`;
   transactionHash: `0x${string}`;
@@ -101,11 +98,11 @@ async function fetchReceiptRow(
 ): Promise<BlacklistRow | null> {
   const receipt = await client.getTransactionReceipt({ hash: txHash });
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });
-  const parsed = parseReceiptLogs(
+  const parsed = parseEvmLogs(
     config,
     receipt.logs.map((log) => ({
       address: log.address,
-      topics: log.topics,
+      topics: [...log.topics],
       data: log.data,
       blockNumber: toHex(log.blockNumber),
       transactionHash: log.transactionHash,
@@ -119,59 +116,6 @@ async function fetchReceiptRow(
     && row.address.toLowerCase() === address.toLowerCase()
     && row.tx_hash.toLowerCase() === txHash.toLowerCase(),
   ) ?? null;
-}
-
-function parseReceiptLogs(config: ContractEventConfig, logs: ParsedReceiptLog[]): BlacklistRow[] {
-  const rows: BlacklistRow[] = [];
-  for (const log of logs) {
-    const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
-    if (!eventDef) continue;
-    const topicIdx = eventDef.addressTopicIndex ?? 1;
-    const addressIndexed = log.topics.length > topicIdx;
-    const affectedAddress = addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66));
-    const amount = eventDef.hasAmount
-      ? addressIndexed
-        ? log.data.length >= 66
-          ? decodeUint256(log.data, config.decimals)
-          : null
-        : log.data.length > 66
-          ? decodeUint256(`0x${log.data.slice(66)}`, config.decimals)
-          : null
-      : null;
-
-    const blockNumber = Number.parseInt(log.blockNumber, 16);
-    const timestamp = Number.parseInt(log.timeStamp, 16);
-    if (Number.isNaN(blockNumber) || Number.isNaN(timestamp)) continue;
-
-    rows.push({
-      id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
-      stablecoin: config.stablecoin,
-      chain_id: config.chain.chainId,
-      chain_name: config.chain.chainName,
-      event_type: eventDef.eventType,
-      address: affectedAddress,
-      amount_native: amount,
-      amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
-      amount_source: amount != null ? "event" : "unavailable",
-      amount_status: amount != null ? "resolved" : "recoverable_pending",
-      tx_hash: log.transactionHash,
-      block_number: blockNumber,
-      timestamp,
-      methodology_version: getBlacklistTrackerMethodologyVersionAt(timestamp),
-      contract_address: config.contractAddress,
-      config_key: config.configKey,
-      event_signature: eventDef.signature,
-      event_topic0: log.topics[0] ?? null,
-      suppression_reason: null,
-      amount_attempt_count: 0,
-      amount_last_attempted_at: null,
-      amount_last_error_class: null,
-      amount_last_provider: null,
-      explorer_tx_url: `${config.chain.explorerUrl}/tx/${log.transactionHash}`,
-      explorer_address_url: `${config.chain.explorerUrl}/address/${affectedAddress}`,
-    });
-  }
-  return rows;
 }
 
 function redactUrlSecrets(message: string): string {
