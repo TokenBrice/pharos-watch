@@ -2000,6 +2000,18 @@
     "description": "The Promise.all at lines 102-120 unconditionally runs `SELECT input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 1` (latestHistorySnapshot). That column is documented in the same file as \"a large per-row blob\" deliberately excluded from the history query. But latestHistorySnapshot is only consumed when latestSample is null (line 152-154), i.e. when stability_index_samples is completely empty — which never happens in steady state since samples are written continuously. So every /api/stability-index request (including detail=true chart loads) pays a large-blob D1 read that is immediately discarded.",
     "recommendation": "Drop the query from the parallel batch and fetch it lazily: `if (!latestSample) { latestHistorySnapshot = await db.prepare(...).first(...) }` before line 152. Identical responses in both branches; the extra serial round-trip only occurs in the already-degraded empty-samples case.",
     "estImpact": "removes one large-blob D1 read per stability-index request"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the latest stability_index input_snapshot query from the hot stability-index Promise.all and fetch it lazily only when no live sample exists for the current fallback.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/stability-index.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/stability-index.ts worker/src/api/__tests__/stability-index.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added regressions that the live-sample path does not run the heavy history snapshot query and that the no-sample fallback still reads the latest daily input_snapshot."
    }
   },
   {

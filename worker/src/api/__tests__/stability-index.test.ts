@@ -90,6 +90,46 @@ describe("handleStabilityIndex contract tests", () => {
     expect(bulkHistoryQuery).toBeDefined();
     expect(bulkHistoryQuery!.sql).not.toMatch(/\bLIMIT\b/i);
     expect(bulkHistoryQuery!.sql).not.toMatch(/input_snapshot/);
+    expect(
+      guardDb
+        .getHistory()
+        .some((q) => /^SELECT input_snapshot FROM stability_index\b/i.test(q.sql)),
+    ).toBe(false);
+  });
+
+  it("lazily fetches the latest history input snapshot only when no live sample exists", async () => {
+    const fallbackSnapshot = {
+      totalMcapUsd: 42_000_000_000,
+      contributors: [{ stablecoinId: "usdc-circle", contribution: 3.2 }],
+    };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [], first: null },
+      {
+        match: "SELECT input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 1",
+        rows: [{ input_snapshot: JSON.stringify(fallbackSnapshot) }],
+        first: { input_snapshot: JSON.stringify(fallbackSnapshot) },
+      },
+      { match: "stability_index ORDER BY computed_at DESC", rows: [historyRow] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      current: {
+        computedAt: number;
+        totalMcapUsd: number;
+        contributors: Array<Record<string, unknown>>;
+      };
+    };
+    expect(body.current.computedAt).toBe(historyRow.computed_at);
+    expect(body.current.totalMcapUsd).toBe(fallbackSnapshot.totalMcapUsd);
+    expect(body.current.contributors).toEqual(fallbackSnapshot.contributors);
+    expect(
+      db
+        .getHistory()
+        .filter((q) => /^SELECT input_snapshot FROM stability_index\b/i.test(q.sql)),
+    ).toHaveLength(1);
   });
 
   it("reconstructs methodology version from timestamps when DB version is null", async () => {

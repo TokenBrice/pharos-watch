@@ -91,15 +91,15 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   // Daily history from stability_index. The detail query is intentionally unbounded so
   // historical event annotations (events go back to 2018) stay within the chart's range.
   // input_snapshot is deliberately NOT selected here — it is a large per-row blob that is
-  // only needed for the latest row (current fallback), fetched once below as
-  // latestHistorySnapshot. Do not re-add a LIMIT to bound this query.
+  // only needed for the latest row when no live sample exists. Fetch it lazily below in
+  // that fallback. Do not re-add a LIMIT to bound this query.
   const historyQuery = detail
     ? "SELECT computed_at, score, band, components, methodology_version FROM stability_index ORDER BY computed_at DESC"
     : "SELECT computed_at, score, band, components, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 91";
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
   // the previous sample remains the source of truth.
-  const [latestSample, avg24hRow, todayAvgRow, rows, latestHistorySnapshot] = await Promise.all([
+  const [latestSample, avg24hRow, todayAvgRow, rows] = await Promise.all([
     db
       .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>(),
@@ -114,9 +114,6 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     db
       .prepare(historyQuery)
       .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null }>(),
-    db
-      .prepare("SELECT input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 1")
-      .first<{ input_snapshot: string | null }>(),
   ]);
   const results = rows.results ?? [];
 
@@ -149,9 +146,15 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   }
   // Snapshot for `current` comes from the live sample when present, else the latest
   // daily row (fetched separately so the history query stays free of the heavy blob).
-  const currentSnapshotRaw = latestSample
-    ? latestSample.input_snapshot
-    : (latestHistorySnapshot?.input_snapshot ?? null);
+  let currentSnapshotRaw: string | null;
+  if (latestSample) {
+    currentSnapshotRaw = latestSample.input_snapshot;
+  } else {
+    const latestHistorySnapshot = await db
+      .prepare("SELECT input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+      .first<{ input_snapshot: string | null }>();
+    currentSnapshotRaw = latestHistorySnapshot?.input_snapshot ?? null;
+  }
   const snapshot = decodePsiObjectField(
     currentSnapshotRaw,
     computedAt,
