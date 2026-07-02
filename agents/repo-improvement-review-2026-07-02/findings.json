@@ -3832,6 +3832,16 @@
     "alsoFiles": [
      "src/app/alt-pegs/fiat-world-atlas/non-geo-glyphs.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the unrendered CelestialBand component, its private non-geo glyph helpers, and the component-only test that was the last importer.",
+    "validation": [
+     "rg -n \"celestial-band|non-geo-glyphs|CelestialBand|NonGeoGlyphs\" src/app/alt-pegs scripts shared worker",
+     "npm run check:unused-code",
+     "npm run typecheck"
+    ]
    }
   },
   {
