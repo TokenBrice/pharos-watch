@@ -162,6 +162,29 @@ function buildSignatureManifest(cards) {
   )}\n`;
 }
 
+const renderInputs = CARDS.map((card) => {
+  const svg = buildSvg({ kicker: card.kicker, title: card.title });
+  return {
+    card,
+    svg,
+    signature: {
+      file: card.file,
+      kicker: card.kicker,
+      title: card.title,
+      svgSha256: sha256(svg),
+    },
+  };
+});
+const signatureManifest = buildSignatureManifest(renderInputs.map(({ signature }) => signature));
+
+function readExistingSignatureManifest() {
+  return existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+}
+
+function allPublicOutputsExist() {
+  return CARDS.every((card) => existsSync(resolve(PUBLIC, card.file)));
+}
+
 // Wrap SVG in an HTML page that loads the Pharos local fonts via @font-face
 // so Playwright Firefox can use the exact serif/mono the dashboard renders.
 function buildHtml(svg) {
@@ -191,18 +214,24 @@ function buildHtml(svg) {
 <body>${svg}</body></html>`;
 }
 
+// The signature manifest fingerprints every deterministic render input. When it
+// matches and all committed PNGs exist, --check does not need Firefox.
+if (CHECK_MODE && readExistingSignatureManifest() === signatureManifest && allPublicOutputsExist()) {
+  for (const card of CARDS) {
+    console.log(formatOgWriteStatus({
+      check: true,
+      publicPath: resolve(PUBLIC, card.file),
+      suffix: ` (kicker: ${card.kicker})`,
+    }));
+  }
+  console.log("Skipped Firefox render; editorial OG signatures are current.");
+  process.exit(0);
+}
+
 const browser = await firefox.launch({ headless: true });
 const staleFiles = [];
-const signatures = [];
 try {
-  for (const card of CARDS) {
-    const svg = buildSvg({ kicker: card.kicker, title: card.title });
-    signatures.push({
-      file: card.file,
-      kicker: card.kicker,
-      title: card.title,
-      svgSha256: sha256(svg),
-    });
+  for (const { card, svg } of renderInputs) {
     const svgPath = resolve(STAGING, card.file.replace(/\.png$/, ".svg"));
     const htmlPath = resolve(STAGING, card.file.replace(/\.png$/, ".html"));
     writeFileSync(svgPath, svg);
@@ -250,9 +279,8 @@ try {
     }));
   }
 
-  const signatureManifest = buildSignatureManifest(signatures);
   if (CHECK_MODE) {
-    const expectedManifest = existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+    const expectedManifest = readExistingSignatureManifest();
     if (expectedManifest !== signatureManifest) {
       staleFiles.push("scripts/maintenance/state/og-editorial-signatures.json");
     }

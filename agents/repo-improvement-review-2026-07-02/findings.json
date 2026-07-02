@@ -5127,6 +5127,17 @@
     "description": "In --check mode the script always launches headless Playwright Firefox and re-renders all 7 cards to compare pixels (with sharp-based perceptual tolerance in og-image-checks.mjs), even though it also maintains src/generated/og-editorial-signatures.json, which hashes every render input (per-card SVG content, both font files, methodology version). When the committed signature manifest matches the freshly computed one, the PNGs are provably outputs of the same inputs; the pixel pass then only guards against a hand-edited/corrupted committed PNG. This browser launch runs inside every check:generated-artifacts invocation and is one of the renderers the 4-way parallelism cap exists to contain (per the comment in run-generated-artifacts.mjs).",
     "recommendation": "In --check mode, compute the signature manifest first and skip the Firefox render when it matches the committed manifest and all 7 PNGs exist (fall back to the full pixel pass on any mismatch). Keeps the perceptual comparison for real drift while removing the browser cost from the common no-change case. Verify the owner considers hand-edited-PNG detection dispensable in the fast path before applying; the same pattern would then apply to build-og-learn-images.mjs and build-og-case-studies.ts.",
     "estImpact": "~-5-10s and one browser launch per artifact-check run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a signature-manifest fast path to editorial OG `--check`: when deterministic render inputs match and all seven public PNGs exist, the script reports the normal checked outputs and skips launching Firefox.",
+    "validation": [
+     "npm run check:og-editorial",
+     "npm run check:script-entrypoints",
+     "git diff --check -- scripts/maintenance/build-og-editorial.mjs"
+    ],
+    "notes": "The fast path intentionally trusts the committed signature manifest plus output presence; any signature mismatch or missing PNG still falls back to the existing Firefox render and perceptual comparison."
    }
   },
   {
