@@ -4008,6 +4008,18 @@
     "alsoFiles": [
      "src/app/pharoswatchbot/app/client.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed `clearPendingUndo` from the Mini App mutations hook public result while keeping the internal undo-toast clearing callback for remove, undo, and unsubscribe-all flows.",
+    "validation": [
+     "rg -n \"clearPendingUndo\" --glob '!agents/repo-improvement-review-2026-07-02/findings.json' . || true",
+     "npx eslint src/app/pharoswatchbot/app/use-mini-app-mutations.ts --max-warnings=0",
+     "npx vitest run src/app/pharoswatchbot/app/page.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/app/pharoswatchbot/app/use-mini-app-mutations.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

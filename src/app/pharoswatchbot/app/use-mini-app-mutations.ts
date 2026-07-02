@@ -136,9 +136,6 @@ export interface UseMiniAppMutationsResult {
   mutate: (operation: TelegramMiniAppOperation) => void;
   /** Imperative dispatch: skips optimistic layer, returns the server snapshot on success. */
   performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppState | null>;
-  /** Cancel a pending undo (e.g. when the user navigates away from watchlist). */
-  clearPendingUndo: () => void;
-
   /** Bound handler for the remove-coin flow: confirm-then-mutate + arm undo on success. */
   remove: (coin: SubscribedCoin) => void;
   /** Bound handler for the undo button. No-op if `pendingUndo` is null. */
@@ -328,7 +325,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     void performMutation(operation);
   }, [applyOptimisticOperation, performMutation]);
 
-  const clearPendingUndo = useCallback(() => {
+  const clearUndoToast = useCallback(() => {
     if (undoTimerRef.current) {
       clearTimeout(undoTimerRef.current);
       undoTimerRef.current = null;
@@ -353,7 +350,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const undoRemove = useCallback(() => {
     const captured = pendingUndo;
     if (!captured) return;
-    clearPendingUndo();
+    clearUndoToast();
     const patch: { alertTypes: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: typeof captured.dewsMinBand; depegStepBps?: typeof captured.depegStepBps; safetyMode?: typeof captured.safetyMode } = {
       alertTypes: { ...captured.alertTypes },
     };
@@ -361,7 +358,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     if (captured.depegStepBps !== null) patch.depegStepBps = captured.depegStepBps;
     if (captured.safetyMode !== null) patch.safetyMode = captured.safetyMode;
     void performMutation({ kind: "set-coin", stablecoinId: captured.stablecoinId, patch });
-  }, [clearPendingUndo, pendingUndo, performMutation]);
+  }, [clearUndoToast, pendingUndo, performMutation]);
 
   const unfollowPreset = useCallback((preset: FollowedPreset) => {
     // Presets aren't joined to subscribed coins in the current state payload, so we
@@ -375,11 +372,11 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     // R3 fix: clear any pending undo before unsubscribing-all so the toast cannot
     // re-add a coin to a now-empty subscriber row.
     const fire = () => {
-      clearPendingUndo();
+      clearUndoToast();
       void performMutation({ kind: "unsubscribe-all" });
     };
     confirmThenFire(showConfirm, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
-  }, [clearPendingUndo, performMutation, showConfirm]);
+  }, [clearUndoToast, performMutation, showConfirm]);
 
   const forgetMe = useCallback(() => {
     // Destructive, irreversible op with no optimistic-state effect: dispatch
@@ -418,7 +415,6 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     homeScreenStatus,
     mutate,
     performMutation,
-    clearPendingUndo,
     remove,
     undoRemove,
     addToHomeScreen,
