@@ -15,6 +15,20 @@ function adminRequest(url: string, method: "GET" | "POST" = "POST"): Request {
   return new Request(url, { method, headers });
 }
 
+function cacheKeysTouched(db: { getHistory: () => Array<{ sql: string; binds: unknown[] }> }): string[] {
+  return db
+    .getHistory()
+    .filter((entry) =>
+      (
+        entry.sql.includes("FROM cache WHERE key = ?") ||
+        entry.sql.includes("INSERT OR REPLACE INTO cache") ||
+        entry.sql.includes("DELETE FROM cache WHERE key = ?")
+      ) &&
+      typeof entry.binds[0] === "string"
+    )
+    .map((entry) => String(entry.binds[0]));
+}
+
 // ---------------------------------------------------------------------------
 // reset-cron-lease
 // ---------------------------------------------------------------------------
@@ -66,6 +80,7 @@ describe("handleResetCircuitBreaker", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as { ok: boolean; cleared: number };
     expect(body.cleared).toBe(1);
+    expect(cacheKeysTouched(db)).toEqual(["circuit:binance-prices"]);
   });
 
   it("rejects unknown circuit (whitelist)", async () => {

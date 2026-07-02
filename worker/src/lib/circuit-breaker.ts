@@ -29,7 +29,6 @@ const DEFAULT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
-const PROVIDER_CIRCUIT_INDEX_CACHE_KEY = "provider:circuit:index";
 const CIRCUIT_RECORD_MEMO_TTL_MS = 5_000;
 
 interface CircuitRecordMemoCache {
@@ -84,27 +83,6 @@ function cacheKey(source: string): string {
   return `circuit:${source}`;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseProviderCircuitIndex(value: string | null | undefined): Record<string, CircuitRecord> {
-  if (!value) return {};
-  try {
-    const parsed = JSON.parse(value);
-    if (!isRecord(parsed) || !isRecord(parsed.circuits)) return {};
-    const circuits: Record<string, CircuitRecord> = {};
-    for (const [source, rawRecord] of Object.entries(parsed.circuits)) {
-      if (typeof source === "string" && isCircuitRecord(rawRecord)) {
-        circuits[source] = cloneCircuitRecord(rawRecord);
-      }
-    }
-    return circuits;
-  } catch {
-    return {};
-  }
-}
-
 async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
   const cached = await getCache(db, cacheKey(source));
   if (!cached) return cloneCircuitRecord(DEFAULT_RECORD);
@@ -152,50 +130,14 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
 async function setCircuitRecord(db: D1Database, source: string, record: CircuitRecord): Promise<void> {
   invalidateCircuitRecord(db, source);
   await setCache(db, cacheKey(source), JSON.stringify(record));
-  await updateProviderCircuitIndexSafe(db, source, record);
-}
-
-async function updateProviderCircuitIndexSafe(
-  db: D1Database,
-  source: string,
-  record: CircuitRecord,
-): Promise<void> {
-  try {
-    const cached = await getCache(db, PROVIDER_CIRCUIT_INDEX_CACHE_KEY);
-    const circuits = parseProviderCircuitIndex(cached?.value);
-    circuits[source] = cloneCircuitRecord(record);
-    await setCache(db, PROVIDER_CIRCUIT_INDEX_CACHE_KEY, JSON.stringify({
-      updatedAt: Math.floor(Date.now() / 1000),
-      circuits,
-    }));
-  } catch (err) {
-    console.warn(`[circuit-breaker] Failed to update provider circuit index (${source}):`, err);
-  }
-}
-
-export async function removeProviderCircuitFromIndexSafe(
-  db: D1Database,
-  source: string,
-): Promise<void> {
-  try {
-    const cached = await getCache(db, PROVIDER_CIRCUIT_INDEX_CACHE_KEY);
-    const circuits = parseProviderCircuitIndex(cached?.value);
-    delete circuits[source];
-    await setCache(db, PROVIDER_CIRCUIT_INDEX_CACHE_KEY, JSON.stringify({
-      updatedAt: Math.floor(Date.now() / 1000),
-      circuits,
-    }));
-  } catch (err) {
-    console.warn(`[circuit-breaker] Failed to remove provider circuit index entry (${source}):`, err);
-  }
 }
 
 const CIRCUIT_RECORD_READ_CHUNK_SIZE = 100;
 
 /**
  * Read authoritative circuit rows for a bounded source allowlist. Status
- * surfaces use this instead of the aggregate provider index so lost index
- * updates or pre-index circuit rows cannot be reported as closed.
+ * surfaces use these rows so stale or missing secondary summaries cannot
+ * report active circuit rows as closed.
  */
 export async function getCircuitRecordsForSources(
   db: D1Database,

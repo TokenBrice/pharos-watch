@@ -52,6 +52,20 @@ function countCircuitRecordReads(
     ).length;
 }
 
+function circuitCacheKeysTouched(db: { getHistory: () => Array<{ sql: string; binds: unknown[] }> }): string[] {
+  return db
+    .getHistory()
+    .filter((entry) =>
+      (
+        entry.sql.includes("FROM cache WHERE key = ?") ||
+        entry.sql.includes("INSERT OR REPLACE INTO cache") ||
+        entry.sql.includes("DELETE FROM cache WHERE key = ?")
+      ) &&
+      typeof entry.binds[0] === "string"
+    )
+    .map((entry) => String(entry.binds[0]));
+}
+
 describe("circuit-breaker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -236,6 +250,23 @@ describe("circuit-breaker", () => {
       const db = mockDbWithCircuit("src", stored);
       await recordOutcome(db, "src", true);
       expect(mockedAlert).not.toHaveBeenCalled();
+    });
+
+    it("stores only the authoritative circuit record cache row", async () => {
+      const stored = makeRecord({ state: "closed" });
+      const db = mockDbWithCircuit("src", stored);
+      await recordOutcome(db, "src", true);
+
+      const write = db
+        .getHistory()
+        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+      expect(write?.binds[0]).toBe("circuit:src");
+      expect(JSON.parse(String(write?.binds[1]))).toMatchObject({
+        state: "closed",
+        consecutiveFailures: 0,
+        lastSuccessAt: Math.floor(Date.now() / 1000),
+      });
+      expect(circuitCacheKeysTouched(db)).toEqual(["circuit:src", "circuit:src"]);
     });
 
     it("invalidates cached state after an outcome write", async () => {

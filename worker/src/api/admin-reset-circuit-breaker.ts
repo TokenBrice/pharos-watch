@@ -4,7 +4,7 @@ import {
   type AdminUrlRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
-import { isActiveCircuitSource, removeProviderCircuitFromIndexSafe } from "../lib/circuit-breaker";
+import { isActiveCircuitSource } from "../lib/circuit-breaker";
 import { logAdminAction } from "../lib/admin-action-audit";
 
 export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminUrlRouteContext>(
@@ -19,7 +19,6 @@ export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminUrlRouteC
     // (worker/src/lib/circuit-breaker.ts), including configured live-reserve
     // scopes. Deleting the row forces the next call to re-probe closed.
     const result = await db.prepare("DELETE FROM cache WHERE key = ?").bind(`circuit:${circuit}`).run();
-    await removeProviderCircuitFromIndexSafe(db, circuit);
     const cleared = result.meta?.changes ?? 0;
     await logAdminAction(
       db,

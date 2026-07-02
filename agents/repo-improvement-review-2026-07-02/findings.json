@@ -5300,6 +5300,16 @@
     "alsoFiles": [
      "worker/src/api/admin-reset-circuit-breaker.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the write-only provider circuit index key/parser/update/remove path so circuit writes and admin resets touch only the authoritative `circuit:<source>` cache row. Added focused assertions for the circuit writer and admin reset route.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/circuit-breaker.test.ts worker/src/api/__tests__/admin-operator-controls.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n 'provider:circuit:index|ProviderCircuitIndex|parseProviderCircuitIndex|removeProviderCircuitFromIndexSafe|updateProviderCircuitIndexSafe' worker/src shared src functions scripts || true"
+    ]
    }
   },
   {
