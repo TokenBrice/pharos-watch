@@ -3970,6 +3970,17 @@
     "description": "The live backfill path is worker/src/api/backfill-yield-history.ts, wired via routes/admin-routes.ts, and it does not import this cron module. The only importer of worker/src/cron/yield-history-backfill.ts (52 LOC, buildBackfillRows) is its own test (worker/src/cron/__tests__/yield-history-backfill.test.ts). No scheduled slot loader in worker/src/handlers/scheduled.ts references it, and worker/scripts/ has no reference either. An earlier audit (R-070, changelog df7fa07a) already deleted the orphaned _backfillYieldHistory caller; this module is the remaining orphan.",
     "recommendation": "Delete the module and its test. Safe: unreachable from worker/src/index.ts, all scheduled slots, all routes, and all scripts (verified by grep for 'yield-history-backfill' and 'buildBackfillRows').",
     "estImpact": "-52 LOC + test file"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the superseded `yield-history-backfill` cron helper and its self-test. The live admin yield-history backfill route remains untouched, and no production references to `yield-history-backfill` or `buildBackfillRows` remain.",
+    "validation": [
+     "rg -n \"yield-history-backfill|buildBackfillRows\" worker/src worker/scripts scripts shared src",
+     "npm run check:unused-code",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/yield-history-backfill.ts worker/src/cron/__tests__/yield-history-backfill.test.ts"
+    ]
    }
   },
   {
