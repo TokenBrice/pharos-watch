@@ -6035,6 +6035,18 @@
     "description": "ALERT_BLOCKQUOTE_CONTEXT (line 108), ALERT_LINK_PREVIEW_FOR_SINGLE_COIN (line 123), and ALERT_TOPCOIN_SNOOZE_ROW (line 278) are hardcoded `: boolean = true` constants with no env/config input and no external reader (the exported one has zero importers). Each keeps a permanently-unreachable branch alive, e.g. `if (!ALERT_LINK_PREVIEW_FOR_SINGLE_COIN) return null;` at line 456. They date from the formatting rollout and have never been flipped.",
     "recommendation": "Inline the true value: delete the three constants and their `if (!FLAG)` guards / false branches. Behavior-preserving by construction — the false paths cannot execute today, so Telegram message output is bit-identical. Confidence medium only because the owner may want to keep them as documented style toggles.",
     "estImpact": "-15 LOC, 3 dead branches removed"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the permanently-true Telegram alert formatting flags and inlined the current true-path behavior for blockquote context, single-coin link previews, and top-coin snooze rows.",
+    "validation": [
+     "rg -n \"ALERT_BLOCKQUOTE_CONTEXT|ALERT_LINK_PREVIEW_FOR_SINGLE_COIN|ALERT_TOPCOIN_SNOOZE_ROW\" worker/src shared src functions scripts || true",
+     "npx vitest run worker/src/lib/__tests__/telegram-alerts.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/telegram-alerts-formatting.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

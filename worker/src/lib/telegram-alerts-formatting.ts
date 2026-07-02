@@ -97,31 +97,6 @@ const DEWS_SEVERITY_GLYPH: Record<string, string> = {
 };
 const LAUNCH_GLYPH = "✦";
 
-/**
- * Feature flag: wrap alert context lines in `<blockquote expandable>` so the
- * supplementary safety/liquidity/supply line collapses by default on mobile
- * Telegram clients. Flip to `false` to fall back to a plain extra line.
- *
- * Requires Telegram Bot API 7.0+ (Mar 2024) for the `expandable` attribute.
- * Older clients render the content as a regular blockquote (still readable).
- */
-const ALERT_BLOCKQUOTE_CONTEXT: boolean = true;
-
-/**
- * Feature flag: enable a small Telegram link-preview card for the
- * "View on Pharos" link on the first chunk of single-coin consolidated alerts.
- * Multi-coin alerts (which link to the dashboard root) and overflow chunks
- * keep previews disabled to stay dense on mobile.
- *
- * Requires Telegram Bot API 7.0+ (Mar 2024) for `link_preview_options`.
- * Older Bot API versions ignore the field and fall back to default link
- * preview behavior (which is harmless because the link is always present).
- *
- * The resolver helper lives below `getSingleAlertStablecoinId`; see
- * `resolveAlertLinkPreviewOptions`.
- */
-export const ALERT_LINK_PREVIEW_FOR_SINGLE_COIN: boolean = true;
-
 function dewsGlyphFor(band: string): string {
   return DEWS_SEVERITY_GLYPH[band] ?? "";
 }
@@ -129,9 +104,7 @@ function dewsGlyphFor(band: string): string {
 function formatContextLine(contextLine?: string): string {
   if (!contextLine) return "";
   const escaped = escapeHtml(contextLine);
-  return ALERT_BLOCKQUOTE_CONTEXT
-    ? `\n<blockquote expandable>${escaped}</blockquote>`
-    : `\n${escaped}`;
+  return `\n<blockquote expandable>${escaped}</blockquote>`;
 }
 
 export function formatDewsLine(e: DewsChange): string {
@@ -270,13 +243,6 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   return `${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
-/**
- * Feature flag: append the compact per-coin "Snooze <SYM> 4h" row to the first
- * chunk of multi-coin alerts. Flip to `false` for a quick rollback that falls
- * back to the prior multi-coin keyboard (snooze row + private Open Watchlist).
- */
-const ALERT_TOPCOIN_SNOOZE_ROW: boolean = true;
-
 /** Max characters of a symbol shown on a compact per-coin snooze button. */
 const TOPCOIN_SNOOZE_SYMBOL_MAX = 12;
 
@@ -387,7 +353,7 @@ export function buildAlertReplyMarkup(
     // callback_data limit is on `coinsnooze:<id>:4h` (id-only, already proven
     // safe by the single-coin coinsnooze buttons); the displayed symbol is
     // truncated independently.
-    if (ALERT_TOPCOIN_SNOOZE_ROW && chunkIndex === 0 && hasAlerts) {
+    if (chunkIndex === 0 && hasAlerts) {
       const topCoins = rankAlertCoins(alerts).slice(0, 2);
       if (topCoins.length > 0) {
         rows.push(
@@ -453,7 +419,6 @@ export function resolveAlertLinkPreviewOptions(
   alerts: ConsolidatedAlerts,
   chunkIndex: number,
 ): { is_disabled: boolean; url: string; prefer_small_media: boolean; show_above_text: boolean } | null {
-  if (!ALERT_LINK_PREVIEW_FOR_SINGLE_COIN) return null;
   if (chunkIndex !== 0) return null;
   const stablecoinId = getSingleAlertStablecoinId(alerts);
   if (stablecoinId == null) return null;
