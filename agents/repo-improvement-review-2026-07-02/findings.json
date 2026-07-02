@@ -5280,6 +5280,21 @@
      "shared/lib/cemetery-merged.ts",
      "scripts/maintenance/generate-compact-logos.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the 74 top-level logo files that were not reachable through `data/logos.json` and regenerated compact logo variants. The generated map now has 194 compact entries, no canonical entries for orphan logos, four new compact variants for mapped oversized logos, and no compact files outside the map.",
+    "validation": [
+     "node scripts/maintenance/generate-compact-logos.mjs",
+     "npx vitest run src/lib/__tests__/logo-variants.test.ts",
+     "node inventory audit: 442 top-level logo files match 442 distinct data/logos.json paths; no missing mapped logos; 194 compact files match 194 generated-map entries",
+     "node full-path reference audit over data/src/shared/worker/functions/scripts/public for every deleted /logos/* path",
+     "npm run check:stablecoin-data",
+     "npm run typecheck",
+     "npm run check:generated-artifacts"
+    ],
+    "notes": "Regeneration also dropped stale `/logos/compact/nusd-nexus.webp` because the canonical `nusd-nexus.webp` is below the generator byte threshold, and added compact variants for `aed-rakbank`, `bils-bitsofgold`, `ejpy-jbfd`, and `ousd-open-standard`."
    }
   },
   {
