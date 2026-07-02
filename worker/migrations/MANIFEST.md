@@ -112,6 +112,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0166     | `0166_worker_repair_tasks.sql`                           | Add a generic Worker repair-task ledger for low-priority repair/backfill debt and DDR repair-required events                                      |
 | 0167     | `0167_worker_canary_runs.sql`                            | Add a compact data-invariant canary ledger for scheduled Worker structural checks                                                                 |
 | 0168     | `0168_surface_publication_generations.sql`               | Add a generic publication-generation ledger for migrated cache-backed and generated Worker surfaces                                                |
+| 0169     | `0169_lusd_ddr_event_90410_split.sql`                    | Ledger LUSD event 90410 as a fresh DDR incident and close the resolved repair-debt task                                                           |
 
 ## Retired Individual Migrations
 

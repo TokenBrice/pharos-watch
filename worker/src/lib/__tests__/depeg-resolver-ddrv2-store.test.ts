@@ -269,6 +269,116 @@ async function sealPredictionFixture(db: SqliteD1) {
 }
 
 describe("DDRv2 storage migrations and stores", () => {
+  it("ledgers LUSD event 90410 as a fresh DDR incident and closes repair debt", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      applyMigrationsThrough(sqlite, "0168_surface_publication_generations.sql");
+
+      sqlite.exec(`
+        INSERT INTO depeg_events
+          (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+           started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+        VALUES
+          (90404, 'lusd-liquity', 'LUSD', 'peggedUSD', 'above', 100,
+           1782944363, 1782947931, 1.0096705168234137, 1.0096705168234137, 1.0085284741080422, 0.9997113947811964, 'live'),
+          (90410, 'lusd-liquity', 'LUSD', 'peggedUSD', 'above', 100,
+           1782970434, 1782973127, 1.0096702857093371, 1.0096702857093371, 1.0092109177692081, 0.99968, 'live');
+
+        INSERT INTO depeg_resolver_incident_event_links
+          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+        VALUES
+          ('ddr2:ba7b7cb3eb0ef0237e1fac09475cd198', 90404, 'repair_replacement', NULL, 1782944403,
+           'pre-lock nearby event adopted as current incident source');
+
+        INSERT INTO depeg_resolver_incidents
+          (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+           first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+           superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+        VALUES
+          ('ddr2:ba7b7cb3eb0ef0237e1fac09475cd198', 'lusd-liquity', 'USD', 'above',
+           90361, 90404, 1782702288, 1782944363, 100, 'active', NULL,
+           'a812e8287ccbedb13ec00d3b4d8a2ec1501b85dbf131a332a14715a6836c360b', 1782702297, 1782944403);
+
+        INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, priority, state, attempt_count, next_attempt_at,
+           payload_json, created_at, updated_at)
+        VALUES
+          ('repair:ddr-repair-required-event:90410', 'ddr-repair-required-event', '90410', 50, 'open', 0, NULL,
+           '{"eventId":90410,"reason":"Unlinked depeg event 90410 overlaps nearby canonical incident ddr2:ba7b7cb3eb0ef0237e1fac09475cd198; explicit repair required"}',
+           1782970440, 1782973133);
+
+        INSERT INTO cache (key, value, updated_at)
+        VALUES (
+          'ddr:repair-debt:v1',
+          '{"checkedAt":1782973133,"count":1,"events":[{"eventId":90410,"reason":"Unlinked depeg event 90410 overlaps nearby canonical incident ddr2:ba7b7cb3eb0ef0237e1fac09475cd198; explicit repair required"}],"eventsTruncated":false}',
+          1782973133
+        );
+      `);
+
+      applyMigrationFile(sqlite, "0169_lusd_ddr_event_90410_split.sql");
+
+      expect(
+        sqlite
+          .prepare(
+            `SELECT incident_key, relation, note
+             FROM depeg_resolver_incident_event_links
+             WHERE event_id = 90410`,
+          )
+          .get(),
+      ).toEqual({
+        incident_key: "ddr2:c14884852abe024faa4d4b9fc1f84742",
+        relation: "observed",
+        note: "fresh LUSD flap split from earlier recovered pre-lock chain",
+      });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT first_event_id, current_event_id, source_fingerprint
+             FROM depeg_resolver_incidents
+             WHERE incident_key = 'ddr2:c14884852abe024faa4d4b9fc1f84742'`,
+          )
+          .get(),
+      ).toEqual({
+        first_event_id: 90410,
+        current_event_id: 90410,
+        source_fingerprint: "09da1784f586d5bbfba3762fa54d4c3c1d47f1660fd5c315616a3187b480f687",
+      });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT policy_universe_included, policy_universe_reason
+             FROM depeg_resolver_incident_policy_membership
+             WHERE incident_key = 'ddr2:c14884852abe024faa4d4b9fc1f84742'`,
+          )
+          .get(),
+      ).toEqual({
+        policy_universe_included: 1,
+        policy_universe_reason: "post_effective_public_tracked",
+      });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT current_event_id
+             FROM depeg_resolver_incidents
+             WHERE incident_key = 'ddr2:ba7b7cb3eb0ef0237e1fac09475cd198'`,
+          )
+          .get(),
+      ).toEqual({ current_event_id: 90404 });
+      expect(
+        sqlite
+          .prepare("SELECT state, closed_at IS NOT NULL AS has_closed_at FROM worker_repair_tasks WHERE subject_id = '90410'")
+          .get(),
+      ).toEqual({ state: "closed", has_closed_at: 1 });
+      expect(
+        sqlite
+          .prepare("SELECT COUNT(*) AS count FROM cache WHERE key = 'ddr:repair-debt:v1'")
+          .get(),
+      ).toEqual({ count: 0 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("repairs APXUSD event 90203 when the earlier relink migration found an accidental link", () => {
     const sqlite = new DatabaseSync(":memory:");
     try {
