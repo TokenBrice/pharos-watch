@@ -1,8 +1,78 @@
 import { describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
 
 describe("challenger load", () => {
+  it("does not run the full legacy JSON load when published snapshots cover", async () => {
+    const db = mockD1(
+      [
+        {
+          match: "FROM sqlite_master",
+          rows: [
+            { name: "dex_price_challengers" },
+            { name: "dex_price_challenger_snapshots" },
+          ],
+        },
+        {
+          match: "SELECT stablecoin_id\n     FROM dex_liquidity",
+          rows: [],
+        },
+        {
+          match: "SELECT stablecoin_id\n     FROM dex_prices",
+          rows: [],
+        },
+        {
+          match: "FROM dex_price_challenger_snapshots",
+          rows: [
+            {
+              stablecoin_id: "coin-a",
+              snapshot_at: 100,
+              published_at: 110,
+              has_rows: 1,
+              source_coverage_complete: 1,
+            },
+          ],
+        },
+        {
+          match: "FROM dex_price_challengers",
+          rows: [
+            {
+              stablecoin_id: "coin-a",
+              snapshot_at: 100,
+              pool_id: "coin-a:published",
+              chain: "Ethereum",
+              protocol: "published-protocol",
+              source_family: "published",
+              price_usd: 0.998,
+              tvl_usd: 50_000,
+            },
+          ],
+        },
+      ],
+      { requireMatch: true },
+    ) as MockD1Database;
+
+    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
+
+    expect(result.diagnostics.mode).toBe("published");
+    expect(result.diagnostics.legacyFallbackCoins).toEqual([]);
+    expect(result.challengersByStablecoin.get("coin-a")).toEqual([
+      expect.objectContaining({
+        stablecoinId: "coin-a",
+        poolId: "coin-a:published",
+        sourceFamily: "published",
+        priceUsd: 0.998,
+        tvlUsd: 50_000,
+      }),
+    ]);
+    expect(
+      db.getHistory().some((entry) =>
+        entry.sql.includes("SELECT stablecoin_id, top_pools_json")
+        || entry.sql.includes("SELECT stablecoin_id, price_sources_json"),
+      ),
+    ).toBe(false);
+  });
+
   it("loads published challenger snapshots when present, falls back per coin, and keeps empty snapshots authoritative", async () => {
     const db = mockD1(
       [

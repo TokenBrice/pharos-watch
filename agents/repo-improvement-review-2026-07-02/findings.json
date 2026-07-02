@@ -613,6 +613,16 @@
     "alsoFiles": [
      "worker/src/cron/dex-liquidity/challenger-legacy.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Made legacy DEX challenger loading lazy. Published snapshot reads now run first, and the loader only pays the full legacy JSON scan when tables are missing, published queries fail, stale/incomplete snapshots need fallback rows, or cheap ID probes find legacy candidates absent from snapshots.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/challenger-load.test.ts worker/src/cron/dex-liquidity/__tests__/challenger-legacy.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/dex-liquidity/challenger-load.ts worker/src/cron/dex-liquidity/__tests__/challenger-load.test.ts"
+    ]
    }
   },
   {
