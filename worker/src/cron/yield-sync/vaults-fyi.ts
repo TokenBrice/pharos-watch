@@ -464,7 +464,7 @@ export async function fetchVaultsFyiSources({
       throw error instanceof Error ? error : new Error(String(error));
     }
     telemetry.status = telemetry.rawVaultCount > 0 || candidates.length > 0 ? "partial" : "failed";
-    telemetry.skipReason = budget.budgetController.signal.aborted ? "request-failed" : "request-failed";
+    telemetry.skipReason = "request-failed";
     telemetry.budgetExhausted = budget.budgetController.signal.aborted;
     circuitOutcome = "failure";
   } finally {

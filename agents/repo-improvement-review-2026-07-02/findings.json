@@ -1325,6 +1325,15 @@
     "description": "In fetchVaultsFyiSources' catch block: `telemetry.skipReason = budget.budgetController.signal.aborted ? \"request-failed\" : \"request-failed\";` — the condition is evaluated and discarded. The shape strongly suggests the budget-exhausted arm was meant to carry a distinct reason, but VaultsFyiSkipReason (vaults-fyi-types.ts:5-14) has no budget value; the separate `telemetry.budgetExhausted` flag (line 468) is what actually preserves the distinction. As written it is a bug-shaped leftover that invites a wrong \"fix\".",
     "recommendation": "Replace with a plain `telemetry.skipReason = \"request-failed\";` (keeping budgetExhausted as the discriminator), or if the owner wants richer telemetry, add a \"budget-exhausted\" member to VaultsFyiSkipReason — but that changes a persisted telemetry enum, so the plain assignment is the safe behavior-frozen cleanup.",
     "estImpact": "Removes a misleading no-op conditional"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the identical-branch vaults.fyi request-failure ternary with a direct skipReason assignment while preserving budgetExhausted as the separate abort discriminator.",
+    "validation": [
+     "cd worker && npx vitest run src/cron/__tests__/yield-vaults-fyi-source.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
