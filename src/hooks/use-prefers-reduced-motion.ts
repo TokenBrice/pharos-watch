@@ -1,15 +1,30 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import {
-  getEffectiveReducedMotion,
-  motionPreferenceStore,
-} from "./use-motion-preference";
-
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+import { getEffectiveReducedMotion, motionPreferenceStore } from "./use-motion-preference";
 
 interface UsePrefersReducedMotionOptions {
   ssrDefault?: boolean;
+}
+
+function subscribeToMotionPreference(onChange: () => void) {
+  return motionPreferenceStore.subscribe(onChange);
+}
+
+function getReducedMotionSnapshot() {
+  return getEffectiveReducedMotion(motionPreferenceStore.getSnapshot(), false);
+}
+
+function getReducedMotionSnapshotWithSsrDefault() {
+  return getEffectiveReducedMotion(motionPreferenceStore.getSnapshot(), true);
+}
+
+function getReducedMotionServerSnapshot() {
+  return getEffectiveReducedMotion(motionPreferenceStore.getServerSnapshot(), false);
+}
+
+function getReducedMotionServerSnapshotWithSsrDefault() {
+  return getEffectiveReducedMotion(motionPreferenceStore.getServerSnapshot(), true);
 }
 
 /**
@@ -19,24 +34,9 @@ interface UsePrefersReducedMotionOptions {
  * changes also re-render so callers stay in sync without polling the media
  * query independently.
  */
-export function usePrefersReducedMotion({
-  ssrDefault = false,
-}: UsePrefersReducedMotionOptions = {}): boolean {
-  const subscribe = (onChange: () => void) => {
-    const unsubscribeStore = motionPreferenceStore.subscribe(onChange);
-    const media = typeof window !== "undefined" ? window.matchMedia?.(REDUCED_MOTION_QUERY) : undefined;
-    media?.addEventListener("change", onChange);
-    return () => {
-      unsubscribeStore();
-      media?.removeEventListener("change", onChange);
-    };
-  };
+export function usePrefersReducedMotion({ ssrDefault = false }: UsePrefersReducedMotionOptions = {}): boolean {
+  const getSnapshot = ssrDefault ? getReducedMotionSnapshotWithSsrDefault : getReducedMotionSnapshot;
+  const getServerSnapshot = ssrDefault ? getReducedMotionServerSnapshotWithSsrDefault : getReducedMotionServerSnapshot;
 
-  const getSnapshot = () =>
-    getEffectiveReducedMotion(motionPreferenceStore.getSnapshot(), ssrDefault);
-
-  const getServerSnapshot = () =>
-    getEffectiveReducedMotion(motionPreferenceStore.getServerSnapshot(), ssrDefault);
-
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(subscribeToMotionPreference, getSnapshot, getServerSnapshot);
 }

@@ -2978,6 +2978,17 @@
     "description": "The subscribe closure (lines 25-33) and both snapshot getters are recreated on every render. useSyncExternalStore treats a changed subscribe function as a store swap: it unsubscribes and re-subscribes, so each render of each consumer tears down and re-adds a matchMedia 'change' listener plus a motionPreferenceStore listener. There are ~8 non-test call sites across 11 files, several inside chart/animation components that re-render on hover and data ticks. The subscribe body depends on nothing render-scoped (REDUCED_MOTION_QUERY is a module constant; ssrDefault only affects snapshots), so the churn is pure waste. The extra matchMedia listener is also redundant when the module-level listener in use-motion-preference.ts:64-73 is active, since that one already calls notify().",
     "recommendation": "Hoist subscribe to module scope (or wrap in useCallback with an empty dep list) and derive getSnapshot via useCallback([ssrDefault]). Identical values are returned on every render, so this is behavior-preserving; it just stops the per-render listener add/remove churn across all consumers.",
     "estImpact": "eliminates 2 listener add/removes per consumer render"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Hoisted the reduced-motion `useSyncExternalStore` subscription and snapshot functions to module scope, relying on the shared motion-preference store for OS preference change notifications instead of per-hook media listeners.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-prefers-reduced-motion.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/hooks/use-prefers-reduced-motion.ts src/hooks/__tests__/use-prefers-reduced-motion.test.ts"
+    ],
+    "notes": "Added regression coverage proving rerenders do not add or remove hook-local media query listeners."
    }
   },
   {
