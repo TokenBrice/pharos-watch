@@ -1,5 +1,10 @@
 import { sleep } from "./abort";
-import { DEFAULT_CRON_TIMEOUT_MS, CRON_TIMEOUT_MS } from "./cron-timeouts";
+import {
+  getCronTimeoutBudgetMetadata,
+  resolveCronTimeoutBudget,
+  type CronTimeoutBudgetMetadata,
+  type ResolvedCronTimeoutBudget,
+} from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 
@@ -9,6 +14,7 @@ export interface CronLeaseOptions {
   owner?: string;
   maxRenewFailures?: number;
   abortSignal?: AbortSignal;
+  timeoutBudget?: ResolvedCronTimeoutBudget;
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
 }
 
@@ -44,9 +50,16 @@ export class CronLeaseLostError extends Error {
 }
 
 export class CronTimeoutError extends Error {
-  constructor(job: string, timeoutMs: number) {
-    super(`Cron job "${job}" timed out after ${Math.round(timeoutMs / 1000)}s`);
+  readonly metadata?: CronTimeoutBudgetMetadata;
+
+  constructor(job: string, timeoutMs: number, metadata?: CronTimeoutBudgetMetadata) {
+    super(
+      metadata?.slotBudgetExhausted
+        ? `Cron job "${job}" did not start because the scheduled slot budget was exhausted`
+        : `Cron job "${job}" timed out after ${Math.round(timeoutMs / 1000)}s`,
+    );
     this.name = "CronTimeoutError";
+    this.metadata = metadata;
   }
 }
 
@@ -183,7 +196,9 @@ export async function runCronWithLease<T>(
   fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
   opts?: CronLeaseOptions,
 ): Promise<CronLeaseRunResult<T>> {
-  const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
+  const timeoutBudget = opts?.timeoutBudget ?? resolveCronTimeoutBudget(job);
+  const timeoutMs = timeoutBudget.effectiveTimeoutMs;
+  const timeoutMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
   const timeoutSec = Math.ceil(timeoutMs / 1000);
   const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
@@ -235,21 +250,30 @@ export async function runCronWithLease<T>(
   let leaseLastRenewedAt: number | null = null;
   let leaseLost = false;
   const leaseController = new AbortController();
-  const markLeaseFailure = () => {
+  const abortForLeaseLoss = (failureCount: number) => {
+    if (leaseLost) return;
+    leaseLost = true;
+    leaseController.abort(new CronLeaseLostError(job, failureCount));
+  };
+  const markRenewError = () => {
     renewFailures++;
     leaseRenewFailuresTotal++;
-    if (!leaseLost && renewFailures >= maxRenewFailures) {
-      leaseLost = true;
-      leaseController.abort(new CronLeaseLostError(job, renewFailures));
+    if (renewFailures >= maxRenewFailures) {
+      abortForLeaseLoss(renewFailures);
     }
+  };
+  const markOwnershipLost = () => {
+    renewFailures++;
+    leaseRenewFailuresTotal++;
+    abortForLeaseLoss(renewFailures);
   };
 
   const timer = setInterval(() => {
     leaseRenewAttempts++;
-    void renewCronLeaseState(db, job, owner, ttlSec)
+    void runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2)
       .then(async (renewal) => {
         if (!renewal.renewed) {
-          markLeaseFailure();
+          markOwnershipLost();
           return;
         }
         leaseRenewSuccesses++;
@@ -258,7 +282,7 @@ export async function runCronWithLease<T>(
         await notifyLeaseState("renewed", renewal);
       })
       .catch(() => {
-        markLeaseFailure();
+        markRenewError();
       });
   }, heartbeatSec * 1000);
 
@@ -271,7 +295,7 @@ export async function runCronWithLease<T>(
       createAbortPromise(
         signal,
         signal === opts?.abortSignal
-          ? new CronTimeoutError(job, timeoutMs)
+          ? new CronTimeoutError(job, timeoutMs, timeoutMetadata)
           : new CronLeaseLostError(job, renewFailures),
       )
     ),

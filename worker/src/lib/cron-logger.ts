@@ -1,12 +1,13 @@
 import { sleep } from "./abort";
 import {
   CRON_ABANDONED_JOB_GRACE_MS,
-  CRON_TIMEOUT_MS,
   CronJobAbandonedError,
   CronTimeoutError,
-  DEFAULT_CRON_TIMEOUT_MS,
   cacheKeySegment,
+  getCronTimeoutBudgetMetadata,
+  resolveCronTimeoutBudget,
   runWithOverloadRetry,
+  type ResolvedCronTimeoutBudget,
 } from "./cron-lease";
 import { setCache } from "./db-cache";
 
@@ -46,6 +47,9 @@ function classifyError(error: unknown): { name: string; message: string; stack?:
 
 function serializeTerminalCronMetadata(error: unknown): string | null {
   if (error instanceof CronJobAbandonedError) {
+    return JSON.stringify(error.metadata);
+  }
+  if (error instanceof CronTimeoutError && error.metadata) {
     return JSON.stringify(error.metadata);
   }
   return null;
@@ -234,6 +238,7 @@ export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>
 
 export interface CronRunLoggerOptions {
   slotStartedAt?: number | null;
+  timeoutBudget?: ResolvedCronTimeoutBudget;
 }
 
 // --- Internal helpers ---
@@ -305,9 +310,10 @@ export async function logCronRun(
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
   const slotStartedAt = options?.slotStartedAt ?? null;
-  const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
+  const timeoutBudget = options?.timeoutBudget ?? resolveCronTimeoutBudget(job);
+  const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const ac = new AbortController();
-  const timeoutError = new CronTimeoutError(job, timeoutMs);
+  const timeoutError = new CronTimeoutError(job, timeoutMs, getCronTimeoutBudgetMetadata(timeoutBudget));
   let resolvedResult: CronResult | void;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   let progressActivated = false;
@@ -335,20 +341,25 @@ export async function logCronRun(
       console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
     }
   };
-  const jobOutcomePromise: Promise<CronJobOutcome> = Promise.resolve()
-    .then(() => fn(ac.signal, reportProgress))
-    .then(
-      (value) => ({ status: "fulfilled" as const, value }),
-      (error) => ({ status: "rejected" as const, error }),
-    );
-  const timeoutPromise = new Promise<{ type: "timeout"; error: CronTimeoutError }>((resolve) => {
-    timeoutHandle = setTimeout(() => {
-      ac.abort(timeoutError);
-      resolve({ type: "timeout", error: timeoutError });
-    }, timeoutMs);
-  });
-
   try {
+    if (timeoutBudget.exhausted) {
+      ac.abort(timeoutError);
+      throw timeoutError;
+    }
+
+    const jobOutcomePromise: Promise<CronJobOutcome> = Promise.resolve()
+      .then(() => fn(ac.signal, reportProgress))
+      .then(
+        (value) => ({ status: "fulfilled" as const, value }),
+        (error) => ({ status: "rejected" as const, error }),
+      );
+    const timeoutPromise = new Promise<{ type: "timeout"; error: CronTimeoutError }>((resolve) => {
+      timeoutHandle = setTimeout(() => {
+        ac.abort(timeoutError);
+        resolve({ type: "timeout", error: timeoutError });
+      }, timeoutMs);
+    });
+
     const race = await Promise.race([
       jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
       timeoutPromise,

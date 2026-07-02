@@ -5,6 +5,7 @@ import {
   CronJobAbandonedError,
   CronLeaseLostError,
   CronTimeoutError,
+  SCHEDULED_SLOT_JOB_BUDGET_MS,
   isRetriableD1OverloadError,
   releaseCronLease,
   renewCronLease,
@@ -13,6 +14,7 @@ import {
   runScheduledSlotWithFence,
   sweepStaleScheduledSlotExecutions,
 } from "../cron-lease";
+import { createScheduledRuntimeContext } from "../../handlers/scheduled/context";
 
 type LeaseRow = {
   job: string;
@@ -186,6 +188,52 @@ function makeLeaseDb(seed?: {
               return { success: true, meta: { changes: 0 } };
             }
             leases.delete(job);
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, item_count, metadata")) {
+            const [job, startedAt, durationMs, status, itemCount, metadata, slotStartedAt, error] = args as [
+              string,
+              number,
+              number,
+              string,
+              number | null,
+              string | null,
+              number | null,
+              string | null,
+            ];
+            cronRuns.push({
+              job,
+              started_at: startedAt,
+              duration_ms: durationMs,
+              status,
+              error,
+              metadata,
+              slot_started_at: slotStartedAt,
+            });
+            void itemCount;
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, error, metadata")) {
+            const [job, startedAt, durationMs, status, error, metadata, slotStartedAt] = args as [
+              string,
+              number,
+              number,
+              string,
+              string | null,
+              string | null,
+              number | null,
+            ];
+            cronRuns.push({
+              job,
+              started_at: startedAt,
+              duration_ms: durationMs,
+              status,
+              error,
+              metadata,
+              slot_started_at: slotStartedAt,
+            });
             return { success: true, meta: { changes: 1 } };
           }
 
@@ -777,8 +825,8 @@ describe("runCronWithLease", () => {
     }
   });
 
-  it("resets renew failures after a successful heartbeat", async () => {
-    const renewOutcomes = [0, 1, 0, 0];
+  it("resets thrown renew failures after a successful heartbeat", async () => {
+    const renewOutcomes: Array<"throw" | "success"> = ["throw", "success", "throw", "throw"];
     const sequencedRenewDb = {
       prepare: (sql: string) => ({
         bind: (..._args: unknown[]) => ({
@@ -787,7 +835,11 @@ describe("runCronWithLease", () => {
               return { success: true, meta: { changes: 1 } };
             }
             if (sql.includes("UPDATE cron_leases")) {
-              return { success: true, meta: { changes: renewOutcomes.shift() ?? 0 } };
+              const outcome = renewOutcomes.shift();
+              if (outcome === "throw") {
+                throw new Error("permanent D1 renewal error");
+              }
+              return { success: true, meta: { changes: outcome === "success" ? 1 : 0 } };
             }
             if (sql.includes("DELETE FROM cron_leases")) {
               return { success: true, meta: { changes: 1 } };
@@ -821,6 +873,98 @@ describe("runCronWithLease", () => {
 
     await vi.advanceTimersByTimeAsync(1000);
     await expect(runPromise).rejects.toBeInstanceOf(CronLeaseLostError);
+  });
+
+  it("retries transient D1 overloads before counting a heartbeat failure", async () => {
+    let renewCalls = 0;
+    const transientRenewDb = {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            if (sql.includes("UPDATE cron_leases")) {
+              renewCalls++;
+              if (renewCalls === 1) {
+                throw new Error("D1 DB is overloaded");
+              }
+              return { success: true, meta: { changes: 1 } };
+            }
+            if (sql.includes("DELETE FROM cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+
+    try {
+      const runPromise = runCronWithLease(
+        transientRenewDb,
+        "sync-stablecoins",
+        async () => new Promise((resolve) => setTimeout(() => resolve("done"), 1500)),
+        { owner: "owner-z", ttlSec: 120, heartbeatSec: 1, maxRenewFailures: 1 },
+      );
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await expect(runPromise).resolves.toMatchObject({
+        status: "ok",
+        result: "done",
+        renewFailures: 0,
+        leaseRenewAttempts: 1,
+        leaseRenewSuccesses: 1,
+        leaseRenewFailuresTotal: 0,
+      });
+      expect(renewCalls).toBe(2);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it("aborts immediately when renewal reports ownership loss", async () => {
+    let renewCalls = 0;
+    const ownershipLostDb = {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            if (sql.includes("UPDATE cron_leases")) {
+              renewCalls++;
+              return { success: true, meta: { changes: 0 } };
+            }
+            if (sql.includes("DELETE FROM cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const runPromise = runCronWithLease(
+      ownershipLostDb,
+      "sync-stablecoins",
+      async ({ signal }) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      }),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 1, maxRenewFailures: 3 },
+    );
+
+    const leaseLostExpectation = expect(runPromise).rejects.toBeInstanceOf(CronLeaseLostError);
+    await vi.advanceTimersByTimeAsync(1000);
+    await leaseLostExpectation;
+    expect(renewCalls).toBe(1);
   });
 
   it("stops heartbeats and leaves the lease until TTL when the outer abort signal fires", async () => {
@@ -1087,6 +1231,101 @@ describe("runCronWithLease", () => {
 
     const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
     expect(reacquired).toBe(true);
+  });
+});
+
+describe("scheduled runtime timeout budgeting", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-03T10:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function buildRuntime(db: D1Database, slotBudgetStartedAtMs: number) {
+    return createScheduledRuntimeContext(
+      { DB: db } as unknown as Parameters<typeof createScheduledRuntimeContext>[0],
+      { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext,
+      {
+        cron: "*/15 * * * *",
+        scheduleKey: "quarterHourly",
+        scheduledTimeMs: null,
+        slotStartedAt: Math.floor(Date.now() / 1000),
+        slotBudgetStartedAtMs,
+      },
+    );
+  }
+
+  it("truncates a late-starting job timeout and logs a controlled cron error", async () => {
+    const db = makeLeaseDb();
+    const remainingBudgetMs = 5_000;
+    const runtime = buildRuntime(
+      db,
+      Date.now() - (SCHEDULED_SLOT_JOB_BUDGET_MS - remainingBudgetMs),
+    );
+    const runJob = vi.fn((signal: AbortSignal): Promise<void> =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      })
+    );
+
+    const runPromise = runtime.runLeasedCron("snapshot-supply", (signal) => runJob(signal));
+    const expectation = expect(runPromise).rejects.toBeInstanceOf(CronTimeoutError);
+    await vi.advanceTimersByTimeAsync(remainingBudgetMs);
+    await expectation;
+
+    expect(runJob).toHaveBeenCalledTimes(1);
+    expect(db.getLease("snapshot-supply")).toBeUndefined();
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "snapshot-supply",
+        status: "error",
+        slot_started_at: runtime.slotStartedAt,
+        error: expect.stringContaining("CronTimeoutError"),
+      }),
+    ]);
+    const timeoutRun = db.getRuns()[0];
+    expect(timeoutRun?.metadata).toBeTruthy();
+    expect(JSON.parse(timeoutRun?.metadata ?? "{}")).toMatchObject({
+      reason: "cron-timeout",
+      configuredTimeoutMs: 5 * 60_000,
+      effectiveTimeoutMs: remainingBudgetMs,
+      slotBudgetTruncated: true,
+      remainingSlotBudgetMs: remainingBudgetMs,
+    });
+  });
+
+  it("logs a controlled error without starting a job after the slot budget is exhausted", async () => {
+    const db = makeLeaseDb();
+    const runtime = buildRuntime(
+      db,
+      Date.now() - SCHEDULED_SLOT_JOB_BUDGET_MS - 1,
+    );
+    const runJob = vi.fn(async () => ({ itemCount: 1 }));
+
+    await expect(runtime.runLeasedCron("snapshot-supply", runJob)).rejects.toBeInstanceOf(CronTimeoutError);
+
+    expect(runJob).not.toHaveBeenCalled();
+    expect(db.getLease("snapshot-supply")).toBeUndefined();
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "snapshot-supply",
+        status: "error",
+        slot_started_at: runtime.slotStartedAt,
+        error: expect.stringContaining("scheduled slot budget was exhausted"),
+      }),
+    ]);
+    const exhaustedRun = db.getRuns()[0];
+    expect(exhaustedRun?.metadata).toBeTruthy();
+    expect(JSON.parse(exhaustedRun?.metadata ?? "{}")).toMatchObject({
+      reason: "cron-timeout",
+      effectiveTimeoutMs: 0,
+      slotBudgetTruncated: true,
+      slotBudgetExhausted: true,
+      remainingSlotBudgetMs: 0,
+    });
   });
 });
 
@@ -1799,6 +2038,37 @@ describe("runScheduledSlotWithFence", () => {
 
     finish?.({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
     await runPromise;
+  });
+
+  it("aborts the slot signal at the configured controlled deadline", async () => {
+    const slotStartedAt = Math.floor(Date.now() / 1000);
+    const db = makeLeaseDb();
+    let abortReason: unknown;
+    const fn = vi.fn((signal: AbortSignal) =>
+      new Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number }>((resolve) => {
+        signal.addEventListener("abort", () => {
+          abortReason = signal.reason;
+          resolve({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
+        }, { once: true });
+      })
+    );
+
+    const runPromise = runScheduledSlotWithFence(
+      db,
+      "daily0800Utc",
+      fn,
+      {
+        slotStartedAt,
+        owner: "owner-deadline",
+        deadlineMs: Date.now() + 1_000,
+      },
+    );
+
+    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(runPromise).resolves.toMatchObject({ status: "ok" });
+    expect(abortReason).toBeInstanceOf(Error);
+    expect(String(abortReason)).toContain("exceeded controlled deadline");
   });
 
   it("records slot heartbeat failures in final slot metadata", async () => {

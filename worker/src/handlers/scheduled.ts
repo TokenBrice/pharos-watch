@@ -1,7 +1,11 @@
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
 import type { Env } from "../lib/env";
-import { runScheduledSlotWithFence, type ScheduledSlotExecutionOptions } from "../lib/cron-lease";
+import {
+  getScheduledSlotControlledDeadlineMs,
+  runScheduledSlotWithFence,
+  type ScheduledSlotExecutionOptions,
+} from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
 
@@ -102,6 +106,7 @@ export async function handleScheduledEvent(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<void> {
+  const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
   const runner = slotPlan ? SLOT_RUNNER_BY_KEY[slotPlan.runnerKey] : undefined;
   if (!runner || !slotPlan) {
@@ -118,6 +123,7 @@ export async function handleScheduledEvent(
     scheduleKey,
     scheduledTimeMs,
     slotStartedAt,
+    slotBudgetStartedAtMs,
   });
 
   const slotResult = await runScheduledSlotWithFence(
@@ -129,6 +135,7 @@ export async function handleScheduledEvent(
     },
     {
       slotStartedAt,
+      deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
       ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
     },
   );

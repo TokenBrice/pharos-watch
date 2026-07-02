@@ -15,6 +15,7 @@ export interface ScheduledSlotExecutionOptions {
   staleAfterSec?: number;
   preSweepStale?: boolean;
   preSweepLimit?: number;
+  deadlineMs?: number;
 }
 
 export interface ScheduledSlotExecutionResult {
@@ -738,6 +739,19 @@ export async function runScheduledSlotWithFence(
 
   const slotController = new AbortController();
   let heartbeatFailures = 0;
+  let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+  const abortForDeadline = () => {
+    if (slotController.signal.aborted) return;
+    slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} exceeded controlled deadline`));
+  };
+  if (opts.deadlineMs != null) {
+    const delayMs = opts.deadlineMs - Date.now();
+    if (delayMs <= 0) {
+      abortForDeadline();
+    } else {
+      deadlineTimer = setTimeout(abortForDeadline, delayMs);
+    }
+  }
   const timer = setInterval(() => {
     void touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner).catch((err) => {
       heartbeatFailures++;
@@ -794,6 +808,7 @@ export async function runScheduledSlotWithFence(
     throw err;
   } finally {
     slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} finished`));
+    if (deadlineTimer) clearTimeout(deadlineTimer);
     clearInterval(timer);
   }
 }

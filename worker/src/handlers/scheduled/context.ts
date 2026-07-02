@@ -1,5 +1,11 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { createLeaseOwner, runCronWithLease, type CronLeaseOptions } from "../../lib/cron-lease";
+import {
+  createLeaseOwner,
+  getCronTimeoutBudgetMetadata,
+  resolveCronTimeoutBudget,
+  runCronWithLease,
+  type CronLeaseOptions,
+} from "../../lib/cron-lease";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
 import { normalizeCgApiKey } from "../../lib/coingecko";
@@ -116,6 +122,7 @@ export interface ScheduledRuntimeInit {
   scheduleKey: CronScheduleKey;
   scheduledTimeMs: number | null;
   slotStartedAt: number;
+  slotBudgetStartedAtMs?: number;
 }
 
 export function createScheduledRuntimeContext(
@@ -132,6 +139,7 @@ export function createScheduledRuntimeContext(
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
   const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
+  const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
 
   return {
     db,
@@ -148,6 +156,8 @@ export function createScheduledRuntimeContext(
     alertWebhookUrl,
     chainRpcs,
     runLeasedCron: async (job, fn) => {
+      const timeoutBudget = resolveCronTimeoutBudget(job, { slotBudgetStartedAtMs });
+      const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
       const ledgerEnabled = shouldRecordWorkerJobAttempt({
         mode: workerJobLedgerMode,
         allowlist: workerJobLedgerAllowlist,
@@ -214,11 +224,13 @@ export function createScheduledRuntimeContext(
             leaseRenewSuccesses: lease.leaseRenewSuccesses,
             leaseRenewFailuresTotal: lease.leaseRenewFailuresTotal,
             leaseLastRenewedAt: lease.leaseLastRenewedAt,
+            ...(timeoutBudgetMetadata ? { timeoutBudget: timeoutBudgetMetadata } : {}),
             ...slotMeta,
           });
           const leaseOptions: CronLeaseOptions = {
             owner: leaseOwner,
             abortSignal: signal,
+            timeoutBudget,
             ...(recordLeaseState ? { onLeaseState: recordLeaseState } : {}),
             ...perJobLeaseOptions,
           };
@@ -274,6 +286,7 @@ export function createScheduledRuntimeContext(
           return { ...result, metadata };
         }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
           slotStartedAt: scheduled.slotStartedAt,
+          timeoutBudget,
         });
         if (ledgerIdentity) {
           try {

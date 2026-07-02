@@ -1,6 +1,44 @@
 import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
 
 export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
+export const SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS = 15 * 60_000;
+export const SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS = 60_000;
+export const SCHEDULED_SLOT_JOB_BUDGET_MS =
+  SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS - SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS;
+
+export interface CronTimeoutBudgetOptions {
+  nowMs?: number;
+  slotBudgetStartedAtMs?: number | null;
+  platformTimeoutMs?: number;
+  controlledErrorReserveMs?: number;
+}
+
+export interface ResolvedCronTimeoutBudget {
+  configuredTimeoutMs: number;
+  effectiveTimeoutMs: number;
+  truncated: boolean;
+  exhausted: boolean;
+  slotBudgetStartedAtMs: number | null;
+  slotPlatformDeadlineMs: number | null;
+  slotControlledDeadlineMs: number | null;
+  remainingSlotBudgetMs: number | null;
+  platformTimeoutMs: number;
+  controlledErrorReserveMs: number;
+}
+
+export interface CronTimeoutBudgetMetadata {
+  reason: "cron-timeout";
+  configuredTimeoutMs: number;
+  effectiveTimeoutMs: number;
+  slotBudgetTruncated?: true;
+  slotBudgetExhausted?: true;
+  slotBudgetStartedAtMs?: number;
+  slotPlatformDeadlineMs?: number;
+  slotControlledDeadlineMs?: number;
+  remainingSlotBudgetMs?: number;
+  platformTimeoutMs?: number;
+  controlledErrorReserveMs?: number;
+}
 
 export const CRON_TIMEOUT_MS: Record<string, number> = {
   // Keep app-level timeout below the platform wall-clock limit so we can log
@@ -59,3 +97,95 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "mint-burn-growth-watchdog": DEFAULT_CRON_TIMEOUT_MS,
   "cron-duration-watchdog": DEFAULT_CRON_TIMEOUT_MS,
 };
+
+function positiveFiniteMs(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) && value != null && value > 0 ? value : fallback;
+}
+
+export function getConfiguredCronTimeoutMs(job: string): number {
+  return CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
+}
+
+export function getScheduledSlotControlledDeadlineMs(
+  slotBudgetStartedAtMs: number,
+  options: Pick<CronTimeoutBudgetOptions, "platformTimeoutMs" | "controlledErrorReserveMs"> = {},
+): number {
+  const platformTimeoutMs = positiveFiniteMs(options.platformTimeoutMs, SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS);
+  const reserveMs = Math.max(
+    0,
+    Math.min(
+      options.controlledErrorReserveMs ?? SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
+      platformTimeoutMs - 1,
+    ),
+  );
+  return slotBudgetStartedAtMs + platformTimeoutMs - reserveMs;
+}
+
+export function resolveCronTimeoutBudget(
+  job: string,
+  options: CronTimeoutBudgetOptions = {},
+): ResolvedCronTimeoutBudget {
+  const configuredTimeoutMs = getConfiguredCronTimeoutMs(job);
+  const platformTimeoutMs = positiveFiniteMs(options.platformTimeoutMs, SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS);
+  const controlledErrorReserveMs = Math.max(
+    0,
+    Math.min(
+      options.controlledErrorReserveMs ?? SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
+      platformTimeoutMs - 1,
+    ),
+  );
+  const slotBudgetStartedAtMs = options.slotBudgetStartedAtMs ?? null;
+
+  if (slotBudgetStartedAtMs == null) {
+    return {
+      configuredTimeoutMs,
+      effectiveTimeoutMs: configuredTimeoutMs,
+      truncated: false,
+      exhausted: false,
+      slotBudgetStartedAtMs: null,
+      slotPlatformDeadlineMs: null,
+      slotControlledDeadlineMs: null,
+      remainingSlotBudgetMs: null,
+      platformTimeoutMs,
+      controlledErrorReserveMs,
+    };
+  }
+
+  const nowMs = options.nowMs ?? Date.now();
+  const slotPlatformDeadlineMs = slotBudgetStartedAtMs + platformTimeoutMs;
+  const slotControlledDeadlineMs = slotPlatformDeadlineMs - controlledErrorReserveMs;
+  const remainingSlotBudgetMs = Math.max(0, slotControlledDeadlineMs - nowMs);
+  const effectiveTimeoutMs = Math.min(configuredTimeoutMs, remainingSlotBudgetMs);
+
+  return {
+    configuredTimeoutMs,
+    effectiveTimeoutMs,
+    truncated: effectiveTimeoutMs < configuredTimeoutMs,
+    exhausted: remainingSlotBudgetMs <= 0,
+    slotBudgetStartedAtMs,
+    slotPlatformDeadlineMs,
+    slotControlledDeadlineMs,
+    remainingSlotBudgetMs,
+    platformTimeoutMs,
+    controlledErrorReserveMs,
+  };
+}
+
+export function getCronTimeoutBudgetMetadata(
+  budget: ResolvedCronTimeoutBudget,
+): CronTimeoutBudgetMetadata | undefined {
+  if (!budget.truncated && !budget.exhausted) return undefined;
+  return {
+    reason: "cron-timeout",
+    configuredTimeoutMs: budget.configuredTimeoutMs,
+    effectiveTimeoutMs: budget.effectiveTimeoutMs,
+    ...(budget.truncated ? { slotBudgetTruncated: true as const } : {}),
+    ...(budget.exhausted ? { slotBudgetExhausted: true as const } : {}),
+    ...(budget.slotBudgetStartedAtMs != null ? { slotBudgetStartedAtMs: budget.slotBudgetStartedAtMs } : {}),
+    ...(budget.slotPlatformDeadlineMs != null ? { slotPlatformDeadlineMs: budget.slotPlatformDeadlineMs } : {}),
+    ...(budget.slotControlledDeadlineMs != null ? { slotControlledDeadlineMs: budget.slotControlledDeadlineMs } : {}),
+    ...(budget.remainingSlotBudgetMs != null ? { remainingSlotBudgetMs: budget.remainingSlotBudgetMs } : {}),
+    platformTimeoutMs: budget.platformTimeoutMs,
+    controlledErrorReserveMs: budget.controlledErrorReserveMs,
+  };
+}

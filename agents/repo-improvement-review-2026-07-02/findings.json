@@ -5293,6 +5293,19 @@
     "alsoFiles": [
      "worker/src/handlers/scheduled/context.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Wrapped lease heartbeats in overload retry, made definitive renewal ownership loss abort immediately, and reserved the max-renew-failures counter for thrown renewal errors. Added lease tests for transient overload retry, immediate ownership-loss abort, and reset after successful renewal.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/cron-leases.test.ts",
+     "npx vitest run worker/src/lib/__tests__/log-cron-run.test.ts",
+     "npx vitest run worker/src/handlers/scheduled/__tests__",
+     "npm run check:cron-sync",
+     "npm run check:cron-connections",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
@@ -5388,6 +5401,20 @@
      "worker/src/handlers/scheduled/context.ts",
      "shared/lib/scheduled-runner-registry.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added scheduled-event timeout budgeting with a 15-minute platform ceiling and a 60-second controlled-error reserve. Scheduled slots now pass a shared budget into leased jobs, truncate late job timeouts, log controlled timeout metadata, and abort slot side work at the controlled deadline.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/cron-timeouts.test.ts worker/src/lib/__tests__/cron-leases.test.ts",
+     "npx vitest run worker/src/lib/__tests__/log-cron-run.test.ts",
+     "npx vitest run worker/src/handlers/scheduled/__tests__",
+     "npm run check:cron-sync",
+     "npm run check:cron-connections",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "The budget clock starts at Worker handler entry. Jobs that ignore abort signals can still be abandoned after the grace window, but controlled timeout rows are now logged before the reserved platform headroom is consumed."
    }
   },
   {
