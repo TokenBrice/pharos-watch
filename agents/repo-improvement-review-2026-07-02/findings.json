@@ -3553,6 +3553,17 @@
     "alsoFiles": [
      "src/app/screener/screener-filters.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Renamed the local desktop row component from `ScreenerRow` to `ScreenerTableRow`, removing the type/value name collision with the imported screener row data type.",
+    "validation": [
+     "rg -n \"function ScreenerRow|<ScreenerRow|ScreenerTableRow\" src/components/screener/screener-table.tsx",
+     "npx vitest run src/components/screener/__tests__/screener-table.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/screener/screener-table.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

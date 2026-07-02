@@ -230,7 +230,7 @@ export function ScreenerTable({
           </DataTableEmptyRow>
         ) : (
           rows.map((row, index) => (
-            <ScreenerRow
+            <ScreenerTableRow
               key={row.id}
               row={row}
               logo={logos?.[row.id]}
@@ -384,7 +384,7 @@ function DesktopScoreCell({ value }: { value: number | null }) {
   );
 }
 
-function ScreenerRow({
+function ScreenerTableRow({
   row,
   logo,
   rowProps,
