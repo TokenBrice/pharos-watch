@@ -14,15 +14,8 @@ interface FullPriceCacheRow {
   consensus_sources_json: string | null;
 }
 
-interface CorePriceCacheRow {
-  asset_id: string;
-  price: number;
-  updated_at: number;
-}
-
 function makeDb(options: {
   fullRows?: FullPriceCacheRow[];
-  coreRows?: CorePriceCacheRow[];
   fullError?: Error;
 }) {
   const queries: string[] = [];
@@ -36,9 +29,6 @@ function makeDb(options: {
           if (isFullPriceCacheQuery) {
             if (options.fullError) throw options.fullError;
             return { results: (options.fullRows ?? []) as T[], success: true, meta: {} };
-          }
-          if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
-            return { results: (options.coreRows ?? []) as T[], success: true, meta: {} };
           }
           return { results: [] as T[], success: true, meta: {} };
         },
@@ -89,29 +79,20 @@ describe("getPriceCache", () => {
     expect(queries[0]).toContain("source, confidence, observed_at");
   });
 
-  it("uses the core-column fallback only for missing metadata columns", async () => {
+  it("propagates missing metadata-column errors without fallback", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { db, queries } = makeDb({
       fullError: new Error("D1_ERROR: no such column: agree_sources_json"),
-      coreRows: [{ asset_id: "usdt-tether", price: 1.001, updated_at: 1800001000 }],
     });
 
-    const cache = await getPriceCache(db);
+    await expect(getPriceCache(db)).rejects.toThrow("no such column: agree_sources_json");
 
-    expect(cache.get("usdt-tether")).toEqual({
-      price: 1.001,
-      updatedAt: 1800001000,
-      source: null,
-      confidence: null,
-      observedAt: 1800001000,
-      observedAtMode: null,
-      syncedAt: 1800001000,
-      agreeSources: [],
-      consensusSources: [],
-    });
-    expect(queries).toHaveLength(2);
-    expect(queries[1]).toBe("SELECT asset_id, price, updated_at FROM price_cache");
-    expect(warn).toHaveBeenCalledWith("[db-cache] price_cache metadata columns missing; trying core-only fallback");
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain("source, confidence, observed_at");
+    expect(warn).toHaveBeenCalledWith(
+      "[db-cache] Full-column price_cache query failed:",
+      "D1_ERROR: no such column: agree_sources_json",
+    );
   });
 
   it("does not fallback when the full-schema query fails unexpectedly", async () => {

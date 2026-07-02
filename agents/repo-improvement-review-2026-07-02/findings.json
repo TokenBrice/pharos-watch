@@ -6396,6 +6396,18 @@
     "description": "getPriceCache catches isMissingColumnError and falls back to a core-columns-only query 'for deployed databases that have not received price_cache metadata columns yet' (lines 176-206). The columns were added by migration 0073_price_cache_provenance.sql; migrations are now past 0151 and the repo's own ADR guarantees D1 migrations run before a new Worker is live. More decisively: the write path savePriceCache (line 227) unconditionally INSERTs all ten columns with no fallback, so any database actually missing the columns would already fail every price-cache write — the read fallback protects a state the system cannot run in.",
     "recommendation": "Remove the catch/fallback block and let the full-column query's error propagate (keep the non-missing-column warn+throw). Behavior-preserving on any migrated database, which is the only kind the worker can run against.",
     "estImpact": "-30 LOC, removes a misleading compatibility path"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the core-column getPriceCache fallback so the full metadata-column query is the only read path; query failures still log and propagate, and tests now assert no fallback query is attempted.",
+    "validation": [
+     "rg -n \"price_cache metadata columns missing|SELECT asset_id, price, updated_at FROM price_cache|core-only fallback|isMissingColumnError\" worker/src/lib/db-cache.ts worker/src/lib/__tests__/db-cache.test.ts || true",
+     "npx vitest run worker/src/lib/__tests__/db-cache.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/db-cache.ts worker/src/lib/__tests__/db-cache.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
