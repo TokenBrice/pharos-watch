@@ -575,7 +575,15 @@ export async function backfillAmounts(
   if (!result.results?.length) return { runtimeBudgetReached: false };
 
   const stmts: D1PreparedStatement[] = [];
+  const assetPriceCache = new Map<BlacklistStablecoin, number | null>();
   let runtimeBudgetHit = false;
+  const getAssetPriceUsd = async (stablecoin: BlacklistStablecoin): Promise<number | null> => {
+    if (!getBlacklistPriceAssetId(stablecoin)) return null;
+    if (assetPriceCache.has(stablecoin)) return assetPriceCache.get(stablecoin) ?? null;
+    const assetPriceUsd = await fetchBlacklistAssetPriceFromCache(db, stablecoin);
+    assetPriceCache.set(stablecoin, assetPriceUsd);
+    return assetPriceUsd;
+  };
 
   for (const row of result.results) {
     throwIfAborted(signal);
@@ -611,9 +619,7 @@ export async function backfillAmounts(
       continue;
     }
 
-    const assetPriceUsd = getBlacklistPriceAssetId(config.stablecoin)
-      ? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin)
-      : null;
+    const assetPriceUsd = await getAssetPriceUsd(config.stablecoin);
 
     let amount: number | null = null;
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";

@@ -290,6 +290,60 @@ describe("enrichRowBalances", () => {
     expect(update?.binds).not.toContain("drpc");
   });
 
+  it("reuses cached asset price lookups per stablecoin during a recovery run", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(10);
+    const makeCandidate = (id: string, address: string) => ({
+      id,
+      chain_id: "ethereum",
+      event_type: "blacklist",
+      address,
+      block_number: 100,
+      stablecoin: "EURC",
+      tx_hash: `0x${id}`,
+      config_key: null,
+      contract_address: null,
+      amount_attempt_count: 0,
+      amount_last_attempted_at: null,
+      amount_last_error_class: null,
+      amount_last_provider: null,
+      amount_source: "event",
+    });
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [
+          makeCandidate("row-1", "0x1111111111111111111111111111111111111111"),
+          makeCandidate("row-2", "0x2222222222222222222222222222222222222222"),
+        ],
+      },
+      {
+        match: "FROM price_cache WHERE asset_id = ?",
+        rows: [{ price: 1.2, updated_at: Math.floor(Date.now() / 1000) }],
+      },
+    ]);
+
+    await backfillAmounts(
+      db,
+      null,
+      null,
+      async <T>(fn: () => Promise<T>) => fn(),
+      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
+    );
+
+    const history = db.getHistory();
+    const priceLookups = history.filter((entry) => entry.sql.includes("FROM price_cache WHERE asset_id = ?"));
+    expect(priceLookups).toHaveLength(1);
+    expect(priceLookups[0]?.binds).toEqual(["eurc-circle"]);
+
+    const resolvedUpdates = history.filter((entry) =>
+      entry.sql.includes("UPDATE blacklist_events") &&
+      entry.sql.includes("amount_usd_at_event = ?") &&
+      entry.sql.includes("amount = ?"),
+    );
+    expect(resolvedUpdates).toHaveLength(2);
+    expect(resolvedUpdates.map((entry) => entry.binds[2])).toEqual([12, 12]);
+  });
+
   it("marks exhausted legacy derived-zero rows permanently unavailable when config cannot be resolved", async () => {
     const db = mockD1([
       {

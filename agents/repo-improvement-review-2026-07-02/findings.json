@@ -1620,6 +1620,16 @@
     "description": "Inside the per-row loop of backfillAmounts (up to BACKFILL_BATCH_SIZE=100 rows per run), line 614 awaits fetchBlacklistAssetPriceFromCache(db, config.stablecoin) for each row. The price_cache lookup is keyed only by stablecoin, and candidate batches are dominated by a handful of symbols (USDT/USDC/EURC), so this issues up to ~100 sequential identical D1 queries per run where ~3 would do. The sibling path processFetchedBlacklistRows already fetches the price once per config and passes assetPriceUsd through, showing the intended pattern.",
     "recommendation": "Memoize per run: `const priceByCoin = new Map<BlacklistStablecoin, number|null>()` and look up/populate it inside the loop. Same values are used for the same rows within a run (the 6h cache TTL makes intra-run drift impossible), so computed amount_usd_at_event values are unchanged.",
     "estImpact": "removes up to ~97 redundant D1 queries per recovery run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Memoized blacklist recovery price-cache lookups per stablecoin for each `backfillAmounts` run, so multiple rows for the same asset reuse one D1 price read.",
+    "validation": [
+     "npx vitest run worker/src/cron/blacklist/__tests__/amount-recovery.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Computed amounts remain run-consistent for the same stablecoin; only duplicate same-run D1 reads are removed."
    }
   },
   {
