@@ -154,7 +154,9 @@ export async function syncKinesisSupply(
   const total = synced + failed + skipped;
   return {
     itemCount: synced,
-    status: synced === total ? "ok" : synced > 0 ? "degraded" : "error",
+    status: failed === 0
+      ? (skipped > 0 ? "degraded" : "ok")
+      : (synced > 0 ? "degraded" : "error"),
     metadata: JSON.stringify({ synced, failed, skipped, chains: chainResults }),
   };
 }

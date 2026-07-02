@@ -141,15 +141,20 @@ describe("syncKinesisSupply", () => {
     expect(meta.synced).toBe(1);
   });
 
-  it("returns error when both circuits are open", async () => {
+  it("returns degraded when both circuits are open", async () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
     const { db } = makeDb();
     const result = await syncKinesisSupply(db, AbortSignal.timeout(5000));
 
-    expect(result.status).toBe("error");
+    expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
     expect(fetchTextWithRetry).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      synced: 0,
+      failed: 0,
+      skipped: 2,
+    });
   });
 
   it("records failure and continues when one chain fetch fails", async () => {

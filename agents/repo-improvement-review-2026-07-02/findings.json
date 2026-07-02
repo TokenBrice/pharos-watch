@@ -661,6 +661,15 @@
     "description": "The status derivation `synced === total ? \"ok\" : synced > 0 ? \"degraded\" : \"error\"` (line 157) folds `skipped` (circuit-breaker deliberately open, lines 88-92) into the failure denominator. If both KAU and KAG circuits are open, the run performs zero work and zero failures yet returns status \"error\" — the strongest failure signal — even though the breaker skip is the intended protective behavior. Every other cron in this directory reports circuit-open skips as \"degraded\" (e.g. sync-bluechip.ts:108, sync-usds-status.ts:91, fetch-tbill-rate.ts:715) or tolerates them (sync-blacklist providerCircuitSkips -> degraded, line 511-512). The misclassification feeds cron-run history and failure-oriented watchdogs with a phantom hard error during a routine breaker window.",
     "recommendation": "Derive status from actual failures: `failed === 0 ? (skipped > 0 ? \"degraded\" : \"ok\") : synced > 0 ? \"degraded\" : \"error\"`. Metadata already carries synced/failed/skipped so no shape change; only the status word for the circuit-open-only case changes, aligning it with the sibling jobs' established semantics.",
     "estImpact": "removes phantom hard-error runs during breaker windows"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed sync-kinesis-supply status derivation to report skip-only circuit-open runs as degraded rather than error, while preserving error for genuine all-failed runs and existing synced/failed/skipped metadata.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/sync-kinesis-supply.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
