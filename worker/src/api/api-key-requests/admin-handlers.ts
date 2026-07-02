@@ -113,6 +113,15 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
         });
       }
       await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
+      await recordRequestAdminAction(db, {
+        action: "api_key_request_reject",
+        requestId,
+        status: 200,
+        resultStatus: "rejected",
+        claimStatus: "released",
+        reason: parsedBody.reason,
+        nowSec,
+      });
       return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
     }
     if (row.status !== "pending_verification" && row.status !== "issued") {

@@ -2896,6 +2896,16 @@
     "description": "In handleApiKeyRequestRejectRoute, the idempotent branch for row.status === 'rejected' (lines 106-117) re-executes revokeAndDeactivateLinkedSelfServeKey and releaseEmailClaim — real mutations (revocation upsert, key deactivation, key-cache clear, api_key_audit row) — but returns before recordRequestAdminAction, so repeated rejects mutate key state with no admin_action_audit trail, unlike the primary path (line 142). The mutations themselves are idempotent, so this is an observability gap rather than a state bug, but it makes the audit log under-report admin activity on exactly the retry paths where forensics matter.",
     "recommendation": "Call recordRequestAdminAction (action 'api_key_request_reject', resultStatus 'rejected') before the early return in the already-rejected branch, mirroring the primary path. Internal audit logging is not part of the frozen external surface.",
     "estImpact": "closes audit gap on admin reject retries"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Mirrored the primary reject audit write in the already-rejected retry branch so repeated reject requests record `api_key_request_reject` admin actions after the idempotent revocation and claim-release work.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/api-key-requests.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Added regression coverage for a non-idempotency-layer retry against an already rejected request, asserting that a second admin audit row captures the retry reason."
    }
   },
   {

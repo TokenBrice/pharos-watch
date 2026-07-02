@@ -715,6 +715,40 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM admin_action_audit").get()).toEqual({ count: 1 });
   });
 
+  it("records admin audit rows when retrying an already rejected request", async () => {
+    const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    expect(pending.status).toBe(202);
+    const { request_id: requestId } = sqlite.prepare("SELECT request_id FROM api_key_requests").get() as { request_id: string };
+
+    const first = await handleApiKeyRequestReject(
+      db,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, { reason: "policy mismatch" }, { "X-Pharos-Admin": "1" }),
+    );
+    const second = await handleApiKeyRequestReject(
+      db,
+      requestId,
+      true,
+      postRequest(`/api/api-key-requests-admin/${requestId}/reject`, { reason: "retry after timeout" }, { "X-Pharos-Admin": "1" }),
+    );
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+
+    const audits = sqlite.prepare(
+      "SELECT action, target, details_json FROM admin_action_audit ORDER BY id",
+    ).all() as Array<{ action: string; target: string; details_json: string }>;
+    expect(audits).toHaveLength(2);
+    expect(audits[1]?.action).toBe("api_key_request_reject");
+    expect(audits[1]?.target).toBe(requestId);
+    expect(JSON.parse(audits[1]?.details_json ?? "{}")).toMatchObject({
+      status: "rejected",
+      claimStatus: "released",
+      reason: "retry after timeout",
+    });
+  });
+
   it("leaves the linked key active when the status flip loses a race (0 rows changed)", async () => {
     await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     const token = extractVerificationToken(sentEmails[0]);
