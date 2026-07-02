@@ -363,7 +363,10 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.txContextShortfalls === 0
   ) {
     if (summary.maxBlockSeen > 0) {
-      newLastBlock = summary.maxBlockSeen;
+      newLastBlock = Math.max(
+        summary.maxBlockSeen,
+        Math.min(scanTo, chainHead - safetyMarginBlocks),
+      );
       summary.advanceReason = "full-success-events";
     } else {
       newLastBlock = Math.max(

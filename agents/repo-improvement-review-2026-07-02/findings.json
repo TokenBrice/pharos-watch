@@ -254,6 +254,16 @@
     "alsoFiles": [
      "worker/src/cron/mint-burn/run-configs.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Advanced successful mint/burn scans with events to the safe scan frontier instead of stopping at the newest persisted event block, eliminating one bounded re-scan window for known-empty covered blocks.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/sync-mint-burn.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "The event branch still preserves the newest event block when it is ahead of the safe frontier; partial coverage, missing timestamps, and deferred tx-context branches keep their existing frontier caps."
    }
   },
   {

@@ -172,6 +172,8 @@ vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
 }));
 
 import { syncMintBurn } from "../sync-mint-burn";
+import { syncMintBurnConfig } from "../mint-burn/sync-config";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
@@ -345,6 +347,51 @@ describe("syncMintBurn", () => {
     const fromBlock = firstCall[3] as number;
     const toBlock = firstCall[4] as number;
     expect(toBlock - fromBlock + 1).toBe(50_000);
+  });
+
+  it("advances full-success event scans to the safe scan frontier", async () => {
+    const db = makeDb();
+    const config = MINT_BURN_CONFIGS[0]!;
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ blockNumber: 21_910_000 })],
+        complete: true,
+        scannedToBlock: 21_949_999,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_949_999,
+        calls: 1,
+        maxDepth: 0,
+      });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_910_000, 1_718_650_752]]));
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+      tier: "critical",
+      fromBlock: 21_900_000,
+      scanTo: 21_949_999,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/alchemy-key",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.summary.maxBlockSeen).toBe(21_910_000);
+    expect(result.summary.advanceReason).toBe("full-success-events");
+    expect(result.summary.advancedTo).toBe(21_949_999);
+    expect(result.newLastBlock).toBe(21_949_999);
   });
 
   it("resumes from canonical sync-state progress", async () => {
