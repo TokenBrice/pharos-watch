@@ -3,6 +3,7 @@ import {
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
   classifyBrowserRequestConsumer,
+  isEnvFlagEnabled,
   resolveApiRequestRouteMetric,
 } from "@shared/lib/request-attribution";
 import { findDynamicEndpointDescriptor } from "@shared/lib/api-endpoints";
@@ -24,6 +25,9 @@ import {
 } from "../request-source-attribution";
 
 describe("request-source-attribution", () => {
+  const enabledFlagValues = ["1", "true", "yes", "on", " TRUE ", "YeS", " ON "];
+  const disabledFlagValues: unknown[] = ["0", "false", "no", "off", "", " ", "enabled", true, 1, null, undefined];
+
   beforeEach(() => {
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
@@ -222,17 +226,32 @@ describe("request-source-attribution", () => {
     expect(API_REQUEST_SOURCE_STATS_RETENTION_DAYS).toBe(REQUEST_ATTRIBUTION_RETENTION_DAYS);
   });
 
-  it("parses the route/source attribution kill switch", () => {
-    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })).toBe(true);
-    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "1" })).toBe(true);
-    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "false" })).toBe(false);
-    expect(isRequestSourceAttributionDisabled({})).toBe(false);
+  it("preserves the shared environment flag truth table", () => {
+    for (const value of enabledFlagValues) {
+      expect(isEnvFlagEnabled({ TEST_FLAG: value }, "TEST_FLAG")).toBe(true);
+    }
+
+    for (const value of disabledFlagValues) {
+      expect(isEnvFlagEnabled({ TEST_FLAG: value }, "TEST_FLAG")).toBe(false);
+    }
+
+    expect(isEnvFlagEnabled({}, "TEST_FLAG")).toBe(false);
+    expect(isEnvFlagEnabled(null, "TEST_FLAG")).toBe(false);
+    expect(isEnvFlagEnabled(undefined, "TEST_FLAG")).toBe(false);
   });
 
-  it("parses the per-key attribution kill switch", () => {
-    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true" })).toBe(true);
-    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "on" })).toBe(true);
-    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "false" })).toBe(false);
+  it("uses the shared flag parser for both attribution kill switches", () => {
+    for (const value of enabledFlagValues) {
+      expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: value })).toBe(true);
+      expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: value })).toBe(true);
+    }
+
+    for (const value of disabledFlagValues) {
+      expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: value })).toBe(false);
+      expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: value })).toBe(false);
+    }
+
+    expect(isRequestSourceAttributionDisabled({})).toBe(false);
     expect(isApiKeyRequestAttributionDisabled({})).toBe(false);
   });
 

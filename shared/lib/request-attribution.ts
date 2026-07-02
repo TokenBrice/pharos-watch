@@ -67,11 +67,15 @@ export function resolveApiRequestRouteMetric(pathname: string): ApiRequestRouteM
   };
 }
 
-export function isRequestSourceAttributionDisabled(env: unknown): boolean {
-  const value = (env as Record<string, unknown> | null | undefined)?.[REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV];
+export function isEnvFlagEnabled(env: unknown, envName: string): boolean {
+  const value = (env as Record<string, unknown> | null | undefined)?.[envName];
   if (typeof value !== "string") return false;
   const normalized = value.trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+export function isRequestSourceAttributionDisabled(env: unknown): boolean {
+  return isEnvFlagEnabled(env, REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV);
 }
 
 export interface AttributionDb {

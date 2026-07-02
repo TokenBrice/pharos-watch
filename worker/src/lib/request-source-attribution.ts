@@ -2,6 +2,7 @@ import {
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
   createBufferedAttributionRecorder,
+  isEnvFlagEnabled,
   type ApiRequestRouteMetric,
   type BufferedAttributionEntry,
 } from "@shared/lib/request-attribution";
@@ -105,10 +106,7 @@ export function resetRequestAttributionStateForTests(): void {
 }
 
 export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
-  const value = (env as Record<string, unknown> | null | undefined)?.[API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV];
-  if (typeof value !== "string") return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  return isEnvFlagEnabled(env, API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV);
 }
 
 export async function recordWorkerRequestAttribution(

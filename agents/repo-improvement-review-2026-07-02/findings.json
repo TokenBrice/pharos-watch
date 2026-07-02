@@ -5642,6 +5642,20 @@
     "alsoFiles": [
      "shared/lib/request-attribution.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a shared isEnvFlagEnabled helper and routed both request-source and API-key attribution kill switches through it, preserving the existing truth table with expanded tests.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/request-source-attribution.test.ts worker/src/handlers/http/__tests__/request-source.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "rg -n \"normalized === \\\\\\\"1\\\\\\\"|normalized === \\\\\\\"true\\\\\\\"|normalized === \\\\\\\"yes\\\\\\\"|normalized === \\\\\\\"on\\\\\\\"|isEnvFlagEnabled\" shared/lib/request-attribution.ts worker/src/lib/request-source-attribution.ts functions/lib/request-attribution.ts worker/src shared src functions scripts",
+     "git diff --check -- shared/lib/request-attribution.ts worker/src/lib/request-source-attribution.ts worker/src/lib/__tests__/request-source-attribution.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
