@@ -18,6 +18,15 @@
     "recommendation": "Add `!cgTickerAllowed &&` to the condition. Log-only change; no data-path effect.",
     "estImpact": "accurate degradation diagnostics; 1-line fix",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Included the CoinGecko ticker circuit in the all-primary-circuits-open diagnostic guard so the warning is emitted only when no live primary provider circuit can fetch.",
+    "validation": [
+     "npx vitest run worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-provider-collection.test.ts worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-consensus.test.ts"
+    ],
+    "notes": "Log-only change; primary price fetch behavior is unchanged."
    }
   },
   {

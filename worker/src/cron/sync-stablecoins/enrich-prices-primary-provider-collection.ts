@@ -377,6 +377,7 @@ export async function buildPrimaryPricePlan(
 
   if (
     !cgAllowed &&
+    !cgTickerAllowed &&
     !pythAllowed &&
     !binanceAllowed &&
     !krakenAllowed &&
