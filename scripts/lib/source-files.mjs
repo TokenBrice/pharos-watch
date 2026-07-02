@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { extname, isAbsolute, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isDirectRun } from "./smoke-runtime.mjs";
 
 export const DEFAULT_SOURCE_FILE_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "node_modules"]);
 
@@ -48,11 +48,7 @@ export function formatScannedOk(label, count) {
 }
 
 export function runAsCli(importMetaUrl, main) {
-  const isDirectRun = process.argv[1]
-    ? importMetaUrl === pathToFileURL(process.argv[1]).href
-    : false;
-
-  if (isDirectRun) {
+  if (isDirectRun(importMetaUrl, process.argv[1])) {
     process.exitCode = main();
   }
 }

@@ -3,12 +3,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
 } from "../../shared/lib/depeg-resolver-version";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const DDR_LOCK_READINESS_THRESHOLD = DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD;
 export const DDR_LOCK_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
@@ -442,8 +442,7 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
   return result.summary.failed === 0 ? 0 : 1;
 }
 
-const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli()
     .then((code) => {
       process.exitCode = code;

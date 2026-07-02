@@ -4,7 +4,6 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import { brotliCompress, gzip } from "node:zlib";
 import { promisify } from "node:util";
 import {
@@ -14,6 +13,7 @@ import {
   isTelegramMiniAppPath,
 } from "../../shared/lib/site-csp.ts";
 import origins from "../../shared/lib/runtime-origins.json" with { type: "json" };
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -354,9 +354,7 @@ export function createStaticExportServer({
   };
 }
 
-const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   const app = createStaticExportServer();
   await app.listen();
   console.log(

@@ -1,6 +1,6 @@
-import { pathToFileURL } from "node:url";
 import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 interface CronConnectionBudgetEntryForCheck {
   job: string;
@@ -243,8 +243,7 @@ export function printReport(report: CronConnectionBudgetReport): void {
 }
 
 function isMainModule(): boolean {
-  const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
-  return import.meta.url === entry;
+  return isDirectRun(import.meta.url, process.argv[1]);
 }
 
 if (isMainModule()) {

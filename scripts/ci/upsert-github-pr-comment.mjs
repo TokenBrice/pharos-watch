@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const DEFAULT_COMMENT_MARKER = "<!-- pharos-change-contract -->";
 
@@ -129,8 +129,7 @@ export async function runCli(env = process.env) {
   console.log(`[pharos-change-contract] PR comment ${result.action} (${result.commentId ?? "unknown id"})`);
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

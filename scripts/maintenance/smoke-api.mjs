@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-import path from "path";
-import { fileURLToPath } from "url";
 import {
   assert,
   formatError,
+  isDirectRun,
   parseCliOptions,
   parseNonNegativeInt,
   parsePositiveInt,
@@ -575,9 +574,7 @@ async function run() {
   console.log("[smoke-api] All checks passed.");
 }
 
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   run().catch((error) => {
     console.error(`[smoke-api] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

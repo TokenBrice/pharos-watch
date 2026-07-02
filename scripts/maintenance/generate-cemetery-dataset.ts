@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "../../shared/lib/cemetery";
 import { CAUSE_META } from "../../shared/lib/dead-stablecoins";
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "../../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import type { DeadStablecoin } from "../../shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE_REPO_PATH = "shared/lib/cemetery-merged.ts";
@@ -244,6 +245,6 @@ function main() {
   });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main();
 }

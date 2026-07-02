@@ -2,8 +2,7 @@
 
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { normalizeRoute, parseCliOptions, parsePositiveInt } from "../lib/smoke-runtime.mjs";
+import { isDirectRun, normalizeRoute, parseCliOptions, parsePositiveInt } from "../lib/smoke-runtime.mjs";
 import { launchChromiumBrowser, loadChromium } from "./smoke-ui.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_MOBILE_UI_URL ?? process.env.SMOKE_UI_URL ?? "http://localhost:3000";
@@ -785,7 +784,7 @@ export async function run(argv = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   run().catch((error) => {
     console.error(`[mobile-ui-smoke] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

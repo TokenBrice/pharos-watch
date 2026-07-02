@@ -5,9 +5,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import { createStaticExportServer } from "./serve-static-export.mjs";
-import { resolveStaticExportPort } from "../lib/smoke-runtime.mjs";
+import { isDirectRun, resolveStaticExportPort } from "../lib/smoke-runtime.mjs";
 
 const OUT_DIR = path.resolve("out");
 const DEFAULT_HOST = "127.0.0.1";
@@ -284,7 +283,7 @@ async function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((error) => {
     console.error(`[lighthouse-static] ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

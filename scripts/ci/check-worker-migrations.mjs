@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const LEGACY_DUPLICATE_PREFIX_ALLOWLIST = Object.freeze(["0056", "0061"]);
 export const ROLLOUT_SAFETY_ENFORCEMENT_PREFIX = "0071";
@@ -523,6 +523,6 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   await main();
 }

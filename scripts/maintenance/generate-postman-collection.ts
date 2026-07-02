@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import {
   POSTMAN_FOLDERS,
   PUBLIC_API_ARTIFACT_ENDPOINTS,
@@ -9,6 +9,7 @@ import {
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = join(__dirname, "../../public/postman");
@@ -184,6 +185,6 @@ function main() {
   });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main();
 }

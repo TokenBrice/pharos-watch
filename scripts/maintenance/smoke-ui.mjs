@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from "url";
-import { assert, normalizeRoute, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
+import { assert, isDirectRun, normalizeRoute, readNonNegativeIntEnv, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
@@ -1010,7 +1009,7 @@ export async function run() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   run().catch((error) => {
     console.error(`[smoke-ui] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

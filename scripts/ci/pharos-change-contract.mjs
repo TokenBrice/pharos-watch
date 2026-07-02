@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import {
   hasDeployImpact,
@@ -17,6 +17,7 @@ import {
   PATH_FAMILIES,
   PROMPT_ROUTES,
 } from "../lib/doc-ownership-registry.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const SESSION_STATE_DIR = resolve(REPO_ROOT, ".cache/pharos-agent-hooks");
@@ -1425,7 +1426,6 @@ export function runCli(argv = process.argv.slice(2)) {
   console.log(formatContract(contract));
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

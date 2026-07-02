@@ -1,11 +1,11 @@
 #!/usr/bin/env tsx
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../../shared/lib/yield-scoring";
 import { clamp } from "../../shared/lib/math";
 import { YieldRankingsResponseSchema, type YieldRanking } from "../../shared/types/yield";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_OUTPUT = "agents/yield-pys-v8-calibration-template.md";
 const MAX_SOURCE_RISK_PENALTY = 2.5;
@@ -479,8 +479,7 @@ function main(): void {
   console.log(`Wrote ${args.outputPath}`);
 }
 
-const entrypoint = process.argv[1] ? resolve(process.argv[1]) : "";
-if (entrypoint === fileURLToPath(import.meta.url)) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main();
 }
 

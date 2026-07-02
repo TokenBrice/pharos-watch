@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -249,8 +250,7 @@ export function printCronScheduleSyncReport(report: CronScheduleSyncReport): voi
 }
 
 function isMainModule(): boolean {
-  const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
-  return import.meta.url === entry;
+  return isDirectRun(import.meta.url, process.argv[1]);
 }
 
 if (isMainModule()) {

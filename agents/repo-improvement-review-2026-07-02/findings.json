@@ -5017,6 +5017,19 @@
     "description": "The \"run main() only when executed directly\" guard is hand-rolled in 22 files across scripts/maintenance, scripts/build-data, and scripts/lib with 5 spellings: pathToFileURL(argv[1]), pathToFileURL(resolve(argv[1])), path.resolve(argv[1])===fileURLToPath(...), a helper exported from build-annotation-candidates.ts:378, and the naive template `file://${process.argv[1]}` (freeze-stablecoin.ts:132, audit-dex-pricing-source-gaps.ts:665). The naive form breaks silently — if the checkout path ever contains a space or non-ASCII character (URL-encoding differs), the guard is false and the script exits 0 doing nothing, which for freeze-stablecoin means the operator gets no output and no error.",
     "recommendation": "Extract one `isDirectRun(importMetaUrl, argv1)` helper into scripts/lib/smoke-runtime.mjs (the existing cross-script CLI utility module), using the robust pathToFileURL(resolve(argv1)).href comparison, and migrate the 22 inline guards — prioritizing the two `file://` template sites. Pure refactor of module-load plumbing; zero output changes.",
     "estImpact": "-40 LOC; removes a silent no-op failure mode"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a shared `isDirectRun(importMetaUrl, argv1)` helper in `scripts/lib/smoke-runtime.mjs` using `pathToFileURL(resolve(argv1)).href`, moved the URL-escaped/relative-path coverage there, and migrated duplicated direct-run guards across script entrypoints including the two fragile `file://${process.argv[1]}` sites.",
+    "validation": [
+     "rg -n \"file://\\\\$\\\\{process\\\\.argv\\\\[1\\\\]\\\\}|pathToFileURL\\\\((resolve\\\\()?process\\\\.argv\\\\[1\\\\]|path\\\\.resolve\\\\(process\\\\.argv\\\\[1\\\\]\\\\).*fileURLToPath|fileURLToPath\\\\(import\\\\.meta\\\\.url\\\\).*process\\\\.argv\\\\[1\\\\]|process\\\\.argv\\\\[1\\\\].*fileURLToPath\\\\(import\\\\.meta\\\\.url\\\\)\" scripts -g '!node_modules' || true",
+     "npx vitest run scripts/__tests__/smoke-runtime.test.ts scripts/maintenance/__tests__/build-annotation-candidates.test.ts",
+     "npm run check:script-entrypoints",
+     "npm run typecheck",
+     "git diff --check -- scripts"
+    ],
+    "notes": "The specialized realpath-aware `check-seo-live-smoke.mjs` main-entrypoint helper was intentionally left unchanged because it handles symlinked script paths."
    }
   },
   {

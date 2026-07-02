@@ -22,9 +22,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -515,6 +516,6 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

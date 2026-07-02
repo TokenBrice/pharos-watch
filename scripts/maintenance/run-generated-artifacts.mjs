@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from "node:url";
 import { createExecutionUnit, runParallelExecutionUnits, runShellCommand } from "../lib/command-runner.mjs";
 import { buildGeneratedArtifactCommands } from "../lib/automation-registry.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 // Each generator owns a disjoint committed artifact, so they can run
 // concurrently. 4-way keeps the browser-rendering OG builders from stacking up
@@ -42,8 +42,7 @@ export async function runGeneratedArtifacts({
   });
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runGeneratedArtifacts().catch((error) => {
     console.error(`[generated-artifacts] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

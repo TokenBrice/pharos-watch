@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { isDirectRun } from "./smoke-runtime.mjs";
 
 export { isRecord, numberValue, stringValue };
 
@@ -338,7 +338,7 @@ export function writeAdvisoryReport(
 }
 
 export function runAsMain(importMetaUrl: string, runCli: () => Promise<number>): void {
-  if (!process.argv[1] || importMetaUrl !== pathToFileURL(resolve(process.argv[1])).href) return;
+  if (!isDirectRun(importMetaUrl, process.argv[1])) return;
 
   runCli()
     .then((code) => {

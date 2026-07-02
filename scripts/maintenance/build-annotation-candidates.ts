@@ -17,8 +17,8 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { StablecoinMeta } from "../../shared/types";
 
 const ROOT = process.cwd();
@@ -373,10 +373,6 @@ async function main(): Promise<void> {
     `Annotation candidates: ${fresh.length} new row(s) appended to ${OUTPUT_PATH} ` +
       `(${notes.length} source note${notes.length === 1 ? "" : "s"}).\n`,
   );
-}
-
-export function isDirectRun(moduleUrl: string, argvPath: string | undefined): boolean {
-  return argvPath != null && moduleUrl === pathToFileURL(argvPath).href;
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

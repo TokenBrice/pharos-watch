@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../../shared/lib/live-reserve-adapters-definitions";
 import {
   ACTIVE_STABLECOINS,
@@ -24,6 +23,7 @@ import {
   writeOutputFile,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   DEFAULT_SOURCE_QUALITY_NOTE,
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
@@ -494,7 +494,7 @@ export async function runCli(
   return 0;
 }
 
-if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? "")).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli().then((code) => process.exit(code)).catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

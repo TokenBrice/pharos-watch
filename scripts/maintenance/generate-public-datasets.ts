@@ -30,7 +30,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "../../shared/lib/api-endpoints/datasets";
 import type { DepegEvent } from "../../shared/types/market";
 import { getMechanismArchetypeLabel } from "../../shared/lib/classification/mechanism-archetypes";
@@ -40,7 +40,7 @@ import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-score-version";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
-import { parseCheckMode } from "../lib/smoke-runtime.mjs";
+import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
   generatorFetchHeaders,
@@ -851,9 +851,7 @@ async function main(): Promise<void> {
   );
 }
 
-const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

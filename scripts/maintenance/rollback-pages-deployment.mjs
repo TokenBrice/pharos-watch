@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { pathToFileURL } from "node:url";
 
-import { sleep } from "../lib/smoke-runtime.mjs";
+import { isDirectRun, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 2_000;
@@ -113,7 +112,6 @@ async function runCli() {
   }
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

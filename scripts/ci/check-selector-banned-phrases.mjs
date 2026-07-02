@@ -22,8 +22,9 @@
  */
 
 import { readFile, readdir, stat } from "node:fs/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { dirname, join, relative, resolve } from "node:path";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = join(dirname(__filename), "..", "..");
@@ -238,9 +239,7 @@ async function main() {
   return 1;
 }
 
-const isCliRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-
-if (isCliRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   const exitCode = await main();
   process.exit(exitCode);
 }

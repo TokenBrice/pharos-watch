@@ -6,6 +6,7 @@ import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-r
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import type { UnknownRecord } from "../lib/coverage-audit-cli";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
@@ -662,7 +663,7 @@ async function main(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((err) => {
     console.error(err instanceof Error ? err.message : String(err));
     process.exitCode = 1;

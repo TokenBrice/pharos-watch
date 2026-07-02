@@ -15,9 +15,9 @@ import type { DepegEvent } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
-import { getArgValue } from "../lib/smoke-runtime.mjs";
+import { getArgValue, isDirectRun } from "../lib/smoke-runtime.mjs";
 import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 interface DepegEventsResponse {
@@ -174,9 +174,7 @@ async function main() {
   console.log(`[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`);
 }
 
-const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

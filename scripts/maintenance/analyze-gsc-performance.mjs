@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   collectInputEntries,
   compareText,
@@ -614,7 +613,7 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
 }
 
 function isMainModule() {
-  return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  return isDirectRun(import.meta.url, process.argv[1]);
 }
 
 if (isMainModule()) {

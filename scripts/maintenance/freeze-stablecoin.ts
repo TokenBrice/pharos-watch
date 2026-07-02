@@ -20,6 +20,7 @@
  * epitaph, obituary, sourceUrl, sourceLabel) by hand and reviews the diff.
  */
 import process from "node:process";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const API_BASE = process.env.PHAROS_API_BASE ?? "https://api.pharos.watch/api";
 
@@ -129,7 +130,7 @@ async function main() {
   console.log("\nSee docs/freezing-stablecoins.md for the full procedure.");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

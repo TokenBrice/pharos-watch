@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from "node:url";
-import { assert, sleep } from "../lib/smoke-runtime.mjs";
+import { assert, isDirectRun, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
@@ -529,7 +528,7 @@ export async function run() {
   console.log("[smoke-ops] All checks passed.");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   run().catch((error) => {
     console.error(`[smoke-ops] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

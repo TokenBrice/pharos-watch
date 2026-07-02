@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const EXCLUDED_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules", "out"]);
@@ -123,6 +123,6 @@ function runCli() {
   process.exit(1);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

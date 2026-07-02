@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import { readFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
 
-import { parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
+import { isDirectRun, parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_ATTEMPTS = 60;
 const DEFAULT_DELAY_MS = 5_000;
@@ -125,7 +124,7 @@ export async function run(argv = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   run().catch((error) => {
     console.error(`[release-marker] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

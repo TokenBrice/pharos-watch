@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from "node:url";
 import { createExecutionUnit, runParallelExecutionUnits } from "../lib/command-runner.mjs";
 import {
   buildValidatePrebuildCommands,
@@ -12,6 +11,7 @@ import {
   VALIDATE_PREBUILD_SURFACE_ENV,
   VALIDATE_PREBUILD_TIER_ENV,
 } from "../lib/validate-contract.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const GENERATED_ARTIFACTS_CHECK_COMMAND = "npm run check:generated-artifacts";
 
@@ -131,7 +131,6 @@ export async function runValidatePrebuild({
   return generatedResult;
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   await runValidatePrebuild();
 }

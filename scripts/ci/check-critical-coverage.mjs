@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 import {
   CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
@@ -14,6 +13,7 @@ import {
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
 
@@ -255,7 +255,6 @@ export function runCriticalCoverageCheck({
   consoleImpl.log("[coverage] Critical coverage gate passed.");
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCriticalCoverageCheck();
 }

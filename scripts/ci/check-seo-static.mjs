@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   collectStructuredDataNodes,
@@ -16,6 +15,7 @@ import {
   parseAttributes,
   wordCount,
 } from "../lib/seo-html-parse.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
@@ -1025,6 +1025,6 @@ function main() {
   console.log("OK: SEO static checks passed");
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main();
 }

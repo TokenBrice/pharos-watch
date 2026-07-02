@@ -2,9 +2,9 @@
 
 import { readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { collectSourceFiles } from "../lib/source-files.mjs";
 import { splitLines } from "../lib/doc-files.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 const {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -623,7 +623,6 @@ export function runEnvContractCheck({ consoleImpl = console, exit = process.exit
   return true;
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runEnvContractCheck();
 }

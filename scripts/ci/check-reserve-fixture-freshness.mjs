@@ -7,7 +7,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const MAX_AGE_DAYS = 90;
 export const FIXTURES_DIR = new URL(
@@ -114,6 +114,6 @@ export function runCli() {
   return 0;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   process.exit(runCli());
 }

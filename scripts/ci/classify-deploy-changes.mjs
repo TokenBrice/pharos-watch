@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
@@ -11,6 +10,7 @@ import {
   hasWorkerPromotionImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ZERO_SHA = /^0+$/;
 
@@ -148,7 +148,6 @@ function runCli(env = process.env) {
   emitGithubOutputs(classification);
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

@@ -1,9 +1,12 @@
 import { createServer } from "node:net";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
   allocatePort,
   canListen,
+  isDirectRun,
   parseBoolean,
   parseCliOptions,
   readCliValue,
@@ -35,6 +38,25 @@ describe("smoke-runtime CLI helpers", () => {
 
   it("reports missing option values with the option name", () => {
     expect(() => readCliValue(["--url"], 0, "--url")).toThrow("--url requires a value");
+  });
+
+  it("matches direct execution from URL-escaped checkout paths", () => {
+    const argvPath = "/tmp/pharos watch checkout/scripts/maintenance/build-annotation-candidates.ts";
+
+    expect(isDirectRun(pathToFileURL(argvPath).href, argvPath)).toBe(true);
+  });
+
+  it("matches direct execution from relative argv paths", () => {
+    const argvPath = "scripts/maintenance/build-annotation-candidates.ts";
+
+    expect(isDirectRun(pathToFileURL(resolve(argvPath)).href, argvPath)).toBe(true);
+  });
+
+  it("rejects imports and missing argv paths", () => {
+    const argvPath = "/tmp/pharos-watch/scripts/maintenance/build-annotation-candidates.ts";
+
+    expect(isDirectRun("file:///tmp/pharos-watch/other.ts", argvPath)).toBe(false);
+    expect(isDirectRun(pathToFileURL(argvPath).href, undefined)).toBe(false);
   });
 
   it("allocates numeric local ports for smoke servers", async () => {

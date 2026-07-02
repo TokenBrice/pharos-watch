@@ -2,8 +2,8 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const CSV_EXT = ".csv";
 const ZIP_EXT = ".zip";
@@ -937,7 +937,7 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
 }
 
 function isMainModule() {
-  return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  return isDirectRun(import.meta.url, process.argv[1]);
 }
 
 if (isMainModule()) {

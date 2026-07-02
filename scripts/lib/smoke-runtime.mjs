@@ -1,4 +1,6 @@
 import { createServer } from "node:net";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export function assert(condition, message) {
   if (!condition) {
@@ -29,6 +31,10 @@ export function readEnvFirst(keys, fallback = "") {
     }
   }
   return fallback;
+}
+
+export function isDirectRun(importMetaUrl, argv1) {
+  return Boolean(argv1) && importMetaUrl === pathToFileURL(resolve(argv1)).href;
 }
 
 export function readPositiveIntEnv(key, fallback) {

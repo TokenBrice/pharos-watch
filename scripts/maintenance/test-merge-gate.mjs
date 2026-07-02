@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import os from "node:os";
-import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
@@ -21,6 +20,7 @@ import {
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
@@ -576,8 +576,7 @@ export async function runMergeGate({
   console.log("[merge-gate] All checks passed.");
 }
 
-const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isCliEntrypoint) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runMergeGate().catch((error) => {
     console.error(`[merge-gate] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);

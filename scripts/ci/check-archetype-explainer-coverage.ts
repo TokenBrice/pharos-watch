@@ -18,7 +18,6 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "../../shared/types";
 import {
   MECHANISM_ARCHETYPE_LABELS,
@@ -29,6 +28,7 @@ import { ARCHETYPE_CONTENT } from "../../src/app/learn/mechanisms/content";
 import sitemap from "../../src/app/sitemap";
 import * as archetypePage from "../../src/app/learn/mechanisms/[archetype]/page";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROUTE_PAGE_PATH = "src/app/learn/mechanisms/[archetype]/page.tsx";
 
@@ -181,8 +181,6 @@ function runCli(): void {
   );
 }
 
-const invokedAsCli =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedAsCli) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   runCli();
 }

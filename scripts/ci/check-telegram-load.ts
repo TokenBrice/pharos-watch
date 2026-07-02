@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "admin-broadcast" | "telegram-429-storm";
@@ -1122,6 +1122,6 @@ function main(): void {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main();
 }
