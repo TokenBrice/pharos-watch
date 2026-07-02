@@ -1,5 +1,9 @@
 import { CIRCUIT_SOURCE } from "./constants";
 
+// Test-validated manifest: runtime pricing paths do not import this module.
+// Keep it aligned with PRICING_SOURCE_REGISTRY so circuit/source drift is caught
+// by worker/src/lib/__tests__/pricing-circuit-map.test.ts.
+
 export type PricingCircuitEnforcementPath = "direct-provider" | "producer-job" | "synthesized" | "cache";
 
 export interface PricingCircuitMetadata {

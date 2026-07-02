@@ -1709,6 +1709,17 @@
     "description": "The entire module (PRICING_SOURCE_CIRCUIT_METADATA, PRICING_SOURCE_TO_CIRCUIT, PricingCircuitMetadata, and 4 builder helpers) is imported only by its own test file worker/src/lib/__tests__/pricing-circuit-map.test.ts. A repo-wide word-boundary grep across worker/, src/, shared/, functions/, scripts/ (including worker/scripts/) finds no other reference to either exported symbol. The only non-test mentions are scripts/lib/critical-coverage.mjs / critical-test-files.mjs, which merely list the test as coverage-critical. The map's real role today is documentation validated by a parity test (every PRICING_SOURCE_REGISTRY key must have an entry, every circuit must exist in CIRCUIT_SOURCE) — no runtime code ever consults it.",
     "recommendation": "Decide the module's role explicitly: if the registry↔circuit parity guard is wanted, keep it but note in the file header that it is test-fixture documentation with no runtime consumer (or inline the table into the test). If not, delete the module together with its test and drop it from the critical-coverage lists. Either option is behavior-preserving since nothing at runtime reads it.",
     "estImpact": "-111 LOC prod (or clarified intent)"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Documented `pricing-circuit-map.ts` as a test-validated pricing-source/circuit parity manifest with no runtime importer, preserving the guard while making its non-runtime role explicit.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/pricing-circuit-map.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"PRICING_SOURCE_CIRCUIT_METADATA|PRICING_SOURCE_TO_CIRCUIT|buildPricingSourceCircuitMetadata|PricingCircuitMetadata\" worker src shared functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "Kept the map because its parity test is a deliberate registry drift guard; runtime behavior remains unchanged."
    }
   },
   {
