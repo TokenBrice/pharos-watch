@@ -942,6 +942,15 @@
     "alsoFiles": [
      "worker/src/cron/dex-discovery/crawl-sources.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused queriedChains set from the CoinGecko pools discovery stage result and all return paths. The caller already consumes only stoppedEarly, unresolvedChains, and priceObservationTargets.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/scoring-helpers.test.ts worker/src/cron/__tests__/dex-liquidity-persistence.test.ts worker/src/cron/dex-liquidity/__tests__/persistence-frozen.test.ts worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

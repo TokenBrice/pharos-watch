@@ -17,7 +17,6 @@ import {
 } from "./staged-pool";
 
 export interface CoinGeckoPoolsStageResult {
-  queriedChains: Set<string>;
   priceObservationTargets: Set<string>;
   unresolvedChains: string[];
   stoppedEarly: boolean;
@@ -52,7 +51,6 @@ export async function crawlCoinGeckoPoolsStage({
   context,
   dependencies = defaultCoinGeckoPoolsStageDependencies,
 }: CrawlCoinGeckoPoolsStageOptions): Promise<CoinGeckoPoolsStageResult> {
-  const queriedChains = new Set<string>();
   const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
@@ -70,7 +68,7 @@ export async function crawlCoinGeckoPoolsStage({
   }
 
   if (!apiKey || !cgOnchainAllowed) {
-    return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: false };
+    return { priceObservationTargets, unresolvedChains, stoppedEarly: false };
   }
 
   let cgRequests = 0;
@@ -78,7 +76,7 @@ export async function crawlCoinGeckoPoolsStage({
   for (const { chain, address } of coinTargets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
-      return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: true };
+      return { priceObservationTargets, unresolvedChains, stoppedEarly: true };
     }
 
     const providers = CHAIN_META[chain]?.providers;
@@ -97,7 +95,6 @@ export async function crawlCoinGeckoPoolsStage({
       await dependencies.sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, context.signal);
     }
     cgRequests++;
-    queriedChains.add(chain);
     const targetKey = makeChainAddressKey(chain, address);
 
     try {
@@ -194,5 +191,5 @@ export async function crawlCoinGeckoPoolsStage({
     }
   }
 
-  return { queriedChains, priceObservationTargets, unresolvedChains, stoppedEarly: false };
+  return { priceObservationTargets, unresolvedChains, stoppedEarly: false };
 }
