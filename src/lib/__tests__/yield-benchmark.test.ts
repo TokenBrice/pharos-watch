@@ -4,6 +4,7 @@ import {
   getYieldBenchmarkDisplayLabel,
   getYieldBenchmarkGapReferenceText,
   getYieldBenchmarkGapUnavailableText,
+  getYieldRankingBenchmarkKey,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
 import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
@@ -124,6 +125,29 @@ describe("yield benchmark gap copy", () => {
 });
 
 describe("resolveYieldScatterBenchmarkFrame", () => {
+  it("uses the provenance benchmark key when the top-level key is absent", () => {
+    const ranking: YieldRanking = {
+      ...buildRanking("eur-fallback", "USD"),
+      benchmarkKey: undefined,
+      provenance: {
+        ...buildRanking("eur-fallback", "USD").provenance,
+        benchmarkKey: "EUR",
+      },
+    };
+
+    const result = resolveYieldScatterBenchmarkFrame({
+      rankings: [ranking],
+      benchmarks: BENCHMARKS,
+      fallbackBenchmark: BENCHMARKS.USD,
+    });
+
+    expect(getYieldRankingBenchmarkKey(ranking)).toBe("EUR");
+    expect(result.hasMixedBenchmarks).toBe(false);
+    expect(result.usesDefaultBenchmarkFrame).toBe(false);
+    expect(result.sharedBenchmarkKey).toBe("EUR");
+    expect(result.referenceBenchmark?.key).toBe("EUR");
+  });
+
   it("uses the shared native benchmark when the visible set is homogeneous", () => {
     const result = resolveYieldScatterBenchmarkFrame({
       rankings: [buildRanking("eur-a", "EUR"), buildRanking("eur-b", "EUR")],

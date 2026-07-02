@@ -1,4 +1,4 @@
-import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
+import { getYieldRankingBenchmarkKey, resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
@@ -217,10 +217,6 @@ function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
 }
 
-function getBenchmarkKey(row: YieldRanking): YieldBenchmarkKey {
-  return row.benchmarkKey ?? row.provenance?.benchmarkKey ?? "USD";
-}
-
 function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all"> {
   return EXTERNAL_OPPORTUNITY_YIELD_TYPES.has(row.yieldType)
     ? "lending-opportunity"
@@ -254,7 +250,7 @@ function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string>
   return {
     row,
     peg: getYieldRankingPeg(row.id),
-    benchmarkKey: getBenchmarkKey(row),
+    benchmarkKey: getYieldRankingBenchmarkKey(row),
     opportunity: getOpportunity(row),
     sourceDepthLens,
     sourcePosture: getSourcePosture(row, sourceDepthLens),

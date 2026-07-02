@@ -50,12 +50,12 @@ export function getYieldBenchmarkGapUnavailableText(periodLabel = "30d"): string
   return `No ${periodLabel} benchmark gap`;
 }
 
+export function getYieldRankingBenchmarkKey(ranking: YieldRanking): YieldBenchmarkKey {
+  return ranking.benchmarkKey ?? ranking.provenance?.benchmarkKey ?? "USD";
+}
+
 function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkKey[] {
-  return Array.from(
-    new Set(
-      rankings.map((ranking) => ranking.benchmarkKey ?? "USD"),
-    ),
-  );
+  return Array.from(new Set(rankings.map(getYieldRankingBenchmarkKey)));
 }
 
 function getYieldBenchmarkForKey(

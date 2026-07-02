@@ -2604,6 +2604,16 @@
      "src/lib/yield-view-model.ts",
      "shared/types/yield.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted `getYieldRankingBenchmarkKey` in `yield-benchmark.ts` and reused it for both scatter benchmark-frame resolution and yield view-model benchmark facets, so top-level and provenance benchmark fallbacks stay aligned.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/yield-benchmark.test.ts src/lib/__tests__/yield-view-model.test.ts",
+     "npm run typecheck"
+    ],
+    "notes": "Added coverage for rows that omit the top-level benchmark key but retain a provenance benchmark key."
    }
   },
   {
