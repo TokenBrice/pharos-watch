@@ -571,13 +571,7 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
   // per-incident sources onto the top-level summary, so there is no nested review
   // object to read here.
   const sources = readSources(candidate.sources);
-  const seenSources = new Set<string>();
-  const dedupedSources = sources.filter((source) => {
-    const key = `${source.label}:${source.url}`;
-    if (seenSources.has(key)) return false;
-    seenSources.add(key);
-    return true;
-  });
+  const mintIncidents = readMintIncidents(candidate.mintIncidents);
   const controls = (Array.isArray(candidate.controls) ? candidate.controls : [])
     .map(readMintAuthorityControl)
     .filter((control): control is MintAuthorityClientControlSummary => control !== null);
@@ -591,11 +585,13 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     authorityPosture: stringValue(candidate.authorityPosture) ?? "unknown",
     confidence: stringValue(candidate.confidence) ?? "unknown",
     inheritedFrom: stringValue(candidate.inheritedFrom) ?? undefined,
-    mintIncidents: readMintIncidents(candidate.mintIncidents),
+    mintIncidents,
     controls,
   } as MintAuthorityClientSummary;
   const parentResolver = buildMintAuthorityParentResolver(coin.mintAuthorityParentSummaries);
-  const score = buildMintAuthorityScoreViewModel(resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate, parentResolver));
+  const score = buildMintAuthorityScoreViewModel(
+    resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate, parentResolver),
+  );
 
   return {
     status: "reviewed",
@@ -609,10 +605,10 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     summary,
     inheritedFrom: stringValue(candidate.inheritedFrom) ?? null,
     controls: controlViewModels,
-    sources: dedupedSources,
+    sources,
     score,
     reviewedAt: stringValue(candidate.reviewedAt) ?? null,
-    mintIncidents: readMintIncidents(candidate.mintIncidents),
+    mintIncidents,
     sourceFreeRationale: stringValue(candidate.sourceFreeRationale) ?? null,
     unresolvedQuestions: Array.isArray(candidate.unresolvedQuestions)
       ? candidate.unresolvedQuestions

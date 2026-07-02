@@ -309,6 +309,47 @@ describe("stablecoin detail view-model builder", () => {
     });
   });
 
+  it("dedupes mint-authority sources and sorts incident callouts", () => {
+    const viewModel = buildMintAuthorityDetailViewModel({
+      id: "dedupe-test",
+      mintAuthoritySummary: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        confidence: "verified",
+        summary: "Issuer backend can mint through reviewed operator controls.",
+        sources: [
+          { label: "Review", url: "https://example.com/review" },
+          { label: "Review", url: "https://example.com/review" },
+          { label: "Docs", url: "https://example.com/docs" },
+        ],
+        mintIncidents: [
+          {
+            date: "2024-01-01",
+            summary: "Older privileged mint incident.",
+            sources: [
+              { label: "Postmortem", url: "https://example.com/postmortem" },
+              { label: "Postmortem", url: "https://example.com/postmortem" },
+            ],
+          },
+          {
+            date: "2025-02-01",
+            summary: "Newer privileged mint incident.",
+            sources: [{ label: "Thread", url: "https://example.com/thread" }],
+          },
+        ],
+      },
+    } as never);
+
+    expect(viewModel.sources).toEqual([
+      { label: "Review", url: "https://example.com/review" },
+      { label: "Docs", url: "https://example.com/docs" },
+    ]);
+    expect(viewModel.mintIncidents.map((incident) => incident.date)).toEqual(["2025-02-01", "2024-01-01"]);
+    expect(viewModel.mintIncidents[1]?.sources).toEqual([
+      { label: "Postmortem", url: "https://example.com/postmortem" },
+    ]);
+  });
+
   it("only exposes Safe modules and guards labels for Safe-like mint authority controls", () => {
     const viewModel = buildMintAuthorityDetailViewModel({
       mintAuthoritySummary: {

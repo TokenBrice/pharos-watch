@@ -2533,6 +2533,19 @@
     "recommendation": "Use `sources` directly (drop the seenSources block) and hoist one `const mintIncidents = readMintIncidents(candidate.mintIncidents)` used in both places. Output is identical: the removed dedupe is a no-op and readMintIncidents is pure/deterministic, so this is safely behavior-preserving.",
     "estImpact": "-9 LOC; one redundant parse+sort per detail render",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the redundant mint-authority source dedupe pass and hoisted mintIncidents parsing so scoring input and returned view-model output share the same parsed incident list.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/stablecoin-detail-view-model.test.ts",
+     "npm run typecheck",
+     "npx prettier --check src/lib/stablecoin-detail-mint-authority-view-model.ts src/lib/__tests__/stablecoin-detail-view-model.test.ts",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- src/lib/stablecoin-detail-mint-authority-view-model.ts src/lib/__tests__/stablecoin-detail-view-model.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a regression covering source dedupe and incident sorting while preserving the returned view-model shape."
    }
   },
   {
