@@ -53,7 +53,6 @@ Case-study JSON-LD lives in `case-study-json-ld.tsx`: the hub emits an `ItemList
 Reverse lookup helpers in the content registry let other surfaces deep-link into case studies:
 
 - `CASE_STUDY_BY_COIN_ID`
-- `CASE_STUDY_BY_CEMETERY_ID`
 - `CASE_STUDY_BY_DEPEG_SLUG`
 - `caseStudySlugForEvent(coinId, tsMs)`
 

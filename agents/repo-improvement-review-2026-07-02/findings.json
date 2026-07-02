@@ -3917,6 +3917,20 @@
     "alsoFiles": [
      "src/app/learn/case-studies/content/client-index.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `CASE_STUDY_BY_CEMETERY_ID` server-side reverse lookup and updated the Learn page docs so the helper list reflects the live exports.",
+    "validation": [
+     "rg -n \"CASE_STUDY_BY_CEMETERY_ID\" . --glob '!agents/repo-improvement-review-2026-07-02/findings.json' || true",
+     "npx vitest run src/app/learn/case-studies/__tests__/content.test.ts",
+     "npm run check:case-study-client-index",
+     "npm run typecheck",
+     "npm run check:verified-doc-links",
+     "npm run check:doc-source-paths",
+     "git diff --check -- docs/learn-page.md src/app/learn/case-studies/content/index.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

@@ -78,10 +78,6 @@ export const CASE_STUDY_BY_COIN_ID: Record<string, CaseStudy> = Object.fromEntri
   CASE_STUDY_LIST.filter((s) => s.primaryCoinId).map((s) => [s.primaryCoinId!, s]),
 );
 
-export const CASE_STUDY_BY_CEMETERY_ID: Record<string, CaseStudy> = Object.fromEntries(
-  CASE_STUDY_LIST.filter((s) => s.cemeteryId).map((s) => [s.cemeteryId!, s]),
-);
-
 export const CASE_STUDY_BY_DEPEG_SLUG: Record<string, CaseStudy> = Object.fromEntries(
   CASE_STUDY_LIST.filter((s) => s.depegEventSlug).map((s) => [s.depegEventSlug!, s]),
 );
