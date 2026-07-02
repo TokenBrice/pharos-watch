@@ -273,6 +273,16 @@ describe("generate-public-datasets", () => {
     expect(rows[0]?.id).toBe(42);
   });
 
+  it("uses a stable event id tiebreak for same-second depeg history rows", () => {
+    const later = { ...makeEvent(null), id: 3, startedAt: Date.UTC(2026, 4, 15) / 1000 };
+    const tiedHighId = { ...makeEvent(null), id: 9 };
+    const tiedLowId = { ...makeEvent(null), id: 2 };
+
+    const rows = testExports.projectDepegHistory([tiedHighId, later, tiedLowId], "2026-05-16");
+
+    expect(rows.map((row) => row.id)).toEqual([3, 2, 9]);
+  });
+
   it("rejects empty live-backed dataset rows and checked artifacts", async () => {
     expect(() => testExports.validateTopicRowFloor("top-stablecoins", [])).toThrow("expected at least 1");
 

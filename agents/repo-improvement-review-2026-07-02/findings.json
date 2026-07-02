@@ -5043,6 +5043,17 @@
     "description": "projectDepegHistory sorts with `(a, b) => (b.startedAtISO > a.startedAtISO ? 1 : -1)`. For two rows with equal startedAtISO (two coins depegging in the same second — plausible in correlated events), compare(a,b) and compare(b,a) both return -1, an inconsistent comparator whose result ordering is implementation-defined. Since the emitted latest/dated CSV/JSON/NDJSON artifacts are committed and diffed byte-for-byte (writeArtifact change detection, check mode), an order flip between runs causes spurious artifact churn in the dated depeg-history mirrors.",
     "recommendation": "Use a total order with a deterministic tiebreak, e.g. `b.startedAtISO.localeCompare(a.startedAtISO) || a.id - b.id` (rows carry the numeric event id). For all current non-tied data the output is identical; ties get a stable, defined order instead of an undefined one.",
     "estImpact": "eliminates spurious dataset-artifact churn on tied events"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed depeg-history sorting to a total order by startedAtISO descending with numeric event id as the deterministic tiebreak, and added a regression test for same-second events.",
+    "validation": [
+     "npx vitest run scripts/__tests__/generate-public-datasets.test.ts",
+     "npx tsx scripts/maintenance/generate-public-datasets.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-public-datasets.ts scripts/__tests__/generate-public-datasets.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

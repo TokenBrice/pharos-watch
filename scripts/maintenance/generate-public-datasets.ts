@@ -403,7 +403,7 @@ function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegH
       pegReference: event.pegReference,
       source: event.source,
     }))
-    .sort((a, b) => (b.startedAtISO > a.startedAtISO ? 1 : -1));
+    .sort((a, b) => b.startedAtISO.localeCompare(a.startedAtISO) || a.id - b.id);
 }
 
 interface ScoreLatestRow {
