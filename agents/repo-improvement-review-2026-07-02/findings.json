@@ -5513,6 +5513,19 @@
     "description": "getTrackedBlacklistStatus and its module-scope TRACKED_BLACKLIST_STATUS_BY_ID (which eagerly imports the full 1.37 MiB registry and resolves blacklist statuses for all tracked coins at import time) have no production consumers — the only importer is worker/src/lib/__tests__/blacklist-contracts.test.ts. Every runtime surface uses resolveBlacklistStatuses from report-card-blacklist-matchers directly.",
     "recommendation": "Delete the file and inline the two-line map construction into blacklist-contracts.test.ts (or import resolveBlacklistStatuses there directly). Safe: no prod import path reaches it, so bundles and outputs are unchanged.",
     "estImpact": "-15 LOC, removes shared-lib test-only surface"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the test-only tracked-blacklist-status wrapper and retargeted the two tests to resolveBlacklistStatuses with the tracked registry inputs directly.",
+    "validation": [
+     "rg -n \"tracked-blacklist-status|getTrackedBlacklistStatus|TRACKED_BLACKLIST_STATUS_BY_ID\" shared worker src functions scripts || true",
+     "npx vitest run worker/src/lib/__tests__/blacklist-contracts.test.ts shared/lib/stablecoins/__tests__/variants.test.ts",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/tracked-blacklist-status.ts shared/lib/stablecoins/__tests__/variants.test.ts worker/src/lib/__tests__/blacklist-contracts.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

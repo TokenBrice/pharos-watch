@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  ACTIVE_STABLECOINS,
+  TRACKED_META_BY_ID,
+  TRACKED_STABLECOINS,
+} from "@shared/lib/stablecoins/registry";
 import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
-import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";
 import {
   buildBlacklistCoverageManifest,
   getDeferredBlacklistCoverage,
@@ -18,10 +21,15 @@ import {
 } from "../blacklist-contracts";
 import { shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
 
+const trackedBlacklistStatuses = resolveBlacklistStatuses(
+  TRACKED_STABLECOINS,
+  { trackedMetaById: TRACKED_META_BY_ID },
+);
+
 describe("blacklist-contracts shared metadata alignment", () => {
   it("marks every blacklist-tracked stablecoin as directly freezable", () => {
     const mismatches = [...new Set(CONTRACT_CONFIGS.map((config) => config.stablecoinId))]
-      .filter((stablecoinId) => getTrackedBlacklistStatus(stablecoinId) !== true);
+      .filter((stablecoinId) => trackedBlacklistStatuses.get(stablecoinId) !== true);
 
     expect(mismatches).toEqual([]);
   });

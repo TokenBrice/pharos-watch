@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
-import { getTrackedBlacklistStatus } from "../../tracked-blacklist-status";
+import {
+  resolveBlacklistStatuses,
+  type BlacklistStatus,
+} from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../registry";
+import {
+  ACTIVE_META_BY_ID,
+  ACTIVE_STABLECOINS,
+  TRACKED_META_BY_ID,
+  TRACKED_STABLECOINS,
+} from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
 
@@ -17,6 +25,11 @@ const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant 
   activeStablecoins: ACTIVE_STABLECOINS,
   hasTrackedVariantMeta,
 });
+
+const trackedBlacklistStatuses = resolveBlacklistStatuses(
+  TRACKED_STABLECOINS,
+  { trackedMetaById: TRACKED_META_BY_ID },
+);
 
 describe("stablecoin variants", () => {
   it("resolves a tracked variant parent", () => {
@@ -52,13 +65,13 @@ describe("stablecoin variants", () => {
     // exposure are equivalent for this invariant: a variant without an explicit
     // `canBeBlacklisted` override must not downgrade below the parent's freeze
     // exposure, while stronger governance may still elevate it further.
-    const strength = (status: ReturnType<typeof getTrackedBlacklistStatus>) =>
+    const strength = (status: BlacklistStatus | null) =>
       status === true || status === "inherited" ? 3 : status === "possible" ? 1 : 0;
 
     for (const variant of TRACKED_STABLECOINS.filter((meta) => meta.variantOf)) {
       if (variant.canBeBlacklisted !== undefined) continue;
-      const parentStatus = getTrackedBlacklistStatus(variant.variantOf!);
-      const variantStatus = getTrackedBlacklistStatus(variant.id);
+      const parentStatus = trackedBlacklistStatuses.get(variant.variantOf!) ?? null;
+      const variantStatus = trackedBlacklistStatuses.get(variant.id) ?? null;
       expect(strength(variantStatus)).toBeGreaterThanOrEqual(strength(parentStatus));
     }
   });
@@ -67,8 +80,8 @@ describe("stablecoin variants", () => {
     // Regression: before the variant-aware inheritance rule, this resolved to
     // `false` because gho-aave was not in blacklistableIds and
     // no reserve-text pattern matched "gho".
-    expect(getTrackedBlacklistStatus("gho-aave")).toBe("inherited");
-    expect(getTrackedBlacklistStatus("stkgho-umbrella-aave")).toBe("inherited");
+    expect(trackedBlacklistStatuses.get("gho-aave")).toBe("inherited");
+    expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe("inherited");
   });
 
   it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {
