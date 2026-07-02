@@ -1055,6 +1055,16 @@
     "description": "generateDailyDigest throws immediately after the Twitter channel when degradedReasons contains 'twitter-send-marker-write' (lines 318-320), which happens when claimDigestSentMarker's D1 INSERT fails. The throw fires BEFORE the Telegram delivery block (line 333), so a Twitter-side D1 marker error silently skips the independent Telegram channel entirely. The digest row is already persisted (line 252), and this cron runs once per day (daily-0805.ts); any re-run within 1h hits the 'recent digest exists' skip, so the day's digest reaches neither channel without operator intervention. The analogous Telegram marker check (line 403) correctly sits after both deliveries.",
     "recommendation": "Move the 'twitter-send-marker-write' throw check to after the Telegram delivery block, next to the existing 'telegram-send-marker-write' check (line 403), throwing if either reason is present. Success-path behavior is identical; only the rare D1-failure path changes, and it changes to deliver an alert that is currently dropped — a genuine bug fix.",
     "estImpact": "prevents full-day loss of Telegram digest on Twitter marker D1 error"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved the hard failure for Twitter marker-write errors until after Telegram delivery is attempted, so a Twitter marker D1 failure no longer prevents the independent Telegram digest path from running. Added regression coverage for the rare marker-write failure path.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/daily-digest.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/daily-digest.ts worker/src/cron/__tests__/daily-digest.test.ts"
+    ]
    }
   },
   {

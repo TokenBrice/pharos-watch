@@ -315,9 +315,6 @@ export async function generateDailyDigest(
       return "ok";
     },
   });
-  if (degradedReasons.includes("twitter-send-marker-write")) {
-    throw new Error("Twitter daily digest marker write failed");
-  }
   throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
@@ -400,6 +397,9 @@ export async function generateDailyDigest(
       return `ok${appendixSuffix}`;
     },
   });
+  if (degradedReasons.includes("twitter-send-marker-write")) {
+    throw new Error("Twitter daily digest marker write failed");
+  }
   if (degradedReasons.includes("telegram-send-marker-write")) {
     throw new Error("Telegram daily digest marker write failed");
   }

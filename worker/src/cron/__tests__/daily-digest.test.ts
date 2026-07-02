@@ -1170,6 +1170,60 @@ describe("generateDailyDigest", () => {
     );
   });
 
+  it("still attempts Telegram before failing hard when the Twitter marker write fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const twitterMarkerKey = "daily-digest:twitter-sent:2026-03-06";
+    const telegramMarkerKey = "daily-digest:telegram-sent:2026-03-06";
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO cache",
+        matchBinds: [
+          twitterMarkerKey,
+          JSON.stringify({ sentAt: nowSec, editionNumber: 1 }),
+          nowSec,
+        ],
+        rows: [],
+        throwError: new Error("twitter marker down"),
+      },
+      ...makeBaseTables(),
+    ]);
+
+    await expect(
+      generateDailyDigest(
+        db,
+        "anthropic-key",
+        {
+          apiKey: "x",
+          apiSecret: "y",
+          accessToken: "z",
+          accessTokenSecret: "w",
+        },
+        false,
+        {
+          botToken: "tg-token",
+          chatId: "tg-chat",
+        },
+      ),
+    ).rejects.toThrow("Twitter daily digest marker write failed");
+
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    const history = (db as MockD1Database).getHistory();
+    expect(history).toContainEqual(
+      expect.objectContaining({
+        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+        binds: expect.arrayContaining([twitterMarkerKey]),
+      }),
+    );
+    expect(history).toContainEqual(
+      expect.objectContaining({
+        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
+        binds: expect.arrayContaining([telegramMarkerKey]),
+      }),
+    );
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+
   it("persists the Telegram sent marker before sending on the happy path", async () => {
     const db = mockD1(makeBaseTables());
     await generateDailyDigest(db, "anthropic-key", null, false, { botToken: "tg-token", chatId: "tg-chat" });
