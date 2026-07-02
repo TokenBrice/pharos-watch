@@ -40,7 +40,6 @@ export function HeroCardHeader({
   onOpenFeedback,
 }: {
   coinId: string;
-  coinName: string;
   compareHref: string;
   benchmarkSymbol: string | null;
   onOpenFeedback: () => void;

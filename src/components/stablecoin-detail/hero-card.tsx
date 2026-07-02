@@ -104,7 +104,6 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     <Card className="pharos-card-shell gap-0">
       <HeroCardHeader
         coinId={header.coinId}
-        coinName={header.coinName}
         compareHref={header.compareHref}
         benchmarkSymbol={header.benchmarkSymbol}
         onOpenFeedback={onOpenFeedback}

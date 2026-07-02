@@ -1258,7 +1258,6 @@ describe("stablecoin detail hero view-model builder", () => {
       redemptionBackstop: { accessModel: "issuer-api" } as never,
     });
 
-    expect(hero.header.coinName).toBe("USD Coin");
     expect(hero.market.safePrevMonth).toBeNull();
     expect(hero.market.prevDayTrendClass).toContain("text-red-700");
     expect(hero.market.prevWeekTrendClass).toContain("text-green-700");

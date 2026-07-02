@@ -437,7 +437,6 @@ export interface HeroCardViewModel {
   infrastructures: Infrastructure[];
   header: {
     coinId: string;
-    coinName: string;
     compareHref: string;
     benchmarkSymbol: string | null;
   };
@@ -765,7 +764,6 @@ export function buildStablecoinDetailHeroViewModel({
     infrastructures,
     header: {
       coinId: coin.id,
-      coinName: coin.name,
       compareHref,
       benchmarkSymbol,
     },

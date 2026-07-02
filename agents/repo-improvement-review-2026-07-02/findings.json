@@ -3168,6 +3168,17 @@
      "src/components/stablecoin-detail/hero-card.tsx",
      "src/lib/stablecoin-detail-view-model.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `coinName` prop from `HeroCardHeader`, its sole call site, and the stablecoin-detail hero view-model header shape.",
+    "validation": [
+     "rg -n \"header\\\\.coinName|coinName=|coinName: string\" src/components/stablecoin-detail src/lib/stablecoin-detail-view-model.ts src/lib/__tests__/stablecoin-detail-view-model.test.ts",
+     "npx vitest run src/lib/__tests__/stablecoin-detail-view-model.test.ts src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
+     "npm run typecheck"
+    ],
+    "notes": "Removed the stale view-model assertion for the dead field; rendered hero output is unchanged."
    }
   },
   {
