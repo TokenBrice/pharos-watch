@@ -59,6 +59,53 @@ describe("reserve adapter I/O limiter", () => {
     expect(order).toEqual(["first", "second"]);
   });
 
+  it("hands a released slot to the queued waiter before accepting later callers", async () => {
+    const limiter = createAdapterIoLimiter(1);
+    const started: string[] = [];
+    const resolvers = new Map<string, () => void>();
+    let active = 0;
+    let peak = 0;
+
+    const runTask = (label: string) =>
+      runAdapterIo({ ioLimiter: limiter }, label, async () => {
+        started.push(label);
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise<void>((resolve) => {
+          resolvers.set(label, resolve);
+        });
+        active -= 1;
+        return label;
+      });
+
+    const first = runTask("first");
+    const second = runTask("second");
+
+    await tick();
+    expect(started).toEqual(["first"]);
+
+    resolvers.get("first")?.();
+    let third: Promise<string> | undefined;
+    queueMicrotask(() => {
+      third = runTask("third");
+    });
+
+    await tick();
+    expect(started).toEqual(["first", "second"]);
+    expect(peak).toBe(1);
+
+    resolvers.get("second")?.();
+    await tick();
+    expect(started).toEqual(["first", "second", "third"]);
+    expect(peak).toBe(1);
+
+    resolvers.get("third")?.();
+    if (!third) {
+      throw new Error("third task was not scheduled");
+    }
+    await expect(Promise.all([first, second, third])).resolves.toEqual(["first", "second", "third"]);
+  });
+
   it("rejects queued work when the adapter attempt aborts", async () => {
     const limiter = createAdapterIoLimiter(1);
     const controller = new AbortController();

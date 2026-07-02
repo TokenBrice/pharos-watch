@@ -176,6 +176,16 @@
     "recommendation": "Hand the slot off instead of freeing it: when release() finds a live waiter, resolve it without decrementing `active` (and have the waiter skip its own increment), or increment `active` on behalf of the waiter before resolving. This only tightens the limit to its documented value; callers see no behavioral difference beyond scheduling.",
     "estImpact": "caps parallel IO at the intended 2, not 3+",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the reserve adapter IO limiter to hand an occupied slot directly to the queued waiter instead of briefly decrementing the active count, preventing later callers from stealing the slot before the waiter resumes. Added a regression test covering the queue-jump microtask race.",
+    "validation": [
+     "npx vitest run worker/src/cron/reserve-adapters/__tests__/concurrency.test.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/reserve-adapters/concurrency.ts worker/src/cron/reserve-adapters/__tests__/concurrency.test.ts worker/src/cron/reserve-adapters/request.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts"
+    ]
    }
   },
   {

@@ -31,10 +31,12 @@ export function createAdapterIoLimiter(maxParallel = RESERVE_ADAPTER_MAX_PARALLE
   const queue: AdapterIoQueueEntry[] = [];
 
   const release = () => {
-    active -= 1;
     for (;;) {
       const next = queue.shift();
-      if (!next) return;
+      if (!next) {
+        active -= 1;
+        return;
+      }
       if (next.signal?.aborted) {
         next.reject(buildAbortError(next.signal, next.label));
         continue;
@@ -42,6 +44,7 @@ export function createAdapterIoLimiter(maxParallel = RESERVE_ADAPTER_MAX_PARALLE
       if (next.abort) {
         next.signal?.removeEventListener("abort", next.abort);
       }
+      // Keep the slot claimed for the waiter before its continuation resumes.
       next.resolve();
       return;
     }
@@ -71,16 +74,22 @@ export function createAdapterIoLimiter(maxParallel = RESERVE_ADAPTER_MAX_PARALLE
   return {
     async run<T>(label: string, factory: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T> {
       throwIfAborted(options?.signal, label);
-      if (active >= max) {
-        await waitForSlot(label, options?.signal);
-      }
-
-      throwIfAborted(options?.signal, label);
-      active += 1;
+      let slotClaimed = false;
       try {
+        if (active >= max) {
+          await waitForSlot(label, options?.signal);
+          slotClaimed = true;
+        } else {
+          active += 1;
+          slotClaimed = true;
+        }
+
+        throwIfAborted(options?.signal, label);
         return await factory();
       } finally {
-        release();
+        if (slotClaimed) {
+          release();
+        }
       }
     },
   };
