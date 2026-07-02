@@ -33,7 +33,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING = resolve(REPO_ROOT, "agents/og-editorial-staging");
-const SIGNATURE_PATH = resolve(REPO_ROOT, "src/generated/og-editorial-signatures.json");
+const SIGNATURE_PATH = resolve(REPO_ROOT, "scripts/maintenance/state/og-editorial-signatures.json");
 const NEWSREADER_FONT = resolve(REPO_ROOT, "src/assets/fonts/Newsreader-Variable.subset.woff2");
 const GEIST_MONO_FONT = resolve(REPO_ROOT, "src/assets/fonts/GeistMono-Regular.woff2");
 const CHECK_MODE = process.argv.includes("--check");
@@ -254,7 +254,7 @@ try {
   if (CHECK_MODE) {
     const expectedManifest = existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
     if (expectedManifest !== signatureManifest) {
-      staleFiles.push("src/generated/og-editorial-signatures.json");
+      staleFiles.push("scripts/maintenance/state/og-editorial-signatures.json");
     }
   } else {
     writeFileSync(SIGNATURE_PATH, signatureManifest);

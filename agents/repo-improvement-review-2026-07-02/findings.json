@@ -4660,6 +4660,18 @@
      "scripts/maintenance/build-og-case-studies.ts",
      "scripts/maintenance/build-og-editorial.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved script-only OG signature manifests out of src/generated into scripts/maintenance/state and updated both OG generators, stale-file labels, and generated-artifact ignore rules.",
+    "validation": [
+     "rg -n \"src/generated/og-case-study-signatures|src/generated/og-editorial-signatures|scripts/maintenance/state/og-case-study-signatures|scripts/maintenance/state/og-editorial-signatures\" .gitignore scripts docs src shared worker functions package.json",
+     "npx tsx scripts/maintenance/build-og-case-studies.ts --check",
+     "node scripts/maintenance/build-og-editorial.mjs --check",
+     "npm run typecheck",
+     "git diff --check -- .gitignore scripts/maintenance/build-og-case-studies.ts scripts/maintenance/build-og-editorial.mjs scripts/maintenance/state/og-case-study-signatures.json scripts/maintenance/state/og-editorial-signatures.json agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
