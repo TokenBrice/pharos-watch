@@ -78,6 +78,7 @@ Defined centrally in `src/hooks/use-api-query.ts`. Cron-backed hooks should pass
 - `chain_supply_history` remains a forward-only internal dataset until the post-2026-04-08 baseline. Earlier rows were written before shared chain-label canonicalization and are not approved for public charting.
 - `/api/dex-liquidity` is meta-aware on the frontend: the page uses worker freshness metadata (and degraded-run `Warning` headers) rather than client fetch time to assess staleness.
 - Liquidity history now carries `coverageClass` / `coverageConfidence`; trend and durability consumers should treat low-confidence snapshots as informational, not authoritative baselines.
+- `dex_liquidity_history` is retained for the public 365-day history window; older daily snapshots are pruned during successful `sync-dex-liquidity` persistence instead of living as an indefinite research archive.
 - Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints/`.
 - The stablecoins cache loader distinguishes `ok`, `degraded`, and `error` states. Operator-facing or published consumers (`/status`, daily digest, safety snapshot) now fail closed on non-`ok` cache reads instead of treating broken cache state as an empty valid dataset.
 - `consensusSources` flows from the price-consensus cron stage through the `stablecoins` cache → `/api/stablecoins` and `/api/peg-summary` → `useStablecoins` / `usePegSummary` hooks → `PriceTransparencyCard` on the detail page and `CoverageBadge` source-count enrichment on the coverage page.

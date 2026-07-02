@@ -697,6 +697,8 @@ async function persistDexLiquidityScoreState(
         snapshotRowsWritten: 0,
         skipped: true,
         writeFailed: false,
+        historyRowsPruned: 0,
+        retentionPruneFailed: false,
       },
     };
   }
@@ -746,10 +748,12 @@ async function persistDexLiquidityScoreState(
   }, ctx.signal);
   await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec, sourceState.validationReferences, ctx.signal);
 
-  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults, ctx.signal)) ?? {
+  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults, ctx.signal, ctx.syncStartSec)) ?? {
     snapshotRowsWritten: 0,
     skipped: false,
     writeFailed: false,
+    historyRowsPruned: 0,
+    retentionPruneFailed: false,
   };
 
   await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, ctx.signal);
@@ -768,8 +772,10 @@ async function persistDexLiquidityScoreState(
         inactiveMetricIdsSkipped: persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
         orphanRowsDeleted: persistence.orphanRowsDeleted,
         historicalSnapshotRows: historicalSnapshot.snapshotRowsWritten,
+        historicalRowsPruned: historicalSnapshot.historyRowsPruned,
       },
       orphanCleanupFailed: persistence.orphanCleanupFailed,
+      retentionPruneFailed: historicalSnapshot.retentionPruneFailed,
     },
   });
 

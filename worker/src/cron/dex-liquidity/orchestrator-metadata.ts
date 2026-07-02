@@ -17,7 +17,8 @@ export function isDexLiquidityDegraded(params: {
     params.analysis.nearValueGuard ||
     params.analysis.nearMajorCoverageGuard ||
     params.persistence.orphanCleanupFailed ||
-    params.historicalSnapshot.writeFailed
+    params.historicalSnapshot.writeFailed ||
+    params.historicalSnapshot.retentionPruneFailed
   );
 }
 
@@ -89,6 +90,8 @@ export function buildDexLiquidityCronMetadata(params: {
       historicalSnapshotRowsWritten: params.historicalSnapshot.snapshotRowsWritten,
       historicalSnapshotSkipped: params.historicalSnapshot.skipped,
       historicalSnapshotWriteFailed: params.historicalSnapshot.writeFailed,
+      historicalSnapshotRowsPruned: params.historicalSnapshot.historyRowsPruned,
+      historicalSnapshotRetentionPruneFailed: params.historicalSnapshot.retentionPruneFailed,
     },
     validationFailures: 0,
   };

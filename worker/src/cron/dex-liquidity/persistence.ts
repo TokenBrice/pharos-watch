@@ -1,5 +1,6 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -8,7 +9,8 @@ import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
-const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * 86_400;
+const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * DAY_SECONDS;
+const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
 
 const DEX_LIQUIDITY_ROW_COLUMNS = [
   "stablecoin_id",
@@ -105,6 +107,8 @@ export interface HistoricalSnapshotWriteResult {
   snapshotRowsWritten: number;
   skipped: boolean;
   writeFailed: boolean;
+  historyRowsPruned: number;
+  retentionPruneFailed: boolean;
 }
 
 interface CandidateGenerationCoverage {
@@ -380,6 +384,30 @@ async function pruneOldDexLiquidityGenerations(
   ], { signal });
 }
 
+async function pruneOldDexLiquidityHistory(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  throwIfAborted(signal);
+  const cutoff = nowSec - DEX_LIQUIDITY_HISTORY_RETENTION_SEC;
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `/* pharos:dex-liquidity:history-retention-delete */
+           DELETE FROM dex_liquidity_history
+           WHERE snapshot_date < ?`,
+        )
+        .bind(cutoff)
+        .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return Number(result?.meta?.changes ?? 0);
+}
+
 /** Persist liquidity scores to D1 (both data rows and zero-score rows). */
 export async function persistScores(
   db: D1Database,
@@ -622,9 +650,22 @@ export async function writeHistoricalSnapshots(
   db: D1Database,
   scoreMap: Map<string, FullScoreResult>,
   signal?: AbortSignal,
+  nowSec = Math.floor(Date.now() / 1000),
 ): Promise<HistoricalSnapshotWriteResult> {
-  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
+  const todayMidnight = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS; // epoch seconds at UTC midnight
   const expectedRowCount = ACTIVE_STABLECOINS.length;
+  let historyRowsPruned = 0;
+  let retentionPruneFailed = false;
+  const pruneHistory = async (): Promise<void> => {
+    try {
+      historyRowsPruned = await pruneOldDexLiquidityHistory(db, nowSec, signal);
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      retentionPruneFailed = true;
+      console.warn("[dex-liquidity] Daily snapshot retention prune failed:", err);
+    }
+  };
+
   try {
     throwIfAborted(signal);
     const existing = await db
@@ -645,10 +686,13 @@ export async function writeHistoricalSnapshots(
     // Keep repairing today's snapshot until coverage and scored-coin count are at least
     // as good as the current run (avoids locking in a degraded first post-midnight run).
     if (existingCount >= expectedRowCount && existingScored >= incomingScored) {
+      await pruneHistory();
       return {
         snapshotRowsWritten: 0,
         skipped: true,
         writeFailed: false,
+        historyRowsPruned,
+        retentionPruneFailed,
       };
     }
 
@@ -691,6 +735,7 @@ export async function writeHistoricalSnapshots(
       }
     }
     await batchExecute(db, snapStmts, { signal });
+    await pruneHistory();
     console.log(
       `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapStmts.length}/${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
@@ -698,6 +743,8 @@ export async function writeHistoricalSnapshots(
       snapshotRowsWritten: snapStmts.length,
       skipped: false,
       writeFailed: false,
+      historyRowsPruned,
+      retentionPruneFailed,
     };
   } catch (err) {
     rethrowIfAborted(err, signal);
@@ -706,6 +753,8 @@ export async function writeHistoricalSnapshots(
       snapshotRowsWritten: 0,
       skipped: false,
       writeFailed: true,
+      historyRowsPruned,
+      retentionPruneFailed,
     };
   }
 }

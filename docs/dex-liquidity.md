@@ -333,7 +333,7 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 - **Depth Stability**: Coefficient of variation of daily TVL over 30-day rolling window, inverted to 0-1 scale. Requires >=7 days of data. Stored as `depth_stability`.
 - **TVL Trends**: 24h and 7d percentage changes computed from daily history snapshots, but only when a baseline exists within a tolerance window (`12h` for 24h, `36h` for 7d) and that snapshot has `coverage_confidence >= 0.5`. Otherwise the API returns `null`.
 - **Depth Stability / Volume Consistency inputs**: durability history uses only snapshots with `coverage_confidence >= 0.75`; fewer than 7 confident rows fall back to neutral durability defaults.
-- **Daily Snapshots**: One snapshot per stablecoin per day in `dex_liquidity_history` table (migration 0010, confidence fields added in 0061). Written on first sync after UTC midnight.
+- **Daily Snapshots**: One snapshot per stablecoin per day in `dex_liquidity_history` table (migration 0010, confidence fields added in 0061). Written on first sync after UTC midnight and pruned to the public 365-day history window during successful DEX liquidity persistence.
 
 ---
 

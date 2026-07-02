@@ -548,8 +548,40 @@ describe("dex-liquidity persistence", () => {
       snapshotRowsWritten: 0,
       skipped: true,
       writeFailed: false,
+      historyRowsPruned: 1,
+      retentionPruneFailed: false,
     });
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("prunes historical snapshots beyond the public 365-day window when today's snapshot is already complete", async () => {
+    const nowSec = Math.floor(Date.UTC(2026, 0, 1, 12) / 1000);
+    const db = makeDb({
+      historyRow: {
+        cnt: ACTIVE_STABLECOINS.length,
+        scored: 1,
+      },
+    });
+
+    const result = await writeHistoricalSnapshots(
+      db,
+      new Map([["usdt-tether", makeFullScoreResult()]]),
+      undefined,
+      nowSec,
+    );
+
+    expect(result).toMatchObject({
+      snapshotRowsWritten: 0,
+      skipped: true,
+      writeFailed: false,
+      historyRowsPruned: 1,
+      retentionPruneFailed: false,
+    });
+    const prune = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("pharos:dex-liquidity:history-retention-delete"));
+    expect(prune?.sql).toContain("DELETE FROM dex_liquidity_history");
+    expect(prune?.binds).toEqual([nowSec - 365 * 86_400]);
   });
 
   it("reconciles missing historical snapshots and backfills placeholder rows", async () => {
@@ -574,6 +606,8 @@ describe("dex-liquidity persistence", () => {
       snapshotRowsWritten: ACTIVE_STABLECOINS.length,
       skipped: false,
       writeFailed: false,
+      historyRowsPruned: 1,
+      retentionPruneFailed: false,
     });
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
@@ -617,6 +651,8 @@ describe("dex-liquidity persistence", () => {
       snapshotRowsWritten: 0,
       skipped: false,
       writeFailed: true,
+      historyRowsPruned: 0,
+      retentionPruneFailed: false,
     });
 
     expect(batchExecute).not.toHaveBeenCalled();

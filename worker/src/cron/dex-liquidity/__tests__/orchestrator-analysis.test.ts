@@ -126,6 +126,8 @@ describe("analyzeDexLiquidityPostScoring", () => {
           snapshotRowsWritten: 0,
           skipped: true,
           writeFailed: false,
+          historyRowsPruned: 0,
+          retentionPruneFailed: false,
         },
       }),
     ).toBe(true);

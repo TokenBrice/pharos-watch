@@ -6993,6 +6993,19 @@
      "worker/src/cron/yield-sync/publication.ts",
      "worker/src/api/backfill-dews.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a 365-day `dex_liquidity_history` prune during successful DEX liquidity historical snapshot persistence, surfaced prune counts/failures in cron metadata, and documented that DEX history is retained for the public 365-day window rather than indefinitely.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dex-liquidity-persistence.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-analysis.test.ts worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run check:doc-source-paths",
+     "git diff --check -- worker/src/cron/dex-liquidity/persistence.ts worker/src/cron/dex-liquidity/orchestrator.ts worker/src/cron/dex-liquidity/orchestrator-metadata.ts worker/src/cron/__tests__/dex-liquidity-persistence.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-analysis.test.ts docs/dex-liquidity.md docs/data-flow-map.md docs/worker-infrastructure.md"
+    ],
+    "notes": "Public API behavior is unchanged because `/api/dex-liquidity-history` already rejects lookbacks beyond 365 days. A failed retention prune marks the DEX run degraded but does not discard the current historical snapshot write."
    }
   },
   {
