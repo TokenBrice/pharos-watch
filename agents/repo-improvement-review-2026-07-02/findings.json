@@ -4722,6 +4722,18 @@
     "description": "The candidates.sort comparator calls yieldSourceScore(b) and yieldSourceScore(a) — each running venue matching, excessApyConcave, depth log10 and freshness math — on every comparison, so each candidate's score is recomputed O(log n) times per sort, and depth/freshness scores are recomputed again in the later tie-break branches. The engine runs this per surviving coin per selector invocation. Numerically it also relies on recomputation being bit-identical (true today, but fragile if any sub-score gains caching or randomness).",
     "recommendation": "Precompute `{candidate, score, risk, depth, freshness}` once per candidate (a Schwartzian transform), then sort on the cached fields. Identical comparison values, so ordering and output are unchanged; strictly behavior-preserving and slightly simpler to read.",
     "estImpact": "~5x fewer score evaluations per yield-source selection"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Yield source selection now precomputes candidate score, risk, depth, and freshness once per candidate before sorting on cached values.",
+    "validation": [
+     "npx vitest run shared/lib/selector/__tests__/yield-source.test.ts",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/selector/yield-source.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

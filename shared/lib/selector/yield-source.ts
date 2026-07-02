@@ -10,6 +10,14 @@ import type {
   YieldSourceCandidate,
 } from "./types";
 
+interface ScoredYieldSourceCandidate {
+  candidate: YieldSourceCandidate;
+  score: number;
+  risk: number;
+  depth: number;
+  freshness: number;
+}
+
 function riskTierScore(tier: YieldSourceCandidate["venueRiskTier"]): number {
   if (tier === "low") return 100;
   if (tier === "mid") return 70;
@@ -68,20 +76,32 @@ function yieldSourceScore(
   candidate: YieldSourceCandidate,
   input: SelectorInput,
   benchmarkRate: number | null,
+  depth: number,
+  freshness: number,
 ): number {
   const venue = venueMatchesPreference(candidate, input) ? 100 : 35;
   const risk =
     candidate.sourceRiskScore != null
       ? sourceRiskInverted(candidate.sourceRiskScore)
       : riskTierScore(candidate.venueRiskTier);
-  const depth = sourceDepthScore(candidate);
-  const freshness = sourceFreshnessScore(candidate);
   // Match the main scorer's excess-APY definition (scoring.ts excessApy):
   // measure against the per-coin benchmarkRate so non-USD pegs use the
   // peg-appropriate benchmark instead of a flat 4% floor. Fall back to 4
   // only when the row has no benchmark.
   const apy = excessApyConcave(candidate.apy30d - (benchmarkRate ?? 4)) ?? 0;
   return venue * 0.35 + risk * 0.25 + depth * 0.2 + freshness * 0.15 + apy * 0.05;
+}
+
+function scoreYieldSourceCandidate(
+  candidate: YieldSourceCandidate,
+  input: SelectorInput,
+  benchmarkRate: number | null,
+): ScoredYieldSourceCandidate {
+  const risk = riskTierScore(candidate.venueRiskTier);
+  const depth = sourceDepthScore(candidate);
+  const freshness = sourceFreshnessScore(candidate);
+  const score = yieldSourceScore(candidate, input, benchmarkRate, depth, freshness);
+  return { candidate, score, risk, depth, freshness };
 }
 
 function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
@@ -120,18 +140,21 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
   if (candidates.length === 0) {
     return null;
   }
-  candidates.sort((a, b) => {
-    const scoreDiff = yieldSourceScore(b, input, row.benchmarkRate) - yieldSourceScore(a, input, row.benchmarkRate);
+  const scoredCandidates = candidates.map((candidate) =>
+    scoreYieldSourceCandidate(candidate, input, row.benchmarkRate),
+  );
+  scoredCandidates.sort((a, b) => {
+    const scoreDiff = b.score - a.score;
     if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
-    const riskDiff = riskTierScore(b.venueRiskTier) - riskTierScore(a.venueRiskTier);
+    const riskDiff = b.risk - a.risk;
     if (riskDiff !== 0) return riskDiff;
-    const depthDiff = sourceDepthScore(b) - sourceDepthScore(a);
+    const depthDiff = b.depth - a.depth;
     if (Math.abs(depthDiff) > 0.0001) return depthDiff;
-    const freshDiff = sourceFreshnessScore(b) - sourceFreshnessScore(a);
+    const freshDiff = b.freshness - a.freshness;
     if (Math.abs(freshDiff) > 0.0001) return freshDiff;
-    return a.sourceKey.localeCompare(b.sourceKey);
+    return a.candidate.sourceKey.localeCompare(b.candidate.sourceKey);
   });
-  const selected = candidates[0]!;
+  const selected = scoredCandidates[0]!.candidate;
   if (selected.chain == null) return null;
   return {
     sourceKey: selected.sourceKey,
