@@ -71,7 +71,6 @@ export type DepegPersistenceCommand =
       id: number;
       endedAt: number;
       recoveryPrice: number | null;
-      recoveryPriceMode: "bind" | "null";
       closeReason: DepegEventCloseReason;
     }
   | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null }

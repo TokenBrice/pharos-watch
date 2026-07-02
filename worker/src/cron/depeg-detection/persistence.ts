@@ -14,11 +14,6 @@ function buildDepegPersistenceStatements(
       case "upsert-pending":
         return buildUpsertPendingDepegStmt(db, command.payload);
       case "close-event":
-        if (command.recoveryPriceMode === "null") {
-          return db
-            .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ? WHERE id = ?")
-            .bind(command.endedAt, command.closeReason, command.id);
-        }
         return db
           .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ? WHERE id = ?")
           .bind(command.endedAt, command.recoveryPrice, command.closeReason, command.id);

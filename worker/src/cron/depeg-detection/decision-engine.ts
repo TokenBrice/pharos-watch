@@ -334,7 +334,6 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
         id: existing.id,
         endedAt: now,
         recoveryPrice: null,
-        recoveryPriceMode: "null",
         closeReason: "coverage-lost-supply",
       });
       decision.diagnostics.push(withDiagnostic(
@@ -488,7 +487,6 @@ function applyNativeQuoteVeto(
           id: existing.id,
           endedAt: ctx.now,
           recoveryPrice: null,
-          recoveryPriceMode: "null",
           closeReason: "recovered-native",
         });
       }
@@ -555,7 +553,6 @@ function decideExistingEvent(
         id: existing.id,
         endedAt: now,
         recoveryPrice: price,
-        recoveryPriceMode: "bind",
         closeReason: "superseded-direction",
       });
       if (requiresConfirmation) {
@@ -707,7 +704,6 @@ function decideRecovery(
       id: existing.id,
       endedAt: now,
       recoveryPrice: price,
-      recoveryPriceMode: "bind",
       closeReason: "recovered-primary",
     });
   } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
@@ -716,7 +712,6 @@ function decideRecovery(
       id: existing.id,
       endedAt: now,
       recoveryPrice: dexRow.dex_price_usd,
-      recoveryPriceMode: "bind",
       closeReason: "recovered-dex",
     });
   } else {

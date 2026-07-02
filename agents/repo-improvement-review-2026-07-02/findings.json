@@ -376,12 +376,23 @@
     "recommendation": "Collapse to one UPDATE binding command.recoveryPrice and drop recoveryPriceMode from the DepegPersistenceCommand type and all emit sites. Identical rows written; verify with existing depeg detection tests.",
     "estImpact": "-15 LOC across 4 files",
     "alsoFiles": [
-     "worker/src/cron/depeg-detection/types.ts",
-     "worker/src/cron/depeg-detection/decision-engine.ts",
-     "worker/src/cron/depeg-detection/repair.ts"
+      "worker/src/cron/depeg-detection/types.ts",
+      "worker/src/cron/depeg-detection/decision-engine.ts",
+      "worker/src/cron/depeg-detection/repair.ts"
     ]
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Removed the redundant recoveryPriceMode discriminator from depeg close-event commands and collapsed persistence to one UPDATE that binds recoveryPrice, relying on null binding to write SQL NULL.",
+   "validation": [
+    "npx vitest run worker/src/cron/depeg-detection/__tests__/repair.test.ts worker/src/cron/depeg-detection/__tests__/decision-engine.test.ts",
+    "cd worker && npx tsc --noEmit",
+    "rg -n \"recoveryPriceMode\" worker/src/cron/depeg-detection || true",
+    "git diff --check -- worker/src/cron/depeg-detection/types.ts worker/src/cron/depeg-detection/persistence.ts worker/src/cron/depeg-detection/decision-engine.ts worker/src/cron/depeg-detection/repair.ts worker/src/cron/depeg-detection/__tests__/decision-engine.test.ts worker/src/cron/depeg-detection/__tests__/repair.test.ts"
+   ]
+  }
+ },
   {
    "id": "w-cron-sync:6",
    "domain": "w-cron-sync",

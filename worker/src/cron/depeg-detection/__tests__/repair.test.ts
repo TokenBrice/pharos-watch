@@ -63,7 +63,6 @@ describe("buildDuplicateOpenEventRepair", () => {
         id: 1,
         endedAt: 300,
         recoveryPrice: null,
-        recoveryPriceMode: "null",
         closeReason: "superseded-direction",
       },
     ]);
@@ -90,7 +89,6 @@ describe("buildOrphanCloseRepair", () => {
         id: 10,
         endedAt: 1_000,
         recoveryPrice: null,
-        recoveryPriceMode: "null",
         closeReason: "orphan-tracking-removed",
       },
     ]);

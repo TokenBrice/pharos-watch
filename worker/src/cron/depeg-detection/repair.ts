@@ -97,7 +97,6 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
         id: stale.id,
         endedAt: keeper.started_at,
         recoveryPrice: null,
-        recoveryPriceMode: "null",
         closeReason: "superseded-direction",
       });
     }
@@ -131,7 +130,6 @@ export function buildOrphanCloseRepair(input: {
       id: row.id,
       endedAt: input.now,
       recoveryPrice: null,
-      recoveryPriceMode: "null",
       closeReason: "orphan-tracking-removed",
     });
     diagnostics.push({
