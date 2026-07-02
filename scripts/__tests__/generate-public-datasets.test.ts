@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -20,26 +20,6 @@ async function makeRoot() {
   const root = await mkdtemp(path.join(os.tmpdir(), "pharos-public-datasets-"));
   tempRoots.push(root);
   return root;
-}
-
-async function snapshotTree(root: string): Promise<Record<string, string>> {
-  const files: Record<string, string> = {};
-
-  async function walk(dir: string, prefix: string): Promise<void> {
-    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      const absolutePath = path.join(dir, entry.name);
-      const relativePath = path.join(prefix, entry.name);
-      if (entry.isDirectory()) {
-        await walk(absolutePath, relativePath);
-      } else if (entry.isFile()) {
-        files[relativePath] = await readFile(absolutePath, "utf8");
-      }
-    }
-  }
-
-  await walk(root, "");
-  return files;
 }
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -306,70 +286,4 @@ describe("generate-public-datasets", () => {
     });
   });
 
-  it("reports latest/newest dated checksum equality and retained bytes", async () => {
-    const root = await makeRoot();
-    const datasetsDir = path.join(root, "datasets");
-    const sheetsDir = path.join(root, "sheets");
-    const topicDir = path.join(datasetsDir, "top-stablecoins");
-    await mkdir(topicDir, { recursive: true });
-
-    const files = {
-      "latest.csv": "same csv\n",
-      "latest.json": '{"version":"latest"}\n',
-      "latest.ndjson": '{"same":"ndjson"}\n',
-      "2026-05-15.csv": "old csv\n",
-      "2026-05-15.json": '{"version":"old"}\n',
-      "2026-05-15.ndjson": '{"old":"ndjson"}\n',
-      "2026-05-16.csv": "same csv\n",
-      "2026-05-16.json": '{"version":"dated"}\n',
-      "2026-05-16.ndjson": '{"same":"ndjson"}\n',
-    };
-    for (const [name, contents] of Object.entries(files)) {
-      await writeFile(path.join(topicDir, name), contents);
-    }
-
-    const report = testExports.buildDatasetDupeTopicReport("top-stablecoins", { datasetsDir, sheetsDir });
-    const latestBytes =
-      Buffer.byteLength(files["latest.csv"]) +
-      Buffer.byteLength(files["latest.json"]) +
-      Buffer.byteLength(files["latest.ndjson"]);
-    const newestDatedBytes =
-      Buffer.byteLength(files["2026-05-16.csv"]) +
-      Buffer.byteLength(files["2026-05-16.json"]) +
-      Buffer.byteLength(files["2026-05-16.ndjson"]);
-    const totalRetainedBytes = Object.entries(files)
-      .filter(([name]) => /^\d{4}-\d{2}-\d{2}\./.test(name))
-      .reduce((total, [, contents]) => total + Buffer.byteLength(contents), 0);
-
-    expect(report.latestBytes).toBe(latestBytes);
-    expect(report.newestDatedDate).toBe("2026-05-16");
-    expect(report.newestDatedBytes).toBe(newestDatedBytes);
-    expect(report.checksumsEqual).toBe(false);
-    expect(report.retentionCount).toBe(2);
-    expect(report.totalRetainedBytes).toBe(totalRetainedBytes);
-    expect(report.variants.find((row) => row.variant === "csv")?.checksumsEqual).toBe(true);
-    expect(report.variants.find((row) => row.variant === "json")?.checksumsEqual).toBe(false);
-    expect(report.variants.find((row) => row.variant === "ndjson")?.checksumsEqual).toBe(true);
-  });
-
-  it("does not write files while building the duplicate report", async () => {
-    const root = await makeRoot();
-    const datasetsDir = path.join(root, "datasets");
-    const sheetsDir = path.join(root, "sheets");
-    const topicDir = path.join(datasetsDir, "top-stablecoins");
-    await mkdir(topicDir, { recursive: true });
-    await writeFile(path.join(topicDir, "latest.csv"), "same\n");
-    await writeFile(path.join(topicDir, "latest.json"), "same\n");
-    await writeFile(path.join(topicDir, "latest.ndjson"), "same\n");
-    await writeFile(path.join(topicDir, "2026-05-16.csv"), "same\n");
-    await writeFile(path.join(topicDir, "2026-05-16.json"), "same\n");
-    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), "same\n");
-
-    const before = await snapshotTree(root);
-    const report = testExports.buildDatasetDupeReport({ datasetsDir, sheetsDir });
-    testExports.formatDatasetDupeReport(report);
-    const after = await snapshotTree(root);
-
-    expect(after).toEqual(before);
-  });
 });

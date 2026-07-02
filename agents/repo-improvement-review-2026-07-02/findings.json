@@ -4986,6 +4986,18 @@
     "description": "DUPE_REPORT_MODE (line 57) and its machinery — DatasetFileMetrics/DatedDatasetFileMetrics/DatasetDupeVariantReport/DatasetDupeTopicReport interfaces plus readDatasetFileMetrics, sumNullableBytes, readDatedDatasetFiles, buildDatasetDupeTopicReport, buildDatasetDupeReport, formatDupeValue, formatDatasetDupeReport (lines ~659-807) and the main() branch (lines 930-933) — are reachable only via the `--dupe-report` CLI flag. Repo-wide grep finds the flag string nowhere outside this file: no package.json script, no docs/scripts.md row, no workflow, no other script. The only exercise is the script's own vitest via testExports (scripts/__tests__/generate-public-datasets.test.ts:359), i.e. the tests are the sole consumer keeping ~150 LOC alive.",
     "recommendation": "Confirm with the owner it was a one-off offline analysis aid (it reports latest-vs-dated checksum duplication under the 90-day retention scheme), then delete the flag, the ~150 LOC of report machinery, the corresponding testExports entries, and the test block. No committed artifact or generation/check path changes.",
     "estImpact": "-150 LOC in a 1,022-line generator"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the uncalled --dupe-report CLI mode, duplicate-report helper types/functions, testExports hooks, and report-only tests from generate-public-datasets.",
+    "validation": [
+     "rg -n \"dupe-report|DatasetDupe|buildDatasetDupe|formatDatasetDupe|DUPE_REPORT_MODE|DATASET_VARIANTS|createHash\" scripts/maintenance/generate-public-datasets.ts scripts/__tests__/generate-public-datasets.test.ts package.json docs scripts/lib .github || true",
+     "npx vitest run scripts/__tests__/generate-public-datasets.test.ts",
+     "npx tsx scripts/maintenance/generate-public-datasets.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-public-datasets.ts scripts/__tests__/generate-public-datasets.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

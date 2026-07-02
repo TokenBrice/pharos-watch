@@ -28,7 +28,6 @@
  * explicit local placeholder regeneration.
  */
 
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -54,18 +53,14 @@ const DATASETS_DIR = join(REPO_ROOT, "public/datasets");
 const SHEETS_DIR = join(REPO_ROOT, "public/sheets");
 const RETENTION_DAYS = 90;
 const CHECK_MODE = parseCheckMode(process.argv);
-const DUPE_REPORT_MODE = process.argv.includes("--dupe-report");
 const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
-const DATASET_VARIANTS = ["csv", "json", "ndjson"] as const;
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "top-stablecoins": 1,
   "depeg-history": 1,
   "scores-latest": 1,
   "peg-mechanism-distribution": 1,
 };
-
-type DatasetVariant = (typeof DATASET_VARIANTS)[number];
 
 interface SnapshotEnvelope {
   snapshotDate: string;
@@ -658,156 +653,6 @@ function checkTopic(
   return { ok: true };
 }
 
-interface DatasetFileMetrics {
-  bytes: number;
-  sha256: string;
-}
-
-interface DatedDatasetFileMetrics extends DatasetFileMetrics {
-  date: string;
-  variant: DatasetVariant;
-  name: string;
-}
-
-interface DatasetDupeVariantReport {
-  variant: DatasetVariant;
-  latestBytes: number | null;
-  newestDatedBytes: number | null;
-  checksumsEqual: boolean | null;
-  retainedFileCount: number;
-  totalRetainedBytes: number;
-}
-
-interface DatasetDupeTopicReport {
-  topic: PublicDatasetTopic;
-  latestBytes: number | null;
-  newestDatedDate: string | null;
-  newestDatedBytes: number | null;
-  checksumsEqual: boolean | null;
-  retentionCount: number;
-  totalRetainedBytes: number;
-  variants: DatasetDupeVariantReport[];
-}
-
-function readDatasetFileMetrics(path: string): DatasetFileMetrics | null {
-  if (!existsSync(path)) return null;
-  const contents = readFileSync(path);
-  return {
-    bytes: contents.byteLength,
-    sha256: createHash("sha256").update(contents).digest("hex"),
-  };
-}
-
-function sumNullableBytes(values: Array<number | null>): number | null {
-  const present = values.filter((value): value is number => value != null);
-  if (present.length === 0) return null;
-  return present.reduce((total, value) => total + value, 0);
-}
-
-function readDatedDatasetFiles(topicDir: string): DatedDatasetFileMetrics[] {
-  if (!existsSync(topicDir)) return [];
-  const files: DatedDatasetFileMetrics[] = [];
-  for (const name of readdirSync(topicDir)) {
-    const match = /^(\d{4}-\d{2}-\d{2})\.(csv|json|ndjson)$/.exec(name);
-    if (!match) continue;
-    const metrics = readDatasetFileMetrics(join(topicDir, name));
-    if (!metrics) continue;
-    files.push({
-      date: match[1],
-      variant: match[2] as DatasetVariant,
-      name,
-      ...metrics,
-    });
-  }
-  return files.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function buildDatasetDupeTopicReport(
-  topic: PublicDatasetTopic,
-  dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS,
-): DatasetDupeTopicReport {
-  const topicDir = join(dirs.datasetsDir, topic);
-  const datedFiles = readDatedDatasetFiles(topicDir);
-  const newestDatedDate = datedFiles.reduce<string | null>(
-    (latest, file) => (latest == null || file.date > latest ? file.date : latest),
-    null,
-  );
-  const latestMetrics = new Map<DatasetVariant, DatasetFileMetrics | null>();
-  const newestDatedMetrics = new Map<DatasetVariant, DatasetFileMetrics | null>();
-
-  for (const variant of DATASET_VARIANTS) {
-    latestMetrics.set(variant, readDatasetFileMetrics(join(topicDir, `latest.${variant}`)));
-    newestDatedMetrics.set(
-      variant,
-      newestDatedDate ? readDatasetFileMetrics(join(topicDir, `${newestDatedDate}.${variant}`)) : null,
-    );
-  }
-
-  const variants = DATASET_VARIANTS.map((variant): DatasetDupeVariantReport => {
-    const latest = latestMetrics.get(variant) ?? null;
-    const newestDated = newestDatedMetrics.get(variant) ?? null;
-    const retainedFiles = datedFiles.filter((file) => file.variant === variant);
-    return {
-      variant,
-      latestBytes: latest?.bytes ?? null,
-      newestDatedBytes: newestDated?.bytes ?? null,
-      checksumsEqual: latest && newestDated ? latest.sha256 === newestDated.sha256 : null,
-      retainedFileCount: retainedFiles.length,
-      totalRetainedBytes: retainedFiles.reduce((total, file) => total + file.bytes, 0),
-    };
-  });
-
-  const checksumsEqual =
-    newestDatedDate == null
-      ? null
-      : DATASET_VARIANTS.every((variant) => {
-          const latest = latestMetrics.get(variant) ?? null;
-          const newestDated = newestDatedMetrics.get(variant) ?? null;
-          return latest != null && newestDated != null && latest.sha256 === newestDated.sha256;
-        });
-
-  return {
-    topic,
-    latestBytes: sumNullableBytes(variants.map((variant) => variant.latestBytes)),
-    newestDatedDate,
-    newestDatedBytes: sumNullableBytes(variants.map((variant) => variant.newestDatedBytes)),
-    checksumsEqual,
-    retentionCount: new Set(datedFiles.map((file) => file.date)).size,
-    totalRetainedBytes: datedFiles.reduce((total, file) => total + file.bytes, 0),
-    variants,
-  };
-}
-
-function buildDatasetDupeReport(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): DatasetDupeTopicReport[] {
-  return PUBLIC_DATASET_TOPICS.map((topic) => buildDatasetDupeTopicReport(topic, dirs));
-}
-
-function formatDupeValue(value: number | boolean | string | null): string {
-  if (value == null) return "missing";
-  return String(value);
-}
-
-function formatDatasetDupeReport(report: readonly DatasetDupeTopicReport[]): string {
-  const lines = [
-    "Public dataset duplicate report (offline)",
-    "topic | latestBytes | newestDatedDate | newestDatedBytes | checksumsEqual | retentionCount | totalRetainedBytes",
-  ];
-  for (const row of report) {
-    lines.push(
-      [
-        row.topic,
-        formatDupeValue(row.latestBytes),
-        formatDupeValue(row.newestDatedDate),
-        formatDupeValue(row.newestDatedBytes),
-        formatDupeValue(row.checksumsEqual),
-        formatDupeValue(row.retentionCount),
-        formatDupeValue(row.totalRetainedBytes),
-      ].join(" | "),
-    );
-  }
-  return `${lines.join("\n")}\n`;
-}
-
 interface PublicDatasetLiveInputs {
   envelope: SnapshotEnvelope;
   depegEvents: DepegEvent[];
@@ -908,12 +753,9 @@ function buildTopicSpecs(
 }
 
 export const testExports = {
-  buildDatasetDupeReport,
-  buildDatasetDupeTopicReport,
   buildTopicSpecs,
   checkTopic,
   cutoffSecForSnapshotDate,
-  formatDatasetDupeReport,
   projectDepegHistory,
   validateTopicRowFloor,
 };
@@ -929,11 +771,6 @@ function checkAllTopics(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): { ok: boole
 // --- Main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  if (DUPE_REPORT_MODE) {
-    process.stdout.write(formatDatasetDupeReport(buildDatasetDupeReport()));
-    return;
-  }
-
   const requestedSnapshotDate = resolveSnapshotDate();
   let snapshotDate = requestedSnapshotDate;
 
