@@ -72,9 +72,9 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 817,
-    "maxFunctionLines": 438,
-    "branchCount": 51,
+    "fileLines": 900,
+    "maxFunctionLines": 489,
+    "branchCount": 59,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 830,

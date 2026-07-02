@@ -20,7 +20,7 @@ import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS, type TableDensity } from "@/hooks/use-table-density";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useElementWidth } from "@/hooks/use-element-width";
-import { fitColumnsToWidth } from "@/lib/stablecoin-table-fit";
+import { useFittedColumns } from "@/hooks/use-fitted-columns";
 import { Button } from "@/components/ui/button";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -282,6 +282,35 @@ function getHeaderLabel(column: StablecoinHeaderDef, variant: StablecoinTableVis
   return column.label;
 }
 
+function ColumnFitToggle({
+  fitToWidth,
+  hiddenCount,
+  compact,
+  onToggle,
+}: {
+  fitToWidth: boolean;
+  hiddenCount: number;
+  compact: boolean;
+  onToggle: () => void;
+}) {
+  const plural = hiddenCount === 1 ? "" : "s";
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className={compact ? "h-8 min-h-8 rounded-lg px-2 sm:px-3" : "rounded-lg min-h-11 sm:min-h-8"}
+      onClick={onToggle}
+      title={
+        fitToWidth
+          ? `${hiddenCount} column${plural} hidden to fit the width — show all with horizontal scroll`
+          : "Hide overflow columns so the table fits without horizontal scroll"
+      }
+    >
+      {fitToWidth ? `+${hiddenCount} column${plural}` : "Fit columns"}
+    </Button>
+  );
+}
+
 function getHeaderClassName(column: StablecoinHeaderDef, variant: StablecoinTableVisualVariant): string | undefined {
   if (variant === "figmaOverview") {
     return OVERVIEW_HEADER_CLASS_NAMES[column.id] ?? column.className;
@@ -479,24 +508,15 @@ export function StablecoinTable({
   // fits the measured container, instead of forcing horizontal scroll. The
   // Columns menu keeps managing intent; the "+N columns" toolbar control
   // toggles back to the scroll-everything behavior.
-  const [fitToWidth, setFitToWidth] = usePreference<boolean>(
-    `${columnPreferenceNamespace}-fit-columns`,
-    true,
-    { decode: (raw) => raw !== false },
-  );
-  const pinnedControlsWidth = showPinnedControls ? (isFigmaOverview ? 48 : PINNED_COLUMN_MIN_WIDTH_PX) : 0;
-  const fitActive = fitToWidth && !isMobileColumns;
-  const { rendered: renderedColumns, hiddenByFit } = useMemo(() => {
-    if (!fitActive) {
-      return { rendered: [...visibleColumns], hiddenByFit: [] as ColumnId[] };
-    }
-    return fitColumnsToWidth({
-      intent: visibleColumns,
-      containerWidth: viewportWidth,
-      getColumnWidth: (id) => getColumnMinWidthPx(id, toolbarVariant),
-      fixedWidth: pinnedControlsWidth,
-    });
-  }, [fitActive, visibleColumns, viewportWidth, toolbarVariant, pinnedControlsWidth]);
+  const getColumnWidth = useCallback((id: ColumnId) => getColumnMinWidthPx(id, toolbarVariant), [toolbarVariant]);
+  const { renderedColumns, hiddenByFit, fitToWidth, setFitToWidth } = useFittedColumns({
+    namespace: columnPreferenceNamespace,
+    intent: visibleColumns,
+    enabled: !isMobileColumns,
+    containerWidth: viewportWidth,
+    getColumnWidth,
+    fixedWidth: showPinnedControls ? (isFigmaOverview ? 48 : PINNED_COLUMN_MIN_WIDTH_PX) : 0,
+  });
 
   const renderedSet = useMemo(() => new Set(renderedColumns), [renderedColumns]);
   const visibleSortColumns = useMemo(
@@ -628,19 +648,12 @@ export function StablecoinTable({
   const intentOverflows = viewportWidth > 0 && intentMinWidthPx > viewportWidth;
   const showFitControl = !isMobileColumns && (hiddenByFit.length > 0 || (!fitToWidth && intentOverflows));
   const fitControl = showFitControl ? (
-    <Button
-      variant="outline"
-      size="sm"
-      className={isFigmaOverview ? "h-8 min-h-8 rounded-lg px-2 sm:px-3" : "rounded-lg min-h-11 sm:min-h-8"}
-      onClick={() => setFitToWidth(!fitToWidth)}
-      title={
-        fitToWidth
-          ? `${hiddenByFit.length} column${hiddenByFit.length === 1 ? "" : "s"} hidden to fit the width — show all with horizontal scroll`
-          : "Hide overflow columns so the table fits without horizontal scroll"
-      }
-    >
-      {fitToWidth ? `+${hiddenByFit.length} column${hiddenByFit.length === 1 ? "" : "s"}` : "Fit columns"}
-    </Button>
+    <ColumnFitToggle
+      fitToWidth={fitToWidth}
+      hiddenCount={hiddenByFit.length}
+      compact={isFigmaOverview}
+      onToggle={() => setFitToWidth(!fitToWidth)}
+    />
   ) : null;
 
   const tableToolbar = (
