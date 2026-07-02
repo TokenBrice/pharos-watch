@@ -80,6 +80,9 @@ export function applyCuratedDetailAddress(body: string, meta: DetailMeta | undef
   const curatedAddress = getCuratedPrimaryAddress(meta);
   if (!curatedAddress) return body;
 
+  const serializedAddress = `"address":${JSON.stringify(curatedAddress)}`;
+  if (body.includes(serializedAddress)) return body;
+
   try {
     const parsed = JSON.parse(body) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return body;

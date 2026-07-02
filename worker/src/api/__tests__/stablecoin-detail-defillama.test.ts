@@ -1,5 +1,75 @@
-import { describe, expect, it } from "vitest";
-import { normalizeDefiLlamaDetailBody } from "../stablecoin-detail/defillama";
+import { describe, expect, it, vi } from "vitest";
+import { applyCuratedDetailAddress, normalizeDefiLlamaDetailBody } from "../stablecoin-detail/defillama";
+
+describe("applyCuratedDetailAddress", () => {
+  it("returns already-normalized cached bodies unchanged without parsing", () => {
+    const curatedAddress = "0x57ab1e0003f623289cd798b1824be09a793e4bec";
+    const body = JSON.stringify({
+      price: 0.99,
+      address: curatedAddress,
+      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+    const parseSpy = vi.spyOn(JSON, "parse");
+
+    try {
+      expect(
+        applyCuratedDetailAddress(body, {
+          contracts: [{ chain: "ethereum", address: curatedAddress, decimals: 18 }],
+        }),
+      ).toBe(body);
+      expect(parseSpy).not.toHaveBeenCalled();
+    } finally {
+      parseSpy.mockRestore();
+    }
+  });
+
+  it("adds the curated address to token-built cached bodies", () => {
+    const body = JSON.stringify({
+      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+
+    expect(
+      JSON.parse(
+        applyCuratedDetailAddress(body, {
+          contracts: [
+            {
+              chain: "ethereum",
+              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+              decimals: 18,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+    });
+  });
+
+  it("overrides stale cached addresses when the curated address is absent", () => {
+    const body = JSON.stringify({
+      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+
+    expect(
+      JSON.parse(
+        applyCuratedDetailAddress(body, {
+          contracts: [
+            {
+              chain: "ethereum",
+              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+              decimals: 18,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+  });
+});
 
 describe("normalizeDefiLlamaDetailBody", () => {
   it("materializes native and USD supply fields for non-USD pegs without mutating raw circulating", () => {

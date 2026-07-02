@@ -2072,6 +2072,16 @@
      "worker/src/api/stablecoin-detail.ts",
      "worker/src/api/stablecoin-detail/shared.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a serialized-address fast path to applyCuratedDetailAddress so already-normalized cached detail bodies return unchanged without JSON.parse/JSON.stringify. Token-built bodies still receive the curated address and stale cached addresses are still corrected.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/stablecoin-detail-defillama.test.ts worker/src/api/__tests__/stablecoin-detail.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/api/stablecoin-detail/defillama.ts worker/src/api/__tests__/stablecoin-detail-defillama.test.ts"
+    ]
    }
   },
   {
