@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryFunctionContext } from "@tanstack/react-query";
 import { fetchStablecoinReserves } from "@/lib/api";
 import { getPollingWindow } from "@/hooks/use-api-query";
 import { CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
@@ -54,7 +54,7 @@ export function useStablecoinReserves(
 ): StablecoinReservesQueryState {
   const { data, error, refetch, isFetching } = useQuery<StablecoinReservesResponse | null>({
     queryKey: ["stablecoin-reserves", stablecoinId],
-    queryFn: () => fetchStablecoinReserves(stablecoinId),
+    queryFn: (context: QueryFunctionContext) => fetchStablecoinReserves(stablecoinId, { signal: context.signal }),
     enabled,
     staleTime: reserveQueryStaleTime,
     refetchInterval: reserveQueryRefetchInterval,

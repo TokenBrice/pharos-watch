@@ -521,6 +521,36 @@ describe("api contract validation policy", () => {
     expect(result).toBeNull();
   });
 
+  it("fetchStablecoinReserves forwards request init abort signals through apiFetch", async () => {
+    const controller = new AbortController();
+    let capturedSignal: AbortSignal | undefined;
+    const body = {
+      stablecoinId: "iusd-infinifi",
+      mode: "live",
+      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
+      estimated: false,
+      provenance: {
+        evidenceClass: "independent",
+        sourceModel: "dynamic-mix",
+        scoringEligible: true,
+      },
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      capturedSignal = init?.signal ?? undefined;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    await expect(fetchStablecoinReserves("iusd-infinifi", { signal: controller.signal })).resolves.toEqual(body);
+
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal!.aborted).toBe(false);
+    controller.abort();
+    expect(capturedSignal!.aborted).toBe(true);
+  });
+
   it("fetchStablecoinReserves validates successful reserve responses", async () => {
     const body = {
       stablecoinId: "iusd-infinifi",

@@ -346,12 +346,15 @@ export async function apiFetchWithMeta<T>(
   return { data: validateApiPayload(path, data, schema, contractMode), meta };
 }
 
-export async function fetchStablecoinReserves(stablecoinId: string): Promise<StablecoinReservesResponse | null> {
+export async function fetchStablecoinReserves(
+  stablecoinId: string,
+  requestInit?: RequestInit,
+): Promise<StablecoinReservesResponse | null> {
   const { StablecoinReservesResponseSchema } = await import("@shared/types/live-reserves");
   return apiFetch<StablecoinReservesResponse>(
     API_PATHS.stablecoinReserves(stablecoinId),
     StablecoinReservesResponseSchema,
-    undefined,
+    requestInit,
     undefined,
     { nullOn404: true },
   );

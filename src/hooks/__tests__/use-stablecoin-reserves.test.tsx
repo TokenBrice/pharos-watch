@@ -14,11 +14,15 @@ vi.mock("@/lib/api", () => ({
   fetchStablecoinReserves: vi.fn(),
 }));
 
+import { fetchStablecoinReserves } from "@/lib/api";
 import { useStablecoinReserves, toReserveResult } from "../use-stablecoin-reserves";
 
 describe("useStablecoinReserves", () => {
+  const fetchStablecoinReservesMock = vi.mocked(fetchStablecoinReserves);
+
   beforeEach(() => {
     useQueryMock.mockReset();
+    fetchStablecoinReservesMock.mockReset();
   });
 
   it("maps the reserve payload into the public reserveResult shape", () => {
@@ -132,5 +136,20 @@ describe("useStablecoinReserves", () => {
     expect(options.refetchInterval({ state: { data: degradedLive } })).toBe(2 * 60 * 1000);
     expect(options.staleTime({ state: { data: uncertainLive } })).toBe(60 * 1000);
     expect(options.refetchInterval({ state: { data: uncertainLive } })).toBe(2 * 60 * 1000);
+  });
+
+  it("passes the TanStack query abort signal to the reserve API request", async () => {
+    fetchStablecoinReservesMock.mockResolvedValue(null);
+    useQueryMock.mockReturnValue({ data: null, error: null, refetch: vi.fn(), isFetching: false });
+
+    renderHook(() => useStablecoinReserves("usdc-circle", true));
+    const options = useQueryMock.mock.calls[0][0] as {
+      queryFn: (context: { signal: AbortSignal }) => Promise<unknown>;
+    };
+    const controller = new AbortController();
+
+    await expect(options.queryFn({ signal: controller.signal })).resolves.toBeNull();
+
+    expect(fetchStablecoinReservesMock).toHaveBeenCalledWith("usdc-circle", { signal: controller.signal });
   });
 });

@@ -3066,6 +3066,17 @@
     "description": "Every registry-backed hook routes through createApiQueryFn, which merges TanStack's per-query AbortSignal into the fetch (use-api-query.ts:86-96, including an AbortSignal.any polyfill built for exactly this). useStablecoinReserves instead passes queryFn: () => fetchStablecoinReserves(stablecoinId) (line 57), and fetchStablecoinReserves (src/lib/api.ts:349) calls apiFetch with requestInit undefined — so navigating away from a coin detail page mid-fetch leaves the reserves request running instead of aborting, and the hook is the one fetching hook exempt from the cancellation convention the rest of the file set establishes.",
     "recommendation": "Accept the QueryFunctionContext in the queryFn and thread context.signal through fetchStablecoinReserves into apiFetch's requestInit (a { signal } parameter addition). Identical responses and cache behavior; only in-flight requests for unmounted queries get cancelled, matching every other hook.",
     "estImpact": "cancels orphaned reserve fetches on navigation"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Threaded TanStack Query's abort signal from `useStablecoinReserves` through `fetchStablecoinReserves` into `apiFetch`, matching the cancellation behavior used by registered API hooks.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-stablecoin-reserves.test.tsx src/lib/__tests__/api-fetch-contracts.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/hooks/use-stablecoin-reserves.ts src/lib/api.ts src/hooks/__tests__/use-stablecoin-reserves.test.tsx src/lib/__tests__/api-fetch-contracts.test.ts"
+    ],
+    "notes": "Added hook-level and API-helper tests proving the query abort signal is forwarded to the underlying fetch."
    }
   },
   {
