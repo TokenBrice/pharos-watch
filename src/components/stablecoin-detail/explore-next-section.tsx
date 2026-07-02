@@ -111,10 +111,6 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
 
   const caseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
-  const hasBrowse = taxonomyLinks.length > 0 || trackerLinks.length > 0 || actionLinks.length > 0;
-  if (!hasPeers && !hasBrowse && !caseStudy) {
-    return null;
-  }
 
   return (
     <section
@@ -206,42 +202,34 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
         </div>
       ) : null}
 
-      {hasBrowse ? (
-        <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2 xl:grid-cols-3">
-          {taxonomyLinks.length > 0 ? (
-            <div className="space-y-2">
-              <p className="pharos-kicker">Taxonomy</p>
-              <div className="-my-1 flex flex-col">
-                {taxonomyLinks.map((link) => (
-                  <CompactLink key={link.href} href={link.href} label={link.label} />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {trackerLinks.length > 0 ? (
-            <div className="space-y-2">
-              <p className="pharos-kicker">Trackers</p>
-              <div className="-my-1 flex flex-col">
-                {trackerLinks.map((link) => (
-                  <CompactLink key={link.href} href={link.href} label={link.label} />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {actionLinks.length > 0 ? (
-            <div className="space-y-2">
-              <p className="pharos-kicker">Actions</p>
-              <div className="-my-1 flex flex-col">
-                {actionLinks.map((link) => (
-                  <CompactLink key={link.href} href={link.href} label={link.label} />
-                ))}
-              </div>
-            </div>
-          ) : null}
+      <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Taxonomy</p>
+          <div className="-my-1 flex flex-col">
+            {taxonomyLinks.map((link) => (
+              <CompactLink key={link.href} href={link.href} label={link.label} />
+            ))}
+          </div>
         </div>
-      ) : null}
+
+        <div className="space-y-2">
+          <p className="pharos-kicker">Trackers</p>
+          <div className="-my-1 flex flex-col">
+            {trackerLinks.map((link) => (
+              <CompactLink key={link.href} href={link.href} label={link.label} />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="pharos-kicker">Actions</p>
+          <div className="-my-1 flex flex-col">
+            {actionLinks.map((link) => (
+              <CompactLink key={link.href} href={link.href} label={link.label} />
+            ))}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

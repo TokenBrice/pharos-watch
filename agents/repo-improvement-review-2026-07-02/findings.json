@@ -3489,6 +3489,16 @@
     "recommendation": "Delete the unreachable early return and the three always-true length ternaries (render the columns unconditionally), or drop `hasBrowse` and keep only the `hasPeers`/`caseStudy` logic that actually varies. Behavior identical because the guarded branches are statically always taken.",
     "estImpact": "-15 LOC, clearer control flow",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unreachable ExploreNextSection browse empty-state guard and rendered the always-populated taxonomy, tracker, and action columns directly.",
+    "validation": [
+     "npm test -- src/components/stablecoin-detail/__tests__/explore-next-section.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/stablecoin-detail/explore-next-section.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
