@@ -1031,6 +1031,15 @@
     "description": "Line 407 maps ALL tracked direct-API pools through buildDirectApiPoolIdentity (needed for the exact-key reservation at line 464), then line 420 maps the eligible subset through buildDirectApiPoolIdentity again. Identity construction does per-token normalization, sorting, and multi-part key joins, so thousands of pools get that work duplicated each run; the eligible pools are a subset whose identities were already built.",
     "recommendation": "Build identities once alongside the eligibility filter (filter [pool, identity] tuples together) and reuse them for both the dedup loop and the exact-key reservation. Deterministic function of the pool, so results are identical.",
     "estImpact": "halves identity-building work in the direct-API merge"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Built direct API pool identities once per tracked pool and carried them through the eligibility filter. The same identity now feeds eligible-pool dedupe and exact-key reservation for sub-threshold direct API pools.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/orchestrator-phases-direct-api.test.ts worker/src/cron/dex-liquidity/__tests__/orchestrator-phases-direct-api-fetch.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

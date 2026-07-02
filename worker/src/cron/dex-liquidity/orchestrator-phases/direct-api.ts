@@ -404,8 +404,11 @@ export async function integrateDirectApiLiquidityPhase(params: {
 
   hydrateDirectApiPoolMetadata(trackedDirectApiPools, params.contractMetaByChainAddress);
 
-  const allDirectApiIdentities = trackedDirectApiPools.map(buildDirectApiPoolIdentity);
-  const eligibleDirectApiPools = trackedDirectApiPools.filter((pool) => {
+  const trackedDirectApiPoolEntries = trackedDirectApiPools.map((pool) => ({
+    pool,
+    identity: buildDirectApiPoolIdentity(pool),
+  }));
+  const eligibleDirectApiPoolEntries = trackedDirectApiPoolEntries.filter(({ pool }) => {
     const eligible = isEligibleDirectApiPool(pool);
     if (eligible) return true;
     if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) {
@@ -417,13 +420,11 @@ export async function integrateDirectApiLiquidityPhase(params: {
     }
     return false;
   });
-  const eligibleDirectApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
+  const eligibleDirectApiIdentities = eligibleDirectApiPoolEntries.map((entry) => entry.identity);
   const directApiIdentityCounts = countPoolIdentityKeys(eligibleDirectApiIdentities);
 
   const retainedDirectApiPools: DexApiPool[] = [];
-  for (let index = 0; index < eligibleDirectApiPools.length; index++) {
-    const pool = eligibleDirectApiPools[index]!;
-    const identity = eligibleDirectApiIdentities[index]!;
+  for (const { pool, identity } of eligibleDirectApiPoolEntries) {
     const dedupReason = getIdentityDedupReason(
       identity,
       params.knownPoolIndex,
@@ -461,7 +462,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
   // different TVL semantics. Keep every authoritative direct-API exact pool id
   // reserved for later exact-address dedupe, even if the direct row itself is
   // too small to contribute to scoring.
-  for (const identity of allDirectApiIdentities) {
+  for (const { identity } of trackedDirectApiPoolEntries) {
     if (identity.exactPoolKey) {
       params.knownPoolIndex.exactKeys.add(identity.exactPoolKey);
     }
