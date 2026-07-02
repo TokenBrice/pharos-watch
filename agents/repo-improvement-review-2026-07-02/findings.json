@@ -646,6 +646,18 @@
      "worker/src/cron/dex-liquidity/fetch-primary.ts",
      "scripts/ci/check-unused-code.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the uncalled CoinGecko and GeckoTerminal in-cron crawler fetchers, their private crawl-token/address builders, the orphaned fetch-primary chain-address export, and the unused-code allowlist entries that kept those dead exports alive. Removed the now-orphaned CoinGecko onchain chain-map re-export; live merge helpers and staged discovery crawlers remain intact.",
+    "validation": [
+     "! rg -n \"fetchCgPools|fetchGtPools|buildCrawlTokens|buildChainAddresses|ProviderChainAddress\" worker/src shared src scripts",
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/fetch-crawlers.test.ts worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts",
+     "npm run check:unused-code",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/dex-liquidity/fetch-crawlers.ts worker/src/cron/dex-liquidity/fetch-primary.ts worker/src/lib/coingecko-onchain.ts scripts/ci/check-unused-code.mjs"
+    ]
    }
   },
   {

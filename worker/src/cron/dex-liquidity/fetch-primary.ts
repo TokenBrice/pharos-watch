@@ -1,4 +1,3 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
@@ -15,7 +14,7 @@ import {
   CURVE_API_BASE, CURVE_CHAINS,
 } from "./constants";
 import {
-  normalizeProtocol, getTrackedContracts, classifyPoolType, isCryptoSwap,
+  normalizeProtocol, classifyPoolType, isCryptoSwap,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -432,28 +431,4 @@ export function buildKnownPoolAddresses(
     `${derivedCount} derived DL keys`,
   );
   return known;
-}
-
-export interface ProviderChainAddress {
-  chain: string;
-  address: string;
-  stablecoinId: string;
-}
-
-/** Build provider chain → tracked token addresses map from canonical chain ids. */
-export function buildChainAddresses(chainMap: Record<string, string>): Map<string, ProviderChainAddress[]> {
-  const result = new Map<string, ProviderChainAddress[]>();
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const c of getTrackedContracts(meta)) {
-      const canonicalChain = c.chain.toLowerCase();
-      const mappedChain = chainMap[canonicalChain];
-      if (!mappedChain) continue;
-      const list = result.get(mappedChain) ?? [];
-      // Keep original case — Solana/Sui addresses are case-sensitive base58/base64
-      // EVM addresses are case-insensitive so lowercasing at comparison time is safe.
-      list.push({ chain: canonicalChain, address: c.address, stablecoinId: meta.id });
-      result.set(mappedChain, list);
-    }
-  }
-  return result;
 }
