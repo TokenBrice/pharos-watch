@@ -26,17 +26,22 @@ describe("setup-workspace tooling cache", () => {
     expect(cacheStep).toContain("worker/*.tsbuildinfo");
   });
 
-  it("uses a fresh primary key per job run so restored tooling caches can be saved after builds", () => {
+  it("saves fresh tooling caches only from jobs that opt in via tooling-cache-save", () => {
     const cacheStep = extractStepByNeedle("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae");
 
     expect(cacheStep).toContain("${{ github.job }}");
-    expect(cacheStep).toContain("${{ github.run_id }}");
-    expect(cacheStep).toContain("${{ github.run_attempt }}");
+    // Saving jobs get a per-run unique key (post-job save always uploads);
+    // restore-only jobs get a deterministic key whose exact hit suppresses the
+    // save, so every shard/coverage job stops churning the 10 GB cache quota.
+    expect(cacheStep).toContain(
+      "${{ inputs.tooling-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}",
+    );
+    expect(action).toContain("tooling-cache-save:");
 
     const restoreKeys = cacheStep.slice(cacheStep.indexOf("restore-keys:"));
     expect(restoreKeys).toContain("${{ github.job }}-");
-    expect(restoreKeys).not.toContain("${{ github.run_id }}");
-    expect(restoreKeys).not.toContain("${{ github.run_attempt }}");
+    expect(restoreKeys).not.toContain("github.run_id");
+    expect(restoreKeys).not.toContain("github.run_attempt");
   });
 
   it("normalizes numeric Node inputs before keying the tooling cache", () => {

@@ -327,15 +327,15 @@ jobs:
         run: exit 1
 
   pages-release:
+    # Deliberately NOT gated on the validate job: the release job's own
+    # "Wait for validation gate" step (wait_for_validate_job) blocks before
+    # anything publishes, so build/chromium/pre-publish checks (~10 min) can
+    # overlap validate (~4 min) instead of serializing behind it. A validate
+    # failure still stops the deploy at that internal gate; the only cost is a
+    # discarded build.
     needs:
       - detect-changes
-      - validate
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && needs.detect-changes.outputs.pages_changed == 'true'
-      }}
+    if: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
     uses: ./.github/workflows/pages-release.yml
     with:
       pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}

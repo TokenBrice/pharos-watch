@@ -83,6 +83,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           tooling-cache: "true"
+          tooling-cache-save: "true"
       - name: Install Chromium and fetch deploy data concurrently
         run: |
           set +e
@@ -95,7 +96,13 @@ jobs:
           npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json > /tmp/sync-depeg-events.log 2>&1 &
           depeg_pid=$!
 
-          npx --no-install playwright install --with-deps chromium
+          # --with-deps deliberately omitted: the Chromium binary restores from
+          # the tooling cache and GitHub's Ubuntu runners already carry the
+          # browser system libraries, so the apt pass was ~60-90s of deploy
+          # critical path for nothing. If a runner-image bump ever drops a lib,
+          # this fails loudly at browser launch before anything publishes —
+          # re-add --with-deps then.
+          npx --no-install playwright install chromium
           chromium_status=$?
 
           wait "$digests_pid"
@@ -116,11 +123,16 @@ jobs:
         run: npm run generate:public-datasets
       - run: npm run build
         env:
-          # OG images are committed, weekly-refreshed (og-refresh.yml), and byte-verified
-          # fresh by check:generated-artifacts in the parallel validate-prebuild gate that
-          # blocks deploy. Skipping their Firefox render here removes them from the deploy
-          # critical path without changing output. Also drops the Firefox install need.
-          GENERATED_ARTIFACTS_SKIP: og-editorial,og-learn,og-case-studies
+          # Every id here is committed and byte-verified fresh by
+          # check:generated-artifacts in the validate-prebuild gate that blocks
+          # this deploy (via the pre-publish validation wait), so regenerating
+          # them inside the build is no-op work on the deploy critical path.
+          # depeg-event-search-data and llms-txt are deliberately NOT skipped:
+          # they consume the freshly synced data/depeg-events.json + digests,
+          # so their in-build regen intentionally ships fresher-than-committed
+          # output. public-datasets self-preserves its API-backed mirrors in
+          # offline mode, so skipping it only removes a validation no-op.
+          GENERATED_ARTIFACTS_SKIP: agent-code-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""

@@ -31,9 +31,13 @@ import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
+  NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV,
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
-import { buildGeneratedArtifactExecutionBatches } from "../maintenance/run-generated-artifacts.mjs";
+import {
+  buildGeneratedArtifactExecutionUnits,
+  GENERATED_ARTIFACTS_MAX_PARALLEL,
+} from "../maintenance/run-generated-artifacts.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -330,12 +334,13 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
       "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     ]);
-    expect(buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands))).toEqual(
-      expectedCommands.map((cmd) => [[cmd]]),
+    expect(buildGeneratedArtifactExecutionUnits().map((unit) => unit.commands)).toEqual(
+      expectedCommands.map((cmd) => [cmd]),
     );
-    expect(
-      buildGeneratedArtifactExecutionBatches({ check: true }).map((batch) => batch.map((unit) => unit.commands)),
-    ).toEqual(expectedCheckCommands.map((cmd) => [[cmd]]));
+    expect(buildGeneratedArtifactExecutionUnits({ check: true }).map((unit) => unit.commands)).toEqual(
+      expectedCheckCommands.map((cmd) => [cmd]),
+    );
+    expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBeGreaterThan(1);
   });
 
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {
@@ -361,13 +366,22 @@ describe("validate-ci parity", () => {
       "run",
       "--coverage",
       "--coverage.thresholds.lines=0",
+      ...CRITICAL_FILES.map((file) => `--coverage.include=${file}`),
       ...CRITICAL_TEST_FILES,
     ]);
-    expect(buildNoncriticalTestArgs(["--reporter=dot"])).toEqual([
-      "run",
-      ...CRITICAL_TEST_FILES.flatMap((file) => ["--exclude", file]),
-      "--reporter=dot",
-    ]);
+    expect(buildNoncriticalTestArgs(["--reporter=dot"])).toEqual(["run", "--reporter=dot"]);
+
+    // The critical-file exclusion rides vitest.config.ts (project include
+    // lists ignore CLI --exclude), so pin the env contract on both sides.
+    const noncriticalRunner = readFileSync(
+      resolve(process.cwd(), "scripts/maintenance/run-noncritical-tests.mjs"),
+      "utf8",
+    );
+    const vitestConfig = readFileSync(resolve(process.cwd(), "vitest.config.ts"), "utf8");
+    expect(NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV).toBe("VITEST_EXCLUDE_CRITICAL_TESTS");
+    expect(noncriticalRunner).toContain("NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV");
+    expect(vitestConfig).toContain("NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV");
+    expect(vitestConfig).toContain("criticalTestExcludes");
   });
 
   it("keeps the expanded validate contract model available for local planning", () => {
@@ -555,7 +569,9 @@ describe("validate-ci parity", () => {
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("needs:");
     expect(pagesReleaseJob).toContain("- detect-changes");
-    expect(pagesReleaseJob).toContain("- validate");
+    // No needs edge on validate: the release overlaps validation and is gated
+    // before publish by its internal wait_for_validate_job step instead.
+    expect(pagesReleaseJob).not.toContain("- validate");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
     expect(pagesReleaseJob).toContain(

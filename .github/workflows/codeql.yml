@@ -7,10 +7,15 @@ on:
   schedule:
     - cron: "0 6 * * 1"
 
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   codeql-analyze:
     name: CodeQL analyze
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
     steps:

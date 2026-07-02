@@ -14,6 +14,14 @@ inputs:
     description: Whether to restore the shared tooling cache.
     required: false
     default: "false"
+  tooling-cache-save:
+    description: >-
+      Whether this job should also upload a fresh tooling cache at job end.
+      Only jobs that produce new tooling state (builds, lint/typecheck caches,
+      browser installs) should save; restore-only jobs use a deterministic key
+      so the post-job save is skipped on the exact hit.
+    required: false
+    default: "false"
   install-deps:
     description: Whether to run npm ci after setup.
     required: false
@@ -67,7 +75,12 @@ runs:
           ~/.cache/ms-playwright
           *.tsbuildinfo
           worker/*.tsbuildinfo
-        key: tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+        # Saving jobs get a per-run unique key so the post-job save always
+        # uploads fresh state; restore-only jobs get a deterministic key whose
+        # exact hit suppresses the save, keeping ~6 near-identical multi-hundred
+        # MB uploads per run from churning the repo's 10 GB cache (and LRU-
+        # evicting the entries the restore-keys below depend on).
+        key: tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}${{ inputs.tooling-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
         restore-keys: |
           tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
           tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
