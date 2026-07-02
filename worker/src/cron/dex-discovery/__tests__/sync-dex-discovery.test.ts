@@ -31,7 +31,6 @@ vi.mock("../crawl-sources", () => ({
       { poolId: "ethereum:0xpool1" },
       { poolId: "base:0xpool2" },
     ],
-    priceObs: [],
     unresolvedChains: [],
   })),
 }));
@@ -116,7 +115,6 @@ describe("syncDexDiscovery", () => {
         makeStagedPool("ethereum:0xpool1"),
         makeStagedPool("base:0xpool2"),
       ],
-      priceObs: [],
       unresolvedChains: [],
     });
   });
@@ -157,7 +155,6 @@ describe("syncDexDiscovery", () => {
       nowMs += DEX_DISCOVERY_RUN_BUDGET_MS + 1_000;
       return {
         pools: [makeStagedPool("ethereum:0xpool1")],
-        priceObs: [],
         unresolvedChains: [],
       };
     });

@@ -131,7 +131,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]?.poolId).toBe("ethereum:0xgoodpool");
-    expect(result.priceObs).toHaveLength(1);
+    expect("priceObs" in result).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[dex-discovery] dexscreener malformed pair for ethereum:0xAbC"),
       expect.objectContaining({
@@ -156,7 +156,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({ pools: [], priceObs: [], unresolvedChains: [] });
+    expect(result).toEqual({ pools: [], unresolvedChains: [] });
     expect(warnSpy).toHaveBeenCalledWith("[dex-discovery] dexscreener error for ethereum:0xabc", expect.any(Error));
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
@@ -184,7 +184,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({ pools: [], priceObs: [], unresolvedChains: [] });
+    expect(result).toEqual({ pools: [], unresolvedChains: [] });
     expect(recordOutcome).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
@@ -245,13 +245,6 @@ describe("crawlCoin DexScreener hardening", () => {
       priceUsd: 1.0002,
       lockedLiqPct: 25,
     });
-    expect(result.priceObs).toEqual([{
-      stablecoinId: "usdc-circle",
-      price: 1.0002,
-      tvl: 220000,
-      chain: "ethereum",
-      protocol: "uniswap-v3",
-    }]);
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.CG_ONCHAIN,
@@ -341,7 +334,6 @@ describe("crawlCoin DexScreener hardening", () => {
     );
 
     expect(result.pools).toEqual([]);
-    expect(result.priceObs).toEqual([]);
   });
 
   it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
@@ -420,7 +412,6 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(result).toEqual({
       pools: [],
-      priceObs: [],
       unresolvedChains: [],
     });
     expect(events).toEqual([
@@ -524,13 +515,6 @@ describe("crawlCoin DexScreener hardening", () => {
       }),
       discoveredAt: expect.any(Number),
       refreshedAt: expect.any(Number),
-    }]);
-    expect(result.priceObs).toEqual([{
-      stablecoinId: "usdc-circle",
-      price: (1.001 * 20_000 + 0.999 * 10_000) / 30_000,
-      tvl: 60_000,
-      chain: "orderbook",
-      protocol: "cg-ticker-kinesis",
     }]);
     expect(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
   });

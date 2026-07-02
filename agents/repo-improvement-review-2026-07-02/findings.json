@@ -974,6 +974,15 @@
      "worker/src/cron/dex-discovery/crawl-sources.ts",
      "worker/src/cron/dex-discovery/staged-pool.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the redundant post-persistence knownPoolIds re-add loop from DEX discovery and narrowed crawlCoin results by dropping the unused priceObs return field while preserving the internal ticker-stage gate.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts worker/src/cron/dex-discovery/__tests__/sync-dex-discovery.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

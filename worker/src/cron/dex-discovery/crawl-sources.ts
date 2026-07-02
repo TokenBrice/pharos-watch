@@ -8,18 +8,11 @@ import {
   selectDexScreenerTargets,
 } from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
-import { createCrawlStageContext } from "./staged-pool";
+import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { StagedPool } from "./types";
 
 export interface CrawlResult {
   pools: StagedPool[];
-  priceObs: Array<{
-    stablecoinId: string;
-    price: number;
-    tvl: number;
-    chain: string;
-    protocol: string;
-  }>;
   unresolvedChains: string[];
 }
 
@@ -34,7 +27,7 @@ export async function crawlCoin(
   references?: PriceValidationReferences,
 ): Promise<CrawlResult> {
   const pools: StagedPool[] = [];
-  const priceObs: CrawlResult["priceObs"] = [];
+  const priceObs: StagedPriceObservation[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
   const stablecoinMeta = TRACKED_META_BY_ID.get(stablecoinId);
   const context = createCrawlStageContext({
@@ -55,7 +48,7 @@ export async function crawlCoin(
     context,
   });
   if (coinGeckoStage.stoppedEarly) {
-    return { pools, priceObs, unresolvedChains: coinGeckoStage.unresolvedChains };
+    return { pools, unresolvedChains: coinGeckoStage.unresolvedChains };
   }
 
   await crawlGeckoTerminalPoolsStage({
@@ -73,7 +66,7 @@ export async function crawlCoin(
     context,
   });
   if (dexScreenerStage.stoppedEarly) {
-    return { pools, priceObs, unresolvedChains: coinGeckoStage.unresolvedChains };
+    return { pools, unresolvedChains: coinGeckoStage.unresolvedChains };
   }
 
   await crawlCoinGeckoTickersStage({
@@ -84,5 +77,5 @@ export async function crawlCoin(
     context,
   });
 
-  return { pools, priceObs, unresolvedChains: coinGeckoStage.unresolvedChains };
+  return { pools, unresolvedChains: coinGeckoStage.unresolvedChains };
 }
