@@ -8,8 +8,7 @@ import { resolveCoinContractAddress } from "./evm";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -228,61 +227,31 @@ export async function fetchCapVaultReserves(
   }
 
   const assetConfigs = normalizeAssetConfigs(config);
-  const callBase = {
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
-  };
-  const assetsRaw = await fetchOnchainRawCall({
-    ...callBase,
-    contract: contractAddress,
-    data: ASSETS_SELECTOR,
   });
+  const assetsRaw = await onchain.raw(contractAddress, ASSETS_SELECTOR);
   const assetAddresses = decodeAddressArrayWord(assetsRaw) ?? [];
   if (assetAddresses.length === 0) {
     throw new Error(`${ADAPTER_KEY} assets() returned no assets for ${coin.id}`);
   }
 
-  const tokenSupplyRaw = await fetchOnchainUint256({
-    ...callBase,
-    contract: contractAddress,
-    data: TOTAL_SUPPLY_SELECTOR,
-  });
+  const tokenSupplyRaw = await onchain.uint256(contractAddress, TOTAL_SUPPLY_SELECTOR);
   const supplyUsd = tokenSupplyRaw != null ? decimalNumberFromBigInt(tokenSupplyRaw, 18) : null;
 
   const assetStates = await Promise.all(assetAddresses.map(async (address) => {
     const encodedAddress = encodeAddress(address);
     const assetMetadataReads = Promise.all([
-      fetchOnchainUint256({
-        ...callBase,
-        contract: address,
-        data: DECIMALS_SELECTOR,
-      }),
+      onchain.uint256(address, DECIMALS_SELECTOR),
     ]);
     const vaultPositionReads = Promise.all([
-      fetchOnchainUint256({
-        ...callBase,
-        contract: contractAddress,
-        data: `${TOTAL_SUPPLIES_SELECTOR}${encodedAddress}`,
-      }),
-      fetchOnchainUint256({
-        ...callBase,
-        contract: contractAddress,
-        data: `${TOTAL_BORROWS_SELECTOR}${encodedAddress}`,
-      }),
-      fetchOnchainUint256({
-        ...callBase,
-        contract: contractAddress,
-        data: `${AVAILABLE_BALANCE_SELECTOR}${encodedAddress}`,
-      }),
-      fetchOnchainRawCall({
-        ...callBase,
-        contract: contractAddress,
-        data: `${PAUSED_SELECTOR}${encodedAddress}`,
-      }),
+      onchain.uint256(contractAddress, `${TOTAL_SUPPLIES_SELECTOR}${encodedAddress}`),
+      onchain.uint256(contractAddress, `${TOTAL_BORROWS_SELECTOR}${encodedAddress}`),
+      onchain.uint256(contractAddress, `${AVAILABLE_BALANCE_SELECTOR}${encodedAddress}`),
+      onchain.raw(contractAddress, `${PAUSED_SELECTOR}${encodedAddress}`),
     ]);
     const [[decimalsRaw], [totalSuppliesRaw, totalBorrowsRaw, availableRaw, pausedRaw]] = await Promise.all([
       assetMetadataReads,

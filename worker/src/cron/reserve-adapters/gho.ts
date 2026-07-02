@@ -1,5 +1,5 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -7,9 +7,9 @@ import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
 import {
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
+  type OnchainCallers,
   reserveDegradedWarning,
   reserveInfoWarning,
   requireOnchainInput,
@@ -62,14 +62,6 @@ interface GhoParams {
   gsmModules: GhoTrackedModuleConfig[];
   ghoTokenAddress?: string;
 }
-
-type OnchainGhoInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
-type GhoCallBase = Pick<OnchainGhoInput, "rpcMode" | "chain"> & {
-  signal: AbortSignal;
-  ctx?: AdapterContext;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-};
 
 export interface GhoTrackedModuleConfig {
   address: string;
@@ -178,15 +170,11 @@ function readParams(config: LiveReservesConfig): GhoParams {
 }
 
 async function loadFacilitators(
-  callBase: GhoCallBase,
+  onchain: OnchainCallers,
   ghoToken: string,
 ): Promise<{ facilitators: GhoFacilitatorSnapshot[]; warnings: LiveReserveWarning[] }> {
   const warnings: LiveReserveWarning[] = [];
-  const facilitatorListRaw = await fetchOnchainRawCall({
-    ...callBase,
-    contract: ghoToken,
-    data: GET_FACILITATORS_LIST_SELECTOR,
-  });
+  const facilitatorListRaw = await onchain.raw(ghoToken, GET_FACILITATORS_LIST_SELECTOR);
   if (!facilitatorListRaw) {
     return {
       facilitators: [],
@@ -217,11 +205,7 @@ async function loadFacilitators(
     facilitatorAddresses,
     FACILITATOR_READ_CONCURRENCY,
     async (address) => {
-      const facilitatorRaw = await fetchOnchainRawCall({
-        ...callBase,
-        contract: ghoToken,
-        data: GET_FACILITATOR_SELECTOR + encodeAddress(address),
-      });
+      const facilitatorRaw = await onchain.raw(ghoToken, GET_FACILITATOR_SELECTOR + encodeAddress(address));
       if (!facilitatorRaw) {
         return {
           facilitator: null,
@@ -264,20 +248,16 @@ async function loadFacilitators(
 
 async function loadTrackedModule(
   trackedModule: GhoTrackedModuleConfig,
-  callBase: GhoCallBase,
+  onchain: OnchainCallers,
 ): Promise<{ module: GhoTrackedModuleSnapshot | null; warnings: LiveReserveWarning[] }> {
   const warnings: LiveReserveWarning[] = [];
-  const moduleCallOpts = {
-    ...callBase,
-    contract: trackedModule.address,
-  };
 
   const [used, currentBackingRaw, isFrozenRaw, isSeizedRaw, feeStrategyRaw] = await Promise.all([
-    fetchOnchainUint256({ ...moduleCallOpts, data: GET_USED_SELECTOR }),
-    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_CURRENT_BACKING_SELECTOR }),
-    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_IS_FROZEN_SELECTOR }),
-    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_IS_SEIZED_SELECTOR }),
-    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_FEE_STRATEGY_SELECTOR }),
+    onchain.uint256(trackedModule.address, GET_USED_SELECTOR),
+    onchain.raw(trackedModule.address, GET_CURRENT_BACKING_SELECTOR),
+    onchain.raw(trackedModule.address, GET_IS_FROZEN_SELECTOR),
+    onchain.raw(trackedModule.address, GET_IS_SEIZED_SELECTOR),
+    onchain.raw(trackedModule.address, GET_FEE_STRATEGY_SELECTOR),
   ]);
 
   if (used == null || !currentBackingRaw) {
@@ -318,11 +298,7 @@ async function loadTrackedModule(
   const feeStrategyAddress =
     feeStrategyRaw && feeStrategyRaw !== "0x" ? parseEvmAddressResult(feeStrategyRaw as `0x${string}`) : null;
   if (feeStrategyAddress && feeStrategyAddress !== ZERO_ADDRESS) {
-    const buyFee = await fetchOnchainUint256({
-      ...callBase,
-      contract: feeStrategyAddress,
-      data: GET_BUY_FEE_SELECTOR + encodeUint256(ONE_GHO),
-    });
+    const buyFee = await onchain.uint256(feeStrategyAddress, GET_BUY_FEE_SELECTOR + encodeUint256(ONE_GHO));
     if (buyFee != null) {
       buyFeeBps = Number((buyFee * 10_000n) / ONE_GHO);
     }
@@ -579,27 +555,21 @@ export async function fetchGhoReserves(
 
   const params = readParams(config);
   const ghoToken = params.ghoTokenAddress ?? GHO_TOKEN;
-  const callBase = {
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
-  };
-
-  const totalSupply = await fetchOnchainUint256({
-    ...callBase,
-    contract: ghoToken,
-    data: TOTAL_SUPPLY_SELECTOR,
   });
+
+  const totalSupply = await onchain.uint256(ghoToken, TOTAL_SUPPLY_SELECTOR);
   if (totalSupply == null) {
     throw new Error("gho: failed to read totalSupply()");
   }
 
   const [{ facilitators, warnings: facilitatorWarnings }, trackedResults] = await Promise.all([
-    loadFacilitators(callBase, ghoToken),
-    Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, callBase))),
+    loadFacilitators(onchain, ghoToken),
+    Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, onchain))),
   ]);
 
   const trackedModules = trackedResults.flatMap((result) => (result.module ? [result.module] : []));

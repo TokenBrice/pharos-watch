@@ -85,6 +85,17 @@
      "worker/src/cron/reserve-adapters/erc4626.ts",
      "worker/src/cron/reserve-adapters/gho.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added `makeOnchainCallers` to bind shared EVM call options once, exported it through reserve helpers, rewired the ERC-4626 raw caller factory, and converted the prioritized repeated-call clusters in M0 wrapper, Liquity native, Chainlink NAV, Cap vault, Liquity V2 branches, and GHO adapters. Added a helper regression test and updated affected adapter mocks.",
+    "validation": [
+     "npx vitest run worker/src/cron/reserve-adapters/__tests__/onchain.test.ts worker/src/cron/reserve-adapters/__tests__/m0-wrapper-underlying.test.ts worker/src/cron/reserve-adapters/__tests__/liquity-native-active-pool.test.ts worker/src/cron/reserve-adapters/__tests__/chainlink-nav.test.ts worker/src/cron/reserve-adapters/__tests__/cap-vault.test.ts worker/src/cron/reserve-adapters/__tests__/liquity-v2-branches.test.ts worker/src/cron/reserve-adapters/__tests__/gho.test.ts worker/src/cron/reserve-adapters/__tests__/erc4626-single-asset.test.ts",
+     "npx vitest run worker/src/cron/__tests__/reserve-adapters.test.ts worker/src/cron/reserve-adapters/__tests__/registry.test.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Converted the highest-repeat clusters called out in the finding while leaving unrelated remaining adapters for follow-up findings; no fetch order, retry, or decode behavior was changed."
    }
   },
   {

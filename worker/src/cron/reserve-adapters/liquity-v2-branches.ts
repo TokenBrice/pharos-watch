@@ -8,8 +8,8 @@ import {
   decimalNumberFromBigInt,
   fetchErc20Balance,
   fetchOnchainRateBps,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
+  type OnchainCallers,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -80,63 +80,19 @@ function computeErc4626AssetsFromShares(
 }
 
 async function tryAdaptErc4626ShareEntry(
-  input: ReturnType<typeof requireOnchainInput>,
+  onchain: OnchainCallers,
   entry: BranchBalanceEntry,
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-  params: LiquityV2BranchParams,
-  timeoutMs: number,
 ): Promise<BranchBalanceEntry> {
   if (entry.balanceRaw == null || entry.balanceRaw <= 0n) return entry;
 
-  const assetRaw = await fetchOnchainRawCall({
-    contract: entry.branch.token.address,
-    data: ERC4626_ASSET_SELECTOR,
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-    timeoutMs,
-  });
+  const assetRaw = await onchain.raw(entry.branch.token.address, ERC4626_ASSET_SELECTOR);
   const assetAddress = decodeAddressWord(assetRaw);
   if (!assetAddress) return entry;
 
   const [totalAssetsRaw, totalSupplyRaw, decimalsRaw] = await Promise.all([
-    fetchOnchainUint256({
-      contract: entry.branch.token.address,
-      data: ERC4626_TOTAL_ASSETS_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: entry.branch.token.address,
-      data: TOTAL_SUPPLY_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
-    fetchOnchainRawCall({
-      contract: assetAddress,
-      data: DECIMALS_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
+    onchain.uint256(entry.branch.token.address, ERC4626_TOTAL_ASSETS_SELECTOR),
+    onchain.uint256(entry.branch.token.address, TOTAL_SUPPLY_SELECTOR),
+    onchain.raw(assetAddress, DECIMALS_SELECTOR),
   ]);
   if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) {
     return entry;
@@ -163,7 +119,7 @@ async function fetchLiquityV2BranchBalances(
   params: LiquityV2BranchParams,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
-  timeoutMs: number,
+  onchain: OnchainCallers,
 ): Promise<BranchBalanceEntry[]> {
   const shareEntries = await Promise.all(
     params.branches.map(async (branch) => {
@@ -181,19 +137,15 @@ async function fetchLiquityV2BranchBalances(
   );
 
   return Promise.all(
-    shareEntries.map((entry) => tryAdaptErc4626ShareEntry(input, entry, signal, ctx, params, timeoutMs)),
+    shareEntries.map((entry) => tryAdaptErc4626ShareEntry(onchain, entry)),
   );
 }
 
 async function fetchBranchProtocolPriceMap(
-  input: ReturnType<typeof requireOnchainInput>,
+  onchain: OnchainCallers,
   balances: BranchBalanceEntry[],
   existingPriceMap: Map<string, number>,
-  signal: AbortSignal,
   warnings: LiveReserveWarning[],
-  ctx: AdapterContext | undefined,
-  params: LiquityV2BranchParams,
-  timeoutMs: number,
 ): Promise<Map<string, number>> {
   const missingPricedBranches = balances.filter(
     ({ branch, balanceRaw }) => balanceRaw != null
@@ -205,17 +157,7 @@ async function fetchBranchProtocolPriceMap(
 
   const protocolPriceMap = new Map<string, number>();
   await Promise.all(missingPricedBranches.map(async ({ branch }) => {
-    const priceRaw = await fetchOnchainUint256({
-      contract: branch.holder,
-      data: BRANCH_PRICE_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    });
+    const priceRaw = await onchain.uint256(branch.holder, BRANCH_PRICE_SELECTOR);
     if (priceRaw == null || priceRaw <= 0n) return;
     const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
     if (Number.isFinite(priceUsd) && priceUsd > 0) {
@@ -347,9 +289,16 @@ export async function fetchLiquityV2BranchReserves(
   const shutdownSelector = params.shutdownSelector ?? DEFAULT_SHUTDOWN_SELECTOR;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
   const timeoutMs = 12_000;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
 
   const [balances, redemptionFeeBps] = await Promise.all([
-    fetchLiquityV2BranchBalances(input, params, signal, ctx, timeoutMs),
+    fetchLiquityV2BranchBalances(input, params, signal, ctx, onchain),
     probeOptionalRedemptionRateBps(
       input,
       params.redemptionRateProbe,
@@ -362,28 +311,8 @@ export async function fetchLiquityV2BranchReserves(
   const debts = await Promise.all(
     balances.map(async (entry) => {
       const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
-        fetchOnchainUint256({
-          contract: entry.branch.holder,
-          data: debtSelector,
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          timeoutMs,
-        }),
-        fetchOnchainRawCall({
-          contract: entry.branch.holder,
-          data: shutdownSelector,
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          timeoutMs,
-        }),
+        onchain.uint256(entry.branch.holder, debtSelector),
+        onchain.raw(entry.branch.holder, shutdownSelector),
         params.redemptionRateProbe
           ? Promise.resolve(null)
           : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
@@ -407,14 +336,10 @@ export async function fetchLiquityV2BranchReserves(
   const priceMapWarnings: LiveReserveWarning[] = [];
   const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
   const protocolPriceMap = await fetchBranchProtocolPriceMap(
-    input,
+    onchain,
     balances,
     priceMap,
-    signal,
     priceMapWarnings,
-    ctx,
-    params,
-    timeoutMs,
   );
   for (const [name, price] of protocolPriceMap) {
     if (!priceMap.has(name)) {

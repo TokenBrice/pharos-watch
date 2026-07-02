@@ -9,10 +9,41 @@ import {
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainUint256 = vi.fn();
+  const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
-    fetchOnchainUint256: vi.fn(),
-    fetchOnchainRawCall: vi.fn(),
+    fetchOnchainUint256,
+    fetchOnchainRawCall,
+    makeOnchainCallers: vi.fn((
+      input: { chain?: string; rpcMode?: unknown },
+      options: { signal: AbortSignal; ctx?: unknown; rpcUrl?: string; fallbackRpcUrl?: string; timeoutMs?: number },
+    ) => ({
+      uint256: (contract: string, data: string) =>
+        fetchOnchainUint256({
+          contract,
+          data,
+          signal: options.signal,
+          ctx: options.ctx,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+          rpcUrl: options.rpcUrl,
+          fallbackRpcUrl: options.fallbackRpcUrl,
+          timeoutMs: options.timeoutMs,
+        }),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          contract,
+          data,
+          signal: options.signal,
+          ctx: options.ctx,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+          rpcUrl: options.rpcUrl,
+          fallbackRpcUrl: options.fallbackRpcUrl,
+          timeoutMs: options.timeoutMs,
+        }),
+    })),
   };
 });
 

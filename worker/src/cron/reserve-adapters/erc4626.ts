@@ -2,7 +2,7 @@ import type { LiveReserveInput, LiveReserveWarning } from "@shared/types/live-re
 import { encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext } from "./types";
 import {
-  fetchOnchainRawCall,
+  makeOnchainCallers,
   reserveDegradedWarning,
 } from "./helpers";
 
@@ -26,18 +26,11 @@ interface ContractRawCallerOptions {
 }
 
 export function makeContractRawCaller(options: ContractRawCallerOptions): ContractRawCaller {
-  return (data: string) =>
-    fetchOnchainRawCall({
-      contract: options.contractAddress,
-      data,
-      signal: options.signal,
-      ctx: options.ctx,
-      rpcMode: options.rpcMode,
-      chain: options.chain,
-      rpcUrl: options.rpcUrl,
-      fallbackRpcUrl: options.fallbackRpcUrl,
-      timeoutMs: options.timeoutMs,
-    });
+  const { raw } = makeOnchainCallers(
+    { chain: options.chain, rpcMode: options.rpcMode },
+    options,
+  );
+  return (data: string) => raw(options.contractAddress, data);
 }
 
 interface Erc4626CollateralizationRatioOptions {

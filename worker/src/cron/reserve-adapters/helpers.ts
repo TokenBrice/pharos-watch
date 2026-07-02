@@ -60,8 +60,12 @@ export {
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  makeOnchainCallers,
+  type OnchainCallers,
   type OnchainMulticall3Call,
+  type OnchainRawCaller,
   type OnchainRateProbe,
+  type OnchainUint256Caller,
 } from "./onchain";
 export { probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";

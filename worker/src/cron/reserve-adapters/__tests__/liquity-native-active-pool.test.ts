@@ -6,10 +6,29 @@ import { fetchOnchainRateBps, fetchOnchainUint256 } from "../helpers";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
     fetchOnchainRateBps: vi.fn(),
-    fetchOnchainUint256: vi.fn(),
+    fetchOnchainUint256,
+    makeOnchainCallers: vi.fn((
+      input: { chain?: string; rpcMode?: unknown },
+      options: { signal: AbortSignal; ctx?: unknown; rpcUrl?: string; fallbackRpcUrl?: string; timeoutMs?: number },
+    ) => ({
+      uint256: (contract: string, data: string) =>
+        fetchOnchainUint256({
+          contract,
+          data,
+          signal: options.signal,
+          ctx: options.ctx,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+          rpcUrl: options.rpcUrl,
+          fallbackRpcUrl: options.fallbackRpcUrl,
+          timeoutMs: options.timeoutMs,
+        }),
+      raw: vi.fn(),
+    })),
   };
 });
 

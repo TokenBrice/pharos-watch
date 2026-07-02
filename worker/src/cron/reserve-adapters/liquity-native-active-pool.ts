@@ -6,7 +6,7 @@ import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainRateBps,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -40,52 +40,19 @@ export async function fetchLiquityNativeActivePoolReserves(
   const timeoutMs = 12_000;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
   const priceDecimals = params.priceDecimals ?? DEFAULT_PRICE_DECIMALS;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
 
   const [debtRaw, collateralRaw, priceRaw, mcrRaw, redemptionFeeBps] = await Promise.all([
-    fetchOnchainUint256({
-      contract: params.activePoolAddress,
-      data: params.debtSelector,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: params.activePoolAddress,
-      data: params.collateralBalanceSelector,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: params.priceFeedAddress,
-      data: params.priceSelector,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: params.troveManagerAddress,
-      data: params.mcrSelector,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
+    onchain.uint256(params.activePoolAddress, params.debtSelector),
+    onchain.uint256(params.activePoolAddress, params.collateralBalanceSelector),
+    onchain.uint256(params.priceFeedAddress, params.priceSelector),
+    onchain.uint256(params.troveManagerAddress, params.mcrSelector),
     params.borrowerOperationsAddress && params.redemptionRateSelector
       ? fetchOnchainRateBps(
           input,
@@ -109,17 +76,10 @@ export async function fetchLiquityNativeActivePoolReserves(
   if (priceRaw == null || priceRaw <= 0n) throw new Error(`${ADAPTER_KEY} collateral price read is zero/unreadable`);
   if (mcrRaw == null || mcrRaw <= 0n) throw new Error(`${ADAPTER_KEY} MCR read is zero/unreadable`);
 
-  const tcrRaw = await fetchOnchainUint256({
-    contract: params.troveManagerAddress,
-    data: encodeUint256SelectorCall(params.tcrSelector, priceRaw),
-    signal,
-    ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    timeoutMs,
-  });
+  const tcrRaw = await onchain.uint256(
+    params.troveManagerAddress,
+    encodeUint256SelectorCall(params.tcrSelector, priceRaw),
+  );
 
   const priceUsd = decimalNumberFromBigInt(priceRaw, priceDecimals);
   const collateralUsd = valueUsdFromBigIntPrice(collateralRaw, params.collateralDecimals, priceUsd);

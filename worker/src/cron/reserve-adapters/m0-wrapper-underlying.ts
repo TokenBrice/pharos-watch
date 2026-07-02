@@ -15,8 +15,7 @@ import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
@@ -106,18 +105,15 @@ export async function fetchM0WrapperUnderlyingReserves(
     ? normalizeAddress(params.expectedMTokenAddress)
     : null;
   const timeoutMs = 12_000;
-
-  const mTokenRaw = await fetchOnchainRawCall({
-    contract: wrapperAddress,
-    data: params.mTokenSelector ?? DEFAULT_M_TOKEN_SELECTOR,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs,
   });
+
+  const mTokenRaw = await onchain.raw(wrapperAddress, params.mTokenSelector ?? DEFAULT_M_TOKEN_SELECTOR);
   const mTokenAddress = decodeAddressWord(mTokenRaw)?.toLowerCase() as `0x${string}` | undefined;
   if (!mTokenAddress) {
     throw new Error(`${ADAPTER_KEY} could not read mToken() for ${coin.id}`);
@@ -127,50 +123,10 @@ export async function fetchM0WrapperUnderlyingReserves(
   }
 
   const [totalSupplyRaw, wrapperDecimalsRaw, underlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
-    fetchOnchainUint256({
-      contract: wrapperAddress,
-      data: TOTAL_SUPPLY_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainRawCall({
-      contract: wrapperAddress,
-      data: DECIMALS_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: mTokenAddress,
-      data: encodeBalanceOfCallData(wrapperAddress),
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainRawCall({
-      contract: mTokenAddress,
-      data: DECIMALS_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
+    onchain.uint256(wrapperAddress, TOTAL_SUPPLY_SELECTOR),
+    onchain.raw(wrapperAddress, DECIMALS_SELECTOR),
+    onchain.uint256(mTokenAddress, encodeBalanceOfCallData(wrapperAddress)),
+    onchain.raw(mTokenAddress, DECIMALS_SELECTOR),
   ]);
   if (totalSupplyRaw == null) throw new Error(`${ADAPTER_KEY} totalSupply() failed for ${coin.id}`);
   if (underlyingBalanceRaw == null) throw new Error(`${ADAPTER_KEY} M balanceOf(wrapper) failed for ${coin.id}`);
@@ -187,17 +143,10 @@ export async function fetchM0WrapperUnderlyingReserves(
   const holderEligibility = params.mode === "m-extension" ? "whitelisted-primary" : "any-holder";
 
   if (params.mode === "m-extension") {
-    const swapFacilityRaw = await fetchOnchainRawCall({
-      contract: wrapperAddress,
-      data: params.swapFacilitySelector ?? DEFAULT_SWAP_FACILITY_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    });
+    const swapFacilityRaw = await onchain.raw(
+      wrapperAddress,
+      params.swapFacilitySelector ?? DEFAULT_SWAP_FACILITY_SELECTOR,
+    );
     swapFacilityAddress = decodeAddressWord(swapFacilityRaw)?.toLowerCase() as `0x${string}` | undefined;
     if (!swapFacilityAddress) {
       throw new Error(`${ADAPTER_KEY} could not read swapFacility() for ${coin.id}`);
@@ -212,34 +161,17 @@ export async function fetchM0WrapperUnderlyingReserves(
     }
 
     const [pausedRaw, canSwapRaw] = await Promise.all([
-      fetchOnchainRawCall({
-        contract: swapFacilityAddress,
-        data: params.pausedSelector ?? DEFAULT_PAUSED_SELECTOR,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
-        timeoutMs,
-      }),
+      onchain.raw(swapFacilityAddress, params.pausedSelector ?? DEFAULT_PAUSED_SELECTOR),
       params.swapperAddress
-        ? fetchOnchainRawCall({
-            contract: swapFacilityAddress,
-            data: encodeCanSwapViaPathCall(
+        ? onchain.raw(
+            swapFacilityAddress,
+            encodeCanSwapViaPathCall(
               params.canSwapViaPathSelector ?? DEFAULT_CAN_SWAP_VIA_PATH_SELECTOR,
               params.swapperAddress,
               wrapperAddress,
               mTokenAddress,
             ),
-            signal,
-            ctx,
-            rpcMode: input.rpcMode,
-            chain: input.chain,
-            rpcUrl: params.rpcUrl,
-            fallbackRpcUrl: params.fallbackRpcUrl,
-            timeoutMs,
-          })
+          )
         : Promise.resolve(null),
     ]);
     swapFacilityPaused = decodeBoolWord(pausedRaw);

@@ -12,6 +12,7 @@ import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
+type EvmCallInput = Pick<EvmInput, "chain"> & { rpcMode?: EvmInput["rpcMode"] };
 
 interface EvmCallOptions {
   contract: string;
@@ -23,6 +24,22 @@ interface EvmCallOptions {
   rpcMode?: EvmInput["rpcMode"];
   chain?: string;
   timeoutMs?: number;
+}
+
+interface BoundOnchainCallOptions {
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  timeoutMs?: number;
+}
+
+export type OnchainUint256Caller = (contract: string, data: string) => Promise<bigint | null>;
+export type OnchainRawCaller = (contract: string, data: string) => Promise<string | null>;
+
+export interface OnchainCallers {
+  uint256: OnchainUint256Caller;
+  raw: OnchainRawCaller;
 }
 
 export interface OnchainRateProbe {
@@ -72,6 +89,33 @@ async function runWithRpcFallback<T>(
 
     return null;
   });
+}
+
+export function makeOnchainCallers(input: EvmCallInput, options: BoundOnchainCallOptions): OnchainCallers {
+  const callBase = {
+    signal: options.signal,
+    ctx: options.ctx,
+    rpcUrl: options.rpcUrl,
+    fallbackRpcUrl: options.fallbackRpcUrl,
+    rpcMode: input.rpcMode,
+    chain: input.chain,
+    timeoutMs: options.timeoutMs,
+  };
+
+  return {
+    uint256: (contract: string, data: string) =>
+      fetchOnchainUint256({
+        ...callBase,
+        contract,
+        data,
+      }),
+    raw: (contract: string, data: string) =>
+      fetchOnchainRawCall({
+        ...callBase,
+        contract,
+        data,
+      }),
+  };
 }
 
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {

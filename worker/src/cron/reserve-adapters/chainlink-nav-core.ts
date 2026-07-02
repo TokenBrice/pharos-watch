@@ -13,9 +13,8 @@ import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   decimalStringFromBigInt,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
   freshnessMetadataFromTimestamp,
+  makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -142,29 +141,16 @@ export async function fetchChainlinkNavCore(
   const params = readChainlinkNavParams(config);
   const method = params.oracleMethod ?? "latestRoundData";
 
-  const oracleCallBase = {
-    contract: params.oracleAddress,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-  };
-
-  const tokenCallBase = {
-    contract: params.tokenAddress,
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-  };
+  });
 
   // Fetch token decimals + totalSupply in parallel with oracle data
-  const tokenDecimalsP = fetchOnchainUint256({ ...tokenCallBase, data: DECIMALS_SELECTOR });
-  const totalSupplyP = fetchOnchainUint256({ ...tokenCallBase, data: TOTAL_SUPPLY_SELECTOR });
+  const tokenDecimalsP = onchain.uint256(params.tokenAddress, DECIMALS_SELECTOR);
+  const totalSupplyP = onchain.uint256(params.tokenAddress, TOTAL_SUPPLY_SELECTOR);
 
   let navPerToken: bigint;
   let navDecimals: number;
@@ -177,7 +163,7 @@ export async function fetchChainlinkNavCore(
     // Ondo-style: getPrice() returns a single uint256 with 18 decimals.
     // The oracle does not expose an update timestamp, so freshness cannot be
     // verified here. Surface that explicitly instead of fabricating one.
-    const rawPrice = await fetchOnchainUint256({ ...oracleCallBase, data: GET_PRICE_SELECTOR });
+    const rawPrice = await onchain.uint256(params.oracleAddress, GET_PRICE_SELECTOR);
     if (rawPrice == null) {
       throw new Error("chainlink-nav: getPrice() call failed");
     }
@@ -191,10 +177,7 @@ export async function fetchChainlinkNavCore(
       "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
     ));
   } else if (method === "getPriceData") {
-    const rawPriceData = await fetchOnchainRawCall({
-      ...oracleCallBase,
-      data: GET_PRICE_DATA_SELECTOR,
-    });
+    const rawPriceData = await onchain.raw(params.oracleAddress, GET_PRICE_DATA_SELECTOR);
     if (rawPriceData == null) {
       throw new Error("chainlink-nav: getPriceData() call failed");
     }
@@ -206,10 +189,10 @@ export async function fetchChainlinkNavCore(
     updatedAt = parsed.updatedAt;
     oracleTimestampSource = "ondo-price-data";
   } else if (method === "getAssetPrice") {
-    const rawPrice = await fetchOnchainUint256({
-      ...oracleCallBase,
-      data: `${GET_ASSET_PRICE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
-    });
+    const rawPrice = await onchain.uint256(
+      params.oracleAddress,
+      `${GET_ASSET_PRICE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
+    );
     if (rawPrice == null) {
       throw new Error("chainlink-nav: getAssetPrice(address) call failed");
     }
@@ -220,17 +203,13 @@ export async function fetchChainlinkNavCore(
     updatedAt = 0;
     oracleTimestampSource = "unavailable";
 
-    const rawWrapperAddress = await fetchOnchainRawCall({
-      ...oracleCallBase,
-      data: `${TOKEN_TO_RWA_ORACLE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
-    });
+    const rawWrapperAddress = await onchain.raw(
+      params.oracleAddress,
+      `${TOKEN_TO_RWA_ORACLE_SELECTOR}${encodeAddress(params.tokenAddress)}`,
+    );
     const wrapperAddress = parseAddressResult(rawWrapperAddress);
     if (wrapperAddress) {
-      const rawPriceData = await fetchOnchainRawCall({
-        ...oracleCallBase,
-        contract: wrapperAddress,
-        data: GET_PRICE_DATA_SELECTOR,
-      });
+      const rawPriceData = await onchain.raw(wrapperAddress, GET_PRICE_DATA_SELECTOR);
       if (rawPriceData != null) {
         try {
           const parsed = parseOndoPriceData(rawPriceData);
@@ -256,13 +235,10 @@ export async function fetchChainlinkNavCore(
     }
   } else {
     // Standard AggregatorV3Interface: decimals() + latestRoundData()
-    const rawOracleDecimals = await fetchOnchainUint256({ ...oracleCallBase, data: DECIMALS_SELECTOR });
+    const rawOracleDecimals = await onchain.uint256(params.oracleAddress, DECIMALS_SELECTOR);
     navDecimals = decodeDecimalsResult(rawOracleDecimals, "oracle");
 
-    const rawRoundData = await fetchOnchainRawCall({
-      ...oracleCallBase,
-      data: LATEST_ROUND_DATA_SELECTOR,
-    });
+    const rawRoundData = await onchain.raw(params.oracleAddress, LATEST_ROUND_DATA_SELECTOR);
     if (rawRoundData == null) {
       throw new Error("chainlink-nav: latestRoundData() call failed");
     }
