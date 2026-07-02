@@ -98,7 +98,7 @@ export function UptimeBar({
     return Math.max(0, Math.floor((todayEpoch + 86400 - lastChangedAt) / 86400));
   }, [lastChangedAt, segments]);
 
-  const { summaryParts } = useMemo(() => {
+  const summaryParts = useMemo(() => {
     const c = { healthy: 0, degraded: 0, stale: 0, unknown: 0 };
     for (const s of segments) c[s.status]++;
 
@@ -112,7 +112,7 @@ export function UptimeBar({
       if (c.unknown > 0) parts.push(`${c.unknown}d no data`);
     }
 
-    return { counts: c, summaryParts: parts };
+    return parts;
   }, [days, segments]);
 
   return (

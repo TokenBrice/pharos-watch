@@ -3531,6 +3531,16 @@
     "recommendation": "Return `parts` directly from the useMemo (`const summaryParts = useMemo(() => { ...; return parts; }, ...)`) and drop the object wrapper. Same rendered strings, one less misleading field.",
     "estImpact": "-2 LOC",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed UptimeBar's summary memo to return the summary parts array directly instead of wrapping it with an unused counts field.",
+    "validation": [
+     "npx vitest run src/components/status/__tests__/uptime-bar.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/status/uptime-bar.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
