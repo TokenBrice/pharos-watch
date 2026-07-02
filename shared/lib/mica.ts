@@ -17,6 +17,10 @@ interface MicaBadgeStyle extends BadgeStyle {
   textCls?: string;
 }
 
+/** Pill style for the EBA-supervised "significant EMT/ART" marker (info-blue: regulatory scope, not a risk state). */
+export const MICA_SIGNIFICANT_BADGE_CLS =
+  "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+
 /** Detail-page / table pill styles per MiCA authorization status. */
 export const MICA_STATUS_BADGE_STYLES: Record<MicaStatus, MicaBadgeStyle> = {
   authorized: {

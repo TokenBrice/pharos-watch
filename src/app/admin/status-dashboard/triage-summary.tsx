@@ -110,10 +110,10 @@ export function TriageSummary({
                 className={cn(
                   "h-2 w-2 rounded-full",
                   data.overallStatus === "stale"
-                    ? "bg-red-400"
+                    ? "bg-[var(--severity-severe)]"
                     : data.overallStatus === "degraded"
-                      ? "bg-amber-400"
-                      : "bg-emerald-400",
+                      ? "bg-[var(--severity-mild)]"
+                      : "bg-[var(--severity-healthy)]",
                 )}
               />
               {overallTone.label}

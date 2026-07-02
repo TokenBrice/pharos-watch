@@ -155,7 +155,7 @@ A single green→amber→orange→red ramp carries every risk vocabulary. The na
 **Body / UI Font:** Geist Sans (fallback `system-ui` stack).
 **Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — folded into `--font-geist-mono`, so every existing mono consumer (tables, `.pharos-numeric`, peg hero) inherits it.
 
-**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, the `/timeline/` wire-service tape, detail-page AI summaries) — never general analytics.
+**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, the `/timeline/` wire-service tape, detail-page AI summaries, `/depeg/[event]` incident briefings) — never general analytics.
 
 ### Hierarchy
 

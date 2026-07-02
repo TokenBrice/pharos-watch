@@ -104,9 +104,9 @@ events = response.json()`,
 
 function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] }) {
   return (
-    <article className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">{example.label}</span>
+    <article className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
+      <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--code-surface-muted)]">{example.label}</span>
         <CopyButton text={example.code} />
       </div>
       <pre className="overflow-x-auto px-3 py-3 text-xs leading-relaxed">

@@ -14,9 +14,9 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 const POPULAR_STABLECOIN_COUNT = 6;
 
 export const PEG_STATUS_DOT: Record<CommandPalettePegStatus, string> = {
-  calm: "bg-emerald-500",
-  watch: "bg-amber-500",
-  alert: "bg-red-500",
+  calm: "bg-[var(--severity-healthy)]",
+  watch: "bg-[var(--severity-mild)]",
+  alert: "bg-[var(--severity-severe)]",
 };
 
 const PEG_STATUS_LABEL: Record<CommandPalettePegStatus, string> = {

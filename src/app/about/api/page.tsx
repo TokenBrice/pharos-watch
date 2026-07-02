@@ -233,10 +233,10 @@ function MarkdownBlockRenderer({
 
   if (block.type === "code") {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
-        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
+        <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
           {block.language ? (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--code-surface-muted)]">
               {block.language}
             </span>
           ) : (

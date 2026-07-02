@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 export function ScrollToTop() {
   const pathname = usePathname();
@@ -17,6 +18,8 @@ export function ScrollToTop() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   if (!visible || pathname === "/") return null;
 
   return (
@@ -25,7 +28,7 @@ export function ScrollToTop() {
       size="icon"
       className="fixed right-6 bottom-20 z-50 hidden animate-in fade-in duration-300 border-border/70 bg-background shadow-lg sm:inline-flex"
       aria-label="Scroll to top"
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
     >
       <ChevronUp className="h-4 w-4" />
     </Button>

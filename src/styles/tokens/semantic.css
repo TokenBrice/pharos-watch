@@ -167,6 +167,14 @@
   --table-sticky-column-bg: oklch(0.995 0.003 260 / 0.95);
   --table-sticky-column-shadow: 10px 0 20px oklch(0 0 0 / 0.05);
 
+  /* ── Component: Code Surface ──────────────────────────────────── */
+  /* Terminal code blocks stay deliberately dark in both themes; the ink
+     matches DESIGN.md control-ink so the surface reads as one system. */
+  --code-surface-bg: oklch(0.19 0.01 255);
+  --code-surface-fg: oklch(0.97 0 0);
+  --code-surface-muted: oklch(0.72 0.005 260);
+  --code-surface-border: oklch(1 0 0 / 10%);
+
   /* ── Motion ───────────────────────────────────────────────────── */
   --motion-duration-fast: 160ms;
   --motion-duration-base: 220ms;

@@ -57,7 +57,7 @@ export function MobileUtilityDock() {
           </button>
           <button
             type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
             aria-label="Scroll to top"
             tabIndex={showScrollTop ? undefined : -1}
             className={cn(

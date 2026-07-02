@@ -36,6 +36,7 @@ import {
   MICA_STATUS_DESCRIPTIONS,
   MICA_TOKEN_TYPE_BADGE_STYLES,
   MICA_TOKEN_TYPE_LABELS,
+  MICA_SIGNIFICANT_BADGE_CLS,
 } from "@shared/lib/mica";
 import type { MicaTokenType, PegCurrency } from "@shared/types";
 import {
@@ -485,7 +486,7 @@ function MicaPathwayCell({ row }: { row: Extract<ComplianceRow, { regime: "mica"
       {row.significant ? (
         <span
           title="EBA-supervised significant EMT/ART"
-          className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-400"
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${MICA_SIGNIFICANT_BADGE_CLS}`}
         >
           <Check className="h-3 w-3" aria-hidden="true" />
           Significant

@@ -103,7 +103,7 @@ export function MethodologyChangelogPage({
               retained so historical charts and citations can be read against the rules active at the time.
             </p>
           </div>
-          <div className="space-y-2 rounded-xl border border-border/50 bg-background/45 px-4 py-4">
+          <div className="space-y-2 border-border/50 lg:border-l lg:pl-5">
             <p className="pharos-kicker">Primary References</p>
             <div className="flex flex-col gap-2 text-sm">
               <Link
@@ -154,7 +154,7 @@ export function MethodologyChangelogPage({
                   <h2 className="text-xl font-semibold tracking-tight">{latestEntry.title}</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">{latestEntry.summary}</p>
                 </div>
-                <div className="rounded-xl border border-border/50 bg-background/45 px-4 py-4">
+                <div className="border-border/50 lg:border-l lg:pl-5">
                   <p className="pharos-kicker">Impact Snapshot</p>
                   {latestEntry.impact.length > 0 ? (
                     <ul className="mt-3 space-y-2 text-sm text-muted-foreground">

@@ -376,15 +376,15 @@ export function ApiKeyRequestForm() {
                 </div>
               ) : null}
 
-              <div className="overflow-hidden rounded-xl border border-emerald-500/35 bg-zinc-950 text-zinc-100">
-                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                  <span className="text-xs font-semibold uppercase text-zinc-400">Token</span>
+              <div className="overflow-hidden rounded-xl border border-emerald-500/35 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
+                <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-4 py-3">
+                  <span className="text-xs font-semibold uppercase text-[var(--code-surface-muted)]">Token</span>
                   <Button
                     ref={copyTokenButtonRef}
                     type="button"
                     size="xs"
                     variant="ghost"
-                    className="h-7 text-zinc-300 hover:bg-white/10 hover:text-white"
+                    className="h-7 text-[var(--code-surface-muted)] hover:bg-[var(--code-surface-border)] hover:text-[var(--code-surface-fg)]"
                     onClick={() => copyText("token", issuedKey.token)}
                   >
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />
@@ -394,9 +394,9 @@ export function ApiKeyRequestForm() {
                 <code ref={tokenCodeRef} tabIndex={-1} className="block break-all px-4 py-4 font-mono text-sm leading-relaxed outline-none sm:text-[0.95rem]">{issuedKey.token}</code>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100">
-                <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-zinc-400">
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
+                <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--code-surface-muted)]">
                     <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
                     Sample
                   </span>
@@ -404,7 +404,7 @@ export function ApiKeyRequestForm() {
                     type="button"
                     size="xs"
                     variant="ghost"
-                    className="h-7 text-zinc-300 hover:bg-white/10 hover:text-white"
+                    className="h-7 text-[var(--code-surface-muted)] hover:bg-[var(--code-surface-border)] hover:text-[var(--code-surface-fg)]"
                     onClick={() => copyText("curl", curlCommand)}
                   >
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />

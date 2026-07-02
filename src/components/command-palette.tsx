@@ -205,7 +205,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="pharos-palette-spring-in inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[12vh] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
+        className="pharos-palette-spring-in inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[12vh] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[var(--elevation-raised)]"
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -269,7 +269,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {group.section}
                   {group.section === "Stablecoins" && (
-                    <span className="ml-2 font-mono text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70">
+                    <span className="ml-2 pharos-numeric text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70">
                       {group.items.length}
                     </span>
                   )}
@@ -358,7 +358,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       )}
                     </div>
                     {typeof item.marketCap === "number" && item.marketCap > 0 ? (
-                      <span className="shrink-0 pl-3 text-right font-mono text-xs text-muted-foreground">
+                      <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground">
                         {formatCommandPaletteMarketCap(item.marketCap)}
                       </span>
                     ) : null}
