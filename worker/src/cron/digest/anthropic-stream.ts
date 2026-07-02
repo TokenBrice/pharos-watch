@@ -73,6 +73,9 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
       if (done) break;
     }
   } finally {
+    if (streamError) {
+      await reader.cancel().catch(() => undefined);
+    }
     try {
       reader.releaseLock();
     } catch {

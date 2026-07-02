@@ -117,6 +117,32 @@ describe("accumulateAnthropicStream", () => {
     await expect(accumulateAnthropicStream(response)).rejects.toThrow(/overloaded_error|over capacity/);
   });
 
+  it("cancels the response body when an SSE error exits before EOF", async () => {
+    const encoder = new TextEncoder();
+    let canceled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            [
+              "event: error",
+              "data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Anthropic is over capacity\"}}",
+              "",
+              "",
+            ].join("\n"),
+          ),
+        );
+      },
+      cancel() {
+        canceled = true;
+      },
+    });
+    const response = new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+
+    await expect(accumulateAnthropicStream(response)).rejects.toThrow(/overloaded_error|over capacity/);
+    expect(canceled).toBe(true);
+  });
+
   it("throws when the stream ends with no text content", async () => {
     const response = sseResponse([
       { event: "message_start", data: { type: "message_start", message: { id: "msg_empty" } } },

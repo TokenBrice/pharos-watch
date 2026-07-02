@@ -1618,6 +1618,16 @@
     "description": "When a mid-stream `error` event is seen, accumulateAnthropicStream breaks out of the read loop (lines 66-73) and only calls reader.releaseLock() in the finally block — it never cancels the reader or drains the remaining body. On Cloudflare Workers an unconsumed response body keeps the subrequest connection occupied, and this repo's hard rule is that cron jobs must consume response bodies before opening more fetches (the digest chain shares the 08:05 slot's 6-connection pool with sync-bluechip, and requestDigestCopy may immediately re-fetch for the corrective retry). The success path fully consumes the stream, so only the error path leaks.",
     "recommendation": "In the streamError break path (or in finally when the loop exited early), call `await reader.cancel().catch(() => {})` before releaseLock. Cancelling signals CF to reclaim the connection; thrown error and all parsing behavior are unchanged.",
     "estImpact": "frees a pooled connection on stream errors in the digest slot"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Cancelled the Anthropic SSE reader when a stream error exits before EOF, while preserving the thrown error and normal EOF handling.",
+    "validation": [
+     "npx vitest run worker/src/cron/digest/__tests__/anthropic-stream.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "The cancellation error is swallowed so existing error propagation remains unchanged while the response body is released."
    }
   },
   {
