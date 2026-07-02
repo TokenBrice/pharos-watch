@@ -405,80 +405,18 @@ function buildSuggestedLendingAllowlistConfig(project: string): ProtocolRecommen
   };
 }
 
-function buildProtocolRecommendations(
-  pools: CoverageGapPool[],
-  options: {
-    sourceQueue: ProtocolRecommendationPromotionMetadata["sourceQueue"];
-    sourceQueueField: ProtocolRecommendationPromotionMetadata["sourceQueueField"];
-    includeAllowlistConfig: boolean;
-  } = {
-    sourceQueue: "uncovered-stablecoin-pools",
-    sourceQueueField: "uncoveredStablecoinPools",
-    includeAllowlistConfig: false,
-  },
-): ProtocolRecommendation[] {
-  const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
-  for (const pool of pools) {
-    const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
-    entry.pools.push(pool);
-    entry.tvl += pool.tvlUsd;
-    byProject.set(pool.project, entry);
-  }
-
-  return [...byProject.entries()]
-    .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
-    .map(([project, v]) => {
-      const sortedPools = [...v.pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
-      const protocolCategory = sortedPools.find((pool) => pool.protocolCategory != null)?.protocolCategory ?? null;
-      const recommendedTier: ProtocolRecommendation["recommendedTier"] =
-        v.tvl >= HIGH_CONFIDENCE_TVL_USD &&
-        v.pools.length >= HIGH_CONFIDENCE_MIN_POOL_COUNT &&
-        isHighConfidenceProtocolCategory(protocolCategory)
-          ? "high-confidence"
-          : "review-needed";
-      const examplePoolDetails = sortedPools.slice(0, 3).map((pool) => ({
-        ...pool,
-        sourceUrl: buildYieldPoolSourceUrl(pool.pool),
-      }));
-      const queueQualifiedPoolCount = sortedPools
-        .filter((pool) => pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD).length;
-      return {
-        project,
-        protocolCategory,
-        poolCount: v.pools.length,
-        totalTvlUsd: v.tvl,
-        recommendedTier,
-        examplePools: examplePoolDetails.map((p) => p.pool),
-        examplePoolDetails,
-        sourceLinks: [
-          {
-            label: "DeFiLlama protocols category source",
-            url: DEFILLAMA_PROTOCOLS_SOURCE_URL,
-          },
-          ...examplePoolDetails.map((pool) => ({
-            label: `DeFiLlama yield chart: ${pool.symbol} on ${pool.chain}`,
-            url: pool.sourceUrl,
-          })),
-        ],
-        suggestedConfig: options.includeAllowlistConfig
-          ? buildSuggestedLendingAllowlistConfig(project)
-          : null,
-        promotionMetadata: {
-          sourceQueue: options.sourceQueue,
-          sourceQueueField: options.sourceQueueField,
-          minPoolTvlUsd: HIGH_TVL_THRESHOLD_USD,
-          queueQualifiedPoolCount,
-          categoryGate: [...HIGH_CONFIDENCE_PROTOCOL_CATEGORIES].sort(),
-          passedCategoryGate: isHighConfidenceProtocolCategory(protocolCategory),
-          existingAllowlistMember: LENDING_PROTOCOL_ALLOWLIST.has(project),
-        },
-      };
-    })
-    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
-    .slice(0, 20);
+interface ProjectPoolAggregation {
+  base: VenueRiskConfigMissing;
+  sortedPools: CoverageGapPool[];
 }
 
-function buildVenueRiskConfigMissing(pools: CoverageGapPool[]): VenueRiskConfigMissing[] {
+function aggregatePoolsByProject(
+  pools: CoverageGapPool[],
+  options: {
+    minTotalTvlUsd?: number;
+    hasProtocolCategory?: (category: string | null) => boolean;
+  } = {},
+): ProjectPoolAggregation[] {
   const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
   for (const pool of pools) {
     const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
@@ -488,14 +426,17 @@ function buildVenueRiskConfigMissing(pools: CoverageGapPool[]): VenueRiskConfigM
   }
 
   return [...byProject.entries()]
+    .filter(([, value]) => options.minTotalTvlUsd == null || value.tvl >= options.minTotalTvlUsd)
     .map(([project, value]) => {
       const sortedPools = [...value.pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
-      const protocolCategory = sortedPools.find((pool) => pool.protocolCategory)?.protocolCategory ?? null;
+      const hasProtocolCategory = options.hasProtocolCategory ?? ((category) => category != null);
+      const protocolCategory = sortedPools.find((pool) => hasProtocolCategory(pool.protocolCategory))
+        ?.protocolCategory ?? null;
       const examplePoolDetails = sortedPools.slice(0, 3).map((pool) => ({
         ...pool,
         sourceUrl: buildYieldPoolSourceUrl(pool.pool),
       }));
-      return {
+      const base: VenueRiskConfigMissing = {
         project,
         protocolCategory,
         poolCount: value.pools.length,
@@ -513,9 +454,63 @@ function buildVenueRiskConfigMissing(pools: CoverageGapPool[]): VenueRiskConfigM
           })),
         ],
       };
+      return { base, sortedPools };
     })
-    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .sort((a, b) => b.base.totalTvlUsd - a.base.totalTvlUsd)
     .slice(0, 20);
+}
+
+function buildProtocolRecommendations(
+  pools: CoverageGapPool[],
+  options: {
+    sourceQueue: ProtocolRecommendationPromotionMetadata["sourceQueue"];
+    sourceQueueField: ProtocolRecommendationPromotionMetadata["sourceQueueField"];
+    includeAllowlistConfig: boolean;
+  } = {
+    sourceQueue: "uncovered-stablecoin-pools",
+    sourceQueueField: "uncoveredStablecoinPools",
+    includeAllowlistConfig: false,
+  },
+): ProtocolRecommendation[] {
+  return aggregatePoolsByProject(pools, { minTotalTvlUsd: HIGH_TVL_THRESHOLD_USD })
+    .map(({ base, sortedPools }) => {
+      const recommendedTier: ProtocolRecommendation["recommendedTier"] =
+        base.totalTvlUsd >= HIGH_CONFIDENCE_TVL_USD &&
+        base.poolCount >= HIGH_CONFIDENCE_MIN_POOL_COUNT &&
+        isHighConfidenceProtocolCategory(base.protocolCategory)
+          ? "high-confidence"
+          : "review-needed";
+      const queueQualifiedPoolCount = sortedPools
+        .filter((pool) => pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD).length;
+      return {
+        project: base.project,
+        protocolCategory: base.protocolCategory,
+        poolCount: base.poolCount,
+        totalTvlUsd: base.totalTvlUsd,
+        recommendedTier,
+        examplePools: base.examplePools,
+        examplePoolDetails: base.examplePoolDetails,
+        sourceLinks: base.sourceLinks,
+        suggestedConfig: options.includeAllowlistConfig
+          ? buildSuggestedLendingAllowlistConfig(base.project)
+          : null,
+        promotionMetadata: {
+          sourceQueue: options.sourceQueue,
+          sourceQueueField: options.sourceQueueField,
+          minPoolTvlUsd: HIGH_TVL_THRESHOLD_USD,
+          queueQualifiedPoolCount,
+          categoryGate: [...HIGH_CONFIDENCE_PROTOCOL_CATEGORIES].sort(),
+          passedCategoryGate: isHighConfidenceProtocolCategory(base.protocolCategory),
+          existingAllowlistMember: LENDING_PROTOCOL_ALLOWLIST.has(base.project),
+        },
+      };
+    });
+}
+
+function buildVenueRiskConfigMissing(pools: CoverageGapPool[]): VenueRiskConfigMissing[] {
+  return aggregatePoolsByProject(pools, {
+    hasProtocolCategory: (category) => Boolean(category),
+  }).map(({ base }) => base);
 }
 
 function normalizeRecommendationSymbol(symbol: string): string {

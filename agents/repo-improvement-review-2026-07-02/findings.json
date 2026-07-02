@@ -642,6 +642,16 @@
     "description": "Lines 420-479 (buildProtocolRecommendations) and 481-519 (buildVenueRiskConfigMissing) both: group CoverageGapPool[] into a byProject Map accumulating pools+tvl, sort each project's pools by tvlUsd desc, pick the first non-null protocolCategory, build examplePoolDetails as top-3 pools with sourceUrl, build the same sourceLinks array (DEFILLAMA_PROTOCOLS_SOURCE_URL label + per-pool yield-chart links), then sort projects by totalTvlUsd desc and slice(0, 20). The only differences are the >= HIGH_TVL_THRESHOLD_USD project filter, tier/suggestedConfig/promotionMetadata fields, and a `pool.protocolCategory != null` vs truthy find predicate (equivalent for the string|null type since \"\" is normalized to null at line 95-98).",
     "recommendation": "Extract a `aggregatePoolsByProject(pools)` helper returning { project, protocolCategory, poolCount, totalTvlUsd, examplePools, examplePoolDetails, sourceLinks }[] (sorted+sliced), then have buildProtocolRecommendations filter by TVL and append its recommendation-specific fields, and buildVenueRiskConfigMissing return the base shape directly. Output objects keep identical field values and ordering, so the persisted report is unchanged.",
     "estImpact": "-40 LOC in a 1,228-line monolith"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted aggregatePoolsByProject to share the project grouping, TVL sorting, top-3 example pool details, source links, and 20-row cap used by protocol recommendations and venue-risk missing rows. Recommendation-specific filtering and metadata now layer on top of the shared aggregation.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-coverage-audit.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/yield-coverage-audit.ts"
+    ]
    }
   },
   {
