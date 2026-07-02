@@ -5117,6 +5117,16 @@
     "description": "deriveContextKeys() pushes the 'current-deviation' context key when `row.currentDeviationBps != null && row.currentDeviationBps > 25`. currentDeviationBps is signed: worker/src/lib/depeg-signals.ts computes bps = (price/pegRef - 1) * 10000, so below-peg coins carry NEGATIVE values, and the selector data adapter (src/app/screener/picker/selector-data-adapter.ts:86) passes that value through. A coin trading 100 bps BELOW peg (the risky direction) therefore never gets the context key, while a 26 bps premium does. Every sibling consumer uses abs: exclusions.ts:159 uses Math.abs(row.currentDeviationBps), and what-to-watch-templates.ts renderWatchText uses roundedBps() = Math.round(Math.abs(...)) >= 25 for the very same threshold — strong evidence the signed comparison is an oversight, not a deliberate above-only rule.",
     "recommendation": "Change the guard to `Math.abs(row.currentDeviationBps) > 25`. This is a one-token computation-bug fix; it adds the 'current-deviation' context key (and downstream chips/snapshot contextKeys) for below-peg coins, so it is behavior-changing but corrects output that is currently wrong in the direction that matters most.",
     "estImpact": "fixes missing risk context on all below-peg picker recommendations"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Picker context-key derivation now uses absolute current peg deviation so below-peg moves can emit the current-deviation context key.",
+    "validation": [
+     "npx vitest run shared/lib/selector/__tests__/lowest-sub-dimension.test.ts shared/lib/selector/__tests__/template-coverage.test.ts shared/lib/selector/__tests__/engine.test.ts",
+     "npm run typecheck",
+     "git diff --check -- shared/lib/selector/lowest-sub-dimension.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

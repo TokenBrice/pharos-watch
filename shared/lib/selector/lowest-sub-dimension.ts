@@ -128,7 +128,7 @@ function deriveContextKeys(row: MergedRow): ContextKey[] {
   if (row.venueRiskTier === "high") keys.push("high-venue-risk");
   if (row.warningSignals.includes("unstable-apy")) keys.push("unstable-apy");
   if (row.warningSignals.includes("thin-tvl")) keys.push("thin-tvl");
-  if (row.currentDeviationBps != null && row.currentDeviationBps > 25) {
+  if (row.currentDeviationBps != null && Math.abs(row.currentDeviationBps) > 25) {
     keys.push("current-deviation");
   }
   return keys;
