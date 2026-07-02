@@ -161,8 +161,8 @@ function PulseStatGroup({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/42 p-3.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.035)]">
-      <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+    <div className="rounded-xl bg-background/42 p-3.5">
+      <p className="pharos-kicker">
         {title}
       </p>
       <div className="mt-3 space-y-3">
@@ -298,7 +298,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       >
         <div className="flex items-center gap-3 border-b border-border/55 pb-4">
           <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
+          <h2 className="pharos-section-title">Telegram pulse</h2>
         </div>
         <p className="text-xs text-muted-foreground">
           Live Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and setup
@@ -355,7 +355,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-accent)]" />
           </span>
-          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
+          <h2 className="pharos-section-title">Telegram pulse</h2>
         </div>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
           current pulse {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt).replace(/^updated /, "")}
@@ -370,12 +370,12 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       ) : null}
 
       <div className="grid gap-5 pt-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-6">
-        <div className="rounded-2xl border border-border/60 bg-background/60 p-4 sm:p-5">
-          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+        <div className="rounded-2xl bg-background/60 p-4 sm:p-5">
+          <p className="pharos-kicker">
             Active / estimated capacity
           </p>
           <p className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1 pharos-numeric leading-none text-foreground">
-            <span className="text-[clamp(3.4rem,12vw,7rem)] font-semibold tracking-normal">
+            <span className="text-[3.5rem] font-semibold tracking-normal sm:text-[4.5rem] lg:text-[6rem]">
               {formatCount(data.activeWatchers)}
             </span>
             <span className="pb-2 text-2xl font-semibold text-muted-foreground sm:pb-3 sm:text-4xl">
@@ -391,8 +391,8 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </div>
 
         <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-xl border border-border/60 bg-background/42 p-3.5">
-            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+          <div className="rounded-xl bg-background/42 p-3.5">
+            <p className="pharos-kicker">
               Alert follows
             </p>
             <p className="mt-3 pharos-numeric text-4xl font-semibold leading-none text-foreground sm:text-5xl">
@@ -414,8 +414,8 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-background/42 p-3.5">
-            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+          <div className="rounded-xl bg-background/42 p-3.5">
+            <p className="pharos-kicker">
               Most followed
             </p>
             {topCoins.length > 0 ? (
@@ -439,10 +439,10 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-border/60 bg-background/46 px-4 py-4 sm:px-5">
+      <div className="mt-6 rounded-2xl bg-background/46 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+            <p className="pharos-kicker">
               Telegram chat lifecycle
             </p>
           </div>
@@ -463,8 +463,8 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         )}
       </div>
 
-      <details className="group mt-5 overflow-hidden rounded-2xl border border-border/60 bg-background/36">
-        <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden sm:px-5">
+      <details className="group mt-5 border-t border-border/60">
+        <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0">
             <span className="block">More information</span>
             <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
@@ -473,7 +473,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
         </summary>
-        <div className="border-t border-border/60 px-4 py-4 sm:px-5 sm:py-5" aria-label="Additional Telegram pulse details">
+        <div className="border-t border-border/60 pt-4 sm:pt-5" aria-label="Additional Telegram pulse details">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
             <PulseStatGroup title="Follow composition" items={followStats} />
             <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />

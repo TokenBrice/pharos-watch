@@ -32,7 +32,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
   return (
     <div className="telegram-mini-app-stage flex flex-1 flex-col gap-3">
       <div
-        className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65 shadow-[0_18px_42px_oklch(0_0_0_/0.24)]"
+        className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65"
         aria-label="Mini App screenshots"
       >
         <div

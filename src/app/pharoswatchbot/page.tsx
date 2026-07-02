@@ -237,7 +237,7 @@ function HeroPreview() {
   const featuredAlert = TELEGRAM_ALERT_EXAMPLES.find((alert) => alert.key === "safety") ?? TELEGRAM_ALERT_EXAMPLES[0];
 
   return (
-    <div className="relative rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_24px_60px_oklch(0_0_0_/0.22)]">
+    <div className="relative rounded-2xl border border-border/70 bg-card/86 p-3">
       <div className="mb-3 flex items-center justify-between rounded-xl border border-border/60 bg-background/55 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/60 text-sky-700 dark:text-sky-300">
@@ -353,7 +353,7 @@ function GrowthSupportCard({ item, index }: { item: (typeof GROWTH_SUPPORT)[numb
 
   return (
     <div
-      className="rounded-xl border border-border/65 bg-background/36 p-4"
+      className="rounded-xl bg-background/36 p-4"
       style={{ "--stagger-index": index } as CSSProperties}
     >
       <div className="flex items-start justify-between gap-3">
@@ -396,15 +396,15 @@ export default function PharosWatchBotPage() {
         </>,
       ]}
     >
-      <div className="space-y-14">
+      <div className="space-y-10">
         <section
-          className="pharos-card-shell relative overflow-hidden rounded-[1.5rem] px-5 py-7 sm:px-7 sm:py-9 lg:px-9 lg:py-11"
+          className="pharos-card-shell relative overflow-hidden rounded-2xl px-5 py-7 sm:px-7 sm:py-9 lg:px-9 lg:py-11"
           aria-labelledby="telegram-hero-title"
         >
           <div className="space-y-8 sm:space-y-10">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)] lg:items-center">
               <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:text-[11px]">
+              <div className="pharos-kicker flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <span aria-hidden="true" className="relative flex h-1.5 w-1.5">
                   <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]" />
@@ -419,10 +419,10 @@ export default function PharosWatchBotPage() {
               <div className="space-y-4">
                 <h2
                   id="telegram-hero-title"
-                  className="text-balance text-4xl font-black leading-[0.98] tracking-[-0.02em] text-foreground sm:text-5xl lg:text-[3.5rem] xl:text-[3.875rem]"
+                  className="pharos-display text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl"
                 >
                   Risk signals should find you before{" "}
-                  <em className="font-serif font-medium italic tracking-normal text-foreground/85">the timeline</em>{" "}
+                  <em className="not-italic font-medium text-foreground/85">the timeline</em>{" "}
                   does.
                 </h2>
                 <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
@@ -440,7 +440,7 @@ export default function PharosWatchBotPage() {
 
             <div className="grid gap-x-6 gap-y-5 border-y border-border/55 py-6 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] sm:gap-x-12 sm:py-7">
               <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-10">
-                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                <p className="pharos-kicker">
                   Tracked universe
                 </p>
                 <p className="mt-3 pharos-numeric text-[3.5rem] font-semibold leading-[0.9] text-frost-blue sm:text-[4.5rem] lg:text-[6rem]">
@@ -451,7 +451,7 @@ export default function PharosWatchBotPage() {
                 </p>
               </div>
               <div>
-                <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+                <p className="pharos-kicker">
                   Alert lane
                 </p>
                 <p className="mt-3 pharos-numeric text-3xl font-semibold leading-[0.95] text-foreground sm:text-4xl lg:text-5xl">
@@ -463,10 +463,10 @@ export default function PharosWatchBotPage() {
               </div>
             </div>
 
-            <div className="pharos-card-shell p-5 sm:p-6">
+            <div>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1 space-y-3">
-                  <p className="pharos-kicker text-sky-700 dark:text-sky-300">Recommended first command</p>
+                  <p className="pharos-kicker">Recommended first command</p>
                   <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
                     <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
                       ▸
@@ -537,7 +537,7 @@ export default function PharosWatchBotPage() {
             <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)]">
               <div className="border-b border-border/55 p-5 lg:border-b-0 lg:border-r lg:p-7">
                 <div className="flex items-baseline justify-between gap-3 border-b border-border/45 pb-3">
-                  <p className="pharos-kicker flex items-baseline gap-2 text-sky-700 dark:text-sky-300">
+                  <p className="pharos-kicker flex items-baseline gap-2">
                     <span>Mini App</span>
                     <span aria-hidden="true" className="text-border">/</span>
                     <span className="text-muted-foreground">Telegram</span>
@@ -835,7 +835,7 @@ export default function PharosWatchBotPage() {
 
         <FaqSection items={TELEGRAM_FAQ} includeJsonLd />
 
-        <section className="pharos-card-shell border-t-2 border-t-sky-500/40 p-6 dark:border-t-sky-400/30 sm:p-8">
+        <section className="pharos-card-shell p-6 sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center">
             <div className="max-w-3xl space-y-2">
               <p className="pharos-kicker">Start watching</p>
