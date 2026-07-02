@@ -533,16 +533,14 @@ export async function persistScores(
   // Clean up orphaned rows from stablecoins no longer in the tracked set.
   // Preserve TRACKED (active + frozen) plus the `__global__` aggregate so
   // frozen coins keep their historical DEX rows.
-  const DEX_LIQUIDITY_TABLES = new Set([
+  const DEX_LIQUIDITY_TABLES = [
     "dex_liquidity",
     "dex_liquidity_history",
     "dex_discovery_meta",
-  ] as const);
+  ] as const;
   try {
-    const tables = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
-    for (const table of tables) {
+    for (const table of DEX_LIQUIDITY_TABLES) {
       throwIfAborted(signal);
-      if (!DEX_LIQUIDITY_TABLES.has(table)) throw new Error(`Invalid DEX liquidity table: ${table}`);
       const existingRows = await db
         // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
         .prepare(

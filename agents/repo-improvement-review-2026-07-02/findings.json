@@ -1002,6 +1002,16 @@
     "description": "persistScores builds `DEX_LIQUIDITY_TABLES` (a Set of three literals, lines 540-544), then iterates a `tables` array containing the identical three literals (line 546) and throws if the Set lacks the entry (line 549) — a check that can never fire because both come from the same hardcoded list in the same scope. The list is duplicated twice within 7 lines.",
     "recommendation": "Keep a single `const tables = [...] as const` and drop the Set plus the unreachable throw (SAFETY comments can reference the const directly). Behavior-preserving; there is no dynamic input to validate.",
     "estImpact": "-8 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Collapsed the DEX liquidity orphan-cleanup table list to one fixed tuple and removed the unreachable self-allowlist throw. Existing SQL safety comments and table cleanup behavior remain intact.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dex-liquidity-persistence.test.ts",
+     "npm run check:sql-safety",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
