@@ -5,6 +5,9 @@ import {
 import type { StablecoinMeta } from "@shared/types";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "./blacklist-contracts";
 
+// Runtime callers use the narrow accessors below. The full manifest builder is
+// kept as a test-validated coverage guard over blacklist metadata/config drift.
+
 export type BlacklistCoverageManifestStatus = "tracked" | "deferred" | "waived" | "out-of-scope";
 
 export interface BlacklistCoverageManifestEntry {

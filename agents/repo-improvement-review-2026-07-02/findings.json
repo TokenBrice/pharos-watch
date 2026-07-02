@@ -1805,6 +1805,17 @@
     "description": "The module's two production importers use only narrow accessors: worker/src/api/blacklist-summary.ts:18 imports getDeferredBlacklistCoverage and worker/src/api/blacklist.ts:19 imports getSupportedBlacklistChainIds/Names. The manifest assembler buildBlacklistCoverageManifest (line 129) and its private helper buildOutOfScopeCoverageEntries (line 102), ~40 LOC together, are exercised only by tests. Caveat: the test that consumes it likely acts as a coverage-completeness guard over CONTRACT_CONFIGS vs blacklistabilityReview metadata, so this is the same 'documentation validated by test' pattern as pricing-circuit-map.",
     "recommendation": "Either move the manifest assembly into the test (keeping the guard) and delete the exports, or keep it with an explicit comment that it exists solely as a test-validated coverage manifest. Both options are behavior-preserving; today a reader reasonably assumes an API serves this manifest, which is false.",
     "estImpact": "-40 LOC or clarified intent"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Documented the full blacklist coverage manifest builder as a test-validated metadata/config drift guard while runtime callers remain on the narrow supported-chain and deferred-coverage accessors.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/blacklist-contracts.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"buildBlacklistCoverageManifest|buildOutOfScopeCoverageEntries|getDeferredBlacklistCoverage|getSupportedBlacklistChain\" worker src shared functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "Kept the guard because tests intentionally validate blacklist coverage completeness; runtime behavior remains unchanged."
    }
   },
   {
