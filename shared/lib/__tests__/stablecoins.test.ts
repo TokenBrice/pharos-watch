@@ -13,18 +13,33 @@ import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters-schemas";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
+  ACTIVE_META_BY_ID,
   ACTIVE_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { getVariants, isTrackedVariant } from "@shared/lib/stablecoins";
+import { createVariantRelationshipHelpers } from "../stablecoins/variant-relationships";
+import { isActiveStablecoinMeta } from "../stablecoins/status";
+import type { StablecoinMeta, VariantKind } from "../../types";
 import {
   findStablecoinCatalogInvariantIssues,
   parseCanonicalOrderAsset,
   parseDeadStablecoinAssets,
   parseStablecoinMetaAssets,
 } from "../stablecoins/schema";
+
+function hasTrackedVariantMeta(
+  meta: StablecoinMeta | undefined,
+): meta is StablecoinMeta & { variantOf: string; variantKind: VariantKind } {
+  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
+}
+
+const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
+  activeMetaById: ACTIVE_META_BY_ID,
+  activeStablecoins: ACTIVE_STABLECOINS,
+  hasTrackedVariantMeta,
+});
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

@@ -1,13 +1,22 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveVariantAwareDependencies,
-  getVariantParent,
-  getVariantRelationship,
-  getVariants,
-  isTrackedVariant,
-} from "../index";
-import { TRACKED_STABLECOINS } from "../registry";
+import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { getTrackedBlacklistStatus } from "../../tracked-blacklist-status";
+import type { StablecoinMeta, VariantKind } from "../../../types";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../registry";
+import { isActiveStablecoinMeta } from "../status";
+import { createVariantRelationshipHelpers } from "../variant-relationships";
+
+function hasTrackedVariantMeta(
+  meta: StablecoinMeta | undefined,
+): meta is StablecoinMeta & { variantOf: string; variantKind: VariantKind } {
+  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
+}
+
+const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
+  activeMetaById: ACTIVE_META_BY_ID,
+  activeStablecoins: ACTIVE_STABLECOINS,
+  hasTrackedVariantMeta,
+});
 
 describe("stablecoin variants", () => {
   it("resolves a tracked variant parent", () => {
@@ -63,7 +72,7 @@ describe("stablecoin variants", () => {
   });
 
   it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {
-    expect(deriveVariantAwareDependencies({
+    expect(deriveEffectiveDependencies({
       variantOf: "usds-sky",
       dependencies: [
         { id: "usds-sky", weight: 0.5, type: "collateral" },

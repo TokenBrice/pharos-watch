@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { deriveEffectiveDependencies } from "@shared/lib/dependency-derivation";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import { deriveVariantAwareDependencies } from "@shared/lib/stablecoins";
 import {
   scoreResilience,
   isBlacklistable,
@@ -169,7 +169,7 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const scores = new Map<string, number>();
     const result = scoreDependencyRisk({
       governance: meta.flags.governance,
-      dependencies: deriveVariantAwareDependencies(meta),
+      dependencies: deriveEffectiveDependencies(meta),
     }, scores);
     expect(result.score).toBe(95);
   });
@@ -185,7 +185,7 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const scores = new Map([["usdtb-ethena", 85], ["usdc-circle", 95]]);
     const result = scoreDependencyRisk({
       governance: meta.flags.governance,
-      dependencies: deriveVariantAwareDependencies(meta),
+      dependencies: deriveEffectiveDependencies(meta),
     }, scores);
     // Blended: 0.9 * 85 + 0.1 * 95 = 86, self-backed = 0
     expect(result.score).toBe(86);
@@ -203,7 +203,7 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const scores = new Map([["usdc-circle", 90]]);
     const result = scoreDependencyRisk({
       governance: meta.flags.governance,
-      dependencies: deriveVariantAwareDependencies(meta),
+      dependencies: deriveEffectiveDependencies(meta),
     }, scores);
     // 50% USDC (90) + 50% self-backed (95 for centralized) = 92.5 → 93
     expect(result.score).toBe(93);
@@ -219,7 +219,7 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const scores = new Map([["usde-ethena", 80]]);
     const result = scoreDependencyRisk({
       governance: meta.flags.governance,
-      dependencies: deriveVariantAwareDependencies(meta),
+      dependencies: deriveEffectiveDependencies(meta),
     }, scores);
     // Wrapper ceiling: 80 - 3 = 77
     expect(result.score).toBe(77);
@@ -236,7 +236,7 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const scores = new Map([["usds-sky", 82], ["usdc-circle", 95]]);
     const result = scoreDependencyRisk({
       governance: meta.flags.governance,
-      dependencies: deriveVariantAwareDependencies(meta),
+      dependencies: deriveEffectiveDependencies(meta),
       variantParentId: meta.variantOf,
       variantKind: meta.variantKind,
     }, scores);
@@ -939,7 +939,7 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
       decentralization: scoreDecentralization("centralized", meta),
       dependencyRisk: scoreDependencyRisk({
         governance: meta.flags.governance,
-        dependencies: deriveVariantAwareDependencies(meta),
+        dependencies: deriveEffectiveDependencies(meta),
       }, depScores),
     };
     const result = computeOverallGrade(dims);
@@ -968,7 +968,7 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
       decentralization: scoreDecentralization("decentralized", meta),
       dependencyRisk: scoreDependencyRisk({
         governance: meta.flags.governance,
-        dependencies: deriveVariantAwareDependencies(meta),
+        dependencies: deriveEffectiveDependencies(meta),
       }, depScores),
     };
     const result = computeOverallGrade(dims);
@@ -1001,7 +1001,7 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
       decentralization: scoreDecentralization("centralized-dependent", meta),
       dependencyRisk: scoreDependencyRisk({
         governance: meta.flags.governance,
-        dependencies: deriveVariantAwareDependencies(meta),
+        dependencies: deriveEffectiveDependencies(meta),
       }, depScores),
     };
     const result = computeOverallGrade(dims);
@@ -1030,7 +1030,7 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
       decentralization: scoreDecentralization("decentralized", meta),
       dependencyRisk: scoreDependencyRisk({
         governance: meta.flags.governance,
-        dependencies: deriveVariantAwareDependencies(meta),
+        dependencies: deriveEffectiveDependencies(meta),
       }, depScores),
     };
     const result = computeOverallGrade(dims);

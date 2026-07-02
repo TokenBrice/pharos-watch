@@ -3821,6 +3821,18 @@
      "shared/lib/stablecoins.ts",
      "shared/lib/stablecoins/index.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the production-dead stablecoins barrel chain and registry-bound variants helper. Tests now import dependency derivation and the variant relationship factory directly, and docs now direct authors to explicit stablecoin submodules instead of stale barrel paths.",
+    "validation": [
+     "! rg -n \"from ['\\\"]@shared/lib/stablecoins(?:['\\\"]|/index['\\\"]|/variants['\\\"])\" src shared worker scripts --glob '*.{ts,tsx,js,mjs}'",
+     "npx vitest run shared/lib/stablecoins/__tests__/variants.test.ts shared/lib/__tests__/stablecoins.test.ts src/lib/__tests__/report-cards.test.ts",
+     "npm run check:unused-code",
+     "npm run typecheck",
+     "npm run check:doc-source-paths"
+    ]
    }
   },
   {
