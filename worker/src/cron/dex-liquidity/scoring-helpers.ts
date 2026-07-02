@@ -255,7 +255,6 @@ export function applyRebuiltMetrics(
 
 export function accumulateGlobalAggregate(
   pools: LiquidityMetrics["topPools"],
-  globalSeenPools: Set<string>,
   globalProtocolTvl: Record<string, number>,
   globalChainTvl: Record<string, number>,
   globalProtoChainTvl: Record<string, number>,
@@ -295,7 +294,6 @@ export function accumulateGlobalAggregate(
       continue;
     }
 
-    globalSeenPools.add(pool.poolId);
     seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, vol24h: pool.volumeUsd1d, vol7d: incomingVol7d, proto, chain: chainKey });
     totalTvl += pool.tvlUsd;
     totalVol24h += pool.volumeUsd1d;

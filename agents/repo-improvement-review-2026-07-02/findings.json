@@ -883,6 +883,15 @@
     "alsoFiles": [
      "worker/src/cron/dex-liquidity/scoring.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the write-only globalSeenPools set and parameter from DEX liquidity global aggregation. The existing seenPoolTvl map remains the sole cross-stablecoin dedupe state.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/scoring-helpers.test.ts worker/src/cron/__tests__/dex-liquidity-persistence.test.ts worker/src/cron/dex-liquidity/__tests__/persistence-frozen.test.ts worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

@@ -305,7 +305,6 @@ describe("filterRetainedPools", () => {
 
 describe("accumulateGlobalAggregate", () => {
   it("dedupes the same poolId across stablecoins", () => {
-    const seen = new Set<string>();
     const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
@@ -314,15 +313,14 @@ describe("accumulateGlobalAggregate", () => {
 
     const pool = makePool({});
 
-    const a = accumulateGlobalAggregate([pool], seen, protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
-    const b = accumulateGlobalAggregate([pool], seen, protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
+    const a = accumulateGlobalAggregate([pool], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
+    const b = accumulateGlobalAggregate([pool], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
 
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
     expect(a.poolCount + b.poolCount).toBe(1);
   });
 
   it("prefers the higher-TVL row on poolId collision", () => {
-    const seen = new Set<string>();
     const seenTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
@@ -331,11 +329,11 @@ describe("accumulateGlobalAggregate", () => {
 
     const a = accumulateGlobalAggregate(
       [makePool({ tvlUsd: 4_500_000, volumeUsd1d: 900_000, volumeUsd7d: 6_300_000 })],
-      seen, protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
+      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
     );
     const b = accumulateGlobalAggregate(
       [makePool({ tvlUsd: 5_000_000, volumeUsd1d: 1_000_000, volumeUsd7d: 7_000_000 })],
-      seen, protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
+      protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
     );
 
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
