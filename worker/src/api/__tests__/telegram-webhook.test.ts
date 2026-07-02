@@ -2669,6 +2669,37 @@ describe("handleTelegramWebhook", () => {
     expect(body.reply_markup).toBeDefined();
   });
 
+  it("counts only registry misses in /import dropped-note copy while deduping tracked ids", async () => {
+    const token = encodeWatchlistToken({
+      coinIds: ["usdc-circle", "usdc-circle", "retired-stablecoin"],
+      alertTypes: ["dews"],
+      presetIds: [],
+    });
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
+
+    const confirmInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(confirmInsert).toBeDefined();
+    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as {
+      coinIds: string[];
+      presetIds: string[];
+      alertTypes: string[];
+    };
+    expect(payload.coinIds).toEqual(["usdc-circle"]);
+    expect(payload.presetIds).toEqual([]);
+    expect(payload.alertTypes).toEqual(["dews"]);
+
+    const body = sentMessageBody();
+    expect(body.text).toContain("Confirm?");
+    expect(body.text).toContain("USDC");
+    expect(body.text).toContain("(1 no longer tracked and were skipped.)");
+    expect(body.text).not.toContain("(2 no longer tracked");
+    expect(body.reply_markup).toBeDefined();
+  });
+
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },

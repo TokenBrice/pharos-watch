@@ -2888,6 +2888,17 @@
     "description": "droppedUnknown = decoded.state.coinIds.length - validIds.length, but validIds is deduped (seen Set, lines 64-71) as well as registry-filtered. A token containing a tracked coin twice (tokens are user-pasteable strings, not only /export output) yields '(1 no longer tracked and were skipped.)' even though every id is tracked. The count also ignores the subscribableCoinCount() cap applied on line 72, so ids silently dropped by the cap are not reported at all. Only the preview message is wrong; the staged subscription payload is correct.",
     "recommendation": "Count only registry misses: track unknown ids separately from duplicate suppression (e.g. increment droppedUnknown only when !TRACKED_META_BY_ID.has(id)). This corrects a wrong count in an existing message — behavior change is the bug fix, and the common /export→/import path (no duplicates) is unaffected.",
     "estImpact": "correct skip count in /import preview"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed `/import` skip accounting to increment the dropped count only for registry misses while still deduping tracked ids before staging the confirmation payload.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/telegram-webhook.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/api/webhook-commands/import.ts worker/src/api/__tests__/telegram-webhook.test.ts"
+    ],
+    "notes": "Added a regression token with a duplicate tracked id plus one unknown id, verifying the preview reports one skipped id and the staged payload contains one deduped coin."
    }
   },
   {

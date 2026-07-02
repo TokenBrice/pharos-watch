@@ -63,14 +63,18 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
 
   const seen = new Set<string>();
   const validIds: string[] = [];
+  let droppedUnknown = 0;
   for (const id of decoded.state.coinIds) {
-    if (TRACKED_META_BY_ID.has(id) && !seen.has(id)) {
+    if (!TRACKED_META_BY_ID.has(id)) {
+      droppedUnknown += 1;
+      continue;
+    }
+    if (!seen.has(id)) {
       seen.add(id);
       validIds.push(id);
     }
   }
   const cappedIds = validIds.slice(0, subscribableCoinCount());
-  const droppedUnknown = decoded.state.coinIds.length - validIds.length;
   const presetIds = dedupePresetIds(decoded.state.presetIds);
 
   if (cappedIds.length === 0 && presetIds.length === 0) {
