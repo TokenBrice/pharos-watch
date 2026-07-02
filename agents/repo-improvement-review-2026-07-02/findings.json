@@ -3010,6 +3010,16 @@
     "description": "use-events.ts (93-118) and use-depeg-events.ts (45-77) hand-roll near-identical infiniteQueryOptions blocks: getPollingWindow(CRON_15MIN), initialPageParam null cursor, retry 2, apiFetchWithMeta queryFn with signal, getNextPageParam from lastPage.data.nextCursor, then both flatten pages and drive useAutoLoadInfinitePages. Additionally, use-events.ts deliberately memoizes all five page-derived values (lines 147-165, with a comment explaining why referential stability matters downstream), while useInfiniteDepegEvents computes events via flatMap and builds a fresh data object on every render (lines 100-110), invalidating any downstream useMemo keyed on it whenever the component re-renders for unrelated reasons.",
     "recommendation": "Extract a small createCursorInfiniteQueryOptions({queryKey, buildPath, schema}) helper used by both hooks (same options emitted, so query behavior is unchanged), and wrap the depeg hook's derived values in useMemo([query.data?.pages]) mirroring use-events.ts. Both changes are behavior-preserving; the memo change only stabilizes references.",
     "estImpact": "~-30 LOC; fewer wasted downstream recomputes"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Memoized `useInfiniteDepegEvents` page-derived values and returned data object from the stable TanStack pages reference, matching the downstream reference-stability pattern used by `useEvents`.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-depeg-events.test.tsx src/hooks/__tests__/query-option-builders.test.ts",
+     "npm run typecheck"
+    ],
+    "notes": "Added a rerender regression test for stable `data`, `events`, and `pending` references. Left the optional shared infinite-query helper unextracted because the events and depeg builders intentionally diverge on first-page total counting and response schema validation."
    }
   },
   {

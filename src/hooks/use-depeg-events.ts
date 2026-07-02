@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { DepegEventsResponse } from "@shared/types";
@@ -97,17 +98,28 @@ export function useInfiniteDepegEvents({
     isFetchingNextPage,
   });
 
-  const events = query.data?.pages.flatMap((page) => page.data.events) ?? [];
-  const total = query.data?.pages[0]?.data.total ?? 0;
-  const totalExact = query.data?.pages[0]?.data.totalExact ?? true;
-  const pages = query.data?.pages ?? [];
-  const nextCursor = pages[pages.length - 1]?.data.nextCursor ?? null;
-  const pending = query.data?.pages[0]?.data.pending ?? [];
-  const meta = query.data?.pages[0]?.meta ?? null;
+  // Keep page-derived values stable across unrelated rerenders. The events
+  // page already carries the cursor-specific fetch behavior, while the depeg
+  // response schema/total semantics differ enough that a shared query-options
+  // helper would add more abstraction than it removes.
+  const pages = query.data?.pages;
+  const events = useMemo(
+    () => pages?.flatMap((page) => page.data.events) ?? [],
+    [pages],
+  );
+  const total = useMemo(() => pages?.[0]?.data.total ?? 0, [pages]);
+  const totalExact = useMemo(() => pages?.[0]?.data.totalExact ?? true, [pages]);
+  const nextCursor = useMemo(() => pages?.[pages.length - 1]?.data.nextCursor ?? null, [pages]);
+  const pending = useMemo(() => pages?.[0]?.data.pending ?? [], [pages]);
+  const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
+  const data = useMemo(
+    () => ({ events, total, totalExact, nextCursor, pending }),
+    [events, nextCursor, pending, total, totalExact],
+  );
 
   return {
     ...query,
-    data: { events, total, totalExact, nextCursor, pending },
+    data,
     loadedCount: events.length,
     isFullyLoaded: nextCursor == null && (!totalExact || total === 0 || events.length >= total),
     meta,
