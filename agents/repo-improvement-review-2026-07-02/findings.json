@@ -116,6 +116,16 @@
     "recommendation": "Extract one parameterized fetchMorphoVaultLiquidityTelemetry(version, query, extractVault, extractLiquidity, extraV2Fields) that produces identical warning codes/messages and telemetry objects for both versions; drop the dead warnings array in the Yearn helper. Same GraphQL requests, same warning strings, same telemetry — behavior-preserving.",
     "estImpact": "~-120 LOC in the largest adapter file",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Consolidated Morpho V1/V2 vault liquidity telemetry behind one parameterized helper while preserving version-specific queries, response extraction, warning codes/messages, validation order, and telemetry fields. Removed the dead Yearn V3 withdrawable warning accumulator.",
+    "validation": [
+     "npx vitest run worker/src/cron/reserve-adapters/__tests__/erc4626-single-asset.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/reserve-adapters/erc4626-single-asset.ts"
+    ]
    }
   },
   {

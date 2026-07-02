@@ -106,52 +106,56 @@ interface RedemptionCapacityTelemetry {
   morphoVaultV2ForceDeallocatableLiquidityUsd?: number;
 }
 
+interface MorphoVaultWarning {
+  type?: unknown;
+  level?: unknown;
+}
+
+interface MorphoVaultLiquidityBase {
+  address?: unknown;
+  listed?: unknown;
+  asset?: {
+    address?: unknown;
+  } | null;
+  chain?: {
+    id?: unknown;
+  } | null;
+  warnings?: MorphoVaultWarning[] | null;
+}
+
+interface MorphoVaultV1LiquidityVault extends MorphoVaultLiquidityBase {
+  liquidity?: {
+    underlying?: unknown;
+    usd?: unknown;
+  } | null;
+}
+
+interface MorphoVaultV2LiquidityVault extends MorphoVaultLiquidityBase {
+  liquidity?: unknown;
+  liquidityUsd?: unknown;
+  forceDeallocatableLiquidity?: unknown;
+  forceDeallocatableLiquidityUsd?: unknown;
+}
+
 interface MorphoVaultV1LiquidityResponse {
   data?: {
-    vaultByAddress?: {
-      address?: unknown;
-      listed?: unknown;
-      asset?: {
-        address?: unknown;
-      } | null;
-      chain?: {
-        id?: unknown;
-      } | null;
-      liquidity?: {
-        underlying?: unknown;
-        usd?: unknown;
-      } | null;
-      warnings?: Array<{
-        type?: unknown;
-        level?: unknown;
-      }> | null;
-    } | null;
+    vaultByAddress?: MorphoVaultV1LiquidityVault | null;
   };
   errors?: unknown;
 }
 
 interface MorphoVaultV2LiquidityResponse {
   data?: {
-    vaultV2ByAddress?: {
-      address?: unknown;
-      listed?: unknown;
-      asset?: {
-        address?: unknown;
-      } | null;
-      chain?: {
-        id?: unknown;
-      } | null;
-      liquidity?: unknown;
-      liquidityUsd?: unknown;
-      forceDeallocatableLiquidity?: unknown;
-      forceDeallocatableLiquidityUsd?: unknown;
-      warnings?: Array<{
-        type?: unknown;
-        level?: unknown;
-      }> | null;
-    } | null;
+    vaultV2ByAddress?: MorphoVaultV2LiquidityVault | null;
   };
   errors?: unknown;
+}
+
+interface ParsedMorphoVaultLiquidity {
+  liquidityRaw: bigint | null;
+  liquidityUsd?: number;
+  forceDeallocatableLiquidityRaw?: bigint;
+  forceDeallocatableLiquidityUsd?: number;
 }
 
 const DEFAULT_MORPHO_GRAPHQL_URL = "https://api.morpho.org/graphql";
@@ -311,7 +315,6 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   telemetry: YearnV3WithdrawableLiquidityTelemetry | null;
   warnings: LiveReserveWarning[];
 }> {
-  const warnings: LiveReserveWarning[] = [];
   const [totalIdleResult, defaultQueueResult] = await Promise.all([
     args.call(YEARN_V3_TOTAL_IDLE_SELECTOR),
     args.call(YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR),
@@ -429,7 +432,7 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
       withdrawableRaw,
       settlementDelaySec: args.settlementDelaySec ?? 0,
     },
-    warnings,
+    warnings: [],
   };
 }
 
@@ -450,7 +453,171 @@ function describeMorphoWarning(value: { type?: unknown; level?: unknown }): stri
   return `${type}/${level}`;
 }
 
-async function fetchMorphoVaultV2LiquidityTelemetry(args: {
+async function fetchMorphoVaultLiquidityTelemetry<
+  Response extends { errors?: unknown },
+  Vault extends MorphoVaultLiquidityBase,
+>(args: {
+  coinId: string;
+  contractAddress: string;
+  assetAddress: string;
+  config: { chainId: number; apiUrl?: string };
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  query: string;
+  versionLabel: "Morpho V1" | "Morpho V2";
+  warningCodePrefix: "morpho-vault-v1" | "morpho-vault-v2";
+  telemetrySource: MorphoVaultLiquiditySource;
+  extractVault: (payload: Response) => Vault | null | undefined;
+  parseLiquidity: (vault: Vault) => ParsedMorphoVaultLiquidity;
+}): Promise<{ telemetry: MorphoVaultLiquidityTelemetry | null; warnings: LiveReserveWarning[] }> {
+  const apiUrl = args.config.apiUrl ?? DEFAULT_MORPHO_GRAPHQL_URL;
+  try {
+    const payload = await fetchJsonPostWithRetry<Response>(
+      apiUrl,
+      {
+        query: args.query,
+        variables: {
+          address: args.contractAddress,
+          chainId: args.config.chainId,
+        },
+      },
+      args.signal,
+      12_000,
+      args.ctx,
+      { headers: { Accept: "application/json" } },
+    );
+    if (payload.errors != null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-liquidity-unavailable`,
+            `${args.versionLabel} liquidity query returned GraphQL errors for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const vault = args.extractVault(payload);
+    if (!vault) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-liquidity-unavailable`,
+            `${args.versionLabel} liquidity query returned no vault for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedVaultAddress = parseMorphoAddress(vault.address);
+    if (reportedVaultAddress !== args.contractAddress.toLowerCase()) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-identity-mismatch`,
+            `${args.versionLabel} liquidity vault address mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedAssetAddress = parseMorphoAddress(vault.asset?.address);
+    if (reportedAssetAddress !== args.assetAddress.toLowerCase()) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-asset-mismatch`,
+            `${args.versionLabel} liquidity asset mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    const reportedChainId = parseMorphoChainId(vault.chain?.id);
+    if (reportedChainId !== args.config.chainId) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-chain-mismatch`,
+            `${args.versionLabel} liquidity chain mismatch for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    if (vault.listed !== true) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-unlisted`,
+            `${args.versionLabel} liquidity vault is not listed for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    if (vault.warnings?.length) {
+      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-warning`,
+            `${args.versionLabel} liquidity vault warnings for ${args.coinId}: ${warningList}`,
+          ),
+        ],
+      };
+    }
+
+    const liquidity = args.parseLiquidity(vault);
+    const { liquidityRaw } = liquidity;
+    if (liquidityRaw == null) {
+      return {
+        telemetry: null,
+        warnings: [
+          reserveDegradedWarning(
+            `${args.warningCodePrefix}-liquidity-invalid`,
+            `${args.versionLabel} liquidity payload has invalid liquidity for ${args.coinId}`,
+          ),
+        ],
+      };
+    }
+
+    return {
+      telemetry: {
+        source: args.telemetrySource,
+        liquidityRaw,
+        ...(liquidity.liquidityUsd != null ? { liquidityUsd: liquidity.liquidityUsd } : {}),
+        ...(liquidity.forceDeallocatableLiquidityRaw != null
+          ? { forceDeallocatableLiquidityRaw: liquidity.forceDeallocatableLiquidityRaw }
+          : {}),
+        ...(liquidity.forceDeallocatableLiquidityUsd != null
+          ? { forceDeallocatableLiquidityUsd: liquidity.forceDeallocatableLiquidityUsd }
+          : {}),
+      },
+      warnings: [],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          `${args.warningCodePrefix}-liquidity-unavailable`,
+          `${args.versionLabel} liquidity fetch failed for ${args.coinId}: ${message}`,
+        ),
+      ],
+    };
+  }
+}
+
+function fetchMorphoVaultV2LiquidityTelemetry(args: {
   coinId: string;
   contractAddress: string;
   assetAddress: string;
@@ -458,153 +625,28 @@ async function fetchMorphoVaultV2LiquidityTelemetry(args: {
   signal: AbortSignal;
   ctx?: AdapterContext;
 }): Promise<{ telemetry: MorphoVaultLiquidityTelemetry | null; warnings: LiveReserveWarning[] }> {
-  const apiUrl = args.config.apiUrl ?? DEFAULT_MORPHO_GRAPHQL_URL;
-  try {
-    const payload = await fetchJsonPostWithRetry<MorphoVaultV2LiquidityResponse>(
-      apiUrl,
-      {
-        query: MORPHO_VAULT_V2_LIQUIDITY_QUERY,
-        variables: {
-          address: args.contractAddress,
-          chainId: args.config.chainId,
-        },
-      },
-      args.signal,
-      12_000,
-      args.ctx,
-      { headers: { Accept: "application/json" } },
-    );
-    if (payload.errors != null) {
+  return fetchMorphoVaultLiquidityTelemetry<MorphoVaultV2LiquidityResponse, MorphoVaultV2LiquidityVault>({
+    ...args,
+    query: MORPHO_VAULT_V2_LIQUIDITY_QUERY,
+    versionLabel: "Morpho V2",
+    warningCodePrefix: "morpho-vault-v2",
+    telemetrySource: "morpho-vault-v2-liquidity",
+    extractVault: (payload) => payload.data?.vaultV2ByAddress,
+    parseLiquidity: (vault) => {
+      const liquidityUsd = parseOptionalNonNegativeNumber(vault.liquidityUsd);
+      const forceDeallocatableLiquidityRaw = parseNonNegativeBigIntLike(vault.forceDeallocatableLiquidity);
+      const forceDeallocatableLiquidityUsd = parseOptionalNonNegativeNumber(vault.forceDeallocatableLiquidityUsd);
       return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-liquidity-unavailable",
-            `Morpho V2 liquidity query returned GraphQL errors for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const vault = payload.data?.vaultV2ByAddress;
-    if (!vault) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-liquidity-unavailable",
-            `Morpho V2 liquidity query returned no vault for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedVaultAddress = parseMorphoAddress(vault.address);
-    if (reportedVaultAddress !== args.contractAddress.toLowerCase()) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-identity-mismatch",
-            `Morpho V2 liquidity vault address mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedAssetAddress = parseMorphoAddress(vault.asset?.address);
-    if (reportedAssetAddress !== args.assetAddress.toLowerCase()) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-asset-mismatch",
-            `Morpho V2 liquidity asset mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedChainId = parseMorphoChainId(vault.chain?.id);
-    if (reportedChainId !== args.config.chainId) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-chain-mismatch",
-            `Morpho V2 liquidity chain mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    if (vault.listed !== true) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-unlisted",
-            `Morpho V2 liquidity vault is not listed for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    if (vault.warnings?.length) {
-      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-warning",
-            `Morpho V2 liquidity vault warnings for ${args.coinId}: ${warningList}`,
-          ),
-        ],
-      };
-    }
-
-    const liquidityRaw = parseNonNegativeBigIntLike(vault.liquidity);
-    if (liquidityRaw == null) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v2-liquidity-invalid",
-            `Morpho V2 liquidity payload has invalid liquidity for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const liquidityUsd = parseOptionalNonNegativeNumber(vault.liquidityUsd);
-    const forceDeallocatableLiquidityRaw = parseNonNegativeBigIntLike(vault.forceDeallocatableLiquidity);
-    const forceDeallocatableLiquidityUsd = parseOptionalNonNegativeNumber(vault.forceDeallocatableLiquidityUsd);
-
-    return {
-      telemetry: {
-        source: "morpho-vault-v2-liquidity",
-        liquidityRaw,
+        liquidityRaw: parseNonNegativeBigIntLike(vault.liquidity),
         ...(liquidityUsd != null ? { liquidityUsd } : {}),
         ...(forceDeallocatableLiquidityRaw != null ? { forceDeallocatableLiquidityRaw } : {}),
         ...(forceDeallocatableLiquidityUsd != null ? { forceDeallocatableLiquidityUsd } : {}),
-      },
-      warnings: [],
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      telemetry: null,
-      warnings: [
-        reserveDegradedWarning(
-          "morpho-vault-v2-liquidity-unavailable",
-          `Morpho V2 liquidity fetch failed for ${args.coinId}: ${message}`,
-        ),
-      ],
-    };
-  }
+      };
+    },
+  });
 }
 
-async function fetchMorphoVaultV1LiquidityTelemetry(args: {
+function fetchMorphoVaultV1LiquidityTelemetry(args: {
   coinId: string;
   contractAddress: string;
   assetAddress: string;
@@ -612,146 +654,21 @@ async function fetchMorphoVaultV1LiquidityTelemetry(args: {
   signal: AbortSignal;
   ctx?: AdapterContext;
 }): Promise<{ telemetry: MorphoVaultLiquidityTelemetry | null; warnings: LiveReserveWarning[] }> {
-  const apiUrl = args.config.apiUrl ?? DEFAULT_MORPHO_GRAPHQL_URL;
-  try {
-    const payload = await fetchJsonPostWithRetry<MorphoVaultV1LiquidityResponse>(
-      apiUrl,
-      {
-        query: MORPHO_VAULT_V1_LIQUIDITY_QUERY,
-        variables: {
-          address: args.contractAddress,
-          chainId: args.config.chainId,
-        },
-      },
-      args.signal,
-      12_000,
-      args.ctx,
-      { headers: { Accept: "application/json" } },
-    );
-    if (payload.errors != null) {
+  return fetchMorphoVaultLiquidityTelemetry<MorphoVaultV1LiquidityResponse, MorphoVaultV1LiquidityVault>({
+    ...args,
+    query: MORPHO_VAULT_V1_LIQUIDITY_QUERY,
+    versionLabel: "Morpho V1",
+    warningCodePrefix: "morpho-vault-v1",
+    telemetrySource: "morpho-vault-v1-liquidity",
+    extractVault: (payload) => payload.data?.vaultByAddress,
+    parseLiquidity: (vault) => {
+      const liquidityUsd = parseOptionalNonNegativeNumber(vault.liquidity?.usd);
       return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-liquidity-unavailable",
-            `Morpho V1 liquidity query returned GraphQL errors for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const vault = payload.data?.vaultByAddress;
-    if (!vault) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-liquidity-unavailable",
-            `Morpho V1 liquidity query returned no vault for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedVaultAddress = parseMorphoAddress(vault.address);
-    if (reportedVaultAddress !== args.contractAddress.toLowerCase()) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-identity-mismatch",
-            `Morpho V1 liquidity vault address mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedAssetAddress = parseMorphoAddress(vault.asset?.address);
-    if (reportedAssetAddress !== args.assetAddress.toLowerCase()) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-asset-mismatch",
-            `Morpho V1 liquidity asset mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const reportedChainId = parseMorphoChainId(vault.chain?.id);
-    if (reportedChainId !== args.config.chainId) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-chain-mismatch",
-            `Morpho V1 liquidity chain mismatch for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    if (vault.listed !== true) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-unlisted",
-            `Morpho V1 liquidity vault is not listed for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    if (vault.warnings?.length) {
-      const warningList = vault.warnings.map(describeMorphoWarning).join(", ");
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-warning",
-            `Morpho V1 liquidity vault warnings for ${args.coinId}: ${warningList}`,
-          ),
-        ],
-      };
-    }
-
-    const liquidityRaw = parseNonNegativeBigIntLike(vault.liquidity?.underlying);
-    if (liquidityRaw == null) {
-      return {
-        telemetry: null,
-        warnings: [
-          reserveDegradedWarning(
-            "morpho-vault-v1-liquidity-invalid",
-            `Morpho V1 liquidity payload has invalid liquidity for ${args.coinId}`,
-          ),
-        ],
-      };
-    }
-
-    const liquidityUsd = parseOptionalNonNegativeNumber(vault.liquidity?.usd);
-
-    return {
-      telemetry: {
-        source: "morpho-vault-v1-liquidity",
-        liquidityRaw,
+        liquidityRaw: parseNonNegativeBigIntLike(vault.liquidity?.underlying),
         ...(liquidityUsd != null ? { liquidityUsd } : {}),
-      },
-      warnings: [],
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      telemetry: null,
-      warnings: [
-        reserveDegradedWarning(
-          "morpho-vault-v1-liquidity-unavailable",
-          `Morpho V1 liquidity fetch failed for ${args.coinId}: ${message}`,
-        ),
-      ],
-    };
-  }
+      };
+    },
+  });
 }
 
 function buildRedemptionCapacityTelemetry(
