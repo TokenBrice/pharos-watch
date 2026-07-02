@@ -7,11 +7,14 @@ import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
 import { createMethodologyVersion } from "./base";
-import currentVersion from "./current-version.json";
+import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_METHODOLOGY_VERSION,
+} from "./constants";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: currentVersion.currentVersion,
-  changelogPath: "/methodology/scoring-changelog/",
+  currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+  changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...SAFETY_SCORE_V8,
     ...SAFETY_SCORE_V7,
@@ -24,9 +27,11 @@ const safetyScore = createMethodologyVersion({
   ],
 });
 
-export const SAFETY_SCORE_METHODOLOGY_VERSION = safetyScore.currentVersion;
-export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = safetyScore.versionLabel;
-export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = safetyScore.changelogPath;
+export {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_METHODOLOGY_VERSION,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG = safetyScore.changelog;
 export const getSafetyScoreVersionAt = safetyScore.getVersionAt;
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS = safetyScore.versionLabels;

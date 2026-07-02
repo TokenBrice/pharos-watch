@@ -4,13 +4,15 @@ import { MINT_BURN_FLOW_V3 } from "../../data/methodology-changelogs/mint-burn-f
 import { MINT_BURN_FLOW_V4 } from "../../data/methodology-changelogs/mint-burn-flow/v4";
 import { MINT_BURN_FLOW_V5 } from "../../data/methodology-changelogs/mint-burn-flow/v5";
 import { MINT_BURN_FLOW_V6 } from "../../data/methodology-changelogs/mint-burn-flow/v6";
+import { createMethodologyVersion } from "./base";
 import {
-  createMethodologyVersion,
-} from "./base";
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION,
+} from "./constants";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "6.17",
-  changelogPath: "/methodology/mint-burn-flow-changelog/",
+  currentVersion: MINT_BURN_FLOW_METHODOLOGY_VERSION,
+  changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...MINT_BURN_FLOW_V6,
     ...MINT_BURN_FLOW_V5,
@@ -21,11 +23,11 @@ const mintBurnFlow = createMethodologyVersion({
   ],
 });
 
-/** Display-ready Mint/Burn Flow methodology version (with "v" prefix). */
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = mintBurnFlow.versionLabel;
-
-/** Public changelog route for Mint/Burn Flow methodology history. */
-export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = mintBurnFlow.changelogPath;
+export {
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG = mintBurnFlow.changelog;

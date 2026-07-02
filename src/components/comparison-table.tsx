@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, memo, useMemo, type ReactNode } from "react";
-import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
+import type { StablecoinData, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice, formatScore, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
@@ -22,13 +22,14 @@ import {
 } from "@/components/table";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { buildStablecoinUrl } from "@/lib/urls";
+import type { ComparisonMeta } from "@/lib/compare-derive";
 
 interface ComparisonCoin {
   id: string;
   symbol: string;
   name: string;
   data: StablecoinData;
-  meta: StablecoinMeta;
+  meta: ComparisonMeta;
   pegScore: number | null;
   liquidityScore: number | null;
   safetyGrade: ReportCardGrade | null;

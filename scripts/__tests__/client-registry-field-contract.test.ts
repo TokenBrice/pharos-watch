@@ -6,12 +6,14 @@ import {
   projectGeniusProfile,
   projectMintAuthoritySummary,
   readCanonicalClientFields,
+  readGeniusComplianceFields,
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
 import { computeMintAuthorityScore, stablecoinToMintAuthorityScoringInput } from "../../shared/lib/mint-authority-scoring";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
+  GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
 } from "../../shared/types/stablecoin-client-meta";
 
@@ -22,6 +24,10 @@ describe("client registry field contract", () => {
 
   it("reads the GENIUS client field list from the shared TypeScript contract", () => {
     expect(readGeniusClientFields()).toEqual([...GENIUS_CLIENT_PROFILE_FIELDS]);
+  });
+
+  it("reads the GENIUS compliance field list from the shared TypeScript contract", () => {
+    expect(readGeniusComplianceFields()).toEqual([...GENIUS_COMPLIANCE_PROFILE_FIELDS]);
   });
 
   it("projects client registry fields in canonical order", () => {
@@ -175,7 +181,7 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("2026-05-24");
   });
 
-  it("projects public GENIUS posture fields and nested review evidence", () => {
+  it("keeps only GENIUS status in the global client projection and projects full compliance evidence separately", () => {
     const coin = {
       id: "genius-usd",
       name: "GENIUS USD",
@@ -229,9 +235,15 @@ describe("client registry field contract", () => {
     };
 
     const projected = projectCoin(coin, readCanonicalClientFields());
+    const complianceProfile = projectGeniusProfile(coin.genius, readGeniusComplianceFields());
 
     expect(projectGeniusProfile(null)).toBeNull();
     expect(projected.genius).toEqual({
+      authorizationStatus: "no-public-authorization-found",
+    });
+    expect(JSON.stringify(projected)).not.toContain("Long applicability basis stays server-side");
+    expect(JSON.stringify(projected)).not.toContain("Long negative evidence review stays server-side");
+    expect(complianceProfile).toEqual({
       applicability: "apparent-payment-stablecoin",
       applicabilityBasis: {
         summary: "Long applicability basis stays server-side.",

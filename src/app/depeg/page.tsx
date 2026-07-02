@@ -13,7 +13,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/depeg-dews-version";
+} from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, heatmaps, severity, and history.`;

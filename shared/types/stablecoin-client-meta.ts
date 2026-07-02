@@ -59,6 +59,10 @@ type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"
 type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
 
 export const GENIUS_CLIENT_PROFILE_FIELDS = [
+  "authorizationStatus",
+] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
+
+export const GENIUS_COMPLIANCE_PROFILE_FIELDS = [
   "applicability",
   "applicabilityBasis",
   "authorizationStatus",
@@ -89,6 +93,11 @@ export type GeniusClientProfile = Pick<
   (typeof GENIUS_CLIENT_PROFILE_FIELDS)[number]
 >;
 
+export type GeniusComplianceProfile = Pick<
+  GeniusSourceProfile,
+  (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]
+>;
+
 /**
  * Slim projection of `StablecoinMeta` for client-side consumers.
  *
@@ -97,11 +106,12 @@ export type GeniusClientProfile = Pick<
  * `featuredContent`, `obituary` text, etc.). This client type keeps only the fields
  * client surfaces actually read for routing, labels, filtering, basic
  * classification, reserve coverage summaries, mint-authority coverage
- * classification, compliance-table display, and portfolio exposure. Stablecoin
+ * classification, compliance status labels, and portfolio exposure. Stablecoin
  * detail pages add page-specific full mint-authority summaries outside this
  * global registry so coverage growth does not inflate every route's client
- * chunk. GENIUS compliance evidence is projected only for public table/detail
- * display; source JSON remains the canonical editorial record.
+ * chunk. GENIUS long-form compliance evidence is projected into a
+ * compliance-route asset outside this global registry; source JSON remains the
+ * canonical editorial record.
  *
  * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
  * `coins.generated.json` to a slim JSON consumed by

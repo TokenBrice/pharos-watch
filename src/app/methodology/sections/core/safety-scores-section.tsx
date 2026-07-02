@@ -1,7 +1,7 @@
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/safety-score-version";
+} from "@shared/lib/methodology-versions/constants";
 import { MethodologySectionShell } from "../../methodology-shared";
 import { SAFETY_SCORES_SECTION_CONTENT } from "../methodology-content";
 import { SafetyScoresOverview } from "./safety-scores-overview";

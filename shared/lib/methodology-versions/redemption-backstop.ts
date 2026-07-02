@@ -3,10 +3,14 @@ import { REDEMPTION_BACKSTOP_V2 } from "../../data/methodology-changelogs/redemp
 import { REDEMPTION_BACKSTOP_V3 } from "../../data/methodology-changelogs/redemption-backstop/v3";
 import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemption-backstop/v4";
 import { createMethodologyVersion } from "./base";
+import {
+  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+} from "./constants";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "4.16",
-  changelogPath: "/methodology/#safety-scores-methodology",
+  currentVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+  changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
   changelog: [
     ...REDEMPTION_BACKSTOP_V4,
     ...REDEMPTION_BACKSTOP_V3,
@@ -15,17 +19,11 @@ const redemptionBackstop = createMethodologyVersion({
   ],
 });
 
-/** Canonical Redemption Backstop methodology version (no "v" prefix). */
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = redemptionBackstop.currentVersion;
-
-/** Display-ready Redemption Backstop methodology version (with "v" prefix). */
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = redemptionBackstop.versionLabel;
-
-/**
- * Public methodology anchor for Redemption Backstop — an in-page #anchor on /methodology, not a
- * dedicated changelog route, so it is intentionally named _METHODOLOGY_PATH (not _METHODOLOGY_CHANGELOG_PATH).
- */
-export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = redemptionBackstop.changelogPath;
+export {
+  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Resolve Redemption Backstop methodology version active at a given Unix timestamp (seconds). */
 export const getRedemptionBackstopVersionAt = redemptionBackstop.getVersionAt;

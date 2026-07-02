@@ -6,7 +6,7 @@ import { DigestSnapshot } from "@/components/digest-snapshot";
 import { EditorialColophon } from "@/components/editorial-colophon";
 import { EditorialMasthead } from "@/components/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";

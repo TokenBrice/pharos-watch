@@ -30,12 +30,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
 const OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.generated.json";
+const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
 const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
+const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
 const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
+const GENIUS_COMPLIANCE_FIELDS_EXPORT = "GENIUS_COMPLIANCE_PROFILE_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
@@ -109,7 +112,12 @@ export function readGeniusClientFields(sourcePath = CLIENT_META_TS_ABS) {
   return readStringLiteralArrayExport(GENIUS_CLIENT_FIELDS_EXPORT, sourcePath);
 }
 
+export function readGeniusComplianceFields(sourcePath = CLIENT_META_TS_ABS) {
+  return readStringLiteralArrayExport(GENIUS_COMPLIANCE_FIELDS_EXPORT, sourcePath);
+}
+
 const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
+const DEFAULT_GENIUS_COMPLIANCE_FIELDS = readGeniusComplianceFields();
 
 export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   const slim = {};
@@ -399,6 +407,24 @@ export function validateProjection(slim, sourceCoin, index, clientFields, genius
   }
 }
 
+export function validateGeniusComplianceProjection(entry, sourceCoin, index, geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS) {
+  if (typeof entry.id !== "string" || entry.id.length === 0) {
+    throw new Error(`[client-registry] compliance entry ${index}: invalid or missing id`);
+  }
+  if (entry.id !== sourceCoin.id) {
+    throw new Error(
+      `[client-registry] compliance entry ${index} (${entry.id}): id diverges from source ${sourceCoin.id}`,
+    );
+  }
+
+  const sourceValue = projectGeniusProfile(sourceCoin.genius, geniusComplianceFields);
+  if (JSON.stringify(sourceValue) !== JSON.stringify(entry.genius)) {
+    throw new Error(
+      `[client-registry] compliance entry ${index} (${entry.id}): genius profile diverges from source`,
+    );
+  }
+}
+
 export function buildClientRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
   clientFields = readCanonicalClientFields(),
@@ -423,25 +449,68 @@ export function buildClientRegistryOutput({
   };
 }
 
+export function buildComplianceRegistryOutput({
+  sourceJsonPath = SOURCE_JSON_ABS,
+  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS,
+} = {}) {
+  const rawJson = readFileSync(sourceJsonPath, "utf8");
+  const parsed = JSON.parse(rawJson);
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
+  }
+
+  const geniusEntries = [];
+  parsed.forEach((coin, index) => {
+    const genius = projectGeniusProfile(coin.genius, geniusComplianceFields);
+    if (!genius || !isPlainObject(genius)) {
+      return;
+    }
+    const entry = { id: coin.id, genius };
+    validateGeniusComplianceProjection(entry, coin, index, geniusComplianceFields);
+    geniusEntries.push(entry);
+  });
+
+  return {
+    output: `${JSON.stringify(geniusEntries, null, 2)}\n`,
+    geniusEntries,
+  };
+}
+
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
   const { output, slimCoins } = buildClientRegistryOutput();
+  const {
+    output: complianceOutput,
+    geniusEntries,
+  } = buildComplianceRegistryOutput();
 
   if (checkMode) {
     const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
-    if (current !== output) {
+    const currentCompliance = existsSync(COMPLIANCE_OUTPUT_JSON_ABS)
+      ? readFileSync(COMPLIANCE_OUTPUT_JSON_ABS, "utf8")
+      : "";
+    if (current !== output || currentCompliance !== complianceOutput) {
       console.error(
-        `${OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
+        `${OUTPUT_JSON_REL} or ${COMPLIANCE_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }
     console.log(
       `${OUTPUT_JSON_REL}: client registry is current (${slimCoins.length} entries, ${output.length} bytes)`,
     );
+    console.log(
+      `${COMPLIANCE_OUTPUT_JSON_REL}: compliance registry is current (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
+    );
   } else {
     mkdirSync(dirname(OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(OUTPUT_JSON_ABS, output, "utf8");
+    mkdirSync(dirname(COMPLIANCE_OUTPUT_JSON_ABS), { recursive: true });
+    writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
     console.log(
       `${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`,
+    );
+    console.log(
+      `${COMPLIANCE_OUTPUT_JSON_REL}: wrote compliance registry (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );
   }
 }

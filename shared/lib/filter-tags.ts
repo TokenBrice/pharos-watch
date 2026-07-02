@@ -35,7 +35,9 @@ export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
   return PEG_METADATA[peg].filterTag;
 }
 
-export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
+export function getFilterTags(
+  meta: Pick<StablecoinMeta, "flags" | "infrastructures" | "variantOf" | "variantKind">,
+): FilterTag[] {
   const tags: FilterTag[] = [];
   const pegTag = pegCurrencyToFilterTag(meta.flags.pegCurrency);
   tags.push(pegTag);

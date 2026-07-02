@@ -10,7 +10,10 @@ import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld"
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
   "Compare stablecoin safety grades by peg stability, liquidity, resilience, decentralization, CDP oracle setup, bridge-route risk, dependency risk, and contagion stress-test impact.";

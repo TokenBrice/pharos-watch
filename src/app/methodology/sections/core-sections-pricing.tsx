@@ -1,7 +1,7 @@
 import {
   PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
   PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/pricing-pipeline-version";
+} from "@shared/lib/methodology-versions/constants";
 import {
   TableBody,
   TableCell,

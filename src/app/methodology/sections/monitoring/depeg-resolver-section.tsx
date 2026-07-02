@@ -1,4 +1,4 @@
-import { DDR_METHODOLOGY_CHANGELOG_PATH, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { DDR_METHODOLOGY_CHANGELOG_PATH, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { MethodologyDetails, MethodologyFacts, MethodologySectionShell } from "../../methodology-shared";
 import { DEPEG_RESOLVER_SECTION_CONTENT } from "../methodology-content";
 

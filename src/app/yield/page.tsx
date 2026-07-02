@@ -7,7 +7,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/yield-methodology-version";
+} from "@shared/lib/methodology-versions/constants";
 import type { FaqItem } from "@/lib/faq";
 
 const desc =

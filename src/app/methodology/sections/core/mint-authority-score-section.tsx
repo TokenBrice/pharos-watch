@@ -1,5 +1,5 @@
 import { ContentTable } from "@/components/table";
-import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-authority-version";
+import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import {
   MethodologyDetails,
   MethodologyFacts,

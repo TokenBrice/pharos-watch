@@ -1,7 +1,7 @@
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/liquidity-score-version";
+} from "@shared/lib/methodology-versions/constants";
 import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../../methodology-shared";
 import { LIQUIDITY_SECTION_CONTENT } from "../methodology-content";
 import { LiquidityTechnicalDetails } from "./liquidity-technical-details";

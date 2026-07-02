@@ -1,22 +1,23 @@
 import { CHAIN_HEALTH_V1 } from "../../data/methodology-changelogs/chain-health/v1";
 import { createMethodologyVersion } from "./base";
+import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_VERSION,
+} from "./constants";
 
 const chainHealth = createMethodologyVersion({
-  currentVersion: "1.4",
-  changelogPath: "/methodology/chain-health-changelog/",
+  currentVersion: CHAIN_HEALTH_METHODOLOGY_VERSION,
+  changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...CHAIN_HEALTH_V1,
   ],
 });
 
-/** Canonical Chain Health methodology version (no "v" prefix). */
-export const CHAIN_HEALTH_METHODOLOGY_VERSION = chainHealth.currentVersion;
-
-/** Display-ready Chain Health methodology version (with "v" prefix). */
-export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = chainHealth.versionLabel;
-
-/** Public changelog route for Chain Health methodology history. */
-export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = chainHealth.changelogPath;
+export {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_VERSION,
+  CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Changelog data. */
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG = chainHealth.changelog;

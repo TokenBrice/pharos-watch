@@ -44,7 +44,7 @@ const optimizer = new Beasties({
 
 const asyncCssLoaderPath = "/critical-css-loader.js";
 const asyncStylesheetPattern =
-  /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/chunks\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
+  /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/(?:chunks|css)\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
 
 async function optimizePage(filePath, label) {
   const before = readFileSync(filePath, "utf8");
@@ -80,7 +80,7 @@ async function optimizePage(filePath, label) {
     throw new Error(`${label}: Beasties did not inline a critical style block.`);
   }
 
-  if (/<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/chunks\/[^"']+\.css)(?![^>]*\bmedia=["']print["'])[^>]*>/i.test(withoutNoscript)) {
+  if (/<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/(?:chunks|css)\/[^"']+\.css)(?![^>]*\bmedia=["']print["'])[^>]*>/i.test(withoutNoscript)) {
     throw new Error(`${label}: still has a render-blocking Next CSS link outside <noscript>.`);
   }
 

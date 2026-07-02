@@ -1,7 +1,7 @@
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/stability-index-version";
+} from "@shared/lib/methodology-versions/constants";
 import { ContentTable } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,

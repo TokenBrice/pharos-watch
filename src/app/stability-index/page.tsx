@@ -7,7 +7,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/stability-index-version";
+} from "@shared/lib/methodology-versions/constants";
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
 

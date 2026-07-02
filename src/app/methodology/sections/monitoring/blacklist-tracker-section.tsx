@@ -1,7 +1,7 @@
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/blacklist-tracker-version";
+} from "@shared/lib/methodology-versions/constants";
 import {
   MethodologyDetails,
   MethodologyFacts,

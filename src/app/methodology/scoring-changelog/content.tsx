@@ -1,6 +1,6 @@
 import {
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/safety-score-version";
+} from "@shared/lib/methodology-versions/constants";
 import { scoringAnchorId } from "./content-shared";
 import { ScoringChangelogV8Entries } from "./content-v8";
 import { ScoringChangelogV7Entries } from "./content-v7";

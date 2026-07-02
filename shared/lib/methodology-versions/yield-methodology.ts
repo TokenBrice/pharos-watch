@@ -7,10 +7,14 @@ import { YIELD_METHODOLOGY_V6 } from "../../data/methodology-changelogs/yield-me
 import { YIELD_METHODOLOGY_V7 } from "../../data/methodology-changelogs/yield-methodology/v7";
 import { YIELD_METHODOLOGY_V8 } from "../../data/methodology-changelogs/yield-methodology/v8";
 import { createMethodologyVersion } from "./base";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION,
+} from "./constants";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "8.298",
-  changelogPath: "/methodology/yield-changelog/",
+  currentVersion: YIELD_METHODOLOGY_VERSION,
+  changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...YIELD_METHODOLOGY_V8,
     ...YIELD_METHODOLOGY_V7,
@@ -23,14 +27,11 @@ const yieldMethodology = createMethodologyVersion({
   ],
 });
 
-/** Display-ready Yield Intelligence methodology version (with "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION = yieldMethodology.currentVersion;
-
-/** Display-ready Yield Intelligence methodology version (with "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION_LABEL = yieldMethodology.versionLabel;
-
-/** Public changelog route for Yield Intelligence methodology history. */
-export const YIELD_METHODOLOGY_CHANGELOG_PATH = yieldMethodology.changelogPath;
+export {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const YIELD_METHODOLOGY_CHANGELOG = yieldMethodology.changelog;

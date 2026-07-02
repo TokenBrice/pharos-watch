@@ -140,7 +140,7 @@ export function getRelatedChainTaxonomyLinks(deployments: readonly ChainTrackedD
   const taxonomyPages: ReadonlyArray<{
     href: string;
     title: string;
-    coins: readonly StablecoinMeta[];
+    coins: readonly { id: string }[];
   }> = [
     ...PEG_TAXONOMY_PAGES,
     ...BACKING_TAXONOMY_PAGES,

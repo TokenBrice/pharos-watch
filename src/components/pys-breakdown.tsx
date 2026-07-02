@@ -15,7 +15,7 @@ import { formatScore, formatSignedPercent } from "@shared/lib/format";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/yield-methodology-version";
+} from "@shared/lib/methodology-versions/constants";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";

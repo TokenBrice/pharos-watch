@@ -8,7 +8,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 ## Architectural keystone
 
-GENIUS status is **static editorial metadata, not pipeline data**. It lives in the per-coin JSON files (`shared/data/stablecoins/coins/*.json`), is bundled into the client registry at build, and renders client-side exactly like `/screener` and the MiCA rows.
+GENIUS status is **static editorial metadata, not pipeline data**. It lives in the per-coin JSON files (`shared/data/stablecoins/coins/*.json`), is projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's long-form evidence.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 

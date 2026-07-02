@@ -1,11 +1,13 @@
-import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/blacklist-tracker";
-import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
-import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/liquidity-score";
-import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/mint-burn-flow";
-import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/pricing-pipeline";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/stability-index";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/yield-methodology";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+  LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
+  PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
+  PSI_METHODOLOGY_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/methodology-versions/constants";
 
 export interface GlossaryEntryExample {
   label: string;

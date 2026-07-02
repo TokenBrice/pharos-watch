@@ -11,24 +11,26 @@ The tracker is informational and source-backed, not legal advice. Missing `mica`
 
 ## Architecture
 
-Compliance metadata is static editorial metadata bundled through the client registry:
+Compliance metadata is static editorial metadata bundled through generated client projections:
 
 - Source of truth: `shared/data/stablecoins/coins/*.json`
 - Runtime schema: `shared/lib/stablecoins/schema.ts`
 - Shared types: `shared/types/core.ts`
-- Client projection: `shared/types/stablecoin-client-meta.ts` and `shared/data/stablecoins/coins.client.generated.json`
+- Client projections: `shared/types/stablecoin-client-meta.ts`, `shared/data/stablecoins/coins.client.generated.json`, and the GENIUS-only `shared/data/stablecoins/coins.compliance.generated.json`
 - Presentation helpers: `shared/lib/mica.ts`, `shared/lib/genius.ts`, `shared/lib/compliance-regime-state.ts`
 - Route: `src/app/compliance/page.tsx`, `client.tsx`, `model.ts`, `loading.tsx`, `error.tsx`
 
 No Worker endpoint, D1 table, cron job, API hook, or `next.config.ts` redirect is required.
 
-The GENIUS client projection includes the public posture fields shown on the page:
-applicability basis, regulator fields, foreign-exception posture, enforcement
-posture, DASP offer/sale posture, reserve/redemption/monthly-attestation flags,
-latest report date, reviewer metadata, notes, and negative-evidence review
-summary. The page source column aggregates top-level references plus nested
-references from applicability, foreign-exception, and negative-evidence blocks so
-rows with nested-only evidence still render citations.
+The global client registry keeps only the short GENIUS authorization status used
+outside `/compliance/`. The compliance route imports the GENIUS-only projection
+for the public posture fields shown on the page: applicability basis, regulator
+fields, foreign-exception posture, enforcement posture, DASP offer/sale posture,
+reserve/redemption/monthly-attestation flags, latest report date, reviewer
+metadata, notes, and negative-evidence review summary. The page source column
+aggregates top-level references plus nested references from applicability,
+foreign-exception, and negative-evidence blocks so rows with nested-only evidence
+still render citations.
 
 ## Page Contract
 

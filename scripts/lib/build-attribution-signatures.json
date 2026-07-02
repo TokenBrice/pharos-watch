@@ -2,6 +2,7 @@
   { "name": "stablecoin-registry-zod", "marker": "LIVE_RESERVE_SEMANTICS_VALUES" },
   { "name": "stablecoin-registry-data", "marker": "\"id\":\"a7a5-old-vector\",\"llamaId\":\"258\"" },
   { "name": "stablecoin-client-registry", "marker": "\"id\":\"a7a5-old-vector\",\"name\":\"A7A5\"" },
+  { "name": "stablecoin-compliance-registry", "marker": "\"foreignExceptionStatus\"" },
   { "name": "recharts", "marker": "\"recharts\"" },
   { "name": "recharts-component", "marker": "BarChart\"" },
   { "name": "market-data-chart", "marker": "ChartAnnotationLegend" },

@@ -3,8 +3,13 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta } from "@shared/types";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+
+type TaxonomyShellCoin = {
+  id: string;
+  name: string;
+  symbol: string;
+};
 
 interface StablecoinTaxonomyShellProps {
   title: string;
@@ -12,7 +17,7 @@ interface StablecoinTaxonomyShellProps {
   description: string;
   intro: string;
   shortLabel: string;
-  coins: StablecoinMeta[];
+  coins: TaxonomyShellCoin[];
   directoryDescription: string;
   definedTermCode?: string;
   definedTermSetHref?: string;
@@ -20,7 +25,7 @@ interface StablecoinTaxonomyShellProps {
   relatedPages?: ReadonlyArray<{
     href: string;
     title: string;
-    coins: StablecoinMeta[];
+    coins: readonly TaxonomyShellCoin[];
   }>;
   children: React.ReactNode;
 }

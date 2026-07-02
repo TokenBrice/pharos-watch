@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/yield-methodology-version";
+} from "@shared/lib/methodology-versions/constants";
 import {
   MethodologyDetails,
   MethodologyDiagramArrow,

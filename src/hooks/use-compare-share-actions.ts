@@ -8,14 +8,15 @@ import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types";
+import type { ComparisonMeta } from "@/lib/compare-derive";
 
 interface CompareCoinForShare {
   id: string;
   symbol: string;
   name: string;
   data: StablecoinData;
-  meta: StablecoinMeta;
+  meta: ComparisonMeta;
   pegScore: number | null;
   liquidityScore: number | null;
   safetyGrade: string | null;

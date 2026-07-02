@@ -1,7 +1,7 @@
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/chain-health-version";
+} from "@shared/lib/methodology-versions/constants";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import {
   METHODOLOGY_LINK_CLASS,

@@ -14,12 +14,17 @@ import type {
 } from "@shared/types";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
+export type ComparisonMeta = Pick<
+  StablecoinMeta,
+  "commodityOunces" | "flags" | "frozenAt" | "id" | "name" | "status" | "symbol"
+>;
+
 export interface ComparisonCoinEntry {
   id: string;
   symbol: string;
   name: string;
   data: StablecoinData;
-  meta: StablecoinMeta;
+  meta: ComparisonMeta;
   pegScore: number | null;
   liquidityScore: number | null;
   safetyGrade: ReportCardGrade | null;
@@ -82,7 +87,7 @@ export function deriveComparisonCoins({
 }: {
   selectedIds: string[];
   assetMap: Map<string, StablecoinData>;
-  metaMap: Map<string, StablecoinMeta>;
+  metaMap: Map<string, ComparisonMeta>;
   pegCoinMap: Map<string, PegCoinSlice>;
   dexData: DexDataMap | undefined;
   cardMap: Map<string, ReportCard>;

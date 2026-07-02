@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   CHAIN_HEALTH_METHODOLOGY_VERSION,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
-} from "@shared/lib/chain-health-version";
+} from "@shared/lib/methodology-versions/constants";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";

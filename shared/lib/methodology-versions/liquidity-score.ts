@@ -4,10 +4,14 @@ import { LIQUIDITY_SCORE_V3 } from "../../data/methodology-changelogs/liquidity-
 import { LIQUIDITY_SCORE_V4 } from "../../data/methodology-changelogs/liquidity-score/v4";
 import { LIQUIDITY_SCORE_V5 } from "../../data/methodology-changelogs/liquidity-score/v5";
 import { createMethodologyVersion } from "./base";
+import {
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  LIQUIDITY_METHODOLOGY_VERSION,
+} from "./constants";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.84",
-  changelogPath: "/methodology/liquidity-score-changelog/",
+  currentVersion: LIQUIDITY_METHODOLOGY_VERSION,
+  changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...LIQUIDITY_SCORE_V5,
     ...LIQUIDITY_SCORE_V4,
@@ -17,14 +21,11 @@ const liquidity = createMethodologyVersion({
   ],
 });
 
-/** Canonical Liquidity Score methodology version (no "v" prefix). */
-export const LIQUIDITY_METHODOLOGY_VERSION = liquidity.currentVersion;
-
-/** Display-ready Liquidity Score methodology version (with "v" prefix). */
-export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = liquidity.versionLabel;
-
-/** Public changelog route for Liquidity Score methodology history. */
-export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = liquidity.changelogPath;
+export {
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  LIQUIDITY_METHODOLOGY_VERSION,
+  LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const LIQUIDITY_METHODOLOGY_CHANGELOG = liquidity.changelog;

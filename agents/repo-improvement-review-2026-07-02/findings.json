@@ -4169,6 +4169,19 @@
      "src/components/mcap-chart.tsx",
      "scripts/maintenance/report-build-size.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Pinned production builds to `next build --webpack` after verifying Next 16 Turbopack continued emitting eight duplicate full Recharts route chunks even after the direct optimization experiments. Widened the critical-CSS postbuild rewrite to handle webpack's `/_next/static/css/*.css` paths so the static export remains CSP-safe and postbuild-complete.",
+    "validation": [
+     "npm run build",
+     "npm run check:build-size",
+     "npm run check:build-attribution",
+     "npm run check:generated-artifacts",
+     "node - <<'NODE' ... Recharts chunk grouping sanity check: full Recharts component chunk count is 1 (1359-0c49faafdd845928.js, 328278 bytes) ..."
+    ],
+    "notes": "Turbopack output still reproduced the eight full Recharts copies; webpack output collapsed them to one cacheable full Recharts component chunk and kept all size budgets green."
    }
   },
   {
@@ -4194,6 +4207,21 @@
      "src/lib/stablecoin-detail-passport.ts",
      "shared/types/stablecoin-client-meta.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Split long-form GENIUS compliance profiles out of the global client stablecoin registry. The client registry now retains only the short `authorizationStatus` profile needed by broad UI surfaces, while `/compliance` imports a generated compliance-scoped registry for notes, evidence, references, and disclosure fields.",
+    "validation": [
+     "node scripts/build-data/build-client-registry.mjs --check",
+     "npx vitest run scripts/__tests__/client-registry-field-contract.test.ts",
+     "npm run typecheck",
+     "npm run build",
+     "npm run check:build-size",
+     "npm run check:build-attribution",
+     "npm run check:generated-artifacts"
+    ],
+    "notes": "Final build reports the global stablecoin-client-registry chunk at 555 KiB and the compliance data in the compliance route chunk/attribution path instead of the global client registry."
    }
   },
   {
@@ -4373,6 +4401,19 @@
      "shared/lib/depeg-dews-version.ts",
      "shared/lib/methodology-versions/safety-score.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a lightweight methodology constants module for current versions, labels, and changelog paths, then rewired client-facing pages/components to import those constants instead of full methodology version modules that materialize changelog bodies.",
+    "validation": [
+     "npm run typecheck",
+     "npm run build",
+     "npm run check:build-size",
+     "npm run check:build-attribution",
+     "npm run check:generated-artifacts"
+    ],
+    "notes": "Server-side methodology/changelog bodies remain available from the existing version modules; broad client surfaces now read only constants."
    }
   },
   {

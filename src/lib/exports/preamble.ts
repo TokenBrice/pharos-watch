@@ -1,12 +1,14 @@
-import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/blacklist-tracker-version";
-import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-dews-version";
-import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
-import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+  LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
+  PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
+  PSI_METHODOLOGY_VERSION_LABEL,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/methodology-versions/constants";
 
 /**
  * Deterministic "as-of" header prepended to every CSV/NDJSON/Markdown export

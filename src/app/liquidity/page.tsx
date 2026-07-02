@@ -6,7 +6,7 @@ import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/liquidity-score-version";
+} from "@shared/lib/methodology-versions/constants";
 
 const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOIN_COUNT} stablecoins, refreshed from the Pharos DEX liquidity lane across Curve, Uniswap, Fluid, and more.`;
 export const metadata = buildPageMetadata({

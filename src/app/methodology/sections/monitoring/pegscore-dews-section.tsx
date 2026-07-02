@@ -1,7 +1,7 @@
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/depeg-dews-version";
+} from "@shared/lib/methodology-versions/constants";
 import { MethodologySectionShell } from "../../methodology-shared";
 import { PEGSCORE_DEWS_SECTION_CONTENT } from "../methodology-content";
 import { PegScoreDewsOverview } from "./pegscore-dews-overview";

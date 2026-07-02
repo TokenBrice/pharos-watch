@@ -2,10 +2,14 @@ import { BLACKLIST_TRACKER_V1 } from "../../data/methodology-changelogs/blacklis
 import { BLACKLIST_TRACKER_V2 } from "../../data/methodology-changelogs/blacklist-tracker/v2";
 import { BLACKLIST_TRACKER_V3 } from "../../data/methodology-changelogs/blacklist-tracker/v3";
 import { createMethodologyVersion } from "./base";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+} from "./constants";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.9972",
-  changelogPath: "/methodology/blacklist-tracker-changelog/",
+  currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+  changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...BLACKLIST_TRACKER_V3,
     ...BLACKLIST_TRACKER_V2,
@@ -13,14 +17,11 @@ const blacklistTracker = createMethodologyVersion({
   ],
 });
 
-/** Canonical Blacklist Tracker methodology version (no "v" prefix). */
-export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = blacklistTracker.currentVersion;
-
-/** Display-ready Blacklist Tracker methodology version (with "v" prefix). */
-export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = blacklistTracker.versionLabel;
-
-/** Public changelog route for Blacklist Tracker methodology history. */
-export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = blacklistTracker.changelogPath;
+export {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG = blacklistTracker.changelog;

@@ -1,4 +1,5 @@
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
+import { GENIUS_COMPLIANCE_PROFILE_BY_ID } from "@shared/lib/stablecoins/genius-compliance-registry";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,
@@ -19,7 +20,7 @@ import type {
   PegCurrency,
   StablecoinLink,
 } from "@shared/types";
-import type { GeniusClientProfile } from "@shared/types/stablecoin-client-meta";
+import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-meta";
 
 export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;
 export type ComplianceRegimeFilter = (typeof COMPLIANCE_REGIME_VALUES)[number];
@@ -193,7 +194,7 @@ function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: M
 
 function buildGeniusRow(
   meta: (typeof CLIENT_TRACKED_STABLECOINS)[number],
-  genius: GeniusClientProfile,
+  genius: GeniusComplianceProfile,
 ): GeniusComplianceRow {
   return {
     regime: "genius",
@@ -235,7 +236,7 @@ function buildGeniusRow(
   };
 }
 
-function collectGeniusReferences(genius: GeniusClientProfile): StablecoinLink[] {
+function collectGeniusReferences(genius: GeniusComplianceProfile): StablecoinLink[] {
   const references = [
     ...(genius.references ?? []),
     ...(genius.applicabilityBasis?.references ?? []),
@@ -263,8 +264,9 @@ function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: Complianc
       rows.push(buildMicaRow(meta, meta.mica));
     }
 
-    if (!meta.genius || meta.status === "frozen") continue;
-    const geniusRow = buildGeniusRow(meta, meta.genius);
+    const genius = GENIUS_COMPLIANCE_PROFILE_BY_ID.get(meta.id);
+    if (!genius || meta.status === "frozen") continue;
+    const geniusRow = buildGeniusRow(meta, genius);
     if (geniusEffective && meta.status !== "pre-launch") {
       rows.push(geniusRow);
     } else {

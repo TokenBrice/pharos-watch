@@ -26,6 +26,9 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/satori-stub.ts",
   "worker/src/__mocks__/wasm-module-stub.ts",
   "src/components/console-signature.tsx",
+  // Public compatibility shim; current label consumers use the light constants
+  // module so they do not pull methodology body data into client bundles.
+  "shared/lib/mint-authority-version.ts",
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
@@ -59,6 +62,7 @@ const EXPORT_ALLOWLIST = new Set([
   // outside the TS import graph the static scan walks.
   "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_META_FIELDS",
   "shared/types/stablecoin-client-meta.ts::GENIUS_CLIENT_PROFILE_FIELDS",
+  "shared/types/stablecoin-client-meta.ts::GENIUS_COMPLIANCE_PROFILE_FIELDS",
   "shared/lib/api-endpoints/index.ts::buildQueryPath",
   "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",
   "shared/lib/api-endpoints/index.ts::EndpointMethodValidationError",

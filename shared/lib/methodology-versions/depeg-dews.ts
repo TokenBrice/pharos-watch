@@ -5,10 +5,14 @@ import { DEPEG_DEWS_V4 } from "../../data/methodology-changelogs/depeg-dews/v4";
 import { DEPEG_DEWS_V5 } from "../../data/methodology-changelogs/depeg-dews/v5";
 import { DEPEG_DEWS_V6 } from "../../data/methodology-changelogs/depeg-dews/v6";
 import { createMethodologyVersion } from "./base";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION,
+} from "./constants";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "6.094",
-  changelogPath: "/methodology/depeg-changelog/",
+  currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+  changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...DEPEG_DEWS_V6,
     ...DEPEG_DEWS_V5,
@@ -19,14 +23,11 @@ const depegDews = createMethodologyVersion({
   ],
 });
 
-/** Canonical Depeg Tracker + DEWS methodology version (no "v" prefix). */
-export const DEPEG_DEWS_METHODOLOGY_VERSION = depegDews.currentVersion;
-
-/** Display-ready Depeg Tracker + DEWS methodology version (with "v" prefix). */
-export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = depegDews.versionLabel;
-
-/** Public changelog route for Depeg Tracker + DEWS methodology history. */
-export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = depegDews.changelogPath;
+export {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG = depegDews.changelog;

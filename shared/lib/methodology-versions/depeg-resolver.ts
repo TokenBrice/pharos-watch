@@ -2,22 +2,24 @@ import { DEPEG_RESOLVER_V1 } from "../../data/methodology-changelogs/depeg-resol
 import { DEPEG_RESOLVER_V2 } from "../../data/methodology-changelogs/depeg-resolver/v2";
 import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resolver/v3";
 import { createMethodologyVersion } from "./base";
+import {
+  DDR_METHODOLOGY_CHANGELOG_PATH,
+  DDR_METHODOLOGY_VERSION,
+  DDR_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 const ddr = createMethodologyVersion({
-  currentVersion: "3.04",
-  changelogPath: "/methodology/depeg-resolver-changelog/",
+  currentVersion: DDR_METHODOLOGY_VERSION,
+  changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
   changelog: [...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 
-/** Canonical DDR methodology version (no "v" prefix). */
-export const DDR_METHODOLOGY_VERSION = ddr.currentVersion;
-
-/** Display-ready DDR methodology version (with "v" prefix). */
-export const DDR_METHODOLOGY_VERSION_LABEL = ddr.versionLabel;
-
-/** Public changelog route for DDR methodology history. */
-export const DDR_METHODOLOGY_CHANGELOG_PATH = ddr.changelogPath;
+export {
+  DDR_METHODOLOGY_CHANGELOG_PATH,
+  DDR_METHODOLOGY_VERSION,
+  DDR_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DepegResolverRowCard } from "@/components/depeg-resolver-row-card-parts";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
-import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { DDR_PUBLIC_WARNING, type DdrResponse } from "@shared/types/depeg-resolver";
 
 interface DepegResolverModuleProps {

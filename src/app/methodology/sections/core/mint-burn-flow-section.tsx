@@ -1,7 +1,7 @@
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/mint-burn-flow-version";
+} from "@shared/lib/methodology-versions/constants";
 import { ContentTable } from "@/components/table";
 import {
   MethodologyDetails,

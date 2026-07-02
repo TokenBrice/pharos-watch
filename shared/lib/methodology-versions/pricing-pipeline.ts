@@ -5,10 +5,14 @@ import { PRICING_PIPELINE_V4 } from "../../data/methodology-changelogs/pricing-p
 import { PRICING_PIPELINE_V5 } from "../../data/methodology-changelogs/pricing-pipeline/v5";
 import { PRICING_PIPELINE_V6 } from "../../data/methodology-changelogs/pricing-pipeline/v6";
 import { createMethodologyVersion } from "./base";
+import {
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+  PRICING_PIPELINE_METHODOLOGY_VERSION,
+} from "./constants";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "6.191",
-  changelogPath: "/methodology/pricing-pipeline-changelog/",
+  currentVersion: PRICING_PIPELINE_METHODOLOGY_VERSION,
+  changelogPath: PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...PRICING_PIPELINE_V6,
     ...PRICING_PIPELINE_V5,
@@ -19,14 +23,11 @@ const pricing = createMethodologyVersion({
   ],
 });
 
-/** Canonical Pricing Pipeline methodology version (no "v" prefix). */
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = pricing.currentVersion;
-
-/** Display-ready Pricing Pipeline methodology version (with "v" prefix). */
-export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = pricing.versionLabel;
-
-/** Public changelog route for Pricing Pipeline methodology history. */
-export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = pricing.changelogPath;
+export {
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
+  PRICING_PIPELINE_METHODOLOGY_VERSION,
+  PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
+} from "./constants";
 
 /** Reconstructed changelog data. */
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG = pricing.changelog;

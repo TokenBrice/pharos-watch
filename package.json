@@ -21,7 +21,7 @@
     "dev:next": "next dev",
     "dev:proxy": "node scripts/maintenance/dev-api-proxy.mjs",
     "prebuild": "node scripts/maintenance/run-generated-artifacts.mjs",
-    "build": "next build",
+    "build": "next build --webpack",
     "build:world-map": "tsx scripts/maintenance/build-world-map-svg.ts",
     "postbuild": "tsx scripts/maintenance/generate-markdown-exports.ts && node scripts/maintenance/inline-homepage-critical-css.mjs",
     "start": "npm run serve:static-export",

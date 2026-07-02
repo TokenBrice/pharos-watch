@@ -41,8 +41,10 @@ import {
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
-import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-authority-version";
+import {
+  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/methodology-versions/constants";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
