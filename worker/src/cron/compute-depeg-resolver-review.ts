@@ -61,7 +61,7 @@ export interface DdrrV2ReviewSource {
 
 export interface ComputeDepegResolverReviewOptions {
   storeContracts?: DdrV2StoreContracts | null;
-  v2ReviewBuilder?: ((source: DdrrV2ReviewSource) => Promise<DdrrResponse>) | null;
+  v2ReviewBuilder?: ((source: DdrrV2ReviewSource, signal?: AbortSignal) => Promise<DdrrResponse>) | null;
 }
 
 interface AssessmentDbRow {
@@ -349,7 +349,11 @@ function sameTapeTerminalEvidenceToken(
   return left.rowCount === right.rowCount && left.maxTs === right.maxTs && left.maxId === right.maxId;
 }
 
-async function loadTapeTerminalEvidenceToken(db: D1Database): Promise<TapeTerminalEvidenceCacheToken | null> {
+async function loadTapeTerminalEvidenceToken(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<TapeTerminalEvidenceCacheToken | null> {
+  abortIf(signal, "compute-depeg-resolver-review");
   try {
     const row = await db
       .prepare(
@@ -358,6 +362,7 @@ async function loadTapeTerminalEvidenceToken(db: D1Database): Promise<TapeTermin
          WHERE type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')`,
       )
       .first<{ row_count: number | null; max_ts: number | null; max_id: number | null }>();
+    abortIf(signal, "compute-depeg-resolver-review");
     const rowCount = nullableNonnegativeInteger(row?.row_count);
     if (rowCount == null) return null;
     return {
@@ -384,12 +389,15 @@ async function loadTapeTerminalEvidenceToken(db: D1Database): Promise<TapeTermin
 async function readTapeTerminalEvidenceCache(
   db: D1Database,
   token: TapeTerminalEvidenceCacheToken,
+  signal?: AbortSignal,
 ): Promise<TapeTerminalEvidenceCachePayload | null> {
+  abortIf(signal, "compute-depeg-resolver-review");
   try {
     const row = await db
       .prepare("SELECT value FROM cache WHERE key = ?")
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY)
       .first<{ value: string | null }>();
+    abortIf(signal, "compute-depeg-resolver-review");
     const payload = tapeTerminalEvidenceCachePayload(tryJsonParse(row?.value));
     if (!payload || !sameTapeTerminalEvidenceToken(payload.token, token)) return null;
     return payload;
@@ -414,7 +422,9 @@ async function writeTapeTerminalEvidenceCache(
   token: TapeTerminalEvidenceCacheToken,
   checkedStablecoinIds: Set<string>,
   evidenceByStablecoinId: Map<string, TerminalEvidence>,
+  signal?: AbortSignal,
 ): Promise<void> {
+  abortIf(signal, "compute-depeg-resolver-review");
   const payload: TapeTerminalEvidenceCachePayload = {
     version: 1,
     token,
@@ -426,6 +436,7 @@ async function writeTapeTerminalEvidenceCache(
       .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY, JSON.stringify(payload), Math.floor(Date.now() / 1000))
       .run();
+    abortIf(signal, "compute-depeg-resolver-review");
   } catch (err) {
     const message = toErrorMessage(err);
     if (message.includes("no such table")) return;
@@ -444,11 +455,13 @@ async function writeTapeTerminalEvidenceCache(
 async function queryTapeTerminalEvidenceByStablecoinId(
   db: D1Database,
   stablecoinIdsInput: readonly string[],
+  signal?: AbortSignal,
 ): Promise<Map<string, TerminalEvidence>> {
   const stablecoinIds = [...new Set(stablecoinIdsInput)];
   const evidenceByStablecoinId = new Map<string, TerminalEvidence>();
 
   for (const ids of chunkArray(stablecoinIds)) {
+    abortIf(signal, "compute-depeg-resolver-review");
     if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
     try {
@@ -463,6 +476,7 @@ async function queryTapeTerminalEvidenceByStablecoinId(
         .bind(...inClause.binds)
         .all<TapeTerminalEvidenceRow>();
 
+      abortIf(signal, "compute-depeg-resolver-review");
       for (const row of result.results ?? []) {
         if (!row.coin_id || evidenceByStablecoinId.has(row.coin_id)) continue;
         const evidence = tapeTerminalEvidence(row);
@@ -495,14 +509,18 @@ async function queryTapeTerminalEvidenceByStablecoinId(
 async function loadTapeTerminalEvidenceByStablecoinId(
   db: D1Database,
   stablecoinIdsInput: readonly string[],
+  signal?: AbortSignal,
 ): Promise<Map<string, TerminalEvidence>> {
   const stablecoinIds = [...new Set(stablecoinIdsInput)];
   if (stablecoinIds.length === 0) return new Map();
 
-  const token = await loadTapeTerminalEvidenceToken(db);
-  if (!token) return queryTapeTerminalEvidenceByStablecoinId(db, stablecoinIds);
+  abortIf(signal, "compute-depeg-resolver-review");
+  const token = await loadTapeTerminalEvidenceToken(db, signal);
+  abortIf(signal, "compute-depeg-resolver-review");
+  if (!token) return queryTapeTerminalEvidenceByStablecoinId(db, stablecoinIds, signal);
 
-  const cached = await readTapeTerminalEvidenceCache(db, token);
+  const cached = await readTapeTerminalEvidenceCache(db, token, signal);
+  abortIf(signal, "compute-depeg-resolver-review");
   const checkedStablecoinIds = new Set(cached?.checkedStablecoinIds ?? []);
   const evidenceByStablecoinId = new Map<string, TerminalEvidence>(
     cached ? Object.entries(cached.evidenceByStablecoinId) : [],
@@ -515,10 +533,12 @@ async function loadTapeTerminalEvidenceByStablecoinId(
     }));
   }
 
-  const loadedEvidence = await queryTapeTerminalEvidenceByStablecoinId(db, missingIds);
+  const loadedEvidence = await queryTapeTerminalEvidenceByStablecoinId(db, missingIds, signal);
+  abortIf(signal, "compute-depeg-resolver-review");
   for (const stablecoinId of missingIds) checkedStablecoinIds.add(stablecoinId);
   for (const [stablecoinId, evidence] of loadedEvidence) evidenceByStablecoinId.set(stablecoinId, evidence);
-  await writeTapeTerminalEvidenceCache(db, token, checkedStablecoinIds, evidenceByStablecoinId);
+  await writeTapeTerminalEvidenceCache(db, token, checkedStablecoinIds, evidenceByStablecoinId, signal);
+  abortIf(signal, "compute-depeg-resolver-review");
   return new Map(stablecoinIds.flatMap((stablecoinId) => {
     const evidence = evidenceByStablecoinId.get(stablecoinId);
     return evidence ? [[stablecoinId, evidence] as const] : [];
@@ -601,12 +621,14 @@ async function loadAssessments(
 async function loadActualEventsByEventIds(
   db: D1Database,
   eventIdsInput: readonly number[],
+  signal?: AbortSignal,
 ): Promise<Map<number, DdrrActualEventWithTerminalEvidence>> {
   const eventIds = [...new Set(eventIdsInput)];
   const actualEventsById = new Map<number, DdrrActualEventWithTerminalEvidence>();
   const sourceRows: ActualEventDbRow[] = [];
 
   for (const ids of chunkArray(eventIds)) {
+    abortIf(signal, "compute-depeg-resolver-review");
     if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
     const result = await db
@@ -618,6 +640,7 @@ async function loadActualEventsByEventIds(
       .bind(...inClause.binds)
       .all<ActualEventDbRow>();
 
+    abortIf(signal, "compute-depeg-resolver-review");
     for (const row of result.results ?? []) {
       sourceRows.push(row);
     }
@@ -630,7 +653,9 @@ async function loadActualEventsByEventIds(
     if (registryEvidence) registryEvidenceByStablecoinId.set(row.stablecoin_id, registryEvidence);
     else idsNeedingTapeEvidence.push(row.stablecoin_id);
   }
-  const tapeEvidenceByStablecoinId = await loadTapeTerminalEvidenceByStablecoinId(db, idsNeedingTapeEvidence);
+  abortIf(signal, "compute-depeg-resolver-review");
+  const tapeEvidenceByStablecoinId = await loadTapeTerminalEvidenceByStablecoinId(db, idsNeedingTapeEvidence, signal);
+  abortIf(signal, "compute-depeg-resolver-review");
 
   for (const row of sourceRows) {
     const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
@@ -1006,7 +1031,12 @@ function buildEffectiveIncidentByKey(incidents: readonly DdrCanonicalIncident[])
   return effective;
 }
 
-async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2ReviewSource): Promise<DdrrResponse> {
+async function buildDurableDdrV2ReviewSnapshot(
+  db: D1Database,
+  source: DdrrV2ReviewSource,
+  signal?: AbortSignal,
+): Promise<DdrrResponse> {
+  abortIf(signal, "compute-depeg-resolver-review");
   const incidentsByKey = new Map(source.incidents.map((incident) => [incident.incidentKey, incident]));
   const effectiveIncidentByKey = buildEffectiveIncidentByKey(source.incidents);
   const firstPublication = firstPublicationByPredictionId(source.firstPublication);
@@ -1014,7 +1044,8 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
   const actualEventsById = await loadActualEventsByEventIds(db, [
     ...[...effectiveIncidentByKey.values()].map((incident) => incident.currentEventId),
     ...source.sealedPublicPredictions.map((prediction) => prediction.eventId),
-  ]);
+  ], signal);
+  abortIf(signal, "compute-depeg-resolver-review");
 
   const assessments: DdrrAssessment[] = [];
   const noCalls: DdrrAssessment[] = [];
@@ -1023,6 +1054,7 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
   const sealedIncidentKeys = new Set<string>();
 
   for (const sealed of source.sealedPublicPredictions) {
+    abortIf(signal, "compute-depeg-resolver-review");
     const incident = effectiveIncidentByKey.get(sealed.incidentKey) ?? incidentsByKey.get(sealed.incidentKey);
     if (!incident) continue;
     sealedIncidentKeys.add(incident.incidentKey);
@@ -1083,6 +1115,7 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
   }
 
   for (const incident of source.incidents) {
+    abortIf(signal, "compute-depeg-resolver-review");
     if (incident.incidentState === "superseded") continue;
     if (sealedIncidentKeys.has(incident.incidentKey)) continue;
     const effectiveIncident = effectiveIncidentByKey.get(incident.incidentKey) ?? incident;
@@ -1119,12 +1152,14 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
 async function maybeBuildDdrV2ReviewSnapshot(
   db: D1Database,
   nowSec: number,
+  signal: AbortSignal | undefined,
   options: ComputeDepegResolverReviewOptions | undefined,
 ): Promise<DdrrResponse | null> {
   const stores = options?.storeContracts;
   const builder = options?.v2ReviewBuilder;
   if (!stores || !stores.loadCanonicalIncidents) return null;
 
+  abortIf(signal, "compute-depeg-resolver-review");
   const loadedIncidents = await stores.loadCanonicalIncidents(db, {
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     policyUniverseIncluded: true,
@@ -1132,6 +1167,7 @@ async function maybeBuildDdrV2ReviewSnapshot(
     policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
     limit: DDRR_V2_INCIDENT_ROW_CAP + 1,
   });
+  abortIf(signal, "compute-depeg-resolver-review");
   const incidentRowsTruncated = loadedIncidents.length > DDRR_V2_INCIDENT_ROW_CAP;
   const incidents = loadedIncidents.slice(0, DDRR_V2_INCIDENT_ROW_CAP);
   const incidentKeys = incidents.map((incident) => incident.incidentKey);
@@ -1140,16 +1176,19 @@ async function maybeBuildDdrV2ReviewSnapshot(
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     includeUnpublished: true,
   });
+  abortIf(signal, "compute-depeg-resolver-review");
   const firstPublication = await stores.loadFirstPublicationMembership(db, {
     incidentKeys,
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
   });
+  abortIf(signal, "compute-depeg-resolver-review");
   const errata = stores.loadPredictionErrata
     ? await stores.loadPredictionErrata(db, {
         incidentKeys,
         publicPredictionIds: sealedPublicPredictions.map((prediction) => prediction.publicPredictionId ?? prediction.id),
       })
     : [];
+  abortIf(signal, "compute-depeg-resolver-review");
 
   const source: DdrrV2ReviewSource = {
     incidents,
@@ -1161,7 +1200,7 @@ async function maybeBuildDdrV2ReviewSnapshot(
     incidentRowsTruncated,
   };
 
-  return builder ? builder(source) : buildDurableDdrV2ReviewSnapshot(db, source);
+  return builder ? builder(source, signal) : buildDurableDdrV2ReviewSnapshot(db, source, signal);
 }
 
 export async function buildDepegResolverReviewSnapshot(
@@ -1171,13 +1210,14 @@ export async function buildDepegResolverReviewSnapshot(
   options?: ComputeDepegResolverReviewOptions,
 ): Promise<DdrrResponse> {
   abortIf(signal, "compute-depeg-resolver-review");
-  const v2Snapshot = await maybeBuildDdrV2ReviewSnapshot(db, nowSec, options);
+  const v2Snapshot = await maybeBuildDdrV2ReviewSnapshot(db, nowSec, signal, options);
+  abortIf(signal, "compute-depeg-resolver-review");
   if (v2Snapshot) return v2Snapshot;
 
   const { assessments, parseIssueCount, truncated: assessmentRowsTruncated } = await loadAssessments(db);
   abortIf(signal, "compute-depeg-resolver-review");
 
-  const actualEventsById = await loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId));
+  const actualEventsById = await loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId), signal);
   abortIf(signal, "compute-depeg-resolver-review");
 
   const { rows, summary } = assessments.length

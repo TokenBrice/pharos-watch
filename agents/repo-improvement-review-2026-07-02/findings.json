@@ -604,6 +604,17 @@
     "description": "`buildDepegResolverReviewSnapshot` checks `abortIf(signal)` once before dispatching to `maybeBuildDdrV2ReviewSnapshot` (line 1173-1175), but the whole v2 path — 4 sequential store loads (loadCanonicalIncidents, loadSealedPublicPredictions, loadFirstPublicationMembership, loadPredictionErrata, lines 1128-1152) plus `buildDurableDdrV2ReviewSnapshot`'s chunked `loadActualEventsByEventIds`/tape-evidence D1 loops (lines 451-490, 609-624) — never consults the signal. The v1 path checks it between each stage (lines 1178, 1181). On cron timeout/lease loss, the v2 run keeps issuing chunked D1 queries and `computeAndStoreDepegResolverReview` still writes the snapshot cache (line 1209) after abort, consuming D1 budget in an isolate whose lease has expired and racing the successor run's write.",
     "recommendation": "Thread the existing `signal` into `maybeBuildDdrV2ReviewSnapshot` and `buildDurableDdrV2ReviewSnapshot`, calling `abortIf(signal, ...)` between store loads and inside the chunk loops (same pattern as the v1 path and queryTapeTerminalEvidenceByStablecoinId chunking). Behavior-preserving on normal runs; only aborted runs stop earlier.",
     "estImpact": "stops post-abort D1 work and stale snapshot writes"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Threaded AbortSignal through DDR v2 review snapshot construction, store-load boundaries, actual-event chunk loading, and tape-evidence cache/query loops so aborted cron runs stop before further D1/store work and before snapshot completion.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/compute-depeg-resolver-review.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/compute-depeg-resolver-review.ts worker/src/cron/__tests__/compute-depeg-resolver-review.test.ts"
+    ],
+    "notes": "D1 operations do not accept AbortSignal directly, so cancellation is cooperative after awaited store/D1 calls return and before the next chunk or load starts."
    }
   },
   {

@@ -84,6 +84,79 @@ function durableStores(overrides: Partial<DdrV2StoreContracts> = {}): DdrV2Store
   };
 }
 
+function incident(overrides: Record<string, unknown> = {}) {
+  return {
+    incidentKey: "ddr2:22222222222222222222222222222222",
+    eventId: 42,
+    currentEventId: 42,
+    stablecoinId: "lusd-liquity",
+    pegCurrency: "USD",
+    direction: "below" as const,
+    startedAt: STARTED_AT,
+    eligibleAt: ELIGIBLE_AT,
+    policyUniverseIncluded: true,
+    ...overrides,
+  };
+}
+
+function chunkAbortDb(input: {
+  controller: AbortController;
+  abortOn: "actual-events" | "tape-events";
+  eventRows: Array<Record<string, unknown>>;
+  abortReason: string;
+}) {
+  let actualEventQueryCount = 0;
+  let tapeEventQueryCount = 0;
+
+  function statement(sql: string, boundValues: unknown[] = []) {
+    const executeAll = async <T>() => {
+      if (sql.includes("FROM depeg_events")) {
+        actualEventQueryCount += 1;
+        if (input.abortOn === "actual-events" && actualEventQueryCount === 1) {
+          input.controller.abort(input.abortReason);
+        }
+        const ids = new Set(boundValues);
+        return {
+          results: input.eventRows.filter((row) => ids.has(row.id)) as T[],
+          success: true,
+          meta: {},
+        };
+      }
+      if (sql.includes("SELECT coin_id, type, ts, payload_json")) {
+        tapeEventQueryCount += 1;
+        if (input.abortOn === "tape-events" && tapeEventQueryCount === 1) {
+          input.controller.abort(input.abortReason);
+        }
+        return { results: [] as T[], success: true, meta: {} };
+      }
+      return { results: [] as T[], success: true, meta: {} };
+    };
+
+    const executeFirst = async <T>() => {
+      if (sql.includes("COUNT(*) as row_count")) {
+        return { row_count: 1, max_ts: 1, max_id: 1 } as T;
+      }
+      if (sql.includes("FROM cache WHERE key = ?")) {
+        return null as T | null;
+      }
+      return null as T | null;
+    };
+
+    return {
+      bind: (...args: unknown[]) => statement(sql, args),
+      all: executeAll,
+      first: executeFirst,
+      run: async () => ({ success: true, meta: { changes: 1 } }),
+    };
+  }
+
+  return {
+    db: { prepare: (sql: string) => statement(sql) } as unknown as D1Database,
+    actualEventQueryCount: () => actualEventQueryCount,
+    tapeEventQueryCount: () => tapeEventQueryCount,
+  };
+}
+
 describe("buildDepegResolverReviewSnapshot", () => {
   it("can build DDRR from durable first-publication exposure when the v2 scorer is provided", async () => {
     const db = mockD1([]);
@@ -195,7 +268,98 @@ describe("buildDepegResolverReviewSnapshot", () => {
         firstPublication: [expect.objectContaining({ publicPredictionId: 9, firstPublished: true })],
         sealedPublicPredictions: [expect.objectContaining({ id: 9 })],
       }),
+      undefined,
     );
+  });
+
+  it("stops durable v2 store loading when the cron signal aborts between loads", async () => {
+    const controller = new AbortController();
+    const db = mockD1([]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => {
+        controller.abort("ddrr store abort");
+        return [incident()];
+      }),
+      loadSealedPublicPredictions: vi.fn(async () => []),
+    });
+
+    await expect(
+      buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, controller.signal, {
+        storeContracts: stores,
+      }),
+    ).rejects.toThrow("ddrr store abort");
+
+    expect(stores.loadCanonicalIncidents).toHaveBeenCalledTimes(1);
+    expect(stores.loadSealedPublicPredictions).not.toHaveBeenCalled();
+  });
+
+  it("stops durable v2 actual-event chunk loading when the cron signal aborts", async () => {
+    const controller = new AbortController();
+    const eventRows = Array.from({ length: 91 }, (_, index) => ({
+      id: index + 1,
+      stablecoin_id: `ddrr-test-${index + 1}`,
+      started_at: STARTED_AT,
+      ended_at: null,
+      recovery_price: null,
+    }));
+    const incidents = eventRows.map((row) =>
+      incident({
+        incidentKey: `ddr2:chunked-actual-${String(row.id).padStart(3, "0")}`,
+        eventId: row.id,
+        currentEventId: row.id,
+        stablecoinId: row.stablecoin_id,
+      }),
+    );
+    const db = chunkAbortDb({
+      controller,
+      abortOn: "actual-events",
+      eventRows,
+      abortReason: "ddrr actual-event chunk abort",
+    });
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
+
+    await expect(
+      buildDepegResolverReviewSnapshot(db.db, ELIGIBLE_AT + 3600, controller.signal, {
+        storeContracts: stores,
+      }),
+    ).rejects.toThrow("ddrr actual-event chunk abort");
+
+    expect(db.actualEventQueryCount()).toBe(1);
+  });
+
+  it("stops durable v2 tape-evidence chunk loading when the cron signal aborts", async () => {
+    const controller = new AbortController();
+    const eventRows = Array.from({ length: 91 }, (_, index) => ({
+      id: index + 1,
+      stablecoin_id: `ddrr-test-${index + 1}`,
+      started_at: STARTED_AT,
+      ended_at: null,
+      recovery_price: null,
+    }));
+    const incidents = eventRows.map((row) =>
+      incident({
+        incidentKey: `ddr2:chunked-tape-${String(row.id).padStart(3, "0")}`,
+        eventId: row.id,
+        currentEventId: row.id,
+        stablecoinId: row.stablecoin_id,
+      }),
+    );
+    const db = chunkAbortDb({
+      controller,
+      abortOn: "tape-events",
+      eventRows,
+      abortReason: "ddrr tape-evidence chunk abort",
+    });
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
+
+    await expect(
+      buildDepegResolverReviewSnapshot(db.db, ELIGIBLE_AT + 3600, controller.signal, {
+        storeContracts: stores,
+      }),
+    ).rejects.toThrow("ddrr tape-evidence chunk abort");
+
+    expect(db.actualEventQueryCount()).toBe(2);
+    expect(db.tapeEventQueryCount()).toBe(1);
   });
 
   it("caps unfiltered durable v2 incident review loads and marks the envelope truncated", async () => {
