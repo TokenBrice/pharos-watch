@@ -2312,6 +2312,17 @@
      "src/lib/__tests__/route-labels.test.ts",
      "scripts/ci/check-unused-code.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the parked `filter-summaries` and `route-labels` modules, removed the route-labels self-test, and dropped the matching module/export allowlist entries now that no product code imports them.",
+    "validation": [
+     "rg -n \"filter-summaries|route-labels|summarizeScreenerFilters|summarizeYieldFilters|summarizeLiquidityFilters|summarizeCompareFilters|ROUTE_LABELS|routeLabelFor|buildRouteBreadcrumb|normalizeRoutePath\" src shared worker functions tests scripts docs -g '!node_modules'",
+     "npm run check:unused-code",
+     "npm run typecheck",
+     "npx vitest run src/lib/__tests__/route-error-recovery.test.ts src/lib/__tests__/command-palette-verbs.test.ts"
+    ]
    }
   },
   {

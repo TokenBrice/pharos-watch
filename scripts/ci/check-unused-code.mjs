@@ -33,8 +33,6 @@ const MODULE_ALLOWLIST = new Set([
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
   // is now consumed by src/components/command-palette.tsx.)
-  "src/lib/filter-summaries.ts",
-  "src/lib/route-labels.ts",
 ]);
 const EXPORT_ALLOWLIST = new Set([
   // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
@@ -186,13 +184,6 @@ const EXPORT_ALLOWLIST = new Set([
   // internally by parsePaletteInput; the static scan does not resolve same-file
   // references, so it stays allowlisted.
   "src/lib/command-palette-verbs.ts::resolveCoinIdFromToken",
-  "src/lib/filter-summaries.ts::summarizeScreenerFilters",
-  "src/lib/filter-summaries.ts::summarizeYieldFilters",
-  "src/lib/filter-summaries.ts::summarizeLiquidityFilters",
-  "src/lib/filter-summaries.ts::summarizeCompareFilters",
-  "src/lib/filter-summaries.ts::getMechanismArchetypeLabel",
-  "src/lib/route-labels.ts::ROUTE_LABELS",
-  "src/lib/route-labels.ts::normalizeRoutePath",
   "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
   "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
   "worker/src/api/telegram-webhook-messages.ts::describeSubscriptionSettings",
