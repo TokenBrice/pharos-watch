@@ -90,10 +90,18 @@ describe("describeSubscriptionSettings", () => {
 
   it("shows all types", () => {
     const row: SubscriptionRow = {
-      stablecoin_id: "x", alert_dews: 1, alert_depeg: 1, alert_safety: 1, alert_launch: 1,
+      stablecoin_id: "x", alert_dews: 1, alert_depeg: 1, alert_safety: 1, alert_launch: 1, alert_reserve: 1,
       dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
     };
-    expect(describeSubscriptionSettings(row)).toBe("DEWS, Depeg, Safety, Launch");
+    expect(describeSubscriptionSettings(row)).toBe("DEWS, Depeg, Safety, Launch, Reserve");
+  });
+
+  it("shows reserve as an enabled per-coin alert type", () => {
+    const row: SubscriptionRow = {
+      stablecoin_id: "x", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 1,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    };
+    expect(describeSubscriptionSettings(row)).toBe("Reserve");
   });
 
   it("shows Muted when no types enabled", () => {
@@ -176,9 +184,20 @@ describe("describeGlobalAlertSettings", () => {
     const sub: SubscriberRow = {
       alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
       global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 1, global_alert_launch: 1,
+      global_alert_reserve: 1,
       quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
     };
-    expect(describeGlobalAlertSettings(sub)).toBe("DEWS, Safety (downgrades; 3-point drop when scored), Launch");
+    expect(describeGlobalAlertSettings(sub)).toBe("DEWS, Safety (downgrades; 3-point drop when scored), Launch, Reserve");
+  });
+
+  it("shows reserve as an enabled global alert type", () => {
+    const sub: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      global_alert_reserve: 1,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    expect(describeGlobalAlertSettings(sub)).toBe("Reserve");
   });
 
   it("shows the global depeg worsening step when configured", () => {

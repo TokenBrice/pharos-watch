@@ -1965,6 +1965,16 @@
     "alsoFiles": [
      "worker/src/api/telegram-webhook-messages.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Included `alert_reserve` in `/health` explicit active follow counts and rendered `Reserve` in both per-coin and global Telegram alert summaries used by `/health` and `/list`. Added focused tests for reserve-only and mixed reserve settings.",
+    "validation": [
+     "npx vitest run worker/src/api/webhook-commands/__tests__/command-handlers.test.ts worker/src/api/__tests__/telegram-webhook-messages.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/api/webhook-commands/health.ts worker/src/api/telegram-webhook-messages.ts worker/src/api/webhook-commands/__tests__/command-handlers.test.ts worker/src/api/__tests__/telegram-webhook-messages.test.ts"
+    ]
    }
   },
   {

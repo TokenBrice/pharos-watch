@@ -83,10 +83,12 @@ function subscriberRow(overrides: Record<string, unknown> = {}) {
     alert_depeg: 0,
     alert_safety: 0,
     alert_launch: 0,
+    alert_reserve: 0,
     global_alert_dews: 0,
     global_alert_depeg: 0,
     global_alert_safety: 0,
     global_alert_launch: 0,
+    global_alert_reserve: 0,
     global_depeg_worsening_bps_step: null,
     quiet_hours_enabled: 0,
     quiet_hours_start_utc: null,
@@ -322,7 +324,12 @@ describe("webhook command handlers", () => {
       {
         match: "FROM telegram_subscribers",
         rows: [],
-        first: subscriberRow({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 }),
+        first: subscriberRow({
+          quiet_hours_enabled: 1,
+          quiet_hours_start_utc: 22,
+          quiet_hours_end_utc: 7,
+          global_alert_reserve: 1,
+        }),
       },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", rows: [], first: { active_count: 2 } },
@@ -341,6 +348,9 @@ describe("webhook command handlers", () => {
     expect(message).toContain("Queued alerts for this chat: 1");
     expect(message).toContain("Recent failure class: rate_limit");
     expect(message).toContain("Alert readiness: 2 explicit coin follows");
+    expect(message).toContain("global: Reserve");
+    const activeCountQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) AS active_count"));
+    expect(activeCountQuery?.sql).toContain("OR alert_reserve = 1");
     expectMiniAppButton(buttonsFromMarkup(options.replyMarkup), "Open in app", "health");
   });
 

@@ -98,6 +98,7 @@ async function loadExplicitActiveFollowCount(
             OR alert_depeg = 1
             OR alert_safety = 1
             OR alert_launch = 1
+            OR alert_reserve = 1
           )`,
     )
     .bind(chatId)

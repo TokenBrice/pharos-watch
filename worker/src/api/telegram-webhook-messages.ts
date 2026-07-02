@@ -266,6 +266,9 @@ export function describeSubscriptionSettings(
   if (row.alert_launch) {
     labels.push("Launch");
   }
+  if (row.alert_reserve) {
+    labels.push("Reserve");
+  }
 
   // C74: in /list (perCoinTag) make the precedence model legible — an
   // all-flags-0 row is a per-coin Muted that suppresses preset/global defaults
@@ -313,6 +316,9 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
   }
   if (subscriber.global_alert_launch) {
     labels.push("Launch");
+  }
+  if (subscriber.global_alert_reserve) {
+    labels.push("Reserve");
   }
 
   return labels.join(", ") || "None";
