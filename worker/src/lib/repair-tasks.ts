@@ -555,32 +555,6 @@ async function deferRepairTask(
   );
 }
 
-async function failRepairTask(
-  db: D1Database,
-  input: { taskId: string; owner: string; nowSec: number; nextAttemptAt: number; error: unknown; signal?: AbortSignal },
-): Promise<void> {
-  throwIfAborted(input.signal);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE worker_repair_tasks
-         SET state = 'deferred',
-             locked_by = NULL,
-             locked_until = NULL,
-             next_attempt_at = ?,
-             last_error = ?,
-             updated_at = ?
-         WHERE task_id = ?
-           AND state = 'claimed'
-           AND locked_by = ?`,
-      )
-      .bind(input.nextAttemptAt, truncateError(input.error), input.nowSec, input.taskId, input.owner)
-      .run(),
-    3,
-    input.signal,
-  );
-}
-
 async function hasDdrEventLink(db: D1Database, eventId: number, signal?: AbortSignal): Promise<boolean> {
   throwIfAborted(signal);
   const row = await db
@@ -749,12 +723,13 @@ export async function runWorkerRepairTaskRunner(
         reason: outcome.reason,
       });
     } catch (err) {
-      await failRepairTask(db, {
+      const reason = truncateError(err);
+      await deferRepairTask(db, {
         taskId: row.task_id,
         owner,
         nowSec: timestamp,
         nextAttemptAt: timestamp + REPAIR_RUNNER_DEFER_SEC,
-        error: err,
+        reason,
         signal: options.signal,
       });
       metadata.failed += 1;
@@ -763,7 +738,7 @@ export async function runWorkerRepairTaskRunner(
         kind: row.kind,
         subjectId: row.subject_id,
         action: "failed",
-        reason: truncateError(err),
+        reason,
       });
     }
   }

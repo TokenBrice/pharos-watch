@@ -289,8 +289,10 @@ describe("repair tasks", () => {
     ]);
   });
 
-  it("defers transient repair processing failures so the next run can retry", async () => {
+  it("defers transient repair processing failures with truncated reasons so the next run can retry", async () => {
     const taskId = buildRepairTaskId("ddr-repair-required-event", "44");
+    const failureReason = `temporary D1 failure: ${"x".repeat(600)}`;
+    const truncatedFailureReason = failureReason.slice(0, 500);
     const firstRunDb = mockD1([
       {
         match: "COUNT(*) AS due_count",
@@ -326,7 +328,7 @@ describe("repair tasks", () => {
         match: "FROM depeg_resolver_incident_event_links",
         matchBinds: [44],
         rows: [],
-        throwError: new Error("temporary D1 failure"),
+        throwError: new Error(failureReason),
       },
     ]);
 
@@ -344,16 +346,18 @@ describe("repair tasks", () => {
         {
           taskId,
           action: "failed",
+          reason: truncatedFailureReason,
         },
       ],
     });
     expect(firstRunDb.getHistory().find((entry) => entry.sql.includes("SET state = 'deferred'"))?.binds).toEqual([
       NOW + 24 * 60 * 60,
-      "temporary D1 failure",
+      truncatedFailureReason,
       NOW,
       taskId,
       expect.stringContaining(`repair-runner:${NOW}:`),
     ]);
+    expect(truncatedFailureReason).toHaveLength(500);
 
     const retryAt = NOW + 24 * 60 * 60;
     const secondRunDb = mockD1([

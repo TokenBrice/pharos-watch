@@ -7019,6 +7019,18 @@
     "description": "failRepairTask (558-582) executes SQL character-for-character identical to deferRepairTask (525-556) — both set state='deferred' — differing only in that the reason passes through truncateError. As a result no code path ever writes state='failed' (worker_repair_tasks is touched only by this file), yet 'failed' is carried in the RepairTaskState union, in ACTIVE_REPAIR_TASK_STATES (line 11, so it would count as open debt), and in the upsert reopen CASEs (lines 175, 181). 'cancelled' likewise has no writer but is pruned as terminal. The metadata.failed counter in the runner remains meaningful (it counts processing exceptions), independent of the row state.",
     "recommendation": "Delete failRepairTask and call deferRepairTask with reason: truncateError(err) at line 752; the persisted rows are byte-identical today. Optionally note the writer-less 'failed'/'cancelled' states in a comment rather than removing them (the DB CHECK/type may be intentional forward-compat).",
     "estImpact": "-28 LOC, one fewer near-identical SQL statement"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the duplicate failRepairTask helper and now routes exception handling through deferRepairTask with a pre-truncated reason, preserving the existing deferred-row behavior.",
+    "validation": [
+     "rg -n \"failRepairTask\" worker/src/lib/repair-tasks.ts worker/src/lib/__tests__/repair-tasks.test.ts || true",
+     "npx vitest run worker/src/lib/__tests__/repair-tasks.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/repair-tasks.ts worker/src/lib/__tests__/repair-tasks.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
