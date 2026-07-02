@@ -71,24 +71,21 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
       identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:scores-latest" }],
       sameAs: "https://pharos.watch/datasets/scores-latest/latest.json",
     });
-    expect(jsonLd.distribution).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          "@type": "DataDownload",
-          contentUrl: "https://pharos.watch/datasets/scores-latest/latest.json",
-          encodingFormat: "application/json",
-        }),
-        expect.objectContaining({
-          "@type": "DataDownload",
-          contentUrl: "https://pharos.watch/datasets/scores-latest/latest.csv",
-          encodingFormat: "text/csv",
-        }),
-        expect.objectContaining({
-          "@type": "DataDownload",
-          contentUrl: "https://pharos.watch/sheets/scores-latest.csv",
-          encodingFormat: "text/csv",
-        }),
-      ]),
+    const distribution = jsonLd.distribution as Array<{ contentUrl: string; encodingFormat: string }>;
+    expect(distribution.map((entry) => entry.contentUrl)).toEqual([
+      "https://pharos.watch/datasets/scores-latest/latest.json",
+      "https://pharos.watch/datasets/scores-latest/latest.csv",
+      "https://pharos.watch/datasets/scores-latest/latest.ndjson",
+      "https://pharos.watch/sheets/scores-latest.csv",
+    ]);
+    expect(distribution.map((entry) => entry.encodingFormat)).toEqual([
+      "application/json",
+      "text/csv",
+      "application/x-ndjson",
+      "text/csv",
+    ]);
+    expect(distribution.map((entry) => entry.contentUrl)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/\/datasets\/scores-latest\/\d{4}-\d{2}-\d{2}\./)]),
     );
   });
 });

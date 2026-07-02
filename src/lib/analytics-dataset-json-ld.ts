@@ -117,7 +117,6 @@ function datasetDate(dataset: PublicDatasetExport): string | undefined {
 }
 
 function buildDatasetDistributions(siteUrl: string, descriptor: PublicDatasetDescriptor) {
-  const date = datasetDate(descriptor.export);
   const formats = [
     ["JSON", "application/json", "json"],
     ["CSV", "text/csv", "csv"],
@@ -132,15 +131,6 @@ function buildDatasetDistributions(siteUrl: string, descriptor: PublicDatasetDes
       encodingFormat,
       contentUrl: `${siteUrl}/datasets/${descriptor.slug}/latest.${extension}`,
     })),
-    ...(date
-      ? formats.map(([label, encodingFormat, extension]) => ({
-          "@type": "DataDownload",
-          "@id": `${siteUrl}/datasets/${descriptor.slug}/${date}.${extension}#download`,
-          name: `${descriptor.name} ${date} ${label} export`,
-          encodingFormat,
-          contentUrl: `${siteUrl}/datasets/${descriptor.slug}/${date}.${extension}`,
-        }))
-      : []),
     {
       "@type": "DataDownload",
       "@id": `${siteUrl}/sheets/${descriptor.slug}.csv#download`,

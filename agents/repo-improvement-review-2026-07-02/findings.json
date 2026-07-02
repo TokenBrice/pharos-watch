@@ -5434,6 +5434,16 @@
      "public/datasets/scores-latest/2026-05-16.json",
      "public/datasets/peg-mechanism-distribution/2026-05-16.json"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Stopped advertising synthesized dated static dataset mirrors in dataset JSON-LD. Structured data now lists only durable `latest.{json,csv,ndjson}` mirrors and the Sheets CSV export, while preserving `dateModified` from dataset metadata.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/analytics-dataset-json-ld.test.ts src/lib/__tests__/api-artifact-json-ld.test.ts",
+     "npm run typecheck"
+    ],
+    "notes": "This fixes the published structured-data 404s without attempting a separate dated artifact retention system."
    }
   }
  ],
