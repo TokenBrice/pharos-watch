@@ -312,8 +312,8 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
     return results;
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    if (budget.budgetController.signal.aborted) {
-      return results;
+    if (!budget.budgetController.signal.aborted) {
+      console.warn("[yield] Royco Dawn sources failed:", error);
     }
     return results;
   } finally {

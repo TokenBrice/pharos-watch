@@ -1306,6 +1306,15 @@
     "description": "fetchRoycoDawnSources' catch block (lines 313-318) rethrows on external abort, then has `if (budget...aborted) { return results; } return results;` — both branches identical, and unlike every sibling family (Morpho, Beefy, Pendle, Yearn all console.warn), a non-abort failure here is completely silent. Because the error is caught internally, runOptionalSupplementalFamily marks the family status \"ok\", so a total Royco API outage is indistinguishable from an empty market list in telemetry and logs.",
     "recommendation": "Add the standard `console.warn(\"[yield] Royco Dawn sources failed:\", error)` on the non-budget path and collapse the duplicated return (match the Morpho/Beefy catch shape). Log-only change; returned candidates are identical.",
     "estImpact": "Restores failure observability for one source family"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Collapsed the duplicated Royco Dawn catch return and added the standard non-budget failure warning while preserving external abort rethrow and partial-result return behavior.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/royco-dawn.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
