@@ -1093,24 +1093,6 @@
       ]
     },
     {
-      "file": "src/components/__tests__/homepage-safety-overview.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type '{ id: string; chains: never[]; circulating: { peggedUSD: number; }; }' to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<string, number>; circulatingPrevDay: Record<...>; ... 22 more ...; agreeSources: string[]; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "28:10"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/homepage-safety-overview.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type '{ id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number; baseScore: null; ratedDimensions: number; rawInputs: { ...; }; dimensions: {}; isDefunct: boolean; }' to type '{ id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number | null; baseScore: number | null; ... 7 more ...; bridgeRouteRisk?: { ...; } | ... 1 more ... | undefined; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "13:10"
-      ]
-    },
-    {
       "file": "src/components/__tests__/liquidity-stats.node.test.ts",
       "code": "TS2352",
       "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; }; chainTvl: { ethereum: number; base: number; }; poolCount: number; concentrationHhi: null; weightedBalanceRatio: null; organicFraction: null; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",

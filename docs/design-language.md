@@ -23,9 +23,9 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 
 Newsreader serif is reserved for authored editorial/tombstone surfaces: the `/digest/**` route, the homepage `DailyDigest` preview card, Cemetery obituary plaques (`cemetery-tombstones.tsx`), and depeg event editorial display text. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph. The root error boundary (`page-error-editorial.tsx`) shares the Georgia register for its kicker and title — deliberately not Newsreader, because `error.tsx` sits in every route's preload graph and importing the digest font there preloaded its CSS app-wide. The `/timeline/` route is a further carve-out: the mono token dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses the sans token at all weights. Do not introduce new serif usage outside the existing authored editorial, error, `AiSummary`, and Cemetery carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
 
-### Masthead tagline
+### Homepage Hero Tagline
 
-The `SiteHeader` tagline reads `Every tracked stablecoin: backing, freeze risk, liquidity, and peg stress.` It is exposed from `md` upward (not `lg+`-only as before) as a single `whitespace-nowrap` line — there is no line-clamp. Mobile (`<md`) shows the stat-pill card only: the sticky site chrome directly above already carries the brand lockup, so the masthead `h1` is `sr-only` below `md` (the page still ships exactly one raw `h1`).
+The `HomeAltHero` tagline reads `Backing, freeze risk, liquidity, and peg stress — all in one place.` It sits under the `Market Pulse` page heading and ships as the homepage's single raw `h1` surface across breakpoints.
 
 ### Hero signals rail (stablecoin detail)
 
@@ -170,11 +170,11 @@ Behavioral contract: [Start Page](./start-page.md)
 
 ### Home Dashboard (Special)
 
-Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top fold is composed of:
+Home keeps a single visible page `h1` owned by `HomeAltHero`; the rest of the top fold is composed of:
 
 Behavioral contract: [Homepage](./homepage.md)
 
-- Masthead strip: `pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3` — stacked on mobile, side-by-side from `md` upward
+- Hero market snapshot: `HomeAltHero` renders the `Market Pulse` heading, total-market figure, cohort rows, and viewport-gated chart in one `pharos-card-shell`
 - Core top rail: the live tape is mounted directly below the desktop `TopNav` on every standard page, and below the mobile `Header` only on the homepage. The horizontal core-nav pill strip is retired; the grouped top nav owns wayfinding. On desktop, the tape is sticky below the fixed top nav (`lg:top-14` on `/`, `lg:top-[calc(3px+3.5rem)]` elsewhere) so the registry chips and event ticker remain visible across Reference, Learn, and analytics pages. Interior mobile routes suppress the tape to avoid crowding the first viewport.
 - Shortcuts module: the homepage saved-shortcuts panel uses one unified bordered shell with internal hairline dividers. Desktop (`lg+`) presents twelve route shortcuts in a six-column, two-row grid; each default route carries a distinct icon-tile category tint while the cells stay neutral. If a smaller saved list exists, the view backfills from the default route set while edit mode preserves the actual saved list. Smaller breakpoints render only the saved shortcuts so the surface does not overtake the dashboard stack.
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow

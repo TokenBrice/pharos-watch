@@ -171,11 +171,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/start-here-callout.ts::START_HERE_CALLOUT_STORAGE_KEY",
   "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
   "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
-  // Consumed by the KpiBar host within the same module; same-file reference
-  // the static scan cannot resolve.
-  "src/components/kpi-bar-parts.tsx::PsiBandHistoryStrip",
-  // Sizing constant exported for downstream icon consumers.
-  "src/components/pharos-icon.tsx::ICON_SIZE",
   // Storage key + snapshot reader exported for tests and one-off lookups
   // (e.g. compare-config presets). External consumption is intermittent.
   "src/hooks/use-watchlist.ts::WATCHLIST_STORAGE_KEY",

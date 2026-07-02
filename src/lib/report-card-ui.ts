@@ -20,8 +20,6 @@ export interface SafetyGradeRangeMetadata {
   sectionDescription: string;
 }
 
-export const SAFETY_GRADE_RANGES = ["A", "B", "C", "D", "F", "NR"] as const satisfies readonly SafetyGradeRange[];
-
 const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMetadata> = {
   A: {
     barClassName: "bg-emerald-500",
@@ -121,7 +119,7 @@ const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMeta
   },
 };
 
-export function getSafetyGradeRange(grade: ReportCardGrade): SafetyGradeRange {
+function getSafetyGradeRange(grade: ReportCardGrade): SafetyGradeRange {
   return gradeRange(grade);
 }
 
@@ -142,15 +140,4 @@ export function gradeBandLabel(score: number, metric?: string): string {
   else if (score >= 40) band = "Weak — significant risks";
   else band = "Poor — major risks";
   return metric ? `${metric}: ${score} — ${band}` : `${score} — ${band}`;
-}
-
-export function createSafetyGradeRangeCounts(): Record<SafetyGradeRange, number> {
-  return {
-    A: 0,
-    B: 0,
-    C: 0,
-    D: 0,
-    F: 0,
-    NR: 0,
-  };
 }

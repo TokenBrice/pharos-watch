@@ -3825,21 +3825,33 @@
     "recommendation": "Delete all 13 files plus their 8 test files (src/components/__tests__/kpi-bar*.test.*, market-highlights, site-header, trust-strip, homepage-safety-overview, src/hooks/__tests__/use-nav-prefetch, use-start-here-callout) and the stale test-typecheck-baseline entry. Safe: no production entrypoint imports any of them (verified by grep of every component/hook name across src/, shared/, worker/, functions/, scripts/ — only historical changelog strings match).",
     "estImpact": "-2,140 LOC prod + ~8 test files",
     "alsoFiles": [
-     "src/components/kpi-bar-parts.tsx",
-     "src/components/kpi-bar-view-model.ts",
-     "src/components/kpi-bar-display-model.ts",
-     "src/components/market-highlights.tsx",
+      "src/components/kpi-bar-parts.tsx",
+      "src/components/kpi-bar-view-model.ts",
+      "src/components/kpi-bar-display-model.ts",
+      "src/components/market-highlights.tsx",
      "src/components/homepage-safety-overview.tsx",
      "src/components/site-header.tsx",
      "src/components/trust-strip.tsx",
      "src/components/pharos-icon.tsx",
      "src/hooks/use-count-up.ts",
      "src/hooks/use-entrance-sequence.ts",
-     "src/hooks/use-nav-prefetch.ts",
-     "src/hooks/use-start-here-callout.ts"
+      "src/hooks/use-nav-prefetch.ts",
+      "src/hooks/use-start-here-callout.ts"
     ]
-   }
   },
+  "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the retired KpiBar/homepage/nav component cluster, its private animation/prefetch/start-here hooks, and their dedicated tests. Removed stale allowlist, type-baseline, docs, and helper exports that were only kept alive by the deleted cluster.",
+    "validation": [
+      "git diff --check",
+      "npm run check:doc-source-paths",
+      "node -e \"JSON.parse(require('node:fs').readFileSync('scripts/lib/test-typecheck-baseline.json','utf8'))\"",
+      "rg -n \"kpi-bar|KpiBar|kpi-bar-parts|kpi-bar-view-model|kpi-bar-display-model|MarketHighlights|market-highlights|HomepageSafetyOverview|homepage-safety-overview|SiteHeader|site-header|TrustStrip|trust-strip|useCountUp|use-count-up|useEntranceSequence|use-entrance-sequence|useNavPrefetch|use-nav-prefetch|useStartHereCallout|use-start-here-callout\" src shared scripts docs -g '!docs/changelog*' -g '!src/data/changelogs/**'"
+    ],
+    "notes": "npm run check:unused-code and typecheck lanes were not counted for this scoped commit because concurrent uncommitted bundle-splitting work currently introduces temporary GENIUS/client-meta and methodology-version changes."
+  }
+ },
   {
    "id": "fn-config:1",
    "domain": "fn-config",

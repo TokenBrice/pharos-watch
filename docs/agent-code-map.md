@@ -163,13 +163,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-compare-share-actions.ts` - useCompareShareActions
 - `src/hooks/use-contagion-graph-drag.ts` - useContagionGraphDrag
 - `src/hooks/use-copy-to-clipboard.ts` - useCopyToClipboard
-- `src/hooks/use-count-up.ts` - useCountUp
 - `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
 - `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useActiveDepegEvents, useInfiniteDepegEvents
 - `src/hooks/use-depeg-resolver-surfaces.ts` - useDepegResolverSurfaces
 - `src/hooks/use-element-width.ts` - useElementWidth
 - `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
-- `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
 - `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
 - `src/hooks/use-fitted-columns.ts` - useFittedColumns
 - `src/hooks/use-flash-on-change.ts` - useFlashOnChange
@@ -182,14 +180,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-mint-burn-flows.ts` - mintBurnFlowsCoinQueryOptions, useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
 - `src/hooks/use-motion-preference.ts` - MotionPreference, getEffectiveReducedMotion, motionPreferenceStore
 - `src/hooks/use-nav-collapse.ts` - STORAGE_KEY, getExpandedState, setExpandedState, useNavCollapse
-- `src/hooks/use-nav-prefetch.ts` - useNavPrefetch
 - `src/hooks/use-near-viewport.ts` - useNearViewport
 - `src/hooks/use-ops-ui-host.ts` - useOpsUiHost
 - `src/hooks/use-pinned-stablecoins.ts` - usePinnedStablecoins
 - `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, usePortfolio
 - `src/hooks/use-preferences.ts` - usePreference
 - `src/hooks/use-prefers-reduced-motion.ts` - usePrefersReducedMotion
-- `src/hooks/use-prefetch-stablecoin.ts` - PREFETCH_DEBOUNCE_MS, usePrefetchStablecoin
+- `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata

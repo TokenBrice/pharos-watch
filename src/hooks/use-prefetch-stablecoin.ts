@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplyHistoryQueryOptions } from "./use-stablecoins";
 
-export const PREFETCH_DEBOUNCE_MS = 100;
+const PREFETCH_DEBOUNCE_MS = 100;
 
 export function usePrefetchStablecoin() {
   const queryClient = useQueryClient();

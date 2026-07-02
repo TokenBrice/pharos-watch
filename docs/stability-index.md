@@ -133,7 +133,7 @@ See [API Reference](./api-reference.md) for the full response shape.
 
 ## Frontend
 
-- **Homepage PSI mini-card**: `src/components/home-alt-mini-cards/psi-band-card.tsx` — shows `current.score` (raw instant), labeled `raw instant`, alongside a last-90-days score sparkline, so the headline number matches its raw-sample sparkline. `src/components/kpi-bar.tsx` is a standalone Market Snapshot bar (not currently mounted in the app) that uses the API display helper `getDisplayedPsi()`, which prefers the rolling 24h average when `current.avg24h` is present and falls back to the raw instant sample.
+- **Homepage PSI mini-card**: `src/components/home-alt-mini-cards/psi-band-card.tsx` — shows `current.score` (raw instant), labeled `raw instant`, alongside a last-90-days score sparkline, so the headline number matches its raw-sample sparkline.
 - **Dedicated page**: `src/app/stability-index/client.tsx` — hero KPI bar focused on the lighthouse/current PSI signal and historical PSI measurements, score history chart with band-colored zones, Beam Dimmers for the current formula component pressure, component breakdown stacked area chart, time range filter, methodology section, and contextual methodology hints on PSI plus the four component labels (`Severity`, `Breadth`, `Stress Breadth`, `Trend`). The headline score explicitly labels whether it is the rolling 24h average or raw instant sample. Beam Dimmers use the current PSI component values and prior-sample deltas only; they are not a causal event timeline and do not change scoring.
 - **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
@@ -150,6 +150,5 @@ The daily digest cron (08:05 UTC) queries the latest PSI sample plus daily rows 
 | `worker/src/cron/stability-index.ts` | 30-minute cron job |
 | `worker/src/api/stability-index.ts` | API endpoint |
 | `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over completed UTC days only, using the PSI-eligible supply universe plus same-day historical price replay where available) |
-| `src/components/kpi-bar.tsx` | Homepage market snapshot PSI widget |
 | `src/app/stability-index/client.tsx` | Full page with charts and methodology |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useStabilityIndex()` and `useStabilityIndexDetail()` |

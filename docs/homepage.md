@@ -7,7 +7,7 @@ Route contract for `/`, the main Pharos dashboard.
 ## Route Shape
 
 - **Server shell:** `src/app/page.tsx`
-- **Desktop masthead:** `src/components/site-header.tsx`
+- **Hero masthead:** `src/components/home-alt-hero.tsx`
 - **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
 - **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
@@ -15,7 +15,7 @@ Route contract for `/`, the main Pharos dashboard.
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
-2. `SiteHeader`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+2. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
 3. `HomeAltClient`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
@@ -24,20 +24,15 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` reads three server-side counts for the masthead:
+`src/app/page.tsx` reads the active/tracked stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market summary.
 
-- tracked stablecoins from `ACTIVE_STABLECOIN_COUNT`, the static projection of `ACTIVE_STABLECOINS.length`
-- peg count from `ACTIVE_PEG_CURRENCY_COUNT`
-- chain count from `CHAIN_META`
-
-The visible top fold is split across four independently composed surfaces:
+The visible top fold is split across three independently composed surfaces:
 
 - `CoreTopRail`, rendered directly under the global header chrome. It now contains only the recent-events tape: the former centered core submenu was retired and wayfinding is owned by the grouped top nav. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
-- `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
-- `HomeAltHero`, whose text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
+- `HomeAltHero`, which owns the page `h1`; its text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
 
-`SiteHeader` owns the visible `h1` and keeps one raw heading across breakpoints. Mobile and desktop masthead layouts may duplicate metric groups, but they must not duplicate the page-level heading because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
+`HomeAltHero` owns the visible `h1` and keeps one raw heading across breakpoints because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
 
 ---
 
@@ -78,14 +73,9 @@ Saved shortcuts are also browser-local:
 - legacy six-item default sets hydrate to the expanded twelve-item default
 - the non-editing desktop panel backfills from the default set to keep twelve visible route shortcuts; edit mode still shows only the user's saved hrefs
 
-### `SiteHeader`
+### `HomeAltHero`
 
-`SiteHeader` is a pure presentational server component. It takes four static build-time props from `src/app/page.tsx` and reads no hooks or live data:
-
-- `tracked` from `TRACKED_STABLECOIN_COUNT`
-- `total` from `ACTIVE_STABLECOIN_COUNT`
-- `pegCount` from `ACTIVE_PEG_CURRENCY_COUNT`
-- `chainCount` from `Object.keys(CHAIN_META).length`
+`HomeAltHero` is a server component fed by `getHomepageHeroSnapshot()` in `src/app/page.tsx`. It renders the `Market Pulse` page heading, the total market-cap snapshot, cohort rows, and the viewport-gated live chart.
 
 ### `HomepageTape`
 
@@ -119,19 +109,19 @@ Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 
 1. `TopNav`
 2. `CoreTopRail` directly below the global header chrome
-3. `SiteHeader`
-4. `HomeAltHero`
+3. `HomeAltHero`
 
 Under the fold (`HomeAltClient`):
 
 1. `HomeAltMiniCardGrid`
 2. `ShortcutsSection`
-3. `PegBrowseStrip`
-4. `StablecoinTable`
-5. `DailyDigest` in `preview` mode
-6. `HomeAltUpcomingHorizonConstellation`
+3. `HomeAltRankingsSection` (`PegBrowseStrip` + `StablecoinTable`)
+4. `HomeAltUpcomingHorizonConstellation`
+5. `HomeAltDdrOverview`
+6. `HomeAltYieldOverview`
+7. `HomeAltStatusTelegram`
 
-The directory table is the product's workbench, so it sits directly under the KPI band (June 2026 mythos pass); the editorial digest and Horizon panel follow it.
+The directory table is the product's workbench, so it sits directly after shortcuts and the signal-card band; Horizon and the overview modules follow it.
 
 ### Key Stablecoin Data
 

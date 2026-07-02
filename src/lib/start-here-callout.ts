@@ -12,7 +12,6 @@ export interface HomepageStartHereCalloutEvaluation {
 }
 
 export const START_HERE_CALLOUT_STORAGE_KEY = "pharos-start-here-callout";
-export const START_HERE_CALLOUT_SESSION_KEY = "pharos-start-here-callout-session";
 export const MAX_START_HERE_HOMEPAGE_SESSIONS = 1;
 
 const DEFAULT_STATE: StartHereCalloutState = {
@@ -39,7 +38,7 @@ export function readStartHereCalloutState(storage: Storage): StartHereCalloutSta
   return readJsonStorageValue(storage, START_HERE_CALLOUT_STORAGE_KEY, normalizeStartHereCalloutState, DEFAULT_STATE);
 }
 
-export function writeStartHereCalloutState(storage: Storage, state: StartHereCalloutState): void {
+function writeStartHereCalloutState(storage: Storage, state: StartHereCalloutState): void {
   writeJsonStorageValue(storage, START_HERE_CALLOUT_STORAGE_KEY, state);
 }
 
