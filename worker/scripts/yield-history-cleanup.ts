@@ -172,13 +172,12 @@ export function loadCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanupRo
   }
 }
 
-export function deleteCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanupSummary {
+export function deleteCleanupRowsFromSqlite(dbPath: string): void {
   const db = new DatabaseSync(dbPath);
   try {
     for (const target of listYieldHistoryCleanupTargets()) {
       db.exec(buildDeleteSql(target));
     }
-    return summarizeYieldHistoryCleanupRows(loadCleanupRowsFromSqlite(dbPath));
   } finally {
     db.close();
   }
@@ -480,5 +479,8 @@ async function main(argv: string[]): Promise<void> {
 
 const isDirectRun = process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirectRun) {
-  void main(process.argv.slice(2));
+  main(process.argv.slice(2)).catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

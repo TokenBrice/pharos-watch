@@ -6442,6 +6442,19 @@
     "description": "Line 421 runs `void main(process.argv.slice(2))` with no .catch, unlike the sibling scripts' `main().catch(err => {console.error; exit(1)})`. All the refusal paths ('Refusing to mutate without --confirm', 'Writer pause guard is not armed', 'lease is active') therefore surface as an UnhandledPromiseRejection crash dump rather than a clean error. Separately, deleteCleanupRowsFromSqlite (lines 158-168) opens a second DatabaseSync connection to the same file while the first is still open just to compute an 'after' summary that its only caller (line 403) discards — main() then re-queries the same after-rows itself at line 408, so the function's return value and inner reload are pure wasted work.",
     "recommendation": "Add the standard `.catch(error => { console.error(error); process.exitCode = 1; })`, and make deleteCleanupRowsFromSqlite return void (drop the inner loadCleanupRowsFromSqlite call). Output for successful runs is unchanged; failures gain the intended clean error message.",
     "estImpact": "clean operator errors; -8 LOC; one fewer full table scan"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a direct-run catch handler to `yield-history-cleanup` so guard refusals print cleanly and set `process.exitCode = 1`, and removed the discarded post-delete SQLite reload from `deleteCleanupRowsFromSqlite`.",
+    "validation": [
+     "npx vitest run worker/scripts/__tests__/yield-history-cleanup.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/scripts/yield-history-cleanup.ts worker/scripts/__tests__/yield-history-cleanup.test.ts"
+    ],
+    "notes": "Successful cleanup output remains unchanged; the focused test now asserts a missing-confirmation direct run exits cleanly without an unhandled rejection."
    }
   },
   {

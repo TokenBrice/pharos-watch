@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -105,6 +106,23 @@ describe("yield-history-cleanup", () => {
     expect(() => parseYieldHistoryCleanupCliOptions(["--execute"])).toThrow(
       "live mutation requires --execute --confirm yield-history-cleanup",
     );
+  });
+
+  it("prints direct-run guard refusals without an unhandled rejection", () => {
+    const result = spawnSync(
+      join(process.cwd(), "node_modules/.bin/tsx"),
+      ["worker/scripts/yield-history-cleanup.ts", "--execute"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Error: Refusing yield-history-cleanup: live mutation requires --execute --confirm yield-history-cleanup",
+    );
+    expect(result.stderr).not.toMatch(/UnhandledPromiseRejection|unhandled rejection/i);
   });
 
   it("preserves sqlite restore exemption from live confirmation", () => {
