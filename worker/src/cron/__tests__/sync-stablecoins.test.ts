@@ -1269,6 +1269,10 @@ describe("syncStablecoins", () => {
     await expect(syncStablecoins(db)).rejects.toThrow(
       "DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient",
     );
+
+    const attemptedSources = vi.mocked(shouldAttemptFetch).mock.calls.map((call) => call[1]);
+    expect(attemptedSources).not.toContain("defillama-coins");
+    expect(attemptedSources).not.toContain("defillama-protocols");
   });
 
   it("runs depeg detection after successful DL sync", async () => {

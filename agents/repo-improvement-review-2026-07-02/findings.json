@@ -283,6 +283,16 @@
     "description": "loadStablecoinsIntake awaits shouldAttemptFetch for the DL stablecoins circuit (line 174), then unconditionally starts fetchSupplementalTrackedTokens (gold protocol fetches, silver CG /coins/markets, fiat-cg DL coins prices plus on-chain totalSupply probes — many subrequests). When the circuit is open (line 184), it awaits the promise purely to drain it and returns via syncViaCoingeckoFallback, which never consumes goldTokens/silverTokens/fiatCgTokens. Since dlAllowed is already known before the promise is created, the entire supplemental fan-out is wasted work on every circuit-open cycle, competing for the 6-connection pool during an already-degraded run.",
     "recommendation": "Only start fetchSupplementalTrackedTokens when dlAllowed is true (create the promise inside/after the `if (!dlAllowed)` guard). The fallback path's published output is unchanged; only discarded upstream calls are skipped.",
     "estImpact": "removes ~10-30 wasted subrequests per circuit-open sync"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved supplemental tracked-token fan-out behind the DefiLlama stablecoins circuit-open guard so the CoinGecko fallback path no longer starts gold, silver, fiat-cg, or DL coins/protocol work whose result is discarded.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/sync-stablecoins.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "The circuit-open fallback still fetches CoinGecko market-cap data before the DL guard because the fallback consumes that data; only supplemental-only downstream fetches are skipped."
    }
   },
   {

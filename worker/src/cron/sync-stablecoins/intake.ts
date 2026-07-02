@@ -172,6 +172,15 @@ export async function loadStablecoinsIntake(
   const cgData = await fetchCoinGeckoMarketData(input.db, input.signal, input.coingeckoApiKey);
 
   const dlAllowed = await shouldAttemptFetch(input.db, CIRCUIT_SOURCE.DL_STABLECOINS);
+  if (!dlAllowed) {
+    console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
+    return {
+      kind: "fallback",
+      result: await input.fallbackToCoingecko(cgData),
+      errorMessage: "DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient",
+    };
+  }
+
   const supplementalTokensPromise = fetchSupplementalTrackedTokens(
     cgData,
     input.signal,
@@ -180,16 +189,6 @@ export async function loadStablecoinsIntake(
     input.fxFallbackRates,
     input.db,
   );
-
-  if (!dlAllowed) {
-    console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
-    await supplementalTokensPromise;
-    return {
-      kind: "fallback",
-      result: await input.fallbackToCoingecko(cgData),
-      errorMessage: "DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient",
-    };
-  }
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([
     fetchDefillamaStablecoinsPayload(input.signal),
