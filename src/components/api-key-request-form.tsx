@@ -224,14 +224,16 @@ export function ApiKeyRequestForm() {
                   key={option.path}
                   htmlFor={id}
                   className={cn(
-                    "flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border/60 bg-background/45 px-3 py-2 text-sm transition-colors",
-                    checked ? "border-emerald-500/40 bg-emerald-500/10 text-foreground" : "text-muted-foreground hover:text-foreground",
+                    "flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+                    checked
+                      ? "border-transparent bg-foreground text-background"
+                      : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <input
                     id={id}
                     type="checkbox"
-                    className="size-4 accent-emerald-600"
+                    className="size-4 accent-foreground"
                     checked={checked}
                     onChange={() => toggleEndpoint(option.path)}
                     disabled={requestStatus === "submitting"}
@@ -257,7 +259,7 @@ export function ApiKeyRequestForm() {
         <label className="mt-4 flex gap-2 rounded-md border border-border/60 bg-background/45 px-3 py-2 text-sm text-muted-foreground">
           <input
             type="checkbox"
-            className="mt-0.5 size-4 accent-emerald-600"
+            className="mt-0.5 size-4 accent-foreground"
             checked={acceptedTerms}
             onChange={(event) => setAcceptedTerms(event.target.checked)}
             disabled={requestStatus === "submitting"}
@@ -436,11 +438,11 @@ export function ApiKeyRequestForm() {
           <dl className="mt-3 grid grid-cols-2 gap-3">
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Quota</dt>
-              <dd className="font-mono text-lg font-semibold text-foreground">{SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE} rpm</dd>
+              <dd className="pharos-numeric text-lg font-semibold text-foreground">{SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE} rpm</dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Expiry</dt>
-              <dd className="font-mono text-lg font-semibold text-foreground">{API_KEY_REQUEST_EXPIRY_DAYS} days</dd>
+              <dd className="pharos-numeric text-lg font-semibold text-foreground">{API_KEY_REQUEST_EXPIRY_DAYS} days</dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Ownership</dt>

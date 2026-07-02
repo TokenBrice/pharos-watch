@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Activity, ArrowUpRight, BookOpen, Code2, Database, KeyRound, LineChart, ShieldCheck } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpen, Database, LineChart, ShieldCheck } from "lucide-react";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 import { CopyButton } from "@/components/copy-button";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { safeJsonLd } from "@/lib/json-ld";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
@@ -119,83 +118,36 @@ function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] 
 
 export default function ApiAccessPage() {
   return (
-    <div className="mx-auto w-full max-w-[76rem] space-y-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-              { "@type": "ListItem", position: 2, name: "API", item: new URL("/api/", SITE_URL).toString() },
-            ],
-          }),
-        }}
-      />
-
-      <div className="space-y-3">
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,0.66fr)_minmax(18rem,0.34fr)] lg:items-end">
-          <div className="space-y-3">
-            <div className="pharos-kicker inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1">
-              <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-              Public API Access
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">Pharos API</h1>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                Request a self-serve key for read-only public stablecoin data. The default key is scoped to external API
-                traffic, limited to {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute, and expires after{" "}
-                {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <Link
-                href="/about/api/"
-                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background px-3 py-2 font-medium text-foreground hover:bg-muted/50"
-              >
-                <BookOpen className="h-4 w-4" aria-hidden="true" />
-                API Reference
-              </Link>
-              <a
-                href={PUBLIC_API_ARTIFACTS.openApi}
-                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background px-3 py-2 font-medium text-foreground hover:bg-muted/50"
-              >
-                OpenAPI
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-              <a
-                href={PUBLIC_API_ARTIFACTS.postmanCollection}
-                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background px-3 py-2 font-medium text-foreground hover:bg-muted/50"
-              >
-                Postman
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-
-          <div className="pharos-card-shell px-4 py-4">
-            <p className="pharos-kicker">Call Pattern</p>
-            <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-              <p>
-                Base URL:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-                  {PUBLIC_API_HOST}
-                </code>
-              </p>
-              <p>
-                Header:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-                  {PUBLIC_API_KEY_HEADER}
-                </code>
-              </p>
-              <p>Respect 429 responses and add jitter to polling intervals.</p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-3">
+    <FeaturePageShell
+      breadcrumbName="API"
+      path="/api/"
+      title="Pharos API"
+      leadParagraphs={[
+        <>
+          Request a self-serve key for read-only public stablecoin data. The default key is scoped to external API
+          traffic, limited to {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute, and expires after{" "}
+          {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
+        </>,
+      ]}
+      headerSupplement={
+        <div className="flex flex-wrap gap-3">
+          <Link href="/about/api/" className="pharos-control-pill pharos-focus-ring gap-1.5">
+            <BookOpen className="h-4 w-4" aria-hidden="true" />
+            API Reference
+          </Link>
+          <a href={PUBLIC_API_ARTIFACTS.openApi} className="pharos-control-pill pharos-focus-ring gap-1.5">
+            OpenAPI
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+          <a href={PUBLIC_API_ARTIFACTS.postmanCollection} className="pharos-control-pill pharos-focus-ring gap-1.5">
+            Postman
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </div>
+      }
+    >
+      <div className="space-y-8">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {ACCESS_FACTS.map((fact) => {
           const Icon = fact.icon;
           return (
@@ -210,6 +162,25 @@ export default function ApiAccessPage() {
             </section>
           );
         })}
+
+        <section className="pharos-card-shell px-4 py-4">
+          <p className="pharos-kicker">Call Pattern</p>
+          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Base URL:{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+                {PUBLIC_API_HOST}
+              </code>
+            </p>
+            <p>
+              Header:{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+                {PUBLIC_API_KEY_HEADER}
+              </code>
+            </p>
+            <p>Respect 429 responses and add jitter to polling intervals.</p>
+          </div>
+        </section>
       </div>
 
       <section className="space-y-3">
@@ -232,7 +203,7 @@ export default function ApiAccessPage() {
                 className="pharos-focus-ring pharos-card-shell pharos-interactive-card px-4 py-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 font-mono text-[11px] font-bold leading-tight text-foreground">
                     {endpoint.method}
                   </span>
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
@@ -251,10 +222,7 @@ export default function ApiAccessPage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,0.7fr)_minmax(18rem,0.3fr)]">
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <div className="pharos-kicker inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1">
-              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Working Examples
-            </div>
+            <p className="pharos-kicker">Working Examples</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Call Pharos from your stack</h2>
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
@@ -305,6 +273,7 @@ export default function ApiAccessPage() {
       </section>
 
       <ApiKeyRequestForm />
-    </div>
+      </div>
+    </FeaturePageShell>
   );
 }

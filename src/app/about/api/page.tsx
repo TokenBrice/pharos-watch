@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
 import {
@@ -96,12 +97,12 @@ const METHOD_BADGE_CLASS =
   "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight";
 const METHOD_BADGE_STYLES = {
   section: {
-    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
-    POST: "border-amber-500/25 bg-amber-500/15 text-amber-400",
+    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+    POST: "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
   },
   directory: {
-    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-500",
-    POST: "border-amber-500/25 bg-amber-500/15 text-amber-500",
+    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-500",
+    POST: "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-500",
   },
 } as const;
 
@@ -366,95 +367,68 @@ export default async function AboutApiPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[76rem] space-y-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-              { "@type": "ListItem", position: 2, name: "About", item: `${SITE_URL}/about/` },
-              { "@type": "ListItem", position: 3, name: "API Reference", item: `${SITE_URL}/about/api/` },
-            ],
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(buildApiArtifactCatalogJsonLd()),
-        }}
-      />
-
-      <div className="space-y-3">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] xl:items-end">
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <p className="pharos-kicker">External Integrations</p>
-              <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">API Reference</h1>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                The public integration lane is <InlineCode>{PUBLIC_API_HOST}</InlineCode>.
-                In production, protected public routes require <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>.
-                The website itself does not use that lane directly; it talks to the internal site-data proxy instead.
-              </p>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                For implementation context beyond the HTTP contract, read the{" "}
-                <Link href="/docs/api-reference/" className="pharos-prose-link">
-                  public API reference doc
-                </Link>{" "}
-                and the broader{" "}
-                <Link href="/docs/" className="pharos-prose-link">
-                  documentation archive
-                </Link>
-                .
-              </p>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                Prefer machine-readable tooling? Download the{" "}
-                <a
-                  href={PUBLIC_API_ARTIFACTS.openApi}
-                  className="pharos-prose-link"
-                >
-                  OpenAPI spec
-                </a>
-                , or import the{" "}
-                <a
-                  href={PUBLIC_API_ARTIFACTS.postmanCollection}
-                  className="pharos-prose-link"
-                >
-                  Pharos API collection
-                </a>{" "}
-                with the{" "}
-                <a
-                  href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
-                  className="pharos-prose-link"
-                >
-                  production environment template
-                </a>
-                .
-              </p>
-            </div>
-          </div>
-
-          <div className="pharos-card-shell px-4 py-4">
-            <p className="pharos-kicker">Quick Facts</p>
-            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-              <li>
-                <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
-              </li>
-              <li>
-                <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)
-              </li>
-              <li>
-                <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-3">
+    <FeaturePageShell
+      breadcrumbName="API Reference"
+      path="/about/api/"
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "About", url: "/about/" },
+        { name: "API Reference", url: "/about/api/" },
+      ]}
+      title="API Reference"
+      leadParagraphs={[
+        <>
+          The public integration lane is <InlineCode>{PUBLIC_API_HOST}</InlineCode>. In production, protected public
+          routes require <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>. The website itself does not use that lane
+          directly; it talks to the internal site-data proxy instead.
+        </>,
+        <>
+          For implementation context beyond the HTTP contract, read the{" "}
+          <Link href="/docs/api-reference/" className="pharos-prose-link">
+            public API reference doc
+          </Link>{" "}
+          and the broader{" "}
+          <Link href="/docs/" className="pharos-prose-link">
+            documentation archive
+          </Link>
+          .
+        </>,
+        <>
+          Prefer machine-readable tooling? Download the{" "}
+          <a
+            href={PUBLIC_API_ARTIFACTS.openApi}
+            className="pharos-prose-link"
+          >
+            OpenAPI spec
+          </a>
+          , or import the{" "}
+          <a
+            href={PUBLIC_API_ARTIFACTS.postmanCollection}
+            className="pharos-prose-link"
+          >
+            Pharos API collection
+          </a>{" "}
+          with the{" "}
+          <a
+            href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
+            className="pharos-prose-link"
+          >
+            production environment template
+          </a>
+          .
+        </>,
+      ]}
+      preface={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(buildApiArtifactCatalogJsonLd()),
+          }}
+        />
+      }
+    >
+      <div className="space-y-8">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {HERO_LANES.map((lane) => {
           const Icon = lane.icon;
           return (
@@ -472,11 +446,26 @@ export default async function AboutApiPage() {
             </section>
           );
         })}
+
+        <div className="pharos-card-shell px-4 py-4">
+          <p className="pharos-kicker">Quick Facts</p>
+          <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
+            </li>
+          </ul>
+        </div>
       </div>
 
-      <section className="rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-5 sm:px-5 sm:py-6">
+      <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
-          <p className="pharos-kicker text-amber-700 dark:text-amber-400">Need A Key?</p>
+          <p className="pharos-kicker">Need A Key?</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Request API access by email verification</h2>
         </div>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
@@ -526,6 +515,7 @@ export default async function AboutApiPage() {
           <EndpointDirectory endpoints={endpoints} />
         </div>
       </ApiReferenceLayout>
-    </div>
+      </div>
+    </FeaturePageShell>
   );
 }

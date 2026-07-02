@@ -28,8 +28,8 @@ function MethodBadge({ method }: { method: "GET" | "POST" }) {
     <span
       className={cn(
         "inline-flex shrink-0 rounded-full border px-1.5 py-px font-mono text-[10px] font-bold leading-tight",
-        method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
-        method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-400",
+        method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+        method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
       )}
     >
       {method}
