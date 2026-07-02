@@ -30,6 +30,7 @@ export function PublicStatusReliabilitySection({
   return (
     <StatusSection
       id="reliability"
+      kicker="Reliability"
       title="Route probes, breakers, and cache pressure"
       summary={
         <>

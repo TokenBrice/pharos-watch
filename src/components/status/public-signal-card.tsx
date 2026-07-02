@@ -17,7 +17,9 @@ export function PublicSignalCard({
   badges,
   description,
   children,
-  variant = "card",
+  /* Default is the flat panel: every consumer renders inside a StatusSection
+     card shell, and nesting a card inside a card is forbidden. */
+  variant = "panel",
   contentClassName,
 }: PublicSignalCardProps) {
   return (

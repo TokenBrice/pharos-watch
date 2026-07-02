@@ -26,36 +26,20 @@ interface PublicStatusHeroProps {
 const HERO_COPY = {
   healthy: {
     headline: "Public surface steady.",
-    shell:
-      "border-emerald-500/24 bg-[linear-gradient(140deg,oklch(0.985_0.02_150_/_0.98),oklch(0.975_0.012_248_/_0.99))] text-slate-950 dark:bg-[linear-gradient(140deg,rgba(3,30,22,0.96),rgba(5,15,23,0.99))] dark:text-emerald-50",
-    glowA:
-      "bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.22),transparent_56%)]",
-    glowB:
-      "bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_52%)]",
-
-    accentDot: "bg-emerald-300",
+    /* Flat card; no accent stripe when healthy. */
+    shell: "",
+    accentDot: "bg-green-500",
   },
   degraded: {
     headline: "Public surface under pressure.",
-    shell:
-      "border-amber-500/24 bg-[linear-gradient(140deg,oklch(0.985_0.02_85_/_0.98),oklch(0.975_0.012_248_/_0.99))] text-slate-950 dark:bg-[linear-gradient(140deg,rgba(33,22,5,0.96),rgba(10,14,22,0.99))] dark:text-amber-50",
-    glowA:
-      "bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.24),transparent_56%)]",
-    glowB:
-      "bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.12),transparent_52%)]",
-
-    accentDot: "bg-amber-300",
+    /* Data-driven severity accent for a real degraded state. */
+    shell: "border-l-[3px] border-l-amber-500",
+    accentDot: "bg-amber-500",
   },
   stale: {
     headline: "Public surface compromised.",
-    shell:
-      "border-red-500/24 bg-[linear-gradient(140deg,oklch(0.985_0.02_25_/_0.98),oklch(0.975_0.012_248_/_0.99))] text-slate-950 dark:bg-[linear-gradient(140deg,rgba(37,9,11,0.96),rgba(10,14,22,0.99))] dark:text-red-50",
-    glowA:
-      "bg-[radial-gradient(circle_at_top_left,rgba(248,113,113,0.24),transparent_56%)]",
-    glowB:
-      "bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.12),transparent_52%)]",
-
-    accentDot: "bg-red-300",
+    shell: "border-l-[3px] border-l-red-500",
+    accentDot: "bg-red-500",
   },
 } as const;
 
@@ -71,10 +55,10 @@ function SignalTile({
   const toneClassName = getStatusTone(tone).badgeClassName;
 
   return (
-    <div className="rounded-lg border border-black/8 bg-white/45 px-3.5 py-3 dark:border-white/10 dark:bg-black/15">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">{label}</p>
+    <div>
+      <p className="pharos-kicker">{label}</p>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
-        <span className="pharos-numeric text-lg font-semibold tracking-tight text-slate-950 dark:text-white">{value}</span>
+        <span className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</span>
         <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", toneClassName)}>
           {getStatusTone(tone).label}
         </span>
@@ -92,8 +76,8 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-white/48">{label}</span>
-      <span className="pharos-numeric text-xs text-slate-950 dark:text-white">{value}</span>
+      <span className="pharos-kicker">{label}</span>
+      <span className="pharos-numeric text-xs text-foreground">{value}</span>
     </div>
   );
 }
@@ -126,11 +110,8 @@ export function PublicStatusHero({
   const mintBurnTone = getPublicMintBurnStatus(healthData.mintBurn.sync);
 
   return (
-    <section className={cn("relative overflow-hidden rounded-xl border px-4 py-5 sm:px-5 lg:px-6", hero.shell)}>
-      <div className={cn("pointer-events-none absolute inset-0 opacity-100", hero.glowA)} />
-      <div className={cn("pointer-events-none absolute inset-0 opacity-100", hero.glowB)} />
-
-      <div className="relative space-y-4">
+    <section className={cn("pharos-card-shell px-4 py-5 sm:px-5 lg:px-6", hero.shell)}>
+      <div className="space-y-4">
         {/* ── Headline row ── */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
@@ -144,13 +125,13 @@ export function PublicStatusHero({
                 labelPrefix="Dashboard fetch"
               />
               {healthData.warnings.length > 0 && (
-                <span className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/60">
+                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <span className={cn("h-2 w-2 rounded-full", hero.accentDot)} />
                   {healthData.warnings.length} warning{healthData.warnings.length !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
-            <h2 className="max-w-3xl text-balance text-[clamp(2rem,4.5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-slate-950 dark:text-white">
+            <h2 className="pharos-page-title max-w-3xl text-balance text-foreground">
               {hero.headline}
             </h2>
           </div>
@@ -159,11 +140,11 @@ export function PublicStatusHero({
 
         {/* ── Watch note (only when warnings or non-healthy) ── */}
         {(healthData.status !== "healthy" || healthData.warnings.length > 0) && (
-          <p className="max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-white/70">{warningLine}</p>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{warningLine}</p>
         )}
 
         {/* ── 4-metric strip ── */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-4">
           <SignalTile
             label="Cache Pressure"
             value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : worstCacheStatus === "healthy" ? "—" : "missing"}
@@ -187,7 +168,7 @@ export function PublicStatusHero({
         </div>
 
         {/* ── Compact metadata footer ── */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-black/8 pt-3 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border/60 pt-3">
           <MetaRow label="Health sample" value={formatTimestampSeconds(healthData.timestamp)} />
           <MetaRow label="Client sync" value={formatTimestampMs(lastUpdated)} />
           {impactedCacheLanes > 0 && (

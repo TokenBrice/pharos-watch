@@ -17,7 +17,7 @@ interface DaySegment {
 }
 
 const STATUS_COLORS: Record<DaySegment["status"], string> = {
-  healthy: "bg-emerald-500",
+  healthy: "bg-green-500",
   degraded: "bg-amber-500",
   stale: "bg-red-500",
   unknown: "bg-slate-300 dark:bg-slate-600",
@@ -119,7 +119,7 @@ export function UptimeBar({
     <div className="pharos-card-shell space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Status runway</div>
+          <div className="pharos-kicker">Status runway</div>
           <div className="mt-1 text-sm text-muted-foreground">Daily posture over the last {days} days.</div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -127,7 +127,7 @@ export function UptimeBar({
             Last {days}d
           </span>
           {holdingDays != null && holdingDays > 0 && (
-            <span className="rounded-full border border-border/70 px-3 py-1 font-mono text-xs tabular-nums text-muted-foreground">
+            <span className="pharos-numeric rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
               {currentStatus} for {holdingDays}d
             </span>
           )}

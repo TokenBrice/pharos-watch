@@ -29,6 +29,7 @@ export function PublicServiceSummarySection({
   return (
     <StatusSection
       id="overview"
+      kicker="Service Health"
       title="Public service summary"
       summary={
         <>
@@ -88,16 +89,16 @@ export function PublicServiceSummarySection({
             {healthData.mintBurn.sync.warning
               ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Successful Sync</div>
-              <div className="mt-2 pharos-numeric text-sm text-foreground">
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <div className="border-t border-border/60 pt-3">
+              <div className="pharos-kicker">Last Successful Sync</div>
+              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                 {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
               </div>
             </div>
-            <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Rollup</div>
-              <div className="mt-2 pharos-numeric text-sm text-foreground">
+            <div className="border-t border-border/60 pt-3">
+              <div className="pharos-kicker">Latest Hourly Rollup</div>
+              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                 {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
               </div>
             </div>
@@ -126,9 +127,9 @@ export function PublicServiceSummarySection({
           <p className="text-sm leading-relaxed text-muted-foreground">
             Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
           </p>
-          <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-            <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
-            <div className="mt-2 leading-relaxed text-foreground">
+          <div className="border-t border-border/60 pt-3">
+            <div className="pharos-kicker">Public Health Interpretation</div>
+            <div className="mt-1.5 leading-relaxed text-foreground">
               {healthData.blacklist.missingAmounts > 0
                 ? blacklistStatus === "healthy"
                   ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${healthData.blacklist.recentMissingAmounts > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
@@ -179,14 +180,14 @@ export function PublicServiceSummarySection({
             ) : undefined
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Subscribers</div>
-              <div className="mt-2 pharos-numeric text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <div className="border-t border-border/60 pt-3">
+              <div className="pharos-kicker">Subscribers</div>
+              <div className="mt-1.5 pharos-numeric text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
             </div>
-            <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Dispatch</div>
-              <div className="mt-2 pharos-numeric text-sm text-foreground">
+            <div className="border-t border-border/60 pt-3">
+              <div className="pharos-kicker">Last Dispatch</div>
+              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                 {telegramSummary.lastDispatchAt
                   ? formatTimestampSeconds(telegramSummary.lastDispatchAt)
                   : "No dispatch recorded"}
@@ -222,9 +223,9 @@ export function PublicServiceSummarySection({
         }
       >
         {impactedPublicSurfaces.length > 0 ? (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-3 lg:grid-cols-2">
             {impactedPublicSurfaces.map((surface) => (
-              <div key={surface.id} className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
+              <div key={surface.id} className="border-t border-border/60 pt-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm font-medium text-foreground">{surface.title}</div>
                   <StatusSummaryBadge label="Impact" value={surface.tone} status={surface.tone} />
@@ -234,7 +235,7 @@ export function PublicServiceSummarySection({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-border/40 bg-background/60 p-3 text-sm leading-relaxed text-muted-foreground dark:bg-background/20">
+          <div className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
             No current public surface impact flags are active beyond the hero summary.
           </div>
         )}

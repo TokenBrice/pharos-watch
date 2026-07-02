@@ -131,10 +131,10 @@ export function EndpointHealthGrid({
                                 {statusLabel}
                               </Badge>
                             )}
-                            <span className="text-xs tabular-nums text-muted-foreground">
+                            <span className="pharos-numeric text-xs text-muted-foreground">
                               {probe.status != null ? `HTTP ${probe.status}` : "No HTTP"}
                             </span>
-                            <span className="text-xs tabular-nums text-muted-foreground">{probe.latencyMs}ms</span>
+                            <span className="pharos-numeric text-xs text-muted-foreground">{probe.latencyMs}ms</span>
                           </>
                         ) : (
                           <Badge className="bg-muted text-xs text-muted-foreground">—</Badge>

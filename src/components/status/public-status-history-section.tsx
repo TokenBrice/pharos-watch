@@ -23,6 +23,7 @@ export function PublicStatusHistorySection({
   return (
     <StatusSection
       id="history"
+      kicker="Incident Log"
       title="Status transitions"
       summary={
         (historyData?.transitions.length ?? 0) > 0 ? (

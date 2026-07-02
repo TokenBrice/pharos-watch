@@ -65,7 +65,7 @@ export function FreshnessIndicator({ updatedAtMs, staleAfterMs, labelPrefix, cla
             )}
           >
             <span
-              className={cn("h-1.5 w-1.5 rounded-full", isStale ? "bg-amber-400" : "bg-emerald-400")}
+              className={cn("h-1.5 w-1.5 rounded-full", isStale ? "bg-amber-500" : "bg-green-500")}
               aria-hidden="true"
             />
             {labelPrefix ? `${labelPrefix}: ${label}` : label}
