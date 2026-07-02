@@ -1192,6 +1192,14 @@ export interface StatusHistoryResponse {
 
 const StatusJsonObjectSchema = z.object({}).passthrough();
 
+function statusObjectSchema<T>(): z.ZodType<T> {
+  return z.custom<T>((value) => value != null && typeof value === "object" && !Array.isArray(value));
+}
+
+function statusRecordSchema<T>(): z.ZodType<Record<string, T>> {
+  return z.record(z.string(), statusObjectSchema<T>());
+}
+
 const StatusCauseSchema = z.object({
   code: z.string(),
   layer: z.enum(["availability", "data-quality", "system"]),
@@ -1311,37 +1319,37 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   discrepancy: StatusDiscrepancySchema,
   timeline: z.array(StatusTransitionSchema),
   caches: z.record(z.string(), CacheStatusSchema),
-  crons: z.record(z.string(), StatusJsonObjectSchema),
-  budgetOnlySurfaces: z.array(StatusJsonObjectSchema),
-  dataQuality: StatusJsonObjectSchema,
-  telegramBot: StatusJsonObjectSchema.nullable(),
+  crons: statusRecordSchema<CronStatus>(),
+  budgetOnlySurfaces: z.array(statusObjectSchema<BudgetOnlySurfaceStatus>()),
+  dataQuality: statusObjectSchema<DataQuality>(),
+  telegramBot: statusObjectSchema<TelegramBotStats>().nullable(),
   sectionErrors: z.record(z.string(), z.object({ code: z.string(), message: z.string() })),
-  datasetFreshness: StatusJsonObjectSchema,
-  summary: StatusJsonObjectSchema,
-  liquidityHealth: StatusJsonObjectSchema.nullable(),
-  yieldHealth: StatusJsonObjectSchema.nullable(),
-  publicationHealth: StatusJsonObjectSchema.nullable().optional(),
-  dependencyHealth: StatusJsonObjectSchema.nullable().optional(),
-  providerCircuitHealth: StatusJsonObjectSchema.nullable().optional(),
-  canaries: StatusJsonObjectSchema.nullable().optional(),
-  priceSourceHealth: StatusJsonObjectSchema.nullable(),
-  priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
+  datasetFreshness: statusObjectSchema<DatasetFreshness>(),
+  summary: statusObjectSchema<StatusResponse["summary"]>(),
+  liquidityHealth: statusObjectSchema<LiquidityHealth>().nullable(),
+  yieldHealth: statusObjectSchema<YieldHealthSummary>().nullable(),
+  publicationHealth: statusObjectSchema<PublicationHealth>().nullable().optional(),
+  dependencyHealth: statusObjectSchema<DependencyHealth>().nullable().optional(),
+  providerCircuitHealth: statusObjectSchema<ProviderCircuitHealth>().nullable().optional(),
+  canaries: statusObjectSchema<CanaryStatus>().nullable().optional(),
+  priceSourceHealth: statusObjectSchema<PriceSourceHealth>().nullable(),
+  priceProviderDiagnostics: z.array(z.record(z.string(), z.unknown())).nullable(),
   gtProbe: StatusJsonObjectSchema.nullable(),
-  coingeckoPriceDiff: StatusJsonObjectSchema.nullable(),
-  d1Usage: StatusJsonObjectSchema.nullable(),
-  discoveryCandidates: z.array(StatusJsonObjectSchema).nullable(),
-  mintBurnReconciliation: StatusJsonObjectSchema.nullable(),
+  coingeckoPriceDiff: statusObjectSchema<CoinGeckoPriceDiff>().nullable(),
+  d1Usage: statusObjectSchema<D1UsageSummary>().nullable(),
+  discoveryCandidates: z.array(statusObjectSchema<DiscoveryCandidate>()).nullable(),
+  mintBurnReconciliation: statusObjectSchema<MintBurnReconciliationSummary>().nullable(),
   reserveComposition: StatusReserveCompositionSchema,
   cacheBlobSizes: z.record(z.string(), z.number()).optional(),
-  reserveDrift: z.array(StatusJsonObjectSchema).optional(),
-  classificationWarnings: z.array(StatusJsonObjectSchema).optional(),
+  reserveDrift: z.array(statusObjectSchema<ReserveDriftEntry>()).optional(),
+  classificationWarnings: z.array(statusObjectSchema<ClassificationWarning>()).optional(),
 }).passthrough().transform((value): StatusResponse => ({
   ...value,
   publicationHealth: value.publicationHealth ?? null,
   dependencyHealth: value.dependencyHealth ?? null,
   providerCircuitHealth: value.providerCircuitHealth ?? null,
   canaries: value.canaries ?? null,
-}) as unknown as StatusResponse);
+}));
 
 export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.object({
   timestamp: z.number(),
@@ -1351,7 +1359,7 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
   discrepancy: StatusDiscrepancySchema,
   transitions: z.array(StatusTransitionSchema),
   reserveComposition: StatusReserveCompositionSchema.nullable(),
-}).transform((value): StatusHistoryResponse => value as unknown as StatusHistoryResponse);
+});
 
 export interface PublicStatusTransition {
   id: number;

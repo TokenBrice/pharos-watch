@@ -5,7 +5,7 @@ import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import type { DigestInputData, DigestSnapshotResponse } from "@shared/types";
+import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
 /* ---------- sub-section wrapper ---------- */
@@ -53,7 +53,7 @@ interface VisibleDepeg {
 }
 
 function getVisibleDepegs(
-  inputData: DigestInputData,
+  inputData: DigestSnapshotInputData,
   depegEvents: DigestSnapshotResponse["depegEvents"],
 ): { count: number; rows: VisibleDepeg[] } {
   const inputTopDepegs = inputData.topDepegs ?? [];
@@ -85,7 +85,7 @@ function ActiveDepegsCard({
   inputData,
   depegEvents,
 }: {
-  inputData: DigestInputData;
+  inputData: DigestSnapshotInputData;
   depegEvents: DigestSnapshotResponse["depegEvents"];
 }) {
   const { count, rows } = getVisibleDepegs(inputData, depegEvents);
@@ -140,8 +140,11 @@ export function DigestSnapshot({ date }: { date: string }) {
 
   const { inputData, prevInputData, depegEvents, blacklistEvents } = data;
   const prev = prevInputData ?? undefined;
+  const totalMcapUsd = inputData.totalMcapUsd ?? 0;
+  const mcap7dDelta = inputData.mcap7dDelta ?? 0;
+  const prevTotalMcapUsd = prev?.totalMcapUsd;
 
-  const mcapDelta = prev ? inputData.totalMcapUsd - prev.totalMcapUsd : 0;
+  const mcapDelta = prevTotalMcapUsd != null ? totalMcapUsd - prevTotalMcapUsd : 0;
 
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
@@ -165,9 +168,9 @@ export function DigestSnapshot({ date }: { date: string }) {
           <p className="text-sm text-foreground/90">
             Total mcap:{" "}
             <span className="font-medium">
-              {formatCurrency(inputData.totalMcapUsd)}
+              {formatCurrency(totalMcapUsd)}
             </span>
-            {prev && (
+            {prevTotalMcapUsd != null && (
               <span className={getNetColor(mcapDelta)}>
                 {" "}({mcapDelta >= 0 ? "+" : ""}
                 {formatCurrency(mcapDelta)} from yesterday)
@@ -176,15 +179,15 @@ export function DigestSnapshot({ date }: { date: string }) {
           </p>
           <p className="text-sm text-muted-foreground">
             7d change:{" "}
-            <span className={`font-medium ${getNetColor(inputData.mcap7dDelta)}`}>
-              {formatCurrency(inputData.mcap7dDelta)}
+            <span className={`font-medium ${getNetColor(mcap7dDelta)}`}>
+              {formatCurrency(mcap7dDelta)}
             </span>
-            {inputData.totalMcapUsd - inputData.mcap7dDelta !== 0 && (
-              <span className={getNetColor(inputData.mcap7dDelta)}>
+            {totalMcapUsd - mcap7dDelta !== 0 && (
+              <span className={getNetColor(mcap7dDelta)}>
                 {" "}
                 ({formatPercentChange(
-                  inputData.totalMcapUsd,
-                  inputData.totalMcapUsd - inputData.mcap7dDelta
+                  totalMcapUsd,
+                  totalMcapUsd - mcap7dDelta
                 )})
               </span>
             )}
@@ -310,11 +313,11 @@ export function DigestSnapshot({ date }: { date: string }) {
                 {inputData.safetyScores.mentionedCoins.map((c) => (
                   <li key={c.symbol} className="text-xs text-foreground/90">
                     <span className="font-medium">{c.symbol}</span>:{" "}
-                    <span className="font-medium">{c.grade}</span>{" "}
+                    <span className="font-medium">{c.grade ?? "n/a"}</span>{" "}
                     <span className="text-muted-foreground">
-                      ({c.score}
-                      {c.peg !== null && `, peg=${c.peg}`}
-                      {c.liq !== null && `, liq=${c.liq}`})
+                      ({c.score ?? "n/a"}
+                      {c.peg != null && `, peg=${c.peg}`}
+                      {c.liq != null && `, liq=${c.liq}`})
                     </span>
                   </li>
                 ))}

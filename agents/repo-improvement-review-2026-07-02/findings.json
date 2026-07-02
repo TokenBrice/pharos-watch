@@ -6194,6 +6194,21 @@
      "shared/types/digest.ts",
      "src/hooks/use-status.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the `as unknown as` schema/interface assertions from status and digest snapshot schemas. Status schemas now use typed permissive object leaves so the defaulting transform structurally returns `StatusResponse`, while digest snapshots expose a dedicated partial `DigestSnapshotInputData` contract consumed by the snapshot component.",
+    "validation": [
+     "npx vitest run shared/types/__tests__/status.test.ts shared/types/__tests__/digest.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "rg -n \"as unknown as StatusResponse|as unknown as StatusHistoryResponse|as unknown as DigestInputData\" shared/types/status.ts shared/types/digest.ts src/components/digest-snapshot.tsx",
+     "git diff --check -- shared/types/status.ts shared/types/digest.ts shared/types/__tests__/digest.test.ts src/components/digest-snapshot.tsx"
+    ],
+    "notes": "Runtime validation remains intentionally permissive for historically loose status subtrees and older digest archives; the change restores compile-time drift detection without narrowing public response compatibility."
    }
   },
   {

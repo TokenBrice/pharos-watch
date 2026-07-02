@@ -405,13 +405,20 @@ const DigestSnapshotInputDataSchema = z
     totalMcapUsd: z.number().optional(),
     mcap7dDelta: z.number().optional(),
     activeDepegCount: z.number().optional(),
+    changeSummary: DigestChangeSummarySchema.optional(),
+    nextTriggers: z.array(DigestNextTriggerSchema).optional(),
+    forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),
+    riskTape: z.array(DigestRiskTapeItemSchema).optional(),
     topDepegs: z
       .array(
         z
           .object({
+            stablecoinId: z.string().optional(),
             symbol: z.string(),
             bps: z.number(),
+            direction: z.string().optional(),
             mcapUsd: z.number(),
+            startedAt: z.number().optional(),
           })
           .passthrough(),
       )
@@ -424,6 +431,7 @@ const DigestSnapshotInputDataSchema = z
           .object({
             severity: z.number(),
             breadth: z.number(),
+            stressBreadth: z.number().optional(),
             trend: z.number(),
           })
           .passthrough(),
@@ -433,6 +441,7 @@ const DigestSnapshotInputDataSchema = z
       .optional(),
     biggestSupplyChange: z
       .object({
+        id: z.string().optional(),
         symbol: z.string(),
         name: z.string(),
         changeUsd: z.number(),
@@ -443,16 +452,77 @@ const DigestSnapshotInputDataSchema = z
       .optional(),
     safetyScores: z
       .object({
-        mentionedCoins: z.array(z.object({ symbol: z.string() }).passthrough()),
+        mentionedCoins: z.array(
+          z
+            .object({
+              symbol: z.string(),
+              grade: z.string().optional(),
+              score: z.number().optional(),
+              peg: z.number().nullable().optional(),
+              liq: z.number().nullable().optional(),
+            })
+            .passthrough(),
+        ),
         medianGrade: z.string(),
         aboveBCount: z.number(),
         fCount: z.number(),
       })
       .passthrough()
       .optional(),
+    yieldAnomalies: z
+      .array(
+        z
+          .object({
+            symbol: z.string(),
+            currentApy: z.number(),
+            apy7d: z.number(),
+            apy30d: z.number(),
+            warnings: z.array(z.string()),
+          })
+          .passthrough(),
+      )
+      .optional(),
+    liquidityShifts: z
+      .array(
+        z
+          .object({
+            symbol: z.string(),
+            currentScore: z.number(),
+            previousScore: z.number(),
+            scoreDelta: z.number(),
+            currentTvl: z.number(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+    supplyVelocity: z
+      .array(
+        z
+          .object({
+            coin: z.string(),
+            change1d: z.number(),
+            change7d: z.number(),
+            signal: z.string(),
+          })
+          .passthrough(),
+      )
+      .optional(),
+    resolvedDepegs: z
+      .array(
+        z
+          .object({
+            symbol: z.string(),
+            peakBps: z.number(),
+            durationHours: z.number(),
+            mcapUsd: z.number(),
+          })
+          .passthrough(),
+      )
+      .optional(),
   })
-  .passthrough()
-  .transform((value): DigestInputData => value as unknown as DigestInputData);
+  .passthrough();
+
+export type DigestSnapshotInputData = z.infer<typeof DigestSnapshotInputDataSchema>;
 
 const DigestSnapshotDepegEventSchema = z.object({
   stablecoinId: z.string(),
