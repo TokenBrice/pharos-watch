@@ -4105,6 +4105,18 @@
     "description": "formatUpdatedAt (lines 66-69) returns \"updated <ts>\" or \"updated every 5m\", but its only caller (line 361) immediately runs .replace(/^updated /, \"\") to render \"current pulse <ts>\" / \"current pulse every 5m\". The prefix is constructed and destroyed in the same expression — a leftover from a previous label format that now obscures what actually renders.",
     "recommendation": "Make formatUpdatedAt return the bare value (\"every 5m\" fallback or the formatted timestamp) and drop the .replace() at the call site. Rendered strings are unchanged.",
     "estImpact": "-2 LOC; removes a build-then-strip roundtrip"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the Telegram pulse timestamp helper to return the bare timestamp/fallback and removed the sole call site's `updated ` prefix strip.",
+    "validation": [
+     "rg -n \"formatUpdatedAt|replace\\\\(/\\\\^updated|updated every 5m|current pulse\" src/app/pharoswatchbot/telegram-pulse-strip.tsx src/app/pharoswatchbot/telegram-pulse-strip.test.tsx",
+     "npx vitest run src/app/pharoswatchbot/telegram-pulse-strip.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/app/pharoswatchbot/telegram-pulse-strip.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Rendered `current pulse ...` text is unchanged; the remaining `updated every 5m` text belongs to the separate compact metric strip."
    }
   },
   {

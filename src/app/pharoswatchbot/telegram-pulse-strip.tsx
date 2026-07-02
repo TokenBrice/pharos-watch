@@ -64,8 +64,8 @@ function formatDayTick(value: unknown): string {
 }
 
 function formatUpdatedAt(value: number | undefined): string {
-  if (!value) return "updated every 5m";
-  return `updated ${PULSE_UPDATED_FORMATTER.format(new Date(value * 1000))}`;
+  if (!value) return "every 5m";
+  return PULSE_UPDATED_FORMATTER.format(new Date(value * 1000));
 }
 
 function formatSnapshotAt(value: number | null | undefined): string | null {
@@ -358,7 +358,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <h2 className="pharos-section-title">Telegram pulse</h2>
         </div>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-          current pulse {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt).replace(/^updated /, "")}
+          current pulse {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt)}
         </span>
       </div>
 
