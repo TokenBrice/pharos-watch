@@ -20,7 +20,7 @@ export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
     <>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="pharos-kicker">
             Stablecoin Dependency Map
           </p>
           <p className="text-sm text-muted-foreground">
@@ -33,27 +33,27 @@ export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
               type="button"
               onClick={graph.unpinAll}
               aria-label={`Unpin all ${graph.pinnedNodeIds.size} pinned nodes`}
-              className="pharos-focus-ring inline-flex h-11 items-center gap-1.5 rounded-md border border-frost-blue/60 bg-background/80 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-frost-blue transition-colors hover:bg-frost-blue/10 md:h-9"
+              className="pharos-focus-ring pharos-control-pill h-11 gap-1.5 px-3 md:h-9"
             >
               <span>Pinned · {graph.pinnedNodeIds.size}</span>
               <span aria-hidden="true">×</span>
             </button>
           )}
-          <div className="grid grid-cols-3 gap-2 sm:w-auto">
-            <div className="rounded-md border border-border/70 bg-background/70 px-3 py-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Visible</p>
+          <div className="grid grid-cols-3 divide-x divide-border/60 sm:w-auto">
+            <div className="px-3 py-2 first:pl-0">
+              <p className="pharos-kicker">Visible</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">
                 {graph.visibleNodeIds.size}/{graph.nodes.length}
               </p>
             </div>
-            <div className="rounded-md border border-border/70 bg-background/70 px-3 py-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Edges</p>
+            <div className="px-3 py-2">
+              <p className="pharos-kicker">Edges</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">
                 {graph.visibleLinks.length}
               </p>
             </div>
-            <div className="rounded-md border border-border/70 bg-background/70 px-3 py-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Hubs</p>
+            <div className="px-3 py-2 last:pr-0">
+              <p className="pharos-kicker">Hubs</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">{hubCount}</p>
             </div>
           </div>

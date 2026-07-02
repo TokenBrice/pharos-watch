@@ -42,7 +42,7 @@ function ControlPill({
       aria-pressed={isActive}
       aria-label={ariaLabel}
       className={cn(
-        "pharos-focus-ring pharos-control-pill px-3 py-1 font-mono text-[10px] uppercase tracking-[0.08em]",
+        "pharos-focus-ring pharos-control-pill px-3 py-1",
         isActive ? "pharos-control-pill-active" : "",
       )}
     >
@@ -66,7 +66,7 @@ export function ContagionGraphControls({
     <div className="grid gap-3 pt-1">
       <div className="flex flex-col gap-2 2xl:flex-row 2xl:flex-wrap 2xl:items-center 2xl:justify-between">
         <div className="flex w-full items-center gap-2 2xl:w-auto">
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="pharos-kicker shrink-0">
             Focus
           </span>
           <div
@@ -88,10 +88,10 @@ export function ContagionGraphControls({
         </div>
 
         <div className="flex w-full flex-col gap-1 2xl:ml-auto 2xl:w-auto 2xl:items-end">
-          <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            Trace coin
+          <label className="flex items-center gap-2">
+            <span className="pharos-kicker shrink-0">Trace coin</span>
             <select
-              className="pharos-focus-ring h-9 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 font-mono text-[11px] text-foreground 2xl:w-[11rem]"
+              className="pharos-focus-ring h-9 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 text-xs font-medium text-foreground 2xl:w-[11rem]"
               value={selectedNeighborhoodId ?? ""}
               onChange={(event) => onTraceNodeChange(event.target.value || null)}
             >
@@ -109,7 +109,7 @@ export function ContagionGraphControls({
       </div>
 
       <div className="flex w-full items-center gap-2">
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Type</span>
+        <span className="pharos-kicker shrink-0">Type</span>
         <div role="group" aria-label="Dependency type filter" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
           {DEPENDENCY_TYPE_FILTERS.map((filter) => (
             <ControlPill
@@ -124,7 +124,7 @@ export function ContagionGraphControls({
       </div>
 
       <div className="flex w-full items-center gap-2">
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Limit</span>
+        <span className="pharos-kicker shrink-0">Limit</span>
         <div role="group" aria-label="Maximum nodes shown" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
           {NODE_LIMIT_OPTIONS.map((limit) => (
             <ControlPill

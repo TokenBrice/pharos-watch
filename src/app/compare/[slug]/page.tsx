@@ -159,7 +159,9 @@ export default async function StaticComparisonPage({ params }: { params: Promise
               href={researchLinks.find((link) => link.href.includes(coin.id))?.href ?? "/"}
               className="pharos-focus-ring mt-4 inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Open {coin.symbol} detail page &rarr;
+              {/* Single span: inline-flex containers drop the whitespace between
+                  SSR text nodes, collapsing "Open USDT detail page". */}
+              <span>Open {coin.symbol} detail page &rarr;</span>
             </Link>
           </article>
         ))}
@@ -193,8 +195,24 @@ export default async function StaticComparisonPage({ params }: { params: Promise
                 <TableHead scope="row" className="whitespace-normal px-4 py-3 font-medium text-foreground">
                   {row.label}
                 </TableHead>
-                <TableCell className="whitespace-normal px-4 py-3 text-muted-foreground">{row.left}</TableCell>
-                <TableCell className="whitespace-normal px-4 py-3 text-muted-foreground">{row.right}</TableCell>
+                <TableCell
+                  className={
+                    row.label === "Tracked chains"
+                      ? "pharos-numeric whitespace-normal px-4 py-3 text-muted-foreground"
+                      : "whitespace-normal px-4 py-3 text-muted-foreground"
+                  }
+                >
+                  {row.left}
+                </TableCell>
+                <TableCell
+                  className={
+                    row.label === "Tracked chains"
+                      ? "pharos-numeric whitespace-normal px-4 py-3 text-muted-foreground"
+                      : "whitespace-normal px-4 py-3 text-muted-foreground"
+                  }
+                >
+                  {row.right}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

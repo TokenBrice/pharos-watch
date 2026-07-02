@@ -43,13 +43,13 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos }
           </div>
           <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:flex sm:items-end sm:gap-8">
             <div className="space-y-1">
-              <dt className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <dt className="pharos-kicker">
                 Upstream hubs
               </dt>
               <dd className="pharos-numeric text-lg font-semibold text-foreground">{model.upstreamHubCount}</dd>
             </div>
             <div className="space-y-1">
-              <dt className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <dt className="pharos-kicker">
                 Direct dependents
               </dt>
               <dd className="pharos-numeric text-lg font-semibold text-foreground">

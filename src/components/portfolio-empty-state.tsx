@@ -26,8 +26,8 @@ function PortfolioPreview() {
         </h3>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-xl border border-border/60 bg-background/55 p-4">
+      <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr] sm:gap-0 sm:divide-x sm:divide-border/50">
+        <div className="min-w-0 sm:pr-4">
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--severity-healthy)]/30 bg-[var(--severity-healthy)]/12 text-lg font-semibold text-emerald-700 dark:text-emerald-300">
               A
@@ -37,13 +37,13 @@ function PortfolioPreview() {
               <p className="text-xs text-muted-foreground">Weighted safety score with concentration drag</p>
             </div>
           </div>
-          <div className="mt-4 rounded-xl border border-border/50 bg-muted/20 p-3">
+          <div className="mt-4 border-t border-border/50 pt-3">
             <p className="text-xs text-muted-foreground">Overall score</p>
             <p className="mt-1 pharos-numeric text-2xl text-foreground">84.6</p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-background/55 p-4">
+        <div className="min-w-0 border-t border-border/50 pt-4 sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">Upstream exposure</p>
             <Radar className="h-4 w-4 text-primary/80" />

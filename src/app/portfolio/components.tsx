@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { DIMENSION_ORDER, REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,43 @@ const usdFormatterCompact = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
   minimumFractionDigits: 0,
 });
+
+/**
+ * Compact "One Beam" hero strip for /portfolio (the beam-header-strip variant of
+ * the FeatureHeroSplit pattern — full-width, no forced right slot). Once holdings
+ * exist the beam is the live Total Portfolio Value; before that it lights the
+ * size of the gradeable registry the portfolio can draw from.
+ */
+export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: number; totalUsd: number }) {
+  const hasHoldings = holdingCount > 0;
+  return (
+    <section className="pharos-card-shell px-5 py-5 sm:px-6 sm:py-6" aria-label="Portfolio overview">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Portfolio Risk</p>
+          <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+            {hasHoldings ? formatUsd(totalUsd) : PORTFOLIO_COIN_OPTIONS.length}
+          </p>
+          <p className="pharos-meta">
+            {hasHoldings
+              ? "Total portfolio value across your holdings"
+              : "Active stablecoins you can model as holdings"}
+          </p>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:flex sm:items-end sm:gap-8">
+          <div className="space-y-1">
+            <dt className="pharos-kicker">Holdings</dt>
+            <dd className="pharos-numeric text-lg font-semibold text-foreground">{holdingCount}</dd>
+          </div>
+          <div className="space-y-1">
+            <dt className="pharos-kicker">Risk axes analyzed</dt>
+            <dd className="pharos-numeric text-lg font-semibold text-foreground">{DIMENSION_ORDER.length}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  );
+}
 
 export function PortfolioLoadingState() {
   return (
@@ -138,7 +175,7 @@ export function PortfolioHoldingsEditor({
   onClear: () => void;
 }) {
   return (
-    <Card>
+    <Card className="pharos-card-shell">
       <CardHeader>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
@@ -146,7 +183,7 @@ export function PortfolioHoldingsEditor({
             <CardTitle className="pharos-kicker">My Holdings</CardTitle>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-in fade-in duration-300">
+            <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-fade-in">
               {toast}
             </span>
             {holdings.length > 0 && (
@@ -241,7 +278,6 @@ function ExposureBar({
 export function PortfolioSummaryCard({
   portfolioGrade,
   portfolioScore,
-  totalUsd,
   radarCard,
   exposureToShow,
   showUpstreamDetail,
@@ -249,7 +285,6 @@ export function PortfolioSummaryCard({
 }: {
   portfolioGrade: ReportCardGrade;
   portfolioScore: number | null;
-  totalUsd: number;
   radarCard: ReportCard | null;
   exposureToShow: UpstreamExposure[];
   showUpstreamDetail: boolean;
@@ -258,7 +293,7 @@ export function PortfolioSummaryCard({
   const hasConcentrationWarning = exposureToShow.some((exposure) => !exposure.isCollateral && exposure.pct > 80);
 
   return (
-    <Card>
+    <Card className="pharos-card-shell">
       <CardContent className="pt-6 space-y-6">
         <div className="flex items-center gap-4">
           <ScoreBadgeWrapper topic="safetyScore">
@@ -276,10 +311,10 @@ export function PortfolioSummaryCard({
             </Badge>
           </ScoreBadgeWrapper>
           <div>
-            <div className="pharos-kicker">Total Portfolio Value</div>
-            <div className="pharos-numeric text-frost-blue text-3xl font-semibold leading-none mt-1">
-              {formatUsd(totalUsd)}
-            </div>
+            <div className="pharos-kicker">Weighted Safety Grade</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Combines the same report-card inputs used across the site, weighted by position size.
+            </p>
           </div>
         </div>
 

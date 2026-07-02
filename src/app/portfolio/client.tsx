@@ -12,6 +12,7 @@ import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
 import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 import {
   PortfolioGradesSection,
+  PortfolioHeroStrip,
   PortfolioHoldingsEditor,
   PortfolioLoadingState,
   PortfolioSummaryCard,
@@ -125,6 +126,7 @@ export function PortfolioClient() {
           },
         ]}
       />
+      <PortfolioHeroStrip holdingCount={portfolio.holdings.length} totalUsd={portfolio.totalUsd} />
       <PortfolioHoldingsEditor
         holdings={portfolio.holdings}
         heldCardIds={heldCardIds}
@@ -153,7 +155,6 @@ export function PortfolioClient() {
         <PortfolioSummaryCard
           portfolioGrade={portfolio.portfolioGrade}
           portfolioScore={portfolio.portfolioScore}
-          totalUsd={portfolio.totalUsd}
           radarCard={portfolioRadarCard}
           exposureToShow={exposureToShow}
           showUpstreamDetail={showUpstreamDetail}

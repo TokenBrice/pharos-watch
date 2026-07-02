@@ -51,9 +51,9 @@ export function EmptyStateSurface({
           </div>
 
           {steps.length > 0 ? (
-            <ol className="grid gap-3 sm:grid-cols-3">
+            <ol className="grid divide-y divide-border/50 border-y border-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               {steps.map((step, index) => (
-                <li key={step.title} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+                <li key={step.title} className="py-3 sm:px-4 sm:first:pl-0 sm:last:pr-0">
                   <p className="pharos-kicker text-primary/80">0{index + 1}</p>
                   <p className="mt-2 text-sm font-semibold text-foreground">{step.title}</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
@@ -65,14 +65,14 @@ export function EmptyStateSurface({
           {actions}
           {children}
           {footnote ? (
-            <div className="rounded-xl border border-border/60 bg-background/35 px-4 py-3 text-sm text-muted-foreground">
+            <div className="border-t border-border/50 pt-3 text-sm text-muted-foreground">
               {footnote}
             </div>
           ) : null}
         </div>
 
         {preview ? (
-          <div className="min-w-0 rounded-xl border border-border/70 bg-background/60 p-4">
+          <div className="min-w-0 border-t border-border/50 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             {preview}
           </div>
         ) : null}

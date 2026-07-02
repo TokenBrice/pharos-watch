@@ -34,67 +34,62 @@ function ComparePreview({
         </span>
       </div>
 
-      <div className="min-w-0 rounded-xl border border-border/60 bg-background/45 p-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {featuredCoins.map((coinId) => {
-            const coin = TRACKED_META_BY_ID.get(coinId);
-            if (!coin) return null;
-            return (
-              <div
-                key={coinId}
-                className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs text-muted-foreground"
-              >
-                <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={20} />
-                <span className="font-medium text-foreground">{coin.symbol}</span>
-              </div>
-            );
-          })}
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {featuredCoins.map((coinId) => {
+          const coin = TRACKED_META_BY_ID.get(coinId);
+          if (!coin) return null;
+          return (
+            <div
+              key={coinId}
+              className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs text-muted-foreground"
+            >
+              <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={20} />
+              <span className="font-medium text-foreground">{coin.symbol}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="min-w-0 divide-y divide-border/50">
+        <div className="pb-4">
+          <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-foreground">Market cap history</p>
+            <span className="text-xs text-muted-foreground">Normalized overlays</span>
+          </div>
+          <div className="flex h-24 items-end gap-2">
+            <div className="h-24 flex-1 rounded-lg border-2 border-dashed border-border/40" />
+          </div>
         </div>
 
-        <div className="mt-4 grid min-w-0 gap-3">
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-            <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-foreground">Market cap history</p>
-              <span className="text-xs text-muted-foreground">Normalized overlays</span>
+        <div className="grid gap-4 pt-4 sm:grid-cols-[1.05fr_0.95fr] sm:gap-6">
+          <div className="min-w-0">
+            <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-foreground">Quick deltas</p>
+              <span className="text-xs text-muted-foreground">peg, supply, liquidity</span>
             </div>
-            <div className="flex h-24 items-end gap-2">
-              <div className="h-24 flex-1 rounded-lg border-2 border-dashed border-border/40" />
+            <div className="divide-y divide-border/40">
+              {["Peg deviation", "7d supply", "Liquidity score"].map((label, index) => (
+                <div key={label} className="flex items-center justify-between py-2">
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <span
+                    className="text-xs pharos-numeric text-muted-foreground"
+                  >
+                    {index === 0 ? "-0.02%" : index === 1 ? "+2.4%" : "78/100"}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr]">
-            <div className="min-w-0 rounded-xl border border-border/50 bg-muted/20 p-3">
-              <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-medium text-foreground">Quick deltas</p>
-                <span className="text-xs text-muted-foreground">peg, supply, liquidity</span>
-              </div>
-              <div className="space-y-2">
-                {["Peg deviation", "7d supply", "Liquidity score"].map((label, index) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between rounded-xl border border-border/40 bg-background/65 px-3 py-2"
-                  >
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                    <span
-                      className="text-xs pharos-numeric text-muted-foreground"
-                    >
-                      {index === 0 ? "-0.02%" : index === 1 ? "+2.4%" : "78/100"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <div className="min-w-0">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">Safety score radar</p>
+              <Waves className="h-4 w-4 text-primary/80" />
             </div>
-
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">Safety score radar</p>
-                <Waves className="h-4 w-4 text-primary/80" />
-              </div>
-              <div className="relative mx-auto mt-2 flex h-32 w-32 items-center justify-center rounded-full border border-dashed border-border/60">
-                <div className="absolute inset-4 rounded-full border border-border/50" />
-                <div className="absolute inset-8 rounded-full border border-border/40" />
-                <div className="h-14 w-14 rounded-full bg-primary/12" />
-              </div>
+            <div className="relative mx-auto mt-2 flex h-32 w-32 items-center justify-center rounded-full border border-dashed border-border/60">
+              <div className="absolute inset-4 rounded-full border border-border/50" />
+              <div className="absolute inset-8 rounded-full border border-border/40" />
+              <div className="h-14 w-14 rounded-full bg-primary/12" />
             </div>
           </div>
         </div>
@@ -127,7 +122,7 @@ function ComparePresetCard({
       description={preset.description}
       previewItems={previewItems}
       chips={chips}
-      footer="Loads directly into the comparison table without auto-populating on first visit."
+      footer=""
       ariaLabel={`Apply ${preset.title} preset`}
       featured={featured}
       onClick={() => onApplyPreset(preset)}
@@ -184,6 +179,9 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
           <div>
             <p className="pharos-kicker">Preset Packs</p>
             <h3 className="mt-1 text-lg font-semibold text-foreground">Jump straight into common comparison angles</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Each pack loads directly into the comparison table without auto-populating on first visit.
+            </p>
           </div>
           <span className="text-xs text-muted-foreground">{presets.length} packs</span>
         </div>

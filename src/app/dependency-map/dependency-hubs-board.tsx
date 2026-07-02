@@ -20,7 +20,7 @@ import type { DependencyHub, DependencyHubsModel } from "./dependency-hubs-model
 function DependencyMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-md border border-border/70 bg-background/55 p-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="pharos-kicker">{label}</p>
       <p className="mt-1 pharos-numeric text-lg font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
@@ -139,7 +139,7 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="pharos-kicker">
               Shared Dependency Infrastructure · Systemic Hubs
             </p>
             <h2 className="text-lg font-semibold tracking-tight">Direct dependency hubs</h2>
@@ -189,25 +189,25 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
           <TableCaption className="sr-only">Direct dependency hubs</TableCaption>
           <TableHeader>
             <TableRow className="border-b border-border/70 text-[10px] uppercase tracking-[0.16em] text-muted-foreground hover:bg-transparent">
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Dependency
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Kind
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Direct dependents
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Summed direct dependency weight
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Modeled dependent market-cap context
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Role / description
               </TableHead>
-              <TableHead scope="col" className="px-3 py-2 font-mono font-medium">
+              <TableHead scope="col" className="px-3 py-2 font-medium">
                 Action
               </TableHead>
             </TableRow>

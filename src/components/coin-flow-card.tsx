@@ -7,9 +7,9 @@ import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
 const PRESSURE_BAR_COLOR: Record<PressureShiftState, string> = {
-  improving: "bg-emerald-500",
+  improving: "bg-[var(--severity-healthy)]",
   stable: "bg-border",
-  worsening: "bg-red-500",
+  worsening: "bg-[var(--severity-severe)]",
   nr: "bg-muted",
 };
 
@@ -53,7 +53,7 @@ export function CoinFlowCard({
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">Net 24h</span>
-        <span className={cn("text-xs font-mono tabular-nums font-semibold", directionUi.valueClass)}>
+        <span className={cn("pharos-numeric text-xs font-semibold", directionUi.valueClass)}>
           {netFlowDirection24h === "inactive"
             ? "—"
             : formatSignedCurrency(netFlow24hUsd)}

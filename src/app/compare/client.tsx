@@ -9,6 +9,7 @@ import { useCompareDataModel } from "@/hooks/use-compare-data-model";
 import { useCompareShareActions } from "@/hooks/use-compare-share-actions";
 import { usePreference } from "@/hooks/use-preferences";
 import { CoinFlowCard } from "@/components/coin-flow-card";
+import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { formatCurrency } from "@shared/lib/format";
 import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { CompareEmptyState } from "@/components/compare-empty-state";
 import { resolveCohortBaseline, type CompareRadarCohort } from "@/components/radar-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { CHART_PALETTE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 import {
   COMPARISON_PRESETS,
@@ -146,6 +148,103 @@ export function CompareMobileSelectionControls({
         />
       ) : null}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CompareScopeHero — FeatureHeroSplit hero band for the compare hub. One Beam =
+// the size of the comparable registry (a neutral magnitude, so it takes the
+// frost recipe); the right slot decomposes that universe by peg currency with
+// the flat proportional-bar idiom. Frost stays the beam: segments use the
+// non-frost CHART_PALETTE sequence tones.
+// ---------------------------------------------------------------------------
+
+const PEG_SEGMENT_COLORS = CHART_PALETTE.slice(1);
+const MAX_PEG_SEGMENTS = 4;
+
+function buildPegSegments(coinOptions: CoinOption[]) {
+  const counts = new Map<string, number>();
+  for (const option of coinOptions) {
+    const peg = TRACKED_META_BY_ID.get(option.id)?.flags.pegCurrency ?? "OTHER";
+    counts.set(peg, (counts.get(peg) ?? 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, MAX_PEG_SEGMENTS);
+  const restCount = sorted.slice(MAX_PEG_SEGMENTS).reduce((sum, [, count]) => sum + count, 0);
+  const segments = top.map(([peg, count], index) => ({
+    label: peg,
+    count,
+    color: PEG_SEGMENT_COLORS[index % PEG_SEGMENT_COLORS.length],
+  }));
+  if (restCount > 0) {
+    segments.push({
+      label: "Other pegs",
+      count: restCount,
+      color: PEG_SEGMENT_COLORS[MAX_PEG_SEGMENTS % PEG_SEGMENT_COLORS.length],
+    });
+  }
+  return segments;
+}
+
+function CompareHeroMetricRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
+      <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function CompareScopeHero({
+  coinOptions,
+  selectedCount,
+}: {
+  coinOptions: CoinOption[];
+  selectedCount: number;
+}) {
+  const segments = useMemo(() => buildPegSegments(coinOptions), [coinOptions]);
+  const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");
+
+  return (
+    <FeatureHeroSplit
+      ariaLabel="Comparison scope overview"
+      beamLabel="Stablecoins ready to compare"
+      beamValue={coinOptions.length}
+      subKicker="Set Scope"
+      sub={
+        <div className="divide-y divide-border/50">
+          <CompareHeroMetricRow label="Assets per set" value="2–5" />
+          <CompareHeroMetricRow label="Preset packs" value={String(COMPARISON_PRESETS.length)} />
+          <CompareHeroMetricRow label="Selected now" value={`${selectedCount}/${MAX_COMPARE_COINS}`} />
+        </div>
+      }
+    >
+      <div className="flex h-full flex-col justify-center space-y-3 p-5 sm:p-6 lg:p-7">
+        <p className="pharos-kicker">Comparable coins by peg</p>
+        <div
+          className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
+          role="img"
+          aria-label={`Comparable coins by peg: ${legend}.`}
+        >
+          {segments.map((segment) => (
+            <span
+              key={segment.label}
+              aria-hidden="true"
+              style={{ flexGrow: segment.count, backgroundColor: segment.color }}
+            />
+          ))}
+        </div>
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {segments.map((segment) => (
+            <li key={segment.label} className="flex items-center gap-1.5">
+              <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ backgroundColor: segment.color }} />
+              <span className="pharos-numeric text-[13px] font-semibold text-foreground">{segment.count}</span>
+              <span className="text-[11px] text-muted-foreground">{segment.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </FeatureHeroSplit>
   );
 }
 
@@ -312,6 +411,7 @@ export function CompareClient() {
           { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData, meta: bluechipMeta },
         ]}
       />
+      <CompareScopeHero coinOptions={coinOptions} selectedCount={selectedIds.length} />
       {selectedIds.length >= 2 ? (
         <div className="pharos-card-shell px-4 py-3">
           <div className="flex flex-col gap-3">
@@ -356,7 +456,7 @@ export function CompareClient() {
       ) : null}
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
-          {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
+          {toast && <span className="text-xs text-muted-foreground animate-fade-in">{toast}</span>}
           <CompareShareButton
             icon={X}
             label="Tweet"
@@ -404,7 +504,7 @@ export function CompareClient() {
       )}
 
       {selectedIds.length >= 2 && (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-6 animate-fade-in">
           <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
 
           {/* Live Flow Signals */}
@@ -418,7 +518,7 @@ export function CompareClient() {
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
             <div className="pharos-card-shell space-y-4 p-4">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="pharos-kicker">
+                <h3 className="pharos-section-title">
                   Live Flow Signals
                 </h3>
                 {flowUpdatedMinutes != null && (
@@ -474,7 +574,7 @@ export function CompareClient() {
             {radarCards.length >= 2 && (
               <Card className="pharos-card-shell h-full flex flex-col">
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <CardTitle className="pharos-kicker">Safety Score Comparison</CardTitle>
+                  <CardTitle className="pharos-section-title">Safety Score Comparison</CardTitle>
                   <CohortToggle
                     cohort={radarCohort}
                     onChange={setRadarCohort}

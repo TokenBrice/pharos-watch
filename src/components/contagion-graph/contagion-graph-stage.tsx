@@ -38,7 +38,10 @@ export function ContagionGraphStage({
       className={
         detailNodePresentation
           ? "relative w-full overflow-hidden rounded-sm border lg:h-full"
-          : "relative w-full overflow-hidden rounded-sm border"
+          : // Map-page variant: the canvas sits inside the map card, so it drops
+            // its own border (no nested panel chrome) — the tinted grid surface
+            // self-delineates. Detail-page snapshots keep the frame.
+            "relative w-full overflow-hidden rounded-sm"
       }
       style={{
         backgroundColor: "var(--graph-canvas-bg)",
