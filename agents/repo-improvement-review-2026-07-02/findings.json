@@ -445,11 +445,22 @@
     "recommendation": "Drop nextConfigIndex from MintBurnRunStateRow and the setMintBurnRunState signature; keep writing a constant 0 to the existing column (or leave the column untouched) to avoid a D1 migration. The rotation cursor and all published metadata are unchanged.",
     "estImpact": "-15 LOC; removes a misleading rotation field",
     "alsoFiles": [
-     "worker/src/cron/mint-burn/run-completion.ts",
-     "worker/src/cron/sync-mint-burn.ts"
+      "worker/src/cron/mint-burn/run-completion.ts",
+      "worker/src/cron/sync-mint-burn.ts"
     ]
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Removed nextConfigIndex from mint-burn run-state reads and internal persistence signatures. Rotation continues to use lastConfigKey, while the legacy D1 next_config_index column remains written as constant 0 for schema compatibility.",
+   "validation": [
+    "npx vitest run worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts worker/src/cron/__tests__/mint-burn-run-state-rotation.test.ts worker/src/cron/__tests__/mint-burn-run-completion.test.ts worker/src/cron/__tests__/mint-burn-config-deferral.test.ts worker/src/cron/__tests__/sync-mint-burn.test.ts worker/src/cron/__tests__/mint-burn-growth-watchdog.test.ts",
+    "cd worker && npx tsc --noEmit",
+    "npm run check:cron-sync",
+    "git diff --check -- worker/src/cron/mint-burn/run-state.ts worker/src/cron/mint-burn/run-completion.ts worker/src/cron/__tests__/mint-burn-run-completion.test.ts worker/src/cron/__tests__/sync-mint-burn.test.ts worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts"
+   ]
+  }
+ },
   {
    "id": "w-cron-sync:8",
    "domain": "w-cron-sync",

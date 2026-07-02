@@ -2,10 +2,11 @@ import { normalizeStringSet } from "../../lib/normalizers";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 
 export interface MintBurnRunStateRow {
-  nextConfigIndex: number;
   degradedStreak: number;
   lastConfigKey: string | null;
 }
+
+const LEGACY_NEXT_CONFIG_INDEX = 0;
 
 /** Rotate configs so that the item after lastConfigKey comes first. */
 export function resolveRotatedConfigs<T>(
@@ -30,13 +31,12 @@ export async function getMintBurnRunState(
 ): Promise<{ state: MintBurnRunStateRow; persistenceFailed: boolean }> {
   try {
     const row = await db
-      .prepare("SELECT next_config_index, degraded_streak, last_config_key FROM mint_burn_run_state WHERE job = ?")
+      .prepare("SELECT degraded_streak, last_config_key FROM mint_burn_run_state WHERE job = ?")
       .bind(jobName)
-      .first<{ next_config_index: number; degraded_streak: number; last_config_key: string | null }>();
+      .first<{ degraded_streak: number; last_config_key: string | null }>();
 
     return {
       state: {
-        nextConfigIndex: row?.next_config_index ?? 0,
         degradedStreak: row?.degraded_streak ?? 0,
         lastConfigKey: row?.last_config_key ?? null,
       },
@@ -45,7 +45,7 @@ export async function getMintBurnRunState(
   } catch (error) {
     console.warn("[sync-mint-burn] Failed to load run-state; using defaults:", error);
     return {
-      state: { nextConfigIndex: 0, degradedStreak: 0, lastConfigKey: null },
+      state: { degradedStreak: 0, lastConfigKey: null },
       persistenceFailed: true,
     };
   }
@@ -54,7 +54,6 @@ export async function getMintBurnRunState(
 export async function setMintBurnRunState(
   db: D1Database,
   jobName: string,
-  nextConfigIndex: number,
   degradedStreak: number,
   lastConfigKey: string | null = null,
 ): Promise<boolean> {
@@ -70,7 +69,7 @@ export async function setMintBurnRunState(
            last_config_key = excluded.last_config_key,
            updated_at = excluded.updated_at`,
       )
-      .bind(jobName, nextConfigIndex, degradedStreak, lastConfigKey, now)
+      .bind(jobName, LEGACY_NEXT_CONFIG_INDEX, degradedStreak, lastConfigKey, now)
       .run();
     return true;
   } catch (error) {

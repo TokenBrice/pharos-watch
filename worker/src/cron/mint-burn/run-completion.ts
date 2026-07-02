@@ -95,15 +95,12 @@ export async function completeMintBurnRun(input: {
 
   throwIfAborted(input.signal);
 
-  const nextConfigIndex = input.enabledConfigs.length > 0
-    ? (input.startIndex + 1) % input.enabledConfigs.length
-    : 0;
   // Track the config AT startIndex — stable across additions/removals
   const lastConfigKey = input.enabledConfigs.length > 0
     ? mintBurnConfigKey(input.enabledConfigs[input.startIndex % input.enabledConfigs.length])
     : null;
   const runStatePersisted = await setMintBurnRunState(
-    input.db, input.jobName, nextConfigIndex, degradedStreak, lastConfigKey,
+    input.db, input.jobName, degradedStreak, lastConfigKey,
   );
   const runStatePersistenceFailed = input.runStatePersistenceFailed || !runStatePersisted;
   if (runStatePersistenceFailed && status === "ok") {

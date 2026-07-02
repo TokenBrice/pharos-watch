@@ -188,16 +188,16 @@ import {
 import { createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
 
 function makeDb(opts: {
-  runState?: { nextIndex: number; degradedStreak: number } | null;
+  runState?: { degradedStreak: number; lastConfigKey?: string | null } | null;
   syncRows?: Array<{ last_block: number; config_key?: string }>;
   cacheRows?: Array<{ key: string; value: string; updated_at: number }>;
 } = {}): D1Database {
-  const runState = opts.runState ?? { nextIndex: 0, degradedStreak: 0 };
+  const runState = opts.runState ?? { degradedStreak: 0, lastConfigKey: null };
   return mockD1([
     {
       match: "mint_burn_run_state",
-      rows: runState ? [{ next_config_index: runState.nextIndex, degraded_streak: runState.degradedStreak }] : [],
-      first: runState ? { next_config_index: runState.nextIndex, degraded_streak: runState.degradedStreak } : null,
+      rows: runState ? [{ degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }] : [],
+      first: runState ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null } : null,
     },
     { match: "mint_burn_sync_state", rows: opts.syncRows ?? [] },
     { match: "price_cache", rows: [{ asset_id: "usdt-tether", price: 1.0 }, { asset_id: "usdc-circle", price: 0.999 }] },
@@ -209,6 +209,8 @@ function makeDb(opts: {
       : []),
   ]);
 }
+
+const USDT_CONFIG_KEY = "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7";
 
 function makeMintLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number } = {}) {
   const block = opts.blockNumber ?? 22_000_000;
@@ -417,7 +419,7 @@ describe("syncMintBurn", () => {
   });
 
   it("prioritizes critical configs even when rotation starts with extended", async () => {
-    const db = makeDb({ runState: { nextIndex: 1, degradedStreak: 0 } });
+    const db = makeDb({ runState: { degradedStreak: 0, lastConfigKey: USDT_CONFIG_KEY } });
 
     await syncMintBurn(db, "alchemy-key");
 
@@ -556,7 +558,7 @@ describe("syncMintBurn", () => {
   });
 
   it("marks run as degraded after consecutive degraded streak", async () => {
-    const db = makeDb({ runState: { nextIndex: 0, degradedStreak: 1 } });
+    const db = makeDb({ runState: { degradedStreak: 1 } });
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce(null as unknown as never)
@@ -694,7 +696,7 @@ describe("syncMintBurn", () => {
   });
 
   it("keeps status ok when only extended configs are deferred", async () => {
-    const db = makeDb({ runState: { nextIndex: 0, degradedStreak: 2 } });
+    const db = makeDb({ runState: { degradedStreak: 2 } });
     vi.mocked(createBudget).mockImplementation(() => ({ count: 190, limit: 200 }));
 
     const result = await syncMintBurn(db, "alchemy-key");

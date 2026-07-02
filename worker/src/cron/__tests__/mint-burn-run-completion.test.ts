@@ -30,7 +30,7 @@ function buildRunInput(overrides: { apiErrors?: number; signal?: AbortSignal } =
     configsDisabled: 0,
     contractsTotal: 0,
     lastBlocksAfterRun: new Map(),
-    runState: { nextConfigIndex: 0, degradedStreak: 0, lastConfigKey: null },
+    runState: { degradedStreak: 0, lastConfigKey: null },
     runStatePersistenceFailed: false,
     degradeConsecutiveThreshold: 2,
     errorConsecutiveThreshold: 3,
@@ -73,6 +73,7 @@ describe("completeMintBurnRun", () => {
 
     expect(result.metadata.apiErrors).toBe(4);
     expect(result.metadata.validationFailures).toBe(0);
+    expect(setMintBurnRunState).toHaveBeenCalledWith(expect.anything(), "sync-mint-burn", 1, null);
   });
 
   it("warns when the historical NULL-price backlog exceeds the threshold", async () => {

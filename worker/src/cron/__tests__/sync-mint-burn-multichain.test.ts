@@ -144,8 +144,8 @@ function makeDb(): D1Database {
   return mockD1([
     {
       match: "mint_burn_run_state",
-      rows: [{ next_config_index: 0, degraded_streak: 0 }],
-      first: { next_config_index: 0, degraded_streak: 0 },
+      rows: [{ degraded_streak: 0, last_config_key: null }],
+      first: { degraded_streak: 0, last_config_key: null },
     },
     { match: "mint_burn_sync_state", rows: [] },
     {
