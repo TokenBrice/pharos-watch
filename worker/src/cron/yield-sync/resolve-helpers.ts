@@ -473,6 +473,7 @@ function appendDynamicAutoLending(params: {
       && meta.flags.pegCurrency !== "SILVER"
       && (params.safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
   );
+  const identityLookups = buildYieldIdentityLookups();
 
   for (const meta of lendingCandidates) {
     const primaryChain = meta.contracts?.[0]?.chain;
@@ -482,7 +483,6 @@ function appendDynamicAutoLending(params: {
       stablecoinSupplyById: params.stablecoinSupplyById,
     });
 
-    const identityLookups = buildYieldIdentityLookups();
     const chainFilter = buildDlChainFilter(meta);
     const contractAddresses = getTrackedContractAddresses(meta);
     const allowSymbolMatch = chainFilter

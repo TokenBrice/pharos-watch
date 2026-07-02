@@ -925,6 +925,16 @@
     "description": "appendDynamicAutoLending iterates lendingCandidates (potentially several hundred of the 408 ACTIVE_STABLECOINS pass the safety gate) and calls `buildYieldIdentityLookups()` inside the loop body (line 485). That function (identity.ts:43-79) is a pure function of ACTIVE_STABLECOINS: it walks every tracked coin and every contract/tradedContract to build three Maps. The result is identical on every iteration, so the loop performs O(coins × coins × contracts) map construction and allocation per cron run for a value that could be computed once. appendResolvedYieldCandidates in the same file already does this correctly (built once at line 186 before its loop).",
     "recommendation": "Hoist `const identityLookups = buildYieldIdentityLookups();` above the `for (const meta of lendingCandidates)` loop (line 477). No behavior change — the function has no inputs that vary per iteration.",
     "estImpact": "Removes ~hundreds of redundant full-registry map builds/run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Hoisted `buildYieldIdentityLookups()` out of the dynamic auto-lending candidate loop so the full-registry identity map is built once per resolution pass instead of once per candidate.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-resolve-helpers.test.ts worker/src/cron/__tests__/yield-resolve.test.ts worker/src/cron/yield-sync/__tests__/identity.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/yield-sync/resolve-helpers.ts"
+    ]
    }
   },
   {
