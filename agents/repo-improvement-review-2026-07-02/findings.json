@@ -2438,6 +2438,18 @@
      "worker/src/api/webhook-callbacks/why.ts",
      "worker/src/api/webhook-callbacks/coverage.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Aligned Why and Coverage callbacks with Status and slash-command behavior by keeping the discovery keyboard in group chats while continuing to gate the mini-app row to private chats.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/webhook-callbacks/why.ts worker/src/api/webhook-callbacks/coverage.ts worker/src/api/__tests__/telegram-webhook-callbacks.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added group-chat callback coverage proving Why and Coverage include follow-up callback buttons without the mini-app web_app row."
    }
   },
   {

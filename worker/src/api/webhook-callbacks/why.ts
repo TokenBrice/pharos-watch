@@ -13,12 +13,10 @@ export const handleWhyCallback: CallbackHandler = async ({ db, botToken, cb, cha
     send: async (id, isPrivateChat) => {
       const message = await buildWhyMessage(db, id);
       await sendAuditedTelegramReply(db, chatId, message, botToken, {
-        replyMarkup: isPrivateChat
-          ? buildStatusDiscoveryKeyboard(id, {
-              includeMiniAppButton: true,
-              miniAppPayload: formatWhyPayload(id),
-            })
-          : undefined,
+        replyMarkup: buildStatusDiscoveryKeyboard(id, {
+          includeMiniAppButton: isPrivateChat,
+          miniAppPayload: formatWhyPayload(id),
+        }),
         actionDetail: "callback_why",
       });
     },

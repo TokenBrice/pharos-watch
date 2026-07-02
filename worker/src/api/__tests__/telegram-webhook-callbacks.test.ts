@@ -993,6 +993,38 @@ describe("handleCallbackQuery", () => {
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
     });
 
+    it("why and coverage callbacks keep discovery buttons in group chats without mini-app buttons", async () => {
+      const whyDb = mockD1([]);
+      await handleCallbackQuery(whyDb, "fake-token", {
+        id: "cb-why-group",
+        data: "why:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: -42, type: "group" }, message_id: 1 },
+      });
+      const whyButtons = (firstSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
+      expect(whyButtons).toEqual(expect.arrayContaining([
+        expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
+        expect.objectContaining({ text: "Coverage", callback_data: "coverage:usdc-circle" }),
+        expect.objectContaining({ text: "Subscribe", callback_data: "quicksub:usdc-circle" }),
+      ]));
+      expect(whyButtons.some((button) => button.web_app)).toBe(false);
+
+      const coverageDb = mockD1([]);
+      await handleCallbackQuery(coverageDb, "fake-token", {
+        id: "cb-cov-group",
+        data: "coverage:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: -42, type: "group" }, message_id: 1 },
+      });
+      const coverageButtons = (lastSentMessageBody().reply_markup?.inline_keyboard ?? []).flat();
+      expect(coverageButtons).toEqual(expect.arrayContaining([
+        expect.objectContaining({ text: "Why?", callback_data: "why:usdc-circle" }),
+        expect.objectContaining({ text: "Coverage", callback_data: "coverage:usdc-circle" }),
+        expect.objectContaining({ text: "Subscribe", callback_data: "quicksub:usdc-circle" }),
+      ]));
+      expect(coverageButtons.some((button) => button.web_app)).toBe(false);
+    });
+
     it("quicksub:<id> in private chat enables DEWS+depeg for one coin", async () => {
       const db = mockD1([]);
       await handleCallbackQuery(db, "fake-token", {

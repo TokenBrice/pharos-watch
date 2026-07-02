@@ -16,12 +16,10 @@ export const handleCoverageCallback: CallbackHandler = async ({ db, botToken, cb
       const status = await loadStatusForCoin(db, id);
       const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
       await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(symbol, status), botToken, {
-        replyMarkup: isPrivateChat
-          ? buildStatusDiscoveryKeyboard(id, {
-              includeMiniAppButton: true,
-              miniAppPayload: formatCoveragePayload(id),
-            })
-          : undefined,
+        replyMarkup: buildStatusDiscoveryKeyboard(id, {
+          includeMiniAppButton: isPrivateChat,
+          miniAppPayload: formatCoveragePayload(id),
+        }),
         actionDetail: "callback_coverage",
       });
     },
