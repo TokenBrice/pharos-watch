@@ -150,13 +150,13 @@ function SelectorQuestionCardInner<TValue extends string>(
           className="block space-y-1.5 outline-none"
         >
           <span className="pharos-kicker inline-flex items-center gap-1.5">
-            <span aria-hidden="true" className="inline-flex h-3.5 w-3.5 items-center justify-center text-[color:oklch(0.62_0.24_330)]">
+            <span aria-hidden="true" className="inline-flex h-3.5 w-3.5 items-center justify-center text-muted-foreground">
               <SelectorEmblem />
             </span>
             <span>
               {kickerLabel ?? (
                 <>
-                  Step <span className="font-mono tabular-nums">{step}</span> of <span className="font-mono tabular-nums">{totalSteps}</span>
+                  Step <span className="pharos-numeric">{step}</span> of <span className="pharos-numeric">{totalSteps}</span>
                   {profileLabel ? ` · ${profileLabel}` : ""}
                 </>
               )}
@@ -183,7 +183,7 @@ function SelectorQuestionCardInner<TValue extends string>(
                 className={cn(
                   "pharos-focus-ring flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-border/55 bg-background/50 px-3.5 py-3 text-left transition-colors hover:border-border/85 hover:bg-background/70 focus-within:border-foreground/65 focus-within:bg-background/80 focus-within:ring-2 focus-within:ring-ring/35 sm:min-h-12 sm:gap-3.5",
                   checked && "border-foreground/65 bg-background/85 ring-1 ring-foreground/15",
-                  preHighlighted && "border-frost-blue/55 bg-frost-blue/[0.06]",
+                  preHighlighted && "border-foreground/40 bg-background/70",
                 )}
                 data-prehighlight={preHighlighted ? "true" : undefined}
               >
@@ -255,7 +255,7 @@ function SelectorQuestionCardInner<TValue extends string>(
             onClick={onNext}
             disabled={!isValid}
             className={cn(
-              "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-55 sm:min-h-9",
+              "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:border-border/55 disabled:bg-muted/50 disabled:text-muted-foreground sm:min-h-9",
             )}
           >
             {nextLabelFor({ step, totalSteps, custom: nextLabel })}

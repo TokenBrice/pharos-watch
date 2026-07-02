@@ -182,7 +182,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
   return (
     <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 font-mono text-xs font-semibold tabular-nums text-foreground">
+        <span aria-hidden="true" className="pharos-numeric mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 text-xs font-semibold text-foreground">
           {rank}
         </span>
         <span className="sr-only">{`Rank ${rank}, ${profileLabel} profile.`}</span>
@@ -223,14 +223,14 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
                 className={cn(
                   "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-[11px]",
                   chip.tone === "watch"
-                    ? "border-frost-blue/40 bg-frost-blue/[0.06] text-foreground"
+                    ? "border-amber-500/40 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200"
                     : "border-border/60 bg-background/55 text-foreground",
                 )}
               >
                 <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="text-muted-foreground">
                   {chip.label}
                 </span>
-                <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="font-mono font-semibold tabular-nums">
+                <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="pharos-numeric font-semibold">
                   {chip.value}
                 </span>
                 {chip.ariaLabel ? <span className="sr-only">{chip.ariaLabel}</span> : null}
@@ -265,7 +265,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           ) : (
             <p>
               {readableLowestSubDimension(rec.lowestSubDimension.key)} scores{" "}
-              <span className="font-mono tabular-nums">{Math.round(rec.lowestSubDimension.score)}</span>{" "}
+              <span className="pharos-numeric">{Math.round(rec.lowestSubDimension.score)}</span>{" "}
               under this profile.
             </p>
           )}
@@ -447,10 +447,10 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
               {readableComponentKey(component.key)}
             </dt>
             <dd className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground sm:justify-end">
-              <span>Weight <span className="font-mono tabular-nums">{formatComponentNumber(component.weight)}</span>%</span>
-              <span>Normalized <span className="font-mono tabular-nums">{formatNullableComponentNumber(component.normalizedValue)}</span></span>
+              <span>Weight <span className="pharos-numeric">{formatComponentNumber(component.weight)}</span>%</span>
+              <span>Normalized <span className="pharos-numeric">{formatNullableComponentNumber(component.normalizedValue)}</span></span>
               <span className="font-medium text-foreground">
-                <span className="font-mono tabular-nums">{formatContribution(component.contribution)}</span> pts
+                <span className="pharos-numeric">{formatContribution(component.contribution)}</span> pts
               </span>
               {component.rawValue == null || component.redistributed ? (
                 <span className="rounded-full border border-border/50 bg-muted/15 px-1.5 text-muted-foreground">

@@ -154,7 +154,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
             <button
               type="button"
               onClick={sessionRecovery.onRestore}
-              className="pharos-focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-full border border-frost-blue/45 px-3 text-xs font-medium text-foreground hover:bg-frost-blue/[0.1]"
+              className="pharos-focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border/55 px-3 text-xs font-medium text-foreground hover:bg-muted/35"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               Restore result
@@ -176,7 +176,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         <div className="flex items-start gap-3">
           <span
             aria-hidden="true"
-            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center text-[color:oklch(0.62_0.24_330)]"
+            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground"
           >
             <SelectorEmblem />
           </span>
@@ -200,7 +200,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
               tabIndex={-1}
               className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
             >
-              <span className="font-mono tabular-nums">{universe.active.toLocaleString()}</span> tracked {pegLabel} stablecoins → <span className="font-mono tabular-nums">{universe.surviving.toLocaleString()}</span> filtered → <span className="font-mono tabular-nums">{shortlistCount}</span> shortlist entries
+              <span className="pharos-numeric">{universe.active.toLocaleString()}</span> tracked {pegLabel} stablecoins → <span className="pharos-numeric">{universe.surviving.toLocaleString()}</span> filtered → <span className="pharos-numeric">{shortlistCount}</span> shortlist entries
             </h2>
           </div>
         </div>

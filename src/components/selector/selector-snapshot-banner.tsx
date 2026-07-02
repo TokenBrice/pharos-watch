@@ -55,7 +55,7 @@ export function SelectorSnapshotBanner({
             <button
               type="button"
               onClick={onCompareToToday}
-              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-frost-blue/45 px-3 py-1 text-xs font-medium text-foreground hover:bg-frost-blue/[0.1]"
+              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/55 px-3 py-1 text-xs font-medium text-foreground hover:bg-muted/35"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
               Compare to today&rsquo;s data

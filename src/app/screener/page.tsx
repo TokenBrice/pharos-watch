@@ -41,8 +41,8 @@ const FAQ_ITEMS = [
 
 const SCREENER_SUPPORT_SECTION = (
   <section className="space-y-4">
-    <div className="rounded-xl border border-border/60 bg-card/45 px-4 py-3">
-      <p className="text-sm font-semibold text-foreground">How to use this screener</p>
+    <div className="pharos-card-shell px-4 py-3">
+      <p className="pharos-section-title">How to use this screener</p>
       <div className="mt-3 grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
         <div className="space-y-2">
           <p className="pharos-kicker">Reading the Filters</p>

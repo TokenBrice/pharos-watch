@@ -174,7 +174,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
           type="button"
           onClick={onSeeResults}
           disabled={!isReady}
-          className="pharos-focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-semibold text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-55"
+          className="pharos-focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-semibold text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:border-border/55 disabled:bg-muted/50 disabled:text-muted-foreground"
         >
           See my shortlist
         </button>
