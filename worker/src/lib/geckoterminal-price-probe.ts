@@ -19,6 +19,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { GtPool } from "../cron/dex-liquidity/types";
 import type { SourcePrice } from "./price-consensus";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "./dex-price-estimators";
+import { midDivergenceBps } from "./price-divergence";
 
 export interface GtProbeResult {
   price: number;
@@ -435,8 +436,11 @@ export async function probeGeckoTerminalPrices(
         // Track divergences for logging
         const mid = (result.price + asset.price) / 2;
         if (mid > 0) {
-          const bps = Math.round((Math.abs(result.price - asset.price) / mid) * 10_000);
-          if (bps >= 500) stats.divergences500bps++;
+          const divergenceBps = midDivergenceBps(result.price, asset.price);
+          if (Number.isFinite(divergenceBps)) {
+            const bps = Math.round(divergenceBps);
+            if (bps >= 500) stats.divergences500bps++;
+          }
         }
 
         prices.set(asset.id, {

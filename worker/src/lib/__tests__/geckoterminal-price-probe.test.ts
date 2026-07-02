@@ -408,6 +408,59 @@ describe("probeGeckoTerminalPrices", () => {
     );
   });
 
+  it("counts rounded midpoint divergences for priced probes", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({
+        data: [
+          makePool({
+            reserveUsd: "250000",
+            basePriceUsd: "0.90",
+            quotePriceUsd: "1.00",
+            baseTokenId: "eth_0xassetcg",
+            quoteTokenId: "eth_0xquote",
+            dexId: "curve",
+          }),
+        ],
+      }), { status: 200 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-cg", price: 1 }],
+      {} as D1Database,
+      undefined,
+      "cg-key",
+    );
+
+    expect(result.stats.divergences500bps).toBe(1);
+  });
+
+  it("does not count non-finite midpoint divergence outputs", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({
+        data: [
+          makePool({
+            reserveUsd: "250000",
+            basePriceUsd: String(Number.MAX_VALUE),
+            quotePriceUsd: "1.00",
+            baseTokenId: "eth_0xassetcg",
+            quoteTokenId: "eth_0xquote",
+            dexId: "curve",
+          }),
+        ],
+      }), { status: 200 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-cg", price: Number.MAX_VALUE }],
+      {} as D1Database,
+      undefined,
+      "cg-key",
+    );
+
+    expect(result.prices.size).toBe(1);
+    expect(result.stats.divergences500bps).toBe(0);
+  });
+
   it("falls through supported contracts until a usable pool is found", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(

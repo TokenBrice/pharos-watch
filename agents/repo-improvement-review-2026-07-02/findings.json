@@ -5584,6 +5584,18 @@
      "worker/src/lib/price-divergence.ts",
      "worker/src/lib/geckoterminal-price-probe.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Rebased native implied-price divergence and GeckoTerminal divergence logging on the canonical midDivergenceBps helper while preserving validation, rounding, and non-finite skip/null semantics.",
+    "validation": [
+     "rg -n \"Math\\\\.round\\\\(\\\\(Math\\\\.abs\\\\(|\\\\* 10_000|BPS_PER_UNIT|midDivergenceBps\" worker/src/lib/native-peg-implied-prices.ts worker/src/lib/geckoterminal-price-probe.ts worker/src/lib/price-divergence.ts worker/src/lib/__tests__/native-peg-implied-prices.test.ts worker/src/lib/__tests__/geckoterminal-price-probe.test.ts",
+     "npx vitest run worker/src/lib/__tests__/native-peg-implied-prices.test.ts worker/src/lib/__tests__/geckoterminal-price-probe.test.ts worker/src/lib/__tests__/price-divergence.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/lib/native-peg-implied-prices.ts worker/src/lib/geckoterminal-price-probe.ts worker/src/lib/__tests__/native-peg-implied-prices.test.ts worker/src/lib/__tests__/geckoterminal-price-probe.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

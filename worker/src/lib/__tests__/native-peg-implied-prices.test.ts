@@ -85,5 +85,7 @@ describe("native-peg-implied-prices", () => {
     expect(computePriceDivergenceBps(1.08, 1.081)).toBe(9);
     expect(computePriceDivergenceBps(1.081, 1.08)).toBe(9);
     expect(computePriceDivergenceBps(0, 1.08)).toBeNull();
+    expect(computePriceDivergenceBps(Number.POSITIVE_INFINITY, 1.08)).toBeNull();
+    expect(computePriceDivergenceBps(Number.MAX_VALUE, Number.MAX_VALUE)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
-import { BPS_PER_UNIT } from "@shared/lib/math";
 import type { PriceReferenceType } from "./price-validation";
 import { fetchCurrentNativePegQuotes, type NativePegQuoteFetchOptions } from "./native-peg-quotes";
+import { midDivergenceBps } from "./price-divergence";
 
 export const COINGECKO_NATIVE_IMPLIED_SOURCE = "coingecko-native-implied";
 export const NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS = 75;
@@ -37,9 +37,8 @@ export function computePriceDivergenceBps(left: number, right: number): number |
   if (!Number.isFinite(left) || left <= 0 || !Number.isFinite(right) || right <= 0) {
     return null;
   }
-  const mid = (left + right) / 2;
-  if (!Number.isFinite(mid) || mid <= 0) return null;
-  return Math.round((Math.abs(left - right) / mid) * BPS_PER_UNIT);
+  const divergenceBps = midDivergenceBps(left, right);
+  return Number.isFinite(divergenceBps) ? Math.round(divergenceBps) : null;
 }
 
 export async function fetchCurrentNativePegImpliedUsdQuotes(
