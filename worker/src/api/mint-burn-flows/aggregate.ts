@@ -134,6 +134,10 @@ function buildGroupedNetFlowMap(
   return netMap;
 }
 
+function filterRowsByWindow(rows: HourlyRow[], windowStart: number): HourlyRow[] {
+  return rows.filter((row) => row.hour_ts >= windowStart);
+}
+
 export function buildAggregateQueryParams(nowSec: number, hours: number): AggregateQueryParams {
   const nowDayTs = bucketDay(nowSec);
   return {
@@ -155,6 +159,7 @@ export async function fetchAggregateData(
   const trackedPairs = getMintBurnTrackedPairs();
   const trackedChainIds = [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
   const chainInClause = buildInClause(trackedChainIds);
+  const hourlyScanStart = Math.min(params.windowStart, params.window24h);
 
   const [batchResults, [lastBlocks, latestCronSnapshot]] = await Promise.all([
     db.batch([
@@ -167,17 +172,7 @@ export async function fetchAggregateData(
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
             ORDER BY hour_ts ASC`,
         )
-        .bind(...chainInClause.binds, params.windowStart),
-      db
-        .prepare(
-           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                   /* pharos:mint-burn-flows:window-24h-rows */
-                   mint_volume_usd, burn_volume_usd, net_flow_usd
-            FROM mint_burn_hourly
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-            ORDER BY hour_ts ASC`,
-        )
-        .bind(...chainInClause.binds, params.window24h),
+        .bind(...chainInClause.binds, hourlyScanStart),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -249,11 +244,12 @@ export async function fetchAggregateData(
     ]),
   ]);
 
-  const hourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], trackedPairs);
-  const hourly24hRows = filterRowsToTrackedPairs((batchResults[1].results ?? []) as HourlyRow[], trackedPairs);
-  const baselineRows = filterRowsToTrackedPairs((batchResults[5].results ?? []) as DailyBaselineRow[], trackedPairs);
-  const firstSeenRows = filterRowsToTrackedPairs((batchResults[6].results ?? []) as FirstSeenRow[], trackedPairs);
-  const largestEventRows = filterRowsToTrackedPairs((batchResults[7].results ?? []) as EventRow[], trackedPairs);
+  const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], trackedPairs);
+  const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart);
+  const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h);
+  const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
+  const firstSeenRows = filterRowsToTrackedPairs((batchResults[5].results ?? []) as FirstSeenRow[], trackedPairs);
+  const largestEventRows = filterRowsToTrackedPairs((batchResults[6].results ?? []) as EventRow[], trackedPairs);
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
   const fallbackSyncAt =
     latestCronSnapshot.startedAt
@@ -266,9 +262,9 @@ export async function fetchAggregateData(
   return {
     hourlyRows,
     hourly24hRows,
-    net7dMap: buildGroupedNetFlowMap((batchResults[2].results ?? []) as GroupedNetFlowRow[], trackedPairs),
-    net30dMap: buildGroupedNetFlowMap((batchResults[3].results ?? []) as GroupedNetFlowRow[], trackedPairs),
-    net90dMap: buildGroupedNetFlowMap((batchResults[4].results ?? []) as GroupedNetFlowRow[], trackedPairs),
+    net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),
+    net30dMap: buildGroupedNetFlowMap((batchResults[2].results ?? []) as GroupedNetFlowRow[], trackedPairs),
+    net90dMap: buildGroupedNetFlowMap((batchResults[3].results ?? []) as GroupedNetFlowRow[], trackedPairs),
     baselineMap: buildBaselineMap(params.nowSec, baselineRows, firstSeenRows),
     largestEventMap: selectLargestEvents(largestEventRows),
     coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenRows, lastBlocks, latestCronSnapshot.chainHeads),

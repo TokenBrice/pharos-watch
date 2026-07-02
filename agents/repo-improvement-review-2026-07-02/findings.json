@@ -2800,6 +2800,16 @@
     "description": "fetchAggregateData batches a `hour_ts >= windowStart` scan (batch stmt 0) and a `hour_ts >= window24h` scan (batch stmt 1) over mint_burn_hourly. For the default and cron-published hours=24 (MINT_BURN_AGGREGATE_PUBLISH_WINDOWS = [24, 168], mint-burn-flows-shared.ts:55), windowStart === window24h, so the two statements are identical except for a SQL comment — the same rows are fetched and materialized twice per refresh. For hours=168 the 24h scan is a strict subset of the 168h scan; for hours<24 the containment reverses. Both result sets have the same HourlyRow shape and ORDER BY.",
     "recommendation": "Issue one query bound to min(windowStart, window24h), then derive the other set in JS with a hour_ts filter: hourlyRows = rows.filter(r => r.hour_ts >= windowStart), hourly24hRows = rows.filter(r => r.hour_ts >= window24h). Filtering a sorted array by the same predicate D1 would apply reproduces both sets exactly, so gauge/coin/hourly outputs are unchanged.",
     "estImpact": "-1 D1 scan per aggregate refresh (2 cron windows + cache misses)"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Collapsed the aggregate hourly data fetch to one scan bound to the earlier of the requested window and the fixed 24h window, then derived both row sets in memory with the same `hour_ts` predicates.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/mint-burn-flows.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Added regression coverage for both wider-than-24h and shorter-than-24h requests, including assertions that the removed `window-24h-rows` scan is no longer executed."
    }
   },
   {
