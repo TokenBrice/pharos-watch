@@ -12,7 +12,6 @@ import {
   fetchRoycoDawnSources,
   fetchVaultsFyiSources,
   fetchYearnKongSources,
-  type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
   type VaultsFyiSourceResult,
@@ -345,24 +344,6 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
     : `aave-v3-onchain:${chain}:${stablecoinId}`;
 }
 
-function buildAaveRowsFromLegacyRates(
-  rates: Map<string, { apy: number; chain: string; sourceTvlUsd: number }>,
-): AaveV3SupplyRateRow[] {
-  return [...rates.entries()].flatMap(([stablecoinId, { apy, chain, sourceTvlUsd }]) => {
-    const meta = TRACKED_META_BY_ID.get(stablecoinId);
-    const assetAddress = getTrackedContractAddress(stablecoinId, chain);
-    if (!meta || !assetAddress) return [];
-    return [{
-      stablecoinId,
-      symbol: meta.symbol,
-      chain,
-      assetAddress,
-      apy,
-      sourceTvlUsd,
-    }];
-  });
-}
-
 async function runMorphoFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
@@ -496,16 +477,14 @@ async function runAaveFamily(
     context.signal,
     () => fetchAaveV3SupplyRates(targets, context.signal, context.chainRpcs),
     {
-      rates: new Map(),
       results: [],
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     },
   );
-  const { rates, results, telemetry } = value;
+  const { results, telemetry } = value;
 
   const candidates: ResolvedYieldCandidate[] = [];
-  const aaveRows = results.length > 0 ? results : buildAaveRowsFromLegacyRates(rates);
-  for (const { stablecoinId, symbol, apy, chain, assetAddress, sourceTvlUsd } of aaveRows) {
+  for (const { stablecoinId, symbol, apy, chain, assetAddress, sourceTvlUsd } of results) {
     if (apy <= 0) continue;
     candidates.push({
       stablecoinId,
@@ -532,7 +511,7 @@ async function runAaveFamily(
   return {
     key: "aaveV3",
     candidates,
-    sourceFamilyCount: aaveRows.length,
+    sourceFamilyCount: results.length,
     status,
     telemetry,
   };

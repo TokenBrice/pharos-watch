@@ -95,7 +95,6 @@ vi.mock("../yield-sync/sources", () => ({
     },
   })),
   fetchAaveV3SupplyRates: vi.fn(async () => ({
-    rates: new Map(),
     results: [],
     telemetry: {
       targetCount: 0,
@@ -190,7 +189,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
     vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
-    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), results: [], telemetry: emptyTelemetry });
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
     vi.mocked(fetchBeefySources).mockResolvedValue([]);
   });
 
@@ -254,12 +253,32 @@ describe("syncYieldSupplemental", () => {
 
   it("keeps distinct same-chain Aave candidates by using asset-scoped source keys", async () => {
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
-      rates: new Map([
-        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
-        ["usdt-tether", { apy: 3.75, chain: "ethereum", sourceTvlUsd: 80_000_000 }],
-        ["eurc-circle", { apy: 2.1, chain: "base", sourceTvlUsd: 10_000_000 }],
-      ]),
-      results: [],
+      results: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "ethereum",
+          assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          apy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        },
+        {
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          chain: "ethereum",
+          assetAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          apy: 3.75,
+          sourceTvlUsd: 80_000_000,
+        },
+        {
+          stablecoinId: "eurc-circle",
+          symbol: "EURC",
+          chain: "base",
+          assetAddress: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+          apy: 2.1,
+          sourceTvlUsd: 10_000_000,
+        },
+      ],
       telemetry: {
         ...emptyTelemetry,
         targetCount: 3,
@@ -629,10 +648,16 @@ describe("syncYieldSupplemental", () => {
   it("bounds optional RPC missing-target examples in source family summaries", async () => {
     const missingTargets = Array.from({ length: 30 }, (_, index) => `ethereum:T${index}`);
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
-      rates: new Map([
-        ["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }],
-      ]),
-      results: [],
+      results: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "ethereum",
+          assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          apy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        },
+      ],
       telemetry: {
         ...emptyTelemetry,
         targetCount: 30,
@@ -676,7 +701,6 @@ describe("syncYieldSupplemental", () => {
 
   it("keeps same-asset Aave markets on different chains when per-target results are available", async () => {
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
-      rates: new Map([["usdc-circle", { apy: 4.25, chain: "ethereum", sourceTvlUsd: 100_000_000 }]]),
       results: [
         {
           stablecoinId: "usdc-circle",
@@ -966,7 +990,6 @@ describe("syncYieldSupplemental", () => {
     );
     vi.mocked(fetchAaveV3SupplyRates).mockImplementation(
       trackFamily("aaveV3", {
-        rates: new Map(),
         results: [],
         telemetry: emptyTelemetry,
       }),

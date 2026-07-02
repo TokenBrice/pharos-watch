@@ -477,7 +477,6 @@ export interface AaveV3SupplyRateRow {
 }
 
 export interface AaveV3RateResult {
-  rates: Map<string, { apy: number; chain: string; sourceTvlUsd: number }>;
   results: AaveV3SupplyRateRow[];
   telemetry: OptionalRpcFamilyTelemetry;
 }
@@ -487,7 +486,6 @@ export async function fetchAaveV3SupplyRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<AaveV3RateResult> {
-  const rates = new Map<string, { apy: number; chain: string; sourceTvlUsd: number }>();
   const results: AaveV3SupplyRateRow[] = [];
   const telemetry = createOptionalRpcFamilyTelemetry(targets.length);
   const accountedTargets = new Set<string>();
@@ -500,9 +498,8 @@ export async function fetchAaveV3SupplyRates(
         recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "no-chain-rpcs");
       }
     }
-    telemetry.emittedCount = rates.size;
     logOptionalRpcTelemetry("aave-v3", telemetry);
-    return { rates, results, telemetry };
+    return { results, telemetry };
   }
 
   const budget = createOptionalSourceBudget("Aave V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
@@ -618,10 +615,6 @@ export async function fetchAaveV3SupplyRates(
               apy,
               sourceTvlUsd,
             });
-            const existing = rates.get(target.stablecoinId);
-            if (!existing || apy > existing.apy) {
-              rates.set(target.stablecoinId, { apy, chain: target.chain, sourceTvlUsd });
-            }
             resolvedTargets.add(targetLabel);
             telemetry.resolvedTargetCount = resolvedTargets.size;
             accountedTargets.add(targetLabel);
@@ -650,7 +643,7 @@ export async function fetchAaveV3SupplyRates(
       results.length,
       budget.budgetController.signal.aborted,
     );
-    return { rates, results, telemetry };
+    return { results, telemetry };
   } finally {
     budget.cleanup();
   }

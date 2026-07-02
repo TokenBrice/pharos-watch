@@ -836,6 +836,16 @@
     "description": "runAaveFamily does `results.length > 0 ? results : buildAaveRowsFromLegacyRates(rates)` (line 507). In fetchAaveV3SupplyRates (sources-rpc.ts:485-657) every `rates.set` (line 623) is immediately preceded by an unconditional `results.push` (line 613) in the same success block, and the early-return paths leave both empty. So `rates` non-empty implies `results` non-empty, making the legacy fallback unreachable: when results is empty, rates is empty and the fallback returns []. This drags along buildAaveRowsFromLegacyRates (lines 348-364), the `rates` field of AaveV3RateResult (sources-rpc.ts:480), the per-stablecoin best-APY dedup block (sources-rpc.ts:621-624), and the Map fallback literal at line 499. fetchAaveV3SupplyRates has exactly one production caller (verified by grep), so nothing else consumes `rates`.",
     "recommendation": "Delete buildAaveRowsFromLegacyRates, drop `rates` from AaveV3RateResult and from fetchAaveV3SupplyRates (including the rates.set block and the `telemetry.emittedCount = rates.size` in the early return, which is always 0 there), and simplify runAaveFamily to iterate `results` directly. Pure dead-code removal; emitted candidates are identical.",
     "estImpact": "-45 LOC, removes a misleading dual-shape return"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unreachable Aave legacy `rates` map, the fallback row builder, and the best-rate dedup block. Aave supplemental sync now consumes the emitted per-market result rows directly, with tests updated to assert the row-shaped contract.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-aave-onchain-source.test.ts worker/src/cron/__tests__/sync-yield-supplemental.test.ts",
+     "git diff --check -- worker/src/cron/yield-sync/sources-rpc.ts worker/src/cron/yield-sync/supplemental-source-families.ts worker/src/cron/__tests__/yield-aave-onchain-source.test.ts worker/src/cron/__tests__/sync-yield-supplemental.test.ts"
+    ],
+    "notes": "Full `npm run typecheck:worker` was deferred in this worktree because concurrent reserve-adapter remediation edits currently fail on `worker/src/cron/reserve-adapters/erc4626.ts`; the yield-focused tests pass."
    }
   },
   {

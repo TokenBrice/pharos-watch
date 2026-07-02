@@ -87,10 +87,10 @@ describe("fetchAaveV3SupplyRates", () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
     mockFetchEvmUint256AtBlock.mockResolvedValue(125_000_000_000_000n);
 
-    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
 
-    expect(rates.has("usdc-circle")).toBe(true);
-    const apy = rates.get("usdc-circle")!.apy;
+    expect(results).toHaveLength(1);
+    const apy = results[0]?.apy ?? 0;
     // Continuous compounding of 5%/yr ≈ 5.127%
     expect(apy).toBeCloseTo(expectedApy(nominalRate), 2);
     expect(apy).toBeGreaterThan(5);
@@ -98,7 +98,7 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(telemetry.resolvedTargetCount).toBe(1);
     expect(telemetry.emittedCount).toBe(1);
     expect(telemetry.missingTargetCount).toBe(0);
-    expect(rates.get("usdc-circle")!.sourceTvlUsd).toBe(125_000_000);
+    expect(results[0]?.sourceTvlUsd).toBe(125_000_000);
   });
 
   it("correctly reads currentLiquidityRate from byte offset 128 (slot 2 in the struct)", async () => {
@@ -108,41 +108,41 @@ describe("fetchAaveV3SupplyRates", () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
     mockFetchEvmUint256AtBlock.mockResolvedValue(50_000_000_000_000n);
 
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
-    expect(rates.has("usdc-circle")).toBe(true);
+    const { results } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    expect(results).toHaveLength(1);
     // Sanity: a small but positive APY — should be close to 0.1%
-    const apy = rates.get("usdc-circle")!.apy;
+    const apy = results[0]?.apy ?? 0;
     expect(apy).toBeGreaterThan(0);
     expect(apy).toBeLessThan(1);
   });
 
-  it("returns empty map when RPC returns null", async () => {
+  it("returns empty results when RPC returns null", async () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
 
-    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
-    expect(rates.size).toBe(0);
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    expect(results).toEqual([]);
     expect(telemetry.missingReasonCounts["reserve-data-unavailable"]).toBe(1);
   });
 
-  it("returns empty map when hex response is too short to contain currentLiquidityRate", async () => {
+  it("returns empty results when hex response is too short to contain currentLiquidityRate", async () => {
     // Only 64 chars = 32 bytes = 1 slot; need at least 3 slots (192 hex chars)
     mockFetchEvmCallHexAtBlock.mockResolvedValue("0x" + "ab".repeat(32) as `0x${string}`);
 
-    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
-    expect(rates.size).toBe(0);
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    expect(results).toEqual([]);
     expect(telemetry.missingReasonCounts["reserve-data-short"]).toBe(1);
   });
 
-  it("returns empty map when chainRpcs is not provided", async () => {
-    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET]);
-    expect(rates.size).toBe(0);
+  it("returns empty results when chainRpcs is not provided", async () => {
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET]);
+    expect(results).toEqual([]);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
     expect(telemetry.missingReasonCounts["no-chain-rpcs"]).toBe(1);
   });
 
-  it("returns empty map when targets is empty", async () => {
-    const { rates } = await fetchAaveV3SupplyRates([], undefined, makeChainRpcs());
-    expect(rates.size).toBe(0);
+  it("returns empty results when targets is empty", async () => {
+    const { results } = await fetchAaveV3SupplyRates([], undefined, makeChainRpcs());
+    expect(results).toEqual([]);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
   });
 
@@ -154,20 +154,20 @@ describe("fetchAaveV3SupplyRates", () => {
       assetAddress: "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
     };
 
-    const { rates, telemetry } = await fetchAaveV3SupplyRates(
+    const { results, telemetry } = await fetchAaveV3SupplyRates(
       [unsupportedTarget],
       undefined,
       makeChainRpcs(["fantom"]),
     );
-    expect(rates.size).toBe(0);
+    expect(results).toEqual([]);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
     expect(telemetry.missingReasonCounts["unsupported-pool-chain"]).toBe(1);
   });
 
   it("skips targets when no RPC config exists for the chain", async () => {
     // chainRpcs only has 'base', not 'ethereum'
-    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs(["base"]));
-    expect(rates.size).toBe(0);
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs(["base"]));
+    expect(results).toEqual([]);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
     expect(telemetry.missingReasonCounts["no-rpc-config"]).toBe(1);
   });
@@ -183,20 +183,21 @@ describe("fetchAaveV3SupplyRates", () => {
       .mockResolvedValueOnce(125_000_000_000_000n)
       .mockResolvedValueOnce(75_000_000_000_000n);
 
-    const { rates } = await fetchAaveV3SupplyRates(
+    const { results } = await fetchAaveV3SupplyRates(
       [USDC_TARGET, USDT_TARGET],
       undefined,
       makeChainRpcs(),
     );
 
-    expect(rates.has("usdc-circle")).toBe(true);
-    expect(rates.has("usdt-tether")).toBe(true);
-    expect(rates.get("usdc-circle")!.apy).toBeGreaterThan(5);
-    expect(rates.get("usdt-tether")!.apy).toBeGreaterThan(3);
-    expect(rates.get("usdt-tether")!.apy).toBeLessThan(5);
+    expect(results).toHaveLength(2);
+    const usdc = results.find((row) => row.stablecoinId === "usdc-circle");
+    const usdt = results.find((row) => row.stablecoinId === "usdt-tether");
+    expect(usdc?.apy).toBeGreaterThan(5);
+    expect(usdt?.apy).toBeGreaterThan(3);
+    expect(usdt?.apy).toBeLessThan(5);
   });
 
-  it("preserves per-market rows while keeping legacy best-rate lookup by stablecoin", async () => {
+  it("preserves per-market rows for same-stablecoin targets across chains", async () => {
     const rate5pct = BigInt(Math.round(0.05 * Number(RAY)));
     const rate3pct = BigInt(Math.round(0.03 * Number(RAY)));
     const baseTarget: AaveV3RateTarget = {
@@ -213,13 +214,14 @@ describe("fetchAaveV3SupplyRates", () => {
       .mockResolvedValueOnce(125_000_000_000_000n)
       .mockResolvedValueOnce(75_000_000_000_000n);
 
-    const { rates, results, telemetry } = await fetchAaveV3SupplyRates(
+    const { results, telemetry } = await fetchAaveV3SupplyRates(
       [USDC_TARGET, baseTarget],
       undefined,
       makeChainRpcs(),
     );
 
-    expect(results).toEqual([
+    expect(results).toHaveLength(2);
+    expect(results).toEqual(expect.arrayContaining([
       expect.objectContaining({
         stablecoinId: "usdc-circle",
         chain: "ethereum",
@@ -232,17 +234,15 @@ describe("fetchAaveV3SupplyRates", () => {
         assetAddress: baseTarget.assetAddress,
         sourceTvlUsd: 75_000_000,
       }),
-    ]);
+    ]));
     expect(telemetry.emittedCount).toBe(2);
-    expect(rates.size).toBe(1);
-    expect(rates.get("usdc-circle")?.chain).toBe("ethereum");
   });
 
   it("excludes rates where APY is zero (zero liquidity rate)", async () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(0n));
 
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
-    expect(rates.size).toBe(0);
+    const { results } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    expect(results).toEqual([]);
   });
 
   it("encodes getReserveData calldata with selector + padded asset address", async () => {
