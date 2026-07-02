@@ -51,10 +51,6 @@ export const SLOT_RUNNER_BY_KEY = Object.fromEntries(
   ]),
 ) as Record<ScheduledRunnerKey, SlotRunner>;
 
-export const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = Object.fromEntries(
-  Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE).map((plan) => [plan.schedule, SLOT_RUNNER_BY_KEY[plan.runnerKey]]),
-) as Record<string, SlotRunner>;
-
 type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "heartbeatSec" | "staleAfterSec" | "preSweepLimit">;
 
 const SHORT_SLOT_FENCE_POLICY = {

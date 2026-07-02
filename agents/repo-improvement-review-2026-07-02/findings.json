@@ -5426,6 +5426,19 @@
     "description": "resetChatOnSuccess (line 113) is exported but never called anywhere in worker/, src/, shared/, functions/, scripts/, or tests (single grep hit = declaration). Its only callee, resetSubscriberBlockCount (line 90), has no other caller, so both are dead — superseded by the batched flushChatSuccessResets (line 123) which performs the same consecutive_block_count reset via one IN-clause UPDATE.",
     "recommendation": "Delete both functions. Safe: the live success-reset path is flushChatSuccessResets; no queue or webhook code references the per-chat variants.",
     "estImpact": "-20 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed the dead resetChatOnSuccess export is absent and kept resetSubscriberBlockCount because the corrected audit notes it remains directly covered; live dispatch still uses the batched flushChatSuccessResets path.",
+    "validation": [
+     "rg -n \"SLOT_RUNNER_BY_SCHEDULE|resetChatOnSuccess|didReserveSyncAttemptFinalizeAsSuccess\" worker/src shared src functions scripts || true",
+     "npx vitest run worker/src/handlers/scheduled/__tests__/scheduled-runner-contract.test.ts worker/src/lib/__tests__/live-reserves-store.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:cron-sync",
+     "npm run check:cron-connections",
+     "git diff --check -- worker/src/handlers/scheduled.ts worker/src/lib/live-reserves-store-shared.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
@@ -5445,6 +5458,19 @@
     "description": "SLOT_RUNNER_BY_SCHEDULE (line 50) maps every cron schedule string to a runner, constructed eagerly from SCHEDULED_SLOT_PLANS_BY_SCHEDULE at worker module load, but nothing reads it — dispatch goes through SLOT_RUNNER_BY_KEY / the fence path. Grep across worker/, shared/, scripts/, and tests finds only the declaration line. Note: scripts/ci/check-unused-code.mjs whitelists this file entirely as a root entrypoint, which is why its unused exports go unflagged.",
     "recommendation": "Delete the export and its Object.fromEntries construction. Safe: no reader exists; also removes a small amount of unnecessary work on every worker cold start.",
     "estImpact": "-5 LOC, less cold-start init"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused SLOT_RUNNER_BY_SCHEDULE construction from the scheduled handler while leaving dispatch on SLOT_RUNNER_BY_KEY unchanged.",
+    "validation": [
+     "rg -n \"SLOT_RUNNER_BY_SCHEDULE|resetChatOnSuccess|didReserveSyncAttemptFinalizeAsSuccess\" worker/src shared src functions scripts || true",
+     "npx vitest run worker/src/handlers/scheduled/__tests__/scheduled-runner-contract.test.ts worker/src/lib/__tests__/live-reserves-store.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:cron-sync",
+     "npm run check:cron-connections",
+     "git diff --check -- worker/src/handlers/scheduled.ts worker/src/lib/live-reserves-store-shared.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
@@ -6302,6 +6328,19 @@
     "alsoFiles": [
      "worker/src/cron/telegram-pending/lifecycle.ts",
      "worker/src/lib/live-reserves-store-shared.ts"
+    ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the remaining dead worker exports SLOT_RUNNER_BY_SCHEDULE and didReserveSyncAttemptFinalizeAsSuccess, and verified resetChatOnSuccess is already absent with no references.",
+    "validation": [
+     "rg -n \"SLOT_RUNNER_BY_SCHEDULE|resetChatOnSuccess|didReserveSyncAttemptFinalizeAsSuccess\" worker/src shared src functions scripts || true",
+     "npx vitest run worker/src/handlers/scheduled/__tests__/scheduled-runner-contract.test.ts worker/src/lib/__tests__/live-reserves-store.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:cron-sync",
+     "npm run check:cron-connections",
+     "git diff --check -- worker/src/handlers/scheduled.ts worker/src/lib/live-reserves-store-shared.ts agents/repo-improvement-review-2026-07-02/findings.json"
     ]
    }
   },

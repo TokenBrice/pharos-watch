@@ -217,10 +217,3 @@ export function createReserveSyncAttemptId(stablecoinId: string): string {
   }
   return `${stablecoinId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
 }
-
-export function didReserveSyncAttemptFinalizeAsSuccess(
-  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAttemptId"> | null | undefined,
-  attemptId: string,
-): boolean {
-  return syncState?.lastSuccessAttemptId === attemptId;
-}
