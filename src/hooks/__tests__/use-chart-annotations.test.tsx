@@ -25,6 +25,7 @@ vi.mock("@shared/data/annotations/curated-annotations", () => ({
   getCuratedAnnotations: getCuratedAnnotationsMock,
 }));
 
+import { CRON_15MIN } from "@/lib/cron-intervals";
 import { useChartAnnotations } from "../use-chart-annotations";
 
 const DAY_MS = 86_400_000;
@@ -83,6 +84,18 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data).toEqual([]);
+  });
+
+  it("uses the events producer polling interval for tape event annotations", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    renderHook(() =>
+      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(useApiQueryWithMetaMock.mock.calls.at(-1)?.[2]).toBe(CRON_15MIN);
   });
 
   it("clamps curated annotations to the [fromMs, toMs] window", () => {

@@ -3000,6 +3000,18 @@
     "description": "useChartAnnotations fetches the same /api/events endpoint as useEvents/useLatestEvents but passes CRON_1H (staleTime 1h, refetch 2h), while use-events.ts:96 and use-events.ts:214 use CRON_15MIN for the identical producer — the repo convention is staleTime = producer interval. Nothing in the hook's extensive docblock (lines 18-38) documents an intentional slower cadence for annotations, unlike other sanctioned deviations in this codebase which carry an explanatory comment. Flagged per the convention-deviation rule; it may be a deliberate lighter budget for a decorative overlay, but as written it's an undocumented inconsistency for one consumer of a shared endpoint.",
     "recommendation": "Either align to CRON_15MIN like the other events consumers, or (if the 1h cadence is deliberate for chart pins) add a one-line comment stating the intentional deviation so future convention audits don't re-flag it. The comment-only option is trivially behavior-preserving; prefer it unless the owner wants alignment.",
     "estImpact": "convention consistency; 1-line change"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Aligned chart annotation event polling to `CRON_15MIN`, matching the `/api/events` producer cadence already used by the main events hooks.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-chart-annotations.test.tsx",
+     "npm run check:hook-polling-window",
+     "npm run typecheck",
+     "git diff --check -- src/hooks/use-chart-annotations.ts src/hooks/__tests__/use-chart-annotations.test.tsx"
+    ],
+    "notes": "Added a focused hook test that pins the polling interval passed to `useApiQueryWithMeta`."
    }
   },
   {

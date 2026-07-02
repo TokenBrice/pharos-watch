@@ -11,7 +11,7 @@ import type {
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import { caseStudySlugForEvent } from "@/app/learn/case-studies/content/client-index";
 import { DAY_MS } from "@/lib/constants";
-import { CRON_1H } from "@/lib/cron-intervals";
+import { CRON_15MIN } from "@/lib/cron-intervals";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
 import { useApiQueryWithMeta } from "./use-api-query";
 
@@ -138,7 +138,7 @@ export function useChartAnnotations(
       },
     ],
     path,
-    CRON_1H,
+    CRON_15MIN,
     { enabled, schema: TapeEventsResponseBodySchema },
   );
 
