@@ -4344,6 +4344,17 @@
      "src/app/feed/digest/route.ts",
      "shared/types/editorial.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Digest archive and feed consumers now use the shared DigestContentEntry type, with the phantom archive author field and dead generatedAt fallbacks removed.",
+    "validation": [
+     "npx vitest run src/app/digest/page.test.tsx src/app/feed/__tests__/smoke.test.ts",
+     "npm run typecheck",
+     "npx eslint src/app/digest/page.tsx src/app/feed/digest/route.ts src/app/digest/page.test.tsx --max-warnings=0",
+     "git diff --check -- src/app/digest/page.tsx src/app/digest/page.test.tsx src/app/feed/digest/route.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

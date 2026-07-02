@@ -1,6 +1,7 @@
 import digests from "../../../../data/digests.json";
 import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import type { DigestContentEntry } from "@shared/types";
 
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -8,19 +9,10 @@ export const revalidate = false;
 const FEED_PATH = "/feed/digest.xml";
 const MAX_ITEMS = 100;
 
-interface DigestEntry {
-  date: string;
-  title: string;
-  text: string;
-  extended?: string;
-  generatedAt: number;
-  digestType?: string;
-}
-
-function digestItems(entries: readonly DigestEntry[]): RssItem[] {
+function digestItems(entries: readonly DigestContentEntry[]): RssItem[] {
   return entries
     .slice()
-    .sort((a, b) => (b.generatedAt ?? 0) - (a.generatedAt ?? 0))
+    .sort((a, b) => b.generatedAt - a.generatedAt)
     .slice(0, MAX_ITEMS)
     .map((entry) => ({
       title: entry.title,
@@ -32,7 +24,7 @@ function digestItems(entries: readonly DigestEntry[]): RssItem[] {
 }
 
 export async function GET(): Promise<Response> {
-  const items = digestItems(digests as DigestEntry[]);
+  const items = digestItems(digests as DigestContentEntry[]);
   return rssResponse({
     title: "Pharos Digest",
     link: `${SITE_URL}/digest/`,

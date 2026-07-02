@@ -21,15 +21,14 @@ afterEach(() => {
 });
 
 describe("DigestArchivePage", () => {
-  it("renders the broadsheet nameplate with the latest edition and writer credit", () => {
+  it("renders the broadsheet nameplate with the latest edition and default writer credit", () => {
     const { container } = render(<DigestArchivePage />);
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.textContent).toContain("Pharos Digest");
 
     expect(container.textContent).toContain(`Issue #${latestDaily.editionNumber}`);
-    const authorCredit = "author" in latestDaily ? (latestDaily as { author?: string }).author ?? "AI" : "AI";
-    expect(container.textContent).toContain(`Written by ${authorCredit}`);
+    expect(container.textContent).toContain("Written by AI");
   });
 
   it("drops the duplicated weekly recap module", () => {

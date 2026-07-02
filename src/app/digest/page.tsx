@@ -8,6 +8,7 @@ import { DigestColophon } from "@/components/digest-colophon";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import type { DigestContentEntry } from "@shared/types";
 import digests from "../../../data/digests.json";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -18,15 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-editorial-digest.png`,
 });
 
-const digestEntries = digests as {
-  date: string;
-  title: string;
-  text: string;
-  generatedAt?: number;
-  digestType?: "daily" | "weekly";
-  editionNumber?: number;
-  author?: string;
-}[];
+const digestEntries = digests as DigestContentEntry[];
 
 const latestDaily = digestEntries.find((entry) => entry.digestType !== "weekly") ?? digestEntries[0];
 
@@ -75,7 +68,7 @@ export default function DigestArchivePage() {
         }}
       />
 
-      <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} author={latestDaily?.author} />
+      <DigestNameplate issueNumber={latestDaily?.editionNumber} date={latestDaily?.date} />
 
       <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-muted-foreground">
         <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
@@ -92,8 +85,8 @@ export default function DigestArchivePage() {
 
       {/* Server-rendered digest links for SEO crawlability (client component loads the interactive list) */}
       <nav aria-label="Digest archive index" className="sr-only">
-        {digestEntries.map((d, index) => (
-          <Link key={`${d.date}-${d.digestType ?? "daily"}-${d.generatedAt ?? index}`} href={`/digest/${d.date}/`}>
+        {digestEntries.map((d) => (
+          <Link key={`${d.date}-${d.digestType ?? "daily"}-${d.generatedAt}`} href={`/digest/${d.date}/`}>
             {d.title} — {d.date}
           </Link>
         ))}
