@@ -3511,6 +3511,17 @@
     "alsoFiles": [
      "src/components/contagion-graph/contagion-graph-stage.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the duplicated `hubLabelY` coordinate from contagion graph node presentation and rendered both ticker and hub labels from the single node-local `labelY` calculation.",
+    "validation": [
+     "npx vitest run src/components/__tests__/contagion-graph.test.tsx",
+     "npm run typecheck",
+     "npx eslint src/components/contagion-graph/contagion-graph-svg.tsx --max-warnings=0",
+     "git diff --check -- src/components/contagion-graph/contagion-graph-svg.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

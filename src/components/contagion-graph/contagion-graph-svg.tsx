@@ -193,19 +193,17 @@ function ContagionGraphEdge({
 
 function getNodePresentation({
   node,
-  position,
   activeHoveredId,
   connectedNodes,
   nodeDistance,
   tierById,
-}: Pick<NodeRenderProps, "node" | "position" | "activeHoveredId" | "connectedNodes" | "nodeDistance" | "tierById">) {
+}: Pick<NodeRenderProps, "node" | "activeHoveredId" | "connectedNodes" | "nodeDistance" | "tierById">) {
   const isHovered = activeHoveredId === node.id;
   const isNodeDimmed = activeHoveredId !== null && activeHoveredId !== node.id && !connectedNodes.has(node.id);
   const tier = tierById.get(node.id) ?? 0;
   const isHub = tier > 0;
   const isCoreHub = tier === 2;
   const color = gradeColor(node.grade);
-  const hubLabelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + node.r + (isCoreHub ? 12 : 10)));
   const hopDist = nodeDistance.get(node.id);
   const isInRipple = activeHoveredId !== null && hopDist != null && hopDist > 0;
   const nodeDelay = isInRipple && hopDist != null ? hopDist * GRAPH_RIPPLE_HOP_DELAY_MS : 0;
@@ -221,7 +219,7 @@ function getNodePresentation({
         ? rippleOpacity
         : 0.85;
 
-  return { isHovered, isHub, isCoreHub, color, hubLabelY, nodeDelay, nodeOpacity };
+  return { isHovered, isHub, isCoreHub, color, nodeDelay, nodeOpacity };
 }
 
 function ContagionGraphNode({
@@ -252,9 +250,8 @@ function ContagionGraphNode({
   const logoUrl = logos?.[node.id];
   const visualR = node.r * nodeScale;
   const innerR = Math.max(visualR - RING_WIDTH, 3);
-  const { isHovered, isHub, isCoreHub, color, hubLabelY, nodeDelay, nodeOpacity } = getNodePresentation({
+  const { isHovered, isHub, isCoreHub, color, nodeDelay, nodeOpacity } = getNodePresentation({
     node,
-    position,
     activeHoveredId,
     connectedNodes,
     nodeDistance,
@@ -376,7 +373,7 @@ function ContagionGraphNode({
       {shouldRenderLabel && (
         <text
           x={position.x}
-          y={showTickerLabels ? labelY : hubLabelY}
+          y={labelY}
           textAnchor="middle"
           fill="currentColor"
           fontSize={showTickerLabels ? tickerFontSize : isCoreHub ? HUB_LABEL_FONT_SIZE : HUB_LABEL_FONT_SIZE - 1}
