@@ -18,6 +18,10 @@ import type { StablecoinMeta } from "@shared/types";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 
+function getContractKey(contract: ContractDeployment): string {
+  return `${contract.chain}:${contract.address}`;
+}
+
 export function ContractDeployments({
   coinId,
   contracts,
@@ -25,7 +29,7 @@ export function ContractDeployments({
   coinId: string;
   contracts: ContractDeployment[];
 }) {
-  const [openChain, setOpenChain] = useState<string | null>(null);
+  const [openContractKey, setOpenContractKey] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
   const [showAllContractsDesktop, setShowAllContractsDesktop] = useState(false);
   // Keyed by chain+address: some coins deploy twice on one chain, and a
@@ -53,7 +57,7 @@ export function ContractDeployments({
   const visibleDesktopContracts = showAllContractsDesktop ? contracts : desktopContractsPreview;
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
-  const openContract = contracts.find((c) => c.chain === openChain) ?? null;
+  const openContract = contracts.find((contract) => getContractKey(contract) === openContractKey) ?? null;
   const quickCopyContract = openContract ?? contracts[0] ?? null;
 
   function copyContractAddress(chain: string, address: string) {
@@ -77,15 +81,18 @@ export function ContractDeployments({
         />
       ) : null}
       <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
-        {visibleMobileContracts.map((c) => (
-          <ContractChainButton
-            key={`${c.chain}-${c.address}`}
-            chainKey={c.chain}
-            address={c.address}
-            isOpen={openChain === c.chain}
-            onToggle={() => setOpenChain(openChain === c.chain ? null : c.chain)}
-          />
-        ))}
+        {visibleMobileContracts.map((c) => {
+          const contractKey = getContractKey(c);
+          return (
+            <ContractChainButton
+              key={contractKey}
+              chainKey={c.chain}
+              address={c.address}
+              isOpen={openContractKey === contractKey}
+              onToggle={() => setOpenContractKey(openContractKey === contractKey ? null : contractKey)}
+            />
+          );
+        })}
       </div>
       <div className="hidden sm:block">
         <div
@@ -116,8 +123,12 @@ export function ContractDeployments({
         <button
           type="button"
           onClick={() => {
-            if (showAllContractsMobile && openChain && !mobileContractsPreview.some((c) => c.chain === openChain)) {
-              setOpenChain(null);
+            if (
+              showAllContractsMobile &&
+              openContractKey &&
+              !mobileContractsPreview.some((contract) => getContractKey(contract) === openContractKey)
+            ) {
+              setOpenContractKey(null);
             }
             setShowAllContractsMobile((current) => !current);
           }}

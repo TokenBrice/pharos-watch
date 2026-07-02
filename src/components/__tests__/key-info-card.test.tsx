@@ -81,6 +81,37 @@ describe("KeyInfoCard contract interactions", () => {
     });
   });
 
+  it("selects the exact deployment when one chain has multiple contracts", () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    const duplicateChainMeta = {
+      ...meta,
+      contracts: [
+        { chain: "base", address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+        { chain: "base", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+      ],
+    } as StablecoinMeta;
+
+    const { container } = render(<KeyInfoCard meta={duplicateChainMeta} resolvedMechanismArchetype={null} />);
+    const mobileGrid = container.querySelector(".grid.grid-cols-5");
+    expect(mobileGrid).not.toBeNull();
+
+    fireEvent.click(within(mobileGrid as HTMLElement).getByRole("button", { name: /Base contract 0xbbbb/i }));
+
+    const selectedContract = screen.getByText("Selected contract").closest("div");
+    expect(selectedContract).not.toBeNull();
+    expect(within(selectedContract as HTMLElement).getByText("0xbbbb...bbbb")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Copy Base contract address" })[0]);
+
+    expect(writeText).toHaveBeenCalledWith("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+  });
+
   it("clears the contract-copy feedback timer on unmount", () => {
     vi.useFakeTimers();
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");

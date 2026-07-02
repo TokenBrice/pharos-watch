@@ -3644,6 +3644,17 @@
     "description": "The mobile chain-button state `openChain` stores only the chain id, but the component's own comment (lines 31-32) acknowledges \"some coins deploy twice on one chain\". zarp-zarp has 2 Solana contracts (verified in the data). Buttons are keyed `${c.chain}-${c.address}` (line 82) yet `isOpen={openChain === c.chain}` highlights BOTH Solana buttons, and `contracts.find((c) => c.chain === openChain)` (line 56) always resolves the FIRST Solana deployment — tapping the second Solana button shows the first contract's address in the \"Selected contract\" row. The copiedContract state was already fixed for exactly this case; the openChain state was not.",
     "recommendation": "Key the open state by `${chain}:${address}` (mirroring copiedContract) and compare per-contract. Only affects coins with duplicate-chain deployments (currently one), so the change is behavior-preserving everywhere else.",
     "estImpact": "correct address selection on dual-deployment coins"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the mobile contract selector to track the selected deployment by `chain:address` instead of chain alone, so duplicate-chain deployments open and copy the exact selected address.",
+    "validation": [
+     "npx vitest run src/components/__tests__/key-info-card.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/key-info-card/contract-deployments.tsx src/components/__tests__/key-info-card.test.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a duplicate-chain regression that selects the second Base deployment and verifies the selected row and copy action use the second address."
    }
   },
   {
