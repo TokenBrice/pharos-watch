@@ -8,7 +8,7 @@ import {
   loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
-import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadOk, type StablecoinsCacheLoadResult } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { ReserveSlice } from "@shared/types/core";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
@@ -29,6 +29,10 @@ export interface ReportCardsSnapshotInputs {
   liquidityStale: boolean;
   redemptionStale: boolean;
   inputFreshness: ReportCardsInputFreshness;
+}
+
+export interface LoadReportCardsSnapshotInputsOptions {
+  preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
 }
 
 const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
@@ -64,7 +68,10 @@ function buildFreshnessEntry(
   };
 }
 
-export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<ReportCardsSnapshotInputs> {
+export async function loadReportCardsSnapshotInputs(
+  db: D1Database,
+  options: LoadReportCardsSnapshotInputsOptions = {},
+): Promise<ReportCardsSnapshotInputs> {
   const [
     stablecoinsCachedResult,
     bluechipCachedResult,
@@ -72,7 +79,9 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
     redemptionBackstopMapResult,
     liveReserveMapResult,
   ] = await Promise.allSettled([
-    loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
+    options.preloadedStablecoinsCache
+      ? Promise.resolve(options.preloadedStablecoinsCache)
+      : loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
     getCache(db, "bluechip-ratings"),
     loadDexLiquiditySnapshot(db),
     loadRedemptionBackstopSnapshot(db),

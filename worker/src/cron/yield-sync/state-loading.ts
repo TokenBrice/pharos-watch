@@ -1,9 +1,10 @@
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { getCache, setCacheIfNewer } from "../../lib/db-cache";
+import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
   computeSafetyScoresSnapshot,
   type SafetyScoresResultMap,
 } from "../../lib/safety-scores";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronStageContext } from "../shared/stage-contracts";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -75,8 +76,12 @@ async function loadYieldSupplementalCandidates(
   let degradedRequiredFamilyCaches = 0;
   let latestFamilyUpdatedAt: number | null = null;
 
+  const familyCacheRows = await getCaches(
+    db,
+    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
+  );
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
-    const cachedFamily = await getCache(db, getYieldSupplementalFamilyCacheKey(family));
+    const cachedFamily = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     if (!cachedFamily) continue;
     const requiredFamily = requiredFamilyKeys.has(family);
     if (requiredFamily) requiredFamilyCacheRows += 1;
@@ -274,12 +279,27 @@ export async function loadYieldSyncState(params: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   etherscanApiKey?: string | null;
 }): Promise<YieldSyncLoadedState> {
-  const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(params.db, params.signal);
-  const { candidates: supplementalCandidates, meta: supplementalMeta } = await loadYieldSupplementalCandidates(
-    params.db,
-    params.startSec,
-  );
-  const onChainHealthCache = await getCache(params.db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY);
+  const [
+    dlPoolsResult,
+    supplementalResult,
+    onChainHealthCache,
+    riskFreeRates,
+    stablecoinsCacheRow,
+  ] = await Promise.all([
+    loadDlStablecoinPools(params.db, params.signal),
+    loadYieldSupplementalCandidates(params.db, params.startSec),
+    getCache(params.db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY),
+    loadRiskFreeRateRegistry(params.db),
+    getCache(params.db, "stablecoins"),
+  ]);
+  const { pools: dlPools, meta: dlPoolsMeta } = dlPoolsResult;
+  const { candidates: supplementalCandidates, meta: supplementalMeta } = supplementalResult;
+  const stablecoinsCache = await loadStablecoinsCache(params.db, {
+    mode: "strict",
+    contract: "published",
+    allowLegacyArray: false,
+    preloadedCache: stablecoinsCacheRow,
+  });
   const onChainHealthState = onChainHealthCache
     ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
     : getDefaultDeterministicOnChainHealthState();
@@ -292,7 +312,7 @@ export async function loadYieldSyncState(params: {
       ? Math.max(0, onChainHealthState.cooldownUntil - params.startSec)
       : 0;
   const onChainSkippedDueToCooldown = onChainCooldownActive;
-  const onChainFetchResult = onChainSkippedDueToCooldown
+  const onChainFetchResultPromise = onChainSkippedDueToCooldown
     ? {
         rates: new Map<string, { rate: number }>(),
         failureBreakdown: null as Record<string, number> | null,
@@ -301,7 +321,16 @@ export async function loadYieldSyncState(params: {
         explorerAttemptedCount: 0,
         explorerResolvedCount: 0,
       }
-    : await fetchOnChainRates(params.signal, params.chainRpcs, params.etherscanApiKey);
+    : fetchOnChainRates(params.signal, params.chainRpcs, params.etherscanApiKey);
+  const safetySnapshotPromise = computeSafetyScoresSnapshot(params.db, {
+    includeNavTokens: true,
+    outputMode: "map",
+    preloadedStablecoinsCache: stablecoinsCache,
+  });
+  const [onChainFetchResult, safetySnapshot] = await Promise.all([
+    onChainFetchResultPromise,
+    safetySnapshotPromise,
+  ]);
   const {
     rates: onChainRates,
     failureBreakdown: onChainFailures,
@@ -310,25 +339,18 @@ export async function loadYieldSyncState(params: {
     explorerAttemptedCount: onChainExplorerAttemptedCount = 0,
     explorerResolvedCount: onChainExplorerResolvedCount = 0,
   } = onChainFetchResult;
-  const riskFreeRates = await loadRiskFreeRateRegistry(params.db);
   const riskFreeRateMeta = riskFreeRates.USD;
 
   const stablecoinSupplyById = new Map<string, number>();
-  const stablecoinsCache = await getCache(params.db, "stablecoins");
-  if (stablecoinsCache?.value) {
+  if (stablecoinsCacheRow?.value) {
     try {
-      for (const [id, supplyUsd] of buildStablecoinSupplyMapFromCacheValue(stablecoinsCache.value)) {
+      for (const [id, supplyUsd] of buildStablecoinSupplyMapFromCacheValue(stablecoinsCacheRow.value)) {
         stablecoinSupplyById.set(id, supplyUsd);
       }
     } catch (error) {
       console.warn("[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
     }
   }
-
-  const safetySnapshot = await computeSafetyScoresSnapshot(params.db, {
-    includeNavTokens: true,
-    outputMode: "map",
-  });
   const safetyScores = safetySnapshot.scores;
   const safetyCoverageRatio = safetySnapshot.coverageRatio;
   const safetySnapshotDegraded =

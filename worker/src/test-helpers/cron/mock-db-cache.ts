@@ -3,7 +3,7 @@
  *
  * Captures the common shape used inline by `sync-yield-data.test.ts`,
  * `sync-stablecoins.test.ts`, and `dispatch-telegram-alerts.test.ts`:
- * benign no-op stubs for `getCache`/`setCache`/`setCacheMany`/`deleteCache`/
+ * benign no-op stubs for `getCache`/`getCaches`/`setCache`/`setCacheMany`/`deleteCache`/
  * `setCacheIfNewer`/`writeFreshnessSentinel`, returned as `vi.fn()` mocks so tests can
  * override per-call via `vi.mocked(getCache).mockImplementation(...)`.
  *
@@ -17,6 +17,8 @@ import type { Mock } from "vitest";
 export interface MockDbCacheOptions {
   /** Optional pre-built spy for `getCache`. Defaults to `vi.fn(async () => null)`. */
   getCacheFn?: Mock;
+  /** Optional pre-built spy for `getCaches`. Defaults to iterating `getCacheFn`. */
+  getCachesFn?: Mock;
   /** Optional pre-built spy for `setCache`. Defaults to `vi.fn(async () => {})`. */
   setCacheFn?: Mock;
   /** Optional pre-built spy for `setCacheMany`. Defaults to forwarding entries through `setCacheFn`. */
@@ -31,6 +33,7 @@ export interface MockDbCacheOptions {
 
 export interface MockDbCacheExports {
   getCache: Mock;
+  getCaches: Mock;
   setCache: Mock;
   setCacheMany: Mock;
   deleteCache: Mock;
@@ -53,9 +56,20 @@ export interface MockDbCacheExports {
  *   }));
  */
 export function mockDbCache(options: MockDbCacheOptions = {}): MockDbCacheExports {
+  const getCache = options.getCacheFn ?? vi.fn(async () => null);
   const setCache = options.setCacheFn ?? vi.fn(async () => {});
   return {
-    getCache: options.getCacheFn ?? vi.fn(async () => null),
+    getCache,
+    getCaches:
+      options.getCachesFn ??
+      vi.fn(async (db: D1Database, keys: readonly string[]) => {
+        const rowsByKey = new Map<string, { value: string; updatedAt: number }>();
+        for (const key of keys) {
+          const row = await getCache(db, key);
+          if (row) rowsByKey.set(key, row);
+        }
+        return rowsByKey;
+      }),
     setCache,
     setCacheMany:
       options.setCacheManyFn ??

@@ -1,4 +1,4 @@
-import { batchExecute } from "./db";
+import { batchExecute, buildInClause } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 import { throwIfAborted } from "./abort";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -18,6 +18,27 @@ export async function getCache(db: D1Database, key: string): Promise<{ value: st
   );
   if (!row) return null;
   return { value: row.value, updatedAt: row.updated_at };
+}
+
+export async function getCaches(
+  db: D1Database,
+  keys: readonly string[],
+): Promise<Map<string, { value: string; updatedAt: number }>> {
+  const uniqueKeys = [...new Set(keys)];
+  const rowsByKey = new Map<string, { value: string; updatedAt: number }>();
+  if (uniqueKeys.length === 0) return rowsByKey;
+
+  const keyClause = buildInClause(uniqueKeys);
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${keyClause.sql})`)
+      .bind(...keyClause.binds)
+      .all<{ key: string; value: string; updated_at: number }>(),
+  );
+  for (const row of rows.results ?? []) {
+    rowsByKey.set(row.key, { value: row.value, updatedAt: row.updated_at });
+  }
+  return rowsByKey;
 }
 
 /**

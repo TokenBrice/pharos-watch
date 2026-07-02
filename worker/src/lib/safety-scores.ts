@@ -3,6 +3,7 @@ import {
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
 } from "./report-cards-snapshot";
+import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";
 
 interface SafetyResult {
   score: number;
@@ -21,7 +22,11 @@ export interface SafetyGradeRow {
 export interface ComputeSafetyScoresOptions {
   includeNavTokens?: boolean;
   outputMode?: "map" | "full-grades";
+  preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
 }
+
+type ComputeSafetyScoresMapOptions = Omit<ComputeSafetyScoresOptions, "outputMode"> & { outputMode: "map" };
+type ComputeSafetyScoresFullOptions = Omit<ComputeSafetyScoresOptions, "outputMode"> & { outputMode: "full-grades" };
 
 export type SafetyScoresResultMap = {
   kind: "ok" | "degraded";
@@ -112,11 +117,11 @@ function toFullResult(
  */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
-  options: { includeNavTokens?: boolean; outputMode: "map" },
+  options: ComputeSafetyScoresMapOptions,
 ): Promise<SafetyScoresResultMap>;
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
-  options: { includeNavTokens?: boolean; outputMode: "full-grades" },
+  options: ComputeSafetyScoresFullOptions,
 ): Promise<SafetyScoresResultFull>;
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
@@ -130,7 +135,9 @@ export async function computeSafetyScoresSnapshot(
   const allGrades: SafetyGradeRow[] = [];
 
   try {
-    const snapshot = await buildReportCardsSnapshot(db);
+    const snapshot = options.preloadedStablecoinsCache
+      ? await buildReportCardsSnapshot(db, { preloadedStablecoinsCache: options.preloadedStablecoinsCache })
+      : await buildReportCardsSnapshot(db);
     for (const card of snapshot.cards) {
       if (card.isDefunct) continue;
       if (!includeNavTokens && card.rawInputs.navToken) continue;

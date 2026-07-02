@@ -187,7 +187,7 @@ vi.mock("../../lib/constants", () => ({
 
 import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
-import { getCache, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
+import { getCache, getCaches, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
@@ -212,6 +212,44 @@ function makeDb() {
     { match: "depeg_events", rows: [] },
     { match: "dex_liquidity", rows: [] },
   ]);
+}
+
+function makeStablecoinsCacheValue(): string {
+  const nowSec = Math.floor(Date.now() / 1000);
+  return JSON.stringify({
+    peggedAssets: [
+      {
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        geckoId: "usd-coin",
+        pegType: "peggedUSD",
+        pegMechanism: "fiat-backed",
+        price: 1,
+        priceSource: "defillama",
+        priceConfidence: "high",
+        priceUpdatedAt: nowSec,
+        priceObservedAt: nowSec,
+        priceObservedAtMode: "upstream",
+        priceSyncedAt: nowSec,
+        consensusSources: [],
+        agreeSources: [],
+        circulating: { peggedUSD: 42_000_000 },
+        circulatingPrevDay: { peggedUSD: 41_000_000 },
+        circulatingPrevWeek: { peggedUSD: 40_000_000 },
+        circulatingPrevMonth: { peggedUSD: 39_000_000 },
+        chainCirculating: {
+          Ethereum: {
+            current: 42_000_000,
+            circulatingPrevDay: 41_000_000,
+            circulatingPrevWeek: 40_000_000,
+            circulatingPrevMonth: 39_000_000,
+          },
+        },
+        chains: ["Ethereum"],
+      },
+    ],
+  });
 }
 
 function makeCacheWriteFailureDb(error: Error) {
@@ -322,6 +360,14 @@ describe("syncYieldData", () => {
     for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
+    vi.mocked(getCaches).mockReset().mockImplementation(async (db, keys) => {
+      const rowsByKey = new Map<string, { value: string; updatedAt: number }>();
+      for (const key of keys) {
+        const row = await getCache(db, key);
+        if (row) rowsByKey.set(key, row);
+      }
+      return rowsByKey;
+    });
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
     vi.mocked(writeFreshnessSentinel).mockReset().mockResolvedValue(undefined);
@@ -386,6 +432,36 @@ describe("syncYieldData", () => {
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
     expect(writeFreshnessSentinel).toHaveBeenCalledWith(db, "yield-data", Math.floor(Date.now() / 1000), undefined);
+  });
+
+  it("reuses the stablecoins cache load for supply gates and safety scores", async () => {
+    const db = makeDb();
+    const updatedAt = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") {
+        return { value: makeStablecoinsCacheValue(), updatedAt };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const stablecoinsReads = vi.mocked(getCache).mock.calls.filter((call) => call[1] === "stablecoins");
+    const safetyCalls = vi.mocked(safetyScoresModule.computeSafetyScoresSnapshot).mock.calls;
+    const safetyCall = safetyCalls[safetyCalls.length - 1];
+
+    expect(stablecoinsReads).toHaveLength(1);
+    expect(safetyCall?.[0]).toBe(db);
+    expect(safetyCall?.[1]).toMatchObject({
+      includeNavTokens: true,
+      outputMode: "map",
+      preloadedStablecoinsCache: {
+        kind: "ok",
+        updatedAt,
+      },
+    });
   });
 
   it("reports writer-pause progress metadata before returning", async () => {
@@ -779,6 +855,13 @@ describe("syncYieldData", () => {
       (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
     );
     expect(supplementalRow).toBeDefined();
+    expect(vi.mocked(getCaches)).toHaveBeenCalledWith(
+      db,
+      expect.arrayContaining([
+        "yield:supplemental-sources:v1:morpho",
+        "yield:supplemental-sources:v1:beefy",
+      ]),
+    );
   });
 
   it("loads valid supplemental family caches even when another family cache is malformed", async () => {

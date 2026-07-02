@@ -13,6 +13,7 @@ import {
   loadReportCardsSnapshotInputs,
   type ReportCardsInputFreshness,
 } from "./report-cards-snapshot-inputs";
+import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -63,11 +64,15 @@ export interface BuildReportCardsSnapshotOptions {
    * also invoked from several read paths that must not perform D1 writes.
    */
   publishPegAnalytics?: boolean;
+  preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
 }
 
 export async function buildReportCardsSnapshot(
   db: D1Database,
-  { publishPegAnalytics = false }: BuildReportCardsSnapshotOptions = {},
+  {
+    publishPegAnalytics = false,
+    preloadedStablecoinsCache,
+  }: BuildReportCardsSnapshotOptions = {},
 ): Promise<ReportCardsSnapshot> {
   const {
     stablecoinsCached,
@@ -78,7 +83,7 @@ export async function buildReportCardsSnapshot(
     liquidityStale,
     redemptionStale,
     inputFreshness,
-  } = await loadReportCardsSnapshotInputs(db);
+  } = await loadReportCardsSnapshotInputs(db, { preloadedStablecoinsCache });
 
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
   const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;

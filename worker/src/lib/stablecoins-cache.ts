@@ -65,6 +65,7 @@ export interface LoadStablecoinsCacheOptions {
   mode?: "strict" | "lenient";
   contract?: StablecoinsCacheContract;
   allowLegacyArray?: boolean;
+  preloadedCache?: Awaited<ReturnType<typeof getCache>>;
 }
 
 interface StablecoinsCacheDecodePayload {
@@ -202,8 +203,11 @@ export async function loadStablecoinsCache(
   const contract = options.contract ?? "critical-fields";
   const allowLegacyArray = options.allowLegacyArray ?? false;
   const decodeMode: JsonDecodeMode = mode === "lenient" ? "degraded" : "strict";
+  const cacheRow = options.preloadedCache !== undefined
+    ? options.preloadedCache
+    : await getCache(db, "stablecoins");
   const decoded = decodeCachedJson<StablecoinsCacheDecodePayload, StablecoinsCacheFailureReason>(
-    await getCache(db, "stablecoins"),
+    cacheRow,
     {
       mode: decodeMode,
       missingReason: "missing-cache",

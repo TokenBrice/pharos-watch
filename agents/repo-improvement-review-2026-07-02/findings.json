@@ -6731,6 +6731,19 @@
      "worker/src/lib/report-cards-snapshot-inputs.ts",
      "worker/src/lib/stablecoins-cache.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added a retried bulk cache read helper for supplemental source-family rows, pipelined independent yield-sync state loads, and reused the single loaded stablecoins cache row for supply gates plus safety/report-card snapshot inputs.",
+    "validation": [
+     "rg -n \"for \\\\(const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS\\\\)|await getCache\\\\(db, getYieldSupplementalFamilyCacheKey|getCaches\\\\(\" worker/src/cron/yield-sync/state-loading.ts worker/src/lib/db-cache.ts worker/src/cron/__tests__/sync-yield-data.test.ts",
+     "npx vitest run worker/src/cron/__tests__/sync-yield-data.test.ts worker/src/lib/__tests__/safety-scores.test.ts worker/src/lib/__tests__/report-cards-snapshot.test.ts worker/src/lib/__tests__/db-utils.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "git diff --check -- worker/src/cron/__tests__/sync-yield-data.test.ts worker/src/cron/yield-sync/state-loading.ts worker/src/lib/__tests__/report-cards-snapshot.test.ts worker/src/lib/__tests__/safety-scores.test.ts worker/src/lib/report-cards-snapshot-inputs.ts worker/src/lib/report-cards-snapshot.ts worker/src/lib/safety-scores.ts worker/src/lib/stablecoins-cache.ts worker/src/lib/db-cache.ts worker/src/test-helpers/cron/mock-db-cache.ts"
+    ],
+    "notes": "Existing safety/report-card callers keep their default behavior unless a preloaded stablecoins cache result is supplied. The supplemental family cache order is preserved while replacing eight sequential D1 reads with one bound `WHERE key IN` query."
    }
   },
   {

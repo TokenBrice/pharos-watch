@@ -7,6 +7,7 @@ import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backst
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { PegSummaryCoin } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
 
 const loadRedemptionBackstopSnapshotMock = vi.hoisted(() => vi.fn());
 
@@ -257,6 +258,30 @@ describe("buildReportCardsSnapshot", () => {
     ]);
 
     await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
+  });
+
+  it("uses a preloaded stablecoins cache without querying the cache row again", async () => {
+    const preloadedStablecoinsCache: StablecoinsCacheLoadOk = {
+      kind: "ok",
+      payload: {
+        peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+      },
+      updatedAt: nowSec,
+    };
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["bluechip-ratings"],
+        rows: [],
+        first: { value: "{}", updated_at: nowSec },
+      },
+      { match: "dex_liquidity", rows: [] },
+    ], { requireMatch: true });
+
+    const snapshot = await buildReportCardsSnapshot(db, { preloadedStablecoinsCache });
+
+    expect(snapshot.updatedAt).toBe(nowSec);
+    expect(db.getHistory().some((entry) => entry.binds[0] === "stablecoins")).toBe(false);
   });
 
   it("returns cards + methodology + dependencyGraph + updatedAt", async () => {

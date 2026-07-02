@@ -80,6 +80,7 @@ vi.mock("../report-cards-snapshot", () => ({
 }));
 
 import { computeSafetyScoresSnapshot } from "../safety-scores";
+import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
 
 describe("computeSafetyScoresSnapshot", () => {
   let db: D1Database;
@@ -117,6 +118,22 @@ describe("computeSafetyScoresSnapshot", () => {
       { id: "usdc-circle", symbol: "BBB", grade: "B+", score: 82, pegScore: 91, liqScore: 84 },
       { id: "ust-terra", symbol: "NAV", grade: "A", score: 95, pegScore: null, liqScore: 90 },
     ]);
+  });
+
+  it("passes a preloaded stablecoins cache through to the report-card builder", async () => {
+    const preloadedStablecoinsCache: StablecoinsCacheLoadOk = {
+      kind: "ok",
+      payload: { peggedAssets: [] },
+      updatedAt: 123,
+    };
+
+    await computeSafetyScoresSnapshot(db, {
+      includeNavTokens: true,
+      outputMode: "map",
+      preloadedStablecoinsCache,
+    });
+
+    expect(buildReportCardsSnapshotMock).toHaveBeenCalledWith(db, { preloadedStablecoinsCache });
   });
 
   it("returns degraded result when report-card snapshot build fails", async () => {
