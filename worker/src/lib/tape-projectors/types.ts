@@ -46,6 +46,57 @@ export interface ResolvedProjectorOptions {
   dryRun: boolean;
 }
 
+export interface TieExpansionSourceQuery<T> {
+  selectSql: string;
+  fromSql: string;
+  timeColumn: string;
+  timePredicatePrefix?: string;
+  trailingWhereSql?: string;
+  trailingBinds?: readonly unknown[];
+  orderBySql: string;
+  since: number;
+  until: number | null;
+  limit: number;
+  getTime: (row: T) => number | null | undefined;
+}
+
+function buildTieExpansionSql<T>(
+  query: TieExpansionSourceQuery<T>,
+  includeUntil: boolean,
+  includeLimit: boolean,
+): string {
+  const untilClause = includeUntil ? ` AND ${query.timeColumn} <= ?` : "";
+  const limitClause = includeLimit ? "\n                 LIMIT ?" : "";
+  return `${query.selectSql}
+                 FROM ${query.fromSql}
+                 WHERE ${query.timePredicatePrefix ?? ""}${query.timeColumn} > ?${untilClause}${query.trailingWhereSql ?? ""}
+                 ORDER BY ${query.orderBySql}${limitClause}`;
+}
+
+export async function fetchRowsWithTieExpansion<T>(
+  db: D1Database,
+  query: TieExpansionSourceQuery<T>,
+): Promise<T[]> {
+  const trailingBinds = query.trailingBinds ?? [];
+  const sql = buildTieExpansionSql(query, query.until != null, true);
+  const binds: unknown[] = query.until != null
+    ? [query.since, query.until, ...trailingBinds, query.limit]
+    : [query.since, ...trailingBinds, query.limit];
+  const result = await db.prepare(sql).bind(...binds).all<T>();
+  const rows = result.results ?? [];
+  if (rows.length < query.limit) return rows;
+
+  const cutoff = query.getTime(rows[rows.length - 1]!);
+  if (cutoff == null) return rows;
+  const expandedUntil = query.until == null ? cutoff : Math.min(query.until, cutoff);
+  const expandedSql = buildTieExpansionSql(query, true, false);
+  const expanded = await db
+    .prepare(expandedSql)
+    .bind(query.since, expandedUntil, ...trailingBinds)
+    .all<T>();
+  return expanded.results ?? [];
+}
+
 /**
  * Resolve the watermark-based defaults shared by every watermark projector:
  * read the persisted watermark for `cursorKey`, then apply the operator

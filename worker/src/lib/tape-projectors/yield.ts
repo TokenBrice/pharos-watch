@@ -31,7 +31,12 @@ import {
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 // Signals that materially impair confidence in the published yield. Anything
 // else (yield-spike, yield-divergence, reward-heavy) is a notice-level signal.
@@ -96,27 +101,17 @@ async function fetchYieldHistorySince(
   until: number | null,
   limit: number,
 ): Promise<YieldHistoryRow[]> {
-  const untilClause = until != null ? " AND recorded_at <= ?" : "";
-  const sql = `SELECT stablecoin_id, source_key, recorded_at, warning_signals
-                 FROM yield_history
-                 WHERE is_best = 1 AND recorded_at > ?${untilClause}
-                 ORDER BY recorded_at ASC, stablecoin_id ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
-  const result = await db.prepare(sql).bind(...binds).all<YieldHistoryRow>();
-  const rows = result.results ?? [];
-  if (rows.length < limit) return rows;
-
-  const cutoff = rows[rows.length - 1]?.recorded_at;
-  if (cutoff == null) return rows;
-  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
-  const expandedUntilClause = " AND recorded_at <= ?";
-  const expandedSql = `SELECT stablecoin_id, source_key, recorded_at, warning_signals
-                         FROM yield_history
-                         WHERE is_best = 1 AND recorded_at > ?${expandedUntilClause}
-                         ORDER BY recorded_at ASC, stablecoin_id ASC`;
-  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<YieldHistoryRow>();
-  return expanded.results ?? [];
+  return fetchRowsWithTieExpansion<YieldHistoryRow>(db, {
+    selectSql: "SELECT stablecoin_id, source_key, recorded_at, warning_signals",
+    fromSql: "yield_history",
+    timePredicatePrefix: "is_best = 1 AND ",
+    timeColumn: "recorded_at",
+    orderBySql: "recorded_at ASC, stablecoin_id ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.recorded_at,
+  });
 }
 
 /**
@@ -270,27 +265,16 @@ async function fetchYieldDecisionsSince(
   until: number | null,
   limit: number,
 ): Promise<YieldDecisionRow[]> {
-  const untilClause = until != null ? " AND created_at <= ?" : "";
-  const sql = `SELECT stablecoin_id, selected_source_key, selected_score, created_at
-                 FROM yield_source_decisions
-                 WHERE created_at > ?${untilClause}
-                 ORDER BY created_at ASC, stablecoin_id ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
-  const result = await db.prepare(sql).bind(...binds).all<YieldDecisionRow>();
-  const rows = result.results ?? [];
-  if (rows.length < limit) return rows;
-
-  const cutoff = rows[rows.length - 1]?.created_at;
-  if (cutoff == null) return rows;
-  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
-  const expandedUntilClause = " AND created_at <= ?";
-  const expandedSql = `SELECT stablecoin_id, selected_source_key, selected_score, created_at
-                         FROM yield_source_decisions
-                         WHERE created_at > ?${expandedUntilClause}
-                         ORDER BY created_at ASC, stablecoin_id ASC`;
-  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<YieldDecisionRow>();
-  return expanded.results ?? [];
+  return fetchRowsWithTieExpansion<YieldDecisionRow>(db, {
+    selectSql: "SELECT stablecoin_id, selected_source_key, selected_score, created_at",
+    fromSql: "yield_source_decisions",
+    timeColumn: "created_at",
+    orderBySql: "created_at ASC, stablecoin_id ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.created_at,
+  });
 }
 
 async function fetchPriorPysScores(

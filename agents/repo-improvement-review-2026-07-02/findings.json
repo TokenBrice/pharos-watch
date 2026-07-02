@@ -1663,6 +1663,17 @@
      "worker/src/lib/tape-projectors/psi.ts",
      "worker/src/lib/tape-projectors/types.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted the shared watermark scan plus tie-expansion query helper into `tape-projectors/types.ts`, rewired DEWS, yield history/decisions, mint/burn large flows, and score grade scans to use it, and moved PSI onto the shared projector option resolver while preserving its existing sample query semantics.",
+    "validation": [
+     "cd worker && npx vitest run src/lib/tape-projectors/__tests__/dews.test.ts src/lib/tape-projectors/__tests__/yield.test.ts src/lib/tape-projectors/__tests__/mint-burn.test.ts src/lib/tape-projectors/__tests__/score.test.ts src/lib/tape-projectors/__tests__/psi.test.ts",
+     "cd worker && npx vitest run src/lib/tape-projectors/__tests__",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/lib/tape-projectors/dews.ts worker/src/lib/tape-projectors/yield.ts worker/src/lib/tape-projectors/mint-burn.ts worker/src/lib/tape-projectors/score.ts worker/src/lib/tape-projectors/psi.ts worker/src/lib/tape-projectors/types.ts"
+    ]
    }
   },
   {

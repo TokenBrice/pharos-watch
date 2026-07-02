@@ -21,12 +21,11 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId } from "../tape-event-helpers";
 import {
-  getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
 
 const CURSOR_KEY = "psi.band_changed";
 const PSI_SOURCE_URL = "/stability-index/";
@@ -144,11 +143,7 @@ export async function projectPsiBandShifts(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
-  const watermark = await getProjectorWatermark(db, CURSOR_KEY);
-  const since = options?.since ?? watermark;
-  const until = options?.until ?? null;
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
-  const dryRun = options?.dryRun === true;
+  const { since, until, limit, dryRun } = await resolveProjectorOptions(db, CURSOR_KEY, options);
 
   const samples = await fetchSamplesSince(db, since, until, limit);
   if (samples.length === 0) return { projected: 0, advanced: null };

@@ -14,7 +14,12 @@ import {
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 interface SafetyGradeSourceRow {
   stablecoin_id: string;
@@ -37,28 +42,18 @@ async function fetchGradeRowsSince(
   until: number | null,
   limit: number,
 ): Promise<SafetyGradeSourceRow[]> {
-  const untilClause = until != null ? " AND recorded_at <= ?" : "";
-  const sql = `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
-                      methodology_version, rowid as rowid
-                 FROM safety_grade_history
-                 WHERE prev_grade IS NOT NULL AND recorded_at > ?${untilClause}
-                 ORDER BY recorded_at ASC, rowid ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
-  const rowsResult = await db.prepare(sql).bind(...binds).all<SafetyGradeSourceRow>();
-  const rows = rowsResult.results ?? [];
-  if (rows.length < limit) return rows;
-
-  const cutoff = rows[rows.length - 1]?.recorded_at;
-  if (cutoff == null) return rows;
-  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
-  const expandedSql = `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
-                              methodology_version, rowid as rowid
-                         FROM safety_grade_history
-                         WHERE prev_grade IS NOT NULL AND recorded_at > ? AND recorded_at <= ?
-                         ORDER BY recorded_at ASC, rowid ASC`;
-  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<SafetyGradeSourceRow>();
-  return expanded.results ?? [];
+  return fetchRowsWithTieExpansion<SafetyGradeSourceRow>(db, {
+    selectSql: `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
+                      methodology_version, rowid as rowid`,
+    fromSql: "safety_grade_history",
+    timePredicatePrefix: "prev_grade IS NOT NULL AND ",
+    timeColumn: "recorded_at",
+    orderBySql: "recorded_at ASC, rowid ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.recorded_at,
+  });
 }
 
 async function projectScoreByVariant(

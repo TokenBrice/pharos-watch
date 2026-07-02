@@ -32,7 +32,13 @@ import {
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
-import { DEFAULT_BATCH_LIMIT, resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  DEFAULT_BATCH_LIMIT,
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 interface StressSignalRow {
   stablecoin_id: string;
@@ -57,26 +63,16 @@ async function fetchSamplesSince(
   until: number | null,
   limit: number,
 ): Promise<StressSignalRow[]> {
-  const untilClause = until != null ? " AND computed_at <= ?" : "";
-  const sql = `SELECT stablecoin_id, computed_at, score, band
-                 FROM stress_signals
-                 WHERE computed_at > ?${untilClause}
-                 ORDER BY computed_at ASC, stablecoin_id ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
-  const result = await db.prepare(sql).bind(...binds).all<StressSignalRow>();
-  const rows = result.results ?? [];
-  if (rows.length < limit) return rows;
-
-  const cutoff = rows[rows.length - 1]?.computed_at;
-  if (cutoff == null) return rows;
-  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
-  const expandedSql = `SELECT stablecoin_id, computed_at, score, band
-                         FROM stress_signals
-                         WHERE computed_at > ? AND computed_at <= ?
-                         ORDER BY computed_at ASC, stablecoin_id ASC`;
-  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil).all<StressSignalRow>();
-  return expanded.results ?? [];
+  return fetchRowsWithTieExpansion<StressSignalRow>(db, {
+    selectSql: "SELECT stablecoin_id, computed_at, score, band",
+    fromSql: "stress_signals",
+    timeColumn: "computed_at",
+    orderBySql: "computed_at ASC, stablecoin_id ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.computed_at,
+  });
 }
 
 /**

@@ -24,7 +24,12 @@ import {
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 const CURSOR_KEY = "mint_burn.large_flow";
 
@@ -65,38 +70,23 @@ async function fetchLargeFlows(
   // teleportation, not economic mint/burn — exclude them. `review_required`
   // burns are still being classified; emit only confirmed burn types so the
   // tape doesn't surface ambiguous rows.
-  const untilClause = until != null ? " AND timestamp <= ?" : "";
-  const sql = `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
-                      counterparty, timestamp, flow_type, burn_type
-                 FROM mint_burn_events
-                 WHERE timestamp > ?${untilClause}
+  return fetchRowsWithTieExpansion<MintBurnSourceRow>(db, {
+    selectSql: `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
+                      counterparty, timestamp, flow_type, burn_type`,
+    fromSql: "mint_burn_events",
+    timeColumn: "timestamp",
+    trailingWhereSql: `
                    AND amount_usd IS NOT NULL
                    AND amount_usd >= ?
                    AND (flow_type IS NULL OR flow_type != 'bridge_transfer')
-                   AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
-                 ORDER BY timestamp ASC, id ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null
-    ? [since, until, NOTICE_USD, limit]
-    : [since, NOTICE_USD, limit];
-  const result = await db.prepare(sql).bind(...binds).all<MintBurnSourceRow>();
-  const rows = result.results ?? [];
-  if (rows.length < limit) return rows;
-
-  const cutoff = rows[rows.length - 1]?.timestamp;
-  if (cutoff == null) return rows;
-  const expandedUntil = until == null ? cutoff : Math.min(until, cutoff);
-  const expandedSql = `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
-                              counterparty, timestamp, flow_type, burn_type
-                         FROM mint_burn_events
-                         WHERE timestamp > ? AND timestamp <= ?
-                           AND amount_usd IS NOT NULL
-                           AND amount_usd >= ?
-                           AND (flow_type IS NULL OR flow_type != 'bridge_transfer')
-                           AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
-                         ORDER BY timestamp ASC, id ASC`;
-  const expanded = await db.prepare(expandedSql).bind(since, expandedUntil, NOTICE_USD).all<MintBurnSourceRow>();
-  return expanded.results ?? [];
+                   AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')`,
+    trailingBinds: [NOTICE_USD],
+    orderBySql: "timestamp ASC, id ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.timestamp,
+  });
 }
 
 function chainLabel(chainId: string): string {
