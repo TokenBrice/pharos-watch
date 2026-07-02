@@ -6121,6 +6121,17 @@
     "alsoFiles": [
      "src/app/depeg/[event]/page-data.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed sitemap.ts already consumes DEPEG_EVENT_ENTRIES and INDEXABLE_DEPEG_EVENT_ENTRIES from the depeg page-data module, with no local JSON reader or duplicate filters remaining.",
+    "validation": [
+     "rg -n \"readDepegEventEntries|DepegEventSitemapEntry|readFileSync|selectStaticDepegEventPages|selectIndexableDepegEvents|DEPEG_EVENT_ENTRIES|INDEXABLE_DEPEG_EVENT_ENTRIES\" src/app/sitemap.ts",
+     "npx vitest run src/app/__tests__/sitemap-frozen.test.ts",
+     "npm run typecheck",
+     "git diff --check -- agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
