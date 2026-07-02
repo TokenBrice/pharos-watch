@@ -193,7 +193,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
 - `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
-- ... 29 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 28 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
 - `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
 - `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
-- ... 142 more files omitted; use `rg --files src/lib` for the full list.
+- ... 141 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 392 more files omitted; use `rg --files src/components` for the full list.
+- ... 389 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
