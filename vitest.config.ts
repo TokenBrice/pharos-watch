@@ -1,10 +1,18 @@
 import { configDefaults, defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import path from "path";
+import {
+  CRITICAL_TEST_FILES,
+  NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV,
+} from "./scripts/lib/critical-test-files.mjs";
 
 const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
 const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
+// run-noncritical-tests.mjs sets this flag; CLI --exclude cannot express it
+// because project-scoped include lists ignore CLI-level excludes.
+const criticalTestExcludes =
+  process.env[NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV] === "1" ? CRITICAL_TEST_FILES : [];
 const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
 const nodeExecArgv = nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [];
 
@@ -20,19 +28,75 @@ function wasmStubPlugin(): Plugin {
   };
 }
 
+const baseTestExcludes = [
+  ...configDefaults.exclude,
+  ...worktreeExcludes,
+  ".claude/**",
+  "agents/**",
+  ".next/**",
+  "out/**",
+  "coverage/**",
+  "tests/visual/**",
+  ...criticalTestExcludes,
+];
+
+// These node-root suites depend on per-file process isolation (module-level
+// registry/env state); they run in the node-isolated project below instead of
+// forcing isolation back on for the other ~200 functions/scripts/shared files.
+const isolationDependentNodeTests = [
+  "scripts/__tests__/serve-static-export.test.ts",
+  "shared/lib/__tests__/psi-eligible.test.ts",
+  "shared/lib/__tests__/stablecoin-id-registry.test.ts",
+];
+
 export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
     execArgv: nodeExecArgv,
-    exclude: [
-      ...configDefaults.exclude,
-      ...worktreeExcludes,
-      ".claude/**",
-      "agents/**",
-      ".next/**",
-      "out/**",
-      "coverage/**",
-      "tests/visual/**",
+    exclude: baseTestExcludes,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          include: [
+            "functions/**/*.test.?(c|m)[jt]s?(x)",
+            "scripts/**/*.test.?(c|m)[jt]s?(x)",
+            "shared/**/*.test.?(c|m)[jt]s?(x)",
+          ],
+          // Project-level exclude replaces the inherited root list, so the
+          // base excludes (incl. the critical-test env exclusion) must be
+          // spread here explicitly.
+          exclude: [...baseTestExcludes, ...isolationDependentNodeTests],
+          // These pure-node suites don't need per-file process isolation;
+          // reusing workers skips ~200 fork setup/teardown cycles per run.
+          isolate: false,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "node-isolated",
+          include: isolationDependentNodeTests,
+        },
+      },
+      {
+        // Worker suites lean on module-level state (circuit breakers, caches,
+        // D1 stubs) and fail without per-file isolation — verified 2026-07-02
+        // (263 test failures under isolate:false). Keep default isolation.
+        extends: true,
+        test: {
+          name: "worker",
+          include: ["worker/**/*.test.?(c|m)[jt]s?(x)"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "src",
+          include: ["src/**/*.test.?(c|m)[jt]s?(x)"],
+        },
+      },
     ],
     coverage: {
       provider: "v8",

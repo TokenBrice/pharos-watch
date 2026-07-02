@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { getNoncriticalTestGeneratedPrerequisites } from "../lib/automation-registry.mjs";
-import { buildNoncriticalTestArgs } from "../lib/critical-test-files.mjs";
+import { buildNoncriticalTestArgs, NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV } from "../lib/critical-test-files.mjs";
 import { localBin } from "../lib/local-bin.mjs";
 import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
 
@@ -22,6 +22,7 @@ for (const command of generatedPrerequisites) {
 }
 
 const result = spawnSync(localBin("vitest"), withCiVitestArgs(buildNoncriticalTestArgs(process.argv.slice(2))), {
+  env: { ...process.env, [NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV]: "1" },
   stdio: "inherit",
 });
 

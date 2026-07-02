@@ -1,3 +1,5 @@
+import { CRITICAL_FILES } from "./critical-coverage.mjs";
+
 export const CRITICAL_TEST_FILES = [
   "src/lib/__tests__/api-fetch-contracts.test.ts",
   "src/lib/__tests__/critical-invariants.test.ts",
@@ -100,15 +102,20 @@ export function buildCriticalCoverageArgs(extraArgs = []) {
     "run",
     "--coverage",
     "--coverage.thresholds.lines=0",
+    // Scope v8 remapping to the enrolled critical source. Per-file numbers for
+    // the enrolled files are unchanged, but the reporter stops remapping the
+    // rest of the loaded module graph — the heaviest part of this invocation.
+    ...CRITICAL_FILES.map((file) => `--coverage.include=${file}`),
     ...CRITICAL_TEST_FILES,
     ...extraArgs,
   ];
 }
 
+// CLI --exclude flags are silently ignored by project-scoped include lists
+// (vitest test.projects), so the critical-file exclusion is applied inside
+// vitest.config.ts when this env flag is set by run-noncritical-tests.mjs.
+export const NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV = "VITEST_EXCLUDE_CRITICAL_TESTS";
+
 export function buildNoncriticalTestArgs(extraArgs = []) {
-  return [
-    "run",
-    ...CRITICAL_TEST_FILES.flatMap((file) => ["--exclude", file]),
-    ...extraArgs,
-  ];
+  return ["run", ...extraArgs];
 }
