@@ -260,15 +260,10 @@ function resolveBlacklistStatusWithoutExplicitOverride(
   }
 
   const effectiveReserves = options.reserveSlices ?? meta.reserves;
-  const enrichedReserves =
-    effectiveReserves && options.context
-      ? enrichReserveSlicesForBlacklist(effectiveReserves, options.context)
-      : effectiveReserves;
-
-  if (enrichedReserves) {
+  if (effectiveReserves) {
     let directReservePct = 0;
     let possibleReservePct = 0;
-    for (const slice of enrichedReserves) {
+    for (const slice of effectiveReserves) {
       const risk = reserveSliceBlacklistRisk(slice, options.context);
       if (risk === "direct") {
         directReservePct += slice.pct;
@@ -319,6 +314,7 @@ export function resolveBlacklistStatuses(
   );
   const reserveSlicesById = options.reserveSlicesById;
   const maxIterations = metas.length + 1;
+  const statuses = new Map<string, BlacklistStatus>();
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
     const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById);
@@ -330,6 +326,7 @@ export function resolveBlacklistStatuses(
         reserveSlices: reserveSlicesById?.get(meta.id),
         reserveSlicesById,
       });
+      statuses.set(meta.id, status);
       if ((status === true || status === "inherited") && !blacklistableIds.has(meta.id)) {
         blacklistableIds.add(meta.id);
         addedThisPass = true;
@@ -337,14 +334,7 @@ export function resolveBlacklistStatuses(
     }
 
     if (!addedThisPass) {
-      const finalContext: BlacklistResolutionContext = createBlacklistResolutionContext(blacklistableIds, trackedMetaById);
-      return new Map(
-        metas.map((meta) => [meta.id, resolveBlacklistStatus(meta, {
-          context: finalContext,
-          reserveSlices: reserveSlicesById?.get(meta.id),
-          reserveSlicesById,
-        })] as const),
-      );
+      return statuses;
     }
   }
 

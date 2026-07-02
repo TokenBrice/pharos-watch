@@ -3352,6 +3352,18 @@
     "description": "Two redundancies in the same resolver. (1) resolveBlacklistStatusWithoutExplicitOverride (lines 262-281) calls enrichReserveSlicesForBlacklist, then re-runs reserveSliceBlacklistRisk on every enriched slice. Enrichment only sets blacklistable=true on slices whose risk is already 'direct', and the loop's first check is slice.blacklistable === true — so enrichment can never change the loop's classification; every slice's regex battery (18 direct + 19 possible + 12 custody patterns + symbol matchers) runs twice. (2) resolveBlacklistStatuses (lines 339-348): when a pass adds no ids, blacklistableIds was unchanged for the whole pass, so the statuses just computed are already final — yet the code discards them and re-resolves all ~408 coins against an identical finalContext, a full extra O(coins × slices × patterns) pass. Variant coins additionally re-resolve their parent recursively each time.",
     "recommendation": "In resolveBlacklistStatusWithoutExplicitOverride, delete the enrichedReserves computation and iterate effectiveReserves directly (enrichReserveSlicesForBlacklist stays for its real consumer, enrichLiveSlicesForBlacklist). In resolveBlacklistStatuses, accumulate the per-coin statuses into a Map during each pass and return that map when addedThisPass is false, instead of re-resolving. Both are provably behavior-identical: enrichment is a no-op for classification, and on the terminating pass the id set and symbol matchers never changed mid-pass.",
     "estImpact": "~2-3x less regex work per report-card build; -10 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the no-op reserve-slice enrichment from the blacklist classification path and changed bulk blacklist resolution to return the statuses computed during the terminal convergence pass instead of re-resolving every coin against an unchanged final context. `enrichLiveSlicesForBlacklist` keeps the enrichment helper for its real live-slice consumer.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/report-card-blacklist-matchers.test.ts shared/lib/__tests__/report-card-blacklist-authority.test.ts",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "npm run typecheck",
+     "git diff --check -- shared/lib/report-card-blacklist-matchers.ts"
+    ]
    }
   },
   {
