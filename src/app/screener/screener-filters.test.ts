@@ -106,6 +106,17 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "usdc-circle"]);
   });
 
+  it("keeps zero scores when only a max DEWS threshold is active", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMax: 40 };
+    const result = applyFilters([
+      makeRow({ id: "zero", dewsScore: 0 }),
+      makeRow({ id: "inside", dewsScore: 20 }),
+      makeRow({ id: "above-max", dewsScore: 41 }),
+    ], filters);
+
+    expect(result.map((r) => r.id)).toEqual(["zero", "inside"]);
+  });
+
   it("filters by safety grade", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyGrades: ["A"] };
     const result = applyFilters(rows, filters);
@@ -134,7 +145,7 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id).sort()).toEqual(["eurs-stasis", "newcoin"]);
   });
 
-  it("includes rows exactly on DEWS range boundaries", () => {
+  it("excludes rows exactly on active DEWS lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMin: 40, dewsMax: 100 };
     const result = applyFilters([
       makeRow({ id: "below-min", dewsScore: 39 }),
@@ -144,10 +155,10 @@ describe("applyFilters", () => {
       makeRow({ id: "unrated", dewsScore: null }),
     ], filters);
 
-    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-default-max"]);
+    expect(result.map((r) => r.id)).toEqual(["inside", "at-default-max"]);
   });
 
-  it("includes rows exactly on supply range boundaries", () => {
+  it("excludes rows exactly on active supply lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 100, supplyMax: 200 };
     const result = applyFilters([
       makeRow({ id: "below-min", supplyUsd: 99 }),
@@ -157,7 +168,7 @@ describe("applyFilters", () => {
       makeRow({ id: "above-max", supplyUsd: 201 }),
     ], filters);
 
-    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-max"]);
+    expect(result.map((r) => r.id)).toEqual(["inside", "at-max"]);
   });
 
   it("filters by mechanism (multi-select)", () => {

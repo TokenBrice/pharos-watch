@@ -289,7 +289,7 @@ function passesRange(
 ): boolean {
   if (!active) return true;
   if (value == null) return false;
-  return value >= minValue && value <= maxValue;
+  return (minValue > 0 ? value > minValue : value >= minValue) && value <= maxValue;
 }
 
 function passesMinimum(value: number | null | undefined, minValue: number): boolean {

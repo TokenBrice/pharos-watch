@@ -4311,6 +4311,16 @@
     "description": "All eight numeric threshold inputs on /screener render through the same ThresholdField, whose visible affordance and sr-only label are \"greater than\" (screener-toolbar.tsx:395-398). But applyFilters routes DEWS through passesRange (`value >= minValue`, line 292) and supply through the same inclusive check, while the five safety-dimension minimums and mintAuthorityScoreMin go through passesMinimum (`value > minValue`, line 297). Concretely: with the DEWS field set to 50, a coin with dewsScore exactly 50 is shown despite the UI promising strictly-greater; with Resilience set to 50, a coin at exactly 50 is hidden. Same control, opposite boundary semantics.",
     "recommendation": "Pick one semantic and align the other side (making passesRange's lower bound strict matches the rendered '>' and the majority of fields; it changes inclusion only for rows sitting exactly on a user-typed boundary). This alters filter output for boundary values, hence behaviorChange=true — flagging because the current output contradicts the page's own UI labeling, not merely expectation.",
     "estImpact": "boundary-value rows match the advertised '>' semantics"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Screener range filters now apply strict lower-threshold semantics for active DEWS and supply minimums, matching the shared greater-than threshold UI while preserving inclusive max-only behavior.",
+    "validation": [
+     "npx vitest run src/app/screener/screener-filters.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/app/screener/screener-filters.ts src/app/screener/screener-filters.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
