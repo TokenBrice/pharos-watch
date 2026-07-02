@@ -44,6 +44,7 @@ function buildDexScreenerQuotes(
   pairs: DsPair[],
   nowSec: number,
   rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>,
+  batchRejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>,
 ): AddressPriceQuote[] {
   const quotes: AddressPriceQuote[] = [];
   for (const target of targets) {
@@ -61,6 +62,7 @@ function buildDexScreenerQuotes(
     const priceUsd = median(prices);
     if (priceUsd == null) {
       incrementReason(rejectedTargets, "missing-quote");
+      incrementReason(batchRejectedTargets, "missing-quote");
       continue;
     }
     const liquidityUsd = usablePairs.reduce((sum, pair) => sum + (pair.liquidity?.usd ?? 0), 0);
@@ -113,12 +115,13 @@ export async function runDexScreenerAddressProvider(
       let diagnostic = rawDiagnostic;
       if (Array.isArray(json)) {
         const pairs = json.filter(isDsPair);
-        const batchQuotes = buildDexScreenerQuotes(batch, pairs, nowSec, rejectedTargets);
+        const batchRejectedTargets: Partial<Record<PricingProviderRejectionReason, number>> = {};
+        const batchQuotes = buildDexScreenerQuotes(batch, pairs, nowSec, rejectedTargets, batchRejectedTargets);
         quotes.push(...batchQuotes);
         diagnostic.responseRowCount = pairs.length;
         diagnostic.matchedCount = batchQuotes.length;
         diagnostic.resolvedCount = batchQuotes.length;
-        diagnostic.rejectionReasonCounts = Object.keys(rejectedTargets).length ? rejectedTargets : undefined;
+        diagnostic.rejectionReasonCounts = Object.keys(batchRejectedTargets).length ? { ...batchRejectedTargets } : undefined;
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {

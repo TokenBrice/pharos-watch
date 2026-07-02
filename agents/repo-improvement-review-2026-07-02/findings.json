@@ -2366,6 +2366,18 @@
     "alsoFiles": [
      "worker/src/lib/address-price-providers/birdeye.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Split DexScreener address rejection accounting into run-level and batch-local maps, copying batch-local rejection counts into each diagnostic so diagnostics no longer alias the cumulative accumulator.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/address-price-providers.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/lib/address-price-providers/dexscreener.ts worker/src/lib/__tests__/address-price-providers.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a regression proving diagnostic rejection counts are a snapshot copy and do not mutate when the run-level rejectedTargets object changes later."
    }
   },
   {

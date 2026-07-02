@@ -418,6 +418,49 @@ describe("address price providers", () => {
     expect(result.quotes[0]?.priceUsd).toBe(1.0);
   });
 
+  it("snapshots DexScreener address rejection counts on diagnostics", async () => {
+    const matchedTarget = makeDexScreenerTarget(0, {
+      stablecoinId: "matched",
+      symbol: "USDV",
+      address: "0x0000000000000000000000000000000000000001",
+    });
+    const missingTarget = makeDexScreenerTarget(1, {
+      stablecoinId: "missing",
+      symbol: "USDV",
+      address: "0x0000000000000000000000000000000000000003",
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify([
+      {
+        chainId: "base",
+        dexId: "uniswap",
+        pairAddress: "0xpair1",
+        baseToken: { address: matchedTarget.address, name: "Verified USD", symbol: "USDV" },
+        quoteToken: { address: "0x0000000000000000000000000000000000000002", name: "USD Coin", symbol: "USDC" },
+        priceUsd: "1.00",
+        priceNative: null,
+        volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+        liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+        pairCreatedAt: null,
+      },
+    ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDexScreenerAddressProvider(
+      [matchedTarget, missingTarget],
+      undefined,
+      1_700_000_000,
+      Date.now() + 60_000,
+    );
+
+    const diagnosticRejections = result.diagnostics[0]?.rejectionReasonCounts;
+    expect(result.rejectedTargets).toEqual({ "missing-quote": 1 });
+    expect(diagnosticRejections).toEqual({ "missing-quote": 1 });
+    expect(diagnosticRejections).not.toBe(result.rejectedTargets);
+
+    result.rejectedTargets["missing-quote"] = 99;
+    expect(diagnosticRejections).toEqual({ "missing-quote": 1 });
+  });
+
   it("does not continue DexScreener address batches after an upstream refusal", async () => {
     const fetchMock = vi.fn(async () => new Response("forbidden", { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
