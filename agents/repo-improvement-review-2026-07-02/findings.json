@@ -3975,6 +3975,17 @@
     "description": "Each of the three TELEGRAM_ACTIONS entries carries a heroButtonLabel (\"Start PharosWatchBot\", \"Daily Digest\", \"Community\"), but a repo-wide grep finds no consumer — the page uses cardButtonLabel (SurfaceCard) and finalButtonLabel (final CTA row) only. The hero section was evidently redesigned to use RECOMMENDED_SETUP_DEEP_LINK buttons instead, leaving these fields orphaned.",
     "recommendation": "Remove the heroButtonLabel property from the three action objects. Behavior-preserving: no code path reads the field.",
     "estImpact": "-3 LOC, prevents stale copy edits landing in a dead field"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `heroButtonLabel` fields from the Telegram action content objects; the page continues to use `cardButtonLabel` and `finalButtonLabel`.",
+    "validation": [
+     "rg -n \"heroButtonLabel\" src/app/pharoswatchbot docs || true",
+     "npx vitest run src/app/pharoswatchbot/page.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/app/pharoswatchbot/telegram-content.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

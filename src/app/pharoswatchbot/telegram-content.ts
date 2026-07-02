@@ -11,7 +11,6 @@ export const TELEGRAM_ACTIONS = [
     href: "https://t.me/PharosWatchBot",
     description:
       "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, and pre-launch assets going live. Tune thresholds, set quiet hours, snooze on the fly.",
-    heroButtonLabel: "Start PharosWatchBot",
     cardButtonLabel: "Open Bot",
     finalButtonLabel: "Start Bot",
     showArchiveLink: false,
@@ -24,7 +23,6 @@ export const TELEGRAM_ACTIONS = [
     href: "https://t.me/pharoswatch",
     description:
       "Optional daily recap, AI-written from the same signals — peg deviations, supply shifts, liquidity changes, and what changed overnight.",
-    heroButtonLabel: "Daily Digest",
     cardButtonLabel: "Join Channel",
     finalButtonLabel: "Digest",
     showArchiveLink: true,
@@ -37,7 +35,6 @@ export const TELEGRAM_ACTIONS = [
     href: "https://t.me/pharoswatchers",
     description:
       "Optional open channel where watchers compare notes between digests — fresh depegs, risk signals, and live commentary.",
-    heroButtonLabel: "Community",
     cardButtonLabel: "Join Community",
     finalButtonLabel: "Community",
     showArchiveLink: false,
