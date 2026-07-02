@@ -1775,6 +1775,17 @@
     "description": "worker/src/api/telegram-webhook.ts (the module's only production importer) imports only formatAdministratorMentions and getCachedChatAdministrators. getCachedChatMember (lines 74-126, ~52 LOC: per-user cache read, getChatMember fetch, normalization, cache write) plus its private helper chatMemberCacheKey (line 35) have no callers outside the test file anywhere in the repo. The single-member lookup was evidently superseded by the getChatAdministrators bulk path for the setup flow.",
     "recommendation": "Delete getCachedChatMember and chatMemberCacheKey (and the exported TelegramChatMemberStatus/TelegramChatMember types stay, since getCachedChatAdministrators uses them). Behavior-preserving: the telegram:chat-member:* cache keys it wrote are simply never written or read again.",
     "estImpact": "-55 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused cached single-member lookup and cache-key helper from `telegram-chat-member.ts`, leaving the administrator cache path intact and clearing stale test references.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/telegram-chat-member.test.ts worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"getCachedChatMember|chatMemberCacheKey\" worker/src shared src functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "Webhook authorization continues to call Telegram getChatMember directly through its own auth helper; only the uncalled cache wrapper was removed."
    }
   },
   {

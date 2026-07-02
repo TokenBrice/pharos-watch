@@ -1036,7 +1036,7 @@ describe("handleCallbackQuery", () => {
           first: null,
         },
       ]);
-      // getCachedChatMember fetches getChatMember from Telegram when cache misses.
+      // Webhook auth fetches getChatMember from Telegram when cache misses.
       fetchSpy.mockImplementation(async (url) => {
         if (String(url).includes("getChatMember")) {
           return new Response(

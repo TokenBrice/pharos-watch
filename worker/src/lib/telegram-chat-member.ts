@@ -32,10 +32,6 @@ interface TelegramApiResponse<T> {
   result?: T;
 }
 
-function chatMemberCacheKey(chatId: string, userId: string): string {
-  return `telegram:chat-member:${chatId}:${userId}`;
-}
-
 function chatAdminsCacheKey(chatId: string): string {
   return `telegram:chat-admins:${chatId}`;
 }
@@ -69,60 +65,6 @@ function normalizeMember(raw: TelegramChatMemberResult, fallbackUserId: string):
     firstName: raw.user?.first_name ?? null,
     isAnonymous: raw.is_anonymous === true,
   };
-}
-
-export async function getCachedChatMember(
-  db: D1Database,
-  botToken: string,
-  chatId: string,
-  userId: string,
-): Promise<TelegramChatMember | null> {
-  const cacheKey = chatMemberCacheKey(chatId, userId);
-  const cached = await getCache(db, cacheKey);
-  if (cached && isFresh(cached.updatedAt)) {
-    try {
-      const parsed = JSON.parse(cached.value) as TelegramChatMember;
-      if (parsed && normalizeStatus(parsed.status)) {
-        return parsed;
-      }
-    } catch {
-      /* fall through to refresh */
-    }
-  }
-
-  let response: Response;
-  try {
-    response = await postTelegramBotApi(botToken, "getChatMember", {
-      chat_id: chatId,
-      user_id: Number(userId),
-    });
-  } catch (err) {
-    console.warn(
-      `[telegram-chat-member] getChatMember fetch failed for chat ${chatId} user ${userId}:`,
-      toErrorMessage(err),
-    );
-    return null;
-  }
-
-  if (!response.ok) {
-    await drainResponseBody(response);
-    console.warn(`[telegram-chat-member] getChatMember returned ${response.status} for chat ${chatId} user ${userId}`);
-    return null;
-  }
-
-  let body: TelegramApiResponse<TelegramChatMemberResult>;
-  try {
-    body = (await response.json()) as TelegramApiResponse<TelegramChatMemberResult>;
-  } catch {
-    return null;
-  }
-
-  if (!body.ok || !body.result) return null;
-  const member = normalizeMember(body.result, userId);
-  if (!member) return null;
-
-  await setCache(db, cacheKey, JSON.stringify(member));
-  return member;
 }
 
 export async function getCachedChatAdministrators(
