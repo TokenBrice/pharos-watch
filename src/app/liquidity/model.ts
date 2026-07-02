@@ -34,25 +34,6 @@ export function formatLiquidityWarningMessage(warning: string): string {
   }
 }
 
-export function buildLiquidityRows(
-  liquidityMap: DexLiquidityMap | undefined,
-  pegFilter: PegCurrency | "all",
-  searchQuery: string,
-): LiquidityRow[] {
-  if (!liquidityMap) return [];
-
-  const q = searchQuery.toLowerCase().trim();
-  return ACTIVE_STABLECOINS.filter((meta) => {
-    if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
-    return !q || meta.name.toLowerCase().includes(q) || meta.symbol.toLowerCase().includes(q);
-  })
-    .map((meta) => ({
-      meta,
-      liq: liquidityMap[meta.id],
-    }))
-    .filter((row): row is LiquidityRow => row.liq != null);
-}
-
 function computeLiquidityStats(
   liquidityMap: DexLiquidityMap,
   allRows: LiquidityRow[],
@@ -111,15 +92,6 @@ function computeLiquidityStats(
     avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
     avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,
   };
-}
-
-export function buildLiquidityStats(liquidityMap: DexLiquidityMap | undefined): LiquidityStatsData | null {
-  if (!liquidityMap) return null;
-  // Build all rows once (no filter) to avoid re-iterating ACTIVE_STABLECOINS.
-  const allRows = ACTIVE_STABLECOINS
-    .map((meta) => ({ meta, liq: liquidityMap[meta.id] }))
-    .filter((row): row is LiquidityRow => row.liq != null);
-  return computeLiquidityStats(liquidityMap, allRows);
 }
 
 export function buildLiquidityViewModel(

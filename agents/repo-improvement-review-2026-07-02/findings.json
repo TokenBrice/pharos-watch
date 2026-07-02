@@ -2917,6 +2917,16 @@
     "description": "buildLiquidityRows (lines 37-54) and buildLiquidityStats (lines 116-123) have zero callers anywhere in src/, shared/, worker/, functions/, or scripts/ — including model.test.ts. The only consumer of this module is src/app/liquidity/client.tsx, which uses buildLiquidityViewModel (the merged single-pass replacement introduced in audit R-227 per the 2026-06-21 changelog). The two older entry points were left behind after that merge and now duplicate the row-building and stats-wrapping logic that buildLiquidityViewModel already contains.",
     "recommendation": "Delete both exported functions. buildLiquidityViewModel and computeLiquidityStats are untouched, so the /liquidity page output is identical. Verified via repo-wide grep that no dynamic or test usage exists.",
     "estImpact": "-35 LOC, removes a stale parallel code path"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the unused `buildLiquidityRows` and `buildLiquidityStats` exports from the liquidity model while keeping `computeLiquidityStats` and `buildLiquidityViewModel` unchanged for the live page path.",
+    "validation": [
+     "npx vitest run src/app/liquidity/model.test.ts",
+     "npm run typecheck",
+     "rg -n \"buildLiquidityRows|buildLiquidityStats\" src shared worker functions tests -g '!node_modules'"
+    ]
    }
   },
   {
