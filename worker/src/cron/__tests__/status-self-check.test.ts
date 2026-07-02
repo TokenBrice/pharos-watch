@@ -142,7 +142,7 @@ describe("runStatusSelfCheck", () => {
   it("does not mark discrepancy alert as sent when webhook delivery fails", async () => {
     sendAlertMock.mockResolvedValueOnce(false);
 
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
@@ -154,7 +154,7 @@ describe("runStatusSelfCheck", () => {
   it("marks discrepancy alert sent only after successful webhook delivery", async () => {
     sendAlertMock.mockResolvedValueOnce(true);
 
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
@@ -172,7 +172,7 @@ describe("runStatusSelfCheck", () => {
       persistenceSucceeded: false,
     });
 
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(sendAlertMock).not.toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("records latency summary and slowest probes in cron metadata", async () => {
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       p95LatencyMs?: number;
       latencySummary?: { p95Ms?: number; medianMs?: number; maxMs?: number; minMs?: number };
@@ -213,7 +213,7 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("persists a raw status snapshot after status evaluation", async () => {
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rawSnapshotPersistenceSucceeded?: boolean;
     };
@@ -280,7 +280,7 @@ describe("runStatusSelfCheck", () => {
       persistenceSucceeded: true,
     });
 
-    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
       | unknown[]
@@ -334,7 +334,7 @@ describe("runStatusSelfCheck", () => {
       persistenceSucceeded: true,
     });
 
-    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessDiagnostics?: Array<{ key?: string; freshnessSource?: string; failureSource?: string }>;
     };
@@ -370,7 +370,7 @@ describe("runStatusSelfCheck", () => {
       persistenceSucceeded: true,
     });
 
-    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
@@ -394,7 +394,10 @@ describe("runStatusSelfCheck", () => {
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
 
-    const result = await runStatusSelfCheck({} as D1Database, "https://api.pharos.watch", undefined, ctx);
+    const result = await runStatusSelfCheck({} as D1Database, {
+      selfUrl: "https://api.pharos.watch",
+      ctx,
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(routeMock).toHaveBeenCalled();
@@ -409,15 +412,12 @@ describe("runStatusSelfCheck", () => {
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
 
-    const result = await runStatusSelfCheck(
-      {} as D1Database,
-      "https://api.pharos.watch",
-      undefined,
+    const result = await runStatusSelfCheck({} as D1Database, {
+      selfUrl: "https://api.pharos.watch",
       ctx,
-      undefined,
-      null,
-      "site-secret",
-    );
+      alertWebhookUrl: null,
+      siteApiSharedSecret: "site-secret",
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       probePlanes?: { external?: { origins?: string[]; sampleCount?: number } };
     };
@@ -463,15 +463,12 @@ describe("runStatusSelfCheck", () => {
       return buildProbeResponse(input);
     });
 
-    const result = await runStatusSelfCheck(
-      {} as D1Database,
-      "https://api.pharos.watch",
-      undefined,
+    const result = await runStatusSelfCheck({} as D1Database, {
+      selfUrl: "https://api.pharos.watch",
       ctx,
-      undefined,
-      null,
-      null,
-    );
+      alertWebhookUrl: null,
+      siteApiSharedSecret: null,
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failCount?: number;
       probePlanes?: { external?: { sampleCount?: number; origins?: string[] } };
@@ -531,15 +528,12 @@ describe("runStatusSelfCheck", () => {
       persistenceSucceeded: true,
     });
 
-    const result = await runStatusSelfCheck(
-      {} as D1Database,
-      "https://api.pharos.watch",
-      undefined,
+    const result = await runStatusSelfCheck({} as D1Database, {
+      selfUrl: "https://api.pharos.watch",
       ctx,
-      undefined,
-      null,
-      "site-secret",
-    );
+      alertWebhookUrl: null,
+      siteApiSharedSecret: "site-secret",
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       internalExternalDiscrepancy?: { reason?: string; hasDivergence?: boolean };
       probeFailureAlertAttempted?: boolean;
@@ -654,7 +648,7 @@ describe("health probe semantic classification", () => {
   it("classifies invalid-health-payload (unparseable JSON) as stale semantic status", async () => {
     mockHealthBody("not-json");
 
-    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
 
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
       | unknown[]
@@ -666,7 +660,7 @@ describe("health probe semantic classification", () => {
   it("classifies invalid-health-status (unknown status value) as stale", async () => {
     mockHealthBody({ status: "weird" });
 
-    await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
 
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
       | unknown[]
@@ -678,7 +672,7 @@ describe("health probe semantic classification", () => {
   it("forces overall probeStatus to at least stale when health endpoint semantically broken", async () => {
     mockHealthBody("not-json");
 
-    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.probeStatus).not.toBe("healthy");
     expect(metadata.probeStatus).toBe("stale");

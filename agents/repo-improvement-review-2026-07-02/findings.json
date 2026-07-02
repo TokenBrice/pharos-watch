@@ -720,6 +720,17 @@
     "description": "runStatusSelfCheck carries a 7-positional-parameter legacy overload (lines 689-697) plus `normalizeStatusSelfCheckOptions` (lines 600-620) to accept either a string selfUrl or an options object. The only runtime caller — worker/src/handlers/scheduled/status-self-check.ts:23 — already passes the options object; grep across worker/, functions/, scripts/ finds no other production call sites. Only the test suite (worker/src/cron/__tests__/status-self-check.test.ts and index.scheduled.test.ts) still exercises the positional form, meaning ~35 lines of overload/normalization code exist purely to serve tests, and every future signature change must be threaded through both forms.",
     "recommendation": "Collapse to the single options-object signature and delete normalizeStatusSelfCheckOptions plus the legacy overload; update the test call sites to pass `{ selfUrl, signal, ctx, ... }` (mechanical). Runtime behavior is unchanged since the sole production caller already uses the surviving form. If touching tests is out of scope right now, at least mark the overload deprecated so new callers don't adopt it.",
     "estImpact": "-35 LOC, one canonical signature"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the legacy positional runStatusSelfCheck overload and normalizeStatusSelfCheckOptions adapter, leaving the existing options-object runtime signature as the only API. Updated tests to call the options-object form explicitly.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/status-self-check.test.ts worker/src/__tests__/index.scheduled.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"normalizeStatusSelfCheckOptions|runStatusSelfCheck\\\\([^\\\\n]*, \\\"\" worker/src functions scripts src shared -g'*.ts' || true",
+     "git diff --check -- worker/src/cron/status-self-check.ts worker/src/cron/__tests__/status-self-check.test.ts worker/src/__tests__/index.scheduled.test.ts"
+    ]
    }
   },
   {

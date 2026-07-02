@@ -597,28 +597,6 @@ async function runExternalProductionProbes(
   return probes;
 }
 
-function normalizeStatusSelfCheckOptions(
-  optionsOrSelfUrl?: StatusSelfCheckOptions | string,
-  signal?: AbortSignal,
-  ctx?: ExecutionContext,
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
-  alertWebhookUrl?: string | null,
-  siteApiSharedSecret?: string | null,
-): StatusSelfCheckOptions {
-  if (typeof optionsOrSelfUrl === "object" && optionsOrSelfUrl !== null) {
-    return optionsOrSelfUrl;
-  }
-
-  return {
-    selfUrl: optionsOrSelfUrl,
-    signal,
-    ctx,
-    mintBurnFreshnessConfig,
-    alertWebhookUrl,
-    siteApiSharedSecret,
-  };
-}
-
 async function collectStatusSelfCheckProbes(
   db: D1Database,
   now: number,
@@ -685,33 +663,10 @@ function shouldSendAlert(
   );
 }
 
-export async function runStatusSelfCheck(db: D1Database, options?: StatusSelfCheckOptions): Promise<CronResult>;
 export async function runStatusSelfCheck(
   db: D1Database,
-  selfUrl?: string,
-  signal?: AbortSignal,
-  ctx?: ExecutionContext,
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
-  alertWebhookUrl?: string | null,
-  siteApiSharedSecret?: string | null,
-): Promise<CronResult>;
-export async function runStatusSelfCheck(
-  db: D1Database,
-  optionsOrSelfUrl?: StatusSelfCheckOptions | string,
-  legacySignal?: AbortSignal,
-  legacyCtx?: ExecutionContext,
-  legacyMintBurnFreshnessConfig?: MintBurnFreshnessConfig,
-  legacyAlertWebhookUrl?: string | null,
-  legacySiteApiSharedSecret?: string | null,
+  options: StatusSelfCheckOptions = {},
 ): Promise<CronResult> {
-  const options = normalizeStatusSelfCheckOptions(
-    optionsOrSelfUrl,
-    legacySignal,
-    legacyCtx,
-    legacyMintBurnFreshnessConfig,
-    legacyAlertWebhookUrl,
-    legacySiteApiSharedSecret,
-  );
   const now = Math.floor(Date.now() / 1000);
   const {
     probeBaseUrl,
