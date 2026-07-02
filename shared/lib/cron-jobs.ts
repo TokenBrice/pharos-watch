@@ -631,9 +631,6 @@ export const CRON_INTERVALS = Object.freeze(
 export const VALID_CRON_JOB_IDS: ReadonlySet<string> = new Set(CRON_JOB_DEFINITIONS.map((def) => def.job));
 
 const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
-const CRON_SCHEDULE_KEY_BY_EXPRESSION = new Map<string, CronScheduleKey>(
-  Object.entries(CRON_SCHEDULES).map(([scheduleKey, expression]) => [expression, scheduleKey as CronScheduleKey]),
-);
 
 export function getCronJobMeta(job: string): CronJobMeta | null {
   return CRON_JOB_META_BY_ID.get(job) ?? null;
@@ -641,10 +638,6 @@ export function getCronJobMeta(job: string): CronJobMeta | null {
 
 export function getCronStatusImpact(job: string): CronStatusImpact {
   return getCronJobMeta(job)?.statusImpact ?? "watch";
-}
-
-export function getCronScheduleKey(expression: string): CronScheduleKey | null {
-  return CRON_SCHEDULE_KEY_BY_EXPRESSION.get(expression) ?? null;
 }
 
 function normalizeCronSlotStartedAt(timestampSec: number, intervalSec: number, offsetSec = 0): number {

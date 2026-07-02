@@ -7,20 +7,11 @@ import {
   getPrevWeekRaw,
   getPrevWeekRawOrNull,
   getPrevMonthRawOrNull,
-  computeGovernanceBreakdown,
 } from "../supply";
-import type { GovernanceType, StablecoinData } from "../../types";
-import { TRACKED_META_BY_ID } from "../stablecoins/registry";
+import type { StablecoinData } from "../../types";
 
 function mockCoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return overrides as StablecoinData;
-}
-
-function trackedIdByGovernance(governance: GovernanceType): string {
-  for (const [id, meta] of TRACKED_META_BY_ID.entries()) {
-    if (meta.flags.governance === governance) return id;
-  }
-  throw new Error(`No tracked coin found for governance=${governance}`);
 }
 
 describe("sumPegBuckets", () => {
@@ -151,87 +142,5 @@ describe("getPrevMonthRawOrNull", () => {
   it("returns sum when data exists", () => {
     const coin = { circulatingPrevMonth: { usd: 500_000 } } as never;
     expect(getPrevMonthRawOrNull(coin)).toBe(500_000);
-  });
-});
-
-describe("computeGovernanceBreakdown", () => {
-  const centralizedId = trackedIdByGovernance("centralized");
-  const dependentId = trackedIdByGovernance("centralized-dependent");
-  const decentralizedId = trackedIdByGovernance("decentralized");
-
-  it("splits market cap by governance tier", () => {
-    const data = [
-      mockCoin({ id: centralizedId, circulating: { peggedUSD: 100 } }),
-      mockCoin({ id: dependentId, circulating: { peggedUSD: 50 } }),
-      mockCoin({ id: decentralizedId, circulating: { peggedUSD: 25 } }),
-    ];
-
-    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
-    expect(result.centralizedMcap).toBe(100);
-    expect(result.dependentMcap).toBe(50);
-    expect(result.decentralizedMcap).toBe(25);
-    expect(result.total).toBe(175);
-    expect(result.cefiPct).toBeCloseTo(57.142857, 5);
-    expect(result.depPct).toBeCloseTo(28.571428, 5);
-    expect(result.defiPct).toBeCloseTo(14.285714, 5);
-  });
-
-  it("skips coins that are not in tracked metadata", () => {
-    const data = [
-      mockCoin({ id: centralizedId, circulating: { peggedUSD: 100 } }),
-      mockCoin({ id: "999999", circulating: { peggedUSD: 500 } }),
-    ];
-
-    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
-    expect(result.centralizedMcap).toBe(100);
-    expect(result.total).toBe(100);
-    expect(result.cefiPct).toBe(100);
-  });
-
-  it("returns 0 percentages when total market cap is 0", () => {
-    const data = [
-      mockCoin({ id: centralizedId, circulating: { peggedUSD: NaN } }),
-      mockCoin({ id: dependentId, circulating: { peggedUSD: Infinity } }),
-      mockCoin({ id: decentralizedId, circulating: { peggedUSD: null as unknown as number } }),
-    ];
-
-    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
-    expect(result.total).toBe(0);
-    expect(result.cefiPct).toBe(0);
-    expect(result.depPct).toBe(0);
-    expect(result.defiPct).toBe(0);
-  });
-
-  it("coerces invalid circulating bucket values to 0", () => {
-    const data = [
-      mockCoin({
-        id: centralizedId,
-        circulating: {
-          peggedUSD: 100,
-          peggedEUR: NaN,
-          peggedGBP: Infinity,
-        },
-      }),
-      mockCoin({
-        id: dependentId,
-        circulating: {
-          peggedUSD: 25,
-          peggedJPY: null as unknown as number,
-        },
-      }),
-      mockCoin({
-        id: decentralizedId,
-        circulating: {
-          peggedUSD: -5,
-          peggedCHF: -Infinity,
-        },
-      }),
-    ];
-
-    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
-    expect(result.centralizedMcap).toBe(100);
-    expect(result.dependentMcap).toBe(25);
-    expect(result.decentralizedMcap).toBe(-5);
-    expect(result.total).toBe(120);
   });
 });

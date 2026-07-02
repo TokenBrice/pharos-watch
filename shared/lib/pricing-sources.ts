@@ -3,10 +3,7 @@ import {
   getPricingSourceRegistryEntry,
   type PricingSourceKey,
 } from "./pricing-source-registry";
-import {
-  PRICE_SOURCE_HEALTH_BUCKET_KEYS,
-  type PriceSourceHealthBucketKey,
-} from "../types/pricing-source-health";
+import { PRICE_SOURCE_HEALTH_BUCKET_KEYS, type PriceSourceHealthBucketKey } from "../types/pricing-source-health";
 
 export { PRICE_SOURCE_HEALTH_BUCKET_KEYS } from "../types/pricing-source-health";
 
@@ -30,9 +27,10 @@ const PRICE_SOURCE_HEALTH_BUCKET_DEFS = [
 const PRICE_SOURCE_HEALTH_BUCKET_KEY_SET = new Set<string>(PRICE_SOURCE_HEALTH_BUCKET_KEYS);
 
 export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHealthBucketKey, number> {
-  return Object.fromEntries(
-    PRICE_SOURCE_HEALTH_BUCKET_KEYS.map((key) => [key, 0]),
-  ) as Record<PriceSourceHealthBucketKey, number>;
+  return Object.fromEntries(PRICE_SOURCE_HEALTH_BUCKET_KEYS.map((key) => [key, 0])) as Record<
+    PriceSourceHealthBucketKey,
+    number
+  >;
 }
 
 export function getPricingSourceLabel(sourceKey: string): string {
@@ -61,9 +59,7 @@ export function splitCompositePriceSource(source: string): string[] {
 export function normalizePricingSourceKeys(
   sourceKeys: readonly (string | null | undefined)[] | string | null | undefined,
 ): string[] {
-  const rawSources = typeof sourceKeys === "string" || sourceKeys == null
-    ? [sourceKeys]
-    : sourceKeys;
+  const rawSources = typeof sourceKeys === "string" || sourceKeys == null ? [sourceKeys] : sourceKeys;
   const normalized: string[] = [];
   for (const rawSource of rawSources) {
     if (!rawSource) continue;
@@ -75,16 +71,4 @@ export function normalizePricingSourceKeys(
     }
   }
   return normalized;
-}
-
-export function getUnknownPricingSourceKeys(
-  sourceKeys: readonly (string | null | undefined)[] | string | null | undefined,
-): string[] {
-  return normalizePricingSourceKeys(sourceKeys)
-    .filter((sourceKey) => getPricingSourceRegistryEntry(sourceKey) == null);
-}
-
-export function isKnownPricingSourceOrComposite(sourceKey: string | null | undefined): boolean {
-  const parts = normalizePricingSourceKeys(sourceKey);
-  return parts.length > 0 && parts.every((part) => getPricingSourceRegistryEntry(part) != null);
 }

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildDependencyGraphEdges,
-  collectDependencyGraphIds,
-  filterDependencyGraphEdgesToLive,
-} from "../dependency-graph";
+import { buildDependencyGraphEdges, filterDependencyGraphEdgesToLive } from "../dependency-graph";
 import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
 
@@ -39,9 +35,7 @@ describe("dependency-graph", () => {
     }),
     makeMeta({
       id: "dependent-b",
-      dependencies: [
-        { id: "upstream", weight: 0.5, type: "wrapper" },
-      ],
+      dependencies: [{ id: "upstream", weight: 0.5, type: "wrapper" }],
     }),
   ];
 
@@ -58,14 +52,7 @@ describe("dependency-graph", () => {
       buildDependencyGraphEdges(metas),
       new Set(["upstream", "dependent-a"]),
     );
-    expect(edges).toEqual([
-      { from: "upstream", to: "dependent-a", weight: 0.6, type: "collateral" },
-    ]);
-  });
-
-  it("collects both upstream and dependent ids for coverage semantics", () => {
-    const ids = collectDependencyGraphIds(buildDependencyGraphEdges(metas));
-    expect(ids).toEqual(new Set(["upstream", "dependent-a", "dependent-b"]));
+    expect(edges).toEqual([{ from: "upstream", to: "dependent-a", weight: 0.6, type: "collateral" }]);
   });
 
   it("emits a single synthetic wrapper edge for tracked variants", () => {
@@ -77,15 +64,11 @@ describe("dependency-graph", () => {
         id: "child",
         variantOf: "parent",
         variantKind: "savings-passthrough",
-        reserves: [
-          { name: "Parent reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" },
-        ],
+        reserves: [{ name: "Parent reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" }],
       }),
     ]);
 
-    expect(edges).toEqual([
-      { from: "parent", to: "child", weight: 1, type: "wrapper" },
-    ]);
+    expect(edges).toEqual([{ from: "parent", to: "child", weight: 1, type: "wrapper" }]);
   });
 
   it("emits the synthetic wrapper edge even when a strategy-vault child has no parent reserve slice", () => {
@@ -95,23 +78,17 @@ describe("dependency-graph", () => {
         id: "child",
         variantOf: "parent",
         variantKind: "strategy-vault",
-        reserves: [
-          { name: "Strategy book", pct: 100, risk: "high" },
-        ],
+        reserves: [{ name: "Strategy book", pct: 100, risk: "high" }],
       }),
     ]);
 
-    expect(edges).toEqual([
-      { from: "parent", to: "child", weight: 1, type: "wrapper" },
-    ]);
+    expect(edges).toEqual([{ from: "parent", to: "child", weight: 1, type: "wrapper" }]);
   });
 
   it("prefers linked live reserve slices over curated linked slices", () => {
     const meta = makeMeta({
       id: "dependent",
-      reserves: [
-        { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
-      ],
+      reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" }],
     });
 
     const dependencies = deriveEffectiveDependencies(meta, {
@@ -121,18 +98,14 @@ describe("dependency-graph", () => {
       ],
     });
 
-    expect(dependencies).toEqual([
-      { id: "live-upstream", weight: 0.65, type: "mechanism" },
-    ]);
+    expect(dependencies).toEqual([{ id: "live-upstream", weight: 0.65, type: "mechanism" }]);
   });
 
   it("keeps unmapped live reserve share as implicit self-backed remainder", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
         id: "dependent",
-        reserves: [
-          { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
-        ],
+        reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" }],
       }),
       {
         liveReserveSlices: [
@@ -142,18 +115,14 @@ describe("dependency-graph", () => {
       },
     );
 
-    expect(dependencies).toEqual([
-      { id: "live-upstream", weight: 0.4, type: "collateral" },
-    ]);
+    expect(dependencies).toEqual([{ id: "live-upstream", weight: 0.4, type: "collateral" }]);
   });
 
   it("falls back to curated dependencies when live reserve slices have no tracked upstreams", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
         id: "dependent",
-        reserves: [
-          { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream", depType: "wrapper" },
-        ],
+        reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream", depType: "wrapper" }],
       }),
       {
         liveReserveSlices: [
@@ -163,9 +132,7 @@ describe("dependency-graph", () => {
       },
     );
 
-    expect(dependencies).toEqual([
-      { id: "curated-upstream", weight: 1, type: "wrapper" },
-    ]);
+    expect(dependencies).toEqual([{ id: "curated-upstream", weight: 1, type: "wrapper" }]);
   });
 
   it("exposes fallback provenance when unmapped live reserve slices use manual dependencies", () => {
@@ -220,9 +187,7 @@ describe("dependency-graph", () => {
         makeMeta({ id: "live-upstream" }),
         makeMeta({
           id: "dependent",
-          reserves: [
-            { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" },
-          ],
+          reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream" }],
         }),
       ],
       {
@@ -238,9 +203,7 @@ describe("dependency-graph", () => {
       },
     );
 
-    expect(edges).toEqual([
-      { from: "live-upstream", to: "dependent", weight: 0.25, type: "collateral" },
-    ]);
+    expect(edges).toEqual([{ from: "live-upstream", to: "dependent", weight: 0.25, type: "collateral" }]);
   });
 
   it("keeps the variant parent wrapper edge dominant over duplicate live parent reserve links", () => {
@@ -256,18 +219,11 @@ describe("dependency-graph", () => {
       ],
       {
         liveReserveSlicesById: new Map([
-          [
-            "child",
-            [
-              { name: "Parent live reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" },
-            ],
-          ],
+          ["child", [{ name: "Parent live reserve", pct: 100, risk: "low", coinId: "parent", depType: "collateral" }]],
         ]),
       },
     );
 
-    expect(edges).toEqual([
-      { from: "parent", to: "child", weight: 1, type: "wrapper" },
-    ]);
+    expect(edges).toEqual([{ from: "parent", to: "child", weight: 1, type: "wrapper" }]);
   });
 });

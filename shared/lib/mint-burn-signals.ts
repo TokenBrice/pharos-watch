@@ -1,26 +1,12 @@
 import { clamp } from "./math";
-import type {
-  CoinFlowCompositeState,
-  NetFlowDirection24h,
-  PressureShiftState,
-} from "../types/mint-burn-signals";
+import type { NetFlowDirection24h, PressureShiftState } from "../types/mint-burn-signals";
 
-export {
-  COIN_FLOW_COMPOSITE_STATE_VALUES,
-  PRESSURE_SHIFT_STATE_VALUES,
-} from "../types/mint-burn-signals";
-export type {
-  CoinFlowCompositeState,
-  NetFlowDirection24h,
-  PressureShiftState,
-} from "../types/mint-burn-signals";
+export { COIN_FLOW_COMPOSITE_STATE_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "../types/mint-burn-signals";
+export type { CoinFlowCompositeState, NetFlowDirection24h, PressureShiftState } from "../types/mint-burn-signals";
 
 export const PRESSURE_SHIFT_STABLE_BAND_MAX = 10;
 
-export function getNetFlowDirection24h(input: {
-  netFlow24hUsd: number;
-  has24hActivity: boolean;
-}): NetFlowDirection24h {
+export function getNetFlowDirection24h(input: { netFlow24hUsd: number; has24hActivity: boolean }): NetFlowDirection24h {
   if (!input.has24hActivity) {
     return "inactive";
   }
@@ -33,9 +19,7 @@ export function getNetFlowDirection24h(input: {
   return "flat";
 }
 
-export function getPressureShiftState(
-  score: number | null,
-): PressureShiftState {
+export function getPressureShiftState(score: number | null): PressureShiftState {
   if (score === null) {
     return "nr";
   }
@@ -56,23 +40,5 @@ export function getLiteralMintingPressureScore(input: {
   if (totalFlow24h <= 0) {
     return null;
   }
-  return clamp(
-    ((input.mintVolume24hUsd - input.burnVolume24hUsd) / totalFlow24h) * 100,
-    -100,
-    100,
-  );
-}
-
-export function getCoinFlowCompositeState(input: {
-  netFlow24hUsd: number;
-  has24hActivity: boolean;
-  pressureShiftScore: number | null;
-}): CoinFlowCompositeState {
-  const direction = getNetFlowDirection24h(input);
-  if (direction === "inactive") {
-    return "inactive";
-  }
-  const pressureState = getPressureShiftState(input.pressureShiftScore);
-  const composite: CoinFlowCompositeState = `${direction}-${pressureState}`;
-  return composite;
+  return clamp(((input.mintVolume24hUsd - input.burnVolume24hUsd) / totalFlow24h) * 100, -100, 100);
 }

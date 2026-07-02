@@ -5,12 +5,7 @@ import {
   isPricingSourceProtocolOverride,
   isPricingSourceSoftGuardrailExempt,
 } from "../pricing-source-registry";
-import {
-  getPricingSourceLabel,
-  getUnknownPricingSourceKeys,
-  isKnownPricingSourceOrComposite,
-  normalizePricingSourceKeys,
-} from "../pricing-sources";
+import { getPricingSourceLabel, normalizePricingSourceKeys } from "../pricing-sources";
 import {
   countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
@@ -204,11 +199,9 @@ describe("pricing source registry", () => {
     expect(isPricingSourceSoftGuardrailExempt(undefined)).toBe(false);
   });
 
-  it("normalizes composite source labels without treating them as unknown keys", () => {
+  it("normalizes composite source labels", () => {
     expect(normalizePricingSourceKeys("coingecko+geckoterminal")).toEqual(["coingecko", "geckoterminal"]);
     expect(getPricingSourceLabel("coingecko+geckoterminal")).toBe("CoinGecko + GeckoTerminal");
-    expect(isKnownPricingSourceOrComposite("coingecko+geckoterminal")).toBe(true);
-    expect(getUnknownPricingSourceKeys("coingecko+not-a-source")).toEqual(["not-a-source"]);
   });
 
   it("keeps shared policy helpers aligned with registry metadata", () => {

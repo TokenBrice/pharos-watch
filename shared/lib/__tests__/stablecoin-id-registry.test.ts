@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  DEAD_BY_LLAMA_ID,
   PSI_INCLUSIVE_REGISTRY_BY_ID,
   READABLE_REGISTRY_BY_ID,
   REGISTRY_BY_ID,
@@ -12,8 +11,6 @@ import {
   resolveReadableStablecoinId,
   resolveStablecoinId,
   resolveTrackedStablecoinId,
-  resolveByExternalId,
-  getLlamaId,
 } from "@shared/lib/stablecoin-id-registry";
 import {
   ACTIVE_STABLECOINS,
@@ -26,9 +23,6 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
 const USDT_META = REGISTRY_BY_LLAMA_ID.get("1");
 const CANONICAL_USDT_ID = USDT_META?.id ?? "1";
-const GECKO_ONLY_ID = TRACKED_STABLECOINS.find(
-  (stablecoin) => stablecoin.geckoId && !stablecoin.llamaId,
-)?.id;
 const PRE_LAUNCH_ID = PRE_LAUNCH_STABLECOINS[0]?.id;
 const FROZEN_ID = FROZEN_STABLECOINS[0]?.id;
 const SHADOW_ID = SHADOW_STABLECOINS[0]?.id;
@@ -168,6 +162,10 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
 });
 
 describe("REGISTRY_BY_GECKO_ID", () => {
+  it("maps geckoId to meta", () => {
+    expect(REGISTRY_BY_GECKO_ID.get("tether")?.symbol).toBe("USDT");
+  });
+
   it("has no duplicate geckoIds", () => {
     const geckoIdCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
       (stablecoin) => stablecoin.geckoId,
@@ -177,46 +175,17 @@ describe("REGISTRY_BY_GECKO_ID", () => {
   });
 });
 
-describe("resolveByExternalId", () => {
-  it("resolves defillama ID", () => {
-    expect(resolveByExternalId("defillama", "1")?.symbol).toBe("USDT");
-  });
+describe("dead stablecoin llamaId invariant", () => {
+  it("has no duplicate dead stablecoin llamaIds", () => {
+    const seenDeadLlamaIds = new Set<string>();
 
-  it("resolves coingecko ID", () => {
-    expect(REGISTRY_BY_GECKO_ID.get("tether")?.symbol).toBe("USDT");
-    expect(resolveByExternalId("coingecko", "tether")?.symbol).toBe("USDT");
-  });
+    for (const dead of DEAD_STABLECOINS) {
+      if (!dead.llamaId) {
+        continue;
+      }
 
-  it("resolves cmc slug", () => {
-    expect(resolveByExternalId("cmc", "jupusd")?.symbol).toBe("JUPUSD");
-  });
-
-  it("returns null for unknown external ID", () => {
-    expect(resolveByExternalId("defillama", "999999")).toBeNull();
-  });
-});
-
-describe("getLlamaId", () => {
-  it("returns llamaId for a tracked stablecoin", () => {
-    expect(getLlamaId(CANONICAL_USDT_ID)).toBe("1");
-  });
-
-  it("returns null for CoinGecko-sourced stablecoin", () => {
-    expect(GECKO_ONLY_ID).toBeTruthy();
-    expect(getLlamaId(GECKO_ONLY_ID!)).toBeNull();
-  });
-
-  it("returns null for non-existent ID", () => {
-    expect(getLlamaId("does-not-exist")).toBeNull();
-  });
-});
-
-describe("DEAD_BY_LLAMA_ID", () => {
-  it("maps dead stablecoin llamaIds to names", () => {
-    expect(DEAD_BY_LLAMA_ID.size).toBeGreaterThan(0);
-  });
-
-  it("skips dead stablecoins without llamaId", () => {
-    expect(DEAD_BY_LLAMA_ID.size).toBeLessThan(DEAD_STABLECOINS.length);
+      expect(seenDeadLlamaIds.has(dead.llamaId)).toBe(false);
+      seenDeadLlamaIds.add(dead.llamaId);
+    }
   });
 });

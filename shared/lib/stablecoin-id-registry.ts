@@ -21,8 +21,6 @@ export const REGISTRY_BY_LLAMA_ID: Map<string, StablecoinMeta> = new Map();
 export const REGISTRY_BY_GECKO_ID: Map<string, StablecoinMeta> = new Map();
 /** Reverse index: CoinMarketCap slug → meta. Guaranteed unique (throws at module load on collision). */
 export const REGISTRY_BY_CMC_SLUG: Map<string, StablecoinMeta> = new Map();
-/** Dead-coin lookup by DefiLlama id. Values are display names for UI labels on archived assets. */
-export const DEAD_BY_LLAMA_ID: Map<string, string> = new Map();
 
 function setUniqueExternalId(
   registry: Map<string, StablecoinMeta>,
@@ -32,11 +30,26 @@ function setUniqueExternalId(
 ): void {
   const existing = registry.get(externalId);
   if (existing) {
-    throw new Error(
-      `[stablecoin-id-registry] Duplicate ${provider}: ${externalId} (${existing.id}, ${meta.id})`,
-    );
+    throw new Error(`[stablecoin-id-registry] Duplicate ${provider}: ${externalId} (${existing.id}, ${meta.id})`);
   }
   registry.set(externalId, meta);
+}
+
+function assertUniqueDeadLlamaIds(): void {
+  const seenDeadLlamaIds = new Map<string, string>();
+
+  for (const dead of DEAD_STABLECOINS) {
+    if (!dead.llamaId) {
+      continue;
+    }
+
+    const existing = seenDeadLlamaIds.get(dead.llamaId);
+    if (existing) {
+      throw new Error(`[stablecoin-id-registry] Duplicate dead llamaId: ${dead.llamaId} (${existing}, ${dead.name})`);
+    }
+
+    seenDeadLlamaIds.set(dead.llamaId, dead.name);
+  }
 }
 
 for (const meta of ALL_LIVE_COINS) {
@@ -77,20 +90,8 @@ if (PSI_INCLUSIVE_REGISTRY_BY_ID.size !== PSI_ELIGIBLE_STABLECOINS.length) {
   throw new Error("[stablecoin-id-registry] PSI-inclusive registry has duplicate canonical ids");
 }
 
-for (const dead of DEAD_STABLECOINS) {
-  if (dead.llamaId) {
-    const existing = DEAD_BY_LLAMA_ID.get(dead.llamaId);
-    if (existing) {
-      throw new Error(
-        `[stablecoin-id-registry] Duplicate dead llamaId: ${dead.llamaId} (${existing}, ${dead.name})`,
-      );
-    }
-    DEAD_BY_LLAMA_ID.set(dead.llamaId, dead.name);
-  }
-}
+assertUniqueDeadLlamaIds();
 
-/** Supported external ID providers. Add new providers here as they are integrated. */
-export type ExternalIdProvider = "defillama" | "coingecko" | "cmc";
 export type StablecoinIdResolution = { canonicalId: string };
 
 function resolveFromRegistry(
@@ -102,27 +103,6 @@ function resolveFromRegistry(
   }
 
   return null;
-}
-
-/**
- * Resolve an external provider ID to a canonical StablecoinMeta.
- * Use this instead of ad-hoc geckoId/cmcSlug matching scattered in code.
- *
- * @example resolveByExternalId("defillama", "1")
- * @example resolveByExternalId("coingecko", "tether")
- */
-export function resolveByExternalId(
-  provider: ExternalIdProvider,
-  externalId: string,
-): StablecoinMeta | null {
-  switch (provider) {
-    case "defillama":
-      return REGISTRY_BY_LLAMA_ID.get(externalId) ?? null;
-    case "coingecko":
-      return REGISTRY_BY_GECKO_ID.get(externalId) ?? null;
-    case "cmc":
-      return REGISTRY_BY_CMC_SLUG.get(externalId) ?? null;
-  }
 }
 
 /** Resolve any tracked canonical stablecoin ID, including pre-launch and frozen IDs. */
@@ -141,16 +121,8 @@ export function resolvePsiInclusiveStablecoinId(input: string): StablecoinIdReso
 }
 
 /** Resolve a public readback stablecoin ID. Returns null for unknown, pre-launch, and shadow-only IDs. */
-export function resolveStablecoinId(
-  input: string,
-): StablecoinIdResolution | null {
+export function resolveStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveReadableStablecoinId(input);
-}
-
-/** Look up the DefiLlama id for a canonical stablecoin id. Returns null for unknown ids and for coins without a llamaId (e.g. pre-listing shadow assets). */
-export function getLlamaId(canonicalId: string): string | null {
-  const meta = REGISTRY_BY_ID.get(canonicalId);
-  return meta?.llamaId ?? null;
 }
 
 /** Historical PSI stablecoin id aliases. Maps legacy/post-collapse ids to the canonical id used in PSI supply/shadow coverage. */

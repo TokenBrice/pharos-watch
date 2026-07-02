@@ -41,7 +41,3 @@ export const PSI_SWEEP_DURATION: Record<ConditionBand, number> = {
   CRISIS: 2.5,
   MELTDOWN: 1.2,
 };
-
-export function psiSweepDuration(band: string): number {
-  return PSI_SWEEP_DURATION[band as ConditionBand] ?? PSI_SWEEP_DURATION.BEDROCK;
-}

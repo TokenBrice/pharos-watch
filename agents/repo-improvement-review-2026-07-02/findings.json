@@ -4543,6 +4543,21 @@
      "shared/lib/dependency-graph.ts",
      "shared/lib/stablecoin-id-registry.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the production-dead shared exports listed by the finding and deleted their self-only test coverage, while preserving live external-id uniqueness invariants in stablecoin-id-registry.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/supply.test.ts shared/lib/__tests__/stablecoin-id-registry.test.ts shared/lib/__tests__/mint-burn-signals.test.ts shared/lib/__tests__/cron-jobs.test.ts shared/lib/__tests__/pricing-source-registry.test.ts shared/lib/__tests__/psi-colors.test.ts shared/lib/__tests__/dependency-graph.test.ts",
+     "npm run typecheck",
+     "npm run typecheck:worker",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "rg -n \"computeGovernanceBreakdown|GovernanceBreakdown|getCoinFlowCompositeState|getCronScheduleKey|CRON_SCHEDULE_KEY_BY_EXPRESSION|getUnknownPricingSourceKeys|isKnownPricingSourceOrComposite|psiSweepDuration|collectDependencyGraphIds|resolveByExternalId|getLlamaId|DEAD_BY_LLAMA_ID|ExternalIdProvider\" shared src worker functions scripts --glob '!agents/**'",
+     "git diff --check -- shared/lib/supply.ts shared/lib/__tests__/supply.test.ts shared/lib/stablecoin-id-registry.ts shared/lib/__tests__/stablecoin-id-registry.test.ts shared/lib/mint-burn-signals.ts shared/lib/__tests__/mint-burn-signals.test.ts shared/lib/cron-jobs.ts shared/lib/__tests__/cron-jobs.test.ts shared/lib/pricing-sources.ts shared/lib/__tests__/pricing-source-registry.test.ts shared/lib/psi-colors.ts shared/lib/__tests__/psi-colors.test.ts shared/lib/dependency-graph.ts shared/lib/__tests__/dependency-graph.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The reference sweep returned no matches outside the remediation ledger."
    }
   },
   {

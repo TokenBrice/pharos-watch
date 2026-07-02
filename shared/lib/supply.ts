@@ -1,4 +1,3 @@
-import type { GovernanceType, StablecoinData } from "../types";
 import { isFiniteNumber } from "./type-guards";
 
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
@@ -55,58 +54,4 @@ export function getPrevWeekRawOrNull(c: { circulatingPrevWeek?: PegBucketRecord 
 /** Returns null when the prev-month bucket is entirely absent/empty. No 0-defaulting variant exists because monthly callers always need the absent/zero distinction. */
 export function getPrevMonthRawOrNull(c: { circulatingPrevMonth?: PegBucketRecord }): number | null {
   return sumPegBucketsOrNull(c.circulatingPrevMonth);
-}
-
-// ---------------------------------------------------------------------------
-// Governance breakdown
-// ---------------------------------------------------------------------------
-
-export interface GovernanceBreakdown {
-  centralizedMcap: number;
-  dependentMcap: number;
-  decentralizedMcap: number;
-  total: number;
-  cefiPct: number;
-  depPct: number;
-  defiPct: number;
-}
-
-type GovernanceMeta = {
-  flags: {
-    governance: GovernanceType;
-  };
-};
-
-/**
- * Compute market-cap breakdown by governance tier (centralized / centralized-dependent / decentralized).
- * Only coins present in `metaById` are included.
- */
-export function computeGovernanceBreakdown(
-  data: StablecoinData[],
-  metaById: ReadonlyMap<string, GovernanceMeta>,
-): GovernanceBreakdown {
-  let centralizedMcap = 0;
-  let dependentMcap = 0;
-  let decentralizedMcap = 0;
-
-  for (const coin of data) {
-    const meta = metaById.get(coin.id);
-    if (!meta) continue;
-    const mcap = getCirculatingRaw(coin);
-    const gov: GovernanceType = meta.flags.governance;
-    if (gov === "centralized") centralizedMcap += mcap;
-    else if (gov === "centralized-dependent") dependentMcap += mcap;
-    else decentralizedMcap += mcap;
-  }
-
-  const total = centralizedMcap + dependentMcap + decentralizedMcap;
-  return {
-    centralizedMcap,
-    dependentMcap,
-    decentralizedMcap,
-    total,
-    cefiPct: total > 0 ? (centralizedMcap / total) * 100 : 0,
-    depPct: total > 0 ? (dependentMcap / total) * 100 : 0,
-    defiPct: total > 0 ? (decentralizedMcap / total) * 100 : 0,
-  };
 }

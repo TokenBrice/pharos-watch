@@ -61,14 +61,3 @@ export function filterDependencyGraphEdgesToLive(
 ): DependencyGraphEdge[] {
   return edges.filter((edge) => liveIds.has(edge.from) && liveIds.has(edge.to));
 }
-
-export function collectDependencyGraphIds(
-  edges: readonly Pick<DependencyGraphEdge, "from" | "to">[],
-): Set<string> {
-  const ids = new Set<string>();
-  for (const edge of edges) {
-    ids.add(edge.from);
-    ids.add(edge.to);
-  }
-  return ids;
-}

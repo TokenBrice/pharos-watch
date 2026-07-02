@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  getCronScheduleKey,
-  getCronSlotStartedAtForSchedule,
-} from "../cron-jobs";
+import { getCronSlotStartedAtForSchedule } from "../cron-jobs";
 
 describe("cron job schedule metadata", () => {
-  it("maps the DEWS/PSI offset expression and derives 26/56 minute slots", () => {
-    expect(getCronScheduleKey("26,56 * * * *")).toBe("dewsPsiOffset");
-
+  it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
     const firstSlot = Date.parse("2026-04-19T16:26:30Z");
     const secondSlot = Date.parse("2026-04-19T16:56:05Z");
 
