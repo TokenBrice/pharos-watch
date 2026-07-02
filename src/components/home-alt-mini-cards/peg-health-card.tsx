@@ -31,7 +31,7 @@ export function PegHealthCard(): React.JSX.Element {
       ) : (
         <div className="flex flex-1 flex-col">
           <div>
-            <div className="flex items-baseline font-mono text-4xl font-bold tabular-nums tracking-tight">
+            <div className="flex items-baseline pharos-numeric text-4xl font-bold tracking-tight">
               <span className="text-foreground">{summary.coinsAtPeg}</span>
               <span className="mx-2 text-2xl text-muted-foreground/50">/</span>
               <span className="text-muted-foreground">{summary.totalTracked}</span>
@@ -72,7 +72,7 @@ export function PegHealthCard(): React.JSX.Element {
                     <span className={`inline-block h-2 w-2 rounded-sm ${seg.colorClass}`} aria-hidden="true" />
                     {seg.legend}
                   </span>
-                  <span className="tabular-nums text-foreground">{buckets[seg.key]}</span>
+                  <span className="pharos-numeric text-foreground">{buckets[seg.key]}</span>
                 </li>
               ))}
             </ul>

@@ -78,7 +78,7 @@ function TapeStatChip({ label, value }: { label: string; value: number }) {
     <span className={STAT_CHIP_CLASS}>
       <span>{label}</span>
       <span aria-hidden="true" className="h-1 w-1 rounded-full bg-muted-foreground/35" />
-      <span className="pharos-numeric font-semibold tabular-nums text-foreground">{value}</span>
+      <span className="pharos-numeric font-semibold text-foreground">{value}</span>
     </span>
   );
 }

@@ -79,14 +79,14 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
           {isLoading || !current ? (
             <Skeleton className="h-9 w-24" />
           ) : (
-            <span className="block font-mono text-4xl font-bold tabular-nums tracking-tight text-foreground">
+            <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
               {current.score.toFixed(2)}
             </span>
           )}
           <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             90D{" "}
             {avgDelta !== null ? (
-              <span className={`tabular-nums ${avgDeltaClass}`}>
+              <span className={`pharos-numeric ${avgDeltaClass}`}>
                 {avgDelta >= 0 ? "+" : ""}
                 {avgDelta.toFixed(1)}
               </span>

@@ -139,7 +139,7 @@ export function UpcomingClient({ teasers }: { teasers: Record<string, string> })
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border/50 p-5 sm:p-6">
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-muted-foreground">Tracked Launches</p>
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
               {PRE_LAUNCH_STABLECOINS.length}
             </p>
           </div>

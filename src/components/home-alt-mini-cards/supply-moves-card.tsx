@@ -91,7 +91,7 @@ export function SupplyMovesCard(): React.JSX.Element {
             <Link
               prefetch={false}
               href={buildStablecoinUrl(peak.id)}
-              className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
+              className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 pharos-numeric transition-colors hover:bg-muted/50"
               aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
             >
               <span className="flex min-w-0 items-center gap-2.5">
@@ -110,7 +110,7 @@ export function SupplyMovesCard(): React.JSX.Element {
                 </span>
               </span>
               <span
-                className={`font-mono text-3xl font-bold tabular-nums tracking-tight ${
+                className={`pharos-numeric text-3xl font-bold tracking-tight ${
                   peak.pctChange >= 0
                     ? "text-green-700 dark:text-green-400"
                     : "text-red-700 dark:text-red-400"
@@ -156,14 +156,14 @@ function MoverList({
               <Link
                 prefetch={false}
                 href={buildStablecoinUrl(row.id)}
-                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50"
+                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
               >
                 <CoinCell logoSrc={logoSrc} />
                 <span className="truncate uppercase tracking-tight text-foreground">
                   {row.symbol}
                 </span>
                 <span
-                  className={`font-semibold tabular-nums ${
+                  className={`font-semibold pharos-numeric ${
                     row.pctChange >= 0
                       ? "text-green-700 dark:text-green-400"
                       : "text-red-700 dark:text-red-400"

@@ -229,7 +229,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("rank") && (
-        <TableCell key="rank" className="text-right text-muted-foreground text-xs font-mono tabular-nums">
+        <TableCell key="rank" className="text-right text-muted-foreground text-xs pharos-numeric">
           {rank}
         </TableCell>
       )}
@@ -269,7 +269,7 @@ function StablecoinVirtualRowBase({
                 >
                   {reportCard ? (
                     <span
-                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10px] font-mono font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
                       title={`Safety grade ${reportCard.overallGrade}`}
                     >
                       {reportCard.overallGrade}
@@ -282,7 +282,7 @@ function StablecoinVirtualRowBase({
                   <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
                     Peg{" "}
                     <span
-                      className={`ml-1 font-mono tabular-nums ${pegScore !== null ? pegScoreColor(pegScore) : "text-muted-foreground"}`}
+                      className={`ml-1 pharos-numeric ${pegScore !== null ? pegScoreColor(pegScore) : "text-muted-foreground"}`}
                     >
                       {pegScore !== null ? pegScore : "—"}
                     </span>
@@ -290,7 +290,7 @@ function StablecoinVirtualRowBase({
                   <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
                     Liq{" "}
                     <span
-                      className={`ml-1 font-mono tabular-nums ${liquidityScore ? getScoreColor(liquidityScore) : "text-muted-foreground"}`}
+                      className={`ml-1 pharos-numeric ${liquidityScore ? getScoreColor(liquidityScore) : "text-muted-foreground"}`}
                     >
                       {liquidityScore ? liquidityScore : "—"}
                     </span>
@@ -300,7 +300,7 @@ function StablecoinVirtualRowBase({
                     title={mintAuthorityScore.detail}
                   >
                     Mint{" "}
-                    <span className={`ml-1 font-mono tabular-nums ${mintAuthorityScore.textClassName}`}>
+                    <span className={`ml-1 pharos-numeric ${mintAuthorityScore.textClassName}`}>
                       {mintAuthorityScore.result.score != null ? mintAuthorityScore.result.score : "NR"}
                     </span>
                   </span>
@@ -311,12 +311,12 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("price") && (
-        <TableCell key="price" className="text-right font-mono tabular-nums">
+        <TableCell key="price" className="text-right pharos-numeric">
           <span className={confidenceClass(coin.priceConfidence)}>{priceCell}</span>
         </TableCell>
       )}
       {isVisible("peg") && (
-        <TableCell key="peg" className="text-right font-mono tabular-nums">
+        <TableCell key="peg" className="text-right pharos-numeric">
           {meta?.flags.navToken ? (
             <span
               className="text-muted-foreground"
@@ -334,12 +334,12 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("mcap") && (
-        <TableCell key="mcap" className="text-right font-mono tabular-nums">
+        <TableCell key="mcap" className="text-right pharos-numeric">
           {formatCurrency(circulating)}
         </TableCell>
       )}
       {isVisible("change24h") && (
-        <TableCell key="change24h" className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="change24h" className="text-right pharos-numeric text-sm">
           <span
             className={getNetColor(change24h, {
               positiveClass: "text-green-700 dark:text-green-400",
@@ -358,7 +358,7 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("change7d") && (
-        <TableCell key="change7d" className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="change7d" className="text-right pharos-numeric text-sm">
           <span
             className={getNetColor(change7d, {
               positiveClass: "text-green-700 dark:text-green-400",
@@ -387,7 +387,7 @@ function StablecoinVirtualRowBase({
           {reportCard && (
             <Badge
               variant="outline"
-              className={`rounded-full px-2 py-0.5 text-xs font-mono font-semibold transition-all duration-200 ${
+              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${
                 REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]
               } ${
                 ["D", "F"].includes(reportCard.overallGrade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""
@@ -400,17 +400,17 @@ function StablecoinVirtualRowBase({
         </TableCell>
       )}
       {isVisible("stability") && (
-        <TableCell key="stability" className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="stability" className="text-right pharos-numeric text-sm">
           {stabilityCell}
         </TableCell>
       )}
       {isVisible("liquidity") && (
-        <TableCell key="liquidity" className="text-right font-mono tabular-nums text-sm">
+        <TableCell key="liquidity" className="text-right pharos-numeric text-sm">
           {liquidityCell}
         </TableCell>
       )}
       {isVisible("blacklistable") && (
-        <TableCell key="blacklistable" className="text-center font-mono tabular-nums text-sm">
+        <TableCell key="blacklistable" className="text-center pharos-numeric text-sm">
           {blacklistStatus === true ? (
             <span className="text-red-700 dark:text-red-400">Yes</span>
           ) : blacklistStatus === false ? (

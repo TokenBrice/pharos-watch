@@ -585,7 +585,7 @@ function DEWSLegend({
       ))}
       <span
         className={cn(
-          "pharos-numeric text-xs text-muted-foreground/70 tabular-nums",
+          "pharos-numeric text-xs text-muted-foreground/70",
           compact ? "w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0" : "ml-auto",
         )}
       >
@@ -656,7 +656,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           <h2 className="text-base font-semibold leading-none">
             <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
           </h2>
-          <span className="pharos-numeric text-xs text-muted-foreground tabular-nums">
+          <span className="pharos-numeric text-xs text-muted-foreground">
             {elevated.length > 0
               ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
               : `All ${totalCount} coins calm`}

@@ -112,7 +112,7 @@ function ThreatTickerStrip({
                 <div className="truncate text-xs text-muted-foreground">{cell.detail}</div>
               </div>
             </div>
-            <div className={cn("pharos-numeric shrink-0 text-lg font-bold tabular-nums", cell.className)}>
+            <div className={cn("pharos-numeric shrink-0 text-lg font-bold", cell.className)}>
               {cell.value}
             </div>
           </div>
@@ -156,9 +156,9 @@ function MetricCell({
     <div className={cn("min-w-0", className)}>
       <div className="mb-1 flex items-baseline justify-between gap-2 md:hidden">
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
-        <span className="pharos-numeric text-sm font-semibold tabular-nums text-foreground">{value}</span>
+        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
       </div>
-      <div className="pharos-numeric hidden text-sm font-semibold tabular-nums text-foreground md:block">{value}</div>
+      <div className="pharos-numeric hidden text-sm font-semibold text-foreground md:block">{value}</div>
       {children ? <div className="mt-1.5">{children}</div> : null}
       {subline ? <div className="pharos-numeric mt-1 truncate text-[10px] text-muted-foreground">{subline}</div> : null}
     </div>
@@ -206,7 +206,7 @@ function InstrumentRow({
       )}
       aria-label={`Open ${coin.symbol} depeg detail`}
     >
-      <div className="pharos-numeric pt-0.5 text-xs tabular-nums text-muted-foreground md:text-right">#{rank}</div>
+      <div className="pharos-numeric pt-0.5 text-xs text-muted-foreground md:text-right">#{rank}</div>
       <div className="min-w-0">
         <StablecoinIdentity
           logoSrc={logos?.[coin.id]}
@@ -220,8 +220,8 @@ function InstrumentRow({
           <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none", statusClassName(row))}>
             {statusLabel(row)}
           </span>
-          <span className="pharos-numeric text-[11px] text-muted-foreground tabular-nums">{eventAge}</span>
-          <span className="pharos-numeric text-[11px] text-muted-foreground tabular-nums">{coin.pegCurrency}</span>
+          <span className="pharos-numeric text-[11px] text-muted-foreground">{eventAge}</span>
+          <span className="pharos-numeric text-[11px] text-muted-foreground">{coin.pegCurrency}</span>
         </div>
       </div>
       <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 md:contents">
@@ -321,9 +321,9 @@ export function DepegControlBoard({
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">Peg control board</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span><span className="pharos-numeric font-semibold text-foreground tabular-nums">{sortedTotalRows}</span> rows</span>
+          <span><span className="pharos-numeric font-semibold text-foreground">{sortedTotalRows}</span> rows</span>
           <span aria-hidden="true">/</span>
-          <span><span className="pharos-numeric font-semibold text-foreground tabular-nums">{warningCount}</span> attention</span>
+          <span><span className="pharos-numeric font-semibold text-foreground">{warningCount}</span> attention</span>
         </div>
       </div>
 
@@ -417,7 +417,7 @@ export function DepegControlBoard({
                 </button>
               ))}
             </div>
-            <div className="pharos-numeric text-xs tabular-nums text-muted-foreground">
+            <div className="pharos-numeric text-xs text-muted-foreground">
               {rangeStart}-{rangeEnd} / {sortedTotalRows}
             </div>
           </div>
@@ -468,7 +468,7 @@ export function DepegControlBoard({
               >
                 Previous
               </button>
-              <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
+              <span className="pharos-numeric text-xs text-muted-foreground">
                 page {effectivePage + 1} / {totalPages}
               </span>
               <button

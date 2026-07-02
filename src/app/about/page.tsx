@@ -288,7 +288,7 @@ export default function AboutPage() {
           <div className="space-y-4">
             <div className="space-y-1">
               <p className="pharos-kicker">Stablecoins tracked</p>
-              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                 {TRACKED_STABLECOIN_COUNT}
               </p>
             </div>
@@ -314,7 +314,7 @@ export default function AboutPage() {
             {heroStats.map((stat) => (
               <div key={stat.label} className="space-y-1">
                 <dt className="pharos-kicker">{stat.label}</dt>
-                <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+                <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
                   {stat.value}
                 </dd>
               </div>

@@ -143,44 +143,44 @@ function RecoveryPanel({ event }: { event: DepegEventEntry }) {
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak deviation</dt>
-        <dd className="font-medium text-foreground">{formatDeviationBps(event.peakDeviationBps)}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">{formatDeviationBps(event.peakDeviationBps)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Started</dt>
-        <dd className="font-medium text-foreground">{formatLongDate(event.startedAt)}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">{formatLongDate(event.startedAt)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Ended</dt>
-        <dd className="font-medium text-foreground">
+        <dd className="pharos-numeric font-medium text-foreground">
           {event.endedAt ? formatLongDate(event.endedAt) : "Ongoing"}
         </dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Duration</dt>
-        <dd className="font-medium text-foreground">
+        <dd className="pharos-numeric font-medium text-foreground">
           {durationSec != null ? formatApproxDurationSeconds(durationSec, { style: "long" }) : "—"}
         </dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
-        <dd className="font-medium text-foreground">{formatPrice(event.pegReference) ?? "—"}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">{formatPrice(event.pegReference) ?? "—"}</dd>
       </div>
       {startPrice ? (
         <div>
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">Start price</dt>
-          <dd className="font-medium text-foreground">{startPrice}</dd>
+          <dd className="pharos-numeric font-medium text-foreground">{startPrice}</dd>
         </div>
       ) : null}
       {peakPrice ? (
         <div>
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak price</dt>
-          <dd className="font-medium text-foreground">{peakPrice}</dd>
+          <dd className="pharos-numeric font-medium text-foreground">{peakPrice}</dd>
         </div>
       ) : null}
       {recoveryPrice ? (
         <div>
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">Recovery price</dt>
-          <dd className="font-medium text-foreground">{recoveryPrice}</dd>
+          <dd className="pharos-numeric font-medium text-foreground">{recoveryPrice}</dd>
         </div>
       ) : null}
     </dl>

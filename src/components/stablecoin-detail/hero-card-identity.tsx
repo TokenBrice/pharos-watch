@@ -273,7 +273,7 @@ export function SafetyGradeHero({
       </ScoreBadgeWrapper>
       {reportCard.overallScore !== null && (
         <span
-          className={`font-mono tabular-nums tracking-tight text-foreground ${
+          className={`pharos-numeric tracking-tight text-foreground ${
             mobile ? "text-base leading-none" : "text-lg"
           }`}
         >

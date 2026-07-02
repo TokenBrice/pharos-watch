@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 
 const DEFAULT_BEAM_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]";
+  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
 
 export interface LearnHeroProps {
   /** Muted label above the beam figure (e.g. "Active coins tracked"). */

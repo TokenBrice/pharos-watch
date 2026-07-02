@@ -40,7 +40,7 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
               {formatCurrency(snapshot.totalUsd, 1)}
             </p>
           </div>
@@ -61,14 +61,14 @@ export function HomeAltHero({ snapshot }: { snapshot: HomepageHeroSnapshot }): R
                 <CohortRow color={USDC_BLUE} label="USDC" value={latest.usdc} total={latest.total} />
                 <CohortRow color={CHART_ORANGE} label="USDS + DAI" value={latest.sky} total={latest.total} />
                 <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={latest.total} />
-                <li className="flex items-baseline justify-between gap-3 font-mono">
+                <li className="flex items-baseline justify-between gap-3 pharos-numeric">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <span className="inline-flex h-2 w-2 items-center" aria-hidden="true">
                       <span className="w-2 border-t border-dashed" style={{ borderColor: CHART_SLATE_STRONG }} />
                     </span>
                     <span className="uppercase tracking-tight">Non-USD share</span>
                   </span>
-                  <span className="flex items-baseline gap-1.5 tabular-nums text-muted-foreground">
+                  <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
                     {snapshot.nonUsdShare !== null ? (
                       <>
                         <span className="text-foreground">{formatCurrency(snapshot.nonUsdUsd, 1)}</span>
@@ -103,12 +103,12 @@ function CohortRow({
 }): React.JSX.Element {
   const share = total > 0 ? (value / total) * 100 : 0;
   return (
-    <li className="flex items-baseline justify-between gap-3 font-mono">
+    <li className="flex items-baseline justify-between gap-3 pharos-numeric">
       <span className="flex items-center gap-2 text-muted-foreground">
         <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: color }} aria-hidden="true" />
         <span className="uppercase tracking-tight">{label}</span>
       </span>
-      <span className="flex items-baseline gap-1.5 tabular-nums text-muted-foreground">
+      <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
         <span className="text-foreground">{formatCurrency(value, 1)}</span>
         <span aria-hidden="true">·</span>
         <span>{share.toFixed(1)}%</span>

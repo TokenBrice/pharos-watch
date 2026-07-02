@@ -91,7 +91,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
         </div>
       ) : (
         <>
-          <div className="flex items-baseline gap-2 font-mono font-bold tabular-nums tracking-tight">
+          <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
             <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>
               {rows.length}
             </span>
@@ -132,7 +132,7 @@ function DepegRow({
       <Link
         prefetch={false}
         href={buildStablecoinUrl(row.id)}
-        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
+        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
@@ -140,12 +140,12 @@ function DepegRow({
             {row.symbol}
           </span>
           <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-          <span className={`shrink-0 font-semibold tabular-nums ${colorClass}`}>
+          <span className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}>
             <span aria-hidden="true" className="mr-0.5">{arrow}</span>
             {Math.abs(row.bps).toFixed(0)}
           </span>
         </span>
-        <span className="uppercase tabular-nums text-muted-foreground">
+        <span className="uppercase pharos-numeric text-muted-foreground">
           {formatElapsedSeconds(row.ageSec)}
         </span>
       </Link>

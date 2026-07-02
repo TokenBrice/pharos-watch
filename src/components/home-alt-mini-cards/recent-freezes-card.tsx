@@ -178,7 +178,7 @@ export function RecentFreezesCard(): React.JSX.Element {
         <>
           <div className="flex items-baseline gap-2">
             <span
-              className={`font-mono text-4xl font-bold tabular-nums tracking-tight ${
+              className={`pharos-numeric text-4xl font-bold tracking-tight ${
                 count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
               }`}
             >
@@ -187,7 +187,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
               ·
             </span>
-            <span className="font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground/70">
+            <span className="pharos-numeric text-[11px] uppercase tracking-wider text-muted-foreground/70">
               {count.toLocaleString("en-US")}X
             </span>
           </div>
@@ -198,14 +198,14 @@ export function RecentFreezesCard(): React.JSX.Element {
                 return (
                   <li
                     key={ev.id}
-                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 tabular-nums"
+                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
                   >
                     <CoinCell logoSrc={logoSrc} />
                     <span className="truncate uppercase tracking-tight text-foreground">
                       {ev.symbol}
                     </span>
                     <span className="flex items-baseline gap-1.5">
-                      <span className="font-semibold tabular-nums text-red-700 dark:text-red-400">
+                      <span className="font-semibold pharos-numeric text-red-700 dark:text-red-400">
                         {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0
                           ? formatCurrency(ev.amountUsdAtEvent, 0)
                           : "—"}
@@ -213,7 +213,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                       <span aria-hidden="true" className="text-muted-foreground/40">
                         ·
                       </span>
-                      <span className="uppercase tabular-nums text-muted-foreground/80">
+                      <span className="uppercase pharos-numeric text-muted-foreground/80">
                         {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
                       </span>
                     </span>

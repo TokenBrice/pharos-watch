@@ -120,7 +120,7 @@ export function BlacklistStats({
         subtext={unfreezableMarketShareSubtext}
         className="sm:col-span-2"
         contentClassName="pt-1"
-        valueClassName="pharos-numeric text-4xl font-semibold leading-none tabular-nums sm:text-5xl"
+        valueClassName="pharos-numeric text-4xl font-semibold leading-none sm:text-5xl"
         subtextClassName="mt-2 text-sm text-muted-foreground"
         onClick={canDrillIntoUnfreezable ? onUnfreezableSelect : undefined}
         actionLabel="Show unfreezable stablecoins"
@@ -129,14 +129,14 @@ export function BlacklistStats({
         title="Tracked Frozen Total"
         value={formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
-        valueClassName="pharos-numeric text-3xl font-semibold tabular-nums"
+        valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
         title="Total Wiped Value"
         value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
         subtext="destroyed or confiscated value"
-        valueClassName="pharos-numeric text-3xl font-semibold tabular-nums"
+        valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
     </div>

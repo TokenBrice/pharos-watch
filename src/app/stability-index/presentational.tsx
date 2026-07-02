@@ -83,7 +83,7 @@ function PsiHistoryStatsGrid({
             </span>
             <span
               className={cn(
-                "tabular-nums leading-none",
+                "pharos-numeric leading-none",
                 isCompact ? "text-base font-bold" : "text-2xl font-extrabold",
                 color,
               )}
@@ -206,7 +206,7 @@ export function StabilityIndexPanel({
                   <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     {scoreBasis}
                   </span>
-                  <span className={`font-mono text-6xl font-extrabold leading-none tabular-nums xl:text-[4.15rem] ${colorClass}`}>
+                  <span className={`pharos-numeric text-6xl font-extrabold leading-none xl:text-[4.15rem] ${colorClass}`}>
                     {formatScore(score)}
                   </span>
                   <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
@@ -215,7 +215,7 @@ export function StabilityIndexPanel({
                 </div>
                 <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground xl:justify-start">
                   {delta !== null && (
-                    <span className={`font-medium tabular-nums ${deltaClass}`}>
+                    <span className={`font-medium pharos-numeric ${deltaClass}`}>
                       {delta >= 0 ? "+" : ""}
                       {delta.toFixed(1)} vs yesterday
                     </span>
@@ -258,10 +258,10 @@ export function PsiEventTimelineCard({ rows }: { rows: PsiEventTimelineRow[] }) 
               />
               <div className="flex flex-col gap-0.5">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className="text-sm tabular-nums text-muted-foreground shrink-0">{event.dateStr}</span>
+                  <span className="text-sm pharos-numeric text-muted-foreground shrink-0">{event.dateStr}</span>
                   <span className="text-sm font-semibold shrink-0">{event.label}</span>
                   {event.psi !== null && (
-                    <span className={`text-sm tabular-nums font-medium shrink-0 ${event.psiColor}`}>
+                    <span className={`text-sm pharos-numeric font-medium shrink-0 ${event.psiColor}`}>
                       PSI {formatScore(event.psi)}
                     </span>
                   )}
@@ -444,7 +444,7 @@ export function PsiContributorsTableCard({
                     <TableCell
                       className={cn(
                         CONTRIBUTOR_CELL_CLASS,
-                        "text-right tabular-nums",
+                        "text-right pharos-numeric",
                         row.bps < 0
                           ? "text-red-700 dark:text-red-400"
                           : "text-amber-700 dark:text-amber-400",
@@ -456,7 +456,7 @@ export function PsiContributorsTableCard({
                     <TableCell
                       className={cn(
                         CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right font-mono text-xs tabular-nums sm:table-cell",
+                        "hidden text-right pharos-numeric text-xs sm:table-cell",
                       )}
                     >
                       {formatCurrency(row.mcapUsd)}
@@ -464,7 +464,7 @@ export function PsiContributorsTableCard({
                     <TableCell
                       className={cn(
                         CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right font-mono tabular-nums sm:table-cell",
+                        "hidden text-right pharos-numeric sm:table-cell",
                       )}
                     >
                       {row.severity.toFixed(2)}
@@ -472,12 +472,12 @@ export function PsiContributorsTableCard({
                     <TableCell
                       className={cn(
                         CONTRIBUTOR_CELL_CLASS,
-                        "hidden text-right font-mono tabular-nums sm:table-cell",
+                        "hidden text-right pharos-numeric sm:table-cell",
                       )}
                     >
                       {row.breadth.toFixed(2)}
                     </TableCell>
-                    <TableCell className={cn(CONTRIBUTOR_CELL_CLASS, "text-right tabular-nums")}>
+                    <TableCell className={cn(CONTRIBUTOR_CELL_CLASS, "text-right pharos-numeric")}>
                       <div className="flex items-center justify-end gap-2">
                         <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
                           <div
@@ -490,7 +490,7 @@ export function PsiContributorsTableCard({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-0 py-2.5 text-right tabular-nums">
+                    <TableCell className="px-0 py-2.5 text-right pharos-numeric">
                       <span className="font-mono text-xs">
                         {row.ageDays < 1 ? "<1d" : `${Math.round(row.ageDays)}d`}
                       </span>

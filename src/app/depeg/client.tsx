@@ -81,7 +81,7 @@ function DepegCoverageBand({ reliability }: { reliability: DepegCoverageMetrics 
       <h2 className="pharos-kicker mr-1">Coverage</h2>
       {items.map((item) => (
         <span key={item.label} className="text-xs text-muted-foreground">
-          <span className="pharos-numeric font-semibold tabular-nums text-foreground">{item.value}</span>{" "}
+          <span className="pharos-numeric font-semibold text-foreground">{item.value}</span>{" "}
           {item.label}
         </span>
       ))}
@@ -296,7 +296,7 @@ export function DepegClient() {
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-muted-foreground">Active depegs</p>
             <div className="flex items-baseline gap-2.5">
-              <span className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+              <span className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                 {reliability.activeCount}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -309,7 +309,7 @@ export function DepegClient() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="text-right">
               <p className="pharos-kicker">DEWS alerts</p>
-              <p className="pharos-numeric mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+              <p className="pharos-numeric mt-0.5 text-lg font-semibold text-foreground">
                 {dewsAlertCount}
               </p>
             </div>
@@ -323,7 +323,7 @@ export function DepegClient() {
                     deviationColorClass(Math.abs(pegData.summary.worstCurrent.bps)),
                   )}
                 >
-                  <span className="pharos-numeric tabular-nums">
+                  <span className="pharos-numeric">
                     {Math.abs(pegData.summary.worstCurrent.bps)} bps
                   </span>
                   <span className="opacity-80">{pegData.summary.worstCurrent.symbol}</span>

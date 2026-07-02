@@ -90,7 +90,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           DEWS Alert Queue
         </h2>
-        <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
+        <span className="pharos-numeric text-xs text-muted-foreground">
           {alertCoins.length} at alert+
         </span>
       </div>
@@ -124,7 +124,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
 
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <DEWSBadge score={coin.score} band={coin.band} />
-                <span className="pharos-numeric w-6 text-right text-xs tabular-nums text-muted-foreground">
+                <span className="pharos-numeric w-6 text-right text-xs text-muted-foreground">
                   {coin.score}
                 </span>
               </div>
@@ -144,7 +144,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           >
             ← Prev
           </button>
-          <span className="pharos-numeric text-xs tabular-nums text-muted-foreground">
+          <span className="pharos-numeric text-xs text-muted-foreground">
             {safePage + 1} / {totalPages}
           </span>
           <button

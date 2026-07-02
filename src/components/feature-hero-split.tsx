@@ -14,7 +14,7 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
  */
 
 const DEFAULT_BEAM_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]";
+  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
 
 export interface FeatureHeroSplitProps {
   /** Small muted label above the beam figure (e.g. "Aggregate DEX Depth"). */

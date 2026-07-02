@@ -71,7 +71,7 @@ function DepegLogoStack({
         {overflow.length > 0 && (
           <span
             title={overflow.map((c) => c.symbol).join(", ")}
-            className="pharos-numeric inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/70 text-[11px] font-semibold tabular-nums text-muted-foreground ring-2 ring-card"
+            className="pharos-numeric inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/70 text-[11px] font-semibold text-muted-foreground ring-2 ring-card"
           >
             +{overflow.length}
           </span>
@@ -95,7 +95,7 @@ function PegStat({
     <div className="pharos-card-shell rounded-xl px-4 py-3">
       <p className="pharos-kicker">{title}</p>
       <p className="mt-1.5 flex items-baseline gap-2">
-        <span className="pharos-numeric text-2xl font-bold tabular-nums leading-none">{value}</span>
+        <span className="pharos-numeric text-2xl font-bold leading-none">{value}</span>
         <span className="text-xs text-muted-foreground">{subtext}</span>
       </p>
     </div>
@@ -113,7 +113,7 @@ function StripStat({
 }) {
   return (
     <span className="text-xs text-muted-foreground">
-      <span className="pharos-numeric font-semibold tabular-nums text-foreground">{value}</span> {label}
+      <span className="pharos-numeric font-semibold text-foreground">{value}</span> {label}
       {trail ? <span className="text-muted-foreground/70"> {trail}</span> : null}
     </span>
   );
@@ -137,7 +137,7 @@ export function DepegTrackerStats({ stats, activeDepegCoins = [], logos }: Depeg
               <MethodologyLabel topic="activeDepegs">Active Depegs</MethodologyLabel>
             </p>
             <p className="mt-1.5 flex items-baseline gap-2">
-              <span className="pharos-numeric text-4xl font-extrabold tabular-nums leading-none">
+              <span className="pharos-numeric text-4xl font-extrabold leading-none">
                 {stats.activeDepegCount}
               </span>
               <span className="text-sm text-muted-foreground">ongoing events</span>

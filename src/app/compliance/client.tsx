@@ -193,13 +193,13 @@ export function ComplianceClient() {
               <p className="pharos-meta">
                 {matchingCount === totalTracked ? (
                   <>
-                    <span className="pharos-numeric tabular-nums">{totalTracked.toLocaleString()}</span> assessed regime
+                    <span className="pharos-numeric">{totalTracked.toLocaleString()}</span> assessed regime
                     rows
                   </>
                 ) : (
                   <>
-                    <span className="pharos-numeric tabular-nums">{matchingCount.toLocaleString()}</span>/
-                    <span className="pharos-numeric tabular-nums">{totalTracked.toLocaleString()}</span> matching
+                    <span className="pharos-numeric">{matchingCount.toLocaleString()}</span>/
+                    <span className="pharos-numeric">{totalTracked.toLocaleString()}</span> matching
                   </>
                 )}
               </p>

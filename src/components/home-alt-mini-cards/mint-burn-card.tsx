@@ -49,12 +49,12 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
             {gauge ? (
               <>
                 {gauge.score !== null && (
-                  <span className="tabular-nums">
+                  <span className="pharos-numeric">
                     {gauge.score >= 0 ? "+" : ""}
                     {gauge.score.toFixed(0)} ·{" "}
                   </span>
                 )}
-                Net <span className="tabular-nums text-foreground/85">{formatSignedCompactUsd(totalNet)}</span>
+                Net <span className="pharos-numeric text-foreground/85">{formatSignedCompactUsd(totalNet)}</span>
               </>
             ) : (
               "Net flow"
@@ -72,7 +72,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                   <Link
                     prefetch={false}
                     href={buildStablecoinUrl(row.id)}
-                    className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 font-mono tabular-nums transition-colors hover:bg-muted/50"
+                    className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
                   >
                     <CoinCell logoSrc={logoSrc} size="compact" />
                     <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>

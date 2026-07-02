@@ -60,7 +60,7 @@ function HeroStat({ label, value, loading }: { label: string; value: string; loa
       {loading ? (
         <Skeleton className="h-7 w-24" />
       ) : (
-        <dd className="pharos-numeric text-xl font-semibold tabular-nums text-foreground sm:text-2xl">{value}</dd>
+        <dd className="pharos-numeric text-xl font-semibold text-foreground sm:text-2xl">{value}</dd>
       )}
     </div>
   );
@@ -161,7 +161,7 @@ export default function FreezeWatchClient() {
             {heroLoading ? (
               <Skeleton className="h-10 w-32" />
             ) : (
-              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
                 {formatShare(freezableShare)}
               </p>
             )}

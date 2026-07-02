@@ -49,7 +49,7 @@ const COMPLIANCE_HERO = (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/50 p-5 sm:p-6">
       <div className="space-y-1.5">
         <p className="text-sm font-medium text-muted-foreground">MiCA-authorized stablecoins</p>
-        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue tabular-nums sm:text-[2.45rem]">
+        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
           {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
         </p>
         <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed issuers</p>
@@ -58,7 +58,7 @@ const COMPLIANCE_HERO = (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
           GENIUS regime
           <span className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</span>
-          <span className="pharos-numeric tabular-nums text-foreground">· effective {GENIUS_REGIME_STATE.effectiveDate}</span>
+          <span className="pharos-numeric text-foreground">· effective {GENIUS_REGIME_STATE.effectiveDate}</span>
         </span>
         <CardExpandButton href="#data" expandLabel="Jump to compliance tables" />
       </div>
@@ -66,19 +66,19 @@ const COMPLIANCE_HERO = (
     <dl className="grid grid-cols-3 divide-x divide-border/40">
       <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
         <dt className="pharos-meta">MiCA authorization rate</dt>
-        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {COMPLIANCE_SUMMARY.micaAuthorizedPct}%
         </dd>
       </div>
       <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
         <dt className="pharos-meta">GENIUS tracked</dt>
-        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {COMPLIANCE_SUMMARY.geniusTracked.toLocaleString()}
         </dd>
       </div>
       <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
         <dt className="pharos-meta">Assessed regime rows</dt>
-        <dd className="pharos-numeric text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+        <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {COMPLIANCE_SUMMARY.assessedRegimeRows.toLocaleString()}
         </dd>
       </div>

@@ -138,7 +138,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <CoinLockup row={row} logos={logos} logoSize={52} />
           {priceLabel ? (
-            <span className="pharos-numeric shrink-0 text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
+            <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{priceLabel}</span>
           ) : null}
           <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
@@ -166,7 +166,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
 
         {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
         {showBand ? (
-          <p className="pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] tabular-nums text-muted-foreground">
+          <p className="pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
             {duration.iqrSec ? (
               <span>
                 band{" "}
@@ -309,7 +309,7 @@ function PredictionDetails({ row, frozen }: { row: DdrDisplayRow; frozen: boolea
             {items.map((item) => (
               <div key={item.label} className="flex items-center gap-1.5">
                 <dt className="text-muted-foreground">{item.label}</dt>
-                <dd className="pharos-numeric tabular-nums text-foreground">{item.value}</dd>
+                <dd className="pharos-numeric text-foreground">{item.value}</dd>
               </div>
             ))}
           </dl>
