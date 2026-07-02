@@ -5,10 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCard } from "@/test/fixtures/safety-scores";
 import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 
-const { useReportCardsMock, useStablecoinsMock, useLogosMock } = vi.hoisted(() => ({
+interface ContagionGraphMockProps {
+  cards: ReportCard[];
+  dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
+  mcapMap: Map<string, number>;
+  focusCoinId?: string;
+}
+
+const { useReportCardsMock, useStablecoinsMock, useLogosMock, contagionGraphMock } = vi.hoisted(() => ({
   useReportCardsMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
   useLogosMock: vi.fn(),
+  contagionGraphMock: vi.fn<(props: ContagionGraphMockProps) => void>(),
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -25,7 +33,9 @@ vi.mock("@/hooks/use-logos", () => ({
 
 vi.mock("next/dynamic", () => ({
   default: () =>
-    function MockDynamicContagionGraph({ focusCoinId }: { focusCoinId?: string }) {
+    function MockDynamicContagionGraph(props: ContagionGraphMockProps) {
+      const { focusCoinId } = props;
+      contagionGraphMock(props);
       return <div data-testid="contagion-graph-mock">graph:{focusCoinId}</div>;
     },
 }));
@@ -116,11 +126,20 @@ const STABLECOINS_PAYLOAD = {
   ],
 };
 
+function getGraphCall(index: number): ContagionGraphMockProps {
+  const props = contagionGraphMock.mock.calls[index]?.[0];
+  if (!props) {
+    throw new Error(`Missing contagion graph render ${index}`);
+  }
+  return props;
+}
+
 describe("ContagionSnapshot", () => {
   beforeEach(() => {
     useReportCardsMock.mockReset();
     useStablecoinsMock.mockReset();
     useLogosMock.mockReset();
+    contagionGraphMock.mockReset();
     useStablecoinsMock.mockReturnValue({ data: STABLECOINS_PAYLOAD });
     useLogosMock.mockReturnValue({ data: {} });
   });
@@ -169,6 +188,36 @@ describe("ContagionSnapshot", () => {
 
     expect(screen.getByTestId("collateral-usage-mock").textContent).toBe("collateral-usage:usde-ethena");
     expect(screen.getByTestId("contagion-graph-mock")).toBeTruthy();
+  });
+
+  it("keeps derived graph inputs stable across unrelated rerenders", () => {
+    const reportCards = makeReportCardsResponse(
+      [makeCard("usde-ethena", "USDe"), makeCard("usdc-circle", "USDC")],
+      [{ from: "usde-ethena", to: "usdc-circle", weight: 0.8, type: "collateral" }],
+    );
+    useReportCardsMock.mockReturnValue({ data: reportCards });
+
+    const { rerender } = render(
+      <ContagionSnapshot
+        stablecoinId="usde-ethena"
+        variantRelationshipCard={<div data-testid="variant-card">VARIANT</div>}
+      />,
+    );
+    const firstProps = getGraphCall(0);
+
+    rerender(
+      <ContagionSnapshot
+        stablecoinId="usde-ethena"
+        variantRelationshipCard={<div data-testid="variant-card">UPDATED</div>}
+      />,
+    );
+    const secondProps = getGraphCall(1);
+
+    expect(contagionGraphMock).toHaveBeenCalledTimes(2);
+    expect(secondProps.cards).toBe(firstProps.cards);
+    expect(secondProps.dependencyEdges).toBe(firstProps.dependencyEdges);
+    expect(secondProps.mcapMap).toBe(firstProps.mcapMap);
+    expect(secondProps.mcapMap.get("usdc-circle")).toBe(60_000_000_000);
   });
 
   it("returns null when no contagion edges exist and no right column is configured", () => {

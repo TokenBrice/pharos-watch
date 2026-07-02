@@ -2295,6 +2295,16 @@
      "src/components/contagion-graph/use-contagion-graph-model.ts",
      "src/app/dependency-map/client.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Memoized ContagionSnapshot's derived graph inputs so unchanged report-card and stablecoin payloads keep stable cards, dependency edge, live-id, contagion flag, and market-cap map identities across unrelated rerenders. Added a component regression test that verifies the graph receives the same derived references when only sibling props change.",
+    "validation": [
+     "npm run test -- src/components/stablecoin-detail/__tests__/contagion-snapshot.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/stablecoin-detail/contagion-snapshot.tsx src/components/stablecoin-detail/__tests__/contagion-snapshot.test.tsx"
+    ]
    }
   },
   {

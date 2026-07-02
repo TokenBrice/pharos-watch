@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -8,6 +8,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CollateralUsageSection } from "./collateral-usage-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import type { ReportCard, ReportCardsResponse, StablecoinData } from "@shared/types";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
@@ -17,6 +18,10 @@ interface ContagionSnapshotProps {
 }
 
 const DETAIL_NODE_LIMIT = 500;
+const EMPTY_CARDS: ReportCard[] = [];
+const EMPTY_DEPENDENCY_EDGES: ReportCardsResponse["dependencyGraph"]["edges"] = [];
+const EMPTY_PEGGED_ASSETS: StablecoinData[] = [];
+const EMPTY_MCAP_MAP = new Map<string, number>();
 
 const ContagionGraph = dynamic(() => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph), {
   ssr: false,
@@ -38,24 +43,34 @@ export function ContagionSnapshot({
   const { data: logos } = useLogos();
   const hasVariantCard = Boolean(variantRelationshipCard);
   const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
-  const focus = rc?.cards?.find((c) => c.id === stablecoinId);
-  const edges = focus ? (rc?.dependencyGraph?.edges ?? []) : [];
-  const liveCardIds = new Set(rc?.cards?.filter((c) => !c.isDefunct).map((c) => c.id) ?? []);
-  const hasContagion = Boolean(
-    focus &&
-    list?.peggedAssets &&
-    edges.some(
-      (e) => liveCardIds.has(e.from) && liveCardIds.has(e.to) && (e.from === stablecoinId || e.to === stablecoinId),
-    ),
+  const cards = rc?.cards ?? EMPTY_CARDS;
+  const dependencyEdges = rc?.dependencyGraph?.edges ?? EMPTY_DEPENDENCY_EDGES;
+  const peggedAssets = list?.peggedAssets ?? EMPTY_PEGGED_ASSETS;
+  const hasStablecoinsPayload = Boolean(list?.peggedAssets);
+  const focus = useMemo(() => cards.find((c) => c.id === stablecoinId), [cards, stablecoinId]);
+  const edges = focus ? dependencyEdges : EMPTY_DEPENDENCY_EDGES;
+  const liveCardIds = useMemo(() => new Set(cards.filter((c) => !c.isDefunct).map((c) => c.id)), [cards]);
+  const hasContagion = useMemo(
+    () =>
+      Boolean(
+        focus &&
+          hasStablecoinsPayload &&
+          edges.some(
+            (e) =>
+              liveCardIds.has(e.from) &&
+              liveCardIds.has(e.to) &&
+              (e.from === stablecoinId || e.to === stablecoinId),
+          ),
+      ),
+    [edges, focus, hasStablecoinsPayload, liveCardIds, stablecoinId],
   );
+  const mcapMap = useMemo(() => {
+    if (!hasContagion) return EMPTY_MCAP_MAP;
+    return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRaw(coin)]));
+  }, [hasContagion, peggedAssets]);
 
   if (!hasContagion && !hasRightColumn) {
     return null;
-  }
-
-  const mcapMap = new Map<string, number>();
-  for (const coin of list?.peggedAssets ?? []) {
-    mcapMap.set(coin.id, getCirculatingRaw(coin));
   }
 
   const rightColumn = (
@@ -78,7 +93,7 @@ export function ContagionSnapshot({
       <div className={layoutClass}>
         {hasContagion ? (
           <ContagionGraph
-            cards={rc?.cards ?? []}
+            cards={cards}
             dependencyEdges={edges}
             mcapMap={mcapMap}
             logos={logos}
