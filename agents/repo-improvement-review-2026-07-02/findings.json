@@ -2829,6 +2829,16 @@
     "description": "manage.ts:15-30 hand-rolls the same SELECT as telegram-store/subscriptions.ts loadSubscriptionRowsByChat (line 147) — same table, same chat_id filter, same ORDER BY, same SubscriptionRow target type — except it silently omits the alert_reserve column, evidence the copy has already drifted from the canonical loader. Today the manage/unsub rendering only reads stablecoin_id (plus sort keys), so the omission is latent, but any future manage-page feature reading alert flags would misrender reserve subscriptions. Its two callers are renderManagePage (manage.ts:79) and the unsub callback (unsub.ts:112).",
     "recommendation": "Delete loadChatSubscriptions and import loadSubscriptionRowsByChat from ../telegram-webhook-store in manage.ts and unsub.ts. The store loader returns a superset (adds alert_reserve) of the same rows in the same order, so rendered output is identical.",
     "estImpact": "-16 LOC, removes a drifting query copy"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the duplicate `loadChatSubscriptions` SELECT and routed both manage-page and unsubscribe refresh reads through the canonical `loadSubscriptionRowsByChat` store loader.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Added callback coverage asserting the manage-page subscription query includes the canonical `alert_reserve` projection."
    }
   },
   {

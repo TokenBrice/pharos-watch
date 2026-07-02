@@ -5,29 +5,13 @@ import {
   buildManageWatchlistMessage,
 } from "../telegram-webhook-messages";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
+import { loadSubscriptionRowsByChat } from "../telegram-webhook-store";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 import {
   hasExactParts,
   type CallbackHandler,
   type TelegramCallbackQuery,
 } from "./_shared";
-
-export async function loadChatSubscriptions(
-  db: D1Database,
-  chatId: string,
-): Promise<SubscriptionRow[]> {
-  const result = await db
-    .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-              dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-         FROM telegram_subscriptions
-        WHERE chat_id = ?
-        ORDER BY stablecoin_id`,
-    )
-    .bind(chatId)
-    .all<SubscriptionRow>();
-  return result.results ?? [];
-}
 
 export async function renderManageWatchlistPage(
   db: D1Database,
@@ -76,7 +60,7 @@ async function renderManagePage(
   requestedPage: number,
   ackText: string,
 ): Promise<void> {
-  const subscriptions = await loadChatSubscriptions(db, chatId);
+  const subscriptions = await loadSubscriptionRowsByChat(db, chatId);
   await renderManageWatchlistPage(db, botToken, cb, {
     chatId,
     subscriptions,

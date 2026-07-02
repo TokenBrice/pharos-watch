@@ -1250,6 +1250,8 @@ describe("handleCallbackQuery", () => {
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
       expect(callbacks).toContain("unsub:usdc-circle");
       expect(callbacks).toContain("unsub:dai-makerdao");
+      const subscriptionSelect = db.getHistory().find((h) => h.sql.includes("FROM telegram_subscriptions"));
+      expect(subscriptionSelect?.sql).toContain("alert_reserve");
       // No mutations on a pure page render.
       expect(db.getHistory().some((h) => /\bDELETE\b|\bINSERT\b/i.test(h.sql))).toBe(false);
     });

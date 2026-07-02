@@ -2,9 +2,9 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { removeSubscriptions } from "../telegram-webhook-store";
+import { loadSubscriptionRowsByChat, removeSubscriptions } from "../telegram-webhook-store";
 import { isGroupChatType } from "../telegram-webhook-auth";
-import { loadChatSubscriptions, renderManageWatchlistPage } from "./manage";
+import { renderManageWatchlistPage } from "./manage";
 import {
   callbackChatType,
   hasExactParts,
@@ -109,7 +109,7 @@ async function handleManageUnsub(
     return;
   }
 
-  const subscriptions = await loadChatSubscriptions(db, chatId);
+  const subscriptions = await loadSubscriptionRowsByChat(db, chatId);
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const ackText = `Removed ${meta?.symbol ?? stablecoinId}.`;
   await renderManageWatchlistPage(db, botToken, cb, {
