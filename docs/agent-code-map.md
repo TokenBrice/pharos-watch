@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 388 more files omitted; use `rg --files src/components` for the full list.
+- ... 389 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
