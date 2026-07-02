@@ -16,17 +16,13 @@ import {
   isFreshFallbackObservedAt,
   isUsableFallbackPrice,
 } from "./enrich-prices-pass-common";
+import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
 const DL_CONTRACT_MAX_AGE_SEC = 15 * 60;
 const DL_CONTRACT_MIN_CONFIDENCE = 0.8;
 
 const DL_COINS_CHAIN_PREFIX_BY_CHAIN: Record<string, string> = {
   avalanche: "avax",
-};
-
-const ADDRESS_OVERRIDES: Record<string, string> = {
-  "m-m0": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
-  "bean-beanstalk": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4",
 };
 
 function isEvmChain(chain: string): boolean {
@@ -164,7 +160,7 @@ function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
 }
 
 function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
-  const rawAddress = (asset.address?.trim() || ADDRESS_OVERRIDES[asset.id])?.trim();
+  const rawAddress = (asset.address?.trim() || TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id])?.trim();
   if (!rawAddress) return buildTrackedDeploymentCoinIds(asset);
   if (rawAddress.includes(":")) {
     return [addressToCoinId(rawAddress)];

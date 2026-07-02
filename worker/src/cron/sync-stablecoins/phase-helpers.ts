@@ -6,12 +6,9 @@ import { throwIfAborted } from "../../lib/abort";
 import { startOfUtcDaySec } from "../../lib/time-constants";
 import type { PeggedAsset } from "./enrich-prices";
 import { parseStablecoinsCachePayload } from "./shared";
+import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
 const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
-const ADDRESS_OVERRIDES: Record<string, string> = {
-  "m-m0": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
-  "bean-beanstalk": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4",
-};
 
 export interface StructuralValidationResult {
   validAssets: PeggedAsset[];
@@ -109,8 +106,8 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
     if (meta?.flags?.navToken) {
       asset.navToken = true;
     }
-    if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
-      asset.address = ADDRESS_OVERRIDES[asset.id];
+    if (!asset.address && TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id]) {
+      asset.address = TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id];
     }
     // contracts come from curated tracked metadata (covers active + frozen),
     // since ACTIVE_META_BY_ID alone would skip frozen rows injected by mergeFrozenSnapshots.

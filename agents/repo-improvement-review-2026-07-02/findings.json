@@ -344,10 +344,20 @@
     "recommendation": "Extract one shared ADDRESS_OVERRIDES constant (e.g., in enrich-prices-pass-common.ts or phase-helpers.ts) and import it in both places. Pure refactor of identical data; no behavior change.",
     "estImpact": "-8 LOC; single source of truth for curated addresses",
     "alsoFiles": [
-     "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts"
+      "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts"
     ]
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Moved the curated tracked-asset address overrides into a single sync-stablecoins module and imported it from both intake normalization and the DefiLlama contract pass, removing the duplicated map without changing override values.",
+   "validation": [
+    "npx vitest run worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/sync-stablecoins/__tests__/fallback.test.ts",
+    "npx vitest run worker/src/cron/__tests__/sync-stablecoins-stages.test.ts worker/src/cron/__tests__/enrich-prices.test.ts",
+    "cd worker && npx tsc --noEmit"
+   ]
+  }
+ },
   {
    "id": "w-cron-sync:5",
    "domain": "w-cron-sync",

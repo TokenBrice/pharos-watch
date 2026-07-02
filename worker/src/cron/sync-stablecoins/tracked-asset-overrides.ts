@@ -1,0 +1,4 @@
+export const TRACKED_ASSET_ADDRESS_OVERRIDES: Record<string, string> = {
+  "m-m0": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+  "bean-beanstalk": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4",
+};
