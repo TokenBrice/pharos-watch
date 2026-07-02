@@ -1,4 +1,3 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 // Shared version/helpers also consumed by homepage-bootstrap-runtime.ts; this
@@ -60,19 +59,4 @@ export function validateHomepageBootstrapPayloadData(payload: HomepageBootstrapP
     }
   }
   return errors;
-}
-
-export function countSeedableHomepageBootstrapQueries(
-  payload: HomepageBootstrapPayload | null,
-  nowMs = Date.now(),
-): number {
-  return homepageBootstrapCodec.countSeedable(payload, nowMs);
-}
-
-export function seedHomepageBootstrapQueries(
-  queryClient: QueryClient,
-  payload: HomepageBootstrapPayload | null,
-  nowMs = Date.now(),
-): number {
-  return homepageBootstrapCodec.seedQueries(queryClient, payload, nowMs);
 }

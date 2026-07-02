@@ -1,10 +1,7 @@
-import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
-  countSeedableHomepageBootstrapQueries,
   normalizeHomepageBootstrapPayload,
-  seedHomepageBootstrapQueries,
   validateHomepageBootstrapPayloadData,
 } from "../homepage-bootstrap";
 
@@ -55,60 +52,5 @@ describe("homepage bootstrap", () => {
     expect(validateHomepageBootstrapPayloadData(payload!)).toEqual([
       expect.stringContaining("stablecoins:"),
     ]);
-  });
-
-  it("seeds validated queries into the TanStack Query cache", () => {
-    const client = new QueryClient();
-    const payload = normalizeHomepageBootstrapPayload({
-      version: HOMEPAGE_BOOTSTRAP_VERSION,
-      generatedAt: 1_700_000_000_000,
-      source: "https://api.pharos.watch",
-      queries: {
-        stablecoins: {
-          id: "stablecoins",
-          path: "/api/stablecoins",
-          fetchedAt: 1_700_000_000_001,
-          data: { peggedAssets: [] },
-          meta: { updatedAt: 1_700_000_000, ageSeconds: 5, status: "fresh" },
-        },
-        reportCards: {
-          id: "reportCards",
-          path: "/api/report-cards",
-          fetchedAt: 1_700_000_000_001,
-          data: { cards: "not-an-array" },
-          meta: null,
-        },
-      },
-    });
-
-    expect(seedHomepageBootstrapQueries(client, payload, 1_700_000_001_000)).toBe(1);
-    expect(client.getQueryData(["stablecoins"])).toEqual({
-      data: { peggedAssets: [] },
-      meta: { updatedAt: 1_700_000_000, ageSeconds: 5, status: "fresh" },
-    });
-    expect(client.getQueryData(["report-cards"])).toBeUndefined();
-  });
-
-  it("does not seed expired preserved payload entries", () => {
-    const client = new QueryClient();
-    const payload = normalizeHomepageBootstrapPayload({
-      version: HOMEPAGE_BOOTSTRAP_VERSION,
-      generatedAt: 1_700_000_000_000,
-      source: "https://api.pharos.watch",
-      queries: {
-        stablecoins: {
-          id: "stablecoins",
-          path: "/api/stablecoins",
-          fetchedAt: 1_700_000_000_000,
-          data: { peggedAssets: [] },
-          meta: { updatedAt: 1_700_000_000, ageSeconds: 5, status: "fresh" },
-        },
-      },
-    });
-
-    expect(countSeedableHomepageBootstrapQueries(payload, 1_700_000_599_000)).toBe(1);
-    expect(countSeedableHomepageBootstrapQueries(payload, 1_700_000_601_000)).toBe(0);
-    expect(seedHomepageBootstrapQueries(client, payload, 1_700_000_601_000)).toBe(0);
-    expect(client.getQueryData(["stablecoins"])).toBeUndefined();
   });
 });

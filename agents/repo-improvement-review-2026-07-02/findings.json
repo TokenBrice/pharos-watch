@@ -4505,6 +4505,17 @@
      "scripts/maintenance/generate-homepage-bootstrap.ts",
      "src/lib/homepage-bootstrap-runtime.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused Zod-side homepage bootstrap seed/count exports and their self-only tests, leaving the production runtime twins intact.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/homepage-bootstrap.test.ts src/lib/__tests__/homepage-bootstrap-runtime.test.ts",
+     "npm run typecheck",
+     "rg -n \"countSeedableHomepageBootstrapQueries|seedHomepageBootstrapQueries\" src scripts shared worker functions",
+     "git diff --check -- src/lib/homepage-bootstrap.ts src/lib/__tests__/homepage-bootstrap.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
