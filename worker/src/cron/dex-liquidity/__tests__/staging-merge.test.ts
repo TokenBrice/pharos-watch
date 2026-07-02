@@ -607,6 +607,72 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
   });
 
+  it("credits the same exact staged pool to each tracked stablecoin row", async () => {
+    const now = 1710000000;
+    const sharedPoolAddress = "0x0000000000000000000000000000000000000123";
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${sharedPoolAddress}`,
+        stablecoin_id: "usdt-tether",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        dex_id: "uniswap-v3",
+        symbol: "USDT/USDC",
+        tvl_usd: 180000,
+        volume_24h: 90000,
+        quality_multiplier: 0.85,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDC",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 2,
+        refreshed_at: now,
+      },
+      {
+        pool_id: `ethereum:${sharedPoolAddress}`,
+        stablecoin_id: "usdc-circle",
+        source: "gecko_terminal",
+        chain: "ethereum",
+        protocol: "uniswap-v3",
+        dex_id: "uniswap-v3",
+        symbol: "USDC/USDT",
+        tvl_usd: 180000,
+        volume_24h: 90000,
+        quality_multiplier: 0.85,
+        pool_type: "gt-concentrated",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: baseToken,
+        quote_token: quoteToken,
+        quote_symbol: "USDT",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400 * 2,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+    const knownPoolIndex = makeKnownPoolIndex();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
+
+    expect(result.mergedCount).toBe(2);
+    expect(result.skippedCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(metrics.get("usdt-tether")?.topPools).toHaveLength(1);
+    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
+    expect(metrics.get("usdt-tether")?.topPools[0]?.poolId).toBe(`ethereum:${sharedPoolAddress}`);
+    expect(metrics.get("usdc-circle")?.topPools[0]?.poolId).toBe(`ethereum:${sharedPoolAddress}`);
+    expect(knownPoolIndex.exactKeys.has(`ethereum:${sharedPoolAddress}`)).toBe(true);
+  });
+
   it("skips staged pools that claim an authoritative protocol without authoritative exact-id confirmation", async () => {
     const now = 1710000000;
     const unconfirmedBalancerPool = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";

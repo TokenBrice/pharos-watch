@@ -115,7 +115,7 @@ export async function crawlCoinGeckoPoolsStage({
         if (!parsed) continue;
 
         const poolId = `${chain.toLowerCase()}:${parsed.poolAddress}`;
-        if (context.knownPoolIds.has(poolId)) continue;
+        if (context.hasKnownPool(poolId)) continue;
 
         const addressLower = address.toLowerCase();
         const side =

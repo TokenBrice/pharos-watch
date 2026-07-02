@@ -44,6 +44,7 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 }));
 
 import { crawlCoin } from "../crawl-sources";
+import { knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
@@ -259,6 +260,54 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(crawlTokenPools).not.toHaveBeenCalled();
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
     expect(fetchJsonWithRetry).not.toHaveBeenCalled();
+  });
+
+  it("keeps shared CoinGecko onchain pools distinct across stablecoins", async () => {
+    const sharedPool = {
+      id: "cg-pool",
+      type: "pool",
+      attributes: {
+        address: "0xPool",
+        name: "USDC / USDT",
+        pool_created_at: "2025-01-01T00:00:00.000Z",
+        base_token_price_usd: "1.0002",
+        quote_token_price_usd: "0.9999",
+        reserve_in_usd: "220000",
+        h24_volume_usd: "18000",
+        pool_fee_percentage: "0.01",
+        locked_liquidity_percentage: "25",
+      },
+      relationships: {
+        base_token: { data: { id: "token_0xabc", type: "token" } },
+        quote_token: { data: { id: "token_0xquote", type: "token" } },
+        dex: { data: { id: "uniswap-v3", type: "dex" } },
+      },
+    } as never;
+    vi.mocked(fetchCgTokenPoolsWithStatus)
+      .mockResolvedValueOnce({ ok: true, pools: [sharedPool] })
+      .mockResolvedValueOnce({ ok: true, pools: [sharedPool] });
+
+    const knownPoolIds = new Set<string>();
+    const usdcResult = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      knownPoolIds,
+    );
+    const usdtResult = await crawlCoin(
+      createMockDb(),
+      "usdt-tether",
+      [{ chain: "ethereum", address: "0xQuote", decimals: 6 }],
+      "test-key",
+      knownPoolIds,
+    );
+
+    expect(usdcResult.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xpool"]);
+    expect(usdtResult.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xpool"]);
+    expect(knownPoolIds).toEqual(
+      new Set([knownPoolIdKey("usdc-circle", "ethereum:0xpool"), knownPoolIdKey("usdt-tether", "ethereum:0xpool")]),
+    );
   });
 
   it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {
@@ -523,9 +572,11 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(usdcResult.pools.map((pool) => pool.poolId)).toEqual(["orderbook:kinesis:usdc-circle"]);
     expect(usdtResult.pools.map((pool) => pool.poolId)).toEqual(["orderbook:kinesis:usdt-tether"]);
-    expect(knownPoolIds).toEqual(new Set([
-      "orderbook:kinesis:usdc-circle",
-      "orderbook:kinesis:usdt-tether",
-    ]));
+    expect(knownPoolIds).toEqual(
+      new Set([
+        knownPoolIdKey("usdc-circle", "orderbook:kinesis:usdc-circle"),
+        knownPoolIdKey("usdt-tether", "orderbook:kinesis:usdt-tether"),
+      ]),
+    );
   });
 });

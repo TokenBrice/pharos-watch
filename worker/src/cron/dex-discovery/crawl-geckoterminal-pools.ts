@@ -74,7 +74,7 @@ export async function crawlGeckoTerminalPoolsStage({
     sourceLabel: "GT",
     tokens: gtTokens,
     chainAddressToId: gtChainAddressToId,
-    knownPoolAddrs: context.knownPoolIds,
+    knownPoolAddrs: context.knownPoolIdsForStablecoin(),
     protocolTvlCaps: new Map(),
     newPools: gtNewPools,
     priceObs: gtPriceObs,
@@ -120,7 +120,7 @@ export async function crawlGeckoTerminalPoolsStage({
   const gtPools = gtNewPools.get(context.stablecoinId) ?? [];
   for (const pool of gtPools) {
     const poolId = `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`;
-    if (context.knownPoolIds.has(poolId)) continue;
+    if (context.hasKnownPool(poolId)) continue;
     if (pool.volume24hUsd <= 0 && pool.tvlUsd < 10_000) continue;
 
     context.addPool(toStagedPool(context, {

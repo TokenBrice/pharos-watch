@@ -14,6 +14,7 @@ import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./type
 import {
   buildPoolIdentity,
   countPoolIdentityKeys,
+  createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
@@ -122,6 +123,21 @@ function pushPool<T>(poolMap: Map<string, T[]>, stablecoinId: string, pool: T): 
   const existing = poolMap.get(stablecoinId) ?? [];
   existing.push(pool);
   poolMap.set(stablecoinId, existing);
+}
+
+function getStablecoinIdentityIndex(
+  indexes: Map<string, KnownPoolIdentityIndex>,
+  stablecoinId: string,
+): KnownPoolIdentityIndex {
+  const existing = indexes.get(stablecoinId);
+  if (existing) return existing;
+  const created = createKnownPoolIdentityIndex();
+  indexes.set(stablecoinId, created);
+  return created;
+}
+
+function poolIdentityRegistrationKey(identity: ReturnType<typeof buildPoolIdentity>): string {
+  return JSON.stringify([identity.exactPoolKey, identity.derivedMatchKey, identity.optionalWildcardKey]);
 }
 
 function resolveStagedPoolProfile(stagedPool: StagedPool): {
@@ -340,9 +356,20 @@ export async function mergeStagedPools(
       confidence,
     });
   }
-  const stagedIdentityCounts = countPoolIdentityKeys(
-    stagedEntries.filter((entry) => entry.confidence > 0).map((entry) => entry.identity),
-  );
+  const stagedEntriesByStablecoin = new Map<string, typeof stagedEntries>();
+  for (const entry of stagedEntries) {
+    if (entry.confidence <= 0) continue;
+    const entries = stagedEntriesByStablecoin.get(entry.stagedPool.stablecoinId) ?? [];
+    entries.push(entry);
+    stagedEntriesByStablecoin.set(entry.stagedPool.stablecoinId, entries);
+  }
+  const stagedIdentityCountsByStablecoin = new Map<string, ReturnType<typeof countPoolIdentityKeys>>();
+  for (const [stablecoinId, entries] of stagedEntriesByStablecoin) {
+    stagedIdentityCountsByStablecoin.set(stablecoinId, countPoolIdentityKeys(entries.map((entry) => entry.identity)));
+  }
+  const acceptedStagedIndexesByStablecoin = new Map<string, KnownPoolIdentityIndex>();
+  const acceptedStagedIdentities: Array<ReturnType<typeof buildPoolIdentity>> = [];
+  const acceptedStagedIdentityKeys = new Set<string>();
 
   for (const entry of stagedEntries) {
     const { stagedPool, dexId, poolType, qualityMultiplier, orderbookMetadata, identity, confidence } = entry;
@@ -401,7 +428,12 @@ export async function mergeStagedPools(
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
 
-    const dedupReason = getIdentityDedupReason(
+    const stagedIdentityCounts = stagedIdentityCountsByStablecoin.get(stagedPool.stablecoinId) ?? {
+      derived: new Map<string, number>(),
+      wildcard: new Map<string, number>(),
+    };
+
+    const knownDedupReason = getIdentityDedupReason(
       identity,
       knownPoolIndex,
       {
@@ -412,6 +444,18 @@ export async function mergeStagedPools(
       },
       { allowOptionalWildcard: true },
     );
+    const stagedDedupReason = getIdentityDedupReason(
+      identity,
+      acceptedStagedIndexesByStablecoin.get(stagedPool.stablecoinId) ?? createKnownPoolIdentityIndex(),
+      {
+        derived: identity.derivedMatchKey ? (stagedIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
+        wildcard: identity.optionalWildcardKey
+          ? (stagedIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
+          : 0,
+      },
+      { allowOptionalWildcard: true },
+    );
+    const dedupReason = knownDedupReason ?? stagedDedupReason;
     if (dedupReason) {
       skippedCount++;
       if (dedupReason === "exact") exactIdentitySkipped++;
@@ -429,7 +473,15 @@ export async function mergeStagedPools(
       );
       continue;
     }
-    registerKnownPoolIdentity(knownPoolIndex, identity);
+    registerKnownPoolIdentity(
+      getStablecoinIdentityIndex(acceptedStagedIndexesByStablecoin, stagedPool.stablecoinId),
+      identity,
+    );
+    const registrationKey = poolIdentityRegistrationKey(identity);
+    if (!acceptedStagedIdentityKeys.has(registrationKey)) {
+      acceptedStagedIdentityKeys.add(registrationKey);
+      acceptedStagedIdentities.push(identity);
+    }
 
     const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
     // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
@@ -534,6 +586,10 @@ export async function mergeStagedPools(
   let mergedCount = 0;
   for (const pools of cgPoolMap.values()) mergedCount += pools.length;
   for (const pools of gtPoolMap.values()) mergedCount += pools.length;
+
+  for (const identity of acceptedStagedIdentities) {
+    registerKnownPoolIdentity(knownPoolIndex, identity);
+  }
 
   if (cgPoolMap.size > 0) await mergeCgPools(metrics, cgPoolMap, db);
   if (gtPoolMap.size > 0) await mergeGtPools(metrics, gtPoolMap, db);

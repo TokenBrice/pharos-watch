@@ -15,6 +15,7 @@ import {
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "./persistence";
+import { rememberKnownPoolId } from "./staged-pool";
 import { toErrorMessage } from "../../lib/error-utils";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
@@ -275,7 +276,7 @@ export async function syncDexDiscovery(
           await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
 
           for (const pool of result.pools) {
-            knownPoolIds.add(pool.poolId);
+            rememberKnownPoolId(knownPoolIds, candidate.stablecoinId, pool.poolId);
           }
 
           coinsCrawled += 1;

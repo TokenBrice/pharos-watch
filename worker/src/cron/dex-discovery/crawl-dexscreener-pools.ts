@@ -141,7 +141,7 @@ export async function crawlDexScreenerPoolsStage({
         }
 
         const poolId = `${chain.toLowerCase()}:${poolAddress}`;
-        if (context.knownPoolIds.has(poolId)) continue;
+        if (context.hasKnownPool(poolId)) continue;
 
         const { side, priceUsd } = dependencies.getDsTrackedTokenPriceUsd(pair, address);
         if (!side) continue;

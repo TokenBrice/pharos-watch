@@ -202,6 +202,16 @@
      "worker/src/cron/dex-discovery/orchestrator.ts",
      "worker/src/cron/dex-liquidity/process-pools.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Namespaced discovery-time known-pool suppression by stablecoin and changed staged merge dedupe so primary/direct known pools remain globally deduped while accepted staged rows dedupe per stablecoin. Shared staged pools can now be credited to each tracked coin, matching primary-path multi-attribution, while accepted identities still flow back into the global fallback dedupe index.",
+    "validation": [
+     "npx vitest run worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:unused-code"
+    ]
    }
   },
   {

@@ -63,7 +63,7 @@ export async function crawlCoinGeckoTickersStage({
 
       for (const summary of exchangeSummaries) {
         const poolId = `orderbook:${summary.exchangeId}:${context.stablecoinId}`.toLowerCase();
-        if (context.knownPoolIds.has(poolId)) continue;
+        if (context.hasKnownPool(poolId)) continue;
         const orderbookMetadata = buildCgTickerOrderbookMetadata(summary);
 
         context.addPool(toStagedPool(context, {

@@ -22,6 +22,8 @@ export interface CrawlStageContext {
   references?: PriceValidationReferences;
   timeExceeded(): boolean;
   buildStageSignal(timeoutMs: number): AbortSignal;
+  hasKnownPool(poolId: string): boolean;
+  knownPoolIdsForStablecoin(): Set<string>;
   addPool(pool: StagedPool): void;
   addPriceObs(obs: StagedPriceObservation): void;
 }
@@ -38,6 +40,29 @@ interface CreateCrawlStageContextOptions {
 }
 
 type StagedPoolFields = Omit<StagedPool, "stablecoinId" | "discoveredAt" | "refreshedAt">;
+
+export function knownPoolIdKey(stablecoinId: string, poolId: string): string {
+  return `${stablecoinId}:${poolId}`;
+}
+
+function hasKnownPoolId(knownPoolIds: Set<string>, stablecoinId: string, poolId: string): boolean {
+  return knownPoolIds.has(knownPoolIdKey(stablecoinId, poolId));
+}
+
+export function rememberKnownPoolId(knownPoolIds: Set<string>, stablecoinId: string, poolId: string): void {
+  knownPoolIds.add(knownPoolIdKey(stablecoinId, poolId));
+}
+
+function collectKnownPoolIdsForStablecoin(knownPoolIds: Set<string>, stablecoinId: string): Set<string> {
+  const prefix = `${stablecoinId}:`;
+  const poolIds = new Set<string>();
+  for (const key of knownPoolIds) {
+    if (key.startsWith(prefix)) {
+      poolIds.add(key.slice(prefix.length));
+    }
+  }
+  return poolIds;
+}
 
 export function buildStageSignal(
   signal: AbortSignal | undefined,
@@ -70,9 +95,11 @@ export function createCrawlStageContext({
     references,
     timeExceeded: () => !!deadlineMs && Date.now() >= deadlineMs,
     buildStageSignal: (timeoutMs) => buildStageSignal(signal, deadlineMs, timeoutMs),
+    hasKnownPool: (poolId) => hasKnownPoolId(knownPoolIds, stablecoinId, poolId),
+    knownPoolIdsForStablecoin: () => collectKnownPoolIdsForStablecoin(knownPoolIds, stablecoinId),
     addPool(pool) {
       pools.push(pool);
-      knownPoolIds.add(pool.poolId);
+      rememberKnownPoolId(knownPoolIds, stablecoinId, pool.poolId);
     },
     addPriceObs(obs) {
       priceObs.push(obs);
