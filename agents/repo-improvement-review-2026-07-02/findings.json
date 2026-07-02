@@ -623,6 +623,16 @@
     "description": "The ~15-field block mapping drainPendingQueue output into the result (messagesSent, blockedUsersCleanedUp, blockedUsersCleanupFailed, pendingAttempted, pendingDrained, pendingSent, pendingRetryQueued, pendingDropped, pendingDroppedTtlExpired, pendingDroppedPermanentFailure, pendingDroppedMaxAttemptsFallback, pendingDeferred, pendingRateLimited, pendingRetryAfterSec, pendingExpired) appears verbatim in executeCircuitOpenQueuePath (lines 303-317), executeEventlessFastPath (lines 409-426), and executeFullFanoutPath (lines 741-753). The `pendingQueueChanged` predicate (sent/blocked/retryQueued/dropped/deferred/expired > 0) is likewise duplicated at lines 287-293 and 705-712. Any new drain counter must currently be added in 3 places; the eventless and full paths already diverge subtly (pendingEnqueued presence), which is exactly the drift this invites.",
     "recommendation": "Extract a `drainResultFields(drainResult, expiredCount)` helper (and a `pendingQueueChanged(drainResult, expiredCount, pendingEnqueued)` predicate) in this file and spread it at all three sites. Pure mechanical extraction of identical field assignments — JSON.stringify(result) output is byte-identical, so behavior is preserved.",
     "estImpact": "-40 LOC; single point of truth for drain counters"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted pendingDispatchFields for the repeated pending drain counters and pendingQueueChanged for the repeated capacity-refresh predicate, while leaving full-fanout messagesSent and blocked-user fields path-specific.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/dispatch-telegram-alerts.ts"
+    ]
    }
   },
   {

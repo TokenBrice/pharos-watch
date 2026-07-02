@@ -16,6 +16,7 @@ import {
   loadChatsInBackoff,
   readPendingCapacitySnapshot,
   readTelegramGlobalBackoff,
+  type PendingDrainResult,
   type PendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
@@ -156,6 +157,65 @@ function shouldRecordTelegramDispatchFailure(
 
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
+type PendingDispatchFields = Pick<
+  DispatchResult,
+  | "pendingAttempted"
+  | "pendingDrained"
+  | "pendingSent"
+  | "pendingRetryQueued"
+  | "pendingDropped"
+  | "pendingDroppedTtlExpired"
+  | "pendingDroppedPermanentFailure"
+  | "pendingDroppedMaxAttemptsFallback"
+  | "pendingDeferred"
+  | "pendingRateLimited"
+  | "pendingRetryAfterSec"
+  | "pendingEnqueued"
+  | "pendingExpired"
+>;
+
+function pendingDispatchFields(
+  drainResult: PendingDrainResult,
+  {
+    expiredCount,
+    pendingEnqueued = 0,
+  }: {
+    expiredCount: number;
+    pendingEnqueued?: number;
+  },
+): PendingDispatchFields {
+  return {
+    pendingAttempted: drainResult.attempted,
+    pendingDrained: drainResult.sent,
+    pendingSent: drainResult.sent,
+    pendingRetryQueued: drainResult.retryQueued,
+    pendingDropped: drainResult.dropped,
+    pendingDroppedTtlExpired: expiredCount,
+    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+    pendingDeferred: drainResult.deferred,
+    pendingRateLimited: drainResult.rateLimited,
+    pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingEnqueued,
+    pendingExpired: expiredCount,
+  };
+}
+
+function pendingQueueChanged(
+  drainResult: PendingDrainResult,
+  expiredCount: number,
+  pendingEnqueued = 0,
+): boolean {
+  return (
+    drainResult.sent > 0 ||
+    drainResult.blocked > 0 ||
+    drainResult.retryQueued > 0 ||
+    drainResult.dropped > 0 ||
+    drainResult.deferred > 0 ||
+    expiredCount > 0 ||
+    pendingEnqueued > 0
+  );
+}
 
 interface SeedPathContext {
   db: D1Database;
@@ -304,14 +364,8 @@ async function executeCircuitOpenQueuePath({
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
-  const pendingQueueChanged =
-    drainResult.sent > 0 ||
-    drainResult.blocked > 0 ||
-    drainResult.retryQueued > 0 ||
-    drainResult.dropped > 0 ||
-    drainResult.deferred > 0 ||
-    expiredCount > 0;
-  const pendingCapacityAfter = pendingQueueChanged
+  const shouldRefreshPendingCapacity = pendingQueueChanged(drainResult, expiredCount);
+  const pendingCapacityAfter = shouldRefreshPendingCapacity
     ? await readPendingCapacitySnapshot(db, nowSec)
     : pendingCapacityBefore;
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
@@ -323,18 +377,7 @@ async function executeCircuitOpenQueuePath({
     messagesSent: drainResult.sent,
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-    pendingAttempted: drainResult.attempted,
-    pendingDrained: drainResult.sent,
-    pendingSent: drainResult.sent,
-    pendingRetryQueued: drainResult.retryQueued,
-    pendingDropped: drainResult.dropped,
-    pendingDroppedTtlExpired: expiredCount,
-    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
-    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
-    pendingDeferred: drainResult.deferred,
-    pendingRateLimited: drainResult.rateLimited,
-    pendingRetryAfterSec: drainResult.retryAfterSec,
-    pendingExpired: expiredCount,
+    ...pendingDispatchFields(drainResult, { expiredCount }),
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
@@ -434,20 +477,11 @@ async function executeEventlessFastPath({
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
     cappedAtLimit: overflowDeliveryResult?.cappedAtLimit ?? false,
-    pendingAttempted: drainResult.attempted,
-    pendingDrained: drainResult.sent,
-    pendingSent: drainResult.sent,
-    pendingRetryQueued: drainResult.retryQueued,
-    pendingDropped: drainResult.dropped,
-    pendingDroppedTtlExpired: expiredCount,
-    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
-    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
-    pendingDeferred: drainResult.deferred,
-    pendingRateLimited: drainResult.rateLimited,
+    ...pendingDispatchFields(drainResult, {
+      expiredCount,
+      pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
+    }),
     reserveSourceUnavailable,
-    pendingRetryAfterSec: drainResult.retryAfterSec,
-    pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
-    pendingExpired: expiredCount,
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
@@ -730,15 +764,8 @@ async function executeFullFanoutPath({
     await deleteCache(db, "telegram:burst-markers");
   }
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-  const pendingQueueChanged =
-    drainResult.sent > 0 ||
-    drainResult.blocked > 0 ||
-    drainResult.retryQueued > 0 ||
-    drainResult.dropped > 0 ||
-    drainResult.deferred > 0 ||
-    expiredCount > 0 ||
-    pendingEnqueued > 0;
-  const pendingCapacityAfter = pendingQueueChanged
+  const shouldRefreshPendingCapacity = pendingQueueChanged(drainResult, expiredCount, pendingEnqueued);
+  const pendingCapacityAfter = shouldRefreshPendingCapacity
     ? await readPendingCapacitySnapshot(db, nowSec)
     : pendingCapacityBefore;
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
@@ -766,19 +793,7 @@ async function executeFullFanoutPath({
     snapshotSeeded: false,
     burstCollapsedChats: burstOutcome.collapsedChats,
     burstDeltaSuppressed: burstOutcome.deltaSuppressed,
-    pendingAttempted: drainResult.attempted,
-    pendingDrained: drainResult.sent,
-    pendingSent: drainResult.sent,
-    pendingRetryQueued: drainResult.retryQueued,
-    pendingDropped: drainResult.dropped,
-    pendingDroppedTtlExpired: expiredCount,
-    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
-    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
-    pendingDeferred: drainResult.deferred,
-    pendingRateLimited: drainResult.rateLimited,
-    pendingRetryAfterSec: drainResult.retryAfterSec,
-    pendingEnqueued,
-    pendingExpired: expiredCount,
+    ...pendingDispatchFields(drainResult, { expiredCount, pendingEnqueued }),
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
