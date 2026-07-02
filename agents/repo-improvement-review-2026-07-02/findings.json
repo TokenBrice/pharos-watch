@@ -3873,6 +3873,19 @@
     "description": "formatSignedPysDelta() is defined twice: src/lib/yield-presentation.ts:16 and src/components/pys-breakdown.tsx:153. The bodies are identical except the pys-breakdown copy adds an `if (!Number.isFinite(delta)) return \"\"` guard the lib copy lacks — the copies have already started drifting. Both format the same \"+X.XX PYS\" delta string for yield UI, so a future format tweak (e.g. precision) applied to one leaves the other stale.",
     "recommendation": "Export the guarded version from src/lib/yield-presentation.ts and import it in pys-breakdown.tsx. The added finite-guard is unreachable at the lib call site (pysDelta is null-checked numeric), so consolidating on the guarded body is behavior-preserving.",
     "estImpact": "-6 LOC; stops silent format drift"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Exported the guarded `formatSignedPysDelta` helper from yield presentation and reused it in the PYS breakdown component and tests, eliminating the divergent local duplicate.",
+    "validation": [
+     "rg -n \"formatSignedPysDelta\" src/lib src/components -g '*.{ts,tsx}'",
+     "npx vitest run src/components/__tests__/pys-breakdown.test.tsx src/lib/__tests__/yield-presentation.test.ts",
+     "npm run typecheck",
+     "npm run typecheck:tests",
+     "npx eslint src/lib/yield-presentation.ts src/lib/__tests__/yield-presentation.test.ts src/components/pys-breakdown.tsx src/components/__tests__/pys-breakdown.test.tsx --max-warnings=0",
+     "git diff --check -- src/lib/yield-presentation.ts src/lib/__tests__/yield-presentation.test.ts src/components/pys-breakdown.tsx src/components/__tests__/pys-breakdown.test.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

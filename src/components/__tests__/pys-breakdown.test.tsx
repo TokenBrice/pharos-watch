@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { PysBreakdown, type PysBreakdownProps } from "@/components/pys-breakdown";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { formatSignedPysDelta } from "@/lib/yield-presentation";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -43,12 +44,6 @@ function renderWithProvider(props: PysBreakdownProps) {
       <PysBreakdown {...props} />
     </TooltipProvider>,
   );
-}
-
-function formatSignedPysDelta(delta: number): string {
-  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
-  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
-  return `${sign}${rounded} PYS`;
 }
 
 describe("PysBreakdown", () => {

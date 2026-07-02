@@ -17,6 +17,7 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import { cn } from "@/lib/utils";
+import { formatSignedPysDelta } from "@/lib/yield-presentation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
@@ -148,13 +149,6 @@ function neutralizeFactorAndRescore(
     sourceRiskPenalty: neutralized.sourceRiskPenalty,
   });
   return actualScore - neutralizedScore;
-}
-
-function formatSignedPysDelta(delta: number): string {
-  if (!Number.isFinite(delta)) return "";
-  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
-  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
-  return `${sign}${rounded} PYS`;
 }
 
 function shouldShowDefaultSafetyBadge(props: PysBreakdownProps): boolean {

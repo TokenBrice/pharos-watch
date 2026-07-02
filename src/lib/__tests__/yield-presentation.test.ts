@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildRankChangeChipDisplay } from "@/lib/yield-presentation";
+import { buildRankChangeChipDisplay, formatSignedPysDelta } from "@/lib/yield-presentation";
+
+describe("formatSignedPysDelta", () => {
+  it("formats signed PYS deltas and suppresses non-finite values", () => {
+    expect(formatSignedPysDelta(2.345)).toBe("+2.35 PYS");
+    expect(formatSignedPysDelta(-12.34)).toBe("-12.3 PYS");
+    expect(formatSignedPysDelta(0)).toBe("+0.00 PYS");
+    expect(formatSignedPysDelta(Number.NaN)).toBe("");
+  });
+});
 
 describe("buildRankChangeChipDisplay", () => {
   it("renders positive rankDelta as an upward rank improvement", () => {
