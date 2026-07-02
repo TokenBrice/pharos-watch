@@ -3774,6 +3774,18 @@
     "alsoFiles": [
      "src/app/pharoswatchbot/app/format.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unreachable `preset` effective-source lane from the Mini App formatter type and deleted the dead CoinCard source-chip branch.",
+    "validation": [
+     "rg -n \"EffectiveAlertSource|sources\\\\.includes\\\\(\\\\\\\"preset\\\\\\\"\\\\)|label: \\\\\\\"Preset\\\\\\\"|\\\\\\\"preset\\\\\\\" \\\\|\" src/app/pharoswatchbot/app",
+     "npx vitest run src/app/pharoswatchbot/app/format.test.ts src/app/pharoswatchbot/app/components/CoinCard.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/app/pharoswatchbot/app/format.ts src/app/pharoswatchbot/app/components/CoinCard.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Presets still participate in off-override classification; they no longer appear as an emitted source lane because no runtime path produced that value."
    }
   },
   {

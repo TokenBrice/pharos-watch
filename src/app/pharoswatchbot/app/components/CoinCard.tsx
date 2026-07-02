@@ -30,7 +30,7 @@ type SourceChip = { label: string; className: string };
 // C74: collapse the per-type effective-source map into the single dominant lane
 // the chip should advertise. Precedence for the displayed lane mirrors the model:
 // an enabled per-coin flag wins; otherwise an all-off row is a muted override;
-// otherwise the coin rides a preset/global default.
+// otherwise the coin rides the inherited default lane.
 function deriveSourceChip(
   coin: SubscribedCoin,
   globalAlerts: TelegramMiniAppState["subscriber"]["globalAlerts"],
@@ -42,9 +42,6 @@ function deriveSourceChip(
   }
   if (sources.includes("off-override")) {
     return { label: "Muted override", className: "border-border/60 bg-muted/40 text-muted-foreground" };
-  }
-  if (sources.includes("preset")) {
-    return { label: "Preset", className: "border-border/60 bg-muted/40 text-muted-foreground" };
   }
   return { label: "All-stablecoins", className: "border-border/60 bg-muted/40 text-muted-foreground" };
 }
