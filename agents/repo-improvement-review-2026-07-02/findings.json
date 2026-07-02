@@ -1467,6 +1467,17 @@
     "description": "selectPendingClaimCandidateIds SELECTs `p.id, p.chat_id, p.message_html` (line 102) but the only consumed column is `id` (lines 131-133). message_html is up to ~4,000 chars per row and the query LIMIT is TELEGRAM_PENDING_DRAIN_BUDGET = 900, so a full backlog drain reads up to ~3.6 MB of message bodies from D1 just to get ids — and then loadClaimedPendingRows re-reads the same bodies for the rows actually claimed. This runs on every 5-minute dispatch lane whenever due rows exist (all three dispatch paths call drainPendingQueue).",
     "recommendation": "Change the candidate SELECT to `SELECT p.id` only (the row type already only reads id). Pure read-shape change inside one function; claimed rows are re-loaded with all columns afterward, so behavior is byte-identical.",
     "estImpact": "up to ~3.6MB redundant D1 reads per drain, every 5 min"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Narrowed the pending-drain claim candidate query to select only `p.id`; claimed rows are still reloaded with full message payloads before delivery.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "Read-shape only; queue claiming, row ordering, and delivery reload behavior are unchanged."
    }
   },
   {

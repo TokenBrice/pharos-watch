@@ -510,7 +510,7 @@ describe("dispatchTelegramAlerts", () => {
         },
       },
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [buildPendingAlertRow({ id: 1, chatId: "100", html: "<b>Queued alert</b>", createdAt: now - 120 })],
       },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
@@ -640,7 +640,7 @@ describe("dispatchTelegramAlerts", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("sub.alert_dews = 1"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("WHERE global_alert_dews = 1"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("FROM telegram_pending_alerts p"))).toBe(false);
   });
 
   it("drains stored overflow plans during an eventless run", async () => {
@@ -822,7 +822,7 @@ describe("dispatchTelegramAlerts", () => {
         },
         rows: [],
       },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     ]);
 
     const progressUpdates: CronProgressUpdate[] = [];
@@ -892,7 +892,7 @@ describe("dispatchTelegramAlerts", () => {
         },
       },
     });
-    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_alerts p"))).toBe(true);
   });
 
   it("detects DEWS/depeg/safety changes and fans out to subscribers", async () => {
@@ -948,7 +948,7 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ stablecoin_id: "usdc-circle", grade: "C", score: 61 }],
       },
       // Phase 1: pending queue drain (empty)
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       // Phase 3: batched subscriber lookups
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
       {
@@ -1035,7 +1035,7 @@ describe("dispatchTelegramAlerts", () => {
           methodology_version: "7.09",
         }],
       },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
@@ -1092,7 +1092,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
@@ -1151,7 +1151,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
@@ -1201,7 +1201,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
@@ -1251,7 +1251,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_safety = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_safety = 1",
@@ -1332,7 +1332,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -1385,7 +1385,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM depeg_events event", rows: resolvedRows },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_depeg = 1", rows: [] },
       { match: "WHERE global_alert_depeg = 1", rows: [] },
       { match: "FROM telegram_subscriptions\n          WHERE stablecoin_id IN", rows: [] },
@@ -1437,7 +1437,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -1497,7 +1497,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_safety = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -1556,7 +1556,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_safety = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -1641,7 +1641,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       // Phase 1: pending queue drain (empty)
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         // Timestamp bind is dynamic (Date.now() inside dispatcher) so matchBinds
         // here is loose — SQL substring alone distinguishes the safety lookup.
@@ -1720,7 +1720,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       // Phase 1: pending queue drain (empty)
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       // Phase 6: cleanup expired pending
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
@@ -1766,7 +1766,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       // Phase 1: pending queue drain (empty)
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       // Phase 6: cleanup expired pending
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
@@ -1804,7 +1804,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -1858,7 +1858,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       // Phase 1: pending queue drain (empty)
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -1920,7 +1920,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -1965,7 +1965,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       // Pending queue has 2 messages
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           buildPendingAlertRow({ id: 1, chatId: "100", html: "<b>Old alert</b>", createdAt: now - 120 }),
           buildPendingAlertRow({ id: 2, chatId: "200", html: "<b>Old alert 2</b>", disableNotification: 1, createdAt: now - 60 }),
@@ -2011,7 +2011,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       // No pending queue items
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     // Batched subscriber lookup returns all subscribers.
       { match: "sub.alert_dews = 1", rows: subscribers },
       // INSERT for overflow (db.batch call)
@@ -2077,7 +2077,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: subscribers },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -2144,7 +2144,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: subscribers },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -2174,7 +2174,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "SELECT id, chat_id, message_html",
         rows: Array.from({ length: 5 }, (_, index) => ({
@@ -2228,7 +2228,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -2297,7 +2297,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [buildPendingAlertRow({ id: 1, chatId: "old-chat", html: "<b>Old</b>", createdAt: now - 60 })],
       },
       { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "fresh-chat", last_active_at: now }] },
@@ -2342,7 +2342,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         rows: [
@@ -2411,7 +2411,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: subscribers },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
@@ -2474,7 +2474,7 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 260, start_price: 0.974, peg_reference: 1 }],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_depeg = 1",
         rows: [{
@@ -2511,7 +2511,7 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 125, start_price: 0.9875, peg_reference: 1 }],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_depeg = 1", rows: [] },
       {
         match: "WHERE global_alert_depeg = 1",
@@ -2555,7 +2555,7 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 260, start_price: 0.974, peg_reference: 1 }],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_depeg = 1", rows: [] },
       {
         match: "WHERE global_alert_depeg = 1",
@@ -2613,7 +2613,7 @@ describe("dispatchTelegramAlerts", () => {
         rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 260, start_price: 0.974, peg_reference: 1 }],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_depeg = 1", rows: [] },
       {
         match: "WHERE global_alert_depeg = 1",
@@ -2668,7 +2668,7 @@ describe("dispatchTelegramAlerts", () => {
           methodology_version: "v2",
         }],
       },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2716,7 +2716,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2755,7 +2755,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
       {
         match: "SELECT consecutive_block_count",
@@ -2825,7 +2825,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
@@ -2870,7 +2870,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: [
         { stablecoin_id: "usdc-circle", chat_id: "42", last_active_at: now },
       ] },
@@ -2926,7 +2926,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", rows: [
         { stablecoin_id: "usdc-circle", chat_id: "42", last_active_at: now },
       ] },
@@ -2986,7 +2986,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
@@ -3049,7 +3049,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       // Per-coin snooze map query (loadPerCoinSnoozeMap): chat C is snoozed for usdc-circle.
       {
@@ -3124,7 +3124,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle", now, now], rows: [] },
       {
         match: "WHERE global_alert_dews = 1",
@@ -3187,7 +3187,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -3280,7 +3280,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -3341,7 +3341,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -3436,7 +3436,7 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
@@ -3494,7 +3494,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "A", last_active_at: now }],
@@ -3582,7 +3582,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_dews = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "A", last_active_at: now }],
@@ -3665,7 +3665,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: depegRows },
       { match: "FROM safety_grade_history", rows: [] },
       // Pending queue empty so freshBudget = TELEGRAM_MAX_MESSAGES_PER_RUN.
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       { match: "sub.alert_depeg = 1", rows: directDepegRows },
       { match: "WHERE global_alert_depeg = 1", rows: globalDepegRows },
       // Capacity-overflow enqueue (one batch INSERT per overflowed chunk).
@@ -3799,7 +3799,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_launch = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "555", last_active_at: now }],
@@ -3922,7 +3922,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_reserve = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "555", last_active_at: now }],
@@ -4018,7 +4018,7 @@ describe("dispatchTelegramAlerts", () => {
         ],
       },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
       {
         match: "sub.alert_depeg = 1",
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],

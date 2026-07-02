@@ -100,7 +100,7 @@ async function selectPendingClaimCandidateIds(
 ): Promise<number[]> {
   const candidateRows = await db
     .prepare(
-      `SELECT p.id, p.chat_id, p.message_html
+      `SELECT p.id
          FROM telegram_pending_alerts p
         WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
           AND (p.not_before_at IS NULL OR p.not_before_at <= ?)

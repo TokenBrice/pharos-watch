@@ -217,7 +217,7 @@ function createClaimContentionD1(row: Record<string, unknown>): D1Database & {
           };
         }
         if (
-          sql.includes("SELECT p.id, p.chat_id, p.message_html") &&
+          sql.includes("SELECT p.id") &&
           sql.includes("processing_owner IS NULL")
         ) {
           candidateReads += 1;
@@ -528,7 +528,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 1, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 2 },
           { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 5 },
@@ -563,7 +563,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 1, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: PENDING_MAX_ATTEMPTS - 1 },
           { id: 2, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: PENDING_MAX_ATTEMPTS },
@@ -596,7 +596,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 50, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -643,7 +643,7 @@ describe("drainPendingQueue", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 401, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
           { id: 402, chat_id: "200", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 2 },
@@ -704,7 +704,7 @@ describe("drainPendingQueue", () => {
 
       const db = mockD1([
         {
-          match: "SELECT p.id, p.chat_id, p.message_html",
+          match: "FROM telegram_pending_alerts p",
           rows: [
             { id: 999, chat_id: "100", message_html: "<b>Alert</b>", disable_notification: 0, created_at: created, attempts },
           ],
@@ -736,7 +736,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 10, chat_id: "100", message_html: "<b>Sent</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -763,7 +763,7 @@ describe("drainPendingQueue", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 11, chat_id: "100", message_html: "<b>Sent</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
         ],
@@ -799,7 +799,7 @@ describe("drainPendingQueue", () => {
       last_error_class: null,
     }));
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "FROM telegram_pending_alerts p", rows },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_alert_job_targets", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
@@ -862,7 +862,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 20, chat_id: "blocked-chat", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -903,7 +903,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 21, chat_id: "double-strike", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
         ],
@@ -1026,7 +1026,7 @@ describe("drainPendingQueue", () => {
       timezone: null,
     }));
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: blockedRows },
+      { match: "FROM telegram_pending_alerts p", rows: blockedRows },
       {
         match: "SELECT consecutive_block_count",
         rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 300 }],
@@ -1090,7 +1090,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 22, chat_id: "stale-strike", message_html: "<b>Alert</b>", disable_notification: 0, created_at: now - 60, attempts: 0 },
         ],
@@ -1136,7 +1136,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 23, chat_id: "recovered", message_html: "<b>Alert</b>", disable_notification: 0, created_at: 1000, attempts: 0 },
         ],
@@ -1185,7 +1185,7 @@ describe("drainPendingQueue", () => {
     }));
 
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "FROM telegram_pending_alerts p", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
     ]);
@@ -1223,7 +1223,7 @@ describe("drainPendingQueue", () => {
     }));
 
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "FROM telegram_pending_alerts p", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
     ]);
@@ -1261,7 +1261,7 @@ describe("drainPendingQueue", () => {
     ];
 
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "FROM telegram_pending_alerts p", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
     ]);
@@ -1304,7 +1304,7 @@ describe("drainPendingQueue", () => {
     }));
 
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows },
+      { match: "FROM telegram_pending_alerts p", rows },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
       { match: "UPDATE telegram_pending_alerts\n            SET processing_owner = NULL", rows: [] },
@@ -1336,7 +1336,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 610, chat_id: "chat-scoped", message_html: "<b>Limited</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
         ],
@@ -1375,7 +1375,7 @@ describe("drainPendingQueue", () => {
 
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           { id: 611, chat_id: "global-scoped", message_html: "<b>Limited</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
         ],
@@ -1408,7 +1408,7 @@ describe("drainPendingQueue", () => {
   it("does not select expired or not-yet-ready pending rows", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     ]);
 
     await drainPendingQueue(db, "bot-token", 10);
@@ -1433,7 +1433,7 @@ describe("drainPendingQueue", () => {
   it("can restrict drain selection to risk-priority rows during fresh alert contention", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     ]);
 
     await drainPendingQueue(db, "bot-token", 10, undefined, {
@@ -1459,7 +1459,7 @@ describe("drainPendingQueue", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           {
             id: 30,
@@ -1496,7 +1496,7 @@ describe("drainPendingQueue", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT p.id, p.chat_id, p.message_html",
+        match: "FROM telegram_pending_alerts p",
         rows: [
           {
             id: 31,
@@ -1583,7 +1583,7 @@ describe("drainPendingQueue", () => {
       },
     ];
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: orderedChunks },
+      { match: "FROM telegram_pending_alerts p", rows: orderedChunks },
       { match: "UPDATE telegram_pending_alerts", rows: [] },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_alert_job_targets", rows: [] },
@@ -1611,7 +1611,7 @@ describe("drainPendingQueue", () => {
 
   it("returns zeros when queue is empty", async () => {
     const db = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     ]);
 
     const result = await drainPendingQueue(db, "bot-token", 10);
@@ -1770,7 +1770,7 @@ describe("drainPendingQueue", () => {
     // distinct chat_id) and the rest get sent.
     const tick1Rows = selectable.slice(0, 200);
     const db1 = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: tick1Rows },
+      { match: "FROM telegram_pending_alerts p", rows: tick1Rows },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET not_before_at", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
@@ -1815,7 +1815,7 @@ describe("drainPendingQueue", () => {
     // Tick 2: drain remaining selectable rows (i.e. the leftover 100).
     const tick2Rows = selectable.slice(200);
     const db2 = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: tick2Rows },
+      { match: "FROM telegram_pending_alerts p", rows: tick2Rows },
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_pending_alerts SET not_before_at", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
@@ -1828,7 +1828,7 @@ describe("drainPendingQueue", () => {
 
     // Tick 3: queue is empty (selectable rows already drained).
     const db3 = mockD1([
-      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      { match: "FROM telegram_pending_alerts p", rows: [] },
     ]);
     const tick3 = await drainPendingQueue(db3, "bot-token", 200);
     expect(tick3.attempted).toBe(0);
