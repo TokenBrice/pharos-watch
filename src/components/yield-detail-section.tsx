@@ -444,10 +444,6 @@ const ATTRIBUTION_TONE: Record<
     wrapper: "border-sky-500/25 bg-sky-500/5",
     kicker: "text-sky-700 dark:text-sky-300",
   },
-  benchmark: {
-    wrapper: "border-violet-500/25 bg-violet-500/5",
-    kicker: "text-violet-700 dark:text-violet-300",
-  },
   mixed: {
     wrapper: "border-amber-500/25 bg-amber-500/5",
     kicker: "text-amber-700 dark:text-amber-300",
@@ -466,8 +462,7 @@ export function YieldChangeAttributionCard({
   const tone = ATTRIBUTION_TONE[attribution.attribution];
   const hasEvidence =
     attribution.largestDelta !== null ||
-    attribution.sourceSwitchDetail !== undefined ||
-    attribution.benchmarkDetail !== undefined;
+    attribution.sourceSwitchDetail !== undefined;
   return (
     <div className={cn("rounded-xl border px-4 py-3", tone.wrapper)}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -517,15 +512,6 @@ export function YieldChangeAttributionCard({
                   {formatSignedPercent(attribution.sourceSwitchDetail.apy30dDelta, 2)}
                 </span>{" "}
                 impact on 30d APY.
-              </li>
-            ) : null}
-            {attribution.benchmarkDetail ? (
-              <li>
-                Benchmark delta on that day:{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {formatSignedPercent(attribution.benchmarkDetail.benchmarkDeltaPp, 2)}
-                </span>
-                .
               </li>
             ) : null}
           </ul>

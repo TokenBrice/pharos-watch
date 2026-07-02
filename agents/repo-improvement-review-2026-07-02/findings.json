@@ -1698,6 +1698,16 @@
      "src/app/stablecoin/[id]/yield/client.tsx",
      "src/components/yield-detail-section.tsx"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the production-unreachable benchmark attribution branch from `classifyApyChange`, including its threshold constant, benchmark history input, helper/formatter, result detail field, UI evidence rendering, and tests that only exercised that dead path.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/yield-change-attribution.test.ts src/components/__tests__/yield-detail-section.test.tsx",
+     "npm run typecheck",
+     "rg -n \"benchmarkHistory|benchmarkDetail|BENCHMARK_DELTA_THRESHOLD_PP|YieldChangeAttributionBenchmarkPoint\" src shared worker functions tests -g '!node_modules'"
+    ]
    }
   },
   {

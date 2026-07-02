@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BENCHMARK_DELTA_THRESHOLD_PP,
   ORGANIC_DELTA_THRESHOLD_PP,
   SOURCE_SWITCH_DELTA_THRESHOLD_PP,
   classifyApyChange,
@@ -88,30 +87,7 @@ describe("classifyApyChange", () => {
     expect(result.attribution).not.toBe("source-switch");
   });
 
-  it("attributes to benchmark when benchmark history moves on the same day as the largest APY move", () => {
-    const history = [point(10, 5.0), point(5, 5.1), point(2, 4.5), point(1, 4.55)];
-    const benchmarkHistory = [
-      { ts: NOW_MS - 10 * DAY_MS, rate: 5.2 },
-      { ts: NOW_MS - 2 * DAY_MS, rate: 4.7 },
-    ];
-    const result = classifyApyChange({ history, benchmarkHistory, nowMs: NOW_MS });
-    expect(result.attribution).toBe("benchmark");
-    expect(result.confidence).toBe("medium");
-    expect(result.benchmarkDetail?.benchmarkDeltaPp).toBeCloseTo(-0.5);
-    expect(result.headline).toMatch(/benchmark/i);
-  });
-
-  it("ignores benchmark when the benchmark move is below the threshold", () => {
-    const history = [point(10, 5.0), point(2, 6.5), point(1, 6.55)];
-    const benchmarkHistory = [
-      { ts: NOW_MS - 10 * DAY_MS, rate: 5.2 },
-      { ts: NOW_MS - 2 * DAY_MS, rate: 5.2 + BENCHMARK_DELTA_THRESHOLD_PP - 0.05 },
-    ];
-    const result = classifyApyChange({ history, benchmarkHistory, nowMs: NOW_MS });
-    expect(result.attribution).toBe("organic");
-  });
-
-  it("attributes organic drift when the largest move exceeds the organic threshold without source switch or benchmark", () => {
+  it("attributes organic drift when the largest move exceeds the organic threshold without source switch", () => {
     const history = [point(10, 5.0), point(5, 5.1), point(2, 6.5), point(1, 6.55)];
     const result = classifyApyChange({ history, yieldStability: 0.8, nowMs: NOW_MS });
     expect(result.attribution).toBe("organic");
@@ -175,12 +151,6 @@ describe("classifyApyChange", () => {
     expect(result.sourceSwitchDetail).toBeUndefined();
   });
 
-  it("falls back to history-only path when benchmarkHistory is null", () => {
-    const history = [point(10, 5.0), point(2, 7.0), point(1, 7.05)];
-    const result = classifyApyChange({ history, benchmarkHistory: null, nowMs: NOW_MS });
-    expect(result.attribution).toBe("organic");
-  });
-
   it("does not throw when history points have invalid dates or NaN APY", () => {
     const history: YieldHistoryPoint[] = [
       { date: "not-a-date", apy: 1, apyBase: null, apyReward: null, exchangeRate: null, sourceTvlUsd: null, warningSignals: [] },
@@ -206,7 +176,6 @@ describe("classifyApyChange", () => {
 
   it("uses constants that match the documented thresholds", () => {
     expect(SOURCE_SWITCH_DELTA_THRESHOLD_PP).toBe(0.5);
-    expect(BENCHMARK_DELTA_THRESHOLD_PP).toBe(0.25);
     expect(ORGANIC_DELTA_THRESHOLD_PP).toBe(1.0);
   });
 });

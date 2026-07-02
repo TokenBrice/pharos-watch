@@ -1,11 +1,10 @@
 /**
  * Per-coin "Why this APY changed" attribution.
  *
- * Given a ranking row, its 30-day APY history, and the current benchmark, classify
+ * Given a ranking row, its 30-day APY history, and the source-switch ledger, classify
  * the largest 30-day APY move into one of:
  *
  *   - "source-switch"      — caused by the canonical source switching mid-window
- *   - "benchmark"          — driven by a published benchmark rate move
  *   - "organic"            — APY drifted at the source level with no switch
  *   - "mixed"              — both a source switch and an organic move overlap
  *   - "insufficient-data"  — no significant move detected or too little history
@@ -17,37 +16,30 @@
  *      (in percentage points) and the switch falls inside the 30d window, treat
  *      attribution as "source-switch" with high confidence.
  *
- *   2. Otherwise, find the largest single-day APY move in the 30d history. If a
- *      benchmark history is provided AND the benchmark moved by more than
- *      {@link BENCHMARK_DELTA_THRESHOLD_PP} (in percentage points) on that same
- *      day, attribute it to "benchmark" with medium confidence.
- *
- *   3. Otherwise, if the largest move exceeds {@link ORGANIC_DELTA_THRESHOLD_PP}
+ *   2. Otherwise, if the largest move exceeds {@link ORGANIC_DELTA_THRESHOLD_PP}
  *      (in percentage points) and no source switch is reported, attribute it to
  *      "organic". Confidence is "high" when yield stability is strong (≥0.75),
  *      "medium" when moderate (≥0.5), "low" otherwise.
  *
- *   4. If a recent source switch overlaps with an organic-sized move (largest
+ *   3. If a recent source switch overlaps with an organic-sized move (largest
  *      delta ≥ {@link ORGANIC_DELTA_THRESHOLD_PP}), attribute it to "mixed" with
  *      low confidence.
  *
- *   5. Otherwise return "insufficient-data".
+ *   4. Otherwise return "insufficient-data".
  *
  * The function NEVER throws. Missing decisionLedger, missing history points,
- * missing benchmark — all degrade gracefully to lower-confidence paths or
+ * and sparse history all degrade gracefully to lower-confidence paths or
  * "insufficient-data".
  *
  * APY values are interpreted as already-percent-scaled (i.e. 5.2 means 5.20%).
- * This matches the rest of the yield pipeline where `apy`, `apy30d`,
- * `benchmarkRate`, etc. are stored in percent units.
+ * This matches the rest of the yield pipeline where `apy`, `apy30d`, etc. are
+ * stored in percent units.
  */
 
 import type { YieldHistoryPoint } from "@shared/types";
 
 /** Source switch impact must move 30d APY by at least this many percentage points to be considered material. */
 export const SOURCE_SWITCH_DELTA_THRESHOLD_PP = 0.5;
-/** A benchmark move on the same day as the largest APY delta must exceed this (in pp) to attribute to benchmark. */
-export const BENCHMARK_DELTA_THRESHOLD_PP = 0.25;
 /** The largest 30d single-day APY move must exceed this (in pp) to attribute to organic drift. */
 export const ORGANIC_DELTA_THRESHOLD_PP = 1.0;
 
@@ -56,7 +48,6 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export type YieldChangeAttribution =
   | "source-switch"
   | "organic"
-  | "benchmark"
   | "mixed"
   | "insufficient-data";
 
@@ -72,17 +63,9 @@ export interface YieldChangeAttributionDecisionLedger {
   switchedAtMs?: number | null;
 }
 
-export interface YieldChangeAttributionBenchmarkPoint {
-  /** Epoch milliseconds for the benchmark observation. */
-  ts: number;
-  rate: number;
-}
-
 export interface YieldChangeAttributionInput {
   history: YieldHistoryPoint[];
   decisionLedger?: YieldChangeAttributionDecisionLedger | null;
-  /** Optional benchmark history (chronological, oldest first). When absent we fall back to history-only attribution. */
-  benchmarkHistory?: YieldChangeAttributionBenchmarkPoint[] | null;
   /** Stability ratio in 0-1 range from the ranking. Used to tune organic-attribution confidence. */
   yieldStability?: number | null;
   /** "Now" override for tests. Defaults to Date.now(). */
@@ -96,9 +79,6 @@ export interface YieldChangeAttributionResult {
     previousSourceKey: string;
     previousSourceLabel?: string;
     apy30dDelta: number;
-  };
-  benchmarkDetail?: {
-    benchmarkDeltaPp: number;
   };
   confidence: YieldChangeAttributionConfidence;
   headline: string;
@@ -144,26 +124,6 @@ function findLargestDailyDelta(
   return best;
 }
 
-function findBenchmarkDeltaAt(
-  benchmarkHistory: YieldChangeAttributionBenchmarkPoint[],
-  ts: number,
-): number | null {
-  if (benchmarkHistory.length < 2) return null;
-  const sorted = [...benchmarkHistory].sort((a, b) => a.ts - b.ts);
-  // Find the benchmark observation at or just before `ts`, and the one just before that.
-  let currentIndex = -1;
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    if (sorted[i].ts <= ts) {
-      currentIndex = i;
-      break;
-    }
-  }
-  if (currentIndex <= 0) return null;
-  const current = sorted[currentIndex];
-  const prior = sorted[currentIndex - 1];
-  return current.rate - prior.rate;
-}
-
 function daysAgo(ts: number, nowMs: number): number {
   return Math.max(0, Math.round((nowMs - ts) / (24 * 60 * 60 * 1000)));
 }
@@ -183,14 +143,6 @@ function formatSourceSwitchHeadline(detail: {
     return `${formatPp(largestDelta.value)} APY ${daysAgo(largestDelta.ts, nowMs)}d ago — source switched from ${previous} (${formatPp(detail.apy30dDelta)} impact).`;
   }
   return `Source switched from ${previous} (${formatPp(detail.apy30dDelta)} impact on 30d APY).`;
-}
-
-function formatBenchmarkHeadline(
-  largestDelta: { value: number; ts: number },
-  benchmarkDeltaPp: number,
-  nowMs: number,
-): string {
-  return `${formatPp(largestDelta.value)} APY ${daysAgo(largestDelta.ts, nowMs)}d ago — benchmark moved ${formatPp(benchmarkDeltaPp)}.`;
 }
 
 function formatOrganicHeadline(
@@ -245,9 +197,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
     // If we ALSO have an organic-sized drift in the window, flag as mixed (lower confidence).
     if (largestDelta && Math.abs(largestDelta.value) >= ORGANIC_DELTA_THRESHOLD_PP) {
-      const benchmarkDelta = input.benchmarkHistory
-        ? findBenchmarkDeltaAt(input.benchmarkHistory, largestDelta.ts)
-        : null;
       // If the largest move correlates with the switch timing (same calendar day), keep source-switch.
       const switchTs = ledger.switchedAtMs ?? null;
       const overlapsSwitch =
@@ -257,7 +206,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
           largestDelta,
           attribution: "mixed",
           sourceSwitchDetail: detail,
-          benchmarkDetail: benchmarkDelta != null ? { benchmarkDeltaPp: benchmarkDelta } : undefined,
           confidence: "low",
           headline: "Multiple drivers overlap; see source-switch trail and history.",
         };
@@ -272,7 +220,7 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 2/3/5: history-driven attribution.
+  // Step 2/4: history-driven attribution.
   if (!largestDelta) {
     return {
       largestDelta: null,
@@ -282,21 +230,7 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 2: benchmark attribution if benchmark history is available and moved on the same day.
-  if (input.benchmarkHistory && input.benchmarkHistory.length >= 2) {
-    const benchmarkDelta = findBenchmarkDeltaAt(input.benchmarkHistory, largestDelta.ts);
-    if (benchmarkDelta != null && Math.abs(benchmarkDelta) > BENCHMARK_DELTA_THRESHOLD_PP) {
-      return {
-        largestDelta,
-        attribution: "benchmark",
-        benchmarkDetail: { benchmarkDeltaPp: benchmarkDelta },
-        confidence: "medium",
-        headline: formatBenchmarkHeadline(largestDelta, benchmarkDelta, nowMs),
-      };
-    }
-  }
-
-  // Step 3: organic drift attribution.
+  // Step 2: organic drift attribution.
   if (Math.abs(largestDelta.value) > ORGANIC_DELTA_THRESHOLD_PP) {
     return {
       largestDelta,
@@ -306,7 +240,7 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 5: nothing significant.
+  // Step 4: nothing significant.
   return {
     largestDelta,
     attribution: "insufficient-data",
