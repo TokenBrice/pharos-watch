@@ -171,6 +171,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
 - `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
 - `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
+- `src/hooks/use-fitted-columns.ts` - useFittedColumns
 - `src/hooks/use-flash-on-change.ts` - useFlashOnChange
 - `src/hooks/use-home-alt-filters.ts` - HomeAltPegFilter, UseHomeAltFiltersReturn, useHomeAltFilters
 - `src/hooks/use-hydrated.ts` - useHydrated
@@ -192,8 +193,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
-- `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
-- ... 29 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 30 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
