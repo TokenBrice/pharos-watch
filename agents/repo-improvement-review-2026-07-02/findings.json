@@ -2425,6 +2425,17 @@
     "description": "Nothing imports @/hooks/use-start-here-callout except its own test (grep across src/ for the module path and the symbol returns only src/hooks/__tests__/use-start-here-callout.test.ts). No component renders the homepage callout it powers — 'retireCallout' has zero non-test references. The companion lib src/lib/start-here-callout.ts is still live, but only for readStartHereCalloutState/shouldShowStartHereNavigation (use-start-here-nav-visibility.ts) and persistStartHereOpened (start-here-visit-marker.tsx); evaluateHomepageStartHereCallout, writeStartHereCalloutState and START_HERE_CALLOUT_SESSION_KEY are used solely by this dead hook.",
     "recommendation": "Delete src/hooks/use-start-here-callout.ts and its test. Optionally also prune the now-unreferenced evaluateHomepageStartHereCallout / writeJsonStorageValue-backed session-key exports from src/lib/start-here-callout.ts (they become orphans of your removal). Behavior-preserving: no render path reaches this code.",
     "estImpact": "-63 LOC hook, up to ~-40 LOC lib"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "`useStartHereCallout` and its test were already absent from HEAD. Removed the remaining test-only homepage-callout evaluator and its tests, made the surviving storage/session constants private, and removed their unused-code allowlist entries while keeping live nav visibility and visit-marker helpers intact.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/start-here-callout.test.ts",
+     "npm run typecheck",
+     "npm run check:unused-code",
+     "test ! -e src/hooks/use-start-here-callout.ts && test ! -e src/hooks/__tests__/use-start-here-callout.test.tsx && ! git grep -n -e useStartHereCallout -e use-start-here-callout -e evaluateHomepageStartHereCallout -e retireCallout -- ':!agents/repo-improvement-review-2026-07-02/findings.json'"
+    ]
    }
   },
   {

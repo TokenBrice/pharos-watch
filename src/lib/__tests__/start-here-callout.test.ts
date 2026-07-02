@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  evaluateHomepageStartHereCallout,
   markStartHereOpened,
   normalizeStartHereCalloutState,
   shouldShowStartHereNavigation,
@@ -21,81 +20,6 @@ describe("normalizeStartHereCalloutState", () => {
     ).toEqual({
       homepageSessions: 0,
       hasOpenedStartHere: false,
-    });
-  });
-});
-
-describe("evaluateHomepageStartHereCallout", () => {
-  it("shows the callout during the first homepage session", () => {
-    const evaluation = evaluateHomepageStartHereCallout(
-      {
-        homepageSessions: 0,
-        hasOpenedStartHere: false,
-      },
-      false,
-    );
-
-    expect(evaluation).toEqual({
-      nextState: {
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      },
-      shouldPersist: true,
-      shouldShow: true,
-    });
-  });
-
-  it("does not increment again within the same browser session", () => {
-    const evaluation = evaluateHomepageStartHereCallout(
-      {
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      },
-      true,
-    );
-
-    expect(evaluation).toEqual({
-      nextState: {
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      },
-      shouldPersist: false,
-      shouldShow: true,
-    });
-  });
-
-  it("hides the callout from the second distinct homepage session onward", () => {
-    const evaluation = evaluateHomepageStartHereCallout(
-      {
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      },
-      false,
-    );
-
-    expect(evaluation).toEqual({
-      nextState: {
-        homepageSessions: 2,
-        hasOpenedStartHere: false,
-      },
-      shouldPersist: true,
-      shouldShow: false,
-    });
-  });
-
-  it("keeps the callout hidden after the Start Here page has been opened", () => {
-    const evaluation = evaluateHomepageStartHereCallout(
-      {
-        homepageSessions: 0,
-        hasOpenedStartHere: true,
-      },
-      false,
-    );
-
-    expect(evaluation.shouldShow).toBe(false);
-    expect(evaluation.nextState).toEqual({
-      homepageSessions: 1,
-      hasOpenedStartHere: true,
     });
   });
 });

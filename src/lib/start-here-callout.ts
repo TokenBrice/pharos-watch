@@ -5,14 +5,8 @@ export interface StartHereCalloutState {
   hasOpenedStartHere: boolean;
 }
 
-export interface HomepageStartHereCalloutEvaluation {
-  nextState: StartHereCalloutState;
-  shouldPersist: boolean;
-  shouldShow: boolean;
-}
-
-export const START_HERE_CALLOUT_STORAGE_KEY = "pharos-start-here-callout";
-export const MAX_START_HERE_HOMEPAGE_SESSIONS = 1;
+const START_HERE_CALLOUT_STORAGE_KEY = "pharos-start-here-callout";
+const MAX_START_HERE_HOMEPAGE_SESSIONS = 1;
 
 const DEFAULT_STATE: StartHereCalloutState = {
   homepageSessions: 0,
@@ -40,24 +34,6 @@ export function readStartHereCalloutState(storage: Storage): StartHereCalloutSta
 
 function writeStartHereCalloutState(storage: Storage, state: StartHereCalloutState): void {
   writeJsonStorageValue(storage, START_HERE_CALLOUT_STORAGE_KEY, state);
-}
-
-export function evaluateHomepageStartHereCallout(
-  state: StartHereCalloutState,
-  hasSeenCurrentSession: boolean,
-): HomepageStartHereCalloutEvaluation {
-  const nextState = hasSeenCurrentSession
-    ? state
-    : {
-        ...state,
-        homepageSessions: state.homepageSessions + 1,
-      };
-
-  return {
-    nextState,
-    shouldPersist: !hasSeenCurrentSession,
-    shouldShow: shouldShowStartHereNavigation(nextState),
-  };
 }
 
 export function shouldShowStartHereNavigation(state: StartHereCalloutState): boolean {

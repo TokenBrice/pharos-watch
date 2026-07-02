@@ -172,8 +172,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/coverage.ts::resolveBlacklistCoverage",
   "src/lib/coverage.ts::resolveDependencyCoverage",
   "src/lib/coverage.ts::countAvailableFeatures",
-  "src/lib/start-here-callout.ts::START_HERE_CALLOUT_STORAGE_KEY",
-  "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
   "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
   // Storage key + snapshot reader exported for tests and one-off lookups
   // (e.g. compare-config presets). External consumption is intermittent.
