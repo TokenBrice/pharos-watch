@@ -9,25 +9,19 @@ import { logosById } from "@/lib/logos";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { LAUNCH_PHASE_LABELS, PHASE_DOT, dateScore } from "@/lib/pre-launch";
+import {
+  HORIZON_CONSTELLATION_LAYOUT,
+  layoutHorizonPhase,
+  phaseRingSize,
+} from "@/lib/horizon-constellation-layout";
 
 // Phases ordered far-from-launch → nearest-to-launch. The readiness columns read
 // left (announced) to right (launching = the live-market threshold).
 const PHASE_ORDER: readonly LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-const DOT = 22;
-const DOT_SPACING = 30;
-const PAD = 12;
-const LOGO_INNER = DOT - 4;
-const MIN_FIELD_R = 58;
-const COUNT_FIELD_SCALE = 7;
-const MAX_FIELD_R = 92;
-
-// Dots are uniform neutral markers — past this many a ring caps the visible dots
-// and stands in the remainder as a "+N" pill (the Figma's overflow indicator).
-// The wide ring wraps OVERFLOW_RING dots around that pill; narrow lanes cap inline.
-const MAX_DOTS = 12;
-const OVERFLOW_RING = 8;
-const NARROW_LANE_DOTS = 8;
+const DOT = HORIZON_CONSTELLATION_LAYOUT.dot;
+const LOGO_INNER = HORIZON_CONSTELLATION_LAYOUT.logoInner;
+const NARROW_LANE_DOTS = HORIZON_CONSTELLATION_LAYOUT.narrowLaneDots;
 
 // Short, single-word phase labels for the visible chips (the readiness rings).
 // Screen-reader/link copy keeps the canonical LAUNCH_PHASE_LABELS; only the
@@ -51,72 +45,6 @@ const PHASE_FIELD: Record<LaunchPhase, string> = {
   beta: "border-emerald-500/35 bg-emerald-500/[0.05] dark:border-emerald-400/35 dark:bg-emerald-400/[0.07]",
   "launching-soon": "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
 };
-
-interface Packed {
-  pts: { x: number; y: number }[];
-  /** Field radius (cluster extent + breathing room). */
-  fieldR: number;
-}
-
-// Pack n dots into a circular cluster centered on (0, 0). Up to 6 form a single
-// polygon ring; 7+ get a center dot wrapped by concentric rings spaced one
-// DOT_SPACING apart, so the disc grows with the count and fills both axes.
-function packCircle(n: number): Packed {
-  if (n <= 0) return { pts: [], fieldR: DOT_SPACING * 0.7 };
-  if (n === 1) return { pts: [{ x: 0, y: 0 }], fieldR: DOT / 2 + PAD };
-  if (n <= 6) {
-    const r = DOT_SPACING / (2 * Math.sin(Math.PI / n));
-    const pts = Array.from({ length: n }, (_, k) => {
-      const a = (k / n) * 2 * Math.PI - Math.PI / 2;
-      return { x: Math.cos(a) * r, y: Math.sin(a) * r };
-    });
-    return { pts, fieldR: r + DOT / 2 + PAD };
-  }
-  const pts = [{ x: 0, y: 0 }];
-  let rem = n - 1;
-  let ring = 1;
-  let lastR = 0;
-  while (rem > 0) {
-    const r = ring * DOT_SPACING;
-    const cap = Math.max(1, Math.round((2 * Math.PI * r) / DOT_SPACING));
-    const cnt = Math.min(cap, rem);
-    for (let k = 0; k < cnt; k++) {
-      // Offset each ring's start so outer dots nest between inner ones.
-      const a = (k / cnt) * 2 * Math.PI - Math.PI / 2 + ring * 0.4;
-      pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
-    }
-    lastR = r;
-    rem -= cnt;
-    ring++;
-  }
-  return { pts, fieldR: lastR + DOT / 2 + PAD };
-}
-
-interface PhaseLayout extends Packed {
-  /** Coins beyond the visible dots, summarised by a "+N" pill (0 when all fit). */
-  hidden: number;
-}
-
-// A readiness stage's dot layout: pack everything that fits, otherwise a single
-// OVERFLOW_RING-dot ring wrapping a "+N" pill for the remainder.
-function layoutPhase(count: number): PhaseLayout {
-  if (count <= MAX_DOTS) {
-    const { pts, fieldR } = packCircle(count);
-    return { pts, fieldR, hidden: 0 };
-  }
-  const r = DOT_SPACING / (2 * Math.sin(Math.PI / OVERFLOW_RING));
-  const pts = Array.from({ length: OVERFLOW_RING }, (_, k) => {
-    const a = (k / OVERFLOW_RING) * 2 * Math.PI - Math.PI / 2;
-    return { x: Math.cos(a) * r, y: Math.sin(a) * r };
-  });
-  return { pts, fieldR: r + DOT / 2 + PAD, hidden: count - OVERFLOW_RING };
-}
-
-function phaseFieldRadius(count: number, layout: PhaseLayout): number {
-  if (count <= 0) return Math.max(layout.fieldR, MIN_FIELD_R);
-  const countRadius = MIN_FIELD_R + Math.sqrt(count) * COUNT_FIELD_SCALE;
-  return Math.min(MAX_FIELD_R, Math.max(layout.fieldR, countRadius));
-}
 
 function dotLinkClass(): string {
   return "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
@@ -144,7 +72,7 @@ const coinsByPhase = PHASE_ORDER.map((phase) =>
 // Lay each stage out, then size the field from its total count so high-volume
 // phases read larger even when their visible dot links are capped behind a
 // "+N" tracker link.
-const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
+const layouts = coinsByPhase.map((c) => layoutHorizonPhase(c.length));
 
 function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
   const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);
@@ -216,7 +144,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
             const coins = coinsByPhase[i];
             const count = coins.length;
             const { pts, hidden } = layouts[i];
-            const ringSize = phaseFieldRadius(count, layouts[i]) * 2;
+            const ringSize = phaseRingSize(count, layouts[i]);
             return (
               <div key={phase} className="flex flex-col items-center gap-4 px-3 py-5">
                 <div className="flex h-[184px] w-full items-center justify-center">

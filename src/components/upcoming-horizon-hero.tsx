@@ -8,28 +8,21 @@ import { logosById } from "@/lib/logos";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { LAUNCH_PHASE_LABELS, PHASE_DOT, dateScore } from "@/lib/pre-launch";
+import {
+  HORIZON_CONSTELLATION_LAYOUT,
+  layoutHorizonPhase,
+  phaseRingSize,
+} from "@/lib/horizon-constellation-layout";
 
-// Hero-scale constellation for the `/upcoming/` page hero — the RIGHT slot of
-// `FeatureHeroSplit`. The dot-packing / ring-sizing logic is adapted from the
-// locked homepage `HomeAltUpcomingHorizonConstellation` (which stays untouched
-// to protect its homepage rendering); the duplication is intentional and flagged
-// for a later shared-helper extraction. This variant drops the section header and
-// the outer `pharos-card-shell` (the hero shell supplies both) and fills the slot
-// edge-to-edge.
+// Hero-scale constellation for the `/upcoming/` page hero. This variant drops
+// the homepage section header and the outer `pharos-card-shell` (the hero shell
+// supplies both) and fills the slot edge-to-edge.
 
 const PHASE_ORDER: readonly LaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-const DOT = 22;
-const DOT_SPACING = 30;
-const PAD = 12;
-const LOGO_INNER = DOT - 4;
-const MIN_FIELD_R = 58;
-const COUNT_FIELD_SCALE = 7;
-const MAX_FIELD_R = 92;
-
-const MAX_DOTS = 12;
-const OVERFLOW_RING = 8;
-const NARROW_LANE_DOTS = 8;
+const DOT = HORIZON_CONSTELLATION_LAYOUT.dot;
+const LOGO_INNER = HORIZON_CONSTELLATION_LAYOUT.logoInner;
+const NARROW_LANE_DOTS = HORIZON_CONSTELLATION_LAYOUT.narrowLaneDots;
 
 const PHASE_SHORT_LABEL: Record<LaunchPhase, string> = {
   announced: "Announced",
@@ -48,64 +41,6 @@ const PHASE_FIELD: Record<LaunchPhase, string> = {
   beta: "border-emerald-500/35 bg-emerald-500/[0.05] dark:border-emerald-400/35 dark:bg-emerald-400/[0.07]",
   "launching-soon": "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
 };
-
-interface Packed {
-  pts: { x: number; y: number }[];
-  fieldR: number;
-}
-
-function packCircle(n: number): Packed {
-  if (n <= 0) return { pts: [], fieldR: DOT_SPACING * 0.7 };
-  if (n === 1) return { pts: [{ x: 0, y: 0 }], fieldR: DOT / 2 + PAD };
-  if (n <= 6) {
-    const r = DOT_SPACING / (2 * Math.sin(Math.PI / n));
-    const pts = Array.from({ length: n }, (_, k) => {
-      const a = (k / n) * 2 * Math.PI - Math.PI / 2;
-      return { x: Math.cos(a) * r, y: Math.sin(a) * r };
-    });
-    return { pts, fieldR: r + DOT / 2 + PAD };
-  }
-  const pts = [{ x: 0, y: 0 }];
-  let rem = n - 1;
-  let ring = 1;
-  let lastR = 0;
-  while (rem > 0) {
-    const r = ring * DOT_SPACING;
-    const cap = Math.max(1, Math.round((2 * Math.PI * r) / DOT_SPACING));
-    const cnt = Math.min(cap, rem);
-    for (let k = 0; k < cnt; k++) {
-      const a = (k / cnt) * 2 * Math.PI - Math.PI / 2 + ring * 0.4;
-      pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
-    }
-    lastR = r;
-    rem -= cnt;
-    ring++;
-  }
-  return { pts, fieldR: lastR + DOT / 2 + PAD };
-}
-
-interface PhaseLayout extends Packed {
-  hidden: number;
-}
-
-function layoutPhase(count: number): PhaseLayout {
-  if (count <= MAX_DOTS) {
-    const { pts, fieldR } = packCircle(count);
-    return { pts, fieldR, hidden: 0 };
-  }
-  const r = DOT_SPACING / (2 * Math.sin(Math.PI / OVERFLOW_RING));
-  const pts = Array.from({ length: OVERFLOW_RING }, (_, k) => {
-    const a = (k / OVERFLOW_RING) * 2 * Math.PI - Math.PI / 2;
-    return { x: Math.cos(a) * r, y: Math.sin(a) * r };
-  });
-  return { pts, fieldR: r + DOT / 2 + PAD, hidden: count - OVERFLOW_RING };
-}
-
-function phaseFieldRadius(count: number, layout: PhaseLayout): number {
-  if (count <= 0) return Math.max(layout.fieldR, MIN_FIELD_R);
-  const countRadius = MIN_FIELD_R + Math.sqrt(count) * COUNT_FIELD_SCALE;
-  return Math.min(MAX_FIELD_R, Math.max(layout.fieldR, countRadius));
-}
 
 function dotLinkClass(): string {
   return "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
@@ -126,7 +61,7 @@ const coinsByPhase = PHASE_ORDER.map((phase) =>
   ),
 );
 
-const layouts = coinsByPhase.map((c) => layoutPhase(c.length));
+const layouts = coinsByPhase.map((c) => layoutHorizonPhase(c.length));
 
 function HorizonLogoDot({ coin }: { coin: PreLaunchCoin }): React.JSX.Element {
   const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);
@@ -161,7 +96,7 @@ export function UpcomingHorizonHero(): React.JSX.Element {
           const coins = coinsByPhase[i];
           const count = coins.length;
           const { pts, hidden } = layouts[i];
-          const ringSize = phaseFieldRadius(count, layouts[i]) * 2;
+          const ringSize = phaseRingSize(count, layouts[i]);
           return (
             <div key={phase} className="flex flex-col items-center justify-center gap-4 px-3 py-6">
               <div className="flex h-[184px] w-full items-center justify-center">

@@ -2769,6 +2769,17 @@
     "description": "packCircle(), layoutPhase(), phaseFieldRadius(), HorizonLogoDot, and the DOT_SPACING/OVERFLOW ring constants are duplicated between upcoming-horizon-hero.tsx (lines 57-148) and home-alt-upcoming-horizon-constellation.tsx (lines 64-149). The hero file's own header comment says \"the duplication is intentional and flagged for a later shared-helper extraction\" — i.e. the owner already sanctioned extracting the pure math while keeping the two render trees separate. The geometry functions are pure (count → coordinates) and identical, so extraction cannot change either page's rendering; any future tuning of one copy silently diverging from the other is the live hazard.",
     "recommendation": "Extract the pure layout helpers (packCircle, layoutPhase, phaseFieldRadius and the shared constants) into e.g. src/lib/horizon-constellation-layout.ts and import from both components, leaving each component's JSX untouched. Behavior-preserving by construction (pure functions, identical bodies).",
     "estImpact": "-90 LOC; removes divergence hazard between homepage and /upcoming/"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted the shared horizon constellation dot packing, overflow layout, ring sizing, and layout constants into `src/lib/horizon-constellation-layout.ts`, then rewired both the homepage constellation and `/upcoming/` hero to use the same pure helper while preserving their separate render trees. Added focused hero coverage for responsive lanes, phase dot links, and overflow tracker links.",
+    "validation": [
+     "npx vitest run src/components/__tests__/upcoming-horizon-hero.test.tsx src/components/__tests__/upcoming-client.test.tsx src/components/__tests__/home-alt-upcoming-horizon-constellation.test.tsx",
+     "npm run typecheck",
+     "npm run check:unused-code",
+     "git diff --check -- src/components/home-alt-upcoming-horizon-constellation.tsx src/components/upcoming-horizon-hero.tsx src/lib/horizon-constellation-layout.ts src/components/__tests__/upcoming-horizon-hero.test.tsx"
+    ]
    }
   },
   {
