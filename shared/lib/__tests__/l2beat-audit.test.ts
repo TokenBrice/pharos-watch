@@ -65,6 +65,19 @@ describe("L2BEAT audit helpers", () => {
     expect(audit.reviewRows.find((row) => row.coinId === "l3-token")?.reasons).toContain("layer3-host-chain-review");
   });
 
+  it("flags L2BEAT under-review deployments from structured context", () => {
+    const audit = buildL2BeatStablecoinSafetyAudit({
+      generatedAt: "2026-06-12T00:00:00.000Z",
+      stablecoins: [
+        { id: "celo-native", symbol: "CELO", contracts: [{ chain: "celo" }] },
+      ],
+    });
+
+    expect(audit.reviewRows.find((row) => row.coinId === "celo-native")).toMatchObject({
+      reasons: ["l2beat-under-review", "weak-l2beat-chain-environment"],
+    });
+  });
+
   it("builds bridge-route review rows from L2BEAT Interop protocol references", () => {
     const audit = buildL2BeatBridgeRouteReviewAudit({
       generatedAt: "2026-06-12T00:00:00.000Z",

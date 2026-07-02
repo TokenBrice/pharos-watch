@@ -353,7 +353,6 @@ function hasWeakRiskSentiment(projectId: L2BeatProjectId): boolean {
 
 function reviewReasons(input: {
   coin: L2BeatStablecoinMetadataInput;
-  chainId: string;
   contractChains: readonly string[];
   auditsForCoin: NonNullable<ReturnType<typeof getL2BeatSafetyScoreAudit>>[];
   audit: NonNullable<ReturnType<typeof getL2BeatSafetyScoreAudit>>;
@@ -386,7 +385,7 @@ function reviewReasons(input: {
   if (input.context.layer === "layer3" || input.context.hostChainId !== "ethereum") {
     reasons.add("layer3-host-chain-review");
   }
-  if (input.audit.notes.some((note) => note.includes("under review"))) {
+  if (input.context.isUnderReview) {
     reasons.add("l2beat-under-review");
   }
   if (input.context.chainEnvironmentScore < 60 || hasWeakRiskSentiment(input.context.projectId)) {
@@ -426,7 +425,6 @@ export function buildL2BeatStablecoinSafetyAudit(options: {
 
       const reasons = reviewReasons({
         coin,
-        chainId,
         contractChains,
         auditsForCoin,
         audit,

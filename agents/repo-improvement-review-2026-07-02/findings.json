@@ -4691,6 +4691,18 @@
     "description": "reviewReasons() adds the 'l2beat-under-review' reason via `input.audit.notes.some((note) => note.includes(\"under review\"))` — string-matching prose that getL2BeatSafetyScoreAudit() itself generates from snapshot.isUnderReview (l2beat-risk.ts:838). The structured flag is already available as input.context.isUnderReview; if the note copy is ever reworded (e.g. capitalized 'Under review'), the reason silently stops firing in the safety-score candidate queue. Same function: the `chainId` field of the input object (line 356, populated at the 427-434 call site) is never read — a dead parameter.",
     "recommendation": "Replace the notes.some(...) check with `input.context.isUnderReview` (provably equivalent today: the note is emitted iff the flag is set and no other note contains the substring) and drop the unused chainId field from the input shape and call site.",
     "estImpact": "removes a copy-coupled correctness trap in audit tooling"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "L2BEAT review reasons now use the structured isUnderReview context flag and the unused reviewReasons chainId input was removed.",
+    "validation": [
+     "npm run test -- shared/lib/__tests__/l2beat-audit.test.ts",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/chains/l2beat-audit.ts shared/lib/__tests__/l2beat-audit.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
