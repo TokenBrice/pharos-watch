@@ -256,8 +256,7 @@ async function main() {
       AND chain_id = ${sqlString(options.chainId)}
     ORDER BY timestamp DESC
   `;
-  const raw = d1.queryRaw(sql);
-  const rows = (JSON.parse(raw)[0]?.results ?? []) as BlacklistEventRow[];
+  const rows = d1.query<BlacklistEventRow>(sql);
   const events = rows.map((row) => ({
     id: row.id,
     stablecoin: row.stablecoin as BlacklistStablecoin,

@@ -211,10 +211,8 @@ export function restoreCleanupRowsToSqlite(dbPath: string, rows: readonly YieldH
   }
 }
 
-function queryRemoteRows(sql: string, remote: boolean): Array<Record<string, unknown>> {
-  const output = createWorkerD1Client(DB_NAME, remote ? "remote" : "local").queryRaw(sql);
-  const parsed = JSON.parse(output) as Array<{ results?: Array<Record<string, unknown>> }>;
-  return parsed[0]?.results ?? [];
+function queryRemoteRows<T>(sql: string, remote: boolean): T[] {
+  return createWorkerD1Client(DB_NAME, remote ? "remote" : "local").query<T>(sql);
 }
 
 function execRemoteStatements(statements: string[], remote: boolean): void {
@@ -227,7 +225,7 @@ function execRemoteStatements(statements: string[], remote: boolean): void {
 function loadCleanupRowsFromWrangler(remote: boolean): YieldHistoryCleanupRow[] {
   const rows: YieldHistoryCleanupRow[] = [];
   for (const target of listYieldHistoryCleanupTargets()) {
-    const targetRows = queryRemoteRows(buildSelectSql(target), remote) as unknown as YieldHistoryCleanupRow[];
+    const targetRows = queryRemoteRows<YieldHistoryCleanupRow>(buildSelectSql(target), remote);
     for (const row of targetRows) {
       rows.push(row);
     }
@@ -251,13 +249,13 @@ function restoreCleanupRowsToWrangler(rows: readonly YieldHistoryCleanupRow[], r
 }
 
 function readWriterPauseFromWrangler(remote: boolean): ReturnType<typeof parseYieldHistoryWriterPause> {
-  const rows = queryRemoteRows(
+  const rows = queryRemoteRows<{ value?: string; updated_at?: number }>(
     // SAFETY: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY is a fixed repo constant,
     // not user input, and sqlValue() still quotes it defensively.
     `SELECT value, updated_at FROM cache WHERE key = ${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)} LIMIT 1`,
     remote,
   );
-  const row = rows[0] as { value?: string; updated_at?: number } | undefined;
+  const row = rows[0];
   if (!row || typeof row.value !== "string" || typeof row.updated_at !== "number") {
     return null;
   }
@@ -287,7 +285,10 @@ function clearWriterPauseInWrangler(remote: boolean): void {
 
 function isYieldWriterActiveInWrangler(remote: boolean): boolean {
   const now = Math.floor(Date.now() / 1000);
-  const rows = queryRemoteRows(`SELECT lease_until FROM cron_leases WHERE job = 'sync-yield-data' LIMIT 1`, remote);
+  const rows = queryRemoteRows<{ lease_until?: number }>(
+    `SELECT lease_until FROM cron_leases WHERE job = 'sync-yield-data' LIMIT 1`,
+    remote,
+  );
   const leaseUntil = rows[0] && typeof rows[0].lease_until === "number" ? rows[0].lease_until : null;
   return leaseUntil != null && leaseUntil >= now;
 }

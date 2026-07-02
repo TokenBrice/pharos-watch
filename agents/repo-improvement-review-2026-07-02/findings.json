@@ -6363,6 +6363,20 @@
      "docs/scripts.md",
      "docs/deployment-process.md"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the retired one-off non-USD fiat depeg repair script and removed its active script inventory/operator-tool documentation references. Git history preserves the destructive repair if a future audited replay is ever needed.",
+    "validation": [
+     "rg -n \"repair-non-usd-fiat-depeg-history\" docs scripts worker shared functions src -g !src/data/changelogs/** -g !node_modules || true",
+     "npm run check:script-entrypoints",
+     "npm run check:doc-source-paths",
+     "npm run check:verified-doc-links",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- docs/scripts.md worker/scripts/rebuild-blacklist-current-balances.ts worker/scripts/yield-history-cleanup.ts worker/scripts/repair-non-usd-fiat-depeg-history.ts"
+    ],
+    "notes": "The only remaining text match is a historical changelog entry under src/data/changelogs, intentionally left untouched. Targeted script tests, root typecheck, worker typecheck, and worker-boundary checks passed for this cluster."
    }
   },
   {
@@ -6387,6 +6401,20 @@
      "worker/scripts/yield-history-cleanup.ts",
      "scripts/lib/remote-d1.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the repair script copy of D1 parse/batch helpers by deleting the retired script, and replaced the remaining live queryRaw JSON parsing in rebuild-blacklist-current-balances and yield-history-cleanup with typed D1Client.query<T>() calls.",
+    "validation": [
+     "rg -n \"queryRaw\\(|JSON\\.parse\\(.*queryRaw|d1BatchExec|d1QueryParsed|fetchHistoricalSecondaryFxRatesDirect\" worker/scripts/rebuild-blacklist-current-balances.ts worker/scripts/yield-history-cleanup.ts || true",
+     "npx vitest run worker/scripts/__tests__/rebuild-blacklist-current-balances.test.ts worker/scripts/__tests__/yield-history-cleanup.test.ts worker/scripts/__tests__/remote-d1.test.ts",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- docs/scripts.md worker/scripts/rebuild-blacklist-current-balances.ts worker/scripts/yield-history-cleanup.ts worker/scripts/repair-non-usd-fiat-depeg-history.ts"
+    ],
+    "notes": "The live scripts now use the same D1Client query path as the KYC-RIP reconcilers. Targeted script tests, root typecheck, worker typecheck, and worker-boundary checks passed for this cluster."
    }
   },
   {
@@ -6477,6 +6505,20 @@
     "alsoFiles": [
      "worker/src/lib/backfill-fx.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Resolved the duplicate historical FX mirror-fetch implementation by retiring the completed repair script that contained fetchHistoricalSecondaryFxRatesDirect, leaving the canonical FX backfill implementation as the only live copy.",
+    "validation": [
+     "rg -n \"fetchHistoricalSecondaryFxRatesDirect|repair-non-usd-fiat-depeg-history\" docs scripts worker shared functions src -g !src/data/changelogs/** -g !node_modules || true",
+     "npm run check:script-entrypoints",
+     "npm run check:doc-source-paths",
+     "npm run check:verified-doc-links",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- docs/scripts.md worker/scripts/rebuild-blacklist-current-balances.ts worker/scripts/yield-history-cleanup.ts worker/scripts/repair-non-usd-fiat-depeg-history.ts"
+    ],
+    "notes": "The remediation follows the finding caveat that deduping the FX helper is only needed if the repair tool survives; because the tool was retired, no new export from backfill-fx is necessary."
    }
   },
   {
