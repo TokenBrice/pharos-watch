@@ -3,4 +3,4 @@
  *
  * Bump when weights, exclusion rules, or deterministic engine behavior change.
  */
-export const SELECTOR_VERSION = "selector-v1.9";
+export const SELECTOR_VERSION = "selector-v1.91";

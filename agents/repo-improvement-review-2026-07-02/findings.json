@@ -3713,6 +3713,18 @@
     "description": "compareScored returns score order only when |scoreA − scoreB| > 1.5, otherwise falls through to supply/grade/liquidity tie-breaks. This violates transitivity: e.g. A(score 100, supply 1), B(98.6, 100), C(97.2, 200) gives B>A (window, supply), C>B (window, supply), but A>C (2.8 > 1.5) — a cycle. Array.prototype.sort with an inconsistent comparator produces implementation-defined order; today's output is only deterministic because the input order into sort is deterministic, so any upstream reordering (or a JS-engine algorithm change) can silently reshuffle picker ranks near the window boundary. The same windowed-threshold comparator pattern recurs in yield-source.ts:123 (0.0001 epsilon, practically harmless).",
     "recommendation": "Do not fix by naively changing sort semantics (that would move ranks, violating the freeze). Instead document the invariant and pin it: compute a total order explicitly (e.g. bucket scores into 1.5-wide clusters first, then tie-break within clusters), verified to reproduce current output on the live universe before swapping. At minimum add a comment warning that ranked order depends on input order.",
     "estImpact": "removes implementation-defined ordering risk in picker ranks"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the non-transitive selector ranking comparator with a score-first total comparator and explicit 1.5-point score clusters before applying tie-breakers. Relaxed fallback ranking uses the same sorter, selector regression tests cover the cycle case, and selector version/docs now advertise selector-v1.91.",
+    "validation": [
+     "npx vitest run shared/lib/selector",
+     "npm run typecheck",
+     "npm run check:selector-banned-phrases",
+     "npm run check:unused-code",
+     "git diff --check -- shared/lib/selector/ranking.ts shared/lib/selector/engine.ts shared/lib/selector/version.ts shared/lib/selector/__tests__/ranking.test.ts docs/screener-picker-page.md docs/api-reference.md"
+    ]
    }
   },
   {

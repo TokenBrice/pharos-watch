@@ -3547,7 +3547,7 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 ```json
 {
   "profile": "treasury",
-  "engineVersion": "selector-v1.9",
+  "engineVersion": "selector-v1.91",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
   "input": {

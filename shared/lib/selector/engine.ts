@@ -18,10 +18,10 @@ import {
 } from "./output-helpers";
 import {
   applyConcentrationSafeguard,
-  compareScored,
   dedupVariants,
   rankRobustnessFor,
   rankScoredEntries,
+  sortScoredEntries,
 } from "./ranking";
 import { buildRecommendation } from "./recommendation";
 import {
@@ -285,8 +285,7 @@ function buildRelaxedFallbackEntries(
     }
   }
   const deduped = dedupVariants(scored, input.profile);
-  deduped.sort(compareScored);
-  return applyConcentrationSafeguard(deduped);
+  return applyConcentrationSafeguard(sortScoredEntries(deduped));
 }
 
 function buildRecommendationPhase(

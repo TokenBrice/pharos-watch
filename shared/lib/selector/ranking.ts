@@ -40,15 +40,14 @@ export function dedupVariants(
 }
 
 const MISSING_SELECTOR_GRADE_RANK = 99;
+const SCORE_CLUSTER_WINDOW = 1.5;
 
 function selectorGradeRank(grade: ReportCardGrade | null | undefined): number {
   if (grade == null) return MISSING_SELECTOR_GRADE_RANK;
   return -(getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK);
 }
 
-export function compareScored(a: ScoredEntry, b: ScoredEntry): number {
-  const diff = b.score - a.score;
-  if (Math.abs(diff) > 1.5) return diff;
+function compareScoredTieBreakers(a: ScoredEntry, b: ScoredEntry): number {
   if (b.row.supplyUsd !== a.row.supplyUsd) {
     return b.row.supplyUsd - a.row.supplyUsd;
   }
@@ -59,6 +58,38 @@ export function compareScored(a: ScoredEntry, b: ScoredEntry): number {
   const bLiq = b.row.liquidityScore ?? -1;
   if (aLiq !== bLiq) return bLiq - aLiq;
   return a.row.id.localeCompare(b.row.id);
+}
+
+export function compareScored(a: ScoredEntry, b: ScoredEntry): number {
+  const diff = b.score - a.score;
+  if (diff !== 0) return diff;
+  return compareScoredTieBreakers(a, b);
+}
+
+// Form descending score windows once; pairwise threshold tie-breaks in
+// Array.sort comparators can create non-transitive cycles.
+export function sortScoredEntries(entries: readonly ScoredEntry[]): ScoredEntry[] {
+  const byScore = [...entries].sort(compareScored);
+  const ordered: ScoredEntry[] = [];
+
+  for (let index = 0; index < byScore.length;) {
+    const clusterStart = index;
+    const clusterTopScore = byScore[index]!.score;
+    index += 1;
+
+    while (
+      index < byScore.length &&
+      clusterTopScore - byScore[index]!.score <= SCORE_CLUSTER_WINDOW
+    ) {
+      index += 1;
+    }
+
+    const cluster = byScore.slice(clusterStart, index);
+    cluster.sort(compareScoredTieBreakers);
+    ordered.push(...cluster);
+  }
+
+  return ordered;
 }
 
 const CONCENTRATION_SUBSTITUTE_WINDOW = 3;
@@ -95,8 +126,7 @@ export function rankScoredEntries(
   input: SelectorInput,
 ): ScoredEntry[] {
   const deduped = dedupVariants([...scored], input.profile);
-  deduped.sort(compareScored);
-  const ranked = applyConcentrationSafeguard(deduped);
+  const ranked = applyConcentrationSafeguard(sortScoredEntries(deduped));
 
   if (input.profile !== "trading" && ranked.length >= 2) {
     if (ranked[0]!.confidence < 40) {
@@ -119,7 +149,7 @@ export function rankRobustnessFor(
   }
   if (!entry || !next) return { label: "clear-margin", scoreMargin: null };
   const margin = round1(Math.max(0, entry.score - next.score));
-  if (margin < 1.5) return { label: "narrow-margin", scoreMargin: margin };
+  if (margin < SCORE_CLUSTER_WINDOW) return { label: "narrow-margin", scoreMargin: margin };
   if (margin < 3) return { label: "crowded-field", scoreMargin: margin };
   return { label: "clear-margin", scoreMargin: margin };
 }
