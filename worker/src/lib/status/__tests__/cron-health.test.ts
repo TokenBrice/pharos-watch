@@ -77,6 +77,17 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
   });
 
+  it("ignores neutral skips when checking critical error streaks", async () => {
+    const rows = seedWithOverrides(NOW, [
+      { job: "sync-stablecoins", status: "skipped_neutral", ageSec: 30 },
+      { job: "sync-stablecoins", status: "error", ageSec: 900 },
+      { job: "sync-stablecoins", status: "error", ageSec: 1800 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.availabilityImpactingCronErrors).toBe(1);
+    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
+  });
+
   it("returns 2 when two critical crons each have 2 consecutive errors", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "sync-stablecoins", status: "error", ageSec: 30 },

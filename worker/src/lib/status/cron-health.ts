@@ -120,10 +120,6 @@ function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: 
   return run != null && now - run.startedAt <= interval * 2;
 }
 
-function latestRequiredCronRun(runs: readonly CronRun[]): CronRun | null {
-  return runs.find((run) => run.status !== "skipped_neutral") ?? null;
-}
-
 function buildCronHistoryQuery(jobCount: number): string {
   if (jobCount <= 0) {
     throw new Error("buildCronHistoryQuery: jobCount must be positive");
@@ -541,7 +537,8 @@ export async function loadCronHealth(
     const telemetryUnknown = cronHistoryQueryFailed;
     const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
     const isFresh = isFreshCronRun(lastRun, now, interval);
-    const latestRequiredRun = latestRequiredCronRun(runs);
+    const requiredRuns = runs.filter((run) => run.status !== "skipped_neutral");
+    const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
     const hasFreshRequiredOk = latestRequiredRunFresh && latestRequiredRun.status === "ok";
@@ -596,14 +593,14 @@ export async function loadCronHealth(
         availabilityImpactingCronErrors++;
       }
       // Consecutive-error streak: only counts if the two most-recent runs are
-      // both in-error. Uses the already-loaded `runs` array (DESC by started_at,
-      // capped at 10 per job). A single transient error surfaces as `degraded`
+      // both in-error. Neutral skips do not reset the streak because they are
+      // not required attempts. A single transient error surfaces as `degraded`
       // in deriveAvailabilityStatus; only 2+ consecutive escalate to `stale`.
       if (
         statusImpact === "critical"
-        && runs.length >= 2
-        && runs[0]?.status === "error"
-        && runs[1]?.status === "error"
+        && requiredRuns.length >= 2
+        && requiredRuns[0]?.status === "error"
+        && requiredRuns[1]?.status === "error"
       ) {
         availabilityImpactingConsecutiveCronErrors++;
       }
