@@ -258,15 +258,17 @@ function preambleLine(p: Preamble): string {
 function buildCsv<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
   const head = `# ${preambleLine(preamble)}`;
   const header = columns.map((c) => c.header).join(",");
-  const body = rows.map((row) => columns.map((c) => escapeCsvField(c.accessor(row))).join(","));
+  const body = rows.map((row, rowIndex) =>
+    columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","),
+  );
   return [head, header, ...body].join("\n") + "\n";
 }
 
 function buildJson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
-  const objects = rows.map((row) => {
+  const objects = rows.map((row, rowIndex) => {
     const obj: Record<string, string | number | null> = {};
     for (const column of columns) {
-      obj[column.header] = column.accessor(row);
+      obj[column.header] = column.accessor(row, rowIndex);
     }
     return obj;
   });
@@ -297,10 +299,10 @@ function buildNdjson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble):
       methodologyLabel: preamble.methodologyLabel,
     },
   });
-  const body = rows.map((row) => {
+  const body = rows.map((row, rowIndex) => {
     const obj: Record<string, string | number | null> = {};
     for (const column of columns) {
-      obj[column.header] = column.accessor(row);
+      obj[column.header] = column.accessor(row, rowIndex);
     }
     return JSON.stringify(obj);
   });

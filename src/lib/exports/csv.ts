@@ -1,40 +1,17 @@
 import type { ExportPreamble } from "./preamble";
 import { formatPreambleCsv } from "./preamble";
+import { buildCsv as buildSharedCsv, buildCsvBody } from "@shared/lib/csv";
+import type { CsvColumn } from "@shared/lib/csv";
 
-export interface CsvColumn<T> {
-  header: string;
-  accessor: (row: T, index: number) => string | number | null;
-}
-
-const SPREADSHEET_FORMULA_PREFIX = /^[\t\r\n ]*[=+\-@]/;
-
-function neutralizeSpreadsheetFormula(value: string): string {
-  return SPREADSHEET_FORMULA_PREFIX.test(value) ? `'${value}` : value;
-}
-
-export function escapeCsvField(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  const str = typeof value === "string" ? neutralizeSpreadsheetFormula(value) : String(value);
-  return str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")
-    ? `"${str.replace(/"/g, '""')}"`
-    : str;
-}
-
-/** Build the header + escaped data rows shared by both CSV builders. */
-function buildCsvBody<T>(data: T[], columns: CsvColumn<T>[]): string[] {
-  const header = columns.map((c) => c.header).join(",");
-  const rows = data.map((row, rowIndex) =>
-    columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","),
-  );
-  return [header, ...rows];
-}
+export type { CsvColumn };
+export { escapeCsvField } from "@shared/lib/csv";
 
 /**
  * Build the CSV string (header + rows). Pure: no DOM access.
  * Mirrors `downloadCsv` field-escaping rules exactly.
  */
 export function buildCsv<T>(data: T[], columns: CsvColumn<T>[]): string {
-  return buildCsvBody(data, columns).join("\n");
+  return buildSharedCsv(data, columns);
 }
 
 /**

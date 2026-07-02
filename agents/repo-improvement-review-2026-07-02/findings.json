@@ -4146,6 +4146,19 @@
     "alsoFiles": [
      "src/lib/exports/csv.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved the runtime-neutral CSV column type, formula neutralization, field escaping, CSV body builder, and pure CSV builder into `shared/lib/csv.ts`. The browser export module now re-exports the shared primitives while keeping only preamble and DOM download behavior locally, and the script helper is a thin shared re-export.",
+    "validation": [
+     "npx vitest run scripts/__tests__/csv-helpers.test.ts src/lib/exports/__tests__/csv.test.ts src/lib/__tests__/csv-export.test.ts scripts/__tests__/generate-public-datasets.test.ts",
+     "npm run typecheck",
+     "npm run check:unused-code",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/csv.ts src/lib/exports/csv.ts scripts/lib/csv-helpers.ts scripts/maintenance/generate-public-datasets.ts"
+    ]
    }
   },
   {
