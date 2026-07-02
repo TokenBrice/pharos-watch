@@ -61,23 +61,23 @@ export async function loadTier1PrevRateRows(
   const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
   if (tier1CandidateIds.length === 0) return tier1PrevRateRows;
 
-  const placeholders = tier1CandidateIds.map(() => "?").join(", ");
-  const rows = await db
-    .prepare(
-      `SELECT /* pharos:yield-sync:tier1-previous-rate */
-         stablecoin_id, exchange_rate, recorded_at
-       FROM yield_history
-       WHERE stablecoin_id IN (${placeholders})
-         AND recorded_at <= ?
-         AND exchange_rate IS NOT NULL
-         AND (publication_generation_id IS NULL OR publication_state = 'published')
-       ORDER BY stablecoin_id ASC, recorded_at DESC`,
-    )
-    .bind(...tier1CandidateIds, sevenDaysAgoSec)
-    .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
-  for (const row of rows.results ?? []) {
-    if (!tier1PrevRateRows.has(row.stablecoin_id)) {
-      tier1PrevRateRows.set(row.stablecoin_id, {
+  const statement = db.prepare(
+    `SELECT /* pharos:yield-sync:tier1-previous-rate */
+       exchange_rate, recorded_at
+     FROM yield_history
+     WHERE stablecoin_id = ?
+       AND recorded_at <= ?
+       AND exchange_rate IS NOT NULL
+       AND (publication_generation_id IS NULL OR publication_state = 'published')
+     ORDER BY recorded_at DESC
+     LIMIT 1`,
+  );
+  for (const stablecoinId of new Set(tier1CandidateIds)) {
+    const row = await statement
+      .bind(stablecoinId, sevenDaysAgoSec)
+      .first<{ exchange_rate: number | null; recorded_at: number }>();
+    if (row) {
+      tier1PrevRateRows.set(stablecoinId, {
         exchangeRate: row.exchange_rate,
         recordedAt: row.recorded_at,
       });

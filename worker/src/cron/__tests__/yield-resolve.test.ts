@@ -1458,6 +1458,48 @@ describe("on-chain rate bootstrapping seed", () => {
 });
 
 describe("tracked optional source anchors", () => {
+  it("loads deterministic on-chain anchors with one bounded query per candidate", async () => {
+    const sevenDaysAgoSec = 1_747_000_000;
+    const db = mockD1(
+      [
+        {
+          match: "pharos:yield-sync:tier1-previous-rate",
+          matchBinds: ["usde-ethena", sevenDaysAgoSec],
+          rows: [],
+          first: { exchange_rate: 1.07, recorded_at: sevenDaysAgoSec - 3 },
+        },
+        {
+          match: "pharos:yield-sync:tier1-previous-rate",
+          matchBinds: ["sdai-maker", sevenDaysAgoSec],
+          rows: [],
+          first: { exchange_rate: 1.01, recorded_at: sevenDaysAgoSec - 9 },
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    const rows = await loadTier1PrevRateRows(db, ["usde-ethena", "sdai-maker"], sevenDaysAgoSec);
+
+    expect(rows.get("usde-ethena")).toEqual({ exchangeRate: 1.07, recordedAt: sevenDaysAgoSec - 3 });
+    expect(rows.get("sdai-maker")).toEqual({ exchangeRate: 1.01, recordedAt: sevenDaysAgoSec - 9 });
+    const queries = db.getHistory().filter((entry) => entry.sql.includes("pharos:yield-sync:tier1-previous-rate"));
+    expect(queries).toHaveLength(2);
+    expect(queries.map((entry) => entry.binds)).toEqual([
+      ["usde-ethena", sevenDaysAgoSec],
+      ["sdai-maker", sevenDaysAgoSec],
+    ]);
+    expect(queries.every((entry) => entry.sql.includes("stablecoin_id = ?"))).toBe(true);
+    expect(queries.every((entry) => !entry.sql.includes("stablecoin_id IN"))).toBe(true);
+    expect(queries.every((entry) => entry.sql.includes("ORDER BY recorded_at DESC"))).toBe(true);
+    expect(queries.every((entry) => entry.sql.includes("LIMIT 1"))).toBe(true);
+    expect(
+      queries.every((entry) =>
+        entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'"),
+      ),
+    ).toBe(true);
+    db.assertAllMatchesUsed();
+  });
+
   it("ignores unpublished deterministic on-chain anchor rows when selecting prior rates", async () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");

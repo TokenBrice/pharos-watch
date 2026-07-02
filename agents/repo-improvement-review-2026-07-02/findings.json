@@ -896,6 +896,16 @@
     "description": "The tier-1 previous-rate query (lines 64-77) selects ALL yield_history rows with `recorded_at <= sevenDaysAgoSec AND exchange_rate IS NOT NULL` for up to ~45 tier-1 candidates (ON_CHAIN_RATE_CONFIGS has 45 entries), ordered by stablecoin_id/recorded_at DESC with no LIMIT and no lower time bound, then keeps only the first row per coin in JS (lines 78-85). yield_history retention is 365 days (publication.ts:38-47), and tier-1 coins write an exchange-rate row every hourly run, so this reads up to tens of thousands of rows per hourly cron to extract ≤45 values. Contrast with the sibling loaders in history.ts (loadPreviousBestRowsForChunk) and tracked-optional-source-registry.ts (Ondo/Midas anchors), which use per-coin LIMIT 1 and bounded windows.",
     "recommendation": "Replace with a per-coin `... ORDER BY recorded_at DESC LIMIT 1` query (the exact pattern already used in loadPreviousBestRowsForChunk), or a correlated NOT EXISTS / GROUP BY MAX(recorded_at) formulation. Semantics (\"most recent published exchange-rate row at least 7 days old\") are preserved exactly, so this is behavior-neutral.",
     "estImpact": "Cuts thousands of D1 rows read per hourly yield run"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the broad retained-history scan in `loadTier1PrevRateRows` with one `stablecoin_id = ? ... ORDER BY recorded_at DESC LIMIT 1` lookup per unique tier-1 candidate, preserving the publication filter and returned anchor semantics. Added a regression test for bounded per-candidate queries.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-resolve.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/yield-sync/resolve-tracked-sources.ts worker/src/cron/__tests__/yield-resolve.test.ts"
+    ]
    }
   },
   {
