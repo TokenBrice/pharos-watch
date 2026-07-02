@@ -2771,6 +2771,16 @@
      "src/lib/page-metadata.ts",
      "scripts/maintenance/generate-markdown-exports.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the private methodology changelog metadata builder with buildPageMetadata so changelog routes emit the shared canonical, markdown alternate, OpenGraph, Twitter card, and robots metadata. Added a factory regression test for markdown alternates and Twitter metadata.",
+    "validation": [
+     "npx vitest run src/app/methodology/changelog-route-factory.test.ts src/lib/__tests__/page-metadata.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/app/methodology/changelog-route-factory.tsx src/app/methodology/changelog-route-factory.test.ts"
+    ]
    }
   },
   {

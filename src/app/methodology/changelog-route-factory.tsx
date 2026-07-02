@@ -2,35 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
-import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
-
-function buildMethodologyChangelogMetadata({
-  title,
-  description,
-  path,
-}: {
-  title: string;
-  description: string;
-  path: string;
-}): Metadata {
-  return {
-    title,
-    description,
-    alternates: { canonical: path },
-    robots: INDEXABLE_ROBOTS,
-    openGraph: {
-      title,
-      description,
-      url: path,
-      type: "website",
-      images: [{ url: "/og-editorial-methodology.png", width: 1200, height: 628 }],
-    },
-    twitter: {
-      images: [{ url: "/og-editorial-methodology.png", width: 1200, height: 628 }],
-    },
-  };
-}
 
 interface MethodologyChangelogRouteConfig {
   path: string;
@@ -59,10 +32,11 @@ interface MethodologyChangelogRouteDefinition {
 export function createMethodologyChangelogRoute(
   config: MethodologyChangelogRouteConfig,
 ): MethodologyChangelogRouteDefinition {
-  const metadata = buildMethodologyChangelogMetadata({
+  const metadata = buildPageMetadata({
     title: config.metadataTitle,
     description: config.metadataDescription,
-    path: config.path,
+    canonical: config.path,
+    ogImage: "/og-editorial-methodology.png",
   });
   const entries = [...(config.entries ?? [])];
 
