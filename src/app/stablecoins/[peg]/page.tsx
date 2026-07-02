@@ -14,7 +14,7 @@ function PegRouteCta({
   topCoinIds: readonly string[];
 }) {
   return (
-    <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-4">
+    <section className="pharos-subtle-band">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Next Check</p>

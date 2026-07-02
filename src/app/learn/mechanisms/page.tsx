@@ -19,6 +19,7 @@ import { CHART_PALETTE } from "@/lib/chart-colors";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { LearnHero } from "../_shared/learn-hero";
 import { LearnPageShell } from "../_shared/learn-page-shell";
+import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { MechanismComparisonMatrix } from "./comparison-matrix";
 import { ARCHETYPE_CONTENT } from "./content";
 
@@ -161,10 +162,10 @@ export default function MechanismExplainersHub() {
       <MechanismJsonLd />
       <section aria-labelledby="mechanism-start-here-title" className="space-y-4 border-y border-border/60 py-5">
         <div className="space-y-2">
-          <p className="pharos-kicker">Start Here</p>
-          <h2 id="mechanism-start-here-title" className="text-xl font-semibold text-foreground">
+          <SectionKicker>Start Here</SectionKicker>
+          <SectionHeading id="mechanism-start-here-title">
             Collateral paths to read first
-          </h2>
+          </SectionHeading>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Three high-signal explainers for readers comparing off-chain collateral, fund gates, and reflexive peg
             mechanics.
@@ -181,7 +182,7 @@ export default function MechanismExplainersHub() {
                 {item.label}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                 Read the explainer
                 <ArrowUpRight
                   className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
@@ -223,7 +224,7 @@ export default function MechanismExplainersHub() {
                   <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                     {countParts.join(" · ")}
                   </p>
-                  <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
+                  <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                     Read the explainer
                     <ArrowUpRight
                       className="h-3 w-3 transition-transform group-hover:translate-x-0.5"

@@ -37,7 +37,7 @@ function ArticleMeta({ study }: { study: CaseStudy }) {
   const minutes = estimateCaseStudyReadingMinutes(study);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-5">
-      <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+      <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
         ~{minutes} min read
       </p>
       <CaseStudyShare />
@@ -62,7 +62,7 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
   return (
     <nav
       aria-label="Case study table of contents"
-      className="sticky top-3 z-10 -mx-1 rounded-xl border border-border/50 bg-background/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="sticky top-16 z-10 -mx-1 rounded-xl border border-border/50 bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <Link
@@ -79,7 +79,7 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
           <li key={item.href}>
             <a
               href={item.href}
-              className="pharos-focus-ring inline-flex rounded-full border border-border/60 px-2.5 py-1 transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+              className="pharos-focus-ring inline-flex min-h-9 items-center rounded-full border border-border/60 px-2.5 py-1 transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
             >
               {item.label}
             </a>
@@ -105,7 +105,7 @@ function Takeaways({
         <SectionKicker className={kickerClass}>The short version</SectionKicker>
         <SectionHeading>Key takeaways</SectionHeading>
       </div>
-      <ul className="space-y-3 rounded-xl border border-border/50 bg-card/40 p-5 sm:p-6">
+      <ul className="pharos-card-shell space-y-3 p-5 sm:p-6">
         {takeaways.map((point, i) => (
           <li
             key={i}
@@ -164,7 +164,7 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
     >
       <Link
         href={`/learn/case-studies/${prev.slug}/`}
-        className="pharos-focus-ring group flex flex-col gap-1 rounded-xl border border-border/50 bg-card/40 px-5 py-4 transition-colors hover:border-frost-blue/60"
+        className="pharos-card-shell pharos-focus-ring group flex flex-col gap-1 px-5 py-4 transition-colors hover:border-frost-blue/60"
       >
         <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           <ArrowLeft
@@ -179,7 +179,7 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
       </Link>
       <Link
         href={`/learn/case-studies/${next.slug}/`}
-        className="pharos-focus-ring group flex flex-col gap-1 rounded-xl border border-border/50 bg-card/40 px-5 py-4 text-right transition-colors hover:border-frost-blue/60 sm:items-end"
+        className="pharos-card-shell pharos-focus-ring group flex flex-col gap-1 px-5 py-4 text-right transition-colors hover:border-frost-blue/60 sm:items-end"
       >
         <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           Next
@@ -247,7 +247,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
   const peak = study.eventWindow.peakDeviationBps;
   const low = study.eventWindow.lowPrice;
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-border/50 bg-card/40 p-5 sm:grid-cols-4 sm:p-6">
+    <dl className="pharos-card-shell grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-4 sm:p-6">
       <div className="space-y-1">
         <dt className="pharos-kicker text-muted-foreground">Outcome</dt>
         <dd>
@@ -263,7 +263,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
       </div>
       <div className="space-y-1">
         <dt className="pharos-kicker text-muted-foreground">When</dt>
-        <dd className="font-mono text-sm tabular-nums text-foreground">
+        <dd className="pharos-numeric text-sm text-foreground">
           {study.eventDateLabel}
         </dd>
       </div>
@@ -280,7 +280,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
       </div>
       <div className="space-y-1">
         <dt className="pharos-kicker text-muted-foreground">Peak deviation</dt>
-        <dd className="font-mono text-sm tabular-nums text-foreground">
+        <dd className="pharos-numeric text-sm text-foreground">
           {peak != null ? `${peak > 0 ? "+" : ""}${peak} bps` : "—"}
           {low != null ? (
             <span className="block text-xs font-normal text-muted-foreground">
@@ -317,15 +317,15 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
   ];
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/40 p-5 sm:p-6">
+    <div className="pharos-card-shell p-5 sm:p-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1">
           <p className="pharos-kicker text-muted-foreground">Event window</p>
-          <p className="font-mono text-sm text-foreground tabular-nums">{windowLabel}</p>
+          <p className="pharos-numeric text-sm text-foreground">{windowLabel}</p>
         </div>
         <div className="space-y-1">
           <p className="pharos-kicker text-muted-foreground">Peak deviation</p>
-          <p className="font-mono text-sm text-foreground tabular-nums">
+          <p className="pharos-numeric text-sm text-foreground">
             {study.eventWindow.peakDeviationBps != null
               ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
               : "n/a"}
@@ -333,7 +333,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
         </div>
         <div className="space-y-1">
           <p className="pharos-kicker text-muted-foreground">Lowest print</p>
-          <p className="font-mono text-sm text-foreground tabular-nums">
+          <p className="pharos-numeric text-sm text-foreground">
             {study.eventWindow.lowPrice != null ? `$${study.eventWindow.lowPrice.toFixed(3)}` : "n/a"}
           </p>
         </div>
@@ -478,14 +478,14 @@ function Sources({
   return (
     <section id="sources" className="space-y-5 rounded-xl border border-border/50 bg-card/25 p-5 sm:p-6">
       <SectionKicker className={kickerClass}>Primary sources</SectionKicker>
-      <ul className="grid gap-2">
+      <ul className="divide-y divide-border/40">
         {study.sources.map((source, i) => (
           <li key={i}>
             <a
               href={source.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring group flex items-start justify-between gap-3 rounded-lg border border-border/40 bg-background/40 px-3 py-2.5 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/50 hover:text-frost-blue"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 py-2.5 text-[15px] leading-snug text-foreground transition-colors hover:text-frost-blue"
             >
               <span>{source.label}</span>
               <ArrowUpRight

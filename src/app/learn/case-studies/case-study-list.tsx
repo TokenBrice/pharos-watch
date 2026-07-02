@@ -173,7 +173,7 @@ export function CaseStudyList({
                     </span>
                   </div>
                 </div>
-                <span className="hidden items-start pt-1 text-frost-blue opacity-70 transition-opacity group-hover:opacity-100 xl:inline-flex">
+                <span className="hidden items-start pt-1 text-muted-foreground transition-colors group-hover:text-foreground xl:inline-flex">
                   <ArrowUpRight
                     className="h-5 w-5 transition-transform group-hover:translate-x-0.5"
                     aria-hidden="true"

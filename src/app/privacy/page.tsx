@@ -43,7 +43,7 @@ export default function PrivacyPage() {
         </div>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">What We Collect</h2>
+          <h2 className="pharos-section-title">What We Collect</h2>
           <p>
             When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, Pharos collects
             anonymized usage analytics such as page views, session duration, approximate geographic region, device or
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Stablecoin Picker Storage</h2>
+          <h2 className="pharos-section-title">Stablecoin Picker Storage</h2>
           <p>
             The Picker at <code className="text-xs bg-muted px-1 py-0.5 rounded">/screener/picker/</code> uses
             functional browser storage. The long-lived local key in the current build is the callout dismissal key,{" "}
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Telegram Data and Retention</h2>
+          <h2 className="pharos-section-title">Telegram Data and Retention</h2>
           <p>
             PharosWatchBot stores only what is required to deliver alerts and keep the bot reliable. The full list of
             Telegram-owned tables and how long each one is retained:
@@ -136,7 +136,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">No Accounts or Wallet Connections</h2>
+          <h2 className="pharos-section-title">No Accounts or Wallet Connections</h2>
           <p>
             Pharos does not require user accounts, logins, or wallet connections for the website. Optional feedback
             contact details and self-serve API request emails are self-declared and are not used as site accounts.
@@ -144,7 +144,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Cookies</h2>
+          <h2 className="pharos-section-title">Cookies</h2>
           <p>
             When analytics is enabled, the only cookies set by Pharos are those required by Google Analytics 4 (e.g.,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga</code>,{" "}
@@ -154,7 +154,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
+          <h2 className="pharos-section-title">Data Retention</h2>
           <p>
             When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
             maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and
@@ -170,7 +170,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Third-Party Services</h2>
+          <h2 className="pharos-section-title">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
             processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
@@ -182,22 +182,19 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Contact</h2>
+          <h2 className="pharos-section-title">Contact</h2>
           <p>
             Questions about this policy? Reach out on{" "}
             <a
               href="https://x.com/PharosWatch"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+              className="pharos-prose-link"
             >
               @PharosWatch
             </a>{" "}
             or via the{" "}
-            <Link
-              href="/about/"
-              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-            >
+            <Link href="/about/" className="pharos-prose-link">
               About page
             </Link>
             .

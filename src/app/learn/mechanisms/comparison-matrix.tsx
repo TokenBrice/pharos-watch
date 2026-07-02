@@ -121,10 +121,7 @@ export function MechanismComparisonMatrix() {
   return (
     <section aria-labelledby="mechanism-matrix-heading" className="space-y-3">
       <div className="flex items-baseline justify-between gap-4">
-        <h2
-          id="mechanism-matrix-heading"
-          className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
-        >
+        <h2 id="mechanism-matrix-heading" className="pharos-kicker">
           At a glance
         </h2>
         <span className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">

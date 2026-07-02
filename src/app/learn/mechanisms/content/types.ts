@@ -53,11 +53,14 @@ export interface ArchetypeContent {
   readonly decommissioned?: ArchetypeDecommissioned;
 }
 
+// Owner ruling (2026-07-02): categorical identity hues collapse to neutral —
+// structure, icons, and kicker copy carry archetype identity, not color. The
+// empty kickerClass leaves `.pharos-kicker`'s muted treatment in charge.
 export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
-  "fiat-cash": { kickerClass: "text-blue-700 dark:text-blue-400" },
-  tbill: { kickerClass: "text-violet-700 dark:text-violet-400" },
-  cdp: { kickerClass: "text-cyan-700 dark:text-cyan-400" },
-  "synthetic-delta-neutral": { kickerClass: "text-teal-700 dark:text-teal-400" },
-  algorithmic: { kickerClass: "text-rose-700 dark:text-rose-400" },
-  "rwa-credit-fund": { kickerClass: "text-amber-700 dark:text-amber-400" },
+  "fiat-cash": { kickerClass: "" },
+  tbill: { kickerClass: "" },
+  cdp: { kickerClass: "" },
+  "synthetic-delta-neutral": { kickerClass: "" },
+  algorithmic: { kickerClass: "" },
+  "rwa-credit-fund": { kickerClass: "" },
 };

@@ -127,7 +127,7 @@ export function StablecoinTaxonomyShell({
     >
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Stablecoin Directory</h2>
+          <h2 className="pharos-kicker">Stablecoin Directory</h2>
           <p className="text-sm text-muted-foreground">{directoryDescription}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -135,7 +135,7 @@ export function StablecoinTaxonomyShell({
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
-              className="inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
+              className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
             >
               {coin.name} ({coin.symbol})
             </Link>
@@ -143,7 +143,7 @@ export function StablecoinTaxonomyShell({
         </div>
         {overflowCoins.length > 0 && (
           <details className="rounded-lg border border-border/60 bg-muted/20">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            <summary className="pharos-focus-ring cursor-pointer px-4 py-3 text-sm font-medium">
               Show the remaining {overflowCoins.length} {shortLabel} stablecoins
             </summary>
             <div className="flex flex-wrap gap-2 px-4 pb-4">
@@ -151,7 +151,7 @@ export function StablecoinTaxonomyShell({
                 <Link
                   key={coin.id}
                   href={buildStablecoinUrl(coin.id)}
-                  className="inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                  className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
                 >
                   {coin.name} ({coin.symbol})
                 </Link>
@@ -167,7 +167,7 @@ export function StablecoinTaxonomyShell({
 
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <h2 className="pharos-kicker">
             How To Use This Directory
           </h2>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
@@ -192,7 +192,7 @@ export function StablecoinTaxonomyShell({
       {relatedPages.length > 0 && (
         <section className="space-y-3">
           <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="pharos-kicker">
               More Stablecoin Hubs
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -204,11 +204,11 @@ export function StablecoinTaxonomyShell({
               <Link
                 key={relatedPage.href}
                 href={relatedPage.href}
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+                className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
               >
                 <span className="block font-medium text-foreground">{relatedPage.title}</span>
                 <span className="mt-1 block text-xs text-muted-foreground">
-                  {relatedPage.coins.length} tracked coins
+                  <span className="pharos-numeric">{relatedPage.coins.length}</span> tracked coins
                 </span>
               </Link>
             ))}

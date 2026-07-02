@@ -54,14 +54,14 @@ const LEDGER_OUTCOMES = [
     label: "Survived",
     note: "clawed back to the dollar",
     fill: "bg-emerald-500",
-    figure: "text-emerald-600 dark:text-emerald-400",
+    figure: "text-emerald-700 dark:text-emerald-400",
   },
   {
     key: "wounded",
     label: "Wounded",
     note: "still trading, structurally scarred",
     fill: "bg-amber-500",
-    figure: "text-amber-600 dark:text-amber-400",
+    figure: "text-amber-700 dark:text-amber-400",
   },
   {
     key: "died",
@@ -91,13 +91,13 @@ function OutcomeLedger({
   return (
     <section
       aria-labelledby="learn-verdict"
-      className="pharos-card-shell space-y-7 p-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:[animation-timing-function:var(--motion-ease-standard)] sm:p-7"
+      className="pharos-card-shell space-y-7 p-6 sm:p-7"
     >
       <div className="space-y-3">
         <p className="pharos-kicker">The verdict so far</p>
         <p
           id="learn-verdict"
-          className="pharos-display max-w-[34rem] text-balance text-[clamp(1.6rem,3.4vw,2.4rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-foreground"
+          className="pharos-display max-w-[34rem] text-balance text-[1.6rem] font-extrabold leading-[1.1] tracking-[-0.02em] text-foreground sm:text-[2.4rem]"
         >
           {total} depegs, reconstructed in full.{" "}
           <span className="text-rose-600 dark:text-rose-400">
@@ -111,7 +111,7 @@ function OutcomeLedger({
           <div key={outcome.key} className="space-y-1.5">
             <dd
               className={cn(
-                "pharos-numeric text-[clamp(2rem,5vw,3rem)] font-semibold leading-none",
+                "pharos-numeric text-[2rem] font-semibold leading-none sm:text-[3rem]",
                 outcome.figure,
               )}
             >
@@ -164,7 +164,7 @@ function ModuleHeader({
           href={href}
           className="pharos-focus-ring group inline-flex items-baseline gap-3 rounded-sm"
         >
-          <span className="pharos-numeric text-sm font-semibold tracking-[0.1em] text-frost-blue">
+          <span className="pharos-numeric text-sm font-semibold tracking-[0.1em] text-muted-foreground">
             {index}
           </span>
           <h2
@@ -180,7 +180,7 @@ function ModuleHeader({
       </div>
       <Link
         href={href}
-        className="pharos-focus-ring group inline-flex shrink-0 items-center gap-1.5 rounded-sm font-mono text-[11px] uppercase tracking-[0.12em] text-frost-blue"
+        className="pharos-focus-ring group inline-flex shrink-0 items-center gap-1.5 rounded-sm font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground"
       >
         {cta}
         <ArrowUpRight
@@ -366,7 +366,7 @@ export default function LearnIndexPage() {
         <p className="text-xs text-muted-foreground">
           <Link
             href="/learn/glossary/"
-            className="pharos-focus-ring rounded-sm font-mono uppercase tracking-[0.08em] text-frost-blue hover:underline hover:underline-offset-4"
+            className="pharos-focus-ring rounded-sm font-mono uppercase tracking-[0.08em] text-foreground hover:underline hover:underline-offset-4"
           >
             +{remainingTerms} more terms, A&ndash;Z &rarr;
           </Link>

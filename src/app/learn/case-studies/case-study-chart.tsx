@@ -21,7 +21,7 @@ export function CaseStudyChart({ widget }: { widget: CaseStudyDataWidget }) {
   });
 
   return (
-    <figure className="overflow-hidden rounded-xl border border-border/50 bg-card/40">
+    <figure className="pharos-card-shell overflow-hidden">
       {error ? (
         <div className="px-4 py-4 sm:px-6">
           <QueryErrorNotice error={error} hasData={data.length > 0} />

@@ -60,7 +60,7 @@ export default function DocsIndexPage() {
         <section aria-labelledby="docs-start-here" className="space-y-4 border-y border-border/60 py-5">
           <div className="space-y-2">
             <p className="pharos-kicker">Start Here</p>
-            <h2 id="docs-start-here" className="text-xl font-semibold text-foreground">
+            <h2 id="docs-start-here" className="pharos-display text-2xl font-bold tracking-tight text-foreground">
               High-signal public docs
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
@@ -89,7 +89,7 @@ export default function DocsIndexPage() {
         </section>
         {DOC_GROUPS.map((group) => (
           <section key={group} className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
+            <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground">{GROUP_TITLES[group]}</h2>
             <ul className="space-y-3">
               {byGroup[group].map((doc) => (
                 <li key={doc.slug} className="border-b border-border/50 pb-3 last:border-b-0">

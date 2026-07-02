@@ -22,7 +22,7 @@ export function LearnPageShell({
     <div className="mx-auto w-full max-w-[68rem] space-y-12">
       <BreadcrumbJsonLd items={breadcrumbItems} />
       <header className="space-y-6">
-        <h1 className={cn("pharos-page-title text-foreground", titleClassName)}>
+        <h1 className={cn("pharos-page-title text-balance text-foreground", titleClassName)}>
           {title}
         </h1>
         {subtitle ? (

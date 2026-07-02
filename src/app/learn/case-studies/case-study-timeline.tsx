@@ -11,8 +11,8 @@ const TIMELINE_PITCH_REM = 15.375;
 const TIMELINE_CARD_REM = 23;
 
 const SEVERITY_DOT: Record<CaseStudySeverity, string> = {
-  high: "bg-rose-500",
-  med: "bg-amber-500",
+  high: "bg-[var(--severity-severe)]",
+  med: "bg-[var(--severity-moderate)]",
   low: "bg-muted-foreground/80",
 };
 
@@ -61,7 +61,7 @@ function formatTimelineDate(dateISO: string): string {
 
 function TimelineDate({ dateISO }: { dateISO: string }) {
   return (
-    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+    <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
       {formatTimelineDate(dateISO)}
     </p>
   );
@@ -85,7 +85,7 @@ function TimelineSourceLink({ href, headline }: { href: string; headline: string
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="pharos-focus-ring inline-flex text-xs font-medium text-frost-blue underline-offset-4 hover:underline"
+      className="pharos-focus-ring inline-flex text-xs font-medium text-foreground underline-offset-4 hover:underline"
     >
       Source
       <span className="sr-only"> for {headline} (opens in a new tab)</span>

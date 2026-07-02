@@ -320,7 +320,7 @@ function TierBlock({ tier }: { tier: TierColumn }) {
     <section aria-labelledby={`sitemap-${tier.key}`} className="space-y-4">
       <header className="space-y-1">
         <p className="pharos-kicker">{tier.kicker}</p>
-        <h2 id={`sitemap-${tier.key}`} className="text-xl font-semibold tracking-tight text-foreground">
+        <h2 id={`sitemap-${tier.key}`} className="pharos-display text-xl font-bold tracking-tight text-foreground">
           {tier.label}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{tier.intro}</p>
@@ -364,7 +364,7 @@ export default function SitemapTreePage() {
             <p className="pharos-kicker">Companion</p>
             <h2
               id="sitemap-companion"
-              className="text-xl font-semibold tracking-tight text-foreground"
+              className="pharos-display text-xl font-bold tracking-tight text-foreground"
             >
               Utilities and sibling sites
             </h2>

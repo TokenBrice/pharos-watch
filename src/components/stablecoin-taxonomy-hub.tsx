@@ -68,9 +68,11 @@ export function StablecoinTaxonomyHub({
             href={page.href}
             className="pharos-focus-ring pharos-card-shell pharos-interactive-card px-4 py-4"
           >
-            <span className="block text-base font-semibold tracking-tight text-foreground">{page.title}</span>
+            <span className="block text-lg font-semibold tracking-tight text-foreground">{page.title}</span>
             <span className="mt-2 block text-sm text-muted-foreground">{page.description}</span>
-            <span className="mt-3 block text-xs font-medium text-muted-foreground">{page.coins.length} active</span>
+            <span className="mt-3 block text-xs font-medium text-muted-foreground">
+              <span className="pharos-numeric">{page.coins.length}</span> active
+            </span>
           </Link>
         ))}
       </section>

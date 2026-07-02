@@ -86,14 +86,14 @@ export default function CaseStudiesHub() {
         subKicker="Outcome spread"
         sub={
           <p className="pharos-numeric text-sm text-muted-foreground">
-            <span className="text-emerald-600 dark:text-emerald-400">
+            <span className="text-emerald-700 dark:text-emerald-400">
               {outcomeCounts.survived}
             </span>{" "}
             survived
             <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
               ·
             </span>
-            <span className="text-amber-600 dark:text-amber-400">
+            <span className="text-amber-700 dark:text-amber-400">
               {outcomeCounts.wounded}
             </span>{" "}
             wounded
@@ -140,7 +140,7 @@ export default function CaseStudiesHub() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {summary}
               </p>
-              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
+              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                 Read the case study
                 <ArrowUpRight
                   className="h-3 w-3 transition-transform group-hover:translate-x-0.5"

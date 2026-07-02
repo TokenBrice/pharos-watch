@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LearnHero } from "../_shared/learn-hero";
+import { LearnPageShell } from "../_shared/learn-page-shell";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -162,25 +162,20 @@ export default function GlossaryPage() {
   const presentLetters = new Set(groups.map((group) => group.letter));
 
   return (
-    <FeaturePageShell
-      breadcrumbName="Glossary"
+    <LearnPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Glossary", url: "/learn/glossary/" },
       ]}
-      path="/learn/glossary/"
       title="Pharos Glossary"
-      variant="longform"
-      leadParagraphs={[GLOSSARY_LEAD]}
-      preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(GLOSSARY_DEFINED_TERM_SET_JSON_LD),
-          }}
-        />
-      }
+      subtitle={GLOSSARY_LEAD}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(GLOSSARY_DEFINED_TERM_SET_JSON_LD),
+        }}
+      />
       <div className="space-y-8">
         <LearnHero
           beamLabel="Terms defined"
@@ -230,6 +225,6 @@ export default function GlossaryPage() {
           </p>
         </aside>
       </div>
-    </FeaturePageShell>
+    </LearnPageShell>
   );
 }

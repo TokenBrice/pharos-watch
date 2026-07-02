@@ -409,7 +409,7 @@ function TrackedCoinList({
         <p>
           <Link
             href={screenerHref}
-            className="pharos-focus-ring inline-flex items-center gap-1 font-medium text-frost-blue underline-offset-4 hover:underline"
+            className="pharos-focus-ring inline-flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
           >
             See all in the screener
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
