@@ -22,6 +22,7 @@ import {
   formatDeathDate,
   formatEventDate,
   formatPegDeviation,
+  formatYearMonth,
   formatNativePrice,
   pegCurrencySymbol,
   formatPercentChange,
@@ -656,5 +657,11 @@ describe("formatDeathDate", () => {
 
   it("returns year only if no month", () => {
     expect(formatDeathDate("2023")).toBe("2023");
+  });
+
+  it("preserves malformed month fallbacks", () => {
+    expect(formatDeathDate("2023-13")).toBe("2023-13");
+    expect(formatYearMonth("2023-13")).toBe("2023-13");
+    expect(formatYearMonth("not-a-month")).toBe("not-a-month");
   });
 });

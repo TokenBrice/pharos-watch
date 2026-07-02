@@ -5039,6 +5039,16 @@
     "description": "formatYearMonth (format.ts:210-217) and formatDeathDate (format.ts:220-228) both parse a 'YYYY-MM' string, validate year/month, and render via toLocaleDateString('en-US', { month, year: 'numeric' }); the only differences are month: 'long' vs 'short' and the malformed-input fallback (raw value vs year prefix — for a valid 'YYYY-MM' input both fallbacks are unreachable). Both are used by the cemetery components (cemetery-tombstones.tsx imports both). Note this is distinct from digest-nameplate's formatter, which intentionally renders a full weekday date and is documented as not-a-clone.",
     "recommendation": "Extract a private formatYearMonthWithStyle(value, monthStyle: 'long' | 'short') and implement both exports as one-line wrappers, preserving each function's existing malformed-input fallback branch verbatim. Rendered output is unchanged for all inputs.",
     "estImpact": "-8 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Extracted a private month/year formatter shared by formatYearMonth and formatDeathDate while preserving each wrapper's fallback behavior.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/format.test.ts",
+     "npm run typecheck",
+     "git diff --check -- shared/lib/format.ts shared/lib/__tests__/format.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

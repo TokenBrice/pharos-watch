@@ -202,29 +202,29 @@ export function formatDuration(startSec: number, endSec: number | null): string 
   return `${minutes}m`;
 }
 
+function formatYearMonthWithStyle(value: string, monthStyle: "long" | "short"): string | null {
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return null;
+  return new Date(y, m - 1).toLocaleDateString("en-US", { month: monthStyle, year: "numeric" });
+}
+
 /**
  * Format a "YYYY-MM" partial date as the long-form prose month and year
  * (e.g. "2022-05" → "May 2022"). Locale-correct via Intl.DateTimeFormat.
  * Returns the raw value if the input does not match the expected pattern.
  */
 export function formatYearMonth(yearMonth: string): string {
-  const match = /^(\d{4})-(\d{2})/.exec(yearMonth);
-  if (!match) return yearMonth;
-  const y = Number(match[1]);
-  const m = Number(match[2]);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return yearMonth;
-  return new Date(y, m - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return formatYearMonthWithStyle(yearMonth, "long") ?? yearMonth;
 }
 
 /** Format "YYYY-MM" death date as "Jan 2023" */
 export function formatDeathDate(d: string): string {
   const [year, month] = d.split("-");
   if (!month) return year;
-  const y = Number(year);
-  const m = Number(month);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return d;
-  const date = new Date(y, m - 1);
-  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return formatYearMonthWithStyle(d, "short") ?? d;
 }
 
 /** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
