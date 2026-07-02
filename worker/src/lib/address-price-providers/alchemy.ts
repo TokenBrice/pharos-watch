@@ -4,7 +4,7 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
   createProviderRunState,
@@ -25,7 +25,7 @@ function buildAlchemyBatches(targets: AddressPriceTarget[]): AddressPriceTarget[
   for (const group of groups) {
     batches.push(...chunk(group, 25));
   }
-  return batches.slice(0, ALCHEMY_ADDRESS_MAX_REQUESTS);
+  return batches;
 }
 
 export async function runAlchemyAddressProvider(
@@ -39,8 +39,13 @@ export async function runAlchemyAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
+  const batches = buildAlchemyBatches(targets);
+  const requestBatches = batches.slice(0, ALCHEMY_ADDRESS_MAX_REQUESTS);
+  const cappedTargets = batches
+    .slice(ALCHEMY_ADDRESS_MAX_REQUESTS)
+    .reduce((sum, batch) => sum + batch.length, 0);
 
-  for (const batch of buildAlchemyBatches(targets)) {
+  for (const batch of requestBatches) {
     throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     attemptedRequests += 1;
@@ -100,6 +105,10 @@ export async function runAlchemyAddressProvider(
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Alchemy prices data array");
     }
     diagnostics.push(diagnostic);
+  }
+
+  if (cappedTargets > 0) {
+    diagnostics.push(buildCapSkipDiagnostic({ source: "alchemy-address", label: "Alchemy" }, cappedTargets));
   }
 
   return {

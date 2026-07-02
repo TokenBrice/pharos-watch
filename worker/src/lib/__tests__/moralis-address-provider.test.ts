@@ -59,6 +59,12 @@ describe("runMoralisAddressProvider", () => {
       attemptedRequests: 3,
       successfulRequests: 3,
     });
-    expect(result.diagnostics.map((diagnostic) => diagnostic.matchedCount)).toEqual([100, 100, 100]);
+    expect(result.diagnostics.slice(0, 3).map((diagnostic) => diagnostic.matchedCount)).toEqual([100, 100, 100]);
+    expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
+      source: "moralis-address",
+      endpoint: "moralis-address:request-cap",
+      errorClass: "cap",
+      candidateCount: 50,
+    });
   });
 });

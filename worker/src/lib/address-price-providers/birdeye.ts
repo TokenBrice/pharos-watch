@@ -1,5 +1,5 @@
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import { numberValue } from "@shared/lib/type-guards";
 import type { AddressPriceProviderRuntimeConfig, AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
@@ -33,6 +33,7 @@ export async function runBirdeyeAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
+  const cappedTargets = Math.max(0, targets.length - BIRDEYE_ADDRESS_MAX_REQUESTS);
 
   // targets are pre-filtered to solana-only by buildAddressPriceTargetsByProvider (index.ts).
   for (const target of targets.slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
@@ -101,6 +102,10 @@ export async function runBirdeyeAddressProvider(
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Birdeye price data object");
     }
     diagnostics.push(diagnostic);
+  }
+
+  if (cappedTargets > 0) {
+    diagnostics.push(buildCapSkipDiagnostic({ source: "birdeye-address", label: "Birdeye" }, cappedTargets));
   }
 
   return {

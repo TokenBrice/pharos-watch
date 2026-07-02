@@ -4,7 +4,7 @@ import type {
   AddressPriceTarget,
 } from "./types";
 import { throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -36,6 +36,7 @@ export async function runMoralisAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
+  let processedCount = 0;
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
     throwIfAborted(signal);
@@ -119,8 +120,14 @@ export async function runMoralisAddressProvider(
       } else if (json != null) {
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Moralis token price array");
       }
+      processedCount += batch.length;
       diagnostics.push(diagnostic);
     }
+  }
+
+  const cappedTargets = Math.max(0, targets.length - processedCount);
+  if (cappedTargets > 0) {
+    diagnostics.push(buildCapSkipDiagnostic({ source: "moralis-address", label: "Moralis" }, cappedTargets));
   }
 
   return {

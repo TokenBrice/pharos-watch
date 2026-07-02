@@ -2403,6 +2403,18 @@
      "worker/src/lib/address-price-providers/birdeye.ts",
      "worker/src/lib/address-price-providers/shared.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added additive request-cap diagnostics for Moralis, CoinGecko Onchain, Alchemy, and Birdeye address providers so targets skipped by provider request caps are visible in diagnostics without changing quote or request behavior.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/address-price-providers.test.ts worker/src/lib/__tests__/moralis-address-provider.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/lib/address-price-providers/moralis.ts worker/src/lib/address-price-providers/coingecko-onchain.ts worker/src/lib/address-price-providers/alchemy.ts worker/src/lib/address-price-providers/birdeye.ts worker/src/lib/__tests__/address-price-providers.test.ts worker/src/lib/__tests__/moralis-address-provider.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Retained existing request caps and added coverage that capped targets produce request-cap diagnostics for each affected provider."
    }
   },
   {

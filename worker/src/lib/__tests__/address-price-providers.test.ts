@@ -7,6 +7,7 @@ import {
 } from "../address-price-providers";
 import { runAlchemyAddressProvider } from "../address-price-providers/alchemy";
 import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
+import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
 import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
 import { emptyProviderResult } from "../address-price-providers/shared";
@@ -339,6 +340,49 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("reports Birdeye targets skipped by the request cap", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi.fn(async () =>
+        new Response(JSON.stringify({
+          success: true,
+          data: {
+            value: "1.001",
+            liquidity: "75000",
+            updateUnixTime: 1_700_000_000,
+          },
+        }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const resultPromise = runBirdeyeAddressProvider(
+        Array.from({ length: 11 }, (_, index) => makeDexScreenerTarget(index, {
+          chain: "solana",
+          providerChainId: "solana",
+          address: `So1111111111111111111111111111111111111111${index}`,
+        })),
+        { birdeyeApiKey: "test-key" },
+        undefined,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(10);
+      expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
+        source: "birdeye-address",
+        endpoint: "birdeye-address:request-cap",
+        errorClass: "cap",
+        candidateCount: 1,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("redacts the Alchemy API key from retry logs while fetching with the real endpoint", async () => {
     const target = makeDexScreenerTarget(0);
     const secret = "ALCH_SECRET_123/plus+space value";
@@ -364,6 +408,60 @@ describe("address price providers", () => {
     expect(warnOutput).not.toContain(secret);
     expect(warnOutput).not.toContain(encodedSecret);
     warnSpy.mockRestore();
+  });
+
+  it("reports Alchemy targets skipped by the request cap", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runAlchemyAddressProvider(
+      Array.from({ length: 501 }, (_, index) => makeDexScreenerTarget(index)),
+      { alchemyApiKey: "alchemy-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
+      source: "alchemy-address",
+      endpoint: "alchemy-address:request-cap",
+      errorClass: "cap",
+      candidateCount: 1,
+    });
+  });
+
+  it("reports CoinGecko onchain targets skipped by the request cap", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const resultPromise = runCoingeckoOnchainAddressProvider(
+        Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index)),
+        null,
+        undefined,
+        1_700_000_000,
+        Number.MAX_SAFE_INTEGER,
+      );
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
+        source: "coingecko-onchain-address",
+        endpoint: "coingecko-onchain-address:request-cap",
+        errorClass: "cap",
+        candidateCount: 1,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("limits DexScreener address augmentation to one batch per run", async () => {

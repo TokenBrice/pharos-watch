@@ -1,7 +1,7 @@
 import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -27,6 +27,7 @@ export async function runCoingeckoOnchainAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
+  let processedCount = 0;
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
@@ -96,8 +97,14 @@ export async function runCoingeckoOnchainAddressProvider(
       } else if (json != null) {
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected CoinGecko onchain tokens/multi payload");
       }
+      processedCount += batch.length;
       diagnostics.push(diagnostic);
     }
+  }
+
+  const cappedTargets = Math.max(0, targets.length - processedCount);
+  if (cappedTargets > 0) {
+    diagnostics.push(buildCapSkipDiagnostic({ source: "coingecko-onchain-address", label: "CoinGecko onchain" }, cappedTargets));
   }
 
   return {
