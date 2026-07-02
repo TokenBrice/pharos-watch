@@ -180,7 +180,7 @@ function LatticeRowCells({
             className={cn(
               "relative h-11 min-w-11 overflow-hidden border border-border/60 text-xs transition-colors sm:h-9 sm:min-w-0",
               supported
-                ? "bg-frost-blue/35 text-foreground hover:bg-frost-blue/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-frost-blue focus-visible:ring-offset-2"
+                ? "pharos-focus-ring bg-frost-blue/35 text-foreground hover:bg-frost-blue/55"
                 : "cursor-not-allowed bg-muted/15 text-muted-foreground/40",
             )}
             onClick={() => {
@@ -210,10 +210,10 @@ function LatticeRowCells({
           {hiddenSupportedCount > 0 ? `+${hiddenSupportedCount}` : ""}
         </div>
       ) : null}
-      <div className="flex h-11 items-center justify-end border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground sm:h-9">
+      <div className="flex h-11 items-center justify-end border border-border/60 bg-background/70 px-2 pharos-numeric text-xs text-muted-foreground sm:h-9">
         {formatCount(row.eventCount)}
       </div>
-      <div className="flex h-11 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground sm:h-9">
+      <div className="flex h-11 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 pharos-numeric text-xs text-muted-foreground sm:h-9">
         {row.frozenTotal > 0 ? formatCurrency(row.frozenTotal, 0) : "—"}
       </div>
     </>

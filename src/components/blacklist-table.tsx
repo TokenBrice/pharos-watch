@@ -178,7 +178,7 @@ export function BlacklistTable({
           />
         </MobileSortPanel>
         {events.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="pharos-empty-note py-8 text-center">
             No freeze events match your filters.
           </div>
         ) : (
@@ -206,7 +206,7 @@ export function BlacklistTable({
           headerClassName="bg-muted"
           mobileScrollHint={false}
           topSlot={
-            <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
+            <div className="pharos-table-toolbar flex-row items-center justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -237,10 +237,10 @@ export function BlacklistTable({
 function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: number }) {
   return (
     <TableRow>
-      <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+      <TableCell className="text-right text-muted-foreground text-xs pharos-numeric">
         {rank}
       </TableCell>
-      <TableCell className="whitespace-nowrap font-mono text-xs">{formatEventDate(evt.timestamp)}</TableCell>
+      <TableCell className="whitespace-nowrap pharos-numeric text-xs">{formatEventDate(evt.timestamp)}</TableCell>
       <TableCell className="font-medium">{evt.stablecoin}</TableCell>
       <TableCell>{evt.chainName}</TableCell>
       <TableCell>
@@ -259,7 +259,7 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
           {formatAddress(evt.address)}
         </a>
       </TableCell>
-      <TableCell className="hidden sm:table-cell text-right font-mono">
+      <TableCell className="hidden sm:table-cell text-right pharos-numeric">
         <BlacklistAmount event={evt} />
       </TableCell>
       <TableCell className="hidden sm:table-cell text-center">
@@ -342,17 +342,17 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            #{rank} · {evt.chainName} · <span className="font-mono">{formatEventDate(evt.timestamp)}</span>
+            #{rank} · {evt.chainName} · <span className="pharos-numeric">{formatEventDate(evt.timestamp)}</span>
           </p>
         </div>
         <div className="shrink-0 text-right">
           <p className="pharos-kicker">Amount</p>
-          <p className="font-mono text-sm font-semibold tabular-nums text-foreground">{formatBlacklistAmountCell(evt)}</p>
+          <p className="pharos-numeric text-sm font-semibold text-foreground">{formatBlacklistAmountCell(evt)}</p>
         </div>
       </div>
 
       <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Address</p>
+        <p className="pharos-kicker">Address</p>
         <a
           href={evt.explorerAddressUrl}
           target="_blank"

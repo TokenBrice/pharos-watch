@@ -107,7 +107,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
-              className="flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
+              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(coin.id)}
             >
               <div className="flex items-center gap-3 min-w-0">

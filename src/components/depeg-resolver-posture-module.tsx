@@ -213,7 +213,7 @@ export function DepegResolverPostureModule({ data, logos }: DepegResolverPosture
     <section aria-label="Depeg outlook posture" className="pharos-card-shell space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2.5">
-          <span className="rounded-md border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-violet-700 dark:text-violet-300">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-background">
             DDR
           </span>
           <h2 className="pharos-section-title">Outlook Posture</h2>

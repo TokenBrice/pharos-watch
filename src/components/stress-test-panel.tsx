@@ -60,25 +60,19 @@ export function StressTestPanel({
     <Card>
       {/* Header */}
       <CardHeader className="pb-3">
-        <button
-          type="button"
-          className="w-full text-left appearance-none bg-transparent border-none p-0 cursor-pointer select-none"
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen(!isOpen)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setIsOpen(!isOpen);
-            }
-          }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            className="pharos-focus-ring appearance-none rounded-md border-none bg-transparent p-0 text-left cursor-pointer select-none"
+            aria-expanded={isOpen}
+            onClick={() => setIsOpen(!isOpen)}
+          >
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/15">
-                <Network className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <Network className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
               </div>
               <div>
-                <p className="pharos-kicker text-rose-600 dark:text-rose-400">Risk Simulation</p>
+                <p className="pharos-kicker">Risk Simulation</p>
                 <CardTitle as="h2" className="text-base font-semibold">
                   Contagion Map
                 </CardTitle>
@@ -88,19 +82,18 @@ export function StressTestPanel({
                 className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ml-2 ${isOpen ? "rotate-180" : ""}`}
               />
             </div>
-            <Link
-              href="/dependency-map/"
-              className="pharos-focus-ring rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Full map →
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Simulate cascading failures when a stablecoin degrades. Trace dependency chains and see which coins are
-            affected.
-          </p>
-        </button>
+          </button>
+          <Link
+            href="/dependency-map/"
+            className="pharos-focus-ring rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            Full map →
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Simulate cascading failures when a stablecoin degrades. Trace dependency chains and see which coins are
+          affected.
+        </p>
 
         {/* Collapsed preview — top-3 systemic risks */}
         {!isOpen && stressTest.systemicRisks.length > 0 && (() => {
@@ -118,13 +111,13 @@ export function StressTestPanel({
                     key={risk.coinId}
                     className={cn(
                       "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
-                      i === 0 ? "bg-rose-500/10 border border-rose-500/20" : "bg-muted/40",
+                      i === 0 ? "border border-border bg-muted/50" : "bg-muted/40",
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
-                        i === 0 ? "bg-rose-500 text-white" : "bg-muted text-muted-foreground",
+                        i === 0 ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
                       )}
                     >
                       {i + 1}
@@ -154,13 +147,13 @@ export function StressTestPanel({
                     key={risk.coinId}
                     className={cn(
                       "flex items-center gap-3 rounded-lg p-2 text-sm transition-colors",
-                      i === 0 ? "bg-rose-500/10 border border-rose-500/20" : "hover:bg-muted/50",
+                      i === 0 ? "border border-border bg-muted/50" : "hover:bg-muted/50",
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0",
-                        i === 0 ? "bg-rose-500 text-white" : "bg-muted text-muted-foreground",
+                        i === 0 ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
                       )}
                     >
                       {i + 1}

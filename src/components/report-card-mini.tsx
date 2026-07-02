@@ -90,7 +90,7 @@ export function ReportCardMini({
           <span className="text-xs text-muted-foreground shrink-0">{card.symbol}</span>
         </div>
         {coreSettlement && (
-          <span className="rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-sky-800 dark:text-sky-300">
+          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
             Core rail
           </span>
         )}

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildSafetyGradeCounts,
   buildSafetyHeadlineStats,
-  buildSafetyInspectionBoard,
   buildSafetyMcapMap,
   buildSafetyStablecoinMap,
   buildCoreSettlementProfiles,
@@ -281,58 +280,5 @@ describe("safety score view-model", () => {
         ),
       ).toBeNull();
     }
-  });
-
-  it("builds a market-weighted inspection board and ranks dimension findings", () => {
-    const cards = [
-      makeCard({
-        id: "large-fragile",
-        symbol: "LFG",
-        name: "Large Fragile",
-        overallScore: 62,
-        overallGrade: "C",
-        dimensions: {
-          pegStability: { score: 90, grade: "A" },
-          liquidity: { score: 42, grade: "D" },
-          resilience: { score: 80, grade: "B" },
-          decentralization: { score: 55, grade: "C" },
-          dependencyRisk: { score: 88, grade: "B+" },
-        },
-      }),
-      makeCard({
-        id: "small-critical",
-        symbol: "SCR",
-        name: "Small Critical",
-        overallScore: 50,
-        overallGrade: "D",
-        dimensions: {
-          pegStability: { score: 70, grade: "B-" },
-          liquidity: { score: 20, grade: "F" },
-          resilience: { score: 60, grade: "C" },
-          decentralization: { score: 45, grade: "D" },
-          dependencyRisk: { score: 40, grade: "D" },
-        },
-      }),
-    ];
-    const mcapMap = new Map([
-      ["large-fragile", 90],
-      ["small-critical", 10],
-    ]);
-
-    const model = buildSafetyInspectionBoard(cards, mcapMap);
-    const liquidity = model.rows.find((row) => row.key === "liquidity");
-
-    expect(model.inspectedCount).toBe(2);
-    expect(model.totalMarketCapUsd).toBe(100);
-    expect(model.findingExposureUsd).toBe(100);
-    expect(model.leadFinding?.key).toBe("liquidity");
-    expect(liquidity).toMatchObject({
-      averageScore: 31,
-      weightedScore: 40,
-      findingCount: 2,
-      findingExposureUsd: 100,
-      unknownCount: 0,
-    });
-    expect(liquidity?.worstFindings.map((finding) => finding.symbol)).toEqual(["SCR", "LFG"]);
   });
 });

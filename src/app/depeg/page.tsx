@@ -48,7 +48,7 @@ function TelegramAlertsHeaderAction() {
     <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
       <div
         role="note"
-        className="flex max-w-full items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-700 sm:text-sm dark:text-sky-300"
+        className="flex max-w-full items-start gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm"
       >
         <Bell className="mt-0.5 h-4 w-4 shrink-0" />
         <p className="min-w-0 leading-relaxed lg:whitespace-nowrap">

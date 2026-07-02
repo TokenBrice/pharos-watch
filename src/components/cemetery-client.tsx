@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
@@ -57,61 +56,51 @@ export function CemeteryClient({ entries }: { entries: CemeteryEntry[] }) {
   return (
     <div className="space-y-6">
       {/* Cemetery field */}
-      <Card className="rounded-xl gap-2">
-        <CardHeader className="gap-3">
-          <div className="flex flex-col gap-3 @min-[560px]/card-header:flex-row @min-[560px]/card-header:items-start @min-[560px]/card-header:justify-between">
-            <div className="min-w-0 space-y-1.5">
-              <CardTitle as="h2" className="pharos-kicker">
-                The Cemetery
-              </CardTitle>
-              <CardDescription className="leading-relaxed">
-                {sortMode === "newest"
-                  ? "Newest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."
-                  : "Oldest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."}
-              </CardDescription>
-            </div>
-            <div className="inline-flex w-full flex-wrap gap-2 @min-[560px]/card-header:w-auto">
-              {SORT_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={cn(
-                    "pharos-focus-ring pharos-control-pill",
-                    sortMode === option.value && "pharos-control-pill-active",
-                  )}
-                  onClick={() => setSortMode(option.value)}
-                  aria-pressed={sortMode === option.value}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-1.5">
+            <h2 className="pharos-kicker">The Cemetery</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {sortMode === "newest"
+                ? "Newest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."
+                : "Oldest graves surface first inside one continuous field. Each marker carries the coin logo, failure cause, date, and hover memorial."}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <CemeteryTombstones coins={orderedCoins} onSelect={handleTombstoneSelect} />
-        </CardContent>
-      </Card>
+          <div className="inline-flex w-full flex-wrap gap-2 sm:w-auto">
+            {SORT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={cn(
+                  "pharos-focus-ring pharos-control-pill",
+                  sortMode === option.value && "pharos-control-pill-active",
+                )}
+                onClick={() => setSortMode(option.value)}
+                aria-pressed={sortMode === option.value}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <CemeteryTombstones coins={orderedCoins} onSelect={handleTombstoneSelect} />
+      </section>
 
       {/* Autopsy reports */}
-      <Card className="rounded-xl">
-        <CardHeader className="gap-1.5 border-b border-border/60">
-          <CardTitle as="h2" className="pharos-kicker">
-            Autopsy Reports
-          </CardTitle>
-          <CardDescription className="leading-relaxed">
+      <section className="space-y-3">
+        <div className="space-y-1.5">
+          <h2 className="pharos-kicker">Autopsy Reports</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Obituaries follow the same order as the cemetery above so the memorial and archive stay in sync.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4">
+          </p>
+        </div>
         <StablecoinCemetery
           coins={orderedCoins}
           expanded={expanded}
           onToggle={handleToggle}
           highlightedId={highlightedId}
         />
-      </CardContent>
-    </Card>
+      </section>
     </div>
   );
 }

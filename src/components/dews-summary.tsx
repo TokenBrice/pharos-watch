@@ -33,6 +33,7 @@ import {
 } from "@/components/dews-summary-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { useSvgId } from "@/components/chart-primitives/axes";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
@@ -95,6 +96,7 @@ function DEWSDot({
   registerRef: (id: string, node: SVGGElement | null) => void;
 }) {
   const logoClipId = useSvgId("dews-logo");
+  const prefersReducedMotion = usePrefersReducedMotion();
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
   const showLogo = coin.band !== "WATCH" && Boolean(coin.logoUrl);
@@ -147,14 +149,16 @@ function DEWSDot({
             strokeDasharray="4 2"
             opacity={0.6}
           >
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from="0 0 0"
-              to="360 0 0"
-              dur="8s"
-              repeatCount="indefinite"
-            />
+            {!prefersReducedMotion && (
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 0 0"
+                to="360 0 0"
+                dur="8s"
+                repeatCount="indefinite"
+              />
+            )}
           </circle>
           <circle
             r={visualR + 4}

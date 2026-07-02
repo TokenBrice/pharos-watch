@@ -99,7 +99,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
         </span>
 
         {/* Chevron */}
-        <span className="text-muted-foreground shrink-0 transition-transform duration-300" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+        <span className="text-muted-foreground shrink-0 transition-transform duration-[220ms] ease-[var(--motion-ease-standard)]" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
           <ChevronRight className="h-4 w-4" />
         </span>
       </button>
@@ -107,7 +107,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
       {/* Expanded autopsy content — grid-rows animation */}
       <div
         id={`autopsy-${coin.id}`}
-        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        className="grid transition-[grid-template-rows] duration-[220ms] ease-[var(--motion-ease-standard)]"
         style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">

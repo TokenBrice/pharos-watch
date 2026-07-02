@@ -88,7 +88,7 @@ const COMPLIANCE_HERO = (
 
 const COMPLIANCE_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div className="pharos-card-shell px-4 py-4">
+    <div className="pharos-card-shell p-5">
       <p className="pharos-kicker">How To Read Status</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <p>
@@ -103,13 +103,13 @@ const COMPLIANCE_STATIC_SECTION = (
         </p>
       </div>
     </div>
-    <div className="pharos-card-shell px-4 py-4">
+    <div className="pharos-card-shell p-5">
       <p className="pharos-kicker">GENIUS Regime State</p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Public law</dt>
-        <dd className="font-mono text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>
+        <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>
         <dt className="text-muted-foreground">Effective date</dt>
-        <dd className="font-mono text-foreground">{GENIUS_REGIME_STATE.effectiveDate}</dd>
+        <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.effectiveDate}</dd>
         <dt className="text-muted-foreground">Phase</dt>
         <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
       </dl>

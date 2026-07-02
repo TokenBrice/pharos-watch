@@ -56,7 +56,7 @@ function FreezeWatchSection({
 function HeroStat({ label, value, loading }: { label: string; value: string; loading: boolean }) {
   return (
     <div className="space-y-1">
-      <dt className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+      <dt className="pharos-kicker">{label}</dt>
       {loading ? (
         <Skeleton className="h-7 w-24" />
       ) : (
@@ -209,8 +209,8 @@ export default function FreezeWatchClient() {
         title="Affected addresses and transactions"
         description="Filter by asset, chain, event type, or address to isolate the rows that matter."
       >
-        <div className="pharos-card-shell rounded-xl">
-          <div className="flex flex-wrap items-end justify-between gap-4 p-4 sm:p-5">
+        <div className="pharos-table-toolbar rounded-xl border border-border/60">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <BlacklistFilters
               chains={summary?.chains ?? []}
               stablecoinFilter={stablecoinFilter}

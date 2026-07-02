@@ -570,7 +570,7 @@ function GeniusReviewDetails({ row }: { row: Extract<ComplianceRow, { regime: "g
 
   return (
     <details className="ml-auto mt-2 max-w-[300px] rounded border border-border/60 bg-muted/20 px-2 py-1 text-left text-xs text-muted-foreground">
-      <summary className="cursor-pointer select-none text-right font-medium text-foreground">Review details</summary>
+      <summary className="pharos-focus-ring cursor-pointer select-none rounded-sm text-right font-medium text-foreground">Review details</summary>
       <div className="mt-2 space-y-2">
         {row.reviewedAt || row.reviewer ? (
           <p>
@@ -606,7 +606,7 @@ function SourceLinks({ references }: { references: readonly { label: string; url
           key={`${reference.label}:${reference.url}`}
           href={reference.url}
           title={reference.label}
-          className="pharos-focus-ring inline-flex max-w-full items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
+          className="pharos-focus-ring inline-flex max-w-full items-center gap-1 rounded-sm text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           iconClassName="h-3 w-3"
         >
           {reference.label}

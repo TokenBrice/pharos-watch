@@ -276,7 +276,7 @@ export default async function DepegEventPage(
             {editorial.lede}
           </p>
         ) : null}
-        <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-tight tracking-tight text-foreground/98 [text-wrap:balance]">
+        <h1 className="pharos-page-title [text-wrap:balance]">
           {heroTitle}
         </h1>
         <ProvenanceLine event={event} />

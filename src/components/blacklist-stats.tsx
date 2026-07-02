@@ -82,7 +82,7 @@ export function BlacklistStats({
         <Card
           className={cn(
             "pharos-card-shell border-l-[3px] sm:col-span-2",
-            qualityTone === "stale" ? "border-l-amber-500/70" : "border-l-yellow-500/70",
+            qualityTone === "stale" ? "border-l-amber-500/70" : "border-l-orange-500/70",
           )}
           role="status"
         >

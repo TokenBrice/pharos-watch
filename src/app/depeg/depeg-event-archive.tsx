@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { deviationColorClass } from "@/lib/severity-colors";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
   INDEXABLE_DEPEG_EVENT_ENTRIES,
@@ -10,12 +11,6 @@ import {
 } from "@/app/depeg/[event]/config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
-
-function severityClass(bps: number): string {
-  if (bps >= 1000) return "text-amber-500 dark:text-amber-400";
-  if (bps >= 500) return "text-amber-600/80 dark:text-amber-300/80";
-  return "text-muted-foreground";
-}
 
 /**
  * Server-rendered list of confirmed depeg events that are in the bounded
@@ -53,13 +48,13 @@ export function DepegEventArchive() {
                 href={`/depeg/${event.slug}/`}
                 className="pharos-focus-ring flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm hover:bg-muted/40"
               >
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                <span className="pharos-numeric text-xs text-muted-foreground">
                   {formatIsoDate(event.startedAt)}
                 </span>
                 <span className="font-semibold text-foreground">
                   {event.symbol}
                 </span>
-                <span className={`font-mono text-xs tabular-nums ${severityClass(peakBps)}`}>
+                <span className={`pharos-numeric text-xs ${deviationColorClass(peakBps)}`}>
                   {direction} {formatDeviationBps(peakBps)}
                 </span>
                 <span className="ml-auto text-xs text-muted-foreground hover:text-foreground">

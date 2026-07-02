@@ -23,14 +23,14 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2.5">
-          <span className="rounded-md border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-violet-700 dark:text-violet-300">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-background">
             DDR
           </span>
           <h2 className="pharos-section-title">Depeg Duration Resolver</h2>
           {versionLabel ? (
             <Badge
               variant="outline"
-              className="border-violet-500/30 bg-violet-500/10 px-1.5 py-0 text-[10px] font-mono uppercase tracking-wide text-violet-700 dark:text-violet-400"
+              className="border-border/60 bg-muted/40 px-1.5 py-0 text-[10px] font-mono uppercase tracking-wide text-muted-foreground"
             >
               {versionLabel}
             </Badge>

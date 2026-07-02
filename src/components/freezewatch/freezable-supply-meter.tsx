@@ -136,36 +136,23 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
     variant === "hero"
       ? "mt-2.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground"
       : "mt-1.5 line-clamp-1 text-[11px] leading-snug text-muted-foreground";
-  const safeAccentClass = variant === "safe" ? "bg-emerald-500/[0.06]" : "";
 
   const accentStripStyle: CSSProperties = {
-    background:
-      variant === "safe" && !isSelected
-        ? color
-        : isSelected
-          ? color
-          : `linear-gradient(90deg, ${color} 0%, ${color}55 55%, transparent 100%)`,
-    opacity: isSelected || variant === "safe" ? 1 : 0.75,
+    backgroundColor: color,
+    opacity: isSelected || variant === "safe" ? 1 : 0.65,
   };
-  const fillStyle: CSSProperties | undefined = isSelected
-    ? { background: `linear-gradient(180deg, ${color}26 0%, ${color}08 60%, transparent 100%)` }
-    : undefined;
-  const borderStyle: CSSProperties | undefined = isSelected ? { borderColor: color } : undefined;
 
   const baseClass = cn(
-    "group relative overflow-hidden rounded-xl border border-border/60 bg-background/55 text-left transition-[background-color,border-color,box-shadow,transform]",
-    safeAccentClass,
+    "group relative text-left transition-colors",
+    isSelected && "bg-muted/50",
     padClass,
     spanClass,
   );
-  const interactiveClass = isInteractive
-    ? "pharos-focus-ring cursor-pointer hover:-translate-y-px hover:bg-muted/40 hover:border-foreground/25"
-    : "";
+  const interactiveClass = isInteractive ? "pharos-focus-ring cursor-pointer hover:bg-muted/40" : "";
 
   const content: ReactNode = (
     <>
-      <div aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={accentStripStyle} />
-      {fillStyle ? <div aria-hidden className="pointer-events-none absolute inset-0" style={fillStyle} /> : null}
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={accentStripStyle} />
       <div className="relative">
         {variant === "hero" ? (
           <div className="flex items-center justify-between gap-2">
@@ -182,7 +169,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
           </div>
         )}
         {variant === "safe" ? (
-          <p className="mt-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-500">
+          <p className="mt-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
             Safe haven
           </p>
         ) : null}
@@ -208,7 +195,6 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
       <button
         type="button"
         className={cn(baseClass, interactiveClass)}
-        style={borderStyle}
         aria-pressed={isSelected}
         onClick={() => onSelect(bucket.key)}
       >
@@ -217,11 +203,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
     );
   }
 
-  return (
-    <div className={baseClass} style={borderStyle}>
-      {content}
-    </div>
-  );
+  return <div className={baseClass}>{content}</div>;
 }
 
 function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBucket[]; totalMarketCap: number }) {

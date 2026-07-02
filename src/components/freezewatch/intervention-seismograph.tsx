@@ -209,7 +209,8 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
           x2={VIEWBOX_WIDTH}
           y1={BASELINE_Y}
           y2={BASELINE_Y}
-          stroke="oklch(0.4 0.02 250)"
+          stroke="var(--color-muted-foreground)"
+          strokeOpacity={0.6}
           strokeWidth={0.5}
           strokeDasharray="3 3"
         />
@@ -247,7 +248,8 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
         <path
           d={horizonPath}
           fill="none"
-          stroke="oklch(0.92 0.02 240)"
+          stroke="var(--color-foreground)"
+          strokeOpacity={0.8}
           strokeWidth={1.25}
           strokeLinecap="square"
           strokeLinejoin="miter"
@@ -260,17 +262,17 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
               x2={annotation.x}
               y1={annotation.topY - 4}
               y2={annotation.topY - 18}
-              stroke="oklch(0.92 0.02 240)"
+              stroke="var(--color-muted-foreground)"
               strokeWidth={0.75}
             />
-            <circle cx={annotation.x} cy={annotation.topY - 4} r={1.6} fill="oklch(0.92 0.02 240)" />
+            <circle cx={annotation.x} cy={annotation.topY - 4} r={1.6} fill="var(--color-muted-foreground)" />
             <text
               x={annotation.x}
               y={annotation.topY - 22}
               textAnchor="middle"
               fontSize={10}
               fontFamily="ui-monospace, monospace"
-              fill="oklch(0.92 0.02 240)"
+              fill="var(--color-foreground)"
             >
               {annotation.label}
             </text>
@@ -288,7 +290,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
               textAnchor="middle"
               fontSize={10}
               fontFamily="ui-monospace, monospace"
-              fill="oklch(0.6 0.02 250)"
+              fill="var(--color-muted-foreground)"
             >
               {point.quarter}
             </text>
@@ -303,7 +305,7 @@ function SignalStat({ label, value, detail }: { label: string; value: string; de
   return (
     <div className="rounded-lg border border-border/65 bg-background/65 px-3 py-2">
       <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="mt-0.5 pharos-numeric text-sm font-semibold text-foreground">{value}</p>
       {detail ? <p className="text-[10px] text-muted-foreground">{detail}</p> : null}
     </div>
   );
