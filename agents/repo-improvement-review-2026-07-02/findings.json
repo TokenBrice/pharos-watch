@@ -5752,6 +5752,17 @@
     "alsoFiles": [
      "shared/lib/api-cache-profiles.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Changed the site-data Cache-Control directive regex terminator to a lookahead so s-maxage is still parsed when it follows max-age, and added a Pages cache-hit regression test for that ordering.",
+    "validation": [
+     "npx vitest run functions/__tests__/site-data-proxy.test.ts",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "git diff --check -- functions/_site-data/[[path]].ts functions/__tests__/site-data-proxy.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

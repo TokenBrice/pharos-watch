@@ -38,7 +38,7 @@ const FORWARDED_RESPONSE_HEADERS = [
 ] as const;
 
 type SiteDataProxyContext = PagesProxyContext<SiteDataProxyEnv>;
-const CACHE_MAX_AGE_DIRECTIVE_RE = /(?:^|,\s*)(s-maxage|max-age)=(\d+)(?:\s*(?:,|$))/gi;
+const CACHE_MAX_AGE_DIRECTIVE_RE = /(?:^|,\s*)(s-maxage|max-age)=(\d+)(?=\s*(?:,|$))/gi;
 
 function methodNotAllowed(): Response {
   return jsonError(405, "Method not allowed", { Allow: SITE_DATA_ALLOWED_METHOD });
