@@ -6891,6 +6891,20 @@
      "worker/migrations/0085_total_request_attribution.sql",
      "worker/src/lib/request-source-attribution.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Recorded `api_request_source_stats` in the migration manifest's deferred destructive cleanup queue and updated the stale D1 schema inventory with dated zero-use evidence instead of adding a normal deploy-path DROP migration.",
+    "validation": [
+     "rg -n -P \"api_request_source_stats|api_key_request_rate_limit(?!_v2)\" worker/src functions shared src || true",
+     "npm run check:migrations",
+     "npx vitest run scripts/__tests__/check-worker-migrations.test.ts",
+     "npm run check:doc-source-paths",
+     "npm run check:verified-doc-links",
+     "git diff --check -- docs/worker-infrastructure.md worker/migrations/MANIFEST.md"
+    ],
+    "notes": "The table is still schema-retained until a dedicated destructive D1 cleanup rollout with production backup / Time Travel verification. The normal migration gate enforces backward-compatible migrations and rejects table drops in the standard deploy path."
    }
   },
   {
@@ -6915,6 +6929,20 @@
      "worker/migrations/0110_api_key_self_serve.sql",
      "worker/src/api/api-key-requests/rate-limit.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Recorded `api_key_request_rate_limit` v1 in the migration manifest's deferred destructive cleanup queue and updated the stale D1 schema inventory with dated zero-use evidence after the completed v2 rollout.",
+    "validation": [
+     "rg -n -P \"api_request_source_stats|api_key_request_rate_limit(?!_v2)\" worker/src functions shared src || true",
+     "npm run check:migrations",
+     "npx vitest run scripts/__tests__/check-worker-migrations.test.ts",
+     "npm run check:doc-source-paths",
+     "npm run check:verified-doc-links",
+     "git diff --check -- docs/worker-infrastructure.md worker/migrations/MANIFEST.md"
+    ],
+    "notes": "The v1 table is still schema-retained until a dedicated destructive D1 cleanup rollout with production backup / Time Travel verification. The normal migration gate enforces backward-compatible migrations and rejects table drops in the standard deploy path."
    }
   },
   {

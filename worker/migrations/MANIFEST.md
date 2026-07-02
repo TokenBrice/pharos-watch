@@ -122,6 +122,15 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | -------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0086     | `0086_treasury_stable_exposure_history.sql` | Retired on 2026-04-08 after the treasuries feature removal maintenance window dropped the unused history table and indexes from production D1. |
 
+## Deferred Destructive Cleanup Queue
+
+These are not active migration rows. They record stale tables with no current runtime readers or writers where the cleanup action is a dedicated destructive D1 rollout, not a standard deploy migration. `npm run check:migrations` enforces `rollout-safety: backward-compatible` for active migrations and rejects table drops in the normal deploy path.
+
+| Table | Obsolete since | Latest zero-use evidence | Required action |
+| --- | --- | --- | --- |
+| `api_request_source_stats` | `0085_total_request_attribution.sql` backfilled `api_request_consumer_stats`; current runtime writes `api_request_consumer_stats` and `api_key_request_stats` | 2026-07-02: `rg` found no readers or writers outside historical migrations and docs | Dedicated destructive D1 cleanup rollout after production backup / Time Travel verification |
+| `api_key_request_rate_limit` | `0112_api_key_self_serve_hardening.sql` introduced `api_key_request_rate_limit_v2`; May 2026 v2 rollout is complete | 2026-07-02: `rg` found no v1 readers or writers outside historical migrations and docs | Dedicated destructive D1 cleanup rollout after production backup / Time Travel verification |
+
 ## Known Anomalies
 
 - Duplicate-prefix allowlist: `0056`, `0061`

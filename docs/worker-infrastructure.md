@@ -238,8 +238,8 @@ Several migration-era tables are intentionally schema-retained until a separate 
 | Table | Replaced by / current runtime path | Cleanup status |
 | --- | --- | --- |
 | `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` | stale schema-retained table |
-| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` | stale schema-retained table; migrated forward by `0085_total_request_attribution.sql` |
-| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` | stale schema-retained table kept for old-worker compatibility during the v2 deploy window |
+| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
+| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup after the completed May 2026 v2 rollout; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
 | `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | stale schema-retained table unless feedback D1 persistence is deliberately reintroduced |
 
 Do not drop these in a normal migration. Destructive cleanup requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated rollout after compatible Worker code has soaked.
