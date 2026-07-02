@@ -97,6 +97,13 @@ export function buildCriticalContractTestArgs(extraArgs = []) {
   return ["run", ...CRITICAL_CONTRACT_TEST_FILES, ...extraArgs];
 }
 
+// coverage.include values are globs; enrolled paths like
+// functions/api/admin/[[path]].ts would otherwise parse as character classes
+// and silently drop those files from lcov (surfacing as MISSING failures).
+export function escapeCoverageIncludeGlob(file) {
+  return file.replace(/[[\](){}*?!+@|]/g, "\\$&");
+}
+
 export function buildCriticalCoverageArgs(extraArgs = []) {
   return [
     "run",
@@ -105,7 +112,7 @@ export function buildCriticalCoverageArgs(extraArgs = []) {
     // Scope v8 remapping to the enrolled critical source. Per-file numbers for
     // the enrolled files are unchanged, but the reporter stops remapping the
     // rest of the loaded module graph — the heaviest part of this invocation.
-    ...CRITICAL_FILES.map((file) => `--coverage.include=${file}`),
+    ...CRITICAL_FILES.map((file) => `--coverage.include=${escapeCoverageIncludeGlob(file)}`),
     ...CRITICAL_TEST_FILES,
     ...extraArgs,
   ];

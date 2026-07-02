@@ -31,6 +31,7 @@ import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
+  escapeCoverageIncludeGlob,
   NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV,
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
@@ -366,7 +367,7 @@ describe("validate-ci parity", () => {
       "run",
       "--coverage",
       "--coverage.thresholds.lines=0",
-      ...CRITICAL_FILES.map((file) => `--coverage.include=${file}`),
+      ...CRITICAL_FILES.map((file) => `--coverage.include=${escapeCoverageIncludeGlob(file)}`),
       ...CRITICAL_TEST_FILES,
     ]);
     expect(buildNoncriticalTestArgs(["--reporter=dot"])).toEqual(["run", "--reporter=dot"]);
