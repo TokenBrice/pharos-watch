@@ -134,6 +134,8 @@ A near-monochrome neutral field with semantic accents that only fire on meaning.
 
 A single green→amber→orange→red ramp carries every risk vocabulary. The named band families — **Severity** (peg deviation), **PSI** (stability index), **DEWS** (early-warning), and **Score tiers** — all map onto these same hues; document once, reuse everywhere.
 
+One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue** (`blue-500` tint family in `shared/lib/report-card-core.ts`). Grades span five bands, and a green→amber jump would read B as already-degraded; blue marks "sound, not top-tier" without borrowing a warning hue. This blue belongs to grade badges only — never to state chips or controls.
+
 - **Healthy** (`#22c55e`), **Mild** (`#b45309` on light / `#f59e0b` on dark — light darkens to amber-700 for WCAG AA), **Moderate** (`#f97316`), **Severe** (`#ef4444`). Each ships a `-hex` twin for Recharts/canvas where CSS custom properties can't reach.
 
 ### Neutral
