@@ -5607,6 +5607,19 @@
      "shared/lib/format.ts",
      "worker/src/cron/sync-redemption-backstops.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the local worker formatUtcDate implementation with a re-export of the shared formatIsoDate helper, preserving the existing worker import path.",
+    "validation": [
+     "rg -n \"formatUtcDate|new Date\\\\(seconds \\\\* 1000\\\\)\\\\.toISOString\\\\(\\\\)\\\\.slice\\\\(0, 10\\\\)|redemption-backstop-availability\" worker/src shared src functions scripts",
+     "npx vitest run worker/src/lib/__tests__/redemption-backstop-availability.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run typecheck",
+     "git diff --check -- worker/src/lib/redemption-backstop-availability.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

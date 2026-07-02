@@ -1,8 +1,11 @@
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
+import { formatIsoDate } from "@shared/lib/format";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { StablecoinMeta } from "@shared/types";
+
+export { formatIsoDate as formatUtcDate } from "@shared/lib/format";
 
 export interface ActiveDepegAvailabilityRow {
   stablecoin_id: string;
@@ -21,11 +24,6 @@ export interface RedemptionRouteAvailability {
   activeDepegDirection: "below";
   outputImpairedShare?: number;
   outputImpairedDependencyId?: string;
-}
-
-/** Returns the UTC date string (YYYY-MM-DD) for the given Unix timestamp in seconds. */
-export function formatUtcDate(seconds: number): string {
-  return new Date(seconds * 1000).toISOString().slice(0, 10);
 }
 
 function isSevereDownsideDepeg(row: ActiveDepegAvailabilityRow): boolean {
@@ -145,7 +143,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
       routeStatus: "degraded",
       routeStatusSource: "market-implied",
       routeStatusReason:
-        `Active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(row.started_at)}; static redemption route requires current live-open evidence before it can score.`,
+        `Active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(row.started_at)}; static redemption route requires current live-open evidence before it can score.`,
       routeStatusReviewedAt,
       activeDepegBps,
       activeDepegStartedAt: row.started_at,
@@ -177,8 +175,8 @@ export async function loadSevereActiveDepegAvailabilityMap(
       routeStatusSource: "market-implied",
       routeStatusReason:
         (isParentImpairment
-          ? `Output asset impairment: parent ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(impairedRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`
-          : `Output asset impairment: ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatUtcDate(impairedRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`) +
+          ? `Output asset impairment: parent ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(impairedRow.started_at)}; wrapper redemption requires current live-open evidence before it can score.`
+          : `Output asset impairment: ${dependencySymbol} has an active severe downside depeg of ${activeDepegBps} bps started ${formatIsoDate(impairedRow.started_at)}; ${outputImpairedSharePct}% of modeled route output is impaired until current live-open evidence is available.`) +
         overLeveragedMarker,
       routeStatusReviewedAt,
       activeDepegBps,
