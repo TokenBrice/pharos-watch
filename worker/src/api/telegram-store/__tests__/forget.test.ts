@@ -228,7 +228,6 @@ describe("forgetSubscriber", () => {
     sqlite.prepare("INSERT INTO telegram_alert_dead_letters (chat_id) VALUES (?)").run(chatId);
     const deletedCacheKeys = [
       `telegram:command-flood:${chatId}`,
-      `telegram:command-flood:${chatId}:actor:99`,
       `telegram:command-cooldown:${chatId}:/status`,
       `telegram:chat-member:${chatId}:99`,
       `telegram:chat-admins:${chatId}`,
@@ -274,6 +273,33 @@ describe("forgetSubscriber", () => {
     });
     expect(sqlite.prepare("SELECT key FROM cache WHERE key != ? ORDER BY key").all("telegram:burst-markers"))
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
+  });
+
+  it("deletes exact command-flood keys without issuing a command-flood prefix delete", async () => {
+    const chatId = "42";
+    const db = mockD1();
+
+    await forgetSubscriber(db, chatId);
+
+    const cacheDeletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM cache"));
+    expect(
+      cacheDeletes.some(
+        (entry) =>
+          entry.sql.includes("WHERE key = ?") && entry.binds[0] === `telegram:command-flood:${chatId}`,
+      ),
+    ).toBe(true);
+    expect(
+      cacheDeletes.some(
+        (entry) =>
+          entry.sql.includes("WHERE key LIKE ?") && entry.binds[0] === `telegram:command-flood:${chatId}:%`,
+      ),
+    ).toBe(false);
+    expect(
+      cacheDeletes.some(
+        (entry) =>
+          entry.sql.includes("WHERE key LIKE ?") && entry.binds[0] === `telegram:command-cooldown:${chatId}:%`,
+      ),
+    ).toBe(true);
   });
 
   it("deletes the shared burst marker cache row when forgetting the only marked chat", async () => {

@@ -2858,6 +2858,17 @@
     "description": "CHAT_CACHE_PREFIX_BUILDERS includes `telegram:command-flood:${chatId}:` (with trailing colon), producing a `DELETE FROM cache WHERE key LIKE 'telegram:command-flood:<chat>:%'` statement on every /forget. But the only flood key ever written is the exact key `telegram:command-flood:${chatId}` with no suffix (processed-updates.ts:229), which is already covered by the exact-key builder on line 86. Grep across worker/src shows no other command-flood key writer. The LIKE delete matches zero rows on every forget — one wasted D1 statement in the batch, and misleading to readers who infer a per-command flood key format exists.",
     "recommendation": "Remove the `telegram:command-flood:${chatId}:` entry from CHAT_CACHE_PREFIX_BUILDERS (keep the exact-key entry and the `telegram:command-cooldown:${chatId}:` prefix, which is real — cooldown keys carry a :commandKey suffix). No user-visible change; the deleted statement can never match a row.",
     "estImpact": "-1 dead D1 DELETE per /forget"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the nonexistent command-flood prefix cache delete from `/forget` while keeping the exact command-flood key delete and real command-cooldown prefix cleanup.",
+    "validation": [
+     "npx vitest run worker/src/api/telegram-store/__tests__/forget.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/api/telegram-store/forget.ts worker/src/api/telegram-store/__tests__/forget.test.ts"
+    ],
+    "notes": "Added coverage proving exact flood keys are deleted without issuing the dead flood-prefix `LIKE` statement."
    }
   },
   {
