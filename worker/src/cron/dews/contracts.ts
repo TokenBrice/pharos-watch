@@ -64,8 +64,6 @@ export interface MintBurnSnapshot {
   mint24h: number;
   burnBaseline: number;
   mintBaseline: number;
-  /** True source freshness age in days, derived from the newest mint_burn_hourly hour_ts. */
-  dataAgeDays: number;
   /** Distinct baseline days observed in the 30-day mint/burn window. */
   baselineDays: number;
 }

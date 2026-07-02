@@ -533,7 +533,6 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         mint24h: latestWindow?.total_mint ?? 0,
         burnBaseline: baseline?.avg_burn ?? 0,
         mintBaseline: baseline?.avg_mint ?? 0,
-        dataAgeDays: ageSec == null ? 9999 : ageSec / DAY_SECONDS,
         baselineDays: baseline?.days_with_data ?? 0,
       });
     }

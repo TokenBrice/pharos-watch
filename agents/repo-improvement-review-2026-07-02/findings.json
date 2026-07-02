@@ -411,11 +411,22 @@
     "recommendation": "Delete dataAgeDays from the MintBurnSnapshot interface (contracts.ts:68) and from the hydration object literal. Scoring already carries the authoritative computation, so DEWS output is bit-identical.",
     "estImpact": "-5 LOC; one freshness derivation instead of two",
     "alsoFiles": [
-     "worker/src/cron/dews/contracts.ts",
-     "worker/src/cron/dews/scoring.ts"
+      "worker/src/cron/dews/contracts.ts",
+      "worker/src/cron/dews/scoring.ts"
     ]
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Removed the unread MintBurnSnapshot.dataAgeDays field from the DEWS contract and stopped hydrating it, leaving the scoring freshness calculation sourced from mintBurnAgeSecById.",
+   "validation": [
+    "npx vitest run worker/src/cron/dews/__tests__/source-state-legacy.test.ts worker/src/cron/dews/__tests__/scoring-blacklist.test.ts worker/src/cron/dews/source-state/__tests__/fallback.test.ts",
+    "cd worker && npx tsc --noEmit",
+    "rg -n \"dataAgeDays\" worker/src/cron/dews worker/src/cron/__tests__ worker/src/cron/dews -g'*.ts'",
+    "git diff --check -- worker/src/cron/dews/contracts.ts worker/src/cron/dews/source-state/hydration.ts"
+   ]
+  }
+ },
   {
    "id": "w-cron-sync:7",
    "domain": "w-cron-sync",
