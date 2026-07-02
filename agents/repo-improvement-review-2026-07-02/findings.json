@@ -1264,6 +1264,16 @@
     "description": "loadRiskFreeRateSnapshot (sources-riskfree.ts:108-111) is defined and re-exported through the sources.ts barrel (line 30), but a grep across src/, shared/, worker/, functions/, and scripts/ (including tests and string-keyed registries) finds zero callers — the only hits are the definition and the barrel re-export. All consumers (state-loading.ts, fetch-tbill-rate.ts) call loadRiskFreeRateRegistry directly and read `.USD` themselves.",
     "recommendation": "Delete the function and its barrel re-export. Behavior-neutral: nothing imports it.",
     "estImpact": "-5 LOC, one less stale API surface"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the uncalled loadRiskFreeRateSnapshot helper, removed its stale sources.ts barrel export, and dropped the now-unused YieldBenchmarkMeta import.",
+    "validation": [
+     "! rg -n \"loadRiskFreeRateSnapshot\" worker src shared functions scripts",
+     "npx vitest run worker/src/cron/__tests__/yield-v816-coverage.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

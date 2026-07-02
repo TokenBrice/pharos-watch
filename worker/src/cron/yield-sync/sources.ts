@@ -27,5 +27,5 @@ export {
   type OptionalRpcFamilyTelemetry,
 } from "./sources-rpc";
 export { loadDlStablecoinPools } from "./sources-dl";
-export { getPriceDerivedApy, loadRiskFreeRateRegistry, loadRiskFreeRateSnapshot } from "./sources-riskfree";
+export { getPriceDerivedApy, loadRiskFreeRateRegistry } from "./sources-riskfree";
 export { COMPOUND_V3_COMETS } from "./sources-optional-protocols-constants";

@@ -1,5 +1,4 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { YieldBenchmarkMeta } from "@shared/types/yield";
 import { getCache } from "../../lib/db-cache";
 import { computeApyFromPrice, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
@@ -103,9 +102,4 @@ export async function loadRiskFreeRateRegistry(
       registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
     ),
   );
-}
-
-export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
-  const registry = await loadRiskFreeRateRegistry(db);
-  return registry.USD;
 }
