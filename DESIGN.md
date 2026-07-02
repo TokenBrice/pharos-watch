@@ -220,7 +220,7 @@ The primary interactive control on data surfaces is the pill, not a heavy CTA. F
 
 - **Shell:** `rounded-xl`, hairline border, no shadow (`.pharos-table-shell`).
 - **Header/Toolbar:** `.pharos-table-toolbar` on the panel-header fill; search · density toggle · Columns · Export CSV. The Stablecoin Overview uses the `figmaOverview` toolbar variant.
-- **Rows:** subtle stripe, hover lift to `--interactive-hover`, sticky first column; right-aligned `.pharos-numeric` figures. Mobile/desktop column boundary is `xl` (1280px). Use the `src/components/table/` primitives, not raw `<table>`.
+- **Rows:** subtle stripe, hover lift to `--interactive-hover`, sticky first column; right-aligned `.pharos-numeric` figures. Phone-layout boundary is `lg` (1024px) — tablets get the real workbench. From `lg` up the table **auto-fits**: low-priority columns shed to the measured container width instead of forcing horizontal scroll, and a quiet `+N columns` toolbar control reveals the full set (with scroll) on demand. Use the `src/components/table/` primitives, not raw `<table>`.
 
 ### Inputs
 

@@ -19,6 +19,9 @@ import {
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS, type TableDensity } from "@/hooks/use-table-density";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useElementWidth } from "@/hooks/use-element-width";
+import { fitColumnsToWidth } from "@/lib/stablecoin-table-fit";
+import { Button } from "@/components/ui/button";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SortableTableHead } from "@/components/sortable-table-head";
@@ -177,17 +180,17 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     id: "name",
     label: "Name",
     sortKey: "name",
-    className: "w-[168px] max-w-[168px] xl:w-[150px] xl:max-w-[150px]",
+    className: "w-[168px] max-w-[168px] lg:w-[150px] lg:max-w-[150px]",
   },
   {
     id: "price",
     label: "Price",
     sortKey: "price",
-    // Pinned to content width below xl: fixed-layout leftover sharing otherwise
-    // inflates the column past the 390px first viewport and clips the fourth
-    // peg-price decimal at rest. At xl+ it pins wider so four-digit prices
-    // (gold pegs, ~$4,030.1234) never overflow into the Peg column.
-    className: "w-[88px] text-right xl:w-[116px]",
+    // Pinned to content width in the phone layout (<lg): fixed-layout leftover
+    // sharing otherwise inflates the column past the 390px first viewport and
+    // clips the fourth peg-price decimal at rest. From lg it pins wider so
+    // four-digit prices (gold pegs, ~$4,030.1234) never overflow into Peg.
+    className: "w-[88px] text-right lg:w-[116px]",
   },
   {
     id: "peg",
@@ -318,7 +321,7 @@ function StablecoinTableHeader({
         {showPinnedControls ? (
           <TableHead
             scope="col"
-            className={variant === "figmaOverview" ? "w-[48px] text-center" : "w-[44px] text-center xl:w-[36px]"}
+            className={variant === "figmaOverview" ? "w-[48px] text-center" : "w-[44px] text-center lg:w-[36px]"}
           >
             <span className="sr-only">Starred</span>
           </TableHead>
@@ -419,7 +422,18 @@ export function StablecoinTable({
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const isFigmaOverview = toolbarVariant === "figmaOverview";
-  const isMobileColumns = useIsMobile(isFigmaOverview ? 768 : 1280);
+  // Phone-layout boundary: the homepage overview flips at 768; the default
+  // workbench flips at lg (1024) so tablets get the real table — auto-fit
+  // (below) sheds low-priority columns instead of forcing horizontal scroll.
+  const isMobileColumns = useIsMobile(isFigmaOverview ? 768 : 1024);
+  const [measureViewportRef, viewportWidth] = useElementWidth<HTMLDivElement>();
+  const setViewportNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      measureViewportRef(node);
+    },
+    [measureViewportRef],
+  );
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -459,26 +473,54 @@ export function StablecoinTable({
       return sameColumnSet(current, previousDefault) ? [...deviceDefault] : current;
     });
   }, [deviceDefault, setVisibleColumns]);
-  const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
-  const visibleSortColumns = useMemo(
-    () => STABLECOIN_HEADER_DEFS.filter((column) => visibleSet.has(column.id)),
-    [visibleSet],
-  );
   const showPinnedControls = typeof onTogglePinnedStablecoin === "function";
-  const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
+
+  // Fit-to-width (≥lg): shed low-priority columns until the user's chosen set
+  // fits the measured container, instead of forcing horizontal scroll. The
+  // Columns menu keeps managing intent; the "+N columns" toolbar control
+  // toggles back to the scroll-everything behavior.
+  const [fitToWidth, setFitToWidth] = usePreference<boolean>(
+    `${columnPreferenceNamespace}-fit-columns`,
+    true,
+    { decode: (raw) => raw !== false },
+  );
+  const pinnedControlsWidth = showPinnedControls ? (isFigmaOverview ? 48 : PINNED_COLUMN_MIN_WIDTH_PX) : 0;
+  const fitActive = fitToWidth && !isMobileColumns;
+  const { rendered: renderedColumns, hiddenByFit } = useMemo(() => {
+    if (!fitActive) {
+      return { rendered: [...visibleColumns], hiddenByFit: [] as ColumnId[] };
+    }
+    return fitColumnsToWidth({
+      intent: visibleColumns,
+      containerWidth: viewportWidth,
+      getColumnWidth: (id) => getColumnMinWidthPx(id, toolbarVariant),
+      fixedWidth: pinnedControlsWidth,
+    });
+  }, [fitActive, visibleColumns, viewportWidth, toolbarVariant, pinnedControlsWidth]);
+
+  const renderedSet = useMemo(() => new Set(renderedColumns), [renderedColumns]);
+  const visibleSortColumns = useMemo(
+    () => STABLECOIN_HEADER_DEFS.filter((column) => renderedSet.has(column.id)),
+    [renderedSet],
+  );
+  const isVisible = useCallback((id: ColumnId) => renderedSet.has(id), [renderedSet]);
   const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
   const tableMinWidthPx = useMemo(
+    () => getTableMinWidthPx(renderedColumns, showPinnedControls, toolbarVariant),
+    [renderedColumns, showPinnedControls, toolbarVariant],
+  );
+  const intentMinWidthPx = useMemo(
     () => getTableMinWidthPx(visibleColumns, showPinnedControls, toolbarVariant),
     [showPinnedControls, toolbarVariant, visibleColumns],
   );
-  const visibleColumnCount = visibleColumns.length + (showPinnedControls ? 1 : 0);
+  const visibleColumnCount = renderedColumns.length + (showPinnedControls ? 1 : 0);
   const skeletonColumns = useMemo<TableSkeletonColumn[]>(
     () => [
       ...(showPinnedControls
         ? [
             {
               id: "pinned",
-              cellClassName: "w-[44px] text-center xl:w-[36px]",
+              cellClassName: "w-[44px] text-center lg:w-[36px]",
               skeletonClassName: "mx-auto h-4 w-4 rounded-full",
             },
           ]
@@ -492,7 +534,7 @@ export function StablecoinTable({
     [isVisible, showPinnedControls],
   );
 
-  const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
+  const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, renderedSet), [sortKey, renderedSet]);
 
   const trackedIds = useMemo(() => buildTrackedIdSet(activeFilters, reportCards), [activeFilters, reportCards]);
 
@@ -583,6 +625,24 @@ export function StablecoinTable({
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
   }, [displayed, pegScores, dexLiquidity, reportCards]);
 
+  const intentOverflows = viewportWidth > 0 && intentMinWidthPx > viewportWidth;
+  const showFitControl = !isMobileColumns && (hiddenByFit.length > 0 || (!fitToWidth && intentOverflows));
+  const fitControl = showFitControl ? (
+    <Button
+      variant="outline"
+      size="sm"
+      className={isFigmaOverview ? "h-8 min-h-8 rounded-lg px-2 sm:px-3" : "rounded-lg min-h-11 sm:min-h-8"}
+      onClick={() => setFitToWidth(!fitToWidth)}
+      title={
+        fitToWidth
+          ? `${hiddenByFit.length} column${hiddenByFit.length === 1 ? "" : "s"} hidden to fit the width — show all with horizontal scroll`
+          : "Hide overflow columns so the table fits without horizontal scroll"
+      }
+    >
+      {fitToWidth ? `+${hiddenByFit.length} column${hiddenByFit.length === 1 ? "" : "s"}` : "Fit columns"}
+    </Button>
+  ) : null;
+
   const tableToolbar = (
     <TableToolbar
       density={density}
@@ -593,7 +653,16 @@ export function StablecoinTable({
       defaultColumns={deviceDefault}
       onExport={handleCsvExport}
       exportDisabled={displayed.length === 0}
-      additionalActions={toolbarActions}
+      additionalActions={
+        fitControl ? (
+          <>
+            {fitControl}
+            {toolbarActions}
+          </>
+        ) : (
+          toolbarActions
+        )
+      }
       searchValue={searchQuery}
       onSearchChange={onSearchChange}
       searchPlaceholder={isFigmaOverview ? "Search" : undefined}
@@ -640,6 +709,7 @@ export function StablecoinTable({
         density={density}
         striped="indexed"
         mobileScrollHint={isFigmaOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
+        viewportRef={setViewportNode}
         viewportClassName={
           isFigmaOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName
         }
@@ -724,7 +794,7 @@ export function StablecoinTable({
           : "animate-in fade-in duration-200"
       }
       density={density}
-      viewportRef={scrollRef}
+      viewportRef={setViewportNode}
       mobileScrollHint={isFigmaOverview ? false : STABLECOIN_FRAME_SHARED.mobileScrollHint}
       viewportClassName={isFigmaOverview ? "pharos-overview-table-viewport" : STABLECOIN_FRAME_SHARED.viewportClassName}
       tableProps={{

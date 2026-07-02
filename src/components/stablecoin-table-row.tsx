@@ -213,8 +213,8 @@ function StablecoinVirtualRowBase({
               className={`pharos-focus-ring inline-flex items-center justify-center rounded-md transition-colors ${
                 isPinned
                   ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
-                  : "text-muted-foreground opacity-80 hover:text-foreground xl:opacity-0 xl:group-hover:opacity-100 xl:focus-visible:opacity-100"
-              } ${isFigmaOverview ? "size-5 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 xl:size-6"}`}
+                  : "text-muted-foreground opacity-80 hover:text-foreground lg:pointer-fine:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
+              } ${isFigmaOverview ? "size-5 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 lg:size-6"}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePinned(coin.id);
@@ -259,12 +259,12 @@ function StablecoinVirtualRowBase({
                   ) : null}
                 </span>
                 <span
-                  className={`max-w-[140px] truncate text-xs text-muted-foreground ${isFigmaOverview ? "block" : "hidden xl:block"}`}
+                  className={`max-w-[140px] truncate text-xs text-muted-foreground ${isFigmaOverview ? "block" : "hidden lg:block"}`}
                 >
                   {coin.name}
                 </span>
                 <span
-                  className={`mt-1 min-w-0 items-center gap-1 ${isFigmaOverview ? "hidden" : "flex xl:hidden"}`}
+                  className={`mt-1 min-w-0 items-center gap-1 ${isFigmaOverview ? "hidden" : "flex lg:hidden"}`}
                   aria-label="Mobile risk summary"
                 >
                   {reportCard ? (
@@ -368,10 +368,10 @@ function StablecoinVirtualRowBase({
           >
             {prevWeek > 0 ? (
               <>
-                {/* xl gate: the 7d column carries a fixed w-[144px] from xl up,
+                {/* lg gate: the 7d column carries a fixed w-[144px] from lg up,
                     which fits the inline sparkline beside the delta without the
-                    svg spilling onto Grade. Below xl the column is hidden. */}
-                <span className="hidden xl:inline">
+                    svg spilling onto Grade. Below lg the column is hidden. */}
+                <span className="hidden lg:inline">
                   <MiniSparkline values={supplySparklineValues} />
                 </span>
                 {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
