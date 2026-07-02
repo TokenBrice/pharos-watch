@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildContentSecurityPolicy, onRequest, prefersMarkdown } from "../_middleware";
+import { buildContentSecurityPolicy } from "@shared/lib/site-csp";
+import { onRequest, prefersMarkdown } from "../_middleware";
 
 function makeAssetsFetch(files: Record<string, string>) {
   return vi.fn(async (input: RequestInfo | URL) => {

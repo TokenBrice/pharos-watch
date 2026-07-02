@@ -1,7 +1,4 @@
-import {
-  buildContentSecurityPolicy,
-  isTelegramMiniAppPath,
-} from "@shared/lib/site-csp";
+import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { injectHtmlCsp } from "./lib/csp-inject";
 
@@ -25,8 +22,6 @@ const MARKDOWN_ROUTE_PREFIXES = [
 
 const PASSTHROUGH_PREFIXES = ["/_site-data/", "/_next/"] as const;
 const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
-
-export { buildContentSecurityPolicy };
 
 function parseQ(params: string[]): number {
   const qParam = params.find((param) => /^q\s*=/i.test(param));

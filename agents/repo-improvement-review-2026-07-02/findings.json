@@ -5785,6 +5785,18 @@
     "alsoFiles": [
      "functions/_middleware.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused normalizeOrigin re-export, made DEFAULT_OPS_UI_ORIGIN local to ops-origin, and pointed the middleware CSP test at the shared site-csp module after dropping the _middleware CSP re-export.",
+    "validation": [
+     "rg -n \"export \\\\{ normalizeOrigin \\\\}|export const DEFAULT_OPS_UI_ORIGIN|export \\\\{ buildContentSecurityPolicy \\\\}|buildContentSecurityPolicy.*\\\\.\\\\./_middleware\" functions || true",
+     "npx vitest run functions/__tests__",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "git diff --check -- functions/lib/ops-origin.ts functions/_middleware.ts functions/__tests__/middleware.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
