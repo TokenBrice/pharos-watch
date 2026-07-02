@@ -446,7 +446,6 @@ export function mapTelegramBotStats(input: {
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
   inactiveSubscribersCleanedThisWeek?: number | null;
-  miniAppDailyAggregate?: TelegramMiniAppDailyAggregate | null;
   lifecycleSnapshot?: TelegramCurrentLifecycleSnapshot | null;
   unavailableFields?: string[];
   telemetryErrors?: Record<string, string>;
@@ -573,7 +572,6 @@ export function mapTelegramBotStats(input: {
 }
 
 export async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats> {
-  const today = utcDayFromUnixSeconds(now);
   const [
     aggregate,
     pendingDisambiguations,
@@ -583,7 +581,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailuresResult,
     inactiveCleanupResult,
-    miniAppDailyAggregateResult,
     lifecycleSnapshotResult,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
@@ -594,7 +591,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramTopStablecoins(db),
     loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
     loadOptionalTelegramTelemetry(loadInactiveSubscribersCleanedThisWeek(db, now)),
-    loadOptionalTelegramTelemetry(loadTelegramMiniAppDailyAggregate(db, today)),
     loadOptionalTelegramTelemetry(refreshTelegramLifecycleSnapshotIfStale(db, now)),
   ]);
   const optionalResults = {
@@ -602,7 +598,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     retryErrorClassCounts: retryErrorClassesResult,
     presetQueryFailures: presetQueryFailuresResult,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
-    miniAppDailyAggregate: miniAppDailyAggregateResult,
     lifecycleSnapshot: lifecycleSnapshotResult,
   };
   const unavailableFields = Object.entries(optionalResults)
@@ -624,7 +619,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,
-    miniAppDailyAggregate: miniAppDailyAggregateResult.value,
     lifecycleSnapshot: lifecycleSnapshotResult.value,
     unavailableFields,
     telemetryErrors,

@@ -288,6 +288,7 @@ describe("getTelegramBotStats", () => {
     expect(aggregateQuery?.sql).toContain("global_alert_launch");
     expect(aggregateQuery?.sql).toContain("alert_launch");
     expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
+    expect(history.some((entry) => entry.sql.includes("FROM telegram_usage_daily"))).toBe(false);
     expect(result.alertTypeChats.launch).toBe(1);
     expect(result.oldestPendingDeliveryAgeSec).toBe(60);
     expect(result.oldestDuePendingAgeSec).toBe(30);

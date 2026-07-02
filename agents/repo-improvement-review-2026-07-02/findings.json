@@ -1574,6 +1574,16 @@
     "alsoFiles": [
      "worker/src/api/telegram-pulse.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused Mini App daily aggregate query/plumbing from `getTelegramBotStats` and `mapTelegramBotStats` while leaving the pulse endpoint loader intact. Added a regression assertion that status stats no longer query `telegram_usage_daily`.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/telegram-bot-stats.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/lib/status/telegram-bot-stats.ts worker/src/lib/__tests__/telegram-bot-stats.test.ts"
+    ]
    }
   },
   {
