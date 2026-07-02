@@ -520,13 +520,6 @@ function evaluateYieldSourceGroup(
   accumulator.evaluatedSources.push(
     ...candidates.map((candidate) => ({
       ...candidate,
-      warnings: candidate.warnings,
-      rejected: candidate.rejected,
-      anomalies: candidate.anomalies,
-      previousBestSourceKey: candidate.previousBestSourceKey,
-      usedLegacyHistory: candidate.usedLegacyHistory,
-      usedDefaultSafety: candidate.usedDefaultSafety,
-      pharosYieldScore: candidate.pharosYieldScore,
       sourceSwitchCount30d: candidate.sourceKey === winner.sourceKey ? sourceSwitchCount30d : null,
     })),
   );

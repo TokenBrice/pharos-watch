@@ -1400,6 +1400,15 @@
     "description": "In evaluateYieldSourceGroup, the final `accumulator.evaluatedSources.push(...candidates.map((candidate) => ({ ...candidate, warnings: candidate.warnings, rejected: candidate.rejected, anomalies: candidate.anomalies, previousBestSourceKey: candidate.previousBestSourceKey, usedLegacyHistory: candidate.usedLegacyHistory, usedDefaultSafety: candidate.usedDefaultSafety, pharosYieldScore: candidate.pharosYieldScore, sourceSwitchCount30d: ... })))` (lines 520-532) restates seven properties with exactly the values the `...candidate` spread already provides. Only sourceSwitchCount30d is actually overridden. The redundant lines invite the false impression that these fields are being transformed.",
     "recommendation": "Reduce to `{ ...candidate, sourceSwitchCount30d: candidate.sourceKey === winner.sourceKey ? sourceSwitchCount30d : null }`. Object shape and values are provably identical.",
     "estImpact": "-7 LOC, clearer override intent"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed redundant self-assignments from evaluated yield source row construction so the spread provides unchanged fields and only sourceSwitchCount30d is explicitly overridden.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-evaluation.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
