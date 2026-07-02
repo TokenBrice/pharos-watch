@@ -25,7 +25,6 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/resvg-stub.ts",
   "worker/src/__mocks__/satori-stub.ts",
   "worker/src/__mocks__/wasm-module-stub.ts",
-  "src/components/console-signature.tsx",
   // Public compatibility shim; current label consumers use the light constants
   // module so they do not pull methodology body data into client bundles.
   "shared/lib/mint-authority-version.ts",
@@ -174,7 +173,6 @@ const EXPORT_ALLOWLIST = new Set([
   // Consumed internally by buildAllCoinTrackerLinks; the static scan does not
   // resolve same-file references.
   "src/lib/coin-tracker-links.ts::buildCoinTrackerLink",
-  "src/components/console-signature.tsx::ConsoleSignature",
   // parsePaletteInput + buildCompareHrefFromCoinIds are consumed by
   // src/components/command-palette.tsx. resolveCoinIdFromToken is only consumed
   // internally by parsePaletteInput; the static scan does not resolve same-file

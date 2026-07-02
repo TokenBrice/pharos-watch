@@ -3740,6 +3740,18 @@
     "description": "ConsoleSignature (a devtools console-branding effect) is exported but never imported or rendered anywhere in src/, shared/, or functions/ — its only references are the two allowlist entries in scripts/ci/check-unused-code.mjs (lines 28 and 186) that suppress the repo's own unused-code detector. So the console signature never actually prints for visitors, and the allowlist entry masks that fact permanently. Either the component was meant to be mounted (e.g. in providers.tsx next to the other dynamic mounts) and the wiring was lost, or it should be deleted.",
     "recommendation": "Owner decision: mount it in providers.tsx (one dynamic import, matching KeyboardShortcuts/ToastContainer) if the console signature is wanted, or delete the file plus its two allowlist lines. Deleting is behavior-preserving since it currently never runs.",
     "estImpact": "-33 LOC + 2 allowlist lines, or restores intended feature"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the never-mounted ConsoleSignature component and removed its stale module/export entries from the unused-code allowlist.",
+    "validation": [
+     "rg -n \"ConsoleSignature|console-signature|console signature|consoleSignature|console-signature.tsx\" . --glob '!agents/repo-improvement-review-2026-07-02/findings.json' || true",
+     "npm run typecheck",
+     "npm run check:unused-code",
+     "git diff --check -- scripts/ci/check-unused-code.mjs src/components/console-signature.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Unused-code still fails only on unrelated existing findings; allowlist audit reports all entries valid."
    }
   },
   {
