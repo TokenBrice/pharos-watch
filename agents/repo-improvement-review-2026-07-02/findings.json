@@ -2261,6 +2261,17 @@
     "description": "useChartAnnotations keys its query on the exact fromMs/toMs it receives ({coin, since, until}) and puts them in the fetch path. Its two live callers derive that window from the chart brush: ChartBrush calls onChange([lo, hi]) on every pointermove (sync.tsx:151-188), and use-market-data-chart-window.ts:34-36 / market-data-section.tsx feed the resulting float-millisecond bounds straight into the hook. Every pixel of a brush drag therefore mints a never-repeating query key and fires a fresh /api/events request (enabled=true, no debounce), leaving dozens of one-shot entries in the TanStack cache per drag. The memo at lines 131-176 already clamps annotations to the raw [lo, hi], so the fetch granularity is invisible to the rendered output.",
     "recommendation": "Quantize since/until inside the hook before building the key/path (e.g. floor `since` to UTC day start, ceil `until` to day end) while keeping the memo's clamp on the raw fromMs/toMs; a whole brush drag then collapses to at most a handful of shared cache entries. Rendered pins are unchanged because clamping already happens client-side (only caveat: the server's 200-event limit; passing severityFloor=warning — the hook drops lower severities client-side anyway — more than compensates). Alternatively debounce the window fed to the hook.",
     "estImpact": "removes ~30-100 redundant API fetches per brush interaction"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Bucketed chart-annotation /api/events query keys and paths into 30-day windows while preserving the existing raw [fromMs, toMs] clamp for rendered annotations, so brush pointer moves reuse cache entries instead of issuing a request per pixel.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-chart-annotations.test.tsx src/components/__tests__/intervention-seismograph.test.ts",
+     "npx eslint --max-warnings=0 src/hooks/use-chart-annotations.ts src/hooks/__tests__/use-chart-annotations.test.tsx src/components/freezewatch/intervention-seismograph.tsx src/components/__tests__/intervention-seismograph.test.ts",
+     "npm run check:hook-polling-window",
+     "git diff --check -- src/hooks/use-chart-annotations.ts src/hooks/__tests__/use-chart-annotations.test.tsx src/components/freezewatch/intervention-seismograph.tsx src/components/__tests__/intervention-seismograph.test.ts"
+    ]
    }
   },
   {
@@ -2427,6 +2438,17 @@
     "description": "buildQuarterPoints() merges per-coin quarterly points keyed by the quarter LABEL and sorts with `a.localeCompare(b)`. Labels come from sortKeyToLabel() (shared/lib/blacklist-aggregates.ts:17) in the form \"Qn 'YY\" (e.g. \"Q3 '22\"), so lexical sort orders by quarter number before year: Q1 '17, Q1 '18, … Q1 '26, Q2 '17, … (verified by simulation). Blacklist data spans 2017→2026 across USDT/USDC/etc., so the SeismographSvg bars, the NOTABLE_QUAKES annotations (Tornado Cash/Silvergate/OFAC pins land at wrong x positions), and the sparse x-axis tick labels all render in scrambled, non-chronological order on /freezewatch/. Headline stats (peak quarter, totals) are unaffected since they are order-independent.",
     "recommendation": "Sort chronologically by parsed (year, quarter) — e.g. derive key = (2000 + Number(label.slice(-2))) * 4 + Number(label[1]) — or better, have the worker payload carry the numeric quarter_sort_key alongside the label. This is a genuine correctness fix restoring the intended chronological rendering (behaviorChange flagged because pixels change).",
     "estImpact": "fixes scrambled 10-year timeline chart on /freezewatch/"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Parsed FreezeWatch quarter labels into chronological year/quarter sort keys before rendering the seismograph, with focused coverage proving multi-year labels sort by time instead of lexically.",
+    "validation": [
+     "npx vitest run src/hooks/__tests__/use-chart-annotations.test.tsx src/components/__tests__/intervention-seismograph.test.ts",
+     "npx eslint --max-warnings=0 src/hooks/use-chart-annotations.ts src/hooks/__tests__/use-chart-annotations.test.tsx src/components/freezewatch/intervention-seismograph.tsx src/components/__tests__/intervention-seismograph.test.ts",
+     "npm run check:hook-polling-window",
+     "git diff --check -- src/hooks/use-chart-annotations.ts src/hooks/__tests__/use-chart-annotations.test.tsx src/components/freezewatch/intervention-seismograph.tsx src/components/__tests__/intervention-seismograph.test.ts"
+    ]
    }
   },
   {

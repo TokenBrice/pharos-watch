@@ -51,7 +51,22 @@ const PADDING_BOTTOM = 28;
 const PLOT_HEIGHT = VIEWBOX_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 const BASELINE_Y = VIEWBOX_HEIGHT - PADDING_BOTTOM;
 
-function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | undefined): QuarterPoint[] {
+function quarterLabelSortKey(label: string): number | null {
+  const match = /^Q([1-4]) '(\d{2})$/.exec(label);
+  if (!match) return null;
+  return (2000 + Number(match[2])) * 4 + (Number(match[1]) - 1);
+}
+
+function compareQuarterLabels(a: string, b: string): number {
+  const aKey = quarterLabelSortKey(a);
+  const bKey = quarterLabelSortKey(b);
+  if (aKey != null && bKey != null && aKey !== bKey) return aKey - bKey;
+  if (aKey != null && bKey == null) return -1;
+  if (aKey == null && bKey != null) return 1;
+  return a.localeCompare(b);
+}
+
+export function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | undefined): QuarterPoint[] {
   if (!stats) return [];
   const map = new Map<string, { blacklist: number; unblacklist: number; destroy: number }>();
   for (const symbol of BLACKLIST_STABLECOINS) {
@@ -65,7 +80,7 @@ function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | undefined
     }
   }
   return [...map.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareQuarterLabels(a, b))
     .map(([quarter, counts]) => ({
       quarter,
       ...counts,

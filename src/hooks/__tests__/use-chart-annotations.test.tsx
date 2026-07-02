@@ -27,6 +27,8 @@ vi.mock("@shared/data/annotations/curated-annotations", () => ({
 
 import { useChartAnnotations } from "../use-chart-annotations";
 
+const DAY_MS = 86_400_000;
+
 function tape(partial: Partial<TapeEvent> & Pick<TapeEvent, "id" | "type" | "ts" | "title">): TapeEvent {
   return {
     severity: "warning",
@@ -97,6 +99,65 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data.map((a) => a.label)).toEqual(["in range"]);
+  });
+
+  it("uses a bucketed event query window across brush moves while preserving the raw display clamp", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    const bucketStart = 30 * DAY_MS * 650;
+    const rawFrom = bucketStart + 5 * DAY_MS;
+    const rawTo = bucketStart + 10 * DAY_MS;
+    useApiQueryWithMetaMock.mockReturnValue({
+      data: {
+        events: [
+          tape({
+            id: "before-raw-window",
+            type: "depeg.opened",
+            severity: "warning",
+            ts: rawFrom - DAY_MS,
+            title: "Before raw window",
+          }),
+          tape({
+            id: "inside-raw-window",
+            type: "depeg.opened",
+            severity: "warning",
+            ts: rawFrom + DAY_MS,
+            title: "Inside raw window",
+          }),
+          tape({
+            id: "after-raw-window",
+            type: "depeg.opened",
+            severity: "warning",
+            ts: rawTo + DAY_MS,
+            title: "After raw window",
+          }),
+        ],
+        nextCursor: null,
+        total: 3,
+        totalExact: true,
+      },
+      isLoading: false,
+    });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ from, to }) => useChartAnnotations("usdc-circle", from, to),
+      { initialProps: { from: rawFrom, to: rawTo } },
+    );
+
+    expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
+    const firstCall = useApiQueryWithMetaMock.mock.calls.at(-1);
+    const firstKey = JSON.stringify(firstCall?.[0]);
+    const firstPath = firstCall?.[1] as string;
+    const firstUrl = new URL(firstPath, "https://pharos.test");
+    expect(firstUrl.searchParams.get("since")).toBe(String(bucketStart));
+    expect(firstUrl.searchParams.get("until")).toBe(String(bucketStart + 30 * DAY_MS));
+
+    rerender({ from: rawFrom + 60_000, to: rawTo + 60_000 });
+
+    const secondCall = useApiQueryWithMetaMock.mock.calls.at(-1);
+    expect(JSON.stringify(secondCall?.[0])).toBe(firstKey);
+    expect(secondCall?.[1]).toBe(firstPath);
+    expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
   });
 
   it("merges curated + tape sources and dedupes same-day same-kind (curated wins)", () => {

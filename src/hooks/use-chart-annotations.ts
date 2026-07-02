@@ -51,6 +51,14 @@ const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true
 type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
 
 const TAPE_EVENTS_LIMIT = 200;
+const ANNOTATION_QUERY_BUCKET_MS = 30 * DAY_MS;
+
+function buildAnnotationQueryWindow(fromMs: number, toMs: number): { since: number; until: number } {
+  return {
+    since: Math.max(0, Math.floor(fromMs / ANNOTATION_QUERY_BUCKET_MS) * ANNOTATION_QUERY_BUCKET_MS),
+    until: Math.ceil(toMs / ANNOTATION_QUERY_BUCKET_MS) * ANNOTATION_QUERY_BUCKET_MS,
+  };
+}
 
 /**
  * Map a worker tape-event `type` slug onto the public `ChartAnnotationKind`
@@ -108,9 +116,15 @@ export function useChartAnnotations(
     typeof toMs === "number" &&
     fromMs < toMs &&
     stablecoinId.length > 0;
+  const queryWindow = enabled ? buildAnnotationQueryWindow(fromMs as number, toMs as number) : null;
 
   const path = enabled
-    ? API_PATHS.events({ coin: stablecoinId, since: fromMs, until: toMs, limit: TAPE_EVENTS_LIMIT })
+    ? API_PATHS.events({
+        coin: stablecoinId,
+        since: queryWindow?.since,
+        until: queryWindow?.until,
+        limit: TAPE_EVENTS_LIMIT,
+      })
     : API_PATHS.events();
 
   const query = useApiQueryWithMeta<TapeEventsResponseBody>(
@@ -119,8 +133,8 @@ export function useChartAnnotations(
       "chart-annotations",
       {
         coin: stablecoinId,
-        since: fromMs ?? null,
-        until: toMs ?? null,
+        since: queryWindow?.since ?? null,
+        until: queryWindow?.until ?? null,
       },
     ],
     path,
