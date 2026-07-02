@@ -25,14 +25,13 @@ import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-mint-au
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
-function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry[] {
-  const usage: CollateralUsageEntry[] = [];
+function buildCollateralUsageIndex(): Map<string, CollateralUsageEntry[]> {
+  const usageByStablecoinId = new Map<string, CollateralUsageEntry[]>();
+
   for (const candidate of TRACKED_STABLECOINS) {
-    if (candidate.id === stablecoinId || candidate.variantOf === stablecoinId) {
-      continue;
-    }
     for (const dependency of deriveDependencies(candidate)) {
-      if (dependency.id !== stablecoinId) continue;
+      if (candidate.id === dependency.id || candidate.variantOf === dependency.id) continue;
+      const usage = usageByStablecoinId.get(dependency.id) ?? [];
       usage.push({
         coin: {
           id: candidate.id,
@@ -42,9 +41,21 @@ function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry
         weight: dependency.weight,
         type: dependency.type ?? "collateral",
       });
+      usageByStablecoinId.set(dependency.id, usage);
     }
   }
-  return usage.sort((a, b) => b.weight - a.weight);
+
+  for (const usage of usageByStablecoinId.values()) {
+    usage.sort((a, b) => b.weight - a.weight);
+  }
+
+  return usageByStablecoinId;
+}
+
+const COLLATERAL_USAGE_BY_STABLECOIN_ID = buildCollateralUsageIndex();
+
+function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry[] {
+  return COLLATERAL_USAGE_BY_STABLECOIN_ID.get(stablecoinId) ?? [];
 }
 
 function DetailPageShellFallback({

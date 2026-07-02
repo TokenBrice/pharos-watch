@@ -4374,6 +4374,18 @@
     "description": "Every one of the ~410 static /stablecoin/[id] pages calls buildCollateralUsageEntries(id), which loops all TRACKED_STABLECOINS and calls deriveDependencies(candidate) for each — ~168,000 derivations (each allocating maps/arrays) per build, recomputing the identical dependency sets 410 times. The result is a pure function of the static registry, so the entire reverse index (collateral coinId → users) can be computed once at module scope and looked up per page.",
     "recommendation": "Build a module-level `Map<string, CollateralUsageEntry[]>` by iterating TRACKED_STABLECOINS once (deriveDependencies per coin, push into the target coin's bucket, sort each bucket by weight desc), then have buildCollateralUsageEntries return `usageIndex.get(stablecoinId) ?? []` while keeping the existing self/variantOf exclusion. Same entries, same order; only build-time work changes.",
     "estImpact": "~410x fewer registry scans during static export"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Stablecoin collateral usage is now built once as a module-level reverse dependency index and looked up per detail page, preserving existing self and variant-parent exclusions.",
+    "validation": [
+     "npx tsx -e '<full-registry legacy-vs-index collateral usage comparison>'",
+     "npm run typecheck",
+     "npx eslint 'src/app/stablecoin/[id]/page.tsx' --max-warnings=0",
+     "git diff --check -- 'src/app/stablecoin/[id]/page.tsx' agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The one-off comparison confirmed identical collateral usage output for all 408 tracked stablecoins."
    }
   },
   {
