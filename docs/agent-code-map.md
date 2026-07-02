@@ -190,7 +190,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
-- ... 30 more files omitted; use `rg --files src/hooks` for the full list.
+- `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
+- `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
+- `src/hooks/use-shortcuts.ts` - DEFAULT_SHORTCUT_HREFS, SHORTCUTS_STORAGE_KEY, ShortcutsState, decodeShortcuts, useShortcuts
+- ... 26 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -239,7 +242,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/command-palette-verbs.ts` - ParsedVerb, buildCompareHrefFromCoinIds, parsePaletteInput, resolveCoinIdFromToken
 - `src/lib/command-palette.ts` - OPEN_COMMAND_PALETTE_EVENT, openCommandPalette
 - `src/lib/compare-config.ts` - COMPARE_COIN_OPTIONS, COMPARE_COLORS, COMPARISON_PRESETS, ID_TO_COMPARE_COIN, MAX_COMPARE_COINS, getPresetCoins
-- `src/lib/compare-derive.ts` - ComparisonCoinEntry, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins, deriveFlowCardData
+- `src/lib/compare-derive.ts` - ComparisonCoinEntry, ComparisonMeta, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins
 - `src/lib/compare-links.ts` - STATIC_COMPARE_PAIRS, StaticComparisonLink, buildLiveCompareUrl, buildStaticComparisonSlug, getPrimaryStaticComparisonLinkForCoin
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
 - `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
@@ -288,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 389 more files omitted; use `rg --files src/components` for the full list.
+- ... 380 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -374,12 +377,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 260 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
 - `shared/data/stablecoins/canonical-order.json` - 408 entries
 - `shared/data/stablecoins/coins.client.generated.json` - 408 entries
+- `shared/data/stablecoins/coins.compliance.generated.json` - 106 entries
 - `shared/data/stablecoins/coins.generated.json` - 408 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 25 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
@@ -417,8 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
-- `shared/data/stablecoins/coins/brla-brla-digital.json` - 26 keys
-- ... 383 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 384 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -614,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, toStagedPool
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- ... 346 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 343 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

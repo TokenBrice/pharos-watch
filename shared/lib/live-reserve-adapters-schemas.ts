@@ -417,22 +417,6 @@ const liquityNativeActivePoolParamsSchema = z
   })
   .strict();
 
-const centrifugeVaultSliceSchema = z
-  .object({
-    name: z.string(),
-    risk: LiveReserveRiskSchema,
-  })
-  .strict();
-
-const centrifugeVaultParamsSchema = z
-  .object({
-    assetAddress: z.string(),
-    slice: centrifugeVaultSliceSchema,
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
-  })
-  .strict();
-
 const originVaultAssetSchema = z
   .object({
     address: z.string(),
@@ -635,9 +619,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "attestation-pdf-index": { primaryInputKinds: ["http-html"], params: attestationPdfIndexParamsSchema },
   "blast-usdb-yield-manager": { primaryInputKinds: ["onchain-evm"], params: blastUsdbYieldManagerParamsSchema },
   btcfi: { primaryInputKinds: ["http-json"], params: btcfiParamsSchema },
-  "buck-io-transparency": { primaryInputKinds: ["http-html"], params: noParamsSchema },
   "cap-vault": { primaryInputKinds: ["onchain-evm"], params: capVaultParamsSchema },
-  "centrifuge-vault": { primaryInputKinds: ["onchain-evm"], params: centrifugeVaultParamsSchema },
   "chainlink-nav": { primaryInputKinds: ["onchain-evm"], params: chainlinkNavParamsSchema },
   "chainlink-por": { primaryInputKinds: ["onchain-evm"], params: chainlinkPorParamsSchema },
   "circle-transparency": { primaryInputKinds: ["http-html"], params: circleTransparencyParamsSchema },
@@ -681,7 +663,6 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "single-asset": { primaryInputKinds: ["http-json", "onchain-evm"], params: singleAssetParamsSchema },
   "sky-makercore": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "superstate-liquidity": { primaryInputKinds: ["onchain-evm"], params: superstateLiquidityParamsSchema },
-  tether: { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "river-protocol-info": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usdgo-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usdh-native-markets": { primaryInputKinds: ["http-html"], params: noParamsSchema },

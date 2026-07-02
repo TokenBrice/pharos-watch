@@ -142,7 +142,7 @@ independent:
 - scoring-eligible freshness = a verified timestamp-backed snapshot or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring, even if older metadata includes a legacy freshness-approval flag
 - timestamp-backed dashboard/disclosure feeds can qualify only when the adapter preserves a trustworthy upstream `sourceTimestamp` and the adapter's source-age policy still marks it fresh
 - direct one-bucket on-chain reserve proofs can qualify when they are registered as independent (for example LUSD's dedicated `liquity-v1` adapter); generic liveness probes do not qualify just because they are on-chain
-- `validated-static` feeds (for example `curated-validated` and `attestation-pdf-index`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
+- `validated-static` feeds (for example `curated-validated` and `attestation-pdf-index`) and `weak-live-probe` feeds (for example `single-asset`, `solstice-attestation`, and `river-protocol-info`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
 - the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics
 
 This keeps reserve displays broad while keeping collateral scoring strict.

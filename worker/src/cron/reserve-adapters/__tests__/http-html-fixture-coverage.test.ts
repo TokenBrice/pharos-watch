@@ -27,7 +27,7 @@ const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
 function fixturePrefixCandidates(key: string): string[] {
   const candidates = [key];
   // Some fixtures shorten the adapter key by dropping the "-transparency" suffix
-  // (e.g. buck-io-transparency → buck-io.html). Accept both forms.
+  // for compact fixture names. Accept both forms.
   if (key.endsWith("-transparency")) {
     candidates.push(key.slice(0, -"-transparency".length));
   }

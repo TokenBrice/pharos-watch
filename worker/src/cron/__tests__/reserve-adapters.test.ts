@@ -7,7 +7,6 @@
  * without any network calls.
  */
 import { describe, it, expect } from "vitest";
-import { adaptTetherTransparency, type TetherTransparencyResponse } from "../reserve-adapters/tether";
 import { adaptCircleTransparency } from "../reserve-adapters/circle-transparency";
 import {
   adaptEthenaCollateral,
@@ -16,97 +15,6 @@ import {
 } from "../reserve-adapters/ethena";
 import { adaptSkyModules, listUnknownGroups, type SkyGroupResult } from "../reserve-adapters/sky-makercore";
 import { adaptGhoFacilitators, type GhoFacilitatorData } from "../reserve-adapters/gho";
-
-// --- Tether adapter tests ---
-
-describe("adaptTetherTransparency", () => {
-  it("parses a valid Tether transparency response", () => {
-    const payload: TetherTransparencyResponse = {
-      data: {
-        usdt: {
-          total_assets: "118536043000",
-          total_liabilities: "113124739000",
-          shareholder_eq: "5411304000",
-        },
-      },
-    };
-
-    const result = adaptTetherTransparency(payload);
-
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].name).toContain("Issuer-attested reserves");
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].risk).toBe("medium");
-
-    expect(result.metadata).toBeDefined();
-    expect(result.metadata!.totalAssetsUsd).toBe(118536043000);
-    expect(result.metadata!.totalLiabilitiesUsd).toBe(113124739000);
-    expect(result.metadata!.shareholderEquityUsd).toBe(5411304000);
-    expect(result.metadata!.collateralizationRatio).toBeCloseTo(118536043000 / 113124739000, 4);
-  });
-
-  it("handles numeric values (not just strings)", () => {
-    const payload: TetherTransparencyResponse = {
-      data: {
-        usdt: {
-          total_assets: 100_000_000_000,
-          total_liabilities: 95_000_000_000,
-          shareholder_eq: 5_000_000_000,
-        },
-      },
-    };
-
-    const result = adaptTetherTransparency(payload);
-    expect(result.slices).toHaveLength(1);
-    expect(result.metadata!.totalAssetsUsd).toBe(100_000_000_000);
-  });
-
-  it("throws when usdt data is missing", () => {
-    const payload = { data: {} } as unknown as TetherTransparencyResponse;
-    expect(() => adaptTetherTransparency(payload)).toThrow("missing usdt data");
-  });
-
-  it("throws when total_assets is zero", () => {
-    const payload: TetherTransparencyResponse = {
-      data: {
-        usdt: {
-          total_assets: 0,
-          total_liabilities: 0,
-          shareholder_eq: 0,
-        },
-      },
-    };
-    expect(() => adaptTetherTransparency(payload)).toThrow("total_assets invalid or zero");
-  });
-
-  it("throws when total_assets is NaN string", () => {
-    const payload: TetherTransparencyResponse = {
-      data: {
-        usdt: {
-          total_assets: "not-a-number",
-          total_liabilities: "1000",
-          shareholder_eq: "100",
-        },
-      },
-    };
-    expect(() => adaptTetherTransparency(payload)).toThrow("total_assets invalid or zero");
-  });
-
-  it("omits collateralizationRatio when liabilities are zero", () => {
-    const payload: TetherTransparencyResponse = {
-      data: {
-        usdt: {
-          total_assets: "1000000",
-          total_liabilities: "0",
-          shareholder_eq: "1000000",
-        },
-      },
-    };
-
-    const result = adaptTetherTransparency(payload);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
-  });
-});
 
 // --- Circle adapter tests ---
 

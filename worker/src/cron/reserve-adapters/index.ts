@@ -7,9 +7,7 @@ import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
-import { fetchBuckIoTransparencyReserves } from "./buck-io-transparency";
 import { fetchCapVaultReserves } from "./cap-vault";
-import { fetchCentrifugeVaultReserves } from "./centrifuge-vault";
 import { fetchCircleReserves } from "./circle-transparency";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
@@ -50,7 +48,6 @@ import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
-import { fetchTetherReserves } from "./tether";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
 import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
@@ -70,9 +67,7 @@ const ADAPTER_FNS = {
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
   "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
   btcfi: fetchBtcfiReserves,
-  "buck-io-transparency": fetchBuckIoTransparencyReserves,
   "cap-vault": fetchCapVaultReserves,
-  "centrifuge-vault": fetchCentrifugeVaultReserves,
   "chainlink-nav": fetchChainlinkNavCore,
   "circle-transparency": fetchCircleReserves,
   "chainlink-por": fetchChainlinkPorReserves,
@@ -114,7 +109,6 @@ const ADAPTER_FNS = {
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
-  tether: fetchTetherReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
   "usdh-native-markets": fetchUsdhNativeMarketsReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,

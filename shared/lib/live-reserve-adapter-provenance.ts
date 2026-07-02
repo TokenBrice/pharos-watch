@@ -26,19 +26,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "attestation-pdf-index": { status: "active", rationale: ACTIVE_RATIONALE },
   "blast-usdb-yield-manager": { status: "active", rationale: ACTIVE_RATIONALE },
   btcfi: { status: "active", rationale: ACTIVE_RATIONALE },
-  "buck-io-transparency": {
-    status: "parked",
-    rationale: "BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.",
-    parkedSince: "2026-05-12",
-    nextReview: "2026-11-12",
-  },
   "cap-vault": { status: "active", rationale: ACTIVE_RATIONALE },
-  "centrifuge-vault": {
-    status: "parked",
-    rationale: "Centrifuge vault implementation is retained, but tracked Anemoy/JTRSY coverage now uses Chainlink NAV.",
-    parkedSince: "2026-05-12",
-    nextReview: "2026-11-12",
-  },
   "chainlink-nav": { status: "active", rationale: ACTIVE_RATIONALE },
   "chainlink-por": { status: "active", rationale: ACTIVE_RATIONALE },
   "circle-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
@@ -86,13 +74,6 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "sky-makercore": { status: "active", rationale: ACTIVE_RATIONALE },
   "solstice-attestation": { status: "active", rationale: ACTIVE_RATIONALE },
   "superstate-liquidity": { status: "active", rationale: ACTIVE_RATIONALE },
-  tether: {
-    status: "parked",
-    rationale:
-      "Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset reserve probes.",
-    parkedSince: "2026-05-12",
-    nextReview: "2026-11-12",
-  },
   "usdgo-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdh-native-markets": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdai-proof-of-reserves": { status: "active", rationale: ACTIVE_RATIONALE },

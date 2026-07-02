@@ -176,31 +176,12 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
-  "buck-io-transparency": {
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
   "cap-vault": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
-  },
-  "centrifuge-vault": {
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "chainlink-nav": {
@@ -603,14 +584,6 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     validation: {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
-  },
-  tether: {
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
   },
   "river-protocol-info": {
     sourceModel: "single-bucket",

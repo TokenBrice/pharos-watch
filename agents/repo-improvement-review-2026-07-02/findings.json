@@ -38,16 +38,28 @@
     "recommendation": "Either delete the three adapters and their registry rows (worker files, index.ts entries, and the corresponding LiveReserveAdapterKey union members plus definitions/schemas/provenance/display rows in shared/lib), or record them as intentionally parked the way openeden-usdo was. Removal is behavior-preserving because getReserveAdapter can only be called with keys present in coin configs; the satisfies-checked registry keeps the edit mechanical.",
     "estImpact": "-380 LOC + ~15 registry rows",
     "alsoFiles": [
-     "worker/src/cron/reserve-adapters/tether.ts",
-     "worker/src/cron/reserve-adapters/buck-io-transparency.ts",
-     "worker/src/cron/reserve-adapters/centrifuge-vault.ts",
-     "shared/lib/live-reserve-adapters-definitions.ts",
-     "shared/lib/live-reserve-adapters-schemas.ts",
-     "shared/lib/live-reserve-adapter-provenance.ts",
-     "shared/lib/live-reserve-display.ts"
+      "worker/src/cron/reserve-adapters/tether.ts",
+      "worker/src/cron/reserve-adapters/buck-io-transparency.ts",
+      "worker/src/cron/reserve-adapters/centrifuge-vault.ts",
+      "shared/lib/live-reserve-adapters-definitions.ts",
+      "shared/lib/live-reserve-adapters-schemas.ts",
+      "shared/lib/live-reserve-adapter-provenance.ts",
+      "shared/lib/live-reserve-display.ts"
     ]
-   }
   },
+  "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the unbound `tether`, `buck-io-transparency`, and `centrifuge-vault` reserve adapters, their fixtures/tests, runtime registry rows, shared adapter-key/schema/definition/display/provenance entries, and matching docs references. `openeden-usdo` remains explicitly parked.",
+    "validation": [
+      "npx vitest run worker/src/cron/__tests__/reserve-adapters.test.ts worker/src/cron/reserve-adapters/__tests__/http-html-fixture-coverage.test.ts worker/src/cron/reserve-adapters/__tests__/registry.test.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts shared/lib/__tests__/stablecoins.test.ts",
+      "npm run check:worker-boundary",
+      "npm run check:shared-cycles",
+      "npm run check:doc-counts",
+      "cd worker && npx tsc --noEmit"
+    ]
+  }
+ },
   {
    "id": "w-reserve-adapters:2",
    "domain": "w-reserve-adapters",

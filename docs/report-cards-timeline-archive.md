@@ -601,7 +601,7 @@ Safety Score structure is unchanged, but the collateral-quality live reserve pas
 
 - Live collateral passthrough now requires a fresh authoritative snapshot whose latest `reserve_sync_state.last_status` is `ok`
 - The live reserve adapter registry now separates reserve shape (`sourceModel`) from evidence strength (`evidenceClass`)
-- `single-asset` and `tether` style feeds are now tagged `weak-live-probe`, so they remain visible on reserve detail/status surfaces but no longer override curated collateral scoring
+- `single-asset` and other proof-class feeds are now tagged `weak-live-probe`, so they remain visible on reserve detail/status surfaces but no longer override curated collateral scoring
 - Source-age and material unknown-exposure warnings now degrade reserve sync health and automatically keep those snapshots out of report-card collateral passthrough
 
 Weights and grade thresholds are unchanged from v6.4.

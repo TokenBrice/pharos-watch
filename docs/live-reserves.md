@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 272 active live-enabled stablecoins across 59 registered adapters; 277 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 55 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 272 active live-enabled stablecoins across 56 registered adapters; 277 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 55 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -53,7 +53,7 @@ The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-native-active-pool`, `liquity-v1`, `m0-wrapper-underlying`, `ripple-transparency`, `sgforge-coinvertible`, `sgho-wrapper`, `superstate-liquidity`, `usd1-bundle-oracle`, `yamato`, plus the parked `centrifuge-vault`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-native-active-pool`, `liquity-v1`, `m0-wrapper-underlying`, `ripple-transparency`, `sgforge-coinvertible`, `sgho-wrapper`, `superstate-liquidity`, `usd1-bundle-oracle`, `yamato`), while weak liveness-only or proof-class summary feeds such as `single-asset`, `solstice-attestation`, and `river-protocol-info` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
@@ -400,7 +400,7 @@ Fallback, template-fallback, and unavailable responses use a shorter edge cache 
 ## Adapter Registry
 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
-This table reflects the adapter keys currently configured in `shared/data/stablecoins/coins/*.json`; the runtime registry also retains unconfigured implementations.
+This table reflects the shared adapter registry. `Configured coins` can be `0` for deliberately parked implementations retained for a future binding.
 
 | Adapter                    | Primary input                                    | Semantics                                             | Configured coins |
 | -------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
@@ -438,7 +438,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `m0-wrapper-underlying`    | `onchain-evm`                                    | `single-asset`                                        | 3                |
 | `mento`                    | `http-json`                                      | `collateral-mix`                                      | 13               |
 | `nest-vault-positions`     | `http-json`                                      | `collateral-mix`                                      | 5                |
-| `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 0                |
 | `origin-vault-balances`    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `quantoz-transparency`     | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
@@ -490,14 +490,11 @@ Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts`
 | `retired` | Kept only for historical compatibility while no new binding should use it |
 | `parked`  | Retained intentionally while no active coin currently binds it            |
 
-Current unbound registered adapters are explicit:
+Current unbound registered adapter is explicit:
 
 | Adapter                | Status   | Rationale                                                                                                            | Parked since | Next review |
 | ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------- |
-| `buck-io-transparency` | `parked` | BUCK.fi transparency implementation is retained, but no tracked active coin currently binds it.                      | 2026-05-12   | 2026-11-12  |
-| `centrifuge-vault`     | `parked` | Centrifuge vault implementation is retained, but tracked Anemoy/JTRSY coverage now uses Chainlink NAV.               | 2026-05-12   | 2026-11-12  |
 | `openeden-usdo`        | `parked` | OpenEden USDO adapter is retained, but its live config was suspended because OpenEden's gateway blocks Cloudflare Worker egress; rebind once the issuer allowlists our egress. | 2026-06-25   | 2026-12-25  |
-| `tether`               | `parked` | Tether issuer summary adapter is retained, while current Tether assets use curated-validated or single-asset probes. | 2026-05-12   | 2026-11-12  |
 
 `parked` and `retired` adapters carry `parkedSince` and `nextReview` ISO dates in `shared/lib/live-reserve-adapter-provenance.ts`. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
 

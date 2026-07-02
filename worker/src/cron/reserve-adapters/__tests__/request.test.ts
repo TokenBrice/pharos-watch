@@ -171,15 +171,15 @@ describe("adapter request cache", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const config = {
-      adapter: "tether",
+      adapter: "ethena",
       version: 1,
-      semantics: "attestation-mix",
+      semantics: "collateral-mix",
       inputs: {
         primary: { kind: "http-json", url: "https://issuer.example/reserves" },
       },
     } as LiveReservesConfig;
     const signal = new AbortController().signal;
-    const payload = await fetchJsonAdapterInput<{ reserves: string }>(config, "tether", signal, 1_000);
+    const payload = await fetchJsonAdapterInput<{ reserves: string }>(config, "ethena", signal, 1_000);
 
     expect(payload).toEqual({ reserves: "ok" });
     expect(fetchMock).toHaveBeenCalledTimes(1);

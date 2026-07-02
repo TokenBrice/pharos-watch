@@ -160,9 +160,9 @@ describe("adapter registry completeness", () => {
 
   it("LiveReservesConfigSchema rejects unsupported primary input kinds", () => {
     const parsed = LiveReservesConfigSchema.safeParse({
-      adapter: "tether",
+      adapter: "ethena",
       version: 1,
-      semantics: "single-asset",
+      semantics: "collateral-mix",
       inputs: {
         primary: { kind: "onchain-solana" },
       },
