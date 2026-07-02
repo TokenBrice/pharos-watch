@@ -4562,6 +4562,16 @@
     "description": "HISTORY_FALLBACKS is declared as an empty `Record<string, string>` (line 10) and never populated. `gitLogWithHistoryFallback` (lines 21-27) therefore always returns the primary `git log` output or empty string — the `fallback ? gitLog(...)` branch can never execute. The helper is a leftover from a past doc rename and now just adds indirection around two straightforward git calls.",
     "recommendation": "Inline the primary git call into getLastGitDate/getFirstGitDate and remove HISTORY_FALLBACKS plus gitLogWithHistoryFallback. Generated docs-metadata.json is byte-identical since the removed branch is unreachable. (If a rename fallback is ever needed again, `--follow` is already passed.)",
     "estImpact": "-12 LOC in generator"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the permanently empty docs history fallback table and helper, with getLastGitDate/getFirstGitDate calling the primary git log commands directly.",
+    "validation": [
+     "npx tsx scripts/maintenance/generate-docs-metadata.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-docs-metadata.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

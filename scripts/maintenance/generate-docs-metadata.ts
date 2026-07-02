@@ -7,7 +7,6 @@ import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = join(__dirname, "../../src/generated/docs-metadata.json");
 const CHECK_MODE = process.argv.includes("--check");
-const HISTORY_FALLBACKS: Record<string, string> = {};
 
 interface DocMetadata {
   dateModified: string;
@@ -18,16 +17,15 @@ function gitLog(args: string[]): string {
   return execFileSync("git", args, { encoding: "utf-8" }).trim();
 }
 
-function gitLogWithHistoryFallback(filePath: string, args: string[]): string {
-  const relPath = relative(process.cwd(), filePath);
-  const output = gitLog([...args, "--", relPath]);
-  if (output) return output;
-  const fallback = HISTORY_FALLBACKS[relPath];
-  return fallback ? gitLog([...args, "--", fallback]) : "";
-}
-
 function getLastGitDate(filePath: string): string {
-  const output = gitLogWithHistoryFallback(filePath, ["log", "--follow", "-1", "--format=%aI"]);
+  const output = gitLog([
+    "log",
+    "--follow",
+    "-1",
+    "--format=%aI",
+    "--",
+    relative(process.cwd(), filePath),
+  ]);
   if (!output) {
     throw new Error(`[docs-metadata] no git history for ${filePath}`);
   }
@@ -35,7 +33,14 @@ function getLastGitDate(filePath: string): string {
 }
 
 function getFirstGitDate(filePath: string): string {
-  const output = gitLogWithHistoryFallback(filePath, ["log", "--follow", "--reverse", "--format=%aI"])
+  const output = gitLog([
+    "log",
+    "--follow",
+    "--reverse",
+    "--format=%aI",
+    "--",
+    relative(process.cwd(), filePath),
+  ])
     .split(/\r?\n/)
     .find(Boolean);
   if (!output) {
