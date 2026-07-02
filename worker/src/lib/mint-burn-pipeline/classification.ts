@@ -165,19 +165,6 @@ export async function classifyBridgeBurnRows(
   let bridgeBurns = 0;
   let reviewBurns = 0;
   const deferredTxHashSet = new Set(deferredTxHashes);
-  if (deferredTxHashSet.size > 0) {
-    for (const row of rows) {
-      if (!deferredTxHashSet.has(row.tx_hash)) continue;
-      row.flow_type = "bridge_transfer";
-      if (row.direction === "burn") {
-        row.burn_type = "review_required";
-        row.burn_review_reason = "tx-context-unavailable";
-      } else {
-        row.burn_type = null;
-        row.burn_review_reason = null;
-      }
-    }
-  }
 
   for (const row of burnRows) {
     if (deferredTxHashSet.has(row.tx_hash)) continue;

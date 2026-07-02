@@ -481,7 +481,7 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(getAlchemyTransactionContextBatchMany)).toHaveBeenCalledTimes(4);
   });
 
-  it("reports tx-context shortfalls before classifier defaults can count bridge rows", async () => {
+  it("reports tx-context shortfalls without fabricating classifications for deferred rows", async () => {
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(new Map());
 
     const rows: MintBurnRow[] = [
@@ -527,7 +527,10 @@ describe("mint-burn shared pipeline modules", () => {
     expect(counters.effectiveBurns).toBe(0);
     expect(counters.bridgeBurns).toBe(0);
     expect(counters.reviewBurns).toBe(0);
-    expect(rows.every((row) => row.flow_type === "bridge_transfer")).toBe(true);
+    expect(rows).toMatchObject([
+      { id: "mint-bridge", flow_type: "standard", burn_type: null, burn_review_reason: null },
+      { id: "burn-bridge", flow_type: "standard", burn_type: "bridge_burn", burn_review_reason: null },
+    ]);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 

@@ -2298,6 +2298,18 @@
     "alsoFiles": [
      "worker/src/cron/mint-burn/sync-config.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the dead deferred-row reclassification mutation from classifyBridgeBurnRows while preserving deferred hash reporting and counter exclusion behavior.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/mint-burn-pipeline.test.ts worker/src/cron/__tests__/sync-mint-burn.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/lib/mint-burn-pipeline/classification.ts worker/src/lib/__tests__/mint-burn-pipeline.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Updated the shortfall regression to assert deferred hashes are reported without fabricating bridge_transfer/review classifications on rows that callers do not persist."
    }
   },
   {
