@@ -43,9 +43,9 @@ function ExitRouteMetric({
     <div className={`exit-route-metric rounded-xl border p-3 ${active ? "exit-route-metric--active" : "border-border/60 bg-background/35"}`}>
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
-        <span className="text-[11px] uppercase tracking-wide">{label}</span>
+        <span className="pharos-kicker">{label}</span>
       </div>
-      <p className="mt-1 font-mono text-lg font-bold tabular-nums">{value}</p>
+      <p className="pharos-numeric mt-1 text-lg font-bold">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
   );
@@ -255,7 +255,7 @@ function ExitRouteInstrumentScene({
                 <text className="exit-route-instrument__route-label" x="78" y={geometry.y - 4} fill="var(--route-hero)" fontSize="12" fontWeight="700" aria-hidden="true">
                   {label}
                 </text>
-                <text x="78" y={geometry.y + 10} fill="var(--route-caption)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace" aria-hidden="true">
+                <text x="78" y={geometry.y + 10} fill="var(--route-caption)" fontSize="10" fontFamily="var(--font-geist-mono)" aria-hidden="true">
                   {`${formatCurrency(route.valueUsd, 0)} · ${formatPercent(route.sharePct, 1)}`}
                 </text>
               </InteractiveExitRouteGroup>
@@ -287,7 +287,7 @@ function ExitRouteInstrumentScene({
                 <text className="exit-route-instrument__route-label" x={EXIT_ROUTE_SCENE.laneLabelX} y={geometry.y} fill="var(--route-hero)" fontSize="12" fontWeight="700" aria-hidden="true">
                   {label}
                 </text>
-                <text x={EXIT_ROUTE_SCENE.laneLabelX} y={geometry.y + 13} fill="var(--route-caption)" fontSize="10" fontFamily="ui-monospace, Menlo, monospace" aria-hidden="true">
+                <text x={EXIT_ROUTE_SCENE.laneLabelX} y={geometry.y + 13} fill="var(--route-caption)" fontSize="10" fontFamily="var(--font-geist-mono)" aria-hidden="true">
                   {`${formatCurrency(route.valueUsd, 0)} · ${formatPercent(route.sharePct, 1)}`}
                 </text>
                 <rect x={EXIT_ROUTE_SCENE.laneX} y={geometry.laneBarY} width={geometry.laneWidth} height={geometry.laneHeight} rx="3" fill={route.colorHex} opacity="0.78" />
@@ -332,7 +332,7 @@ function ExitRouteInstrumentScene({
                 aria-hidden="true"
               />
             ))}
-            <text x={EXIT_ROUTE_SCENE.throatX} y="211" textAnchor="middle" fill="var(--route-hero)" fontSize="34" fontWeight="800" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
+            <text x={EXIT_ROUTE_SCENE.throatX} y="211" textAnchor="middle" fill="var(--route-hero)" fontSize="34" fontWeight="800" fontFamily="var(--font-geist-mono)" style={{ fontVariantNumeric: "tabular-nums slashed-zero" }} aria-hidden="true">
               {formatCurrency(model.totalTvlUsd, 0)}
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="9" fontWeight="700" letterSpacing="0.45" textLength="116" lengthAdjust="spacingAndGlyphs" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
@@ -457,28 +457,28 @@ export function LiquidityExitRouteMap({
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <ExitRouteMetric
-              icon={<DoorOpen className="h-4 w-4 text-emerald-700 dark:text-emerald-300" aria-hidden />}
+              icon={<DoorOpen className="h-4 w-4" aria-hidden />}
               label="Open routes"
               value={`${model.protocolCount} / ${model.chainCount}`}
               detail={`${model.poolCount} pools across protocol doors / chain lanes`}
               active={activeMetric === "routes"}
             />
             <ExitRouteMetric
-              icon={<Gauge className="h-4 w-4 text-amber-700 dark:text-amber-300" aria-hidden />}
+              icon={<Gauge className="h-4 w-4" aria-hidden />}
               label="Crowding index"
               value={model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
               detail="HHI concentration; lower means more route diversity"
               active={activeMetric === "crowding"}
             />
             <ExitRouteMetric
-              icon={<Split className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />}
+              icon={<Split className="h-4 w-4" aria-hidden />}
               label="Pool balance"
               value={model.weightedBalancePct == null ? "NR" : `${model.weightedBalancePct}%`}
               detail="TVL-weighted balance across measured pools"
               active={selected.kind === "throat"}
             />
             <ExitRouteMetric
-              icon={<Route className="h-4 w-4 text-violet-700 dark:text-violet-300" aria-hidden />}
+              icon={<Route className="h-4 w-4" aria-hidden />}
               label={<MethodologyLabel topic="liquidityScore">Organic</MethodologyLabel>}
               value={model.organicPct == null ? "NR" : `${model.organicPct}%`}
               detail={`${formatCurrency(model.totalVolume24hUsd, 0)} 24h routed volume`}

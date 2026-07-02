@@ -83,9 +83,12 @@ function LeaderboardHeading({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-      <h2 id="leaderboard-heading" className="text-xl font-semibold">
-        Yield Leaderboard
-      </h2>
+      <div className="space-y-1">
+        <p className="pharos-kicker">Leaderboard</p>
+        <h2 id="leaderboard-heading" className="pharos-section-title">
+          Yield Leaderboard
+        </h2>
+      </div>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -112,7 +115,7 @@ function LeaderboardHeading({
           <button
             type="button"
             onClick={handleCopy}
-            className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
           >
             <span
               className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
@@ -408,7 +411,7 @@ export function YieldMobileCard({
               aria-hidden="true"
               className={`h-4 w-4 rounded border ${
                 isCompared
-                  ? "border-frost-blue bg-frost-blue ring-2 ring-inset ring-background"
+                  ? "border-foreground bg-foreground ring-2 ring-inset ring-background"
                   : "border-border/70 bg-background/60"
               }`}
             />

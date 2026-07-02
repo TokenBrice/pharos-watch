@@ -20,7 +20,7 @@ function AtlasHeroHeader({
     <div className="relative z-10 flex items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 lg:px-6">
       <h2
         id="alt-peg-link-hub"
-        className="text-lg font-semibold tracking-tight text-foreground sm:text-xl lg:text-[1.45rem]"
+        className="pharos-section-title"
       >
         Peg Diversity Atlas
       </h2>
@@ -47,7 +47,7 @@ function AtlasHeroHeader({
 }
 
 const ATLAS_SHELL_STANDALONE =
-  "relative overflow-hidden rounded-[1.45rem] border border-border/70 bg-card/92 text-foreground shadow-[0_22px_60px_oklch(0_0_0_/0.12)] dark:border-white/10 dark:bg-[oklch(0.105_0.012_248)] dark:text-white dark:shadow-[0_26px_70px_oklch(0_0_0_/0.22)]";
+  "pharos-card-shell relative overflow-hidden text-foreground dark:bg-[oklch(0.105_0.012_248)] dark:text-white";
 
 // Embedded inside the `FeatureHeroSplit` right slot: the hero card already
 // supplies the flat `pharos-card-shell` chrome, so the atlas drops its own

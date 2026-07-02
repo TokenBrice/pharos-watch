@@ -107,7 +107,7 @@ function AltPegDistributionCard({
             .
           </p>
         </div>
-        <div className="rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 font-mono text-xs text-muted-foreground">
+        <div className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 text-xs text-muted-foreground">
           {formatCurrency(altMarketCap, 1)} alt-peg market cap
         </div>
       </div>
@@ -137,7 +137,7 @@ function AltPegDistributionCard({
                   >
                     {row.label}
                   </Link>
-                  <span className="rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  <span className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 text-[11px] text-muted-foreground">
                     {row.coinCount} coin{row.coinCount === 1 ? "" : "s"}
                   </span>
                 </div>
@@ -156,12 +156,12 @@ function AltPegDistributionCard({
 
               <div className="space-y-1">
                 <p className="pharos-kicker md:hidden">Market Cap</p>
-                <p className="font-mono text-sm font-semibold text-foreground">{formatCurrency(row.marketCap, 1)}</p>
+                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatCurrency(row.marketCap, 1)}</p>
               </div>
 
               <div className="space-y-1">
                 <p className="pharos-kicker md:hidden">Share</p>
-                <p className="font-mono text-sm font-semibold text-foreground">{formatPercent(row.sharePct)}</p>
+                <p className="pharos-numeric text-sm font-semibold text-foreground">{formatPercent(row.sharePct)}</p>
               </div>
 
               <div className="space-y-1">
@@ -281,7 +281,7 @@ export function AltPegsClient() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none">
       <StaleDataBanner
         queries={[
           {

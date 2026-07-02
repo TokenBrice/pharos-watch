@@ -170,7 +170,7 @@ function ChainDeploymentAnchors({
       <div className="space-y-1.5">
         <h2
           id="chain-deployment-anchors-heading"
-          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+          className="pharos-kicker"
         >
           Tracked Stablecoins On {chainName}
         </h2>
@@ -207,7 +207,7 @@ function ChainResearchSurfaces({ chainName }: { chainName: string }) {
   return (
     <section className="space-y-3" aria-label={`${chainName} stablecoin research surfaces`}>
       <div className="space-y-1.5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="pharos-kicker">
           Stablecoin Research Surfaces
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -229,7 +229,7 @@ function ChainRelatedHubs({ chainId, taxonomyLinks }: { chainId: string; taxonom
       <div className="space-y-1.5">
         <h2
           id={`${chainId}-related-hubs-heading`}
-          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+          className="pharos-kicker"
         >
           Related Stablecoin Hubs
         </h2>

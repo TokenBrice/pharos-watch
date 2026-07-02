@@ -14,6 +14,7 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CHART_PALETTE, CHART_SLATE, CHART_SLATE_STRONG } from "@/lib/chart-colors";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatCompactUsd, formatSignedPercent, getNetColor } from "@shared/lib/format";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
@@ -28,16 +29,11 @@ import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
 import { nextHarborSweepId } from "./nautical-scene-math";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
-/** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
-const DOMINANCE_COLORS = [
-  "oklch(0.62 0.14 250)", // blue
-  "oklch(0.58 0.14 300)", // violet
-  "oklch(0.70 0.13 80)", // amber
-  "oklch(0.62 0.14 160)", // teal
-  "oklch(0.62 0.12 20)", // rose
-];
-const OTHER_CHAINS_COLOR = "oklch(0.55 0.02 260)";
-const UNATTRIBUTED_COLOR = "oklch(0.66 0.03 245)";
+/** Shared series colors for the dominance breakdown bar — CHART_PALETTE minus
+ *  the frost-blue lead slot (idx 0 is reserved for live-data heroes). */
+const DOMINANCE_COLORS = CHART_PALETTE.slice(1);
+const OTHER_CHAINS_COLOR = CHART_SLATE_STRONG;
+const UNATTRIBUTED_COLOR = CHART_SLATE;
 const HARBOR_LIGHT_SWEEP_MS = 7_000;
 
 type ChainSortKey =
@@ -448,7 +444,7 @@ export function ChainsLeaderboardClient() {
                 onHover={() => setSelectedChainId(chain.id)}
                 onActivate={() => router.push(`/chains/${chain.id}/`)}
               >
-                <TableCell className="text-right tabular-nums text-muted-foreground">{rank}</TableCell>
+                <TableCell className="pharos-numeric text-right text-muted-foreground">{rank}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Image
@@ -492,7 +488,7 @@ export function ChainsLeaderboardClient() {
                       size={18}
                     />
                     <span className="text-sm">{chain.dominantStablecoin.symbol}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="pharos-numeric text-xs text-muted-foreground">
                       ({(chain.dominantStablecoin.share * 100).toFixed(0)}%)
                     </span>
                   </div>

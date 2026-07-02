@@ -527,7 +527,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
                 aria-hidden={openDisclosure === null}
                 inert={openDisclosure === null}
                 className={cn(
-                  "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+                  "grid transition-[grid-template-rows,opacity] duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                   openDisclosure ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
                 )}
               >
@@ -559,7 +559,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
               aria-hidden={!showAllLanes}
               inert={!showAllLanes}
               className={cn(
-                "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+                "grid transition-[grid-template-rows] duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                 showAllLanes ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
               )}
             >

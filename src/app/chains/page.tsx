@@ -44,7 +44,7 @@ function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }
       <div className="space-y-1.5">
         <h2
           id="chain-directory-heading"
-          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+          className="pharos-kicker"
         >
           Chain Profile Directory
         </h2>

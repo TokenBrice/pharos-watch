@@ -72,8 +72,8 @@ export function LiquidityClient() {
               aria-pressed={pegFilter === f.value}
               className={
                 pegFilter === f.value
-                  ? "pharos-control-pill pharos-control-pill-active min-h-[44px] md:min-h-0"
-                  : "pharos-control-pill min-h-[44px] md:min-h-0"
+                  ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 md:min-h-9"
+                  : "pharos-focus-ring pharos-control-pill min-h-11 md:min-h-9"
               }
             >
               {f.label}

@@ -443,7 +443,7 @@ export function YieldClient() {
                       key={suggestion.filterKey}
                       type="button"
                       onClick={() => handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")}
-                      className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                      className="pharos-focus-ring pharos-control-pill gap-1.5"
                     >
                       <span>{suggestion.label}</span>
                       <span className="font-mono text-[10px] tabular-nums text-muted-foreground">

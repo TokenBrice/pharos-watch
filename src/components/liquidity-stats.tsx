@@ -118,7 +118,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         <MetricStatCard
           title="Total DEX TVL"
           value={formatCurrency(stats.totalTvl)}
-          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext={
             <>
               Across all tracked stablecoins
@@ -138,7 +138,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         <MetricStatCard
           title="24h DEX Volume"
           value={formatCurrency(stats.totalVol)}
-          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext="Trading volume today"
           subtextClassName="text-sm text-muted-foreground"
         />
@@ -151,7 +151,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               <span className="text-lg text-muted-foreground">/100</span>
             </>
           }
-          valueClassName={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}
+          valueClassName={`pharos-numeric text-2xl font-extrabold tracking-tight ${getScoreColor(stats.avgScore)}`}
           subtext="Mean score of active coins"
           subtextClassName="text-sm text-muted-foreground"
         />
@@ -159,7 +159,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         <MetricStatCard
           title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
-          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}
           subtextClassName="text-sm text-muted-foreground"
         />
@@ -167,7 +167,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           <MetricStatCard
             title="Avg Pool Balance"
             value={`${stats.avgBalance}%`}
-            valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+            valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
             subtext="TVL-weighted average"
             subtextClassName="text-sm text-muted-foreground"
           />
@@ -176,7 +176,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           <MetricStatCard
             title="Organic Liquidity"
             value={`${stats.avgOrganic}%`}
-            valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+            valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
             subtext="Fee-based vs incentivized"
             subtextClassName="text-sm text-muted-foreground"
           />

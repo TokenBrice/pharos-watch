@@ -556,10 +556,10 @@ export function YieldInstrumentBoard({
   return (
     <div
       data-testid="yield-instrument-board"
-      className="overflow-hidden rounded-xl border border-border/60 bg-background/35"
+      className="pharos-table-shell"
     >
       {/* Sort pills + range summary */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-muted/20 px-3 py-2">
+      <div className="pharos-table-toolbar flex-row flex-wrap items-center justify-between">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Sort yield leaderboard">
           {SORT_PILLS.map((pill) => {
             const active = sortKey === pill.key;
@@ -571,7 +571,7 @@ export function YieldInstrumentBoard({
                 aria-pressed={active}
                 aria-label={`${pill.label} sort${active ? `, ${sortDirection}` : ""}`}
                 className={cn(
-                  "pharos-focus-ring rounded-sm border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  "pharos-focus-ring rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors",
                   active
                     ? "border-foreground/20 bg-foreground text-background"
                     : "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground",

@@ -113,7 +113,7 @@ export function MintingPressureGauge({
           className="h-full rounded-full"
           style={{
             background:
-              "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #6b7280 50%, #84cc16 65%, #10b981 100%)",
+              "linear-gradient(90deg, var(--severity-severe-hex) 0%, var(--severity-mild-hex) 35%, var(--muted-foreground) 50%, var(--severity-healthy-hex) 100%)",
           }}
         />
         {knobPct !== null && (

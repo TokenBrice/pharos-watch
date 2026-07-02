@@ -278,7 +278,7 @@ export function FlowBrrrOverview({
               className="h-full rounded-full"
               style={{
                 background:
-                  "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)",
+                  "linear-gradient(90deg, var(--severity-severe-hex) 0%, var(--severity-moderate-hex) 35%, var(--severity-mild-hex) 55%, var(--severity-healthy-hex) 100%)",
               }}
             />
             {snapshot.leverPct !== null && (

@@ -166,7 +166,7 @@ function IdentityRow({ meta, chainName }: { meta: ChainMeta; chainName: string }
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 className="text-3xl font-extrabold leading-none tracking-tight">{chainName}</h2>
+            <h2 className="text-lg font-semibold leading-none tracking-tight">{chainName}</h2>
             <ChainTypeBadge type={meta.type} />
             {meta.evmChainId != null && (
               <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
@@ -202,7 +202,7 @@ function MarketMetrics({ chain }: { chain: ChainSummary | null }) {
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
       <div>
         <p className="pharos-kicker">Total Supply</p>
-        <div className="mt-1 font-mono text-2xl font-bold leading-none tabular-nums">
+        <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-frost-blue">
           {chain ? formatCompactUsd(chain.totalUsd) : <Skeleton className="h-7 w-24" />}
         </div>
       </div>

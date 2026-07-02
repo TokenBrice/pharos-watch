@@ -17,12 +17,12 @@ const RISK_BUDGET_STYLES: Record<
     activeCount: "text-emerald-700 dark:text-emerald-200",
   },
   balanced: {
-    dot: "bg-teal-500",
-    dotBorder: "border-teal-500",
-    ring: "ring-teal-500/25",
-    trackFill: "bg-teal-500",
-    text: "text-teal-700 dark:text-teal-300",
-    activeCount: "text-teal-700 dark:text-teal-200",
+    dot: "bg-green-500",
+    dotBorder: "border-green-500",
+    ring: "ring-green-500/25",
+    trackFill: "bg-green-500",
+    text: "text-green-700 dark:text-green-300",
+    activeCount: "text-green-700 dark:text-green-200",
   },
   opportunistic: {
     dot: "bg-amber-500",

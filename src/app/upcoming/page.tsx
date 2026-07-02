@@ -82,10 +82,7 @@ export default function UpcomingPage() {
         "Track upcoming launches before they enter the live stablecoin universe, then open any coin for the full pre-launch dossier.",
       ]}
     >
-      <CalloutBanner
-        icon={<Bell className="h-4 w-4" />}
-        className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-      >
+      <CalloutBanner icon={<Bell className="h-4 w-4" />}>
         Want a launch alert instead of checking back manually? Send{" "}
         <span className="inline-flex items-center gap-1 align-middle">
           <code className="rounded bg-background/70 px-1.5 py-0.5 text-xs font-mono tabular-nums text-foreground">

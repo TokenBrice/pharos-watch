@@ -1,20 +1,19 @@
 "use client";
 
-import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_BADGE_STYLES, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ChainRouteViewModel } from "./view-model";
 
-const BACKING_BAR_COLORS: Record<string, string> = {
-  "rwa-backed": "bg-sky-500",
-  "crypto-backed": "bg-violet-500",
+/** Solid chart-fill twins of the canonical BACKING_BADGE_STYLES hues
+ *  (blue = RWA, purple = crypto, orange = algorithmic); Tailwind needs
+ *  static strings, so the fills are written out but keyed against the
+ *  canonical map so a classification change breaks this loudly. */
+const BACKING_BAR_COLORS: Record<keyof typeof BACKING_BADGE_STYLES | "other", string> = {
+  "rwa-backed": "bg-blue-500",
+  "crypto-backed": "bg-purple-500",
+  algorithmic: "bg-orange-500",
   other: "bg-zinc-400",
-};
-
-const BACKING_FILTER_COLORS: Record<string, string> = {
-  "rwa-backed": "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30 hover:bg-sky-500/20",
-  "crypto-backed": "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/20",
-  other: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20",
 };
 
 export function BackingBreakdown({
@@ -45,24 +44,23 @@ export function BackingBreakdown({
           {Object.entries(backingTotals).map(([type, amount]) => {
             const pct = totalUsd > 0 ? (amount / totalUsd) * 100 : 0;
             if (pct <= 0) return null;
-            return <div key={type} className={cn("h-full", BACKING_BAR_COLORS[type])} style={{ width: `${pct}%` }} />;
+            return <div key={type} className={cn("h-full", BACKING_BAR_COLORS[type as keyof typeof BACKING_BAR_COLORS])} style={{ width: `${pct}%` }} />;
           })}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button"
             onClick={() => onFilterChange(null)}
             className={cn(
-              "pharos-focus-ring inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              "gap-2 text-xs",
               activeFilter === null
-                ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/15"
-                : "border-border/60 bg-background hover:bg-muted/50",
+                ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active"
+                : "pharos-focus-ring pharos-toggle-pill",
             )}
             title={activeFilter === null ? "Showing all stablecoins" : "Click to show all stablecoins"}
           >
-            <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-sky-500 via-violet-500 to-amber-500" />
+            <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50" />
             <span>All</span>
-            <span className="pharos-numeric text-muted-foreground">{coins.length}</span>
-            {activeFilter === null && <span className="ml-1 text-xs">●</span>}
+            <span className="pharos-numeric opacity-80">{coins.length}</span>
           </button>
           {Object.entries(backingTotals).map(([type, amount]) => {
             const pct = totalUsd > 0 ? (amount / totalUsd) * 100 : 0;
@@ -73,14 +71,16 @@ export function BackingBreakdown({
                 key={type}
                 onClick={() => onFilterChange(isActive ? null : type)}
                 className={cn(
-                  "pharos-focus-ring inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                  isActive ? BACKING_FILTER_COLORS[type] : "border-border/60 bg-background hover:bg-muted/50",
+                  "gap-2 text-xs",
+                  isActive
+                    ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active"
+                    : "pharos-focus-ring pharos-toggle-pill",
                 )}
                 title={isActive ? "Click to clear filter" : `Click to filter by ${BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? type}`}
               >
-                <div className={cn("h-2.5 w-2.5 rounded-full", BACKING_BAR_COLORS[type])} />
+                <div className={cn("h-2.5 w-2.5 rounded-full", BACKING_BAR_COLORS[type as keyof typeof BACKING_BAR_COLORS])} />
                 <span>{BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? (type === "other" ? "Other" : type)}</span>
-                <span className="pharos-numeric text-muted-foreground">{pct.toFixed(1)}%</span>
+                <span className="pharos-numeric opacity-80">{pct.toFixed(1)}%</span>
                 {isActive && <span className="ml-1 text-xs">✕</span>}
               </button>
             );

@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   TableBody,
@@ -87,19 +88,12 @@ export function StablecoinTable({
       </TableHeader>
       <TableBody>
         {coins.map((coin, index) => (
-          <TableRow
+          <InteractiveTableRow
             key={coin.id}
             role="link"
-            aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyOnChain)} on chain`}
-            className="group cursor-pointer transition-colors hover:bg-muted/40"
-            onClick={() => router.push(buildStablecoinUrl(coin.id))}
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                router.push(buildStablecoinUrl(coin.id));
-              }
-            }}
+            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyOnChain)} on chain`}
+            className="group transition-colors hover:bg-muted/40"
+            onActivate={() => router.push(buildStablecoinUrl(coin.id))}
           >
             <TableCell className="tabular-nums text-muted-foreground">{index + 1}</TableCell>
             <TableCell>
@@ -130,7 +124,7 @@ export function StablecoinTable({
             <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
               {formatSignedPercent(coin.change30dPct * 100, 2)}
             </TableCell>
-          </TableRow>
+          </InteractiveTableRow>
         ))}
       </TableBody>
     </TableFrame>

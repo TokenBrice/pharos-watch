@@ -153,7 +153,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
           />
         </section>
 
-        <section id="data" tabIndex={-1} aria-labelledby="table-heading" className="order-3 md:order-2">
+        <section id="data" tabIndex={-1} aria-label="Per-coin flows" className="order-3 md:order-2">
           <FlowTable coins={coins} isLoading={isSummaryLoading} />
         </section>
 

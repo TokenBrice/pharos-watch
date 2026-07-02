@@ -111,7 +111,6 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const toolbar = (
     <TableToolbarFrame
       eyebrow="Per-Coin Flows"
-      titleId="table-heading"
       description="Minting and redemption per coin on each configured issuance chain, ranked by net 24h flow."
     />
   );

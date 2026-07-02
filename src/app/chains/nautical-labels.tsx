@@ -19,7 +19,7 @@ export function CompassPlate({
     <div className="relative rounded-lg border border-border/70 bg-muted/20 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)]">
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
-        <span className="text-[11px] uppercase tracking-wide">{label}</span>
+        <span className="pharos-kicker">{label}</span>
       </div>
       <p className="pharos-numeric mt-1 break-words text-lg font-bold">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
@@ -55,7 +55,7 @@ export function ShipNameLabels({ geometries }: { geometries: Array<{ entry: Chai
           y={geom.hullBottom + 22}
           textAnchor="middle"
           fontSize={9}
-          fontFamily="ui-monospace, Menlo, monospace"
+          fontFamily="var(--font-geist-mono)"
           fill="currentColor"
           opacity={0.62}
         >

@@ -202,7 +202,7 @@ export function AltPegCohortHistoryChart({
   const legendKeys = latestPoint ? pegKeys.filter((key) => (latestPoint[key] ?? 0) > 0) : pegKeys;
 
   return (
-    <Card className="pharos-card-shell animate-in fade-in duration-300">
+    <Card className="pharos-card-shell animate-in fade-in duration-200 motion-reduce:animate-none">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <CardTitle as="h2" className="pharos-section-title">
