@@ -2595,6 +2595,18 @@
     "description": "handleStatusHistory (status-history.ts:16-23), which fabricates a synthetic Request when none is passed, has zero production callers — routing uses handleStatusHistoryRoute directly (routes/ops-routes.ts:17); only its own unit test imports it. Same pattern lingers nearby: handlePublicStatusHistory keeps a `_trustedAdmin?: boolean` param plus a hard-coded fallback URL (public-status-history.ts:60-62) while its only caller passes `(db, undefined, request)` (routes/public-routes.ts:64), and handleBlacklistSummary declares `_execCtx?: ExecutionContext` (blacklist-summary.ts:674) that it never uses though the route hands it over. These leftovers imply call shapes that no longer exist and invite drift.",
     "recommendation": "Delete the handleStatusHistory wrapper (point its test at handleStatusHistoryRoute), drop the _trustedAdmin param and synthetic-Request fallback from handlePublicStatusHistory (making request required, updating the public-routes call to two args), and drop _execCtx from handleBlacklistSummary plus its route binding. All are internal signatures; wire responses are untouched.",
     "estImpact": "-~20 LOC; removes 3 misleading call shapes"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the dead handleStatusHistory wrapper, made public status history require its routed Request, and dropped the unused blacklist-summary ExecutionContext parameter and route binding.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/status-history.test.ts worker/src/api/__tests__/public-status-history.test.ts worker/src/api/__tests__/blacklist-summary.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/status-history.ts worker/src/api/__tests__/status-history.test.ts worker/src/api/public-status-history.ts worker/src/api/__tests__/public-status-history.test.ts worker/src/api/blacklist-summary.ts worker/src/api/__tests__/blacklist-summary.test.ts worker/src/routes/public-routes.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Status-history tests now call handleStatusHistoryRoute directly with explicit route context; public route bindings now match the simplified handler signatures."
    }
   },
   {

@@ -4,12 +4,13 @@ import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/a
 
 stubCryptoForAuth();
 
-const { handleStatusHistory } = await import("../status-history");
+const { handleStatusHistoryRoute } = await import("../status-history");
 
-describe("handleStatusHistory", () => {
+describe("handleStatusHistoryRoute", () => {
   it("returns 401 when request is unauthorized", async () => {
     const db = mockD1([]);
-    const res = await handleStatusHistory(db, undefined, undefined);
+    const request = makeApiRequest("/api/status-history");
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: false, request });
     expect(res.status).toBe(401);
   });
 
@@ -67,7 +68,7 @@ describe("handleStatusHistory", () => {
     ]);
 
     const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
-    const res = await handleStatusHistory(db, true, request);
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       state: { currentStatus: string } | null;
@@ -126,7 +127,7 @@ describe("handleStatusHistory", () => {
     }) as typeof db.prepare;
 
     const request = makeApiRequest("/api/status-history?from=2025-01-01T00:00:00Z&to=1735776000", { adminKey: "secret-key" });
-    const res = await handleStatusHistory(db, true, request);
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const transitionsSql = seenSql.find((sql) => sql.includes("FROM status_transitions")) ?? "";

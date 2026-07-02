@@ -57,9 +57,9 @@ function filterPublicStatusTransitions(transitions: StatusTransition[]): StatusT
 
 export const handlePublicStatusHistory = withErrorHandler(
   "public-status-history",
-  async (db: D1Database, _trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+  async (db: D1Database, request: Request): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
-    const url = new URL(request?.url ?? "https://pharos.watch/api/public-status-history");
+    const url = new URL(request.url);
     const parsed = parseQueryParams(url.searchParams, {
       limit: { type: "int", default: 50, min: 1, max: MAX_LIMIT, rangePolicy: "reject" },
     });

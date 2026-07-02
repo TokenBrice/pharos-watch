@@ -654,7 +654,7 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
 
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
-  async (db: D1Database, _execCtx?: ExecutionContext): Promise<Response> => {
+  async (db: D1Database): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
     const snapshot = await readBlacklistSummarySnapshot(db);
     if (snapshot) {

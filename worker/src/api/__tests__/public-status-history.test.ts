@@ -162,7 +162,7 @@ describe("handlePublicStatusHistory", () => {
     ]);
 
     const request = new Request("https://pharos.watch/api/public-status-history?window=24h&limit=20");
-    const res = await handlePublicStatusHistory(db, undefined, request);
+    const res = await handlePublicStatusHistory(db, request);
 
     expect(res.status).toBe(200);
     expect(db.getHistory()).toContainEqual(expect.objectContaining({
@@ -174,7 +174,7 @@ describe("handlePublicStatusHistory", () => {
   it("rejects unknown windows", async () => {
     const db = mockD1([]);
     const request = new Request("https://pharos.watch/api/public-status-history?window=90d");
-    const res = await handlePublicStatusHistory(db, undefined, request);
+    const res = await handlePublicStatusHistory(db, request);
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid window parameter" });
@@ -183,7 +183,7 @@ describe("handlePublicStatusHistory", () => {
   it("rejects oversized limits instead of silently clamping them", async () => {
     const db = mockD1([]);
     const request = new Request("https://pharos.watch/api/public-status-history?limit=999");
-    const res = await handlePublicStatusHistory(db, undefined, request);
+    const res = await handlePublicStatusHistory(db, request);
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 200" });
@@ -224,7 +224,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as {
         currentStatus: string;
         transitions: unknown[];
@@ -256,7 +256,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("stale"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as {
         currentStatus: string;
         transitions: Array<{ to: string }>;
@@ -297,7 +297,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("degraded"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as {
         currentStatus: string;
         transitions: unknown[];
@@ -340,7 +340,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as { transitions: unknown[]; currentStatus: string };
       expect(body.transitions).toHaveLength(0);
       expect(body.currentStatus).toBe("healthy");
@@ -362,7 +362,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as {
         currentStatus: string;
         lastChangedAt: number | null;
@@ -428,7 +428,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as {
         transitions: Array<{ id: number; from: string | null; to: string }>;
         currentStatus: string;
@@ -483,7 +483,7 @@ describe("handlePublicStatusHistory", () => {
       assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
 
       const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
-      const res = await handlePublicStatusHistory(db, undefined, request);
+      const res = await handlePublicStatusHistory(db, request);
       const body = (await res.json()) as { transitions: unknown[]; currentStatus: string };
 
       expect(body.currentStatus).toBe("healthy");

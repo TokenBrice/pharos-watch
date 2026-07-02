@@ -79,12 +79,6 @@ describe("handleBlacklistSummary", () => {
       totalEvents: 9,
       methodology: { asOf: staleAt },
     };
-    const waitUntilPromises: Promise<unknown>[] = [];
-    const execCtx = {
-      waitUntil: (promise: Promise<unknown>) => {
-        waitUntilPromises.push(promise);
-      },
-    } as unknown as ExecutionContext;
     const db = mockD1([
       {
         match: "blacklist-summary-snapshot-read",
@@ -101,11 +95,10 @@ describe("handleBlacklistSummary", () => {
       },
     ]) as MockD1Database;
 
-    const res = await handleBlacklistSummary(db, execCtx);
+    const res = await handleBlacklistSummary(db);
     const body = await res.json() as typeof payload;
 
     expect(body).toEqual(payload);
-    expect(waitUntilPromises).toHaveLength(0);
     expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-summary-snapshot-read"))).toHaveLength(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);

@@ -13,15 +13,6 @@ import { emptyReserveComposition } from "../lib/status/derived-data";
 import { deriveReserveCompositionStatus } from "../lib/status/evaluation-state";
 import { logWorkerEvent } from "../lib/structured-log";
 
-export function handleStatusHistory(
-  db: D1Database,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
-  const routeRequest = request ?? new Request("https://ops-api.pharos.watch/api/status-history");
-  return handleStatusHistoryRoute({ db, trustedAdmin: trustedAdmin === true, request: routeRequest });
-}
-
 export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
   "status-history",
   async ({ db, request }) => {

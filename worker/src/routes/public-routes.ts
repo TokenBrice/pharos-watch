@@ -33,7 +33,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("stablecoins", ({ db }) => handleStablecoins(db)),
   defineStaticRoute("stablecoin-charts", ({ db }) => handleStablecoinCharts(db)),
   defineStaticRoute("blacklist", ({ db, url }) => handleBlacklist(db, url)),
-  defineStaticRoute("blacklist-summary", ({ db, execCtx }) => handleBlacklistSummary(db, execCtx)),
+  defineStaticRoute("blacklist-summary", ({ db }) => handleBlacklistSummary(db)),
   defineStaticRoute("depeg-events", ({ db, url }) => handleDepegEvents(db, url)),
   defineStaticRoute("events", ({ db, url }) => handleEvents(db, url)),
   defineStaticRoute("peg-summary", ({ db }) => handlePegSummary(db)),
@@ -61,6 +61,6 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
   defineStaticRoute("chains", ({ db }) => handleChains(db)),
   defineStaticRoute("non-usd-share", ({ db, url }) => handleNonUsdShare(db, url)),
-  defineStaticRoute("public-status-history", ({ db, request }) => handlePublicStatusHistory(db, undefined, request)),
+  defineStaticRoute("public-status-history", ({ db, request }) => handlePublicStatusHistory(db, request)),
   defineStaticRoute("telegram-pulse", ({ db }) => handleTelegramPulse(db)),
 ] as const satisfies readonly StaticRouteDefinition[];
