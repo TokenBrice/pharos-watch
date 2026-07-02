@@ -50,22 +50,6 @@ export interface CgPool {
   relationships: CgPoolRelationships;
 }
 
-export interface CgTokenAttributes {
-  address: string;
-  name: string;
-  symbol: string;
-  coingecko_coin_id: string | null;
-  price_usd: string | null;
-  total_reserve_in_usd: string | null;
-  volume_usd: { h24: string | null } | null;
-}
-
-export interface CgToken {
-  id: string;
-  type: string;
-  attributes: CgTokenAttributes;
-}
-
 export interface CgFetchOptions {
   maxRetries?: number;
   timeoutMs?: number;
@@ -165,29 +149,6 @@ export async function fetchCgTokenPoolsWithStatus(
       return json.data as CgPool[];
     },
   }).then((pools) => ({ ok, pools }));
-}
-
-/**
- * Fetch multiple tokens by addresses (batch).
- * GET /onchain/networks/{network}/tokens/multi/{addresses}
- * Addresses comma-separated, max 30 per request.
- */
-export async function fetchCgTokensBatch(
-  network: string,
-  addresses: string[],
-  signal?: AbortSignal,
-  apiKey: string | null = null,
-): Promise<CgToken[]> {
-  if (addresses.length === 0) return [];
-  const joined = addresses.join(",");
-  const url = cgUrl(`/onchain/networks/${network}/tokens/multi/${joined}`, apiKey);
-  const res = await fetchWithRetry(url, {
-    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
-    signal,
-  }, 1);
-  if (!res?.ok) return [];
-  const json = await readCgOnchainJsonBody<{ data?: unknown }>(res, CG_ONCHAIN_DEFAULT_TIMEOUT_MS, signal);
-  return Array.isArray(json.data) ? (json.data as CgToken[]) : [];
 }
 
 /**

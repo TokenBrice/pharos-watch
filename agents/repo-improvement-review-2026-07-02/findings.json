@@ -1808,6 +1808,17 @@
     "description": "fetchCgTokensBatch (the /onchain/networks/{network}/tokens/multi/ batch fetch, ~18 LOC) is referenced only by tests. The live tokens/multi pricing lane is implemented independently in worker/src/lib/address-price-providers/coingecko-onchain.ts:41, which does its own batching, diagnostics, and circuit integration (the 'coingecko-onchain-address' source). The remaining exports of lib/coingecko-onchain.ts (fetchCgTokenPoolsWithStatus, parseCgPoolVolume, CgPool types) are alive via dex-liquidity/dex-discovery crons, so only this one function is orphaned.",
     "recommendation": "Delete fetchCgTokensBatch and its CgToken-only supporting exports if they become unused after removal (CgToken is currently referenced only by this function and tests). Behavior-preserving: no production code path invokes it.",
     "estImpact": "-20 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the dead `fetchCgTokensBatch` onchain token batch helper and its token-only types, and cleared stale direct tests/mocks for the deleted export.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/coingecko-onchain.test.ts worker/src/cron/__tests__/dex-liquidity-fetch-primary.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"\\b(fetchCgTokensBatch|CgToken)\\b\" worker/src shared src functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "The live exact-address token pricing lane remains in `worker/src/lib/address-price-providers/coingecko-onchain.ts`; no production importer used this helper."
    }
   },
   {

@@ -14,7 +14,6 @@ import { fetchWithRetry } from "../fetch-retry";
 import {
   fetchCgTokenPools,
   fetchCgTokenPoolsWithStatus,
-  fetchCgTokensBatch,
   isOnchainAvailable,
   onchainRateLimit,
   parseCgPoolVolume,
@@ -97,24 +96,6 @@ describe("coingecko-onchain", () => {
         passthroughStatuses: [400, 404],
       }),
     );
-  });
-
-  it("fetches token batches, short-circuits empty input, and handles failures", async () => {
-    expect(await fetchCgTokensBatch("base", [])).toEqual([]);
-    expect(fetchWithRetry).not.toHaveBeenCalled();
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [{ id: "token-1" }] }), { status: 200 }),
-    );
-    expect(await fetchCgTokensBatch("base", ["0xa", "0xb"])).toEqual([{ id: "token-1" }]);
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      expect.stringContaining("/onchain/networks/base/tokens/multi/0xa,0xb"),
-      expect.any(Object),
-      1,
-    );
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
-    expect(await fetchCgTokensBatch("base", ["0xc"])).toEqual([]);
   });
 
   it("parses pool volume from flat, nested, and invalid payloads", () => {

@@ -13,7 +13,6 @@ vi.mock("../../lib/db-cache", () => ({ setCache: vi.fn(async () => {}) }));
 vi.mock("../yield-sync/cache", () => ({ buildDlStablecoinPoolsCache: vi.fn(() => "{}") }));
 vi.mock("../yield-sync/pool-filter", () => ({ isYieldRelevantDlPool: vi.fn(() => false) }));
 vi.mock("../../lib/coingecko-onchain", () => ({
-  fetchCgTokensBatch: vi.fn(),
   onchainRateLimit: vi.fn(async () => {}),
   CG_CHAIN_MAP: {},
 }));
