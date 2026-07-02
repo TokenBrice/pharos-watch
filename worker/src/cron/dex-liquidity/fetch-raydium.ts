@@ -146,26 +146,20 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   let ok = false;
   let degraded = false;
 
-  if (concentrated.status === "fulfilled") {
-    results.push(...concentrated.value.pools);
-    ok = ok || concentrated.value.ok;
-    degraded = degraded || concentrated.value.degraded;
-    errors.push(...concentrated.value.errors);
-  } else {
-    const message = concentrated.reason instanceof Error ? concentrated.reason.message : String(concentrated.reason);
-    errors.push(`concentrated request failed: ${message}`);
-    degraded = true;
-  }
-
-  if (standard.status === "fulfilled") {
-    results.push(...standard.value.pools);
-    ok = ok || standard.value.ok;
-    degraded = degraded || standard.value.degraded;
-    errors.push(...standard.value.errors);
-  } else {
-    const message = standard.reason instanceof Error ? standard.reason.message : String(standard.reason);
-    errors.push(`standard request failed: ${message}`);
-    degraded = true;
+  for (const [label, settled] of [
+    ["concentrated", concentrated],
+    ["standard", standard],
+  ] as const) {
+    if (settled.status === "fulfilled") {
+      results.push(...settled.value.pools);
+      ok = ok || settled.value.ok;
+      degraded = degraded || settled.value.degraded;
+      errors.push(...settled.value.errors);
+    } else {
+      const message = settled.reason instanceof Error ? settled.reason.message : String(settled.reason);
+      errors.push(`${label} request failed: ${message}`);
+      degraded = true;
+    }
   }
 
   if (results.length > 0) {

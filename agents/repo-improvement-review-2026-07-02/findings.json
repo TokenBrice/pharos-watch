@@ -1087,6 +1087,15 @@
     "description": "Lines 149-169 contain two copy-pasted blocks handling the fulfilled/rejected cases for the 'concentrated' and 'standard' Promise.allSettled entries — same pushes, same ok/degraded folding, same error formatting, with only the label differing.",
     "recommendation": "Iterate `[[\"concentrated\", concentrated], [\"standard\", standard]]` and apply one handler. Identical outputs; pure dedup.",
     "estImpact": "-15 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced duplicate Raydium concentrated/standard Promise.allSettled handling with one labeled settled-result loop that preserves result/error ordering and existing failure messages.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dex-liquidity-direct-api.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {
