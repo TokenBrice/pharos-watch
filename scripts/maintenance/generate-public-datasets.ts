@@ -29,7 +29,7 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "../../shared/lib/api-endpoints/datasets";
 import type { DepegEvent } from "../../shared/types/market";

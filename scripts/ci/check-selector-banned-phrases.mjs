@@ -23,7 +23,7 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const __filename = fileURLToPath(import.meta.url);

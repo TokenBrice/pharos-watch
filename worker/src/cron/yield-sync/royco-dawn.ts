@@ -5,6 +5,7 @@ import type { YieldMarketStatus, YieldSourceRisk, YieldTrancheSide } from "@shar
 import { throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { YIELD_VARIANT_MAP } from "../yield-config-variants";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
@@ -313,7 +314,16 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (!budget.budgetController.signal.aborted) {
-      console.warn("[yield] Royco Dawn sources failed:", error);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "royco_dawn_sources_failed",
+        job: "sync-yield-supplemental",
+        provider: "royco-dawn",
+        source: "yield-supplemental",
+        message: "Royco Dawn supplemental yield sources failed",
+        error,
+      });
     }
     return results;
   } finally {

@@ -183,10 +183,6 @@ function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 describe("runPruneCronHistory", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
     const { db } = createStubDb();
@@ -302,8 +298,7 @@ describe("runPruneCronHistory", () => {
 
     const deleteSqls = preparedSqls.filter((sql) => /\bDELETE\s+FROM\b/i.test(sql));
     for (const { table } of ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE) {
-      const tablePattern = new RegExp(`\\b${escapeRegExp(table)}\\b`, "i");
-      expect(deleteSqls.some((sql) => tablePattern.test(sql))).toBe(false);
+      expect(deleteSqls.some((sql) => sql.toLowerCase().includes(`delete from ${table.toLowerCase()}`))).toBe(false);
     }
   });
 

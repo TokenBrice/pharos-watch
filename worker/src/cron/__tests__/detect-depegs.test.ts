@@ -49,6 +49,10 @@ vi.mock("@shared/lib/supply", () => ({
 import { detectDepegEvents } from "../detect-depegs";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 
+function isCloseEventUpdate(sql: string): boolean {
+  return sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ? WHERE id = ?");
+}
+
 // Helper to build a minimal asset
 function makeAsset(overrides: {
   id: string;
@@ -574,10 +578,8 @@ describe("detectDepegEvents", () => {
       }),
     ]);
 
-    const closeCall = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ? WHERE id = ?"),
-    );
-    expect(closeCall?.binds).toEqual([now, "coverage-lost-supply", 1]);
+    const closeCall = db.getHistory().find((entry) => isCloseEventUpdate(entry.sql));
+    expect(closeCall?.binds).toEqual([now, null, "coverage-lost-supply", 1]);
     const inserts = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT INTO depeg_events") || entry.sql.includes("INSERT INTO depeg_pending"),
     );
@@ -743,7 +745,7 @@ describe("detectDepegEvents", () => {
       { peggedREAL: 0.18765951 },
     );
 
-    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?"))).toBe(true);
+    expect(preparedSqls.some(isCloseEventUpdate)).toBe(true);
   });
 
   it("skips NAV tokens", async () => {
@@ -1319,9 +1321,7 @@ describe("detectDepegEvents", () => {
       }),
     ]);
 
-    const orphanClosures = preparedSqls.filter((sql) =>
-      sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
-    );
+    const orphanClosures = preparedSqls.filter(isCloseEventUpdate);
     expect(orphanClosures).toHaveLength(0);
   });
 
@@ -1349,9 +1349,7 @@ describe("detectDepegEvents", () => {
       }),
     ]);
 
-    const orphanClosures = db.getHistory().filter((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
-    );
+    const orphanClosures = db.getHistory().filter((entry) => isCloseEventUpdate(entry.sql));
     expect(orphanClosures).toHaveLength(0);
   });
 
@@ -1379,9 +1377,7 @@ describe("detectDepegEvents", () => {
       }),
     ]);
 
-    const orphanClosure = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL, close_reason = ?")
-    );
-    expect(orphanClosure?.binds).toEqual([now, "orphan-tracking-removed", 99]);
+    const orphanClosure = db.getHistory().find((entry) => isCloseEventUpdate(entry.sql));
+    expect(orphanClosure?.binds).toEqual([now, null, "orphan-tracking-removed", 99]);
   });
 });

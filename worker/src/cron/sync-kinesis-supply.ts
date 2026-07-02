@@ -151,7 +151,6 @@ export async function syncKinesisSupply(
     chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
   }
 
-  const total = synced + failed + skipped;
   return {
     itemCount: synced,
     status: failed === 0

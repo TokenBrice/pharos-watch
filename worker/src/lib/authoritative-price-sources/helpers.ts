@@ -22,8 +22,8 @@ export const PROTOCOL_REDEEM_SOURCE = "protocol-redeem";
 
 export const USDC_CIRCLE_ID = "usdc-circle";
 
-export const ERC4626_NAV_MIN_RATIO = 0.5;
-export const ERC4626_NAV_MAX_RATIO = 10;
+const ERC4626_NAV_MIN_RATIO = 0.5;
+const ERC4626_NAV_MAX_RATIO = 10;
 
 export interface Erc4626NavVaultConfig {
   id: string;

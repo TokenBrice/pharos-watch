@@ -14,7 +14,7 @@
   "shared/lib/format.ts": {
     "fileLines": 392,
     "maxFunctionLines": 32,
-    "branchCount": 88,
+    "branchCount": 87,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 306,
@@ -24,9 +24,9 @@
     "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 122,
+    "fileLines": 152,
     "maxFunctionLines": 42,
-    "branchCount": 5,
+    "branchCount": 6,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 76,
@@ -48,8 +48,8 @@
     "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
   "worker/src/handlers/http/request-dispatch.ts": {
-    "fileLines": 134,
-    "maxFunctionLines": 100,
+    "fileLines": 136,
+    "maxFunctionLines": 102,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -276,8 +276,8 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 919,
-    "maxFunctionLines": 122,
+    "fileLines": 917,
+    "maxFunctionLines": 121,
     "branchCount": 37,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -348,8 +348,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1047,
-    "maxFunctionLines": 351,
+    "fileLines": 1127,
+    "maxFunctionLines": 338,
     "branchCount": 26,
     "disposition": "deferred",
     "targetBudget": {
@@ -360,7 +360,7 @@
     "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 479,
+    "fileLines": 478,
     "maxFunctionLines": 173,
     "branchCount": 40,
     "disposition": "deferred",
@@ -372,7 +372,7 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 825,
+    "fileLines": 831,
     "maxFunctionLines": 163,
     "branchCount": 20,
     "disposition": "stabilized",

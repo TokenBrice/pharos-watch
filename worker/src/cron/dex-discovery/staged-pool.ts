@@ -49,7 +49,7 @@ function hasKnownPoolId(knownPoolIds: Set<string>, stablecoinId: string, poolId:
   return knownPoolIds.has(knownPoolIdKey(stablecoinId, poolId));
 }
 
-export function rememberKnownPoolId(knownPoolIds: Set<string>, stablecoinId: string, poolId: string): void {
+function rememberKnownPoolId(knownPoolIds: Set<string>, stablecoinId: string, poolId: string): void {
   knownPoolIds.add(knownPoolIdKey(stablecoinId, poolId));
 }
 

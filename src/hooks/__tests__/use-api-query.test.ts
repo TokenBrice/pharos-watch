@@ -242,6 +242,7 @@ describe("use-api-query", () => {
             { signal: fetchInitController.signal },
           );
           const promise = fn({ signal: contextController.signal });
+          await Promise.resolve();
 
           expect(capturedSignal).toBeDefined();
           const signal = capturedSignal!;

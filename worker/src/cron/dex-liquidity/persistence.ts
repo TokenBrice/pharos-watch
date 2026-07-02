@@ -5,6 +5,7 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 
@@ -662,7 +663,15 @@ export async function writeHistoricalSnapshots(
     } catch (err) {
       rethrowIfAborted(err, signal);
       retentionPruneFailed = true;
-      console.warn("[dex-liquidity] Daily snapshot retention prune failed:", err);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "dex_liquidity_history_retention_prune_failed",
+        job: "sync-dex-liquidity",
+        source: "dex-liquidity-history",
+        message: "Daily DEX liquidity snapshot retention prune failed",
+        error: err,
+      });
     }
   };
 

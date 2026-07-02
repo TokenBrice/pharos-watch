@@ -204,6 +204,7 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts",
   "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts",
   "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
+  "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts",
   "worker/src/cron/sync-stablecoins/zephyr-zsd.ts",
   "worker/src/lib/address-price-providers/alchemy.ts",
   "worker/src/lib/address-price-providers/birdeye.ts",

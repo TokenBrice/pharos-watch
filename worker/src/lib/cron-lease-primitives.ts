@@ -270,7 +270,7 @@ export async function runCronWithLease<T>(
 
   const timer = setInterval(() => {
     leaseRenewAttempts++;
-    void runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2)
+    void runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2, opts?.abortSignal)
       .then(async (renewal) => {
         if (!renewal.renewed) {
           markOwnershipLost();

@@ -14,7 +14,6 @@
 import type { DepegEvent } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getArgValue, isDirectRun } from "../lib/smoke-runtime.mjs";

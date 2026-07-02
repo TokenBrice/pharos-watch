@@ -143,7 +143,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - QueryControlOverrides, createRegisteredApiPollingQueryOptions, createRegisteredApiPollingQueryOptionsWithMeta, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings
+- `src/hooks/api-hooks.ts` - QueryControlOverrides, createRegisteredApiPollingQueryOptions, createRegisteredApiPollingQueryOptionsWithMeta, dexLiquidityHistoryQueryOptions, useBluechipRatings, useDailyDigest
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
 - `src/hooks/use-api-key-request-form-state.ts` - useApiKeyRequestFormState
 - `src/hooks/use-api-key-requests.ts` - useApiKeyRequests
@@ -232,6 +232,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/chart-export.ts` - downloadChartPng
 - `src/lib/chart-time-range.ts` - formatRangeTickDate
 - `src/lib/chart-utils.ts` - buildAdaptiveMonthlyTicks, computeChartYDomain, mergeSeriesByTimestamp
+- `src/lib/chromeless-routes.test.ts`
+- `src/lib/chromeless-routes.ts` - isChromelessPath
 - `src/lib/client-feature-page.tsx` - createClientFeaturePage
 - `src/lib/client-variant-registry.ts` - getClientVariantParent, getClientVariantRelationship, getClientVariants
 - `src/lib/coin-id-by-symbol.ts` - coinIdBySymbol
@@ -245,9 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-derive.ts` - ComparisonCoinEntry, ComparisonMeta, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins
 - `src/lib/compare-links.ts` - STATIC_COMPARE_PAIRS, StaticComparisonLink, buildLiveCompareUrl, buildStaticComparisonSlug, getPrimaryStaticComparisonLinkForCoin
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
-- `src/lib/compare-selection-insights.ts` - CompareSelectionInsights, buildCompareSelectionInsights
-- `src/lib/compare-share-image.ts` - ShareCoinData, ShareRadarData, canvasToBlob, loadImage, renderCompareShareImage
-- ... 142 more files omitted; use `rg --files src/lib` for the full list.
+- ... 145 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,11 +291,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 380 more files omitted; use `rg --files src/components` for the full list.
+- ... 377 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
-- `functions/_middleware.ts` - buildContentSecurityPolicy, onRequest, prefersMarkdown
+- `functions/_middleware.ts` - onRequest, prefersMarkdown
 - `functions/_site-data/[[path]].ts` - onRequest
 - `functions/admin-api/[[path]].ts` - serveOpsAssetWithHostGate
 - `functions/admin/[[path]].ts` - serveOpsAssetWithHostGate
@@ -304,7 +304,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/lib/noindex.ts` - NOINDEX_HEADER_VALUE, noindexTextNotFoundResponse, withNoindex
 - `functions/lib/ops-asset-host-gate.ts` - OpsAssetHostGateEnv, serveOpsAssetWithHostGate
 - `functions/lib/ops-env.ts` - DEFAULT_OPS_API_ORIGIN, OpsAdminProxyEnv, OpsProxyEnvIssue, PAGES_FUNCTIONS_ACTIVE_ENV_KEYS, PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS, PAGES_FUNCTIONS_REQUIRED_ENV_KEYS
-- `functions/lib/ops-origin.ts` - DEFAULT_OPS_UI_ORIGIN, hasMatchingOpsUiOriginHeader, normalizeOrigin, rejectIfNotOpsUiOrigin, resolveOpsUiOrigin
+- `functions/lib/ops-origin.ts` - hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin, resolveOpsUiOrigin
 - `functions/lib/pages-proxy-harness.ts` - PagesProxyContext, PagesProxyFetchErrorKind, PagesProxyHarness, PagesProxyUpstreamRequest, runPagesProxy
 - `functions/lib/proxy-paths.ts` - OPS_ADMIN_PROXY_PREFIX, SITE_DATA_PROXY_PREFIX, resolveOpsAdminUpstreamPath, resolveSiteDataRequestedPath
 - `functions/lib/proxy-utils.ts` - buildProxyResponse, buildUpstreamHeaders, isHtmlResponse, jsonError, summarizeFetchError
@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 257 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -443,7 +443,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/http/gates.ts` - checkCachedPublicApiReadFastRateLimit, evaluateAccessGate, evaluateCachedPublicApiReadFastGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce
 - `worker/src/handlers/http/request-dispatch.ts` - handleHttpRequestImpl
 - `worker/src/handlers/http/request-source.ts` - createRequestSourceRecorder, isApiKeyRequestAttributionDisabled, isRequestSourceAttributionDisabled
-- `worker/src/handlers/scheduled.ts` - SLOT_RUNNER_BY_KEY, SLOT_RUNNER_BY_SCHEDULE, SLOT_RUNNER_LOADER_BY_KEY, handleScheduledEvent
+- `worker/src/handlers/scheduled.ts` - SLOT_RUNNER_BY_KEY, SLOT_RUNNER_LOADER_BY_KEY, handleScheduledEvent
 - `worker/src/handlers/scheduled/context.ts` - ScheduledRuntimeContext, ScheduledRuntimeInit, createScheduledRuntimeContext, parseStablecoinsCapabilities
 - `worker/src/handlers/scheduled/daily-0300.ts` - runDaily0300Slot
 - `worker/src/handlers/scheduled/daily-0800.ts` - runDaily0800Slot
@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, knownPoolIdKey
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
 - `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- ... 342 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 343 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -656,7 +656,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/authoritative-price-sources.ts`
 - `worker/src/lib/authoritative-price-sources/cap-cusd.ts` - capCusdProvider
 - `worker/src/lib/authoritative-price-sources/erc4626-nav.ts` - erc4626NavProvider
-- `worker/src/lib/authoritative-price-sources/helpers.ts` - CurrentPriceOverride, ERC4626_NAV_MAX_RATIO, ERC4626_NAV_MIN_RATIO, ETHEREUM_CHAIN, Erc4626NavVaultConfig, HistoricalBlockPriceResolver
+- `worker/src/lib/authoritative-price-sources/helpers.ts` - CurrentPriceOverride, ETHEREUM_CHAIN, Erc4626NavVaultConfig, HistoricalBlockPriceResolver, HistoricalPriceContext, HistoricalPricePoint
 - `worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts` - idleCdoTrancheProvider
 - `worker/src/lib/authoritative-price-sources/index.ts` - AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS, AuthoritativeLivePriceCandidate, AuthoritativeLivePriceOverrideOptions, AuthoritativeLivePriceOverrideStats, createAuthoritativeLivePriceOverrideStats, fetchAuthoritativeHistoricalPriceSeries
 - `worker/src/lib/authoritative-price-sources/infinifi-iusd.ts` - iusdInfinifiProvider
@@ -672,7 +672,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
 - `worker/src/lib/blacklist-contracts.ts` - BlacklistEventDef, BlacklistEventFamily, CONTRACT_CONFIGS, ContractEventConfig, PYUSD_EVENT_FAMILY, chainConfig
 - `worker/src/lib/blacklist-coverage-manifest.ts` - BlacklistCoverageManifestEntry, BlacklistCoverageManifestStatus, BlacklistDeferredCoverageEntry, buildBlacklistCoverageManifest, getDeferredBlacklistCoverage, getSupportedBlacklistChainIds
-- `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
+- `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
 - `worker/src/lib/blacklist-gaps.ts` - BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC, BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC, BlacklistGapMetrics, BlacklistGapMetricsOptions, materializeBlacklistGapMetrics, queryBlacklistGapMetrics
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
-- ... 223 more files omitted; use `rg --files scripts` for the full list.
+- ... 222 more files omitted; use `rg --files scripts` for the full list.

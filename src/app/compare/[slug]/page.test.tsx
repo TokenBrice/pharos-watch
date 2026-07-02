@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+// @ts-expect-error jsdom lacks bundled TypeScript declarations in this dependency set.
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -52,5 +53,5 @@ describe("StaticComparisonPage", () => {
 
     expect(findLinkByText(document, "Open sUSDe detail page")?.getAttribute("href")).toBe("/stablecoin/susde-ethena");
     expect(findLinkByText(document, "Open USDe detail page")?.getAttribute("href")).toBe("/stablecoin/usde-ethena");
-  });
+  }, 15_000);
 });

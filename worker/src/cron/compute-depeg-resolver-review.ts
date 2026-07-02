@@ -31,6 +31,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { toErrorMessage } from "../lib/error-utils";
+import { throwIfAborted } from "../lib/abort";
 import { logWorkerEvent } from "../lib/structured-log";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
@@ -461,7 +462,7 @@ async function queryTapeTerminalEvidenceByStablecoinId(
   const evidenceByStablecoinId = new Map<string, TerminalEvidence>();
 
   for (const ids of chunkArray(stablecoinIds)) {
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
     try {
@@ -628,7 +629,7 @@ async function loadActualEventsByEventIds(
   const sourceRows: ActualEventDbRow[] = [];
 
   for (const ids of chunkArray(eventIds)) {
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
     const result = await db
