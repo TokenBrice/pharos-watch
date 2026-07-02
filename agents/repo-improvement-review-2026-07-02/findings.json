@@ -4317,6 +4317,16 @@
     "alsoFiles": [
      "worker/migrations/0163_selector_snapshot_daily_quota.sql"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added the daily quota table to the existing prune-cron-history housekeeping job, deleting selector_snapshot_daily_quota rows before the two-day UTC cutoff while preserving current and recent quota rows.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/prune-cron-history.test.ts",
+     "git diff --check -- worker/src/cron/prune-cron-history.ts worker/src/cron/__tests__/prune-cron-history.test.ts"
+    ],
+    "notes": "A full `cd worker && npx tsc --noEmit` pass is deferred to the concurrent blacklist script remediation currently editing worker/scripts/rebuild-blacklist-current-balances.ts."
    }
   },
   {
@@ -5095,6 +5105,16 @@
      "worker/migrations/0000_baseline.sql",
      "worker/src/cron/mint-burn/sync-config.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Added block_timestamp_cache pruning to the daily prune-cron-history job using the same 14-day cutoff already enforced by every cache reader, and reported the deleted count plus cutoff in cron metadata.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/prune-cron-history.test.ts",
+     "git diff --check -- worker/src/cron/prune-cron-history.ts worker/src/cron/__tests__/prune-cron-history.test.ts"
+    ],
+    "notes": "A full `cd worker && npx tsc --noEmit` pass is deferred to the concurrent blacklist script remediation currently editing worker/scripts/rebuild-blacklist-current-balances.ts."
    }
   },
   {

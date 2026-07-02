@@ -25,6 +25,14 @@ interface CanaryRunRow {
   observed_at: number;
 }
 
+interface SelectorSnapshotDailyQuotaRow {
+  quota_date: string;
+}
+
+interface BlockTimestampCacheRow {
+  updated_at: number;
+}
+
 /**
  * Minimal D1 stub that understands the DELETE statements issued by
  * runPruneCronHistory plus the SELECT COUNT(*) verification queries used
@@ -36,12 +44,16 @@ function createStubDb(): {
   jobAttempts: JobAttemptRow[];
   repairTasks: RepairTaskRow[];
   canaryRuns: CanaryRunRow[];
+  selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[];
+  blockTimestampCacheRows: BlockTimestampCacheRow[];
   slotExecs: SlotExecRow[];
 } {
   const cronRuns: CronRunRow[] = [];
   const jobAttempts: JobAttemptRow[] = [];
   const repairTasks: RepairTaskRow[] = [];
   const canaryRuns: CanaryRunRow[] = [];
+  const selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[] = [];
+  const blockTimestampCacheRows: BlockTimestampCacheRow[] = [];
   const slotExecs: SlotExecRow[] = [];
 
   function prepare(sql: string): D1PreparedStatement {
@@ -69,6 +81,28 @@ function createStubDb(): {
           for (let i = slotExecs.length - 1; i >= 0; i--) {
             if (slotExecs[i].slot_started_at < cutoff) {
               slotExecs.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
+        if (sql.startsWith("DELETE FROM selector_snapshot_daily_quota WHERE quota_date <")) {
+          const [cutoff] = bound as [string];
+          let removed = 0;
+          for (let i = selectorSnapshotDailyQuotaRows.length - 1; i >= 0; i--) {
+            if (selectorSnapshotDailyQuotaRows[i].quota_date < cutoff) {
+              selectorSnapshotDailyQuotaRows.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
+        if (sql.startsWith("DELETE FROM block_timestamp_cache WHERE updated_at <")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          for (let i = blockTimestampCacheRows.length - 1; i >= 0; i--) {
+            if (blockTimestampCacheRows[i].updated_at < cutoff) {
+              blockTimestampCacheRows.splice(i, 1);
               removed += 1;
             }
           }
@@ -124,12 +158,26 @@ function createStubDb(): {
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
 
-  return { db, cronRuns, jobAttempts, repairTasks, canaryRuns, slotExecs };
+  return {
+    db,
+    cronRuns,
+    jobAttempts,
+    repairTasks,
+    canaryRuns,
+    selectorSnapshotDailyQuotaRows,
+    blockTimestampCacheRows,
+    slotExecs,
+  };
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
+const TWO_DAYS_SEC = 2 * 24 * 60 * 60;
 const TWO_WEEKS_SEC = 14 * 24 * 60 * 60;
 const NINETY_DAYS_SEC = 90 * 24 * 60 * 60;
+
+function toUtcDateString(timestampSec: number): string {
+  return new Date(timestampSec * 1000).toISOString().slice(0, 10);
+}
 
 describe("runPruneCronHistory", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
@@ -213,13 +261,50 @@ describe("runPruneCronHistory", () => {
     expect(metadata.canaryRunsDeleted).toBe(1);
   });
 
+  it("removes selector snapshot daily quota rows older than 2 days and keeps newer rows", async () => {
+    const { db, selectorSnapshotDailyQuotaRows } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60) });
+    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - 3600) });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(selectorSnapshotDailyQuotaRows).toEqual([{ quota_date: toUtcDateString(now - 3600) }]);
+    const metadata = JSON.parse(result.metadata!) as { selectorSnapshotDailyQuotaDeleted: number };
+    expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
+  });
+
+  it("removes block timestamp cache rows older than 14 days and keeps newer rows", async () => {
+    const { db, blockTimestampCacheRows } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    blockTimestampCacheRows.push({ updated_at: now - TWO_WEEKS_SEC - 3600 });
+    blockTimestampCacheRows.push({ updated_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(blockTimestampCacheRows).toEqual([{ updated_at: now - 3600 }]);
+    const metadata = JSON.parse(result.metadata!) as { blockTimestampCacheDeleted: number };
+    expect(metadata.blockTimestampCacheDeleted).toBe(1);
+  });
+
   it("reports all deleted counts in metadata", async () => {
-    const { db, cronRuns, jobAttempts, repairTasks, canaryRuns, slotExecs } = createStubDb();
+    const {
+      db,
+      cronRuns,
+      jobAttempts,
+      repairTasks,
+      canaryRuns,
+      selectorSnapshotDailyQuotaRows,
+      blockTimestampCacheRows,
+      slotExecs,
+    } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
     cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
     jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
     repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
     canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 1 });
+    selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60) });
+    blockTimestampCacheRows.push({ updated_at: now - TWO_WEEKS_SEC - 1 });
     slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
 
     const result = await runPruneCronHistory(db);
@@ -228,11 +313,15 @@ describe("runPruneCronHistory", () => {
       jobAttemptsDeleted: number;
       repairTasksDeleted: number;
       canaryRunsDeleted: number;
+      selectorSnapshotDailyQuotaDeleted: number;
+      blockTimestampCacheDeleted: number;
       slotExecutionsDeleted: number;
       cutoffCronRunsSec: number;
       cutoffJobAttemptsSec: number;
       cutoffRepairTasksSec: number;
       cutoffCanaryRunsSec: number;
+      cutoffSelectorSnapshotDailyQuotaDate: string;
+      cutoffBlockTimestampCacheSec: number;
       cutoffSlotExecutionsSec: number;
     };
 
@@ -240,11 +329,15 @@ describe("runPruneCronHistory", () => {
     expect(metadata.jobAttemptsDeleted).toBe(1);
     expect(metadata.repairTasksDeleted).toBe(1);
     expect(metadata.canaryRunsDeleted).toBe(1);
+    expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
+    expect(metadata.blockTimestampCacheDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - NINETY_DAYS_SEC, -2);
+    expect(metadata.cutoffSelectorSnapshotDailyQuotaDate).toBe(toUtcDateString(now - TWO_DAYS_SEC));
+    expect(metadata.cutoffBlockTimestampCacheSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
   });
 

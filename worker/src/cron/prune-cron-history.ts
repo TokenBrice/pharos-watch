@@ -11,10 +11,17 @@ import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/c
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
 // housekeeping pass is the single place that prunes cron observability rows.
 const SLOT_EXECUTION_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
+const BLOCK_TIMESTAMP_CACHE_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
+const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
+
+function toUtcDateString(timestampSec: number): string {
+  return new Date(timestampSec * 1000).toISOString().slice(0, 10);
+}
 
 export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
+  const selectorSnapshotDailyQuotaCutoffDate = toUtcDateString(now - SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC);
 
   const cronRunsResult = await runWithOverloadRetry(() =>
     db
@@ -34,6 +41,28 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   const canaryRunsDeleted = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
   throwIfAborted(signal);
 
+  const selectorSnapshotDailyQuotaResult = await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM selector_snapshot_daily_quota WHERE quota_date < ?")
+      .bind(selectorSnapshotDailyQuotaCutoffDate)
+      .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  const selectorSnapshotDailyQuotaDeleted = selectorSnapshotDailyQuotaResult.meta?.changes ?? 0;
+
+  const blockTimestampCacheResult = await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM block_timestamp_cache WHERE updated_at < ?")
+      .bind(now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC)
+      .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  const blockTimestampCacheDeleted = blockTimestampCacheResult.meta?.changes ?? 0;
+
   const slotResult = await runWithOverloadRetry(() =>
     db
       .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
@@ -47,17 +76,28 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   return createCronResult({
     status: "ok",
-    itemCount: cronRunsDeleted + jobAttemptsDeleted + repairTasksDeleted + canaryRunsDeleted + slotExecutionsDeleted,
+    itemCount:
+      cronRunsDeleted +
+      jobAttemptsDeleted +
+      repairTasksDeleted +
+      canaryRunsDeleted +
+      selectorSnapshotDailyQuotaDeleted +
+      blockTimestampCacheDeleted +
+      slotExecutionsDeleted,
     metadata: {
       cronRunsDeleted,
       jobAttemptsDeleted,
       repairTasksDeleted,
       canaryRunsDeleted,
+      selectorSnapshotDailyQuotaDeleted,
+      blockTimestampCacheDeleted,
       slotExecutionsDeleted,
       cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
       cutoffJobAttemptsSec: now - SECONDS.ONE_WEEK,
       cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffCanaryRunsSec: now - WORKER_CANARY_RUN_RETENTION_SEC,
+      cutoffSelectorSnapshotDailyQuotaDate: selectorSnapshotDailyQuotaCutoffDate,
+      cutoffBlockTimestampCacheSec: now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,
     },
   });
