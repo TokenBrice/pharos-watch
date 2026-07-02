@@ -2393,6 +2393,16 @@
     "description": "useNavPrefetch (route-hover cache warmer for 'the top sidebar links', per its docblock) has zero importers in src/, shared/, worker/, functions/ or scripts/ outside src/hooks/__tests__/use-nav-prefetch.test.tsx — verified by repo-wide grep for the symbol, the module path, and 'nav-prefetch'. The sidebar it served was replaced by the global top-nav, and the current header/nav components never call it. The whole file (ROUTE_PREFETCH_DESCRIPTORS table, ROUTE_WARMERS, the hook) plus its test is unreachable product code. PREFETCH_DEBOUNCE_MS, which it imports, remains live via use-prefetch-stablecoin.ts.",
     "recommendation": "Delete src/hooks/use-nav-prefetch.ts and src/hooks/__tests__/use-nav-prefetch.test.tsx. No runtime path can reach the hook, so removal is behavior-preserving; keep use-prefetch-stablecoin.ts untouched.",
     "estImpact": "-113 LOC product code (+~80 LOC test)"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "`useNavPrefetch` and its self-test were already absent from HEAD when this item was revisited; fresh validation found no remaining hook, module-path, or route-prefetch references outside the findings ledger.",
+    "validation": [
+     "test ! -e src/hooks/use-nav-prefetch.ts && test ! -e src/hooks/__tests__/use-nav-prefetch.test.tsx && ! git grep -n -e useNavPrefetch -e use-nav-prefetch -e ROUTE_PREFETCH -- ':!agents/repo-improvement-review-2026-07-02/findings.json'",
+     "npm run typecheck",
+     "npm run check:unused-code"
+    ]
    }
   },
   {
