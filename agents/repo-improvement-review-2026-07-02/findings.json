@@ -5073,6 +5073,17 @@
     "description": "HISTORY_FALLBACKS is declared as an empty object (line 10), so in gitLogWithHistoryFallback (lines 21-27) `HISTORY_FALLBACKS[relPath]` is always undefined and the fallback `gitLog` re-invocation is unreachable. The wrapper adds a layer of indirection to getLastGitDate/getFirstGitDate for a rename-fallback feature that has no entries (and `--follow` already handles renames on the primary call).",
     "recommendation": "Delete HISTORY_FALLBACKS and gitLogWithHistoryFallback; have getLastGitDate/getFirstGitDate call gitLog directly with the `-- <relPath>` suffix. Identical output for every current PUBLIC_DOCS entry; if a doc is ever moved without history the existing throw still fires.",
     "estImpact": "-12 LOC, one less indirection"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Confirmed generate-docs-metadata now calls gitLog directly from the date helpers with no HISTORY_FALLBACKS map or fallback wrapper remaining, and refreshed the checked docs-metadata artifact.",
+    "validation": [
+     "rg -n \"HISTORY_FALLBACKS|gitLogWithHistoryFallback\" scripts/maintenance/generate-docs-metadata.ts scripts || true",
+     "npx tsx scripts/maintenance/generate-docs-metadata.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-docs-metadata.ts src/generated/docs-metadata.json agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
