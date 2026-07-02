@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TableToolbarFrame } from "@/components/table";
-import { TableControlsToolbar, TableSettingsMenu, TableSourceLink } from "@/components/table/client";
+import { TableSourceLink } from "@/components/table/client";
 
 describe("table affordances", () => {
   afterEach(() => {
@@ -26,59 +26,6 @@ describe("table affordances", () => {
     expect(layoutRow?.className).toContain("xl:flex-row");
     expect(screen.getByText("Compact rows")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
-  });
-
-  it("renders optional density and column settings inside the shared settings menu", () => {
-    const onDensityChange = vi.fn();
-
-    render(
-      <TableSettingsMenu
-        density="spacious"
-        onDensityChange={onDensityChange}
-        columnsSlot={<button type="button">Column picker</button>}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Table settings" }));
-
-    expect(screen.getByText("Density")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Column picker" })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("radio", { name: "Compact" }));
-    expect(onDensityChange).toHaveBeenCalledWith("compact");
-  });
-
-  it("renders density-only settings without requiring a column picker", () => {
-    render(<TableSettingsMenu density="compact" onDensityChange={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Table settings" }));
-
-    expect(screen.getByText("Density")).toBeTruthy();
-    expect(screen.queryByText("Columns")).toBeNull();
-  });
-
-  it("renders generic table controls with settings slots and export action", () => {
-    const onDensityChange = vi.fn();
-    const onExport = vi.fn();
-
-    render(
-      <TableControlsToolbar
-        density="spacious"
-        onDensityChange={onDensityChange}
-        columnsSlot={<button type="button">Column picker</button>}
-        settingsSlot={<button type="button">Reset filters</button>}
-        onExport={onExport}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Table settings" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Compact" }));
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
-
-    expect(screen.getByRole("button", { name: "Column picker" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reset filters" })).toBeTruthy();
-    expect(onDensityChange).toHaveBeenCalledWith("compact");
-    expect(onExport).toHaveBeenCalledTimes(1);
   });
 
   it("renders source links with external-link metadata and can stop row propagation", () => {

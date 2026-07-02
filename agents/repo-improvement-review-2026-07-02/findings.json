@@ -3145,6 +3145,18 @@
      "src/components/table/table-settings-menu.tsx",
      "src/components/table/client.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Deleted the dead TableControlsToolbar and TableSettingsMenu modules, removed their client barrel exports, and pruned the test-only affordance coverage for those unused components while keeping TableToolbarFrame and TableSourceLink coverage intact.",
+    "validation": [
+     "rg -n \"TableControlsToolbar|TableSettingsMenu|table-controls-toolbar|table-settings-menu\" src || true",
+     "npx vitest run src/components/__tests__/table-affordances.test.tsx",
+     "npm run typecheck",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- src/components/table/client.ts src/components/__tests__/table-affordances.test.tsx src/components/table/table-controls-toolbar.tsx src/components/table/table-settings-menu.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
