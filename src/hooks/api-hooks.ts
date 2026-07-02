@@ -203,13 +203,6 @@ export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
   );
 }
 
-export function safetyScoreHistoryQueryOptions(stablecoinId: string, days = 3650) {
-  return createRegisteredApiPollingQueryOptionsWithMeta<SafetyScoreHistoryResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.safetyScoreHistory(stablecoinId, days),
-    { enabled: !!stablecoinId },
-  );
-}
-
 export function useStablecoinCharts() {
   return useRegisteredApiQuery<StablecoinChartPoint[]>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.stablecoinCharts,

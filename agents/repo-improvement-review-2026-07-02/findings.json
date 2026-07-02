@@ -2947,6 +2947,18 @@
     "description": "safetyScoreHistoryQueryOptions (api-hooks.ts:206-211) has no callers in product code — repo-wide grep finds only its definition and src/hooks/__tests__/query-option-builders.test.ts. The live hook useSafetyScoreHistory builds its query via useRegisteredApiQueryWithMeta directly and never touches this builder. The comment in use-prefetch-stablecoin.ts:32-35 confirms the historical consumer: detail-page prefetch was narrowed to supply history only ('safety-score history (10y) ... fetch on scroll instead'), which orphaned this options factory. Note dexLiquidityHistoryQueryOptions (line 136) is NOT dead — useDexLiquidityHistory calls it — only its export keyword is test-facing.",
     "recommendation": "Delete safetyScoreHistoryQueryOptions and its case in query-option-builders.test.ts. No runtime path constructs these options, so removal cannot change behavior.",
     "estImpact": "-6 LOC + test case"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `safetyScoreHistoryQueryOptions` export and deleted the test-only assertion that kept the orphaned builder alive.",
+    "validation": [
+     "rg -n \"safetyScoreHistoryQueryOptions\" src/hooks src/components shared worker functions scripts || true",
+     "npx vitest run src/hooks/__tests__/query-option-builders.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/hooks/api-hooks.ts src/hooks/__tests__/query-option-builders.test.ts"
+    ],
+    "notes": "The live `useSafetyScoreHistory` hook still uses `useRegisteredApiQueryWithMeta` directly."
    }
   },
   {

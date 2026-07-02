@@ -10,7 +10,7 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
-import { dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions } from "../api-hooks";
+import { dexLiquidityHistoryQueryOptions } from "../api-hooks";
 import { depegEventsInfiniteQueryOptions } from "../use-depeg-events";
 import { supplyHistoryQueryOptions } from "../use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions } from "../use-mint-burn-flows";
@@ -81,27 +81,12 @@ describe("query option builders", () => {
     );
   });
 
-  it("keeps history prefetch builders aligned with their consuming hooks", async () => {
+  it("keeps dex history prefetch builders aligned with their consuming hooks", () => {
     const dexOptions = dexLiquidityHistoryQueryOptions("usdc-circle", 90);
-    const safetyOptions = safetyScoreHistoryQueryOptions("usdc-circle", 3650);
 
     expect(dexOptions.queryKey).toEqual(["dex-liquidity-history", "usdc-circle", 90]);
     expect(dexOptions.staleTime).toBe(24 * 60 * 60 * 1000);
     expect(dexOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
-
-    expect(safetyOptions.queryKey).toEqual(["safety-score-history", "usdc-circle", 3650]);
-    expect(safetyOptions.staleTime).toBe(24 * 60 * 60 * 1000);
-    expect(safetyOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
-    expect(safetyOptions.enabled).toBe(true);
-
-    await safetyOptions.queryFn?.();
-    expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
-      "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
-      expect.objectContaining({ safeParse: expect.any(Function) }),
-      undefined,
-      24 * 60 * 60,
-      undefined,
-    );
   });
 
   it("passes TanStack Query cancellation signals to API fetches", async () => {
