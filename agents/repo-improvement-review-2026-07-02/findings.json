@@ -479,12 +479,22 @@
     "recommendation": "Move responseFromBufferedBody next to applyNonOkProviderDiagnostic in lib/pricing-provider-lifecycle.ts (or into enrich-prices-pass-common.ts) and import it in both passes; export FIAT_CG_METAS from one module. Pure identical-code consolidation.",
     "estImpact": "-14 LOC; shared provider-diagnostic helper",
     "alsoFiles": [
-     "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts",
-     "worker/src/cron/sync-stablecoins/supplemental-assets.ts",
-     "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts"
+      "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts",
+      "worker/src/cron/sync-stablecoins/supplemental-assets.ts",
+      "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts"
     ]
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Moved responseFromBufferedBody into the shared pricing-provider lifecycle helpers and reused it from the CMC and Jupiter enrichment passes. Exported the fiat-CG metadata list from the fiat-cg supplemental module and reused it for aggregate CoinGecko market-data batching.",
+   "validation": [
+    "npx vitest run worker/src/cron/__tests__/enrich-prices.test.ts worker/src/cron/sync-stablecoins/supplemental-assets/__tests__/fiat-cg.test.ts worker/src/cron/__tests__/supplemental-assets.test.ts",
+    "cd worker && npx tsc --noEmit",
+    "rg -n \"function responseFromBufferedBody|const FIAT_CG_METAS|export const FIAT_CG_METAS\" worker/src/cron/sync-stablecoins worker/src/lib -g'*.ts'"
+   ]
+  }
+ },
   {
    "id": "w-cron-sync:9",
    "domain": "w-cron-sync",

@@ -10,6 +10,7 @@ import {
   isProviderCircuitAllowed,
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
+  responseFromBufferedBody,
 } from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
 import { CmcCategoryResponseSchema } from "../../lib/schemas";
@@ -273,12 +274,4 @@ export async function runCmcPass(
   }
 
   return { resolved, failures: [], diagnostics };
-}
-
-function responseFromBufferedBody(result: { response: Response; body: string }): Response {
-  return new Response(result.body, {
-    status: result.response.status,
-    statusText: result.response.statusText,
-    headers: result.response.headers,
-  });
 }

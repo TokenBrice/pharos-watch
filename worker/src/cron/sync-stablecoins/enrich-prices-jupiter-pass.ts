@@ -13,6 +13,7 @@ import {
   isProviderCircuitAllowed,
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
+  responseFromBufferedBody,
 } from "../../lib/pricing-provider-lifecycle";
 import {
   endpointLabel,
@@ -396,12 +397,4 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   } catch (err) {
     return { slot: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
   }
-}
-
-function responseFromBufferedBody(result: { response: Response; body: string }): Response {
-  return new Response(result.body, {
-    status: result.response.status,
-    statusText: result.response.statusText,
-    headers: result.response.headers,
-  });
 }

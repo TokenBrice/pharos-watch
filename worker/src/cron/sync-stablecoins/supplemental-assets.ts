@@ -6,7 +6,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PeggedAsset } from "./enrich-prices";
-import { fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
+import { FIAT_CG_METAS, fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
 import { fetchGoldTokens } from "./supplemental-assets/gold";
 import { fetchSilverTokens } from "./supplemental-assets/silver";
 
@@ -28,8 +28,6 @@ import type { CoinGeckoMcapData } from "./supplemental-assets/shared";
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
 );
-
-const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 
 export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<CoinGeckoMcapData> {
   const ids = [

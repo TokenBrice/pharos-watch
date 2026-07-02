@@ -16,7 +16,7 @@ import {
   type CoinGeckoMcapData,
 } from "./shared";
 
-const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
+export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
 
 export async function fetchFiatCoinGeckoTokens(

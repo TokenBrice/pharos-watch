@@ -137,6 +137,14 @@ export async function applyNonOkProviderDiagnostic(
   };
 }
 
+export function responseFromBufferedBody(result: { response: Response; body: string }): Response {
+  return new Response(result.body, {
+    status: result.response.status,
+    statusText: result.response.statusText,
+    headers: result.response.headers,
+  });
+}
+
 export function applyJsonParseFailureDiagnostic(
   diagnostic: PricingProviderAttemptDiagnostic,
   error: unknown,
