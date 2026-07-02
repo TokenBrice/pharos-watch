@@ -167,15 +167,6 @@
   --table-sticky-column-bg: oklch(0.995 0.003 260 / 0.95);
   --table-sticky-column-shadow: 10px 0 20px oklch(0 0 0 / 0.05);
 
-  /* ── Component: Sidebar ───────────────────────────────────────── */
-  --sidebar-bg: var(--surface-overlay);
-  --sidebar-border: var(--border-default);
-  --sidebar-item-hover: var(--interactive-hover);
-
-  /* ── Component: Sidebar Dimensions ───────────────────────────── */
-  --sidebar-width-expanded: 220px;
-  --sidebar-width-collapsed: 56px;
-
   /* ── Motion ───────────────────────────────────────────────────── */
   --motion-duration-fast: 160ms;
   --motion-duration-base: 220ms;

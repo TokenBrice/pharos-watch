@@ -1663,13 +1663,13 @@
   /* On wide viewports the horizontal timeline breaks out of the article column
      so the full event sequence fits without scrolling. Target width follows the
      actual track (--tl-track = event count x card width), never shrinks below
-     the column, and is bounded by the main content box (viewport minus the
-     expanded sidebar rail) so the breakout stays on-canvas: it never slides
-     under the sidebar or forces page-level horizontal scroll. Below 90rem it
-     stays in-column and scrolls as before. */
+     the column, and is bounded by the viewport minus a gutter so the breakout
+     stays on-canvas and never forces page-level horizontal scroll (content
+     runs full-width under the top-nav). Below 90rem it stays in-column and
+     scrolls as before. */
   @media (min-width: 90rem) {
     .pharos-timeline-wide {
-      --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100vw - var(--sidebar-width-expanded) - 4rem));
+      --pharos-timeline-width: max(100%, min(var(--tl-track, 115rem), 100vw - 4rem));
       width: var(--pharos-timeline-width);
       margin-inline: calc((100% - var(--pharos-timeline-width)) / 2);
     }
