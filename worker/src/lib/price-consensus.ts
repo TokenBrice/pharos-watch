@@ -17,6 +17,7 @@
  */
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { median } from "@shared/lib/stats";
 import {
   buildObservedAtModeRecord,
   buildObservedAtRecord,
@@ -246,11 +247,7 @@ function buildSourceLabel(cluster: SourcePrice[]): string {
 }
 
 function medianPrice(cluster: SourcePrice[]): number {
-  const sorted = cluster.map((source) => source.price).sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid] ?? 0;
-  return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+  return median(cluster.map((source) => source.price)) ?? 0;
 }
 
 function clusterTotalWeight(cluster: SourcePrice[]): number {

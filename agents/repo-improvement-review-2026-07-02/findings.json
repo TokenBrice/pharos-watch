@@ -5703,6 +5703,21 @@
      "worker/src/lib/price-consensus.ts",
      "shared/lib/stats.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the local `medianPrice` sorting/midpoint implementation in `price-consensus.ts` with the shared `median()` helper while preserving the existing `0` fallback; the selector percentile path had already been converged to `percentileLinear()` in an earlier remediation.",
+    "validation": [
+     "npx vitest run shared/lib/selector/__tests__/lower-ranked.test.ts",
+     "npx vitest run worker/src/lib/__tests__/price-consensus.test.ts",
+     "npm run typecheck",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- worker/src/lib/price-consensus.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The shared helper's finite-value filter is behavior-preserving for the consensus path because source prices are validated as finite before clustering."
    }
   },
   {
