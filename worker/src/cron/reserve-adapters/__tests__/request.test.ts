@@ -99,6 +99,38 @@ describe("adapter request cache", () => {
     expect(second.origin).toBe("https://app-b.example");
   });
 
+  it("keeps same-URL JSON GETs separate when Headers instances differ", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      return new Response(JSON.stringify({ origin: headers.get("origin") }), {
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    const first = await fetchJsonWithRetry<{ origin: string }>(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: new Headers({ Origin: "https://app-a.example" }) },
+    );
+    const second = await fetchJsonWithRetry<{ origin: string }>(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: new Headers({ Origin: "https://app-b.example" }) },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.origin).toBe("https://app-a.example");
+    expect(second.origin).toBe("https://app-b.example");
+  });
+
   it("does not share JSON and text reads for the same URL", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       headers: { "content-type": "application/json" },
@@ -147,6 +179,39 @@ describe("adapter request cache", () => {
     expect(second).toBe("https://issuer.example/b");
   });
 
+  it("dedupes entry-array text headers after deterministic normalization", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      return new Response(`${headers.get("origin")}:${headers.get("referer")}`, {
+        headers: { "content-type": "text/plain" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    const firstHeaders: [string, string][] = [
+      ["Origin", "https://issuer.example"],
+      ["Referer", "https://issuer.example/reserves"],
+    ];
+    const sameHeadersDifferentOrder: [string, string][] = [
+      ["referer", "https://issuer.example/reserves"],
+      ["origin", "https://issuer.example"],
+    ];
+
+    const [first, second] = await Promise.all([
+      fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx, { headers: firstHeaders }),
+      fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx, {
+        headers: sameHeadersDifferentOrder,
+      }),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first).toBe("https://issuer.example:https://issuer.example/reserves");
+    expect(second).toBe(first);
+  });
+
   it("keys JSON POST cache entries by serialized body", async () => {
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => new Response(
       JSON.stringify({ body: init?.body ?? null }),
@@ -162,6 +227,40 @@ describe("adapter request cache", () => {
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "eurc" }, signal, 1_000, ctx);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps JSON POST cache entries separate when Headers instances differ", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      return new Response(JSON.stringify({ origin: headers.get("origin") }), {
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    const first = await fetchJsonPostWithRetry<{ origin: string }>(
+      "https://issuer.example/graphql",
+      { coin: "usdc" },
+      signal,
+      1_000,
+      ctx,
+      { headers: new Headers({ Origin: "https://app-a.example" }) },
+    );
+    const second = await fetchJsonPostWithRetry<{ origin: string }>(
+      "https://issuer.example/graphql",
+      { coin: "usdc" },
+      signal,
+      1_000,
+      ctx,
+      { headers: new Headers({ Origin: "https://app-b.example" }) },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.origin).toBe("https://app-a.example");
+    expect(second.origin).toBe("https://app-b.example");
   });
 
   it("fetches the primary JSON input from a live-reserve config", async () => {

@@ -57,6 +57,50 @@ function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | 
   return ctx?.requestCache ?? null;
 }
 
+function isHeadersInstance(headers: HeadersInit): headers is Headers {
+  return typeof Headers !== "undefined" && headers instanceof Headers;
+}
+
+function isPlainHeadersRecord(headers: HeadersInit): headers is Record<string, string> {
+  return !Array.isArray(headers) && !isHeadersInstance(headers);
+}
+
+function normalizeHeaderEntries(headers: HeadersInit): Array<[string, string]> {
+  return Array.from(new Headers(headers).entries()).sort(([leftName, leftValue], [rightName, rightValue]) => {
+    if (leftName < rightName) return -1;
+    if (leftName > rightName) return 1;
+    if (leftValue < rightValue) return -1;
+    if (leftValue > rightValue) return 1;
+    return 0;
+  });
+}
+
+function serializeHeadersForCache(headers?: HeadersInit): string {
+  if (!headers) return "null";
+  if (isPlainHeadersRecord(headers)) {
+    return JSON.stringify(headers);
+  }
+  return `headers:${JSON.stringify(normalizeHeaderEntries(headers))}`;
+}
+
+function buildRequestHeaders(
+  defaults: Record<string, string>,
+  overrides?: HeadersInit,
+): HeadersInit {
+  if (!overrides || isPlainHeadersRecord(overrides)) {
+    return {
+      ...defaults,
+      ...(overrides ?? {}),
+    };
+  }
+
+  const merged = new Headers(defaults);
+  for (const [name, value] of normalizeHeaderEntries(overrides)) {
+    merged.set(name, value);
+  }
+  return merged;
+}
+
 export function getCachedRequest<T>(
   key: string,
   factory: () => Promise<T>,
@@ -88,17 +132,19 @@ export async function fetchJsonWithRetry<T>(
   options?: JsonRetryOptions,
 ): Promise<T> {
   return getCachedRequest(
-    `json-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
+    `json-get:${url}:${timeoutMs}:${serializeHeadersForCache(options?.headers)}`,
     async () => runAdapterIo(ctx, `json-get:${url}`, async () => {
       const result = await fetchTextBodyWithRetry(
         url,
         {
           signal,
-          headers: {
-            Accept: "application/json",
-            "User-Agent": ADAPTER_USER_AGENT,
-            ...(options?.headers ?? {}),
-          },
+          headers: buildRequestHeaders(
+            {
+              Accept: "application/json",
+              "User-Agent": ADAPTER_USER_AGENT,
+            },
+            options?.headers,
+          ),
         },
         2,
         { timeoutMs, returnFinalResponse: true },
@@ -130,17 +176,19 @@ export async function fetchJsonPostWithRetry<T>(
 ): Promise<T> {
   const serializedBody = JSON.stringify(body);
   return getCachedRequest(
-    `json-post:${url}:${timeoutMs}:${serializedBody}:${JSON.stringify(options?.headers ?? null)}`,
+    `json-post:${url}:${timeoutMs}:${serializedBody}:${serializeHeadersForCache(options?.headers)}`,
     async () => runAdapterIo(ctx, `json-post:${url}`, async () => {
       const result = await fetchTextBodyWithRetry(
         url,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": ADAPTER_USER_AGENT,
-            ...(options?.headers ?? {}),
-          },
+          headers: buildRequestHeaders(
+            {
+              "Content-Type": "application/json",
+              "User-Agent": ADAPTER_USER_AGENT,
+            },
+            options?.headers,
+          ),
           body: serializedBody,
           signal,
         },
@@ -183,16 +231,18 @@ export async function fetchTextWithRetry(
   options?: TextRetryOptions,
 ): Promise<string> {
   return getCachedRequest(
-    `text-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
+    `text-get:${url}:${timeoutMs}:${serializeHeadersForCache(options?.headers)}`,
     async () => runAdapterIo(ctx, `text-get:${url}`, async () => {
       const result = await fetchTextBodyWithRetry(
         url,
         {
           signal,
-          headers: {
-            "User-Agent": ADAPTER_USER_AGENT,
-            ...(options?.headers ?? {}),
-          },
+          headers: buildRequestHeaders(
+            {
+              "User-Agent": ADAPTER_USER_AGENT,
+            },
+            options?.headers,
+          ),
         },
         2,
         { timeoutMs, returnFinalResponse: true },

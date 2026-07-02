@@ -206,6 +206,16 @@
     "recommendation": "Normalize before keying: convert HeadersInit to a sorted lowercase-key record (new Headers(init) then [...entries()].sort()) and stringify that, or narrow the option type to Record<string,string> so the compiler rejects Headers/entry-array inputs. Either change keeps all current cache keys stable for existing plain-object call sites.",
     "estImpact": "closes a latent cross-request cache-collision hole",
     "alsoFiles": []
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Normalized non-record HeadersInit values into deterministic sorted header entries before request-cache serialization, while preserving the existing plain-record cache-key shape. Merged Headers and entry-array overrides through the Headers API so they are also sent correctly.",
+    "validation": [
+     "npx vitest run worker/src/cron/reserve-adapters/__tests__/concurrency.test.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "git diff --check -- worker/src/cron/reserve-adapters/concurrency.ts worker/src/cron/reserve-adapters/__tests__/concurrency.test.ts worker/src/cron/reserve-adapters/request.ts worker/src/cron/reserve-adapters/__tests__/request.test.ts"
+    ]
    }
   },
   {
