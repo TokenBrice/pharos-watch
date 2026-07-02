@@ -2332,6 +2332,18 @@
     "alsoFiles": [
      "worker/src/lib/authoritative-price-sources/helpers.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Introduced a shared fetchBoundedVaultQuote helper for prebuilt calldata, null/zero decode handling, finite checks, and trusted ratio bounds, then routed both the ERC-4626 selector wrapper and Idle CDO virtualPrice through it.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/authoritative-price-sources.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/lib/authoritative-price-sources/helpers.ts worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Idle CDO keeps its original Number(outputAmount) / 10 ** assetDecimals scaling while sharing the RPC/decode/bounds pipeline."
    }
   },
   {

@@ -1,13 +1,9 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmCallHexAtBlock } from "../evm-rpc";
-import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   buildParentDerivedLiveOverride,
-  decodeUint256WordBigInt,
   encodeAddress,
-  ERC4626_NAV_MAX_RATIO,
-  ERC4626_NAV_MIN_RATIO,
+  fetchBoundedVaultQuote,
   ETHEREUM_CHAIN,
   PROTOCOL_REDEEM_SOURCE,
   resolveTrustedOverrideParent,
@@ -54,32 +50,15 @@ async function fetchIdleCdoTrancheAssetsPerShare(
   options?: { throwOnNullQuote?: boolean },
 ): Promise<number | null> {
   const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
-  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.cdo, calldata, blockNumberOrTag, {
+  return fetchBoundedVaultQuote(
+    { id: config.id, chain: config.chain, target: config.cdo },
+    calldata,
+    "virtualPrice",
+    blockNumberOrTag,
+    (outputAmount) => Number(outputAmount) / 10 ** config.assetDecimals,
     signal,
-    extraRpcUrls: getPublicFallbackRpcUrls(config.chain),
-  });
-  if (!quoteHex) {
-    const message = `[authoritative-price-sources] ${config.id}: virtualPrice() returned null`;
-    console.warn(message);
-    if (options?.throwOnNullQuote) {
-      throw new Error(message);
-    }
-    return null;
-  }
-  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
-  if (outputAmount == null || outputAmount <= 0n) {
-    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned zero or invalid output`);
-    return null;
-  }
-  const assetsPerShare = Number(outputAmount) / 10 ** config.assetDecimals;
-  if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
-  if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
-    console.warn(
-      `[authoritative-price-sources] ${config.id}: virtualPrice() ratio ${assetsPerShare} outside trusted bounds`,
-    );
-    return null;
-  }
-  return assetsPerShare;
+    options,
+  );
 }
 
 export const idleCdoTrancheProvider: PriceSourceProvider = {

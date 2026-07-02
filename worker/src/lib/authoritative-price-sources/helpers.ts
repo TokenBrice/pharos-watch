@@ -36,17 +36,23 @@ export interface Erc4626NavVaultConfig {
   allowFreshNonReplaySafeParent?: boolean;
 }
 
-export async function fetchVaultAssetsPerShareViaSelector(
-  config: Erc4626NavVaultConfig,
-  selector: string,
+interface BoundedVaultQuoteConfig {
+  id: string;
+  chain: string;
+  target: string;
+  rpcUrls?: readonly string[];
+}
+
+export async function fetchBoundedVaultQuote(
+  config: BoundedVaultQuoteConfig,
+  calldata: string,
   label: string,
   blockNumberOrTag: number | "latest",
+  decodeAssetsPerShare: (outputAmount: bigint) => number,
   signal?: AbortSignal,
   options?: { throwOnNullQuote?: boolean },
 ): Promise<number | null> {
-  const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
-  const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
-  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.vault, calldata, blockNumberOrTag, {
+  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.target, calldata, blockNumberOrTag, {
     signal,
     extraRpcUrls: [...(config.rpcUrls ?? getPublicFallbackRpcUrls(config.chain))],
   });
@@ -65,7 +71,7 @@ export async function fetchVaultAssetsPerShareViaSelector(
     return null;
   }
 
-  const assetsPerShare = ratioToNumber(outputAmount, config.assetDecimals, oneShareRaw, config.vaultDecimals);
+  const assetsPerShare = decodeAssetsPerShare(outputAmount);
   if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
   if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
     console.warn(
@@ -75,6 +81,27 @@ export async function fetchVaultAssetsPerShareViaSelector(
   }
 
   return assetsPerShare;
+}
+
+export async function fetchVaultAssetsPerShareViaSelector(
+  config: Erc4626NavVaultConfig,
+  selector: string,
+  label: string,
+  blockNumberOrTag: number | "latest",
+  signal?: AbortSignal,
+  options?: { throwOnNullQuote?: boolean },
+): Promise<number | null> {
+  const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
+  const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
+  return fetchBoundedVaultQuote(
+    { id: config.id, chain: config.chain, target: config.vault, rpcUrls: config.rpcUrls },
+    calldata,
+    label,
+    blockNumberOrTag,
+    (outputAmount) => ratioToNumber(outputAmount, config.assetDecimals, oneShareRaw, config.vaultDecimals),
+    signal,
+    options,
+  );
 }
 
 const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
