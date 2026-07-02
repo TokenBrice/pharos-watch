@@ -23,6 +23,7 @@ const MIDAS_MMEV_ID = "mmev-midas";
 const ONDO_USDY_ID = "usdy-ondo-finance";
 const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
 const MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY = "protocol-api:midas-mmev-nav-oracle";
+const ONDO_USDY_ORACLE_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 
 export interface TrackedOptionalSourceContext {
@@ -39,48 +40,19 @@ interface TrackedOptionalSourceEntry {
   run: (context: TrackedOptionalSourceContext) => Promise<ResolvedYield | null>;
 }
 
-export async function loadOndoOracleAnchorRow(
+type OracleAnchorRow = { exchange_rate: number; recorded_at: number };
+
+async function loadNavOracleAnchorRow(
   db: D1Database,
+  stablecoinId: string,
+  sourceKey: string,
   startSec: number,
-): Promise<{ exchange_rate: number; recorded_at: number } | null> {
-  const preferredPriorRow = await db
-    .prepare(
-      `SELECT /* pharos:yield-sync:ondo-prior-anchor-preferred */
-         exchange_rate, recorded_at FROM yield_history
-       WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
-         AND exchange_rate IS NOT NULL
-         AND recorded_at <= ?
-         AND recorded_at >= ?
-         AND (publication_generation_id IS NULL OR publication_state = 'published')
-       ORDER BY recorded_at DESC LIMIT 1`,
-    )
-    .bind(ONDO_USDY_ID, startSec - 7 * DAY_SECONDS, startSec - 45 * DAY_SECONDS)
-    .first<{ exchange_rate: number; recorded_at: number }>();
-
-  if (preferredPriorRow) return preferredPriorRow;
-
+  minAgeDays: number,
+  maxAgeDays: number,
+): Promise<OracleAnchorRow | null> {
   return db
     .prepare(
-      `SELECT /* pharos:yield-sync:ondo-prior-anchor-fallback */
-         exchange_rate, recorded_at FROM yield_history
-       WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
-         AND exchange_rate IS NOT NULL
-         AND recorded_at <= ?
-         AND recorded_at >= ?
-         AND (publication_generation_id IS NULL OR publication_state = 'published')
-       ORDER BY recorded_at DESC LIMIT 1`,
-    )
-    .bind(ONDO_USDY_ID, startSec - 3 * DAY_SECONDS, startSec - 14 * DAY_SECONDS)
-    .first<{ exchange_rate: number; recorded_at: number }>();
-}
-
-async function loadMidasMmevOracleAnchorRow(
-  db: D1Database,
-  startSec: number,
-): Promise<{ exchange_rate: number; recorded_at: number } | null> {
-  return db
-    .prepare(
-      `SELECT /* pharos:yield-sync:midas-mmev-prior-anchor */
+      `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor */
          exchange_rate, recorded_at FROM yield_history
        WHERE stablecoin_id = ? AND source_key = ?
          AND exchange_rate IS NOT NULL
@@ -89,8 +61,32 @@ async function loadMidasMmevOracleAnchorRow(
          AND (publication_generation_id IS NULL OR publication_state = 'published')
        ORDER BY recorded_at DESC LIMIT 1`,
     )
-    .bind(MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec - 7 * DAY_SECONDS, startSec - 45 * DAY_SECONDS)
-    .first<{ exchange_rate: number; recorded_at: number }>();
+    .bind(stablecoinId, sourceKey, startSec - minAgeDays * DAY_SECONDS, startSec - maxAgeDays * DAY_SECONDS)
+    .first<OracleAnchorRow>();
+}
+
+export async function loadOndoOracleAnchorRow(
+  db: D1Database,
+  startSec: number,
+): Promise<OracleAnchorRow | null> {
+  const preferredPriorRow = await loadNavOracleAnchorRow(
+    db,
+    ONDO_USDY_ID,
+    ONDO_USDY_ORACLE_SOURCE_KEY,
+    startSec,
+    7,
+    45,
+  );
+  if (preferredPriorRow) return preferredPriorRow;
+
+  return loadNavOracleAnchorRow(db, ONDO_USDY_ID, ONDO_USDY_ORACLE_SOURCE_KEY, startSec, 3, 14);
+}
+
+async function loadMidasMmevOracleAnchorRow(
+  db: D1Database,
+  startSec: number,
+): Promise<OracleAnchorRow | null> {
+  return loadNavOracleAnchorRow(db, MIDAS_MMEV_ID, MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY, startSec, 7, 45);
 }
 
 const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
@@ -144,19 +140,16 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
   },
   {
     stablecoinId: ONDO_USDY_ID,
-    sourceKey: "protocol-api:ondo-usdy-oracle",
+    sourceKey: ONDO_USDY_ORACLE_SOURCE_KEY,
     run: async (context) => {
       const anchorRow = await loadOndoOracleAnchorRow(context.db, context.startSec);
-      const prevPriceBigint = anchorRow?.exchange_rate
-        ? BigInt(Math.round(anchorRow.exchange_rate * 1e18))
-        : null;
       const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
 
       return runTimedOptionalSource(
         "Ondo USDY oracle source",
         context.signal,
         (budgetSignal) => fetchOndoUsdyOracleSource(
-          prevPriceBigint,
+          anchorRow?.exchange_rate ?? null,
           daysDelta,
           anchorRow?.recorded_at ?? null,
           budgetSignal,

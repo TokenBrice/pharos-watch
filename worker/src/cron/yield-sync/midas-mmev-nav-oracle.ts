@@ -19,7 +19,6 @@ const MIDAS_NAV_ORACLE_MAX_DECIMALS = 36;
 const MIDAS_NAV_ORACLE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
 interface MidasMmevNavOracleOptions {
-  prevPriceBigint?: bigint | null;
   prevExchangeRate?: number | null;
   daysDelta?: number;
   comparisonAnchorObservedAt?: number | null;
@@ -74,7 +73,6 @@ export async function fetchMidasMmevNavOracleSource(
   options: MidasMmevNavOracleOptions = {},
 ): Promise<ResolvedYieldCandidate | null> {
   const {
-    prevPriceBigint = null,
     prevExchangeRate = null,
     daysDelta = 0,
     comparisonAnchorObservedAt = null,
@@ -118,9 +116,7 @@ export async function fetchMidasMmevNavOracleSource(
 
     const prevPriceFloat = typeof prevExchangeRate === "number" && Number.isFinite(prevExchangeRate) && prevExchangeRate > 0
       ? prevExchangeRate
-      : prevPriceBigint != null && prevPriceBigint > 0n
-        ? finiteDecimalNumberFromBigInt(prevPriceBigint, decimals)
-        : null;
+      : null;
 
     if (prevPriceFloat == null || daysDelta < 1) {
       return buildMidasMmevNavCandidate({

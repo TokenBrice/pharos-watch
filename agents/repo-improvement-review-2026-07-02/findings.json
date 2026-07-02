@@ -1297,6 +1297,15 @@
     "description": "Three related warts in the tracked NAV-oracle sources: (1) fetchMidasMmevNavOracleSource accepts a `prevPriceBigint` option (midas-mmev-nav-oracle.ts:22, 119-123) but its only production caller passes `prevExchangeRate` — the bigint branch is dead outside tests. (2) The Ondo entry converts the D1 float `exchange_rate` to a bigint via `BigInt(Math.round(anchorRow.exchange_rate * 1e18))` (registry line 150-152) only for fetchOndoUsdyOracleSource to convert it straight back to a float with finiteDecimalNumberFromBigInt(prev, 18) (protocol-api.ts:253) — a lossy-in-principle round trip that exists only because the two oracle fetchers have different signatures. (3) loadOndoOracleAnchorRow and loadMidasMmevOracleAnchorRow (registry lines 42-94) are near-identical SQL differing only in bind values.",
     "recommendation": "Give fetchOndoUsdyOracleSource the same `prevExchangeRate: number|null` signature Midas already uses, drop `prevPriceBigint` from both, and collapse the two anchor loaders into one parameterized query (Ondo keeps its extra 3-14d fallback window as a second call). APY math is unchanged: 1e18-scaled round-tripping of a float is identity for these magnitudes, and removing it only skips the no-op conversion.",
     "estImpact": "-40 LOC, one prev-price convention instead of two"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Unified NAV-oracle previous-price plumbing on prevExchangeRate numbers, removed Midas' unused prevPriceBigint option, removed Ondo's float-to-bigint-to-float round trip, and collapsed Ondo/Midas anchor lookups into one parameterized history query while preserving Ondo's fallback window.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/yield-ondo-source.test.ts worker/src/cron/__tests__/yield-midas-nav-source.test.ts worker/src/cron/__tests__/yield-resolve.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

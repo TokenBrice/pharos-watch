@@ -222,7 +222,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
 }
 
 export async function fetchOndoUsdyOracleSource(
-  prevPriceBigint: bigint | null,
+  prevExchangeRate: number | null,
   daysDelta: number,
   comparisonAnchorObservedAt: number | null,
   signal?: AbortSignal,
@@ -240,7 +240,7 @@ export async function fetchOndoUsdyOracleSource(
     const currentPriceFloat = finiteDecimalNumberFromBigInt(currentPrice, 18);
     if (currentPriceFloat == null || !Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
 
-    if (!prevPriceBigint || prevPriceBigint === 0n || daysDelta < 1) {
+    if (prevExchangeRate == null || prevExchangeRate === 0 || daysDelta < 1) {
       return {
         currentApy: 0, apyBase: null, apyReward: null,
         sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
@@ -250,9 +250,8 @@ export async function fetchOndoUsdyOracleSource(
       };
     }
 
-    const prevPriceFloat = finiteDecimalNumberFromBigInt(prevPriceBigint, 18);
-    if (prevPriceFloat == null || !Number.isFinite(prevPriceFloat) || prevPriceFloat <= 0) return null;
-    const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
+    if (!Number.isFinite(prevExchangeRate) || prevExchangeRate <= 0) return null;
+    const apy = (Math.pow(currentPriceFloat / prevExchangeRate, 365.25 / daysDelta) - 1) * 100;
     if (!Number.isFinite(apy) || apy < 0) return null;
 
     return {

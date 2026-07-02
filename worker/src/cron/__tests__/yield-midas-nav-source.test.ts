@@ -82,7 +82,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
     const fetchSpy = mockMidasRpc({ answer: 104_200_000n, updatedAt });
 
     const result = await fetchMidasMmevNavOracleSource({
-      prevPriceBigint: 103_000_000n,
+      prevExchangeRate: 1.03,
       daysDelta: 7,
       comparisonAnchorObservedAt: NOW_SEC - 7 * 86_400,
       chainRpcs: makeChainRpcs(),

@@ -15,7 +15,7 @@ describe("fetchOndoUsdyOracleSource", () => {
   it("derives APY from USDY oracle price vs prior price", async () => {
     mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
     const result = await fetchOndoUsdyOracleSource(
-      1_083_500_000_000_000_000n, 7, 1_771_000_000,
+      1.0835, 7, 1_771_000_000,
     );
     expect(result).toEqual(expect.objectContaining({
       dataSource: "protocol-api",
