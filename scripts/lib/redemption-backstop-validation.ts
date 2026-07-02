@@ -974,11 +974,27 @@ function validateStaticConfigOverwrites(
 ): void {
   if (!sourceTextByPath) return;
 
-  for (const moduleEntry of manifest) {
-    for (const filePath of [moduleEntry.filePath, ...(moduleEntry.sourceFilePaths ?? [])]) {
-      validateStaticConfigSourceFile(moduleEntry, filePath, sourceTextByPath, findings);
-    }
+  for (const filePath of sourceTextByPath.keys()) {
+    const moduleEntry = resolveManifestEntryForSourceFile(manifest, filePath);
+    if (!moduleEntry) continue;
+    validateStaticConfigSourceFile(moduleEntry, filePath, sourceTextByPath, findings);
   }
+}
+
+function resolveManifestEntryForSourceFile(
+  manifest: readonly RedemptionBackstopConfigManifestEntry[],
+  filePath: string,
+): RedemptionBackstopConfigManifestEntry | undefined {
+  for (const moduleEntry of manifest) {
+    if (filePath === moduleEntry.filePath) return moduleEntry;
+  }
+
+  for (const moduleEntry of manifest) {
+    if (!moduleEntry.filePath.endsWith("/index.ts")) continue;
+    const dir = moduleEntry.filePath.slice(0, -"/index.ts".length);
+    if (filePath.startsWith(`${dir}/`)) return moduleEntry;
+  }
+  return undefined;
 }
 
 function validateStaticConfigSourceFile(

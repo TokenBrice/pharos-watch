@@ -1,6 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test scans checked-in redemption-backstop config directories under the repository root only. */
-import { readdirSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
@@ -112,33 +109,6 @@ describe("redemption backstop config consistency", () => {
       })
       .map(([id]) => id);
     expect(violations).toEqual([]);
-  });
-
-  it("manifest sourceFilePaths stay in sync with the per-coin files on disk", () => {
-    const repoRoot = process.cwd();
-    const mismatches: string[] = [];
-
-    for (const moduleEntry of familyModules) {
-      if (!("sourceFilePaths" in moduleEntry)) continue;
-      const dir = path.posix.dirname(moduleEntry.filePath);
-      const barrel = path.posix.basename(moduleEntry.filePath);
-      const onDisk = readdirSync(path.join(repoRoot, dir))
-        .filter((file) => file.endsWith(".ts") && file !== barrel)
-        .map((file) => `${dir}/${file}`)
-        .sort();
-      const declared: string[] = [...moduleEntry.sourceFilePaths].sort();
-
-      const missingFromManifest = onDisk.filter((p) => !declared.includes(p));
-      const missingFromDisk = declared.filter((p) => !onDisk.includes(p));
-      if (missingFromManifest.length > 0) {
-        mismatches.push(`${moduleEntry.name}: not listed in manifest -> ${missingFromManifest.join(", ")}`);
-      }
-      if (missingFromDisk.length > 0) {
-        mismatches.push(`${moduleEntry.name}: listed but absent on disk -> ${missingFromDisk.join(", ")}`);
-      }
-    }
-
-    expect(mismatches).toEqual([]);
   });
 
   it("family modules do not shadow ids across files", () => {

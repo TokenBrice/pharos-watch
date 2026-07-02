@@ -1,8 +1,11 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "../../shared/lib/redemption-backstop-configs/manifest";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, posix, resolve } from "node:path";
+import {
+  REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
+  type RedemptionBackstopConfigManifestEntry,
+} from "../../shared/lib/redemption-backstop-configs/manifest";
 import {
   validateRedemptionBackstopRegistry,
   type RedemptionRegistryValidationResult,
@@ -41,6 +44,20 @@ function readRepoFile(path: string): string {
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 
+function resolveManifestSourceFilePaths(entry: RedemptionBackstopConfigManifestEntry): readonly string[] {
+  if (posix.basename(entry.filePath) !== "index.ts") {
+    return [entry.filePath];
+  }
+
+  const dir = posix.dirname(entry.filePath);
+  const siblingSourceFilePaths = readdirSync(resolve(ROOT, dir), { withFileTypes: true })
+    .filter((dirent) => dirent.isFile() && dirent.name.endsWith(".ts") && dirent.name !== "index.ts")
+    .map((dirent) => `${dir}/${dirent.name}`)
+    .sort();
+
+  return [entry.filePath, ...siblingSourceFilePaths];
+}
+
 function buildReport(result: RedemptionRegistryValidationResult): object {
   return {
     summary: result.summary,
@@ -59,8 +76,7 @@ function writeJson(path: string, value: unknown): void {
 const options = parseArgs(process.argv.slice(2));
 const sourceTextByPath = new Map(
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST.flatMap((entry) => {
-    const sourceFilePaths = "sourceFilePaths" in entry ? entry.sourceFilePaths : [];
-    return [entry.filePath, ...sourceFilePaths].map((filePath) => [filePath, readRepoFile(filePath)] as const);
+    return resolveManifestSourceFilePaths(entry).map((filePath) => [filePath, readRepoFile(filePath)] as const);
   }),
 );
 

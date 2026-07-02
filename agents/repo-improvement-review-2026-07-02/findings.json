@@ -4823,6 +4823,19 @@
     "description": "REDEMPTION_BACKSTOP_CONFIG_MANIFEST embeds two literal file lists (offchain-issuer: 7 paths at lines 28-36; stablecoin-redeem: 66 paths at lines 65-131, ~110 LOC). Their only consumers are Node scripts (scripts/ci/check-redemption-backstops.ts reads the files; the AST overwrite/source-inference pass in scripts/lib/redemption-backstop-validation.ts walks them). A dedicated test ('manifest sourceFilePaths stay in sync with the per-coin files on disk', redemption-backstop-consistency.test.ts:117) exists solely to keep the list matching the directory — i.e., the list is fully redundant with `readdirSync`. Every coin addition currently touches 4 places (new file, index import, index map entry, manifest list).",
     "recommendation": "Since the manifest itself must stay fs-free (shared/lib is runtime-neutral), move sourceFilePaths derivation into the script layer: readdirSync the directory of entry.filePath (excluding index.ts) where the manifest today lists files, then delete the two literal lists and the sync test. Registry output is unaffected — sourceFilePaths only feeds CI-side file reading and attribution — so this is behavior-preserving.",
     "estImpact": "-110 LOC; one fewer touchpoint per coin addition"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed manifest-maintained sourceFilePaths lists and moved source-file derivation into Node validation scripts by reading sibling config files from disk.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/redemption-backstop-consistency.test.ts",
+     "npm run check:redemption-backstops",
+     "npm run typecheck",
+     "npm run typecheck:worker",
+     "rg -n \"sourceFilePaths|resolveManifestSourceFilePaths|resolveManifestEntryForSourceFile\" shared/lib/redemption-backstop-configs shared/lib/__tests__/redemption-backstop-consistency.test.ts scripts/ci/check-redemption-backstops.ts scripts/lib/redemption-backstop-validation.ts",
+     "git diff --check -- scripts/ci/check-redemption-backstops.ts scripts/lib/redemption-backstop-validation.ts shared/lib/redemption-backstop-configs/manifest.ts shared/lib/__tests__/redemption-backstop-consistency.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
