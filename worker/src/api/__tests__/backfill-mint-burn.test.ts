@@ -6,7 +6,6 @@ stubCryptoForAuth();
 vi.mock("../../lib/alchemy-logs", () => ({
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
-  getAlchemyTransactionContextBatch: vi.fn(async () => ({ tx: null, receipt: null })),
   getAlchemyTransactionContextBatchMany: vi.fn(async () => new Map()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
@@ -16,7 +15,6 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { handleBackfillMintBurn } from "../backfill-mint-burn";
 import {
   fetchAlchemyLogs,
-  getAlchemyTransactionContextBatch,
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
@@ -353,7 +351,6 @@ describe("handleBackfillMintBurn", () => {
         ],
       },
     };
-    vi.mocked(getAlchemyTransactionContextBatch).mockReset().mockResolvedValue(txContext);
     vi.mocked(getAlchemyTransactionContextBatchMany)
       .mockReset()
       .mockResolvedValue(new Map([[TX_HASH, txContext]]));

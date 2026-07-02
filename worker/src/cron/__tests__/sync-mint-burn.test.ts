@@ -125,10 +125,6 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 vi.mock("../../lib/alchemy-logs", () => ({
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
-  getAlchemyTransactionContextBatch: vi.fn(async () => ({
-    tx: { hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" },
-    receipt: { transactionHash: "0xtx", to: "0xrouter", logs: [] },
-  })),
   getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
     new Map(txHashes.map((txHash) => [txHash, {
       tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },

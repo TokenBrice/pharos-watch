@@ -19,8 +19,6 @@ import {
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
   buildReserveSyncFinalizeSuccessStatement,
-  buildReserveSyncRecordDeferredStatement,
-  type ReserveSyncDeferredRecord,
 } from "./live-reserves-store-statements";
 
 const LIVE_RESERVE_ARTIFACT_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
@@ -43,13 +41,6 @@ export async function beginReserveSyncAttempt(
   record: ReserveSyncAttemptStartRecord,
 ): Promise<void> {
   await runWithOverloadRetry(() => buildReserveSyncAttemptStartStatement(db, record).run());
-}
-
-export async function recordReserveSyncDeferred(
-  db: D1Database,
-  record: ReserveSyncDeferredRecord,
-): Promise<void> {
-  await runWithOverloadRetry(() => buildReserveSyncRecordDeferredStatement(db, record).run());
 }
 
 export async function didReserveSyncSuccessBecomeAuthoritative(

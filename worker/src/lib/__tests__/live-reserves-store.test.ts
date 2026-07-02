@@ -10,9 +10,9 @@ import {
   loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   pruneLiveReserveHistory,
-  recordReserveSyncDeferred,
   resolveReserveResult,
 } from "../live-reserves-store";
+import { buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
 import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
@@ -786,13 +786,13 @@ describe("live-reserves-store", () => {
   it("clears active attempt fencing when recording a deferred tail row", async () => {
     const db = mockD1();
 
-    await recordReserveSyncDeferred(db, {
+    await buildReserveSyncRecordDeferredStatement(db, {
       stablecoinId: "iusd-infinifi",
       adapterKey: "infinifi",
       breakerKey: "live-reserves:infinifi",
       attemptedAt: 1_700_000_000,
       reason: "run-budget-exhausted",
-    });
+    }).run();
 
     const statement = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_sync_state"));
     expect(statement).toBeDefined();

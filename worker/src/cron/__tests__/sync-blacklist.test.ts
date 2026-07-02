@@ -111,7 +111,6 @@ vi.mock("../../lib/evm-logs", () => ({
   getEvmBlockNumber: vi.fn(async () => 20000000),
   fetchEvmLogsForTopic: vi.fn(async () => []),
   fetchEvmLogsForTopicWithCompleteness: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 99999999 })),
-  fetchEvmLogsForTopics: vi.fn(async () => []),
   readDataWord: vi.fn((hex: string, slotIndex: number) => {
     const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
     const start = slotIndex * 64;

@@ -276,25 +276,6 @@ async function fetchSingleFeedQuote(
   }
 }
 
-export async function fetchChainlinkReferenceQuotes(
-  signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  nowSec = Math.floor(Date.now() / 1000),
-  drpcApiKey?: string | null,
-  etherscanApiKey?: string | null,
-  previousFailingRuns?: Record<string, number>,
-): Promise<Map<string, ChainlinkReferenceQuote>> {
-  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
-    signal,
-    chainRpcs,
-    nowSec,
-    drpcApiKey,
-    etherscanApiKey,
-    previousFailingRuns,
-  );
-  return snapshot.quotes;
-}
-
 export async function fetchChainlinkReferenceQuoteSnapshot(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,

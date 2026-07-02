@@ -133,11 +133,3 @@ export async function fetchCgTickerPricesDetailed(
     successfulResponses,
   };
 }
-
-export async function fetchCgTickerPrices(
-  configs: CgTickerConfig[],
-  apiKey: string | null,
-  signal?: AbortSignal,
-): Promise<Map<string, number>> {
-  return (await fetchCgTickerPricesDetailed(configs, apiKey, signal)).prices;
-}

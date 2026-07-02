@@ -9,7 +9,7 @@ import {
   budgetExhausted,
   createRateLimiter,
   getEvmBlockNumber,
-  fetchEvmLogsForTopics,
+  fetchEvmLogsForTopicsWithCompleteness,
   readDataWord,
 } from "../evm-logs";
 
@@ -281,9 +281,9 @@ describe("getEvmBlockNumber", () => {
   });
 });
 
-// --- fetchEvmLogsForTopics ---
+// --- fetchEvmLogsForTopicsWithCompleteness ---
 
-describe("fetchEvmLogsForTopics", () => {
+describe("fetchEvmLogsForTopicsWithCompleteness", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -304,51 +304,63 @@ describe("fetchEvmLogsForTopics", () => {
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
 
-    expect(result).toHaveLength(1);
+    expect(result.complete).toBe(true);
+    expect(result.logs).toHaveLength(1);
     expect(budget.count).toBe(1);
   });
 
-  it("returns null on HTTP error", async () => {
+  it("marks the scan incomplete on HTTP error", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response("Server Error", { status: 500 })
     );
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
 
-    expect(result).toBeNull();
+    expect(result.complete).toBe(false);
+    expect(result.logs).toEqual([]);
   });
 
-  it("returns empty array on 'No records found'", async () => {
+  it("returns a complete empty result on 'No records found'", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ status: "0", message: "No records found", result: [] }), { status: 200 })
     );
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
 
-    expect(result).toEqual([]);
+    expect(result).toMatchObject({ complete: true, logs: [], scannedToBlock: 100 });
   });
 
-  it("returns null when budget exhausted", async () => {
+  it("marks the scan incomplete when budget is exhausted", async () => {
     const budget = { count: 10, limit: 10 }; // Already exhausted
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
 
-    expect(result).toBeNull();
+    expect(result).toMatchObject({
+      complete: false,
+      logs: [],
+      scannedToBlock: -1,
+      failureReason: "budget-exhausted",
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("returns null at max recursion depth", async () => {
+  it("marks the scan incomplete at max recursion depth", async () => {
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 9, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 9, noopLimiter, budget);
 
-    expect(result).toBeNull();
+    expect(result).toMatchObject({
+      complete: false,
+      logs: [],
+      scannedToBlock: -1,
+      failureReason: "max-recursion-depth",
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -377,9 +389,10 @@ describe("fetchEvmLogsForTopics", () => {
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
-    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+    const result = await fetchEvmLogsForTopicsWithCompleteness(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
 
-    expect(result).toHaveLength(8); // 5 + 3
+    expect(result.complete).toBe(true);
+    expect(result.logs).toHaveLength(8); // 5 + 3
     expect(budget.count).toBe(3); // 3 API calls
   });
 });

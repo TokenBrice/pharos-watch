@@ -6,7 +6,6 @@ vi.mock("../fetch-retry", () => ({
 
 import { fetchJsonWithRetry } from "../fetch-retry";
 import {
-  fetchCgTickerPrices,
   fetchCgTickerPricesDetailed,
   pickBestTicker,
   type CgTickerConfig,
@@ -105,7 +104,7 @@ describe("pickBestTicker", () => {
   });
 });
 
-describe("fetchCgTickerPrices", () => {
+describe("fetchCgTickerPricesDetailed", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("fetches both coins on happy path", async () => {
@@ -119,7 +118,7 @@ describe("fetchCgTickerPrices", () => {
       return null;
     });
 
-    const results = await fetchCgTickerPrices([KAU_CONFIG, KAG_CONFIG], null);
+    const results = (await fetchCgTickerPricesDetailed([KAU_CONFIG, KAG_CONFIG], null)).prices;
 
     expect(results.size).toBe(2);
     expect(results.get("kau-kinesis")).toBe(136.76);
@@ -130,7 +129,7 @@ describe("fetchCgTickerPrices", () => {
   it("passes API key through to the fetch call", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
 
-    await fetchCgTickerPrices([KAU_CONFIG], "my-key");
+    await fetchCgTickerPricesDetailed([KAU_CONFIG], "my-key");
 
     // Verify fetch was called — API key plumbing is tested via coingecko.ts unit
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
@@ -145,7 +144,7 @@ describe("fetchCgTickerPrices", () => {
       return makeTickerResult([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
     });
 
-    const results = await fetchCgTickerPrices([KAU_CONFIG, KAG_CONFIG], null);
+    const results = (await fetchCgTickerPricesDetailed([KAU_CONFIG, KAG_CONFIG], null)).prices;
 
     expect(results.size).toBe(1);
     expect(results.has("kau-kinesis")).toBe(false);
@@ -158,14 +157,14 @@ describe("fetchCgTickerPrices", () => {
       makeTickerResult([makeTicker({ target: "EUR", last: 118.71 })]),
     );
 
-    const results = await fetchCgTickerPrices([KAU_CONFIG], null);
+    const results = (await fetchCgTickerPricesDetailed([KAU_CONFIG], null)).prices;
     expect(results.size).toBe(0);
   });
 
   it("includes exchange_ids filter in URL", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
 
-    await fetchCgTickerPrices([KAU_CONFIG], null);
+    await fetchCgTickerPricesDetailed([KAU_CONFIG], null);
 
     const [url] = vi.mocked(fetchJsonWithRetry).mock.calls[0]!;
     expect(url).toContain("exchange_ids=kinesis_money");
@@ -177,12 +176,12 @@ describe("fetchCgTickerPrices", () => {
     vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("aborted"));
 
     await expect(
-      fetchCgTickerPrices([KAU_CONFIG], null, controller.signal),
+      fetchCgTickerPricesDetailed([KAU_CONFIG], null, controller.signal),
     ).rejects.toThrow("aborted");
   });
 });
 
-describe("fetchCgTickerPricesDetailed", () => {
+describe("fetchCgTickerPricesDetailed result metadata", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("counts successful responses even when no fresh ticker is usable", async () => {

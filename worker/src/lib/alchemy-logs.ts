@@ -183,16 +183,6 @@ export async function getAlchemyBlockNumber(
   }
 }
 
-export async function getAlchemyTransactionContextBatch(
-  alchemyUrl: string,
-  txHash: string,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<AlchemyTransactionContextBatch> {
-  const results = await getAlchemyTransactionContextBatchMany(alchemyUrl, [txHash], budget, signal);
-  return results.get(txHash) ?? { tx: null, receipt: null };
-}
-
 export async function getAlchemyTransactionContextBatchMany(
   alchemyUrl: string,
   txHashes: string[],

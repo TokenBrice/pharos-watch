@@ -203,38 +203,9 @@ export async function fetchEvmLogsForTopicWithCompleteness(
  * Supports filtering by topic0 alone, or topic0 + topic1/topic2 for
  * mint/burn detection (e.g. Transfer where from=zero or to=zero).
  *
- * Returns `null` on API failure (rate limit, network error, invalid key)
- * vs `[]` for a genuine "no records found" response.
- *
- * Recursively splits block ranges when result count hits Etherscan's 1000-row cap.
+ * Returns a completeness-aware result so callers can distinguish reliable
+ * empty scans from partial failures.
  */
-export async function fetchEvmLogsForTopics(
-  evmChainId: number,
-  contractAddress: string,
-  topics: TopicFilter[],
-  apiKey: string | null,
-  fromBlock: number,
-  toBlock: number,
-  depth: number,
-  rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<EtherscanLogEntry[] | null> {
-  const result = await fetchEvmLogsForTopicsWithCompleteness(
-    evmChainId,
-    contractAddress,
-    topics,
-    apiKey,
-    fromBlock,
-    toBlock,
-    depth,
-    rateLimit,
-    budget,
-    signal,
-  );
-  return result.complete ? result.logs : null;
-}
-
 export async function fetchEvmLogsForTopicsWithCompleteness(
   evmChainId: number,
   contractAddress: string,

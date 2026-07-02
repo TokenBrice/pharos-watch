@@ -24,8 +24,6 @@ const alchemyMockHelpers = vi.hoisted(() => ({
 }));
 
 vi.mock("../alchemy-logs", () => ({
-  getAlchemyTransactionContextBatch: vi.fn(async (_url: string, txHash: string) =>
-    alchemyMockHelpers.makeAlchemyContext(txHash)),
   getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
     new Map(txHashes.map((txHash) => [txHash, alchemyMockHelpers.makeAlchemyContext(txHash)])),
   ),

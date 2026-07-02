@@ -1745,6 +1745,17 @@
     "description": "Each of these is an older convenience wrapper whose production callers migrated to a richer variant, leaving the wrapper referenced only by tests (verified repo-wide incl. worker/scripts): (1) evm-logs.ts:211 fetchEvmLogsForTopics — blacklist crons use fetchEvmLogsForTopicWithCompleteness instead (~26 LOC + doc block); (2) chainlink-feeds.ts:279 fetchChainlinkReferenceQuotes — sync-fx-rates-helpers.ts imports only fetchChainlinkReferenceQuoteSnapshot; (3) cg-ticker.ts:137 fetchCgTickerPrices — the primary-provider collector uses fetchCgTickerPricesDetailed; (4) alchemy-logs.ts:186 getAlchemyTransactionContextBatch — mint-burn-pipeline/classification.ts uses getAlchemyTransactionContextBatchMany; (5) live-reserves-store-write.ts:48 recordReserveSyncDeferred — sync-live-reserves-run-state.ts:190 calls buildReserveSyncRecordDeferredStatement directly via recordDeferredTail.",
     "recommendation": "Delete the five wrappers and retarget or drop the tests that exercise them (the underlying variants keep their own coverage). No production call site changes, so this is strictly behavior-preserving.",
     "estImpact": "-80 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the five superseded wrapper exports and retargeted direct tests/mocks to the richer APIs or statement builder that production already uses.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/evm-logs.test.ts worker/src/lib/__tests__/chainlink-feeds.test.ts worker/src/lib/__tests__/cg-ticker.test.ts worker/src/lib/__tests__/live-reserves-store.test.ts worker/src/api/__tests__/backfill-mint-burn.test.ts worker/src/lib/__tests__/mint-burn-pipeline.test.ts worker/src/cron/__tests__/sync-mint-burn.test.ts worker/src/cron/__tests__/sync-blacklist.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"\\b(fetchEvmLogsForTopics|fetchChainlinkReferenceQuotes|fetchCgTickerPrices|getAlchemyTransactionContextBatch|recordReserveSyncDeferred)\\b\" worker/src shared src functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "Production call sites were already using the newer APIs; this removes only the compatibility wrappers and stale test/doc references."
    }
   },
   {

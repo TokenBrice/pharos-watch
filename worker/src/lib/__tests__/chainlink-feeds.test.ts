@@ -10,7 +10,6 @@ import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } 
 import {
   CHAINLINK_REFERENCE_FEEDS,
   fetchChainlinkReferenceQuoteSnapshot,
-  fetchChainlinkReferenceQuotes,
   parseChainlinkLatestRoundData,
   parseSignedInt256Word,
 } from "../chainlink-feeds";
@@ -77,7 +76,7 @@ describe("parseChainlinkLatestRoundData", () => {
   });
 });
 
-describe("fetchChainlinkReferenceQuotes", () => {
+describe("fetchChainlinkReferenceQuoteSnapshot", () => {
   it("returns fresh quotes for configured feeds", async () => {
     const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
     expect(eurFeed).toBeDefined();
@@ -92,7 +91,7 @@ describe("fetchChainlinkReferenceQuotes", () => {
       return null;
     });
 
-    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000);
+    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000)).quotes;
     expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
   });
 
@@ -113,7 +112,7 @@ describe("fetchChainlinkReferenceQuotes", () => {
       return null;
     });
 
-    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, undefined, "etherscan-key");
+    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, undefined, "etherscan-key")).quotes;
     expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
     expect(mockFetchEtherscanProxyHex).toHaveBeenCalled();
   });
@@ -133,7 +132,7 @@ describe("fetchChainlinkReferenceQuotes", () => {
       return null;
     });
 
-    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, "drpc-key");
+    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, "drpc-key")).quotes;
     expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
     expect(mockFetchJsonRpcHexAtUrl).toHaveBeenCalled();
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalledWith(
@@ -167,7 +166,7 @@ describe("fetchChainlinkReferenceQuotes", () => {
       return null;
     });
 
-    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000);
+    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000)).quotes;
     expect(quotes.has("peggedEUR")).toBe(false);
   });
 
@@ -249,7 +248,7 @@ describe("fetchChainlinkReferenceQuotes", () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
     mockFetchEtherscanProxyHex.mockResolvedValue(null);
 
-    await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, "drpc-key");
+    await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, "drpc-key");
 
     const calledUrls = mockFetchJsonRpcHexAtUrl.mock.calls.map(([url]) => String(url));
     const eurCallsForDecimals = calledUrls.filter(
