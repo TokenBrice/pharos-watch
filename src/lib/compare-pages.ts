@@ -184,10 +184,6 @@ export function getStaticComparisonPagesForCoin(coinId: string): StaticCompariso
   return STATIC_COMPARISON_PAGES.filter((page) => page.left.id === coinId || page.right.id === coinId);
 }
 
-export function getPrimaryStaticComparisonPageForCoin(coinId: string): StaticComparisonPage | null {
-  return getStaticComparisonPagesForCoin(coinId)[0] ?? null;
-}
-
 export function buildComparisonResearchLinks(page: StaticComparisonPage) {
   return [
     {

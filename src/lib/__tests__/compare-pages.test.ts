@@ -4,16 +4,16 @@ import {
   buildComparisonAtAGlanceRows,
   buildComparisonSnippetAnswer,
   buildStaticComparisonJsonLd,
-  getPrimaryStaticComparisonPageForCoin,
   STATIC_COMPARE_PAIRS,
+  STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
 
 describe("compare page blacklist copy", () => {
   it("surfaces upstream FreezeWatch status in static comparison copy", () => {
-    const page = getPrimaryStaticComparisonPageForCoin("usde-ethena");
+    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get("usdt-tether-vs-usde-ethena");
 
-    expect(page).not.toBeNull();
+    expect(page).toBeDefined();
 
     const rows = buildComparisonAtAGlanceRows(page!);
     const blacklistRow = rows.find((row) => row.label === "Blacklist controls");
@@ -61,9 +61,9 @@ describe("STATIC_COMPARISON_PAGES", () => {
   });
 
   it("builds a visible short-answer module with live-data caveats", () => {
-    const page = getPrimaryStaticComparisonPageForCoin("usdt-tether");
+    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get("usdt-tether-vs-usdc-circle");
 
-    expect(page).not.toBeNull();
+    expect(page).toBeDefined();
 
     const snippet = buildComparisonSnippetAnswer(page!);
 
@@ -73,9 +73,9 @@ describe("STATIC_COMPARISON_PAGES", () => {
   });
 
   it("builds WebPage and ItemList JSON-LD for static comparison pages", () => {
-    const page = getPrimaryStaticComparisonPageForCoin("usdt-tether");
+    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get("usdt-tether-vs-usdc-circle");
 
-    expect(page).not.toBeNull();
+    expect(page).toBeDefined();
 
     const jsonLd = buildStaticComparisonJsonLd(page!, {
       siteUrl: "https://pharos.watch",

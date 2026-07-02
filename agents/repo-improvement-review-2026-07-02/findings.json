@@ -2555,6 +2555,19 @@
     "alsoFiles": [
      "src/lib/compare-links.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused getPrimaryStaticComparisonPageForCoin export and retargeted compare-pages tests to STATIC_COMPARISON_PAGE_BY_SLUG for direct fixture selection.",
+    "validation": [
+     "npx vitest run src/lib/__tests__/compare-pages.test.ts",
+     "npm run typecheck",
+     "if rg -n \"getPrimaryStaticComparisonPageForCoin\" src worker shared functions scripts; then exit 1; fi",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- src/lib/compare-pages.ts src/lib/__tests__/compare-pages.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Production primary comparison links remain on src/lib/compare-links.ts; getStaticComparisonPagesForCoin remains for page consumers."
    }
   },
   {
