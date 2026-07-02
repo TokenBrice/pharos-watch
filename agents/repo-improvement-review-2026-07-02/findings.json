@@ -3793,6 +3793,17 @@
     "description": "TapeFiltersProps declares `eventsForCoinDirectory?: TapeEvent[]` (documented as \"omitted in v1\"), but the component never destructures it and a repo-wide grep shows no caller passes it — the only occurrence in the codebase is the declaration itself. The prop keeps the TapeEvent type import alive and advertises a capability that does not exist, which misleads future callers into passing data that is silently dropped.",
     "recommendation": "Delete the prop from TapeFiltersProps and drop TapeEvent from the type-only import. Pure type-level removal; zero runtime effect.",
     "estImpact": "-4 LOC; removes misleading API surface"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the unused `eventsForCoinDirectory` prop from TapeFiltersProps and dropped the now-unused TapeEvent type import.",
+    "validation": [
+     "rg -n \"eventsForCoinDirectory\" . --glob '!agents/repo-improvement-review-2026-07-02/findings.json' || true",
+     "npx vitest run src/app/timeline/client.test.tsx src/app/timeline/page.test.tsx src/components/tape/event-card.test.tsx",
+     "npm run typecheck",
+     "git diff --check -- src/components/tape/tape-filters.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

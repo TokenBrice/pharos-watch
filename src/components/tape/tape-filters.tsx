@@ -10,7 +10,6 @@ import { isUrlFilterClearValue } from "@/hooks/use-url-filters";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import {
   SEVERITY_LABEL_INCLUSIVE,
-  type TapeEvent,
   type TapeEventSeverity,
 } from "@shared/types/tape-event";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
@@ -110,8 +109,6 @@ export function readTapeFilterState(getParam: (key: string, defaultValue?: strin
 interface TapeFiltersProps {
   state: TapeFilterState;
   setParam: (key: string, value: string) => void;
-  /** Optional event source for the coin combo box (omitted in v1 — coin filter is URL-driven only). */
-  eventsForCoinDirectory?: TapeEvent[];
   /** Active coin filter value to render as a chip; cleared via `onClearCoin`. */
   coin?: string;
   onClearCoin?: () => void;
