@@ -525,6 +525,15 @@
     "description": "runFallbackPriceEnrichmentPhase calls runMissingPriceEnrichmentPhase with cmcApiKey and jupiterApiKey but not coingeckoApiKey, even though FallbackPriceEnrichmentInput carries it (fallback-types.ts:74) and the very next call in the same function (runSharedPriceCompletion, line 78) passes it. The main path passes it (stages.ts:287). Consequence: during a CoinGecko-supply fallback run, the CoinGecko low-volume pass (enrich-prices-coingecko-low-volume-pass.ts) calls fetchCoingeckoSimplePrices with no API key, hitting the unauthenticated public endpoint, which is 429-prone — so the LOW_VOLUME_CG_FALLBACK_IDS coins are most likely to lose their price exactly when the pipeline is already degraded.",
     "recommendation": "Add `coingeckoApiKey: input.coingeckoApiKey` to the runMissingPriceEnrichmentPhase argument object. Safe: it only authenticates an existing fetch; validated price data and all downstream figures are unchanged.",
     "estImpact": "removes 429-prone unauthenticated CG calls in fallback runs"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Passed the existing CoinGecko API key into fallback missing-price enrichment so degraded fallback runs use the authenticated CoinGecko path. Added a regression test that asserts the key is forwarded.",
+    "validation": [
+     "npx vitest run worker/src/cron/sync-stablecoins/__tests__/fallback-enrichment.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ]
    }
   },
   {

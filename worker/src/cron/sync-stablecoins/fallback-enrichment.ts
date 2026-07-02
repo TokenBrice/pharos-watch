@@ -64,6 +64,7 @@ export async function runFallbackPriceEnrichmentPhase(
     signal: input.signal,
     cmcApiKey: input.cmcApiKey,
     jupiterApiKey: input.jupiterApiKey,
+    coingeckoApiKey: input.coingeckoApiKey,
     returnIfAborted: input.returnIfAborted,
   }, "fallback-");
   if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
