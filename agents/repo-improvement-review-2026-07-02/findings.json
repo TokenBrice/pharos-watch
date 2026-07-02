@@ -4781,6 +4781,17 @@
      "shared/lib/redemption-backstop-configs/stablecoin-redeem/index.ts",
      "shared/lib/redemption-backstop-configs/offchain-issuer/index.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "applyTrackedReviewedDocs now throws on absent config-map IDs, with the helper test split into valid backfill and missing-id failure cases.",
+    "validation": [
+     "npx vitest run shared/lib/__tests__/redemption-backstop-config-helpers.test.ts",
+     "npm run check:redemption-backstops",
+     "npm run typecheck",
+     "git diff --check -- shared/lib/redemption-backstop-configs/shared.ts shared/lib/__tests__/redemption-backstop-config-helpers.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

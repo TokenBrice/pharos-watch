@@ -132,7 +132,11 @@ export function applyTrackedReviewedDocs(
 ): void {
   for (const stablecoinId of stablecoinIds) {
     const config = configs[stablecoinId];
-    if (!config) continue;
+    if (!config) {
+      throw new Error(
+        `Missing redemption backstop config for stablecoin id "${stablecoinId}" while applying tracked reviewed docs`,
+      );
+    }
     if (reviewedAt) {
       config.reviewedAt ??= reviewedAt;
     }

@@ -174,7 +174,7 @@ describe("redemption backstop config helpers", () => {
       "usdt-tether": withExistingDocs,
     };
 
-    applyTrackedReviewedDocs(configs, ["usdc-circle", "usdt-tether", "missing-id"], "2026-05-12");
+    applyTrackedReviewedDocs(configs, ["usdc-circle", "usdt-tether"], "2026-05-12");
 
     expect(configs["usdc-circle"].reviewedAt).toBe("2026-05-12");
     expect(configs["usdc-circle"].docs?.length).toBeGreaterThan(0);
@@ -183,6 +183,12 @@ describe("redemption backstop config helpers", () => {
     expect(configs["usdt-tether"].docs).toEqual([
       sourceRef("Existing docs", "https://example.com/existing", ["route"]),
     ]);
+  });
+
+  it("throws when a tracked reviewed docs id is absent from the config map", () => {
+    expect(() => applyTrackedReviewedDocs({}, ["usdc-circle"], "2026-05-12")).toThrow(
+      'Missing redemption backstop config for stablecoin id "usdc-circle" while applying tracked reviewed docs',
+    );
   });
 
   it("maps access models to default holder eligibility", () => {
