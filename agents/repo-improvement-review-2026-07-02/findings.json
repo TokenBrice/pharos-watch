@@ -2089,6 +2089,18 @@
     "description": "In the per-coin branch of /api/mint-burn-flows, lines 174-186 batch the hourly-rows query and readMintBurnCronSnapshot in Promise.all, but line 189 then serially awaits getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB), which depends on neither result (it only feeds fallbackSyncAt/latestSuccessfulSyncAt computed afterwards). Every per-coin request on the cache-miss path pays one avoidable serial D1 round-trip.",
     "recommendation": "Move getLatestSuccessfulCronTimestampResult into the existing Promise.all triple. All three queries are independent; downstream computation is unchanged, so responses are identical.",
     "estImpact": "-1 serial D1 round-trip per per-coin flow refresh"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved the per-coin mint/burn latest-successful-cron lookup into the existing Promise.all batch with hourly rows and the cron snapshot, removing one serial D1 round-trip without changing downstream freshness calculation.",
+    "validation": [
+     "npx vitest run worker/src/api/__tests__/mint-burn-flows.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/api/mint-burn-flows.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "The lookup only depends on the database and mint/burn cron job name, so it is independent of the hourly query and snapshot read."
    }
   },
   {

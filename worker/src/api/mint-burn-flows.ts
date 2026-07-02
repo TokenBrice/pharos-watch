@@ -171,7 +171,7 @@ async function handlePerCoin(
     const syncStartSec = nowSec;
     const windowStart = nowSec - hours * 3600;
 
-    const [hourlyResult, latestCronSnapshot] = await Promise.all([
+    const [hourlyResult, latestCronSnapshot, latestSuccessfulSyncLookup] = await Promise.all([
       db
         .prepare(
           `SELECT chain_id, hour_ts, mint_count, burn_count,
@@ -183,10 +183,10 @@ async function handlePerCoin(
         .bind(...chainInClause.binds, stablecoinId, windowStart)
         .all<HourlyRow>(),
       readMintBurnCronSnapshot(db),
+      getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB),
     ]);
 
     const rows = hourlyResult.results ?? [];
-    const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
     const fallbackSyncAt =
       latestCronSnapshot.startedAt
       ?? (rows.length > 0 ? resolveFlowUpdatedAt(rows, 0) : null);
