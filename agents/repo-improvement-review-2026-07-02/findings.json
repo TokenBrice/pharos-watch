@@ -1498,6 +1498,16 @@
     "description": "executeCircuitOpenQueuePath (lines 279-321) and executeEventlessFastPath (lines 377-436) contain a near-identical sequence: conditional drainPendingQueue with the same budget/soft-deadline options, conditional cleanupExpiredPendingAlerts, a pendingQueueChanged recompute-snapshot guard, and ~14 identically-mapped pending* result fields (pendingAttempted/pendingDrained/pendingSent/pendingRetryQueued/pendingDropped/pendingDroppedTtlExpired/... plus pendingCapacityBefore/After). executeFullFanoutPath repeats the pendingQueueChanged guard (lines 705-715) and the same field mapping (lines 741-756). Any new drain counter must be threaded through three hand-copied blocks; the eventless path already diverges subtly (its pendingQueueChanged omits nothing today, but the copies can drift silently).",
     "recommendation": "Extract two helpers in this file: `drainAndCleanupPending(db, botToken, pendingCapacityBefore, nowSec, dispatchStartedAtMs, signal, maxPriority?)` returning {drainResult, expiredCount, pendingCapacityAfter}, and `pendingDrainResultFields(drainResult, expiredCount)` returning the shared field object spread into each DispatchResult. Field values are computed from the same inputs, so JSON metadata output is unchanged.",
     "estImpact": "-70 LOC, single source of truth for drain accounting"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Centralized the remaining shared pending lifecycle accounting by extracting common pending progress count totals and the capacity refresh decision used by circuit-open, eventless, and full-fanout dispatch paths.",
+    "validation": [
+     "npx vitest run worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+     "cd worker && npx tsc --noEmit"
+    ],
+    "notes": "The existing `pendingDispatchFields` helper already covered the result-field mapping; this pass keeps each path's distinct drain/cleanup policy intact while removing the remaining duplicated accounting logic."
    }
   },
   {

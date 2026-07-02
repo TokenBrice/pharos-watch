@@ -217,6 +217,34 @@ function pendingQueueChanged(
   );
 }
 
+function pendingCountTotals(drainResult: PendingDrainResult) {
+  return {
+    pendingAttempted: drainResult.attempted,
+    pendingSent: drainResult.sent,
+    pendingDeferred: drainResult.deferred,
+    pendingDropped: drainResult.dropped,
+  };
+}
+
+async function readPendingCapacityAfterLifecycle(
+  db: D1Database,
+  nowSec: number,
+  pendingCapacityBefore: PendingCapacitySnapshot,
+  drainResult: PendingDrainResult,
+  expiredCount: number,
+  options: {
+    pendingEnqueued?: number;
+    forceRefresh?: boolean;
+  } = {},
+): Promise<PendingCapacitySnapshot> {
+  const shouldRefresh =
+    options.forceRefresh === true ||
+    pendingQueueChanged(drainResult, expiredCount, options.pendingEnqueued ?? 0);
+  return shouldRefresh
+    ? readPendingCapacitySnapshot(db, nowSec)
+    : pendingCapacityBefore;
+}
+
 interface SeedPathContext {
   db: D1Database;
   currentSnapshots: DispatchSnapshotState["currentSnapshots"];
@@ -364,10 +392,13 @@ async function executeCircuitOpenQueuePath({
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
-  const shouldRefreshPendingCapacity = pendingQueueChanged(drainResult, expiredCount);
-  const pendingCapacityAfter = shouldRefreshPendingCapacity
-    ? await readPendingCapacitySnapshot(db, nowSec)
-    : pendingCapacityBefore;
+  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
+    db,
+    nowSec,
+    pendingCapacityBefore,
+    drainResult,
+    expiredCount,
+  );
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
 
   const base = emptyResult(false);
@@ -396,12 +427,7 @@ async function executeCircuitOpenQueuePath({
     itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
     metadata: {
       skipped: "circuit-open",
-      countTotals: {
-        pendingAttempted: drainResult.attempted,
-        pendingSent: drainResult.sent,
-        pendingDeferred: drainResult.deferred,
-        pendingDropped: drainResult.dropped,
-      },
+      countTotals: pendingCountTotals(drainResult),
       deferredTail: pendingTailState(pendingCapacityAfter),
     },
   });
@@ -458,12 +484,17 @@ async function executeEventlessFastPath({
     markTelegramDeliveryStarted,
   });
   await persistEventlessOverflowBacklog(db, overflowDeliveryResult, overflowBacklog, nowSec);
-  const pendingCapacityAfter =
-    pendingCapacityBefore.due > 0 ||
-      pendingCapacityBefore.expired > 0 ||
-      (overflowDeliveryResult?.pendingEnqueued ?? 0) > 0
-      ? await readPendingCapacitySnapshot(db, nowSec)
-      : pendingCapacityBefore;
+  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
+    db,
+    nowSec,
+    pendingCapacityBefore,
+    drainResult,
+    expiredCount,
+    {
+      pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
+      forceRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0,
+    },
+  );
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
 
   await writeSnapshots(db, currentSnapshots);
@@ -507,12 +538,7 @@ async function executeEventlessFastPath({
     itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
     metadata: {
       eventlessFastPath: true,
-      countTotals: {
-        pendingAttempted: drainResult.attempted,
-        pendingSent: drainResult.sent,
-        pendingDeferred: drainResult.deferred,
-        pendingDropped: drainResult.dropped,
-      },
+      countTotals: pendingCountTotals(drainResult),
       deferredTail: pendingTailState(pendingCapacityAfter),
     },
   });
@@ -764,10 +790,14 @@ async function executeFullFanoutPath({
     await deleteCache(db, "telegram:burst-markers");
   }
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-  const shouldRefreshPendingCapacity = pendingQueueChanged(drainResult, expiredCount, pendingEnqueued);
-  const pendingCapacityAfter = shouldRefreshPendingCapacity
-    ? await readPendingCapacitySnapshot(db, nowSec)
-    : pendingCapacityBefore;
+  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
+    db,
+    nowSec,
+    pendingCapacityBefore,
+    drainResult,
+    expiredCount,
+    { pendingEnqueued },
+  );
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
   if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
     await writePresetFailureCount(db, 0);
@@ -841,11 +871,9 @@ async function executeFullFanoutPath({
         freshSent,
         freshRetryQueued,
         freshOverflow,
-        pendingAttempted: drainResult.attempted,
+        ...pendingCountTotals(drainResult),
         pendingDrained: drainResult.sent,
         pendingEnqueued,
-        pendingDeferred: drainResult.deferred,
-        pendingDropped: drainResult.dropped,
       },
       cappedAtLimit,
       systemicFreshFailure,
