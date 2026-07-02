@@ -27,6 +27,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 export function generateStaticParams() {
   return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);
@@ -45,6 +46,9 @@ export default async function StaticComparisonPage({ params }: { params: Promise
   const researchLinks = buildComparisonResearchLinks(page);
   const snippetAnswer = buildComparisonSnippetAnswer(page);
   const liveCompareHref = buildLiveCompareUrl([page.left.id, page.right.id]);
+  const detailHrefByCoinId = new Map(
+    [page.left, page.right].map((coin) => [coin.id, buildStablecoinUrl(coin.id)]),
+  );
   const pegSlug = PEG_SLUGS[page.left.flags.pegCurrency];
   const taxonomyLinks = [
     {
@@ -156,7 +160,7 @@ export default async function StaticComparisonPage({ params }: { params: Promise
               </li>
             </ul>
             <Link
-              href={researchLinks.find((link) => link.href.includes(coin.id))?.href ?? "/"}
+              href={detailHrefByCoinId.get(coin.id) ?? buildStablecoinUrl(coin.id)}
               className="pharos-focus-ring mt-4 inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {/* Single span: inline-flex containers drop the whitespace between

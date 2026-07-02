@@ -4251,8 +4251,18 @@
     "confidence": "high",
     "behaviorChange": false,
     "description": "The per-coin card link is `researchLinks.find((link) => link.href.includes(coin.id))?.href ?? \"/\"` — it rediscovers the coin's own detail URL by substring-searching the research-links array that the same render just built from buildStablecoinUrl(coin.id). This is fragile: coin ids can be substrings of one another (the live pair usde-ethena / susde-ethena already collides in one direction), and the live-compare link in the same array contains both ids. Today the ordering happens to keep every current pair correct (verified against all 31 STATIC_COMPARE_PAIRS), but adding a pair where the left id contains the right id as a prefix-substring would silently link both cards to the wrong page.",
-    "recommendation": "Replace with `href={buildStablecoinUrl(coin.id)}` (already imported in compare-pages.ts; add the import here). This is exactly the value the find() resolves to for every current pair, so rendered output is unchanged while the latent mislink is eliminated.",
+   "recommendation": "Replace with `href={buildStablecoinUrl(coin.id)}` (already imported in compare-pages.ts; add the import here). This is exactly the value the find() resolves to for every current pair, so rendered output is unchanged while the latent mislink is eliminated.",
     "estImpact": "removes a latent wrong-link bug class; -1 fragile lookup"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Static comparison card links now use exact stablecoin detail URLs instead of rediscovering them via substring matching across research links.",
+    "validation": [
+     "npx vitest run 'src/app/compare/[slug]/page.test.tsx'",
+     "npm run typecheck",
+     "git diff --check -- src/app/compare/[slug]/page.tsx src/app/compare/[slug]/page.test.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
