@@ -129,6 +129,9 @@ output/playwright/
 /test-results/
 /playwright-report/
 
+# local scratch artifacts
+.tmp/
+
 # local screenshot artifacts from browser automation
 /alt-pegs-*.png
 /*-screenshot.png

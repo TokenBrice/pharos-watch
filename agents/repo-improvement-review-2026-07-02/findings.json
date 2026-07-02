@@ -5868,6 +5868,16 @@
      "home-final-dark.png",
      ".gitignore"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the tracked one-off evidence file and root screenshot artifact, and added `.tmp/` to `.gitignore` so scratch files stay out of future commits.",
+    "validation": [
+     "git ls-files .tmp/launch-date-resolved-evidence.txt home-final-dark.png",
+     "rg -n \"home-final-dark|launch-date-resolved-evidence\" src shared worker functions scripts docs package.json .github || true",
+     "git diff --check -- .gitignore .tmp/launch-date-resolved-evidence.txt home-final-dark.png agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
