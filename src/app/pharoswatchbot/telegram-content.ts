@@ -1,3 +1,13 @@
+import {
+  Bell,
+  MessageSquareText,
+  Radio,
+  ShieldCheck,
+  SlidersHorizontal,
+  Terminal,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
@@ -43,6 +53,108 @@ export const TELEGRAM_ACTIONS = [
 ] as const;
 
 export type TelegramActionKey = (typeof TELEGRAM_ACTIONS)[number]["key"];
+
+export const MINI_APP_FEATURES = [
+  { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
+  { title: "Global alerts", detail: "DEWS, depeg, safety, and launches in one panel." },
+  { title: "Per-coin tuning", detail: "DEWS bands, depeg steps, safety modes." },
+  { title: "Presets", detail: "One-tap cohorts like USD Top 25." },
+  { title: "Quiet hours", detail: "Mute nights, snooze bursts, resume cleanly." },
+  { title: "Delivery health", detail: "See whether Telegram can still reach you." },
+  { title: "Coin search", detail: "Find and add stablecoins fast." },
+  { title: "Bot sync", detail: "Commands and app share one alert state." },
+  { title: "Deep links", detail: "Jump straight to settings, presets, or a coin." },
+  { title: "Launch alerts", detail: "Catch tracked pre-launch assets going live." },
+] as const satisfies readonly { title: string; detail: string }[];
+
+export const MINI_APP_SCREENSHOTS = [
+  {
+    title: "Home",
+    src: "/featured/telegram-mini-app/home.png",
+    alt: "PharosWatchBot Mini App home screen with watcher state, snooze controls, quiet hours, and last delivery",
+    width: 583,
+    height: 1280,
+  },
+  {
+    title: "Watchlist",
+    src: "/featured/telegram-mini-app/watchlist.png",
+    alt: "PharosWatchBot Mini App watchlist screen with per-coin alert toggles",
+    width: 583,
+    height: 1280,
+  },
+  {
+    title: "Presets",
+    src: "/featured/telegram-mini-app/presets.png",
+    alt: "PharosWatchBot Mini App presets screen with followed and available preset watchlists",
+    width: 583,
+    height: 1280,
+  },
+  {
+    title: "Settings",
+    src: "/featured/telegram-mini-app/settings.png",
+    alt: "PharosWatchBot Mini App settings screen with global alerts, depeg step, and quiet hours",
+    width: 583,
+    height: 1280,
+  },
+] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
+
+export const RECOMMENDED_SETUPS = [
+  {
+    title: "First watcher setup",
+    command: "/subscribe dews,depeg usd-top25",
+    description: "Top 25 USD stablecoins, DEWS plus depeg. The safe default if you're not sure where to start.",
+    icon: Bell,
+  },
+  {
+    title: "Research desk setup",
+    command: "/subscribe safety mcap-ge-1b",
+    description: "All safety-grade changes with reason lines, on coins above $1B mcap.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Group setup",
+    command: "/subscribe@PharosWatchBot dews usd-top25",
+    description: "Address commands to the bot so a shared Telegram group runs one watch desk without colliding with other bots.",
+    icon: MessageSquareText,
+  },
+] as const satisfies readonly {
+  title: string;
+  command: string;
+  description: string;
+  icon: LucideIcon;
+}[];
+
+export const GROWTH_SUPPORT = [
+  {
+    title: "Dynamic presets",
+    detail: "Top-N and market-cap cohorts subscribe to a moving list with one command. No re-subscribing as the universe changes.",
+    signal: "/presets",
+    icon: Terminal,
+  },
+  {
+    title: "Noise controls",
+    detail: "Raise the DEWS floor, set depeg milestones, mute upgrades, schedule quiet hours in your /timezone, snooze on the fly.",
+    signal: "/set, /mute",
+    icon: SlidersHorizontal,
+  },
+  {
+    title: "Shared group state",
+    detail: "One Telegram chat, one shared subscription. Pending ticker selections stay scoped to whoever started them.",
+    signal: "@PharosWatchBot",
+    icon: Users,
+  },
+  {
+    title: "No dropped alerts",
+    detail: "Overflow gets queued, not silently dropped. Even when Telegram throttles, alerts arrive in order.",
+    signal: "pending queue",
+    icon: Radio,
+  },
+] as const satisfies readonly {
+  title: string;
+  detail: string;
+  signal: string;
+  icon: LucideIcon;
+}[];
 
 export const TELEGRAM_ALERT_EXAMPLES = [
   {

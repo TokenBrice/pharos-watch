@@ -4139,6 +4139,16 @@
     "alsoFiles": [
      "src/app/pharoswatchbot/telegram-content.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Moved Mini App feature, screenshot, recommended setup, and growth-support content constants from the Telegram bot page into the established telegram-content module.",
+    "validation": [
+     "npx vitest run src/app/pharoswatchbot",
+     "npm run typecheck",
+     "git diff --check -- src/app/pharoswatchbot/page.tsx src/app/pharoswatchbot/telegram-content.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {
