@@ -7,7 +7,7 @@ import {
   getYieldRankingBenchmarkKey,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
-import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
+import type { YieldBenchmarkKey, YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types";
 
 const BENCHMARKS: YieldBenchmarkRegistry = {
   USD: {
@@ -51,6 +51,33 @@ const BENCHMARKS: YieldBenchmarkRegistry = {
   },
 };
 
+function buildProvenance(benchmarkKey: YieldBenchmarkKey): YieldRankingProvenance {
+  return {
+    sourceKey: "test-source",
+    sourceObservedAt: 1774483200,
+    sourceAgeSeconds: 0,
+    comparisonAnchorObservedAt: null,
+    comparisonAnchorAgeSeconds: null,
+    confidenceTier: "curated",
+    selectionMethod: "confidence-weighted",
+    selectionReason: "test",
+    sourceSwitch: false,
+    previousBestSourceKey: null,
+    usedLegacyHistory: false,
+    usedDefaultSafety: false,
+    benchmarkKey,
+    benchmarkLabel: BENCHMARKS[benchmarkKey]?.label,
+    benchmarkCurrency: benchmarkKey,
+    benchmarkRate: BENCHMARKS[benchmarkKey]?.rate,
+    benchmarkRecordDate: BENCHMARKS[benchmarkKey]?.recordDate ?? null,
+    benchmarkIsFallback: false,
+    benchmarkFallbackMode: null,
+    benchmarkSelectionMode: "native",
+    benchmarkIsProxy: false,
+    anomalies: [],
+  };
+}
+
 function buildRanking(id: string, benchmarkKey: "USD" | "EUR" | "CHF"): YieldRanking {
   return {
     id,
@@ -74,7 +101,7 @@ function buildRanking(id: string, benchmarkKey: "USD" | "EUR" | "CHF"): YieldRan
     benchmarkKey,
     benchmarkLabel: BENCHMARKS[benchmarkKey]?.label,
     benchmarkCurrency: benchmarkKey,
-    benchmarkRate: BENCHMARKS[benchmarkKey]?.rate ?? null,
+    benchmarkRate: BENCHMARKS[benchmarkKey]?.rate,
     benchmarkRecordDate: BENCHMARKS[benchmarkKey]?.recordDate ?? null,
     benchmarkIsFallback: false,
     benchmarkFallbackMode: null,
@@ -86,11 +113,7 @@ function buildRanking(id: string, benchmarkKey: "USD" | "EUR" | "CHF"): YieldRan
     apyMax30d: 4.2,
     warningSignals: [],
     altSources: [],
-    provenance: {
-      confidenceTier: "curated",
-      selectionReason: "test",
-      sourceSwitch: false,
-    },
+    provenance: buildProvenance(benchmarkKey),
   };
 }
 
@@ -126,13 +149,10 @@ describe("yield benchmark gap copy", () => {
 
 describe("resolveYieldScatterBenchmarkFrame", () => {
   it("uses the provenance benchmark key when the top-level key is absent", () => {
+    const { benchmarkKey: _benchmarkKey, ...rankingWithoutBenchmarkKey } = buildRanking("eur-fallback", "USD");
     const ranking: YieldRanking = {
-      ...buildRanking("eur-fallback", "USD"),
-      benchmarkKey: undefined,
-      provenance: {
-        ...buildRanking("eur-fallback", "USD").provenance,
-        benchmarkKey: "EUR",
-      },
+      ...rankingWithoutBenchmarkKey,
+      provenance: buildProvenance("EUR"),
     };
 
     const result = resolveYieldScatterBenchmarkFrame({
