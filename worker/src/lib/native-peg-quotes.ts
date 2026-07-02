@@ -127,10 +127,6 @@ export function getNativePegQueryCurrencies(pegCurrency: string | null | undefin
   return SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES.get(normalized) ?? [];
 }
 
-export function getPreferredNativePegQueryCurrency(pegCurrency: string | null | undefined): string | null {
-  return getNativePegQueryCurrencies(pegCurrency)[0] ?? null;
-}
-
 export async function fetchCurrentNativePegQuotes(
   requests: NativePegQuoteRequest[],
   signal?: AbortSignal,

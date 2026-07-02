@@ -9,7 +9,6 @@ vi.mock("../fetch-retry", () => ({
 import {
   fetchCurrentNativePegQuotes,
   getNativePegQueryCurrencies,
-  getPreferredNativePegQueryCurrency,
   normalizeSupportedPegCurrency,
 } from "../native-peg-quotes";
 import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
@@ -32,12 +31,11 @@ describe("native-peg-quotes", () => {
     expect(normalizeSupportedPegCurrency(" eur ")).toBe("EUR");
     expect(normalizeSupportedPegCurrency("gold")).toBeNull();
     expect(getNativePegQueryCurrencies("CNH")).toEqual(["cny", "cnh"]);
-    expect(getPreferredNativePegQueryCurrency("CNH")).toBe("cny");
-    expect(getPreferredNativePegQueryCurrency("ARS")).toBe("ars");
-    expect(getPreferredNativePegQueryCurrency("BRL")).toBe("brl");
-    expect(getPreferredNativePegQueryCurrency("KGS")).toBeNull();
-    expect(getPreferredNativePegQueryCurrency("NGN")).toBe("ngn");
-    expect(getPreferredNativePegQueryCurrency("XOF")).toBeNull();
+    expect(getNativePegQueryCurrencies("ARS")).toEqual(["ars"]);
+    expect(getNativePegQueryCurrencies("BRL")).toEqual(["brl"]);
+    expect(getNativePegQueryCurrencies("KGS")).toEqual([]);
+    expect(getNativePegQueryCurrencies("NGN")).toEqual(["ngn"]);
+    expect(getNativePegQueryCurrencies("XOF")).toEqual([]);
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {

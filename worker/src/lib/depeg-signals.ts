@@ -51,13 +51,6 @@ export function signalCrossesThreshold(
   return signal != null && signal.absBps >= thresholdBps;
 }
 
-export function signalRecoversWithinThreshold(
-  signal: Pick<DepegSignal, "absBps"> | null | undefined,
-  thresholdBps: number,
-): boolean {
-  return signal != null && signal.absBps < thresholdBps;
-}
-
 export function classifyDirectionalSignal(
   signal: DepegSignal | null | undefined,
   thresholdBps: number,

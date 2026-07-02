@@ -5,7 +5,6 @@ import {
   deriveDepegSignal,
   pickMoreSevereBps,
   signalCrossesThreshold,
-  signalRecoversWithinThreshold,
   signalsShareDirection,
 } from "../depeg-signals";
 
@@ -63,8 +62,7 @@ describe("threshold helpers", () => {
     const recovered = deriveDepegSignal(0.9995, 1)!;
 
     expect(signalCrossesThreshold(signal, 100)).toBe(true);
-    expect(signalRecoversWithinThreshold(signal, 100)).toBe(false);
-    expect(signalRecoversWithinThreshold(recovered, 100)).toBe(true);
+    expect(signalCrossesThreshold(recovered, 100)).toBe(false);
   });
 });
 

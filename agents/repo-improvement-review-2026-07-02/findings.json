@@ -1873,6 +1873,17 @@
     "description": "Repo-wide word-boundary greps (excluding tests) find only the definition for each of: (1) depeg-signals.ts:54 signalRecoversWithinThreshold — the trivial negation of signalCrossesThreshold, unused since classifyDirectionalSignal handles the recover case inline; (2) blacklist-current-balances.ts:282 deleteBlacklistCurrentBalance — a single-row DELETE never issued by any cron, API, or ops script; (3) native-peg-quotes.ts:130 getPreferredNativePegQueryCurrency — callers use getNativePegQueryCurrencies directly; (4) telegram-presets.ts:181 isTelegramPresetAlias — callers use resolveTelegramPresetAlias and null-check.",
     "recommendation": "Delete all four exports and retarget their test assertions to the surviving primitives (signalCrossesThreshold, resolveTelegramPresetAlias, getNativePegQueryCurrencies). Strictly behavior-preserving; each is a one-expression wrapper with zero production call sites.",
     "estImpact": "-25 LOC"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the four orphan wrapper helpers and retargeted tests to the surviving primitives for threshold crossing, native-peg currency lists, Telegram preset alias resolution, and blacklist balance upserts.",
+    "validation": [
+     "npx vitest run worker/src/lib/__tests__/depeg-signals.test.ts worker/src/lib/__tests__/native-peg-quotes.test.ts worker/src/lib/__tests__/telegram-presets.test.ts worker/src/cron/blacklist/__tests__/current-balance-cache.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "rg -n \"signalRecoversWithinThreshold|deleteBlacklistCurrentBalance|getPreferredNativePegQueryCurrency|isTelegramPresetAlias\" worker/src shared src functions scripts --glob '!node_modules/**'"
+    ],
+    "notes": "Each removed symbol had zero production callers; runtime behavior remains on the existing primitives."
    }
   },
   {

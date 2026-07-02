@@ -6,7 +6,6 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
-  deleteBlacklistCurrentBalance: vi.fn(),
 }));
 
 vi.mock("../balance-providers", () => ({
@@ -15,7 +14,7 @@ vi.mock("../balance-providers", () => ({
 }));
 
 import { syncCurrentBalanceCacheForRows } from "../current-balance-cache";
-import { upsertBlacklistCurrentBalance, deleteBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
+import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
 import { fetchEvmTokenCurrentBalance } from "../balance-providers";
 
 const ethereumConfig: ContractEventConfig = {
@@ -122,7 +121,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
       skippedDueBudget: 0,
       budgetExhausted: false,
     });
-    expect(deleteBlacklistCurrentBalance).not.toHaveBeenCalled();
     expect(upsertBlacklistCurrentBalance).not.toHaveBeenCalled();
   });
 
@@ -167,7 +165,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
       skippedDueBudget: 0,
       budgetExhausted: false,
     });
-    expect(deleteBlacklistCurrentBalance).not.toHaveBeenCalled();
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

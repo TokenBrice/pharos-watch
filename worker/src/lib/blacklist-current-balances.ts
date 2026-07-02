@@ -278,17 +278,3 @@ export async function upsertBlacklistCurrentBalance(
     )
     .run();
 }
-
-export async function deleteBlacklistCurrentBalance(
-  db: D1Database,
-  stablecoin: BlacklistStablecoin,
-  chainId: string,
-  address: string,
-  configKey?: string | null,
-  contractAddress?: string | null,
-): Promise<void> {
-  await db
-    .prepare("DELETE FROM blacklist_current_balances WHERE id = ?")
-    .bind(buildBlacklistCurrentBalanceId(stablecoin, chainId, address, configKey, contractAddress))
-    .run();
-}

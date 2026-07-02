@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
-  isTelegramPresetAlias,
   listTelegramPresets,
   resolveTelegramPresetAlias,
   resolveTelegramPresetTargets,
@@ -67,12 +66,12 @@ describe("telegram preset catalog", () => {
   });
 
   it("recognizes supported preset aliases", () => {
-    expect(isTelegramPresetAlias("usd-top25")).toBe(true);
-    expect(isTelegramPresetAlias("usd-top-25")).toBe(true);
-    expect(isTelegramPresetAlias("non-usd-top25")).toBe(true);
-    expect(isTelegramPresetAlias("non-usd-top-25")).toBe(true);
-    expect(isTelegramPresetAlias("USD-TOP25".toLowerCase())).toBe(true);
-    expect(isTelegramPresetAlias("usd-top100")).toBe(false);
+    expect(resolveTelegramPresetAlias("usd-top25")).not.toBeNull();
+    expect(resolveTelegramPresetAlias("usd-top-25")).not.toBeNull();
+    expect(resolveTelegramPresetAlias("non-usd-top25")).not.toBeNull();
+    expect(resolveTelegramPresetAlias("non-usd-top-25")).not.toBeNull();
+    expect(resolveTelegramPresetAlias("USD-TOP25".toLowerCase())).not.toBeNull();
+    expect(resolveTelegramPresetAlias("usd-top100")).toBeNull();
   });
 
   it("normalizes dashed aliases to canonical preset ids", () => {

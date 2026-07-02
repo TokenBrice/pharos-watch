@@ -178,10 +178,6 @@ export function resolveTelegramPresetAlias(token: string): TelegramPresetId | nu
   return PRESET_ALIAS_TO_ID.get(token.toLowerCase()) ?? null;
 }
 
-export function isTelegramPresetAlias(token: string): token is TelegramPresetId {
-  return resolveTelegramPresetAlias(token) !== null;
-}
-
 function compareStablecoinIdsByMarketCap(
   a: string,
   b: string,
