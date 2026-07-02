@@ -447,9 +447,7 @@ export async function reconcileTrackedSupplyGaps(
       const meta = ACTIVE_META_BY_ID.get(assetId);
       if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) return [];
 
-      if (sumPegBuckets(asset.circulating) <= 0) {
-        return [meta.geckoId];
-      }
+      if (sumPegBuckets(asset.circulating) <= 0) return [];
 
       const metadataChainIds = buildMetadataChainIds(assetId);
       if (metadataChainIds.length === 0) return [];

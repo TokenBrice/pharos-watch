@@ -513,8 +513,19 @@
     "recommendation": "Restrict candidateGeckoIds to the missing-tracked-chain case (drop the `sumPegBuckets <= 0` early return of geckoId). The missing-chain gate and all reconciliation outputs are computed from the same inputs as before; zero-supply handling is untouched.",
     "estImpact": "smaller CG batch URL; -4 LOC",
     "alsoFiles": []
-   }
   },
+  "remediation": {
+   "status": "fixed",
+   "remediatedAt": "2026-07-02",
+   "summary": "Stopped adding zero-supply DefiLlama assets to the current CoinGecko market-cap prefetch list; the prefetch now covers only positive-supply assets with missing tracked-chain coverage, which is the only branch that reads currentMarketCaps.",
+   "validation": [
+    "npx vitest run worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/enrich-prices.test.ts",
+    "cd worker && npx tsc --noEmit",
+    "rg -n \"reconcileTrackedSupplyGaps|supply-gap|SupplyGap\" worker/src -g'*.test.ts'"
+   ],
+   "notes": "No dedicated supply-gap reconciliation test suite exists; this is a one-line request-size reduction and the zero-supply reconciliation branch remains unchanged."
+  }
+ },
   {
    "id": "w-cron-core:1",
    "domain": "w-cron-core",
