@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
@@ -10,6 +11,7 @@ import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-provi
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
 import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
+import { parsePositiveInteger } from "./lib/kyc-rip";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 type BlacklistEventRow = {
@@ -36,7 +38,7 @@ type BlacklistEventRow = {
   explorer_address_url: string;
 };
 
-type ScriptOptions = {
+export type ScriptOptions = {
   remote: boolean;
   dryRun: boolean;
   concurrency: number;
@@ -60,6 +62,13 @@ type CurrentBalanceWriteRow = {
   lastErrorClass: string | null;
 };
 
+function parsePositiveIntegerFlag(args: Map<string, string | boolean>, flag: string, fallback: number): number {
+  const value = args.get(flag);
+  if (value == null) return fallback;
+  if (typeof value === "boolean") throw new Error(`--${flag} requires a value`);
+  return parsePositiveInteger(value, `--${flag}`);
+}
+
 function buildCurrentBalanceId(stablecoin: string, chainId: string, address: string): string {
   return buildBlacklistAddressCountKey(
     stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0],
@@ -68,11 +77,16 @@ function buildCurrentBalanceId(stablecoin: string, chainId: string, address: str
   );
 }
 
-function parseArgs(argv: string[]): ScriptOptions {
+export function parseArgs(argv: string[]): ScriptOptions {
   const args = new Map<string, string | boolean>();
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
     if (!arg.startsWith("--")) continue;
+    const inlineValueIndex = arg.indexOf("=");
+    if (inlineValueIndex > 2) {
+      args.set(arg.slice(2, inlineValueIndex), arg.slice(inlineValueIndex + 1));
+      continue;
+    }
     const key = arg.slice(2);
     const next = argv[index + 1];
     if (!next || next.startsWith("--")) {
@@ -90,8 +104,8 @@ function parseArgs(argv: string[]): ScriptOptions {
   return {
     remote: operationMode.remote,
     dryRun: operationMode.dryRun,
-    concurrency: Number(args.get("concurrency") ?? 20),
-    requestsPerSecond: Number(args.get("requests-per-second") ?? 8),
+    concurrency: parsePositiveIntegerFlag(args, "concurrency", 20),
+    requestsPerSecond: parsePositiveIntegerFlag(args, "requests-per-second", 8),
     chainId: String(args.get("chain") ?? "tron").toLowerCase(),
     stablecoin: String(args.get("stablecoin") ?? "USDT").toUpperCase(),
   };
@@ -355,6 +369,12 @@ async function main() {
     await Promise.all(Array.from({ length: Math.max(1, options.concurrency) }, () => worker()));
   }
 
+  if (active.length > 0 && rowsToWrite.length === 0) {
+    throw new Error(
+      `Refusing to delete ${options.stablecoin}:${options.chainId} current balances: ${active.length} active rows produced no replacement rows`,
+    );
+  }
+
   d1.executeStatements(
     [
       // SAFETY: stablecoin and chainId are constrained by getBlacklistConfigsForSymbolAndChain() before writes, and sqlString() quotes both values.
@@ -392,7 +412,9 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

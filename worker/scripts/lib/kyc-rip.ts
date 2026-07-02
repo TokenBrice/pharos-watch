@@ -73,7 +73,7 @@ class RetryableHttpError extends Error {
   }
 }
 
-function parsePositiveInteger(value: string, flag: string): number {
+export function parsePositiveInteger(value: string, flag: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(`${flag} must be a positive integer`);

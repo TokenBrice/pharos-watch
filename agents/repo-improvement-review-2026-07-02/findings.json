@@ -4718,6 +4718,16 @@
     "description": "parseArgs() (line 93) does `Number(args.get(\"concurrency\") ?? 20)` with no validation. A live run like `--execute --confirm rebuild-blacklist-current-balances --chain ethereum --stablecoin USDT --concurrency 2O` (typo) yields NaN; line 355 `Math.max(1, NaN)` is NaN and `Array.from({length: NaN})` is an empty array, so ZERO workers run, rowsToWrite stays empty, yet line 358 still executes `DELETE FROM blacklist_current_balances WHERE stablecoin=... AND chain_id=...` followed by no inserts — wiping the entire EVM scope's balance cache while printing rebuilt:0. Similarly `--requests-per-second` NaN makes createRateLimiter's interval NaN (setTimeout(NaN)=0), silently removing rate limiting. Unknown/typo'd flags are also ignored (unlike the sibling kyc-rip parser which throws on unknown args).",
     "recommendation": "Validate numeric flags with the parsePositiveInteger pattern already in worker/scripts/lib/kyc-rip.ts (throw on non-integer), and/or refuse to issue the DELETE when active.length > 0 but rowsToWrite is empty. Pure guard hardening on an operator tool; no observable behavior change for valid invocations.",
     "estImpact": "prevents accidental wipe of blacklist_current_balances scope"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Validated rebuild-blacklist-current-balances numeric rate/concurrency flags as positive integers, added import-safe argument tests, and refused destructive scope replacement when active rows produce no replacement rows.",
+    "validation": [
+     "npx vitest run worker/scripts/__tests__/rebuild-blacklist-current-balances.test.ts worker/scripts/__tests__/reconcile-blacklist-current-balances-from-kyc-rip.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:script-entrypoints"
+    ]
    }
   },
   {
@@ -5049,6 +5059,17 @@
      "scripts/lib/remote-d1.ts",
      "worker/scripts/lib/remote-d1.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the kyc.rip current-balance temp staging table and now emits a validated DELETE plus direct INSERT OR REPLACE statements, with duplicate/non-finite row validation before any D1 mutation path and coverage for >200-row replacement plans.",
+    "validation": [
+     "npx vitest run worker/scripts/__tests__/rebuild-blacklist-current-balances.test.ts worker/scripts/__tests__/reconcile-blacklist-current-balances-from-kyc-rip.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "npm run check:script-entrypoints"
+    ],
+    "notes": "The replacement still executes through wrangler statement chunks, so a later chunk failure after the initial delete could leave a partial replacement; the accepted temp-table connection failure is fixed and JS validation now runs before the delete path."
    }
   },
   {

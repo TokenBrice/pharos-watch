@@ -87,32 +87,35 @@ export async function normalizeCurrentBalanceRows(rows: KycRipCurrentBalanceRow[
 }
 
 function buildReplacementStatements(rows: SnapshotRow[], observedAt: number): string[] {
+  validateReplacementRows(rows);
   return [
-    `CREATE TEMP TABLE kyc_rip_current_balance_stage (
-      id TEXT PRIMARY KEY,
-      stablecoin TEXT NOT NULL,
-      chain_id TEXT NOT NULL,
-      address TEXT NOT NULL,
-      amount_native REAL,
-      amount_usd REAL,
-      source TEXT NOT NULL,
-      status TEXT NOT NULL,
-      observed_at INTEGER NOT NULL,
-      attempt_count INTEGER NOT NULL,
-      last_attempted_at INTEGER NOT NULL,
-      last_error_class TEXT
-    );`,
+    "DELETE FROM blacklist_current_balances WHERE (stablecoin = 'USDT' AND chain_id = 'ethereum') OR (stablecoin = 'USDC' AND chain_id = 'ethereum') OR (stablecoin = 'USDT' AND chain_id = 'tron');",
     ...rows.map(
       (row) =>
-        `INSERT INTO kyc_rip_current_balance_stage (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
+        `INSERT OR REPLACE INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
        VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountUsd}, ${row.amountUsd}, 'kyc_rip_bootstrap', 'resolved', ${observedAt}, 1, ${observedAt}, NULL);`,
     ),
-    "DELETE FROM blacklist_current_balances WHERE (stablecoin = 'USDT' AND chain_id = 'ethereum') OR (stablecoin = 'USDC' AND chain_id = 'ethereum') OR (stablecoin = 'USDT' AND chain_id = 'tron');",
-    `INSERT OR REPLACE INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
-     SELECT id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class
-     FROM kyc_rip_current_balance_stage;`,
-    "DROP TABLE kyc_rip_current_balance_stage;",
   ];
+}
+
+function validateReplacementRows(rows: SnapshotRow[]): void {
+  if (rows.length === 0) {
+    throw new Error("refusing to replace blacklist_current_balances with zero normalized rows");
+  }
+
+  const ids = new Set<string>();
+  for (const [index, row] of rows.entries()) {
+    if (!row.id || !row.address) {
+      throw new Error(`normalized row ${index} is missing an id or address`);
+    }
+    if (ids.has(row.id)) {
+      throw new Error(`normalized row ${index} duplicates id ${row.id}`);
+    }
+    ids.add(row.id);
+    if (!Number.isFinite(row.amountUsd)) {
+      throw new Error(`normalized row ${index} has a non-finite amount`);
+    }
+  }
 }
 
 function summarizeByScope(rows: SnapshotRow[]): Record<string, number> {
@@ -179,6 +182,7 @@ export async function runCurrentBalanceReconciliation(
   if (snapshots.length < options.minRows) {
     throw new Error(`normalized ${snapshots.length} rows, below minimum ${options.minRows}`);
   }
+  validateReplacementRows(snapshots);
 
   if (!options.apply) {
     const summary = buildSummary(options, providerUrl, stats, snapshots, null);
