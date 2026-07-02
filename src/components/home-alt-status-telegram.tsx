@@ -108,14 +108,3 @@ export function HomeAltStatusTelegram(): React.JSX.Element {
     </section>
   );
 }
-
-export function HomeAltStatusTelegramFallback(): React.JSX.Element {
-  return (
-    <section aria-hidden="true">
-      <div className="pharos-card-shell flex flex-col gap-x-4 gap-y-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-5 w-60" />
-        <Skeleton className="h-5 w-44" />
-      </div>
-    </section>
-  );
-}

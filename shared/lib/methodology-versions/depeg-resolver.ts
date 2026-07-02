@@ -24,9 +24,6 @@ export {
 /** Reconstructed changelog data. */
 export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 
-/** Resolve DDR methodology version active at a given Unix timestamp (seconds). */
-export const getDdrMethodologyVersionAt = ddr.getVersionAt;
-
 /** Sub-component versions surfaced in the API _meta for reproducibility. */
 export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v2";
 export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v1";

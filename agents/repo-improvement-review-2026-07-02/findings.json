@@ -5955,6 +5955,19 @@
      "src/app/about/principles/content.ts",
      "src/app/learn/case-studies/content/index.ts"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the still-live dead HomeAltStatusTelegramFallback, getDdrMethodologyVersionAt, and PRINCIPLES_LEAD declarations; verified didReserveSyncAttemptFinalizeAsSuccess and CASE_STUDY_BY_CEMETERY_ID were already absent.",
+    "validation": [
+     "rg -n \"HomeAltStatusTelegramFallback|getDdrMethodologyVersionAt|PRINCIPLES_LEAD|CASE_STUDY_BY_CEMETERY_ID|didReserveSyncAttemptFinalizeAsSuccess\" src shared worker functions scripts || true",
+     "npx vitest run shared/lib/__tests__/methodology-version.test.ts src/app/learn/case-studies/__tests__/content.test.ts src/components/__tests__/home-alt-client.test.tsx",
+     "npm run typecheck",
+     "npm run check:worker-boundary",
+     "npm run check:shared-cycles",
+     "git diff --check -- shared/lib/methodology-versions/depeg-resolver.ts src/app/about/principles/content.ts src/components/home-alt-status-telegram.tsx agents/repo-improvement-review-2026-07-02/findings.json"
+    ]
    }
   },
   {

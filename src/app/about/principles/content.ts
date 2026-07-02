@@ -4,11 +4,6 @@ export interface PrincipleAxiom {
   body: string;
 }
 
-export const PRINCIPLES_LEAD =
-  "A short list of beliefs that drive what Pharos computes and what it refuses to compute. They are written so the project can be cited against itself when the data disagrees with the maintainer.";
-
-
-
 export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   {
     id: "independence",
