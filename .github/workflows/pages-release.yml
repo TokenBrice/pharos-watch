@@ -225,7 +225,11 @@ jobs:
           # a11y runs on its own bare static-export server (port 4174) so it keeps the
           # exact conditions of the former standalone step (no API hydration), while
           # running concurrently with the API-backed smoke server on 4173.
-          STATIC_EXPORT_PORT=4174 npm run test:a11y &
+          # --workers=1 here only: this block already drives ~9 concurrent smoke
+          # pages on a 4-core runner, and 3 axe workers on top oversubscribed the
+          # CPU into 30s test timeouts (run 28586595047). The standalone
+          # pages-build validate job and the local gate keep the config default.
+          STATIC_EXPORT_PORT=4174 npm run test:a11y -- --workers=1 &
           a11y_pid=$!
 
           npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local &
