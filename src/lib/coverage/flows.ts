@@ -142,5 +142,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveFlow,
   formatBreakdown: formatFlows,
 });
-
-export const resolveFlowCoverage = coverageFeature.resolve;

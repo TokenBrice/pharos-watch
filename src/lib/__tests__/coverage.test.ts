@@ -6,17 +6,17 @@ import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
   COVERAGE_FEATURES,
-  resolveBlacklistCoverage,
-  resolveDependencyCoverage,
-  resolveDexCoverage,
-  resolveFlowCoverage,
-  resolveMintAuthorityCoverage,
-  resolvePriceCoverage,
-  resolveRedemptionCoverage,
-  resolveReserveCoverage,
-  resolveSafetyCoverage,
-  resolveYieldCoverage,
 } from "@/lib/coverage";
+import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blacklist";
+import { coverageFeature as dependencyCoverageFeature } from "@/lib/coverage/dependency";
+import { coverageFeature as dexCoverageFeature } from "@/lib/coverage/dex";
+import { coverageFeature as flowCoverageFeature } from "@/lib/coverage/flows";
+import { coverageFeature as mintAuthorityCoverageFeature } from "@/lib/coverage/mint-authority";
+import { coverageFeature as priceCoverageFeature } from "@/lib/coverage/price";
+import { coverageFeature as redemptionCoverageFeature } from "@/lib/coverage/redemption";
+import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
+import { coverageFeature as safetyCoverageFeature } from "@/lib/coverage/safety";
+import { coverageFeature as yieldCoverageFeature } from "@/lib/coverage/yield";
 import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
 
 type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityClientSummary };
@@ -78,7 +78,7 @@ function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): Rede
 
 describe("coverage helpers", () => {
   it("marks NAV tokens as price-only instead of depeg-tracked", () => {
-    const status = resolvePriceCoverage(
+    const status = priceCoverageFeature.resolve(
       makeCoin({
         flags: {
           backing: "rwa-backed",
@@ -97,14 +97,14 @@ describe("coverage helpers", () => {
   });
 
   it("maps DEX coverage classes into user-facing labels", () => {
-    expect(resolveDexCoverage("primary").label).toBe("Primary");
-    expect(resolveDexCoverage("fallback").label).toBe("Fallback");
-    expect(resolveDexCoverage("unobserved").available).toBe(false);
+    expect(dexCoverageFeature.resolve("primary").label).toBe("Primary");
+    expect(dexCoverageFeature.resolve("fallback").label).toBe("Fallback");
+    expect(dexCoverageFeature.resolve("unobserved").available).toBe(false);
   });
 
   it("maps reserve sync coverage into live, curated-validated, proof, curated, or estimated states", () => {
     expect(
-      resolveReserveCoverage(
+      reserveCoverageFeature.resolve(
         makeCoin({
           liveReservesConfig: {
             adapter: "infinifi",
@@ -119,7 +119,7 @@ describe("coverage helpers", () => {
     ).toBe("live");
 
     expect(
-      resolveReserveCoverage(
+      reserveCoverageFeature.resolve(
         makeCoin({
           liveReservesConfig: {
             adapter: "curated-validated",
@@ -134,7 +134,7 @@ describe("coverage helpers", () => {
     ).toBe("curated-validated");
 
     expect(
-      resolveReserveCoverage(
+      reserveCoverageFeature.resolve(
         makeCoin({
           liveReservesConfig: {
             adapter: "single-asset",
@@ -153,18 +153,18 @@ describe("coverage helpers", () => {
     ).toBe("proof");
 
     expect(
-      resolveReserveCoverage(
+      reserveCoverageFeature.resolve(
         makeCoin({
           reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
         }),
       ).kind,
     ).toBe("curated");
 
-    expect(resolveReserveCoverage(makeCoin()).kind).toBe("estimated");
+    expect(reserveCoverageFeature.resolve(makeCoin()).kind).toBe("estimated");
   });
 
   it("marks reserve coverage unavailable when the coverage row has no reserve data", () => {
-    const status = resolveReserveCoverage(
+    const status = reserveCoverageFeature.resolve(
       makeCoin({
         reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
       }),
@@ -189,20 +189,20 @@ describe("coverage helpers", () => {
       },
     });
 
-    expect(resolveReserveCoverage(liveConfiguredCoin, false).kind).toBe("live-configured");
-    expect(resolveReserveCoverage(liveConfiguredCoin, false).available).toBe(false);
-    expect(resolveReserveCoverage(liveConfiguredCoin, null).kind).toBe("checking");
+    expect(reserveCoverageFeature.resolve(liveConfiguredCoin, false).kind).toBe("live-configured");
+    expect(reserveCoverageFeature.resolve(liveConfiguredCoin, false).available).toBe(false);
+    expect(reserveCoverageFeature.resolve(liveConfiguredCoin, null).kind).toBe("checking");
   });
 
   it("maps redemption route families into user-facing labels", () => {
-    expect(resolveRedemptionCoverage(makeRedemptionEntry()).label).toBe("PSM");
-    expect(resolveRedemptionCoverage(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe("Issuer");
-    expect(resolveRedemptionCoverage(makeRedemptionEntry({ routeFamily: "queue-redeem" })).label).toBe("Queue");
-    expect(resolveRedemptionCoverage(null).available).toBe(false);
+    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry()).label).toBe("PSM");
+    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe("Issuer");
+    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "queue-redeem" })).label).toBe("Queue");
+    expect(redemptionCoverageFeature.resolve(null).available).toBe(false);
   });
 
   it("treats configured but unrated redemption rows as unavailable coverage", () => {
-    const status = resolveRedemptionCoverage(
+    const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: null,
         effectiveExitScore: null,
@@ -217,7 +217,7 @@ describe("coverage helpers", () => {
   });
 
   it("treats low-confidence redemption rows as heuristic coverage, not strong availability", () => {
-    const status = resolveRedemptionCoverage(
+    const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         modelConfidence: "low",
       }),
@@ -229,7 +229,7 @@ describe("coverage helpers", () => {
   });
 
   it("treats impaired redemption rows as unavailable coverage", () => {
-    const status = resolveRedemptionCoverage(
+    const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: null,
         effectiveExitScore: null,
@@ -248,7 +248,7 @@ describe("coverage helpers", () => {
   });
 
   it("treats resolved eventual-only redemption rows as unscored coverage", () => {
-    const status = resolveRedemptionCoverage(
+    const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: 65,
         effectiveExitScore: 60,
@@ -263,53 +263,53 @@ describe("coverage helpers", () => {
   });
 
   it("maps mint/burn coverage states into visible labels", () => {
-    expect(resolveFlowCoverage("full").label).toBe("Full");
-    expect(resolveFlowCoverage("partial-history").label).toBe("Partial");
-    expect(resolveFlowCoverage("bootstrapping").kind).toBe("bootstrapping");
-    expect(resolveFlowCoverage("bootstrapping").spokenLabel).toBe("Bootstrapping");
-    expect(resolveFlowCoverage("unknown").label).toBe("Unknown");
-    expect(resolveFlowCoverage(null).available).toBe(false);
+    expect(flowCoverageFeature.resolve("full").label).toBe("Full");
+    expect(flowCoverageFeature.resolve("partial-history").label).toBe("Partial");
+    expect(flowCoverageFeature.resolve("bootstrapping").kind).toBe("bootstrapping");
+    expect(flowCoverageFeature.resolve("bootstrapping").spokenLabel).toBe("Bootstrapping");
+    expect(flowCoverageFeature.resolve("unknown").label).toBe("Unknown");
+    expect(flowCoverageFeature.resolve(null).available).toBe(false);
   });
 
   it("emits live tracker, blacklistable, and resolved status kinds", () => {
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "tGBP" }), true).kind).toBe("live");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "YES" }), true).kind).toBe("yes");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDT" }), "possible").kind).toBe("possible");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "DAI" }), "inherited").kind).toBe("upstream");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).kind).toBe("no");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "tGBP" }), true).kind).toBe("live");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "YES" }), true).kind).toBe("yes");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "USDT" }), "possible").kind).toBe("possible");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "DAI" }), "inherited").kind).toBe("upstream");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "USDQ" }), false).kind).toBe("no");
+    expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
   });
 
   it("emits role-aware dependency coverage states", () => {
-    expect(resolveDependencyCoverage({
+    expect(dependencyCoverageFeature.resolve({
       kind: "both",
       upstreamCount: 2,
       dependentCount: 1,
       rawDependencyCount: 2,
       mappedDependencyWeight: 0.9,
     }).kind).toBe("both");
-    expect(resolveDependencyCoverage({
+    expect(dependencyCoverageFeature.resolve({
       kind: "dependent",
       upstreamCount: 1,
       dependentCount: 0,
       rawDependencyCount: 1,
       mappedDependencyWeight: 0.5,
     }).kind).toBe("dependent");
-    expect(resolveDependencyCoverage({
+    expect(dependencyCoverageFeature.resolve({
       kind: "upstream",
       upstreamCount: 0,
       dependentCount: 2,
       rawDependencyCount: 0,
       mappedDependencyWeight: 0,
     }).kind).toBe("upstream");
-    expect(resolveDependencyCoverage({
+    expect(dependencyCoverageFeature.resolve({
       kind: "resolved-none",
       upstreamCount: 0,
       dependentCount: 0,
       rawDependencyCount: 0,
       mappedDependencyWeight: 0,
     }).available).toBe(true);
-    expect(resolveDependencyCoverage({
+    expect(dependencyCoverageFeature.resolve({
       kind: "unmapped-gap",
       upstreamCount: 0,
       dependentCount: 0,
@@ -319,10 +319,10 @@ describe("coverage helpers", () => {
   });
 
   it("maps mint-authority summaries into descriptive coverage states", () => {
-    expect(resolveMintAuthorityCoverage(null).kind).toBe("unknown");
-    expect(resolveMintAuthorityCoverage(null).available).toBe(false);
+    expect(mintAuthorityCoverageFeature.resolve(null).kind).toBe("unknown");
+    expect(mintAuthorityCoverageFeature.resolve(null).available).toBe(false);
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "immutable-user-collateralized",
         authorityPosture: "none-resolved",
         confidence: "verified",
@@ -330,7 +330,7 @@ describe("coverage helpers", () => {
       }).kind,
     ).toBe("no-privileged-mint");
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "bridge-or-oft-synthetic",
         authorityPosture: "partially-bounded-admin",
         confidence: "manual-review",
@@ -338,7 +338,7 @@ describe("coverage helpers", () => {
       }).kind,
     ).toBe("bridge-mint");
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "permissioned-minter",
         authorityPosture: "bounded-admin",
         confidence: "verified",
@@ -354,7 +354,7 @@ describe("coverage helpers", () => {
       }).kind,
     ).toBe("multisig-mint");
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "issuer-direct-mint",
         authorityPosture: "bounded-admin",
         confidence: "verified",
@@ -362,7 +362,7 @@ describe("coverage helpers", () => {
       }).kind,
     ).toBe("issuer-or-backend-mint");
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "permissioned-minter",
         authorityPosture: "unbounded-or-compromised",
         confidence: "manual-review",
@@ -378,7 +378,7 @@ describe("coverage helpers", () => {
       }).kind,
     ).toBe("issuer-or-backend-mint");
     expect(
-      resolveMintAuthorityCoverage({
+      mintAuthorityCoverageFeature.resolve({
         mintPath: "wrapped-or-variant-inherited",
         authorityPosture: "bounded-admin",
         confidence: "probable",
@@ -388,7 +388,7 @@ describe("coverage helpers", () => {
   });
 
   it("does not use authority posture as a mint-authority coverage ranking", () => {
-    const bounded = resolveMintAuthorityCoverage({
+    const bounded = mintAuthorityCoverageFeature.resolve({
       mintPath: "permissioned-minter",
       authorityPosture: "bounded-admin",
       confidence: "verified",
@@ -402,7 +402,7 @@ describe("coverage helpers", () => {
         },
       ],
     });
-    const concentrated = resolveMintAuthorityCoverage({
+    const concentrated = mintAuthorityCoverageFeature.resolve({
       mintPath: "permissioned-minter",
       authorityPosture: "concentrated-admin",
       confidence: "verified",
@@ -653,7 +653,7 @@ describe("coverage helpers", () => {
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
-    const status = resolvePriceCoverage(makeCoin(), true, ["coingecko", "defillama", "pyth"], "high");
+    const status = priceCoverageFeature.resolve(makeCoin(), true, ["coingecko", "defillama", "pyth"], "high");
 
     expect(status.kind).toBe("tracked");
     expect(status.sourceCount).toBe(3);
@@ -662,7 +662,7 @@ describe("coverage helpers", () => {
   });
 
   it("sets sourceCount on tracked price coverage with empty sources", () => {
-    const status = resolvePriceCoverage(makeCoin(), true, [], "single-source");
+    const status = priceCoverageFeature.resolve(makeCoin(), true, [], "single-source");
 
     expect(status.kind).toBe("tracked");
     expect(status.sourceCount).toBe(0);
@@ -671,7 +671,7 @@ describe("coverage helpers", () => {
   });
 
   it("does not set sourceCount when consensusSources omitted (backward compat)", () => {
-    const status = resolvePriceCoverage(makeCoin(), true);
+    const status = priceCoverageFeature.resolve(makeCoin(), true);
 
     expect(status.kind).toBe("tracked");
     expect(status.sourceCount).toBeUndefined();
@@ -1115,78 +1115,78 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   }
 
   // ── price ────────────────────────────────────────────────────────────────
-  record("price", resolvePriceCoverage(coin(), true).kind); // tracked
-  record("price", resolvePriceCoverage(coin(), false).kind); // missing
+  record("price", priceCoverageFeature.resolve(coin(), true).kind); // tracked
+  record("price", priceCoverageFeature.resolve(coin(), false).kind); // missing
   record(
     "price",
-    resolvePriceCoverage(coin({ flags: { ...baseFlags, navToken: true } }), false).kind,
+    priceCoverageFeature.resolve(coin({ flags: { ...baseFlags, navToken: true } }), false).kind,
   ); // price-only
-  record("price", resolvePriceCoverage(coin(), true, undefined, undefined, false).kind); // data-unavailable
+  record("price", priceCoverageFeature.resolve(coin(), true, undefined, undefined, false).kind); // data-unavailable
 
   // ── safety ───────────────────────────────────────────────────────────────
-  record("safety", resolveSafetyCoverage(82).kind); // rated
-  record("safety", resolveSafetyCoverage(null).kind); // nr
-  record("safety", resolveSafetyCoverage(82, false).kind); // data-unavailable
+  record("safety", safetyCoverageFeature.resolve(82).kind); // rated
+  record("safety", safetyCoverageFeature.resolve(null).kind); // nr
+  record("safety", safetyCoverageFeature.resolve(82, false).kind); // data-unavailable
 
   // ── dex ──────────────────────────────────────────────────────────────────
-  record("dex", resolveDexCoverage("primary").kind);
-  record("dex", resolveDexCoverage("mixed").kind);
-  record("dex", resolveDexCoverage("fallback").kind);
-  record("dex", resolveDexCoverage("legacy").kind);
-  record("dex", resolveDexCoverage("unobserved").kind);
-  record("dex", resolveDexCoverage(null).kind); // unknown
-  record("dex", resolveDexCoverage("primary", false).kind); // data-unavailable
+  record("dex", dexCoverageFeature.resolve("primary").kind);
+  record("dex", dexCoverageFeature.resolve("mixed").kind);
+  record("dex", dexCoverageFeature.resolve("fallback").kind);
+  record("dex", dexCoverageFeature.resolve("legacy").kind);
+  record("dex", dexCoverageFeature.resolve("unobserved").kind);
+  record("dex", dexCoverageFeature.resolve(null).kind); // unknown
+  record("dex", dexCoverageFeature.resolve("primary", false).kind); // data-unavailable
 
   // ── reserves ─────────────────────────────────────────────────────────────
-  record("reserves", resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), true).kind); // live
+  record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), true).kind); // live
   record(
     "reserves",
-    resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), false).kind,
+    reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), false).kind,
   ); // live-configured
   record(
     "reserves",
-    resolveReserveCoverage(coin({ liveReservesConfig: liveCfg }), null).kind,
+    reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), null).kind,
   ); // checking
   record(
     "reserves",
-    resolveReserveCoverage(coin({ liveReservesConfig: curatedValidatedCfg })).kind,
+    reserveCoverageFeature.resolve(coin({ liveReservesConfig: curatedValidatedCfg })).kind,
   ); // curated-validated
-  record("reserves", resolveReserveCoverage(coin({ liveReservesConfig: proofCfg })).kind); // proof
+  record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: proofCfg })).kind); // proof
   record(
     "reserves",
-    resolveReserveCoverage(coin({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] })).kind,
+    reserveCoverageFeature.resolve(coin({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] })).kind,
   ); // curated
-  record("reserves", resolveReserveCoverage(coin()).kind); // estimated (template fallback)
+  record("reserves", reserveCoverageFeature.resolve(coin()).kind); // estimated (template fallback)
   record(
     "reserves",
-    resolveReserveCoverage(
+    reserveCoverageFeature.resolve(
       coin({
         flags: { ...baseFlags, backing: "rwa-backed", governance: "decentralized" },
       }),
     ).kind,
   ); // unavailable: no template match for rwa-decentralized
-  record("reserves", resolveReserveCoverage(coin(), true, false).kind); // data-unavailable
+  record("reserves", reserveCoverageFeature.resolve(coin(), true, false).kind); // data-unavailable
 
   // ── redemption ───────────────────────────────────────────────────────────
-  record("redemption", resolveRedemptionCoverage(null).kind); // none
-  record("redemption", resolveRedemptionCoverage(undefined, false).kind); // data-unavailable
+  record("redemption", redemptionCoverageFeature.resolve(null).kind); // none
+  record("redemption", redemptionCoverageFeature.resolve(undefined, false).kind); // data-unavailable
   record(
     "redemption",
-    resolveRedemptionCoverage(
+    redemptionCoverageFeature.resolve(
       redemption({ resolutionState: "impaired", modelConfidence: "low" }),
     ).kind,
   ); // impaired
   record(
     "redemption",
-    resolveRedemptionCoverage(redemption({ resolutionState: "missing-capacity" })).kind,
+    redemptionCoverageFeature.resolve(redemption({ resolutionState: "missing-capacity" })).kind,
   ); // configured-unrated (non-resolved)
   record(
     "redemption",
-    resolveRedemptionCoverage(redemption({ modelConfidence: "low" })).kind,
+    redemptionCoverageFeature.resolve(redemption({ modelConfidence: "low" })).kind,
   ); // modeled-heuristic
   record(
     "redemption",
-    resolveRedemptionCoverage(redemption({ capacitySemantics: "eventual-only" })).kind,
+    redemptionCoverageFeature.resolve(redemption({ capacitySemantics: "eventual-only" })).kind,
   ); // resolved-unscored
   for (const family of [
     "offchain-issuer",
@@ -1196,20 +1196,20 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     "stablecoin-redeem",
     "basket-redeem",
   ] as const) {
-    record("redemption", resolveRedemptionCoverage(redemption({ routeFamily: family })).kind);
+    record("redemption", redemptionCoverageFeature.resolve(redemption({ routeFamily: family })).kind);
   }
   // Trigger the "modeled" preset fallback by passing an unknown route family.
   record(
     "redemption",
-    resolveRedemptionCoverage(
+    redemptionCoverageFeature.resolve(
       redemption({ routeFamily: "unknown-family" as unknown as RedemptionBackstopEntry["routeFamily"] }),
     ).kind,
   );
 
   // ── yield ────────────────────────────────────────────────────────────────
-  record("yield", resolveYieldCoverage(true).kind); // ranked
-  record("yield", resolveYieldCoverage(false).kind); // none
-  record("yield", resolveYieldCoverage(true, false).kind); // data-unavailable
+  record("yield", yieldCoverageFeature.resolve(true).kind); // ranked
+  record("yield", yieldCoverageFeature.resolve(false).kind); // none
+  record("yield", yieldCoverageFeature.resolve(true, false).kind); // data-unavailable
 
   // ── flows ────────────────────────────────────────────────────────────────
   for (const status of [
@@ -1220,60 +1220,60 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     "unknown",
     "disabled",
   ] as const) {
-    record("flows", resolveFlowCoverage(status).kind);
+    record("flows", flowCoverageFeature.resolve(status).kind);
   }
-  record("flows", resolveFlowCoverage(null).kind); // none
-  record("flows", resolveFlowCoverage("full", false).kind); // data-unavailable
+  record("flows", flowCoverageFeature.resolve(null).kind); // none
+  record("flows", flowCoverageFeature.resolve("full", false).kind); // data-unavailable
 
   // ── blacklist ────────────────────────────────────────────────────────────
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDC" }), true).kind); // live
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "YES" }), true).kind); // yes
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "DAI" }), "inherited").kind); // upstream
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDT" }), "possible").kind);
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDQ" }), false).kind); // no
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "X" }), null).kind); // data-unavailable
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "USDC" }), true).kind); // live
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "YES" }), true).kind); // yes
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "DAI" }), "inherited").kind); // upstream
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "USDT" }), "possible").kind);
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "USDQ" }), false).kind); // no
+  record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "X" }), null).kind); // data-unavailable
 
   // ── dependency ───────────────────────────────────────────────────────────
-  record("dependency", resolveDependencyCoverage({
+  record("dependency", dependencyCoverageFeature.resolve({
     kind: "both",
     upstreamCount: 1,
     dependentCount: 1,
     rawDependencyCount: 1,
     mappedDependencyWeight: 1,
   }).kind);
-  record("dependency", resolveDependencyCoverage(true).kind); // dependent via legacy boolean input
-  record("dependency", resolveDependencyCoverage({
+  record("dependency", dependencyCoverageFeature.resolve(true).kind); // dependent via legacy boolean input
+  record("dependency", dependencyCoverageFeature.resolve({
     kind: "upstream",
     upstreamCount: 0,
     dependentCount: 1,
     rawDependencyCount: 0,
     mappedDependencyWeight: 0,
   }).kind);
-  record("dependency", resolveDependencyCoverage({
+  record("dependency", dependencyCoverageFeature.resolve({
     kind: "resolved-none",
     upstreamCount: 0,
     dependentCount: 0,
     rawDependencyCount: 0,
     mappedDependencyWeight: 0,
   }).kind);
-  record("dependency", resolveDependencyCoverage(false).kind); // unmapped-gap via legacy boolean input
-  record("dependency", resolveDependencyCoverage(true, false).kind); // data-unavailable
+  record("dependency", dependencyCoverageFeature.resolve(false).kind); // unmapped-gap via legacy boolean input
+  record("dependency", dependencyCoverageFeature.resolve(true, false).kind); // data-unavailable
 
   // ── mint authority ──────────────────────────────────────────────────────
-  record("mintAuthority", resolveMintAuthorityCoverage(null).kind); // unknown
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve(null).kind); // unknown
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "immutable-user-collateralized",
     authorityPosture: "none-resolved",
     confidence: "verified",
     summary: "No privileged mint path is resolved.",
   }).kind);
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "user-collateralized-governed",
     authorityPosture: "bounded-admin",
     confidence: "verified",
     summary: "Governance can affect minting parameters.",
   }).kind);
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "permissioned-minter",
     authorityPosture: "bounded-admin",
     confidence: "verified",
@@ -1287,19 +1287,19 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       },
     ],
   }).kind);
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "issuer-direct-mint",
     authorityPosture: "bounded-admin",
     confidence: "verified",
     summary: "Issuer role can mint new supply.",
   }).kind);
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "bridge-or-oft-synthetic",
     authorityPosture: "partially-bounded-admin",
     confidence: "manual-review",
     summary: "Bridge route controls destination supply.",
   }).kind);
-  record("mintAuthority", resolveMintAuthorityCoverage({
+  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
     mintPath: "wrapped-or-variant-inherited",
     authorityPosture: "bounded-admin",
     confidence: "probable",

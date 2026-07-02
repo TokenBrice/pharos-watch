@@ -198,5 +198,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveReserve,
   formatBreakdown: formatReserves,
 });
-
-export const resolveReserveCoverage = coverageFeature.resolve;

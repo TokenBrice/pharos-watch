@@ -68,5 +68,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveYield,
   formatBreakdown: formatYield,
 });
-
-export const resolveYieldCoverage = coverageFeature.resolve;

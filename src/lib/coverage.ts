@@ -38,18 +38,6 @@ export type {
   CoverageTone,
 } from "@/lib/coverage-types";
 
-// Per-feature resolver re-exports (preserve existing public API).
-export { resolveBlacklistCoverage } from "@/lib/coverage/blacklist";
-export { resolveDependencyCoverage } from "@/lib/coverage/dependency";
-export { resolveDexCoverage } from "@/lib/coverage/dex";
-export { resolveFlowCoverage } from "@/lib/coverage/flows";
-export { resolveMintAuthorityCoverage } from "@/lib/coverage/mint-authority";
-export { resolvePriceCoverage } from "@/lib/coverage/price";
-export { resolveRedemptionCoverage } from "@/lib/coverage/redemption";
-export { resolveReserveCoverage } from "@/lib/coverage/reserves";
-export { resolveSafetyCoverage } from "@/lib/coverage/safety";
-export { resolveYieldCoverage } from "@/lib/coverage/yield";
-
 export { COVERAGE_FEATURES };
 
 /**

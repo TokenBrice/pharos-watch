@@ -3258,6 +3258,18 @@
      "src/lib/coverage/mint-authority.ts",
      "scripts/ci/check-unused-code.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the legacy resolve*Coverage alias exports from each coverage feature module and the coverage barrel, moved tests to the feature modules' coverageFeature.resolve functions, and deleted the now-obsolete unused-code allowlist entries.",
+    "validation": [
+     "rg -n \"resolve(Blacklist|Dependency|Dex|Flow|MintAuthority|Price|Redemption|Reserve|Safety|Yield)Coverage\" src/lib src/components src/app shared worker functions scripts || true",
+     "npx vitest run src/lib/__tests__/coverage.test.ts src/lib/__tests__/coverage-client-registry.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/lib/coverage.ts src/lib/coverage src/lib/__tests__/coverage.test.ts src/lib/__tests__/coverage-client-registry.test.ts scripts/ci/check-unused-code.mjs"
+    ],
+    "notes": "The unused-code check now reports the coverage allowlist entries as gone; remaining failures are pre-existing unrelated findings tracked separately."
    }
   },
   {
@@ -3281,6 +3293,18 @@
      "shared/lib/time-constants.ts",
      "scripts/ci/check-unused-code.mjs"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Removed the dead HOUR_MS, WEEK_MS, and NINETY_DAYS_MS exports and their unused-code allowlist entries; renamed the tape-digest test-local fixture constant so repo-wide scans no longer match the deleted export names.",
+    "validation": [
+     "rg -n \"HOUR_MS|WEEK_MS|NINETY_DAYS_MS\" src shared worker functions scripts -g '!agents/repo-improvement-review-2026-07-02/findings.json' || true",
+     "npx vitest run src/lib/__tests__/tape-digest.test.ts",
+     "npm run typecheck",
+     "git diff --check -- src/lib/constants.ts shared/lib/time-constants.ts scripts/ci/check-unused-code.mjs src/lib/__tests__/tape-digest.test.ts"
+    ],
+    "notes": "The unused-code allowlist audit is clean for these entries; remaining unused-code failures are unrelated existing findings."
    }
   },
   {

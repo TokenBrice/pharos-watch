@@ -129,5 +129,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolvePrice,
   formatBreakdown: formatPrice,
 });
-
-export const resolvePriceCoverage = coverageFeature.resolve;

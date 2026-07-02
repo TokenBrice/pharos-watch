@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { resolveReserveCoverage } from "@/lib/coverage";
+import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
 
 /**
  * Regression guard for the /coverage Reserve View.
@@ -22,7 +22,7 @@ describe("coverage reserve resolution from the client registry", () => {
   it("resolves non-curated reserve states for live-enabled client coins", () => {
     const kinds = new Map<string, number>();
     for (const coin of CLIENT_ACTIVE_STABLECOINS) {
-      const status = resolveReserveCoverage(coin, true, true);
+      const status = reserveCoverageFeature.resolve(coin, true, true);
       kinds.set(status.kind, (kinds.get(status.kind) ?? 0) + 1);
     }
 

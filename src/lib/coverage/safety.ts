@@ -78,5 +78,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveSafety,
   formatBreakdown: formatSafety,
 });
-
-export const resolveSafetyCoverage = coverageFeature.resolve;

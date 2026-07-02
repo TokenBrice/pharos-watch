@@ -90,5 +90,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveMintAuthority,
   formatBreakdown: formatMintAuthority,
 });
-
-export const resolveMintAuthorityCoverage = coverageFeature.resolve;

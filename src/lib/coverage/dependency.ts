@@ -179,5 +179,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveDependency,
   formatBreakdown: formatDependency,
 });
-
-export const resolveDependencyCoverage = coverageFeature.resolve;

@@ -222,5 +222,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveRedemption,
   formatBreakdown: formatRedemption,
 });
-
-export const resolveRedemptionCoverage = coverageFeature.resolve;

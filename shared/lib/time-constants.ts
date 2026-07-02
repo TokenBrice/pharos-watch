@@ -8,6 +8,4 @@ export const DAY_SECONDS = HOURS_PER_DAY * HOUR_SECONDS;
 export const WEEK_SECONDS = 7 * DAY_SECONDS;
 export const THIRTY_DAYS_SECONDS = 30 * DAY_SECONDS;
 
-export const HOUR_MS = HOUR_SECONDS * MS_PER_SECOND;
 export const DAY_MS = DAY_SECONDS * MS_PER_SECOND;
-export const WEEK_MS = 7 * DAY_MS;

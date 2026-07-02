@@ -121,5 +121,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveDex,
   formatBreakdown: formatDex,
 });
-
-export const resolveDexCoverage = coverageFeature.resolve;

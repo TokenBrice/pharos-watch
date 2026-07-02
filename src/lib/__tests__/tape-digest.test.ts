@@ -10,7 +10,7 @@ import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 // Fixture helpers
 // ---------------------------------------------------------------------------
 
-const HOUR_MS = 3_600_000;
+const MS_PER_HOUR = 3_600_000;
 // Pick `nowMs` deep inside a UTC day so the "today"/"yesterday" boundaries
 // don't shift when we offset events by a few hours.
 const NOW_MS = Date.UTC(2026, 4, 21, 12, 0, 0); // 2026-05-21 12:00:00Z
@@ -63,9 +63,9 @@ function digestByDayForTest(events: readonly TapeEvent[], nowMs: number): Digest
 describe("single-page digest", () => {
   it("buckets events by UTC day, newest day first", () => {
     const events = sortDesc([
-      makeEvent(NOW_MS - HOUR_MS, "depeg.opened"),
-      makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened"),
-      makeEvent(NOW_MS - 50 * HOUR_MS, "depeg.opened"),
+      makeEvent(NOW_MS - MS_PER_HOUR, "depeg.opened"),
+      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened"),
+      makeEvent(NOW_MS - 50 * MS_PER_HOUR, "depeg.opened"),
     ]);
     const days = digestByDayForTest(events, NOW_MS);
     expect(days.map((d) => d.dayKey)).toEqual([
@@ -147,7 +147,7 @@ describe("digestPage", () => {
         coinId: null,
         payload: { stablecoin: "USDT", amountUsdAtEvent: 100 },
       }),
-      makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened", { coinId: "dai" }),
+      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened", { coinId: "dai" }),
     ]);
 
     const viaPage = mergeDigestedPages([digestPage(events, NOW_MS)]);
@@ -188,7 +188,7 @@ function asPlain(days: DigestedDay[]): DigestedDay[] {
 describe("mergeDigestedPages", () => {
   it("handles disjoint days (no seam)", () => {
     const page1 = sortDesc([makeEvent(NOW_MS - 1, "depeg.opened")]);
-    const page2 = sortDesc([makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened")]);
+    const page2 = sortDesc([makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened")]);
 
     const merged = mergeDigestedPages([
       digestPage(page1, NOW_MS),
@@ -209,7 +209,7 @@ describe("mergeDigestedPages", () => {
     const page2 = sortDesc([
       // Same UTC day as page1 — this is the seam.
       makeEvent(NOW_MS - 3, "depeg.opened", { coinId: "usdc" }),
-      makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened", { coinId: "usdt" }),
+      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened", { coinId: "usdt" }),
     ]);
 
     const merged = mergeDigestedPages([
@@ -239,12 +239,12 @@ describe("mergeDigestedPages", () => {
       // seam with page1 (same UTC day = today)
       makeEvent(NOW_MS - 2, "depeg.opened", { coinId: "usdc" }),
       // and starts yesterday too
-      makeEvent(NOW_MS - 25 * HOUR_MS, "depeg.opened", { coinId: "dai" }),
+      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened", { coinId: "dai" }),
     ]);
     const page3 = sortDesc([
       // seam with page2 (same UTC day = yesterday)
-      makeEvent(NOW_MS - 26 * HOUR_MS, "depeg.opened", { coinId: "dai" }),
-      makeEvent(NOW_MS - 50 * HOUR_MS, "depeg.opened", { coinId: "usdt" }),
+      makeEvent(NOW_MS - 26 * MS_PER_HOUR, "depeg.opened", { coinId: "dai" }),
+      makeEvent(NOW_MS - 50 * MS_PER_HOUR, "depeg.opened", { coinId: "usdt" }),
     ]);
 
     const merged = mergeDigestedPages([

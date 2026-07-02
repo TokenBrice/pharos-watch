@@ -149,5 +149,3 @@ export const coverageFeature = defineCoverageFeature({
   resolve: resolveBlacklist,
   formatBreakdown: formatBlacklist,
 });
-
-export const resolveBlacklistCoverage = coverageFeature.resolve;
