@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, "../..");
 const APP_DIR = join(__dirname, "../../src/app");
 const STABLECOIN_COINS_DIR = join(__dirname, "../../shared/data/stablecoins/coins");
 const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/app/learn/case-studies/content");
@@ -27,15 +28,78 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/content/types.ts"),
 ];
 
-function getLastModified(pagePath: string): string {
+const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
+const GIT_DATE_SCAN_PATHS = [
+  "src/app",
+  "src/components/stablecoin-detail/static-seo-content.tsx",
+  "src/lib/page-metadata.ts",
+  "src/lib/stablecoin-detail-json-ld.ts",
+  "shared/data/stablecoins/coins",
+];
+
+interface GitDateIndex {
+  fileDates: Map<string, string>;
+  changedPaths: { path: string; date: string }[];
+}
+
+let gitDateIndex: GitDateIndex | null | undefined;
+
+function toGitPath(path: string): string {
+  return relative(REPO_ROOT, path).replaceAll("\\", "/");
+}
+
+function loadGitDateIndex(): GitDateIndex | null {
   try {
-    return (
-      execFileSync("git", ["log", "-1", "--format=%aI", "--", pagePath], { encoding: "utf-8" }).trim() ||
-      statSync(pagePath).mtime.toISOString()
+    const output = execFileSync(
+      "git",
+      ["log", `--format=${GIT_LOG_MARKER}%aI`, "--name-only", "--", ...GIT_DATE_SCAN_PATHS],
+      { cwd: REPO_ROOT, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
     );
+    const fileDates = new Map<string, string>();
+    const changedPaths: GitDateIndex["changedPaths"] = [];
+    let currentDate: string | null = null;
+
+    for (const line of output.split(/\r?\n/)) {
+      if (line.startsWith(GIT_LOG_MARKER)) {
+        currentDate = line.slice(GIT_LOG_MARKER.length);
+        continue;
+      }
+      if (!line || currentDate == null) continue;
+      const changedPath = line.replaceAll("\\", "/");
+      if (!fileDates.has(changedPath)) fileDates.set(changedPath, currentDate);
+      changedPaths.push({ path: changedPath, date: currentDate });
+    }
+
+    return { fileDates, changedPaths };
   } catch {
-    return statSync(pagePath).mtime.toISOString();
+    return null;
   }
+}
+
+function getGitDateIndex(): GitDateIndex | null {
+  if (gitDateIndex === undefined) {
+    gitDateIndex = loadGitDateIndex();
+  }
+  return gitDateIndex;
+}
+
+function findDirectoryLastModified(index: GitDateIndex, gitPath: string): string | null {
+  const prefix = gitPath.endsWith("/") ? gitPath : `${gitPath}/`;
+  return index.changedPaths.find((entry) => entry.path === gitPath || entry.path.startsWith(prefix))?.date ?? null;
+}
+
+function getLastModified(pagePath: string): string {
+  const index = getGitDateIndex();
+  const gitPath = toGitPath(pagePath);
+  const fileDate = index?.fileDates.get(gitPath);
+  if (fileDate) return fileDate;
+
+  const pageStat = statSync(pagePath);
+  if (index && pageStat.isDirectory()) {
+    const directoryDate = findDirectoryLastModified(index, gitPath);
+    if (directoryDate) return directoryDate;
+  }
+  return pageStat.mtime.toISOString();
 }
 
 function latestIso(...dates: string[]): string {

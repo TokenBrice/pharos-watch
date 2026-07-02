@@ -3313,6 +3313,16 @@
     "alsoFiles": [
      "src/generated/sitemap-dates.json"
     ]
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced per-path `git log -1` calls in `generate-sitemap-dates.ts` with one cached `git log --name-only` history scan over the sitemap source roots, preserving file and directory mtime fallback behavior for untracked paths. Regenerated the checked sitemap-dates artifact, which was stale against current route git history.",
+    "validation": [
+     "npx tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-sitemap-dates.ts src/generated/sitemap-dates.json"
+    ]
    }
   },
   {
@@ -3618,6 +3628,16 @@
     "description": "getLastModified() runs a synchronous `git log -1 --format=%aI -- <path>` per file. The script calls it for every non-dynamic page.tsx (56), all 408 coin JSONs, 31 case-study content files, and 11 shared-source files — ~505 execFileSync spawns per invocation. Measured: a full `--check` run takes 3.8s wall (50 spawns alone cost 0.35s). This generator is in GENERATED_ARTIFACT_REGISTRY, so it runs in `npm run prebuild` AND again in `check:generated-artifacts`, both inside the merge gate, competing with the 4-way-parallel OG browser renderers.",
     "recommendation": "Replace per-file spawns with one batched git pass: a single `git log --format=%x00%aI --name-only` walk building a path→last-commit-date map (first occurrence per path when walking from HEAD equals `git log -1`), keeping the statSync mtime fallback for untracked files. Output is byte-identical for the same repo state, so the checked-in artifact and check mode are unaffected.",
     "estImpact": "~-3s per prebuild and per artifact check (~-6s per merge-gate run)"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Replaced the sequential per-file git subprocess path with one cached `git log --name-only` scan for sitemap source roots, including directory-prefix lookup for the route clusters that use directory mtimes. The script still falls back to filesystem mtimes for paths absent from git history and the generated artifact now checks clean.",
+    "validation": [
+     "npx tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+     "npm run typecheck",
+     "git diff --check -- scripts/maintenance/generate-sitemap-dates.ts src/generated/sitemap-dates.json"
+    ]
    }
   },
   {
