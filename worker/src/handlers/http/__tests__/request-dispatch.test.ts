@@ -211,6 +211,40 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
+  it("does not probe edge cache twice after a fast-gate cache miss", async () => {
+    const routedResponse = new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    const edgeCacheContext = { cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false };
+    mocks.evaluateCachedPublicApiReadFastGate.mockResolvedValue({
+      isAdmin: false,
+      isSiteProxy: false,
+      apiKey: { id: 123, trafficClass: "external", rateLimitPerMinute: 120 },
+      requestLane: "public-api",
+      response: null,
+    });
+    mocks.readEdgeCache.mockResolvedValue(null);
+    mocks.createEdgeCacheContext.mockReturnValue(edgeCacheContext);
+    mocks.route.mockResolvedValue(routedResponse);
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_mockSecretValue1234567890" },
+      }),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response).toBe(routedResponse);
+    expect(mocks.readEdgeCache).toHaveBeenCalledOnce();
+    expect(mocks.readEdgeCache).toHaveBeenCalledWith(edgeCacheContext);
+    expect(mocks.evaluateAccessGate).toHaveBeenCalledOnce();
+    expect(mocks.route).toHaveBeenCalledOnce();
+    expect(mocks.checkCachedPublicApiReadFastRateLimit).not.toHaveBeenCalled();
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+  });
+
   it("returns 404 when no route dependencies are registered for the path", async () => {
     mocks.resolveRoute.mockReturnValue(null);
 

@@ -47,6 +47,7 @@ export async function handleHttpRequestImpl(
   const url = new URL(request.url);
   const edgeCache = createEdgeCacheContext(request, url);
   let cached: Response | null = null;
+  let edgeCacheProbed = false;
   const commonSourceConfig = {
     request,
     db: env.DB,
@@ -66,6 +67,7 @@ export async function handleHttpRequestImpl(
   }
   const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
   if (fastGate) {
+    edgeCacheProbed = true;
     cached = await readEdgeCache(edgeCache);
     if (cached) {
       const fastRateLimitResponse = fastGate.apiKey
@@ -101,7 +103,7 @@ export async function handleHttpRequestImpl(
     return finalizeResponse(gateResponse, origin, ctx);
   }
 
-  if (!cached) {
+  if (!cached && !edgeCacheProbed) {
     cached = await readEdgeCache(edgeCache);
   }
   if (cached) {

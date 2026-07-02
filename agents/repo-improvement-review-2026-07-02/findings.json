@@ -2063,6 +2063,18 @@
     "description": "When evaluateCachedPublicApiReadFastGate returns non-null (protected public-API cacheable GET with an isolate-cached API key), line 69 performs readEdgeCache. On a miss, execution falls through to the full access gate and then line 104 `if (!cached) cached = await readEdgeCache(edgeCache)` re-runs the identical caches.default.match for the same cacheKey. So every fast-gate-eligible request that misses the edge cache does two Cache API lookups. The second lookup can only differ from the first if a concurrent isolate populated the cache during the D1 auth round-trips — an incidental race benefit, not a documented one.",
     "recommendation": "Track that the fast gate already probed the cache (e.g. `let cacheProbed = fastGate != null && ...`) and skip the second readEdgeCache when the first already ran. Same responses in all non-racy executions; the only delta is no longer catching a cache entry written milliseconds earlier, which the next request serves anyway.",
     "estImpact": "-1 Cache API lookup per keyed cache-miss request"
+   },
+   "remediation": {
+    "status": "fixed",
+    "remediatedAt": "2026-07-02",
+    "summary": "Tracked whether the fast public-API gate already probed the edge cache and skipped the later readEdgeCache call on fast-gate misses, avoiding duplicate Cache API lookups.",
+    "validation": [
+     "npx vitest run worker/src/handlers/http/__tests__/request-dispatch.test.ts",
+     "cd worker && npx tsc --noEmit",
+     "node -e 'const fs=require(\"fs\"); JSON.parse(fs.readFileSync(\"agents/repo-improvement-review-2026-07-02/findings.json\",\"utf8\"));'",
+     "git diff --check -- worker/src/handlers/http/request-dispatch.ts worker/src/handlers/http/__tests__/request-dispatch.test.ts agents/repo-improvement-review-2026-07-02/findings.json"
+    ],
+    "notes": "Added a dispatcher regression proving a fast-gate cache miss performs one edge-cache read before routing."
    }
   },
   {
