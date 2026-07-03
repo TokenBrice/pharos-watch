@@ -228,6 +228,7 @@ describe("forgetSubscriber", () => {
     sqlite.prepare("INSERT INTO telegram_alert_dead_letters (chat_id) VALUES (?)").run(chatId);
     const deletedCacheKeys = [
       `telegram:command-flood:${chatId}`,
+      `telegram:command-flood:${chatId}:actor:99`,
       `telegram:command-cooldown:${chatId}:/status`,
       `telegram:chat-member:${chatId}:99`,
       `telegram:chat-admins:${chatId}`,
@@ -275,7 +276,7 @@ describe("forgetSubscriber", () => {
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
   });
 
-  it("deletes exact command-flood keys without issuing a command-flood prefix delete", async () => {
+  it("deletes exact and actor-scoped command-flood keys", async () => {
     const chatId = "42";
     const db = mockD1();
 
@@ -293,7 +294,7 @@ describe("forgetSubscriber", () => {
         (entry) =>
           entry.sql.includes("WHERE key LIKE ?") && entry.binds[0] === `telegram:command-flood:${chatId}:%`,
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       cacheDeletes.some(
         (entry) =>

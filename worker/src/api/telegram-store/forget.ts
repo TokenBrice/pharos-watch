@@ -90,6 +90,7 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [
+  (chatId: string) => `telegram:command-flood:${chatId}:`,
   (chatId: string) => `telegram:command-cooldown:${chatId}:`,
   (chatId: string) => `telegram:chat-member:${chatId}:`,
 ] as const;
