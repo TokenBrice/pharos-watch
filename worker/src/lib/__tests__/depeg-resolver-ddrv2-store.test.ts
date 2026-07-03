@@ -417,6 +417,83 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("keeps DDR repair-debt cache markers that include unrelated cache-only debt", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      applyMigrationsThrough(sqlite, "0168_surface_publication_generations.sql");
+
+      sqlite.exec(`
+        INSERT INTO depeg_events
+          (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+           started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+        VALUES
+          (90410, 'lusd-liquity', 'LUSD', 'peggedUSD', 'above', 100,
+           1782970434, 1782973127, 1.0096702857093371, 1.0096702857093371, 1.0092109177692081, 0.99968, 'live');
+
+        INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, priority, state, attempt_count, next_attempt_at,
+           payload_json, created_at, updated_at)
+        VALUES
+          ('repair:ddr-repair-required-event:90410', 'ddr-repair-required-event', '90410', 50, 'open', 0, NULL,
+           '{"eventId":90410,"reason":"explicit repair required"}',
+           1782970440, 1782973133);
+
+        INSERT INTO cache (key, value, updated_at)
+        VALUES (
+          'ddr:repair-debt:v1',
+          '{"checkedAt":1782973133,"count":2,"events":[{"eventId":90410,"reason":"explicit repair required"},{"eventId":99999,"reason":"cache-only repair debt"}],"eventsTruncated":false}',
+          1782973133
+        );
+      `);
+
+      applyMigrationFile(sqlite, "0169_lusd_ddr_event_90410_split.sql");
+
+      expect(
+        sqlite
+          .prepare("SELECT state, closed_at IS NOT NULL AS has_closed_at FROM worker_repair_tasks WHERE subject_id = '90410'")
+          .get(),
+      ).toEqual({ state: "closed", has_closed_at: 1 });
+      expect(
+        sqlite
+          .prepare("SELECT value FROM cache WHERE key = 'ddr:repair-debt:v1'")
+          .get(),
+      ).toEqual({
+        value:
+          '{"checkedAt":1782973133,"count":2,"events":[{"eventId":90410,"reason":"explicit repair required"},{"eventId":99999,"reason":"cache-only repair debt"}],"eventsTruncated":false}',
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps cache-only DDR repair-debt markers when event 90410 is not repaired", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      applyMigrationsThrough(sqlite, "0168_surface_publication_generations.sql");
+
+      sqlite.exec(`
+        INSERT INTO cache (key, value, updated_at)
+        VALUES (
+          'ddr:repair-debt:v1',
+          '{"checkedAt":1782973133,"count":1,"events":[{"eventId":99999,"reason":"cache-only repair debt"}],"eventsTruncated":false}',
+          1782973133
+        );
+      `);
+
+      applyMigrationFile(sqlite, "0169_lusd_ddr_event_90410_split.sql");
+
+      expect(
+        sqlite
+          .prepare("SELECT value FROM cache WHERE key = 'ddr:repair-debt:v1'")
+          .get(),
+      ).toEqual({
+        value: '{"checkedAt":1782973133,"count":1,"events":[{"eventId":99999,"reason":"cache-only repair debt"}],"eventsTruncated":false}',
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("repairs APXUSD event 90203 when the earlier relink migration found an accidental link", () => {
     const sqlite = new DatabaseSync(":memory:");
     try {

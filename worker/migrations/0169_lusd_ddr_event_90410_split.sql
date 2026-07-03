@@ -131,11 +131,31 @@ WHERE kind = 'ddr-repair-required-event'
   AND EXISTS (
     SELECT 1
     FROM depeg_resolver_incident_event_links l
-    WHERE l.event_id = 90410
+    JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
+    WHERE l.incident_key = 'ddr2:c14884852abe024faa4d4b9fc1f84742'
+      AND l.event_id = 90410
+      AND i.first_event_id = 90410
+      AND i.current_event_id = 90410
   );
 
 DELETE FROM cache
 WHERE key = 'ddr:repair-debt:v1'
+  AND EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
+    WHERE l.incident_key = 'ddr2:c14884852abe024faa4d4b9fc1f84742'
+      AND l.event_id = 90410
+      AND i.first_event_id = 90410
+      AND i.current_event_id = 90410
+  )
+  AND COALESCE(json_extract(value, '$.count'), 0) = 1
+  AND CAST(json_extract(value, '$.events[0].eventId') AS INTEGER) = 90410
+  AND NOT EXISTS (
+    SELECT 1
+    FROM json_each(value, '$.events') event
+    WHERE CAST(json_extract(event.value, '$.eventId') AS INTEGER) != 90410
+  )
   AND NOT EXISTS (
     SELECT 1
     FROM worker_repair_tasks task
