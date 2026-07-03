@@ -319,6 +319,12 @@ function parseCliArgs(argv: string[]): Map<string, string | true> {
 
 function getCliString(args: Map<string, string | true>, flag: string): string | null {
   const value = args.get(flag);
+  if (value === true) {
+    throw new Error(`${flag} requires a value`);
+  }
+  if (value === "") {
+    throw new Error(`${flag} requires a non-empty value`);
+  }
   return typeof value === "string" ? value : null;
 }
 

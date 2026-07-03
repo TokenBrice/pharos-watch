@@ -143,6 +143,26 @@ describe("yield-history-cleanup", () => {
     expect(options.operationMode.dryRun).toBe(true);
   });
 
+  it("rejects value-taking cleanup flags when their value is missing", () => {
+    expect(() =>
+      parseYieldHistoryCleanupCliOptions([
+        "--sqlite",
+        "test.sqlite",
+        "--restore",
+        "--execute",
+        "--confirm",
+        "yield-history-cleanup",
+      ]),
+    ).toThrow("--restore requires a value");
+
+    expect(() => parseYieldHistoryCleanupCliOptions(["--sqlite", "--export"])).toThrow(
+      "--sqlite requires a value",
+    );
+    expect(() => parseYieldHistoryCleanupCliOptions(["--export="])).toThrow(
+      "--export requires a non-empty value",
+    );
+  });
+
   it("loads only the targeted parent-owned wrapper rows", () => {
     const path = createTempDbPath();
     tempPaths.push(path);
