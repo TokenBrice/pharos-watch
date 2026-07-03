@@ -10,7 +10,7 @@ Applies to `src/**`.
 
 ## Rules
 
-See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents src-specific items.
+See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents src-specific items.
 
 - Preserve static-export behavior. Route metadata, sitemap coverage, and crawlability can be part of the feature contract.
 - When route behavior, metadata, or crawlability changes, verify the triad of `src/app/sitemap.ts`, `src/app/robots.ts`, and `public/_headers` alongside the route file.

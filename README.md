@@ -81,6 +81,8 @@ cd worker
 npx wrangler dev
 ```
 
+For local tunnel or cross-origin `next dev` testing, set `NEXT_ALLOWED_DEV_ORIGINS=host1,host2` in `.env.local`; `next.config.ts` appends those hosts to the built-in dev allowlist.
+
 Useful checks:
 
 ```bash

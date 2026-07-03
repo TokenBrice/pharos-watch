@@ -38,7 +38,7 @@ For default-on rollbacks (`NEXT_PUBLIC_PHAROS_HERO_VERDICT`, `NEXT_PUBLIC_PHAROS
 
 `pages-release.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job mirrors the same block so PR validation, scheduled/manual rebuilds, and production deploys inline the same flag state.
 
-No code changes required to add or remove a flag — but if you add a new flag, you must add its line to every build workflow listed above or it will silently stay off on that path.
+Flipping an existing flag only changes the repo Variable. Adding, renaming, or removing a flag is a code change: update `src/lib/feature-flags.ts`, the flag docs/expiry entry, `scripts/ci/check-feature-flag-inlining.mjs` if the inlining assertion needs to recognize it, and every build workflow listed above. Otherwise the flag can silently stay off, or stay on by default, on one deploy path.
 
 ## Recommended sequence
 

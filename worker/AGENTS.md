@@ -11,7 +11,7 @@ Applies to `worker/**`.
 
 ## Rules
 
-See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents worker-specific items.
+See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents worker-specific items.
 
 - Do not read `Env` bindings at module initialization time. Derive runtime config inside request or scheduled contexts.
 - Preserve the `worker/src` boundary: worker code may import `@shared/*`, but must not import frontend `src/*` modules.

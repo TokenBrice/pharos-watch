@@ -224,7 +224,7 @@ Optional dedicated Pages data-sync secrets:
 
 Optional GitHub Actions checkout fallback:
 
-- `ACTIONS_CHECKOUT_TOKEN` — a repo-scoped read token used by production deploy checkout steps only when the default `github.token` fetch path is rejected by GitHub. The workflows fall back to `github.token` when this secret is absent.
+- `ACTIONS_CHECKOUT_TOKEN` — a repo-scoped read token used by production deploy checkout steps only when the default `github.token` fetch path is rejected by GitHub. Push/manual production deploys pass this optional secret into `pages-release`; the reusable Pages workflow falls back to `github.token` when the secret is absent. Scheduled/manual `rebuild-pages.yml` calls do not pass the fallback token today and use the default `github.token` checkout path.
 
 Scheduled artifact PR secret:
 
@@ -297,7 +297,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 ### Validate Lane Fan-out and Deploy Ordering
 
 - The Node 24.16.0 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional Worker validation as independent jobs, then uses the aggregate `validate / validate` job to require every needed result. The pull-request Node 26 proof lane is separate and non-blocking; failures there should be triaged before widening Node-dependent behavior.
-- Worker candidate upload waits for the aggregate `validate / validate` result before any Cloudflare-secret-bearing preparation. The `pages-release` job intentionally has no `needs` edge on validate: its build/chromium/pre-publish checks (~10 min) overlap the validate lane (~4 min), and its internal "Wait for validation gate" step (`wait_for_validate_job`) blocks before anything publishes. A validate failure still stops the deploy at that internal gate; the only cost is a discarded build.
+- Worker candidate upload waits for the aggregate `validate / validate` result before any Cloudflare-secret-bearing preparation. The `pages-release` job also has a `needs: validate` edge in `.github/workflows/deploy-cloudflare.yml`; the reusable workflow still keeps its internal "Wait for validation gate" step (`wait_for_validate_job`) as defense in depth for manual or non-standard callers before anything publishes.
 - Production D1 mutation and Worker promotion remain behind the aggregate `validate / validate` result; Pages publish also waits for validation and, on combined deploys, successful Worker promotion.
 
 ### Pages Path Behavior
@@ -323,7 +323,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 When reviewing deploy runtime after optimization work, separate queue time from job execution time because the shared `production-deploy` concurrency group can make a healthy run appear slow while it waits for another production-changing workflow. Compare like-for-like paths: combined worker + Pages deploys, worker-only deploys, Pages-only deploys, and scheduled Pages rebuilds have different expected critical paths.
 
-For combined deploys, `pages-release` prep (build, chromium, pre-publish checks) starts alongside validation and overlaps it; the publish itself still waits for the aggregate validation result (internal wait gate) and, on combined deploys, successful `deploy-worker` completion. This keeps Cloudflare publish actions behind validation while preserving Worker/Pages coordination; the consolidated Pages job reruns local artifact `smoke-ui` after worker promotion and before publishing Pages.
+For combined deploys, `pages-release` starts after the aggregate validation result, then waits for successful Worker promotion before publishing Pages when `wait_for_worker_promotion` is enabled. This keeps both Pages build/smoke scripts and Cloudflare publish actions behind validation while preserving Worker/Pages coordination; the consolidated Pages job reruns local artifact `smoke-ui` after worker promotion and before publishing Pages.
 
 Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs should remain valid and may be slower; investigate cache behavior only when repeated warm-cache deploys fail to reuse unchanged build, lint, or typecheck work. Only jobs that produce new tooling state upload a fresh cache (`tooling-cache-save: "true"` on validate-prebuild, pages-build, and pages-release); restore-only jobs use a deterministic key whose exact hit suppresses the post-job save, protecting the repo's 10 GB cache quota from per-run churn. The pages-release Chromium install runs without `--with-deps` (the binary restores from cache and GitHub's Ubuntu runners carry the system libraries); if a runner-image change ever drops a library, the browser launch fails loudly before anything publishes — re-add the flag then.
 

@@ -10,7 +10,7 @@ Applies to `shared/**`.
 
 ## Rules
 
-See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents shared-specific items.
+See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents shared-specific items.
 
 - `shared/lib/**` is runtime-neutral and must compile under both the root and Worker TypeScript targets.
 - Shared code may use the repository's ES2022 TypeScript target, but it must stay runtime-neutral and avoid frontend-only or Worker-only globals unless explicitly abstracted.

@@ -10,7 +10,7 @@ Applies to `shared/data/stablecoins/**`.
 
 ## Rules
 
-See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents stablecoin-data-specific items.
+See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents stablecoin-data-specific items.
 
 - Author base stablecoin metadata in `shared/data/stablecoins/coins/*.json`; migrated domain fields live in sidecars under `shared/data/stablecoins/domains/<domain>/<id>.json`.
 - The first sidecar domain is `reserves`; for migrated coins, edit reserve composition in `shared/data/stablecoins/domains/reserves/<id>.json` and keep `reserves` out of the matching base coin file.
