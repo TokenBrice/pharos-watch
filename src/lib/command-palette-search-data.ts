@@ -416,5 +416,6 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["ejpy-jbfd", "EJPY", "EJPY", "pre-launch"],
   ["aed-rakbank", "RAKBank AED Stablecoin", "AED-RAKBANK", "pre-launch"],
   ["bils-bitsofgold", "BILS", "BILS", "pre-launch"],
+  ["kusd-kerne", "Kerne USD", "kUSD", "pre-launch"],
   ["ousd-open-standard", "Open USD", "OUSD", "pre-launch"],
 ] as const satisfies readonly CommandPaletteStablecoinSearchItem[];

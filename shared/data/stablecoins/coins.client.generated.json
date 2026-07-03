@@ -10221,6 +10221,72 @@
     }
   },
   {
+    "id": "kusd-kerne",
+    "name": "Kerne USD",
+    "symbol": "kUSD",
+    "oneLiner": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale and currently backed 1:1 by USDC while its hedge vault is rebuilt.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "mechanismArchetype": "synthetic-delta-neutral",
+    "status": "pre-launch",
+    "announcedDate": "2026-04",
+    "launchPhase": "beta",
+    "milestones": [
+      {
+        "date": "2026-05-14",
+        "type": "milestone",
+        "title": "First kUSD mint on Base through the Peg Stability Module",
+        "description": "kUSD v2 minted 1:1 against USDC via the on-chain PSM on Base.",
+        "sourceUrl": "https://basescan.org/tx/0xb1783dd5d6b190e473b2825cfed1bbb9ee28c25c02e7190737ff71199fdfee7c"
+      },
+      {
+        "date": "2026-06",
+        "type": "audit",
+        "title": "Independent researcher review published",
+        "description": "Anonymized independent researcher review published at kerne.fi/security/audits; not a formal third-party audit.",
+        "sourceUrl": "https://kerne.fi/security/audits"
+      }
+    ],
+    "reserves": [
+      {
+        "name": "USDC held 1:1 in the on-chain Peg Stability Module",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "collateralQuality": "rwa",
+    "blacklistStatus": "inherited",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": false,
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 2,
+          "signerCount": 3,
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ]
+    }
+  },
+  {
     "id": "lisusd-lista",
     "name": "Lista USD",
     "symbol": "LISUSD",

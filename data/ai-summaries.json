@@ -1,4 +1,14 @@
 {
+  "kusd-kerne": {
+    "title": "Genesis Beta, USDC-Backed Today",
+    "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale but still pre-active in Pharos because the runtime price path is not ready. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row reports price=null and CoinGecko does not yet resolve a Kerne USD coin, so Pharos keeps it on the upcoming tracker rather than the active dashboard. Current backing is simple: about 117.85 USDC in the on-chain Peg Stability Module against 117.735154 kUSD outstanding as of July 3, 2026. The more ambitious delta-neutral design, with a WETH vault and Hyperliquid short hedge, is documented as degraded and excluded from reserves pending a v2 redeploy. Admin authority sits with a 2-of-3 Gnosis Safe, and Kerne publishes hourly signed proof-of-reserves data at kerne.fi/verify.",
+    "updatedAt": "2026-07-03",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex pre-launch intake",
+    "reviewedAt": "2026-07-03",
+    "factsAsOf": "2026-07-03"
+  },
   "usdt-tether": {
     "title": "Treasury-Heavy Dollar Base",
     "text": "USDT's B-grade profile is not a peg indictment; Pharos still sees an A+ peg record, while liquidity and especially decentralization do the dragging. Tether's Q1 2026 attestation shows $191.77B of assets against $183.54B of liabilities, led by about $141B of direct and indirect U.S. Treasury-bill exposure, with gold, Bitcoin, and an excess reserve buffer making the balance sheet less boring than its dollar promise. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and another reminder that omnichain convenience is not the same thing as issuer decentralization. The redemption floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly BDO Italia attestation cadence rather than continuous bank-style disclosure. On-chain supply authority is still concentrated around Tether-controlled mint infrastructure, and the 2019 accidental 5B USDT mint remains the canonical lesson in why the biggest stablecoin can be operationally serious and structurally centralized at the same time.",
