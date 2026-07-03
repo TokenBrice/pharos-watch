@@ -347,7 +347,7 @@ describe("syncMintBurn", () => {
     expect(toBlock - fromBlock + 1).toBe(50_000);
   });
 
-  it("advances full-success event scans to the safe scan frontier", async () => {
+  it("keeps full-success event scans anchored to the newest returned event", async () => {
     const db = makeDb();
     const config = MINT_BURN_CONFIGS[0]!;
 
@@ -388,8 +388,8 @@ describe("syncMintBurn", () => {
 
     expect(result.summary.maxBlockSeen).toBe(21_910_000);
     expect(result.summary.advanceReason).toBe("full-success-events");
-    expect(result.summary.advancedTo).toBe(21_949_999);
-    expect(result.newLastBlock).toBe(21_949_999);
+    expect(result.summary.advancedTo).toBe(21_910_000);
+    expect(result.newLastBlock).toBe(21_910_000);
   });
 
   it("resumes from canonical sync-state progress", async () => {

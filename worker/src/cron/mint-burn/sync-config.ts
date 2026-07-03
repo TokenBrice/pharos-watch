@@ -363,10 +363,11 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.txContextShortfalls === 0
   ) {
     if (summary.maxBlockSeen > 0) {
-      newLastBlock = Math.max(
-        summary.maxBlockSeen,
-        Math.min(scanTo, chainHead - safetyMarginBlocks),
-      );
+      // Keep event-containing scans anchored to the newest event we actually
+      // parsed. A successful eth_getLogs response is not independently
+      // provable as exhaustive, so advancing across later empty-looking blocks
+      // could permanently skip provider-omitted events in the same window.
+      newLastBlock = summary.maxBlockSeen;
       summary.advanceReason = "full-success-events";
     } else {
       newLastBlock = Math.max(
