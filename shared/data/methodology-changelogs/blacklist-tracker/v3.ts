@@ -5,11 +5,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // INTEGER, not a decimal fraction — so `3.997` parses to [3, 997] and sorts after
 // `3.99` ([3, 99]) and `3.9` ([3, 9]). The minor segment is therefore an
 // open-ended integer counter within the v3 bucket; routine changes bump it
-// (…3.9 → 3.99 → 3.997 → 3.9971 → 3.9972 …) and stay in this file. Create a new `v4.ts`
+// (…3.9 → 3.99 → 3.997 → 3.9971 → 3.9972 → 3.9973 …) and stay in this file. Create a new `v4.ts`
 // (and a sibling vN file array) only for a genuine major/breaking change to the
 // blacklist-tracker methodology, not merely to "roll over" the counter. There is
 // no implicit cap that forces a v4; entries below are newest-first by version.
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
+  {
+    version: "3.9973",
+    title: "Current-balance stale warning restoration",
+    date: "2026-07-02",
+    effectiveAt: 1782950400, // 2026-07-02T00:00:00Z
+    summary:
+      "Restores stale current-balance freeze-ledger snapshots as public data-quality warnings while keeping historical bootstrap rows, permanent limitations, and deferred coverage diagnostic-only.",
+    impact: [
+      "Current-balance rows older than the blacklist-summary stale threshold again set `dataQuality.freezeLedger.staleSnapshotCount` and emit `stale-current-balance-snapshots`",
+      "FreezeWatch data-quality status becomes `stale` when stale current-balance snapshots are present, so the public banner warns before stale tracked frozen totals are presented as healthy",
+      "Bootstrap/history-preserved rows, permanently unavailable amount rows, and deferred coverage inventory remain diagnostics unless their existing actionable thresholds are crossed",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.9972",
     title: "Actionable data-quality warning scope",

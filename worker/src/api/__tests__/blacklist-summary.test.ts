@@ -778,7 +778,7 @@ describe("handleBlacklistSummary", () => {
     expect(json.dataQuality.status).toBe("ok");
   });
 
-  it("keeps resolved old snapshots and permanent limitations out of the warning state", async () => {
+  it("surfaces stale current-balance snapshots while keeping permanent limitations out of the warning state", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "GROUP BY stablecoin, event_type", rows: [] },
@@ -855,9 +855,9 @@ describe("handleBlacklistSummary", () => {
     expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(1);
     expect(json.dataQuality.amountGaps.unrecoverable).toBe(2);
     expect(json.dataQuality.coverage.unsupportedDeferredConfigs).toBeGreaterThan(0);
-    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(0);
-    expect(json.dataQuality.status).toBe("ok");
-    expect(json.dataQuality.warnings).toEqual([]);
+    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(1);
+    expect(json.dataQuality.status).toBe("stale");
+    expect(json.dataQuality.warnings).toEqual(["stale-current-balance-snapshots"]);
   });
 
   it("excludes suppression_reason != null from public aggregates", async () => {

@@ -4,7 +4,7 @@ import { BLACKLIST_TRACKER_V3 } from "../../data/methodology-changelogs/blacklis
 import { createMethodologyVersion } from "./base";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.9972",
+  currentVersion: "3.9973",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
     ...BLACKLIST_TRACKER_V3,

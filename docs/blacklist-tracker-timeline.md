@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` (2026-02-09 -> 2026-07-01).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9973` (2026-02-09 -> 2026-07-02).
+
+---
+
+## v3.9973 — Current-balance stale warning restoration (2026-07-02)
+
+- **Current-balance stale snapshots are actionable** — stale rows produced by the current-balance provider again populate `dataQuality.freezeLedger.staleSnapshotCount`, emit `stale-current-balance-snapshots`, and set `dataQuality.status` to `stale`
+- **Historical diagnostics stay scoped** — retained bootstrap/history rows, permanently unavailable amount rows, and deferred coverage inventory remain diagnostic-only unless their existing actionable thresholds are crossed
+- **FreezeWatch banner restored** — the public data-quality banner now warns when tracked frozen totals rely on stale current-balance snapshots
 
 ---
 

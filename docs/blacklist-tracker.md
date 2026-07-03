@@ -799,8 +799,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.9972",
-    "currentVersionLabel": "v3.9972",
+    "currentVersion": "3.9973",
+    "currentVersionLabel": "v3.9973",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false
@@ -821,7 +821,7 @@ The summary now mixes two intentionally distinct lenses:
 - recent activity stats such as `recentCount` (30d) and `recentCount24h`
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
 - tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from last-known successful `blacklist_current_balances` snapshots
-- data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and manifest-derived deferred coverage; retained snapshot age, permanent unavailable rows, and deferred coverage are diagnostics unless recoverable gaps or provider failures cross warning criteria
+- data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and manifest-derived deferred coverage; stale current-balance snapshots, recoverable gaps, and provider failures drive public warnings, while retained historical/bootstrap snapshot age, permanent unavailable rows, and deferred coverage remain diagnostics
 - quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter
 
 Coverage entries are contract/config-level records. Every supported row is expected to carry the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`; deferred rows carry `symbol`, `chainId`, and `reason`.

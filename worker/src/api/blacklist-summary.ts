@@ -263,12 +263,8 @@ function buildDataQuality(
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
   });
-  // Resolved freeze-ledger rows are retained historical snapshots by design.
-  // Their age remains visible in freezeLedgerMeta.currentFreshnessDistribution,
-  // but it is not an actionable stale condition unless the provider is failing
-  // or recoverable amount gaps cross the shared gap thresholds.
-  const actionableStaleSnapshotCount = 0;
-  const status = gapStatus === "stale"
+  const actionableStaleSnapshotCount = freezeLedgerMeta.currentFreshnessDistribution.stale;
+  const status = actionableStaleSnapshotCount > 0 || gapStatus === "stale"
     ? "stale"
     : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
       ? "degraded"
@@ -276,6 +272,7 @@ function buildDataQuality(
   const warnings: string[] = [];
   if (gapStatus !== "healthy" && gapMetrics.missingAmounts > 0) warnings.push("recoverable-amount-gaps");
   if (freezeLedgerMeta.providerFailedCount > 0) warnings.push("current-balance-provider-failures");
+  if (actionableStaleSnapshotCount > 0) warnings.push("stale-current-balance-snapshots");
 
   return {
     status,

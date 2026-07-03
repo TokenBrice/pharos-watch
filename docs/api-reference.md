@@ -958,10 +958,10 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   },
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.9972",
-    "versionLabel": "v3.9972",
-    "currentVersion": "3.9972",
-    "currentVersionLabel": "v3.9972",
+    "version": "3.9973",
+    "versionLabel": "v3.9973",
+    "currentVersion": "3.9973",
+    "currentVersionLabel": "v3.9973",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": true
@@ -969,7 +969,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
 }
 ```
 
-`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows; each row includes the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`. `unsupportedDeferred` identifies known deferred or explicitly de-scoped deployments from the runtime manifest and the reason they are not live; current examples use `chainId` values from the same shared chain registry as event rows. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `freshnessDistribution` covers every historical ledger row; `currentFreshnessDistribution` isolates rows produced by the current-balance provider when present, but old resolved snapshots are diagnostic rather than an actionable stale condition. `dataQuality.status` summarizes recoverable amount-gap thresholds and current-balance provider failures into `ok`, `degraded`, or `stale`; permanent unavailable rows and deferred coverage remain visible in the payload without opening warning state by themselves. Clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
+`coverage` is the machine-readable tracker coverage inventory. `supported` entries are contract/config-level rows; each row includes the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`. `unsupportedDeferred` identifies known deferred or explicitly de-scoped deployments from the runtime manifest and the reason they are not live; current examples use `chainId` values from the same shared chain registry as event rows. `freezeLedgerMeta` describes the last-known snapshot ledger used by `trackedFrozenTotal`, including scoped-vs-legacy row counts, observed-age bounds, source/status distributions, provider failures, and amount-gap distributions. `freshnessDistribution` covers every historical ledger row; `currentFreshnessDistribution` isolates rows produced by the current-balance provider when present, and stale current-balance rows are actionable because the public tracked frozen total depends on those latest provider snapshots. `dataQuality.status` summarizes stale current-balance snapshots, recoverable amount-gap thresholds, and current-balance provider failures into `ok`, `degraded`, or `stale`; permanent unavailable rows, retained historical/bootstrap row age, and deferred coverage remain visible in the payload without opening warning state by themselves. Clients should display or alert on `warnings` rather than inferring quality from null amount fields alone.
 
 ---
 
