@@ -88,7 +88,7 @@ interface StaleSlotTakeoverSummary {
   previousUpdatedAt: number;
   staleBefore: number;
   takenOverAt: number;
-  reconciliation: StaleSlotReconciliationSummary;
+  reconciliation?: StaleSlotReconciliationSummary;
 }
 
 type ScheduledSlotClaimResult =
@@ -572,15 +572,12 @@ async function claimScheduledSlotExecution(
       started_at: existing.started_at,
       updated_at: existing.updated_at,
     };
-    const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
-    await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
     const staleSlotTakeover: StaleSlotTakeoverSummary = {
       previousOwner: existing.execution_owner,
       previousStartedAt: existing.started_at,
       previousUpdatedAt: existing.updated_at,
       staleBefore,
       takenOverAt: nowSec,
-      reconciliation,
     };
     const takeover = await runWithOverloadRetry(() =>
       db
@@ -601,6 +598,22 @@ async function claimScheduledSlotExecution(
         .run(),
     );
     if ((takeover.meta.changes ?? 0) > 0) {
+      const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
+      staleSlotTakeover.reconciliation = reconciliation;
+      await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
+      await runWithOverloadRetry(() =>
+        db
+          .prepare(
+            `UPDATE cron_slot_executions
+             SET metadata = ?
+             WHERE slot_key = ?
+               AND slot_started_at = ?
+               AND execution_owner = ?
+               AND state = 'running'`,
+          )
+          .bind(JSON.stringify({ staleSlotTakeover }), slotKey, slotStartedAt, owner)
+          .run(),
+      );
       return { status: "claimed", staleSlotTakeover };
     }
   }
