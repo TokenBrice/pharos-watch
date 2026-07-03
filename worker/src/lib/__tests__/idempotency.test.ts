@@ -64,12 +64,12 @@ function makeIdempotencyDb(
           }
           return { success: true, meta: { changes: 0 } };
         }
-        if (sql.includes("UPDATE admin_idempotency_keys SET request_hash")) {
-          const [requestHash, status, body, createdAt, action, idemKey, expectedStatus, createdBefore] = args as [
-            string,
+        if (sql.includes("UPDATE admin_idempotency_keys SET response_status") && sql.includes("created_at < ?")) {
+          const [status, body, createdAt, action, idemKey, requestHash, expectedStatus, createdBefore] = args as [
             number,
             string,
             number,
+            string,
             string,
             string,
             number,
@@ -77,11 +77,16 @@ function makeIdempotencyDb(
           ];
           const key = `${action}:${idemKey}`;
           const existing = store.get(key);
-          if (!existing || existing.response_status !== expectedStatus || existing.created_at >= createdBefore) {
+          if (
+            !existing ||
+            existing.request_hash !== requestHash ||
+            existing.response_status !== expectedStatus ||
+            existing.created_at >= createdBefore
+          ) {
             return { success: true, meta: { changes: 0 } };
           }
           store.set(key, {
-            request_hash: requestHash,
+            request_hash: existing.request_hash,
             response_status: status,
             response_body: body,
             created_at: createdAt,
@@ -239,24 +244,30 @@ describe("runIdempotentAdminAction", () => {
     expect(calls).toBe(1);
   });
 
-  it("takes over an abandoned pending reservation older than the execution window", async () => {
+  it("takes over an abandoned pending reservation older than the execution window for the same request", async () => {
     const now = 1_800_000_000;
     const dateSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
 
     try {
       const db = makeIdempotencyDb();
-      db.setRecord("backfill-depegs", "abc-abandoned", {
-        request_hash: "stale-request-hash",
-        response_status: -1,
-        response_body: "",
-        created_at: now - 20 * 60 - 1,
-      });
-
       const request = new Request("https://x/api/backfill-depegs?batch=2", {
         method: "POST",
         headers: { "Idempotency-Key": "abc-abandoned" },
         body: JSON.stringify({ batch: 2 }),
       });
+
+      const firstStarted = new Promise<void>((resolve) => {
+        void runIdempotentAdminAction(db, "backfill-depegs", request.clone(), async () => {
+          resolve();
+          return new Promise<Response>(() => {});
+        });
+      });
+      await firstStarted;
+
+      const pending = db.getRecord("backfill-depegs", "abc-abandoned");
+      expect(pending).toBeDefined();
+      pending!.created_at = now - 20 * 60 - 1;
+      const originalHash = pending!.request_hash;
 
       let calls = 0;
       const execute = async () => {
@@ -274,18 +285,53 @@ describe("runIdempotentAdminAction", () => {
       expect(calls).toBe(1);
 
       const record = db.getRecord("backfill-depegs", "abc-abandoned");
-      expect(record?.request_hash).not.toBe("stale-request-hash");
+      expect(record?.request_hash).toBe(originalHash);
       expect(record?.response_status).toBe(202);
       expect(record?.created_at).toBe(now);
 
-      const takeover = db
-        .getHistory()
-        .find((entry) => entry.sql.includes("UPDATE admin_idempotency_keys SET request_hash"));
-      expect(takeover?.binds[3]).toBe(now);
-      expect(takeover?.binds[4]).toBe("backfill-depegs");
-      expect(takeover?.binds[5]).toBe("abc-abandoned");
+      const takeover = db.getHistory().find((entry) => entry.sql.includes("created_at < ?"));
+      expect(takeover?.binds[2]).toBe(now);
+      expect(takeover?.binds[3]).toBe("backfill-depegs");
+      expect(takeover?.binds[4]).toBe("abc-abandoned");
+      expect(takeover?.binds[5]).toBe(originalHash);
       expect(takeover?.binds[6]).toBe(-1);
       expect(takeover?.binds[7]).toBe(now - 20 * 60);
+    } finally {
+      dateSpy.mockRestore();
+    }
+  });
+
+  it("rejects abandoned pending reservation takeover for a different request", async () => {
+    const now = 1_800_000_000;
+    const dateSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+
+    try {
+      const db = makeIdempotencyDb();
+      db.setRecord("backfill-depegs", "abc-abandoned-conflict", {
+        request_hash: "stale-request-hash",
+        response_status: -1,
+        response_body: "",
+        created_at: now - 20 * 60 - 1,
+      });
+
+      const request = new Request("https://x/api/backfill-depegs?batch=2", {
+        method: "POST",
+        headers: { "Idempotency-Key": "abc-abandoned-conflict" },
+        body: JSON.stringify({ batch: 2 }),
+      });
+
+      let calls = 0;
+      const response = await runIdempotentAdminAction(db, "backfill-depegs", request, async () => {
+        calls++;
+        return new Response(JSON.stringify({ ok: true }), { status: 202 });
+      });
+
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        error: "Idempotency key reuse with different request payload",
+      });
+      expect(calls).toBe(0);
+      expect(db.getRecord("backfill-depegs", "abc-abandoned-conflict")?.request_hash).toBe("stale-request-hash");
     } finally {
       dateSpy.mockRestore();
     }

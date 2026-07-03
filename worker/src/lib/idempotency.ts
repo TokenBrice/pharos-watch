@@ -74,9 +74,9 @@ async function takeOverAbandonedPendingReservation(
   try {
     const takeoverResult = await db
       .prepare(
-        "UPDATE admin_idempotency_keys SET request_hash = ?, response_status = ?, response_body = ?, created_at = ? WHERE action = ? AND idempotency_key = ? AND response_status = ? AND created_at < ?",
+        "UPDATE admin_idempotency_keys SET response_status = ?, response_body = ?, created_at = ? WHERE action = ? AND idempotency_key = ? AND request_hash = ? AND response_status = ? AND created_at < ?",
       )
-      .bind(fingerprint, PENDING_RESPONSE_STATUS, "", now, action, key, PENDING_RESPONSE_STATUS, cutoff)
+      .bind(PENDING_RESPONSE_STATUS, "", now, action, key, fingerprint, PENDING_RESPONSE_STATUS, cutoff)
       .run();
 
     return (takeoverResult.meta?.changes ?? 0) > 0;
@@ -122,14 +122,6 @@ export async function runIdempotentAdminAction(
   }
 
   let ownsReservation = insertedReservation;
-  if (existing.response_status === PENDING_RESPONSE_STATUS && !ownsReservation) {
-    ownsReservation = await takeOverAbandonedPendingReservation(db, action, key, fingerprint, now);
-    if (ownsReservation) {
-      existing.request_hash = fingerprint;
-      existing.response_body = "";
-      existing.created_at = now;
-    }
-  }
 
   if (existing.request_hash !== fingerprint) {
     if (insertedReservation) {
@@ -150,6 +142,14 @@ export async function runIdempotentAdminAction(
         });
     }
     return errorResponse(409, "Idempotency key reuse with different request payload");
+  }
+
+  if (existing.response_status === PENDING_RESPONSE_STATUS && !ownsReservation) {
+    ownsReservation = await takeOverAbandonedPendingReservation(db, action, key, fingerprint, now);
+    if (ownsReservation) {
+      existing.response_body = "";
+      existing.created_at = now;
+    }
   }
 
   if (existing.response_status === PENDING_RESPONSE_STATUS && !ownsReservation) {
