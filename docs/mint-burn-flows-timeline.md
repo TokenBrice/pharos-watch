@@ -1,6 +1,13 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.17` (2026-03-01 -> 2026-06-07).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v6.18` (2026-03-01 -> 2026-07-03).
+
+---
+
+## v6.18 - Runtime coverage count reconciliation (July 3, 2026)
+
+- Current runtime scope is 135 contract configs across 135 stablecoin IDs: 7 critical-lane configs (implicit `tier: "critical"`) and 128 explicit `extended` configs.
+- Tracked registry count is 409 metadata entries, so DDR and mint/burn docs now report mint/burn coverage as 135 of 409 tracked coins instead of the stale 137 of 407 figure.
 
 ---
 
