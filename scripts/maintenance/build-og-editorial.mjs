@@ -162,6 +162,16 @@ function buildSignatureManifest(cards) {
   )}\n`;
 }
 
+function withPublicPngSignatures(signatures) {
+  return signatures.map((signature) => {
+    const publicPath = resolve(PUBLIC, signature.file);
+    return {
+      ...signature,
+      pngSha256: existsSync(publicPath) ? sha256(readFileSync(publicPath)) : null,
+    };
+  });
+}
+
 const renderInputs = CARDS.map((card) => {
   const svg = buildSvg({ kicker: card.kicker, title: card.title });
   return {
@@ -175,10 +185,40 @@ const renderInputs = CARDS.map((card) => {
     },
   };
 });
-const signatureManifest = buildSignatureManifest(renderInputs.map(({ signature }) => signature));
+const renderInputSignatures = renderInputs.map(({ signature }) => signature);
+const inputSignatureManifest = buildSignatureManifest(renderInputSignatures);
+const signatureManifest = CHECK_MODE
+  ? buildSignatureManifest(withPublicPngSignatures(renderInputSignatures))
+  : inputSignatureManifest;
 
 function readExistingSignatureManifest() {
   return existsSync(SIGNATURE_PATH) ? readFileSync(SIGNATURE_PATH, "utf-8") : null;
+}
+
+function stripPngSignatures(manifest) {
+  if (!manifest) return null;
+  try {
+    const parsed = JSON.parse(manifest);
+    parsed.cards = parsed.cards.map(({ pngSha256, ...card }) => card);
+    return `${JSON.stringify(parsed, null, 2)}\n`;
+  } catch {
+    return null;
+  }
+}
+
+function stalePngSignatureLabels(manifest) {
+  if (!manifest) return CARDS.map((card) => card.file);
+  try {
+    return JSON.parse(manifest).cards
+      .filter(
+        (signature) =>
+          !signature.pngSha256 ||
+          signature.pngSha256 !== sha256(readFileSync(resolve(PUBLIC, signature.file))),
+      )
+      .map((signature) => signature.file);
+  } catch {
+    return CARDS.map((card) => card.file);
+  }
 }
 
 function allPublicOutputsExist() {
@@ -214,9 +254,12 @@ function buildHtml(svg) {
 <body>${svg}</body></html>`;
 }
 
-// The signature manifest fingerprints every deterministic render input. When it
-// matches and all committed PNGs exist, --check does not need Firefox.
-if (CHECK_MODE && readExistingSignatureManifest() === signatureManifest && allPublicOutputsExist()) {
+// The signature manifest fingerprints every deterministic render input and
+// committed PNG. When it matches and all committed PNGs exist, --check does
+// not need Firefox while still detecting hand-edited or corrupted assets.
+const existingSignatureManifest = readExistingSignatureManifest();
+
+if (CHECK_MODE && existingSignatureManifest === signatureManifest && allPublicOutputsExist()) {
   for (const card of CARDS) {
     console.log(formatOgWriteStatus({
       check: true,
@@ -226,6 +269,18 @@ if (CHECK_MODE && readExistingSignatureManifest() === signatureManifest && allPu
   }
   console.log("Skipped Firefox render; editorial OG signatures are current.");
   process.exit(0);
+}
+
+if (
+  CHECK_MODE &&
+  allPublicOutputsExist() &&
+  stripPngSignatures(existingSignatureManifest) === inputSignatureManifest
+) {
+  assertNoStaleOgOutputs({
+    family: "Editorial",
+    staleFiles: stalePngSignatureLabels(existingSignatureManifest),
+    refreshCommand: "npm run build:og-editorial",
+  });
 }
 
 const browser = await firefox.launch({ headless: true });
@@ -280,12 +335,11 @@ try {
   }
 
   if (CHECK_MODE) {
-    const expectedManifest = readExistingSignatureManifest();
-    if (expectedManifest !== signatureManifest) {
+    if (existingSignatureManifest !== signatureManifest) {
       staleFiles.push("scripts/maintenance/state/og-editorial-signatures.json");
     }
   } else {
-    writeFileSync(SIGNATURE_PATH, signatureManifest);
+    writeFileSync(SIGNATURE_PATH, buildSignatureManifest(withPublicPngSignatures(renderInputSignatures)));
   }
 
   assertNoStaleOgOutputs({
