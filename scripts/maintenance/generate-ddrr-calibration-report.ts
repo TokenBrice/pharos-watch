@@ -27,6 +27,7 @@ import {
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
 export const PROD_DDRR_SITE_DATA_URL = `${PROD_ORIGIN}/_site-data/depeg-resolver-review`;
+export const TRUSTED_DDRR_API_KEY_ORIGINS = new Set(["https://api.pharos.watch"]);
 
 const TERMINALITY_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
   "correct_recoverable",
@@ -67,6 +68,27 @@ export interface DdrrCalibrationRecommendation {
   severity: RecommendationSeverity;
   finding: string;
   nextAction: string;
+}
+
+function isLocalApiOrigin(url: URL): boolean {
+  return (
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1")
+  );
+}
+
+export function isTrustedDdrrApiKeyDestination(apiBase: string): boolean {
+  try {
+    const url = new URL(apiBase);
+    return TRUSTED_DDRR_API_KEY_ORIGINS.has(url.origin) || isLocalApiOrigin(url);
+  } catch {
+    return false;
+  }
+}
+
+function ddrrApiKeyForDestination(apiBase: string): string | undefined {
+  if (!isTrustedDdrrApiKeyDestination(apiBase)) return undefined;
+  return process.env.PHAROS_API_KEY ?? process.env.SMOKE_API_KEY;
 }
 
 type VerdictCounts = Record<DdrrVerdictReview, number>;
@@ -958,8 +980,7 @@ async function loadResponse(
 
   if (options.apiBase) {
     const url = joinUrl(options.apiBase, "/api/depeg-resolver-review");
-    const apiKey = process.env.PHAROS_API_KEY ?? process.env.SMOKE_API_KEY;
-    const payload = await fetchJson(url, fetchImpl, apiKey);
+    const payload = await fetchJson(url, fetchImpl, ddrrApiKeyForDestination(options.apiBase));
     return {
       response: DdrrResponseSchema.parse(unwrapResponsePayload(payload)),
       source: { mode: "api", detail: url },
