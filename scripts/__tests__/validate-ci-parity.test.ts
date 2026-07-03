@@ -570,9 +570,9 @@ describe("validate-ci parity", () => {
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("needs:");
     expect(pagesReleaseJob).toContain("- detect-changes");
-    // No needs edge on validate: the release overlaps validation and is gated
-    // before publish by its internal wait_for_validate_job step instead.
-    expect(pagesReleaseJob).not.toContain("- validate");
+    // The secret-bearing Pages release job must not start until validation
+    // succeeds; the reusable workflow's internal wait remains defense in depth.
+    expect(pagesReleaseJob).toContain("- validate");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
     expect(pagesReleaseJob).toContain(
