@@ -12,6 +12,7 @@ import type {
 } from "../../shared/types/depeg-resolver-review";
 import {
   buildDdrrCalibrationReport,
+  isTrustedDdrrApiKeyDestination,
   parseArgs,
   renderDdrrCalibrationReportMarkdown,
   runCli,
@@ -342,6 +343,48 @@ describe("generate-ddrr-calibration-report", () => {
           Origin: "https://pharos.watch",
           Referer: "https://pharos.watch/depeg/",
         }),
+      }),
+    );
+  });
+
+  it("only sends environment API keys to trusted api-base origins", async () => {
+    expect(isTrustedDdrrApiKeyDestination("https://api.pharos.watch")).toBe(true);
+    expect(isTrustedDdrrApiKeyDestination("http://127.0.0.1:8787")).toBe(true);
+    expect(isTrustedDdrrApiKeyDestination("https://api.example.test")).toBe(false);
+
+    const originalPharosApiKey = process.env.PHAROS_API_KEY;
+    const payload = response([prediction()]);
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ payload }), { status: 200 }));
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      process.env.PHAROS_API_KEY = "ddrr-fixture-value";
+      await expect(
+        runCli(
+          [
+            "--api-base",
+            "https://api.example.test",
+            "--json",
+            "--stdout",
+            "--generated-at",
+            "2026-06-29T00:00:00.000Z",
+          ],
+          process.cwd(),
+          fetchMock as unknown as typeof fetch,
+        ),
+      ).resolves.toBe(0);
+    } finally {
+      if (originalPharosApiKey === undefined) {
+        delete process.env.PHAROS_API_KEY;
+      } else {
+        process.env.PHAROS_API_KEY = originalPharosApiKey;
+      }
+      stdout.mockRestore();
+    }
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/depeg-resolver-review",
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ "X-API-Key": "ddrr-fixture-value" }),
       }),
     );
   });
