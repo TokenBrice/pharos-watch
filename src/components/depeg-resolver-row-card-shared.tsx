@@ -82,7 +82,10 @@ export function LiveFacts({ row }: { row: DdrDisplayRow }) {
   const live = compat.live ?? {};
   const ageSec = live.ageSec ?? getAgeSec(row);
   const peakDeviationBps = live.peakDeviationBps ?? getPeakDeviationBps(row);
-  const currentDeviationBps = live.currentDeviationBps ?? getCurrentDeviationBps(row);
+  const currentDeviationBps =
+    compat.live && "currentDeviationBps" in compat.live
+      ? (compat.live.currentDeviationBps ?? null)
+      : getCurrentDeviationBps(row);
   const status =
     live.status ??
     ("eventState" in live ? live.eventState : live.active === false ? "closed" : live.stale ? "stale" : "active");

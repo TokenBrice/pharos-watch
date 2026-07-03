@@ -302,6 +302,8 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
     expect(screen.getByRole("img", { name: /lock deviation -250 bps/i })).toBeTruthy();
     expect(screen.getByText("From lock")).toBeTruthy();
+    expect(screen.getByText("$0.9820")).toBeTruthy();
+    expect(screen.queryByText("$0.9750")).toBeNull();
     // Live overlay deviation (-180) renders in the Live incident strip, distinct from the frozen lock-side value.
     expect(screen.getByText("-180 bps")).toBeTruthy();
     expect(screen.queryByText("Projected")).toBeNull();

@@ -6,8 +6,8 @@ import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
 import type { DdrFactor } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
-  getCurrentDeviationBps,
   getDuration,
+  getLiveCurrentDeviationBps,
   getPredictionState,
   getRelatedContext,
   getResolution,
@@ -123,7 +123,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const showTension = factors.length > 0 && !insufficient;
   const chronic = duration.ageStatus === "chronic_tail";
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
-  const currentDeviationBps = getCurrentDeviationBps(row);
+  const currentDeviationBps = getLiveCurrentDeviationBps(row);
   const priceLabel =
     currentDeviationBps != null
       ? formatPrice(1 + currentDeviationBps / 10_000, pegCurrencySymbol(row.pegCurrency))

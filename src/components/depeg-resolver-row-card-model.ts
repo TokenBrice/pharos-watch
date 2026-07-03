@@ -276,6 +276,18 @@ export function getCurrentDeviationBps(row: DdrDisplayRow): number | null {
   );
 }
 
+export function getLiveCurrentDeviationBps(row: DdrDisplayRow): number | null {
+  const compat = row as DdrCompatRow;
+  if (compat.live && "currentDeviationBps" in compat.live) {
+    return compat.live.currentDeviationBps ?? null;
+  }
+  return (
+    ("currentDeviationBps" in row ? row.currentDeviationBps : undefined) ??
+    compat.frozen?.sourceRow?.currentDeviationBps ??
+    null
+  );
+}
+
 export function formatDurationSec(seconds: number): string {
   return formatApproxDurationSeconds(seconds, { invalidFallback: "—" });
 }
