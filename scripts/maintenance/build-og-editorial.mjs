@@ -199,7 +199,12 @@ function stripPngSignatures(manifest) {
   if (!manifest) return null;
   try {
     const parsed = JSON.parse(manifest);
-    parsed.cards = parsed.cards.map(({ pngSha256, ...card }) => card);
+    parsed.cards = parsed.cards.map((signature) => ({
+      file: signature.file,
+      kicker: signature.kicker,
+      title: signature.title,
+      svgSha256: signature.svgSha256,
+    }));
     return `${JSON.stringify(parsed, null, 2)}\n`;
   } catch {
     return null;
