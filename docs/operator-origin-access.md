@@ -100,7 +100,7 @@ The current proxy now fails closed on its own trust boundary:
 ### Proxy contract
 
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (including `/api/discovery-candidates/:id/dismiss`).
-- HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
+- HTTP method rules are enforced through the shared endpoint validators (`validateRouteMatchMethod()` in the Worker router, backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
@@ -127,7 +127,7 @@ For the site-data proxy:
 
 - `SITE_API_SHARED_SECRET`
 - `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
-- `DB` for durable site-data attribution telemetry
+- `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
 
 Optional active overrides (the proxy has production defaults for these already):
 

@@ -110,7 +110,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/about/bluechip/`                              | [about-page.md](./about-page.md), [bluechip-ratings.md](./bluechip-ratings.md), [report-cards.md](./report-cards.md)                                 |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
-| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex wrapper / Pages redirect alias for `/freezewatch/`                                    |
+| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy redirect alias for `/freezewatch/`                                                             |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
 | `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |

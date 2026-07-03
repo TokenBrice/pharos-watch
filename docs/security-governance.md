@@ -10,7 +10,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 
 **Why:** A token in a URL query is sent in `Referer` headers, logged by CDNs, indexed by crawlers, and shown to anyone with the URL bar. URL fragments are not sent to servers, but anything that *reads* a fragment-token via inline script is structurally indistinguishable from a credential-harvesting phishing kit (see next rule).
 
-**Apply:** API key email verification uses raw fragment tokens like `https://pharos.watch/api/#akv_…` exclusively. The worker emits this format from `buildVerificationUrl` in `worker/src/api/api-key-requests/request.ts`. The frontend consumes it via a React effect on the `/api/` route only — never via a root-layout inline script. Do not reintroduce `#verify=...` or `?verify=...` parser shapes; the raw token fragment avoids a URL-parameter signature in the route bundle.
+**Apply:** API key email verification links use raw fragment tokens like `https://pharos.watch/api/#akv_…` exclusively. The worker emits this format from `buildVerificationUrl` in `worker/src/api/api-key-requests/request.ts`. The frontend consumes raw tokens via a React effect on the `/api/` route only — never via a root-layout inline script. The client also retains a route-scoped legacy `sessionStorage` pickup for an already staged raw `akv_...` token and removes it immediately; this is compatibility behavior, not a supported email-link format. Do not reintroduce `#verify=...` or `?verify=...` parser shapes; the raw token fragment avoids a URL-parameter signature in the route bundle.
 
 ### Inline-script discipline in root layouts
 
