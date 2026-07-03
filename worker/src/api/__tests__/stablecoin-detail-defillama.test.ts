@@ -69,6 +69,25 @@ describe("applyCuratedDetailAddress", () => {
       tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
     });
   });
+
+  it("overrides stale cached addresses when a nested address matches the curated address", () => {
+    const curatedAddress = "0x57ab1e0003f623289cd798b1824be09a793e4bec";
+    const body = JSON.stringify({
+      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+
+    expect(
+      JSON.parse(
+        applyCuratedDetailAddress(body, {
+          contracts: [{ chain: "ethereum", address: curatedAddress, decimals: 18 }],
+        }),
+      ),
+    ).toEqual({
+      address: curatedAddress,
+      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+  });
 });
 
 describe("normalizeDefiLlamaDetailBody", () => {

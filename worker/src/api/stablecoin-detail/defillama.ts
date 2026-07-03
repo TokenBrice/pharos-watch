@@ -76,12 +76,44 @@ function getCuratedPrimaryAddress(meta: DetailMeta | undefined): string | null {
   return contract?.address ?? null;
 }
 
+function hasTopLevelSerializedAddress(body: string, serializedAddress: string): boolean {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      if (depth === 1 && body.startsWith(serializedAddress, index)) return true;
+      inString = true;
+    } else if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+    }
+  }
+
+  return false;
+}
+
 export function applyCuratedDetailAddress(body: string, meta: DetailMeta | undefined): string {
   const curatedAddress = getCuratedPrimaryAddress(meta);
   if (!curatedAddress) return body;
 
   const serializedAddress = `"address":${JSON.stringify(curatedAddress)}`;
-  if (body.includes(serializedAddress)) return body;
+  if (hasTopLevelSerializedAddress(body, serializedAddress)) return body;
 
   try {
     const parsed = JSON.parse(body) as unknown;
