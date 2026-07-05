@@ -60161,6 +60161,13 @@
         "title": "Galaxy Digital leads $7M investment in Tenbin to build improved tokenized gold and FX markets",
         "description": "Tenbin Labs raised a $7M seed led by Galaxy Ventures to build an on-chain tokenization protocol for gold and FX, starting with the gold token tGLD.",
         "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://www.fintechlaunches.com/announcements/jpeg-trading-launches-rwa-curation-business-tgld-euler-defi-asset-underwriting-liquidity/",
+        "title": "JPEG Trading launches RWA curation business with tGLD on Euler",
+        "description": "JPEG Trading launched an RWA curation business with tGLD as its inaugural curated asset, standing up the first DeFi lending vaults for tGLD on Euler.",
+        "source": "Fintech Launches"
       }
     ],
     "milestones": [
@@ -60189,6 +60196,13 @@
         "type": "partnership",
         "title": "Tenbin adopts Chainlink CCIP for cross-chain expansion",
         "sourceUrl": "https://www.cryptowisser.com/news/tenbin-labs-is-migrating-to-chainlink-ccip"
+      },
+      {
+        "date": "2026-06-22",
+        "type": "partnership",
+        "title": "JPEG Trading launches RWA curation with tGLD as inaugural Euler asset",
+        "description": "JPEG Trading launched an RWA curation business with tGLD as its inaugural curated asset, deploying the first DeFi lending vaults for tGLD on Euler with co-deployed capital.",
+        "sourceUrl": "https://www.fintechlaunches.com/announcements/jpeg-trading-launches-rwa-curation-business-tgld-euler-defi-asset-underwriting-liquidity/"
       }
     ]
   },
