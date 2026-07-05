@@ -273,7 +273,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/cemetery-tombstones.module.css`
 - `src/components/cemetery-tombstones.tsx` - CemeteryTombstones
 - `src/components/chain-type-badge.tsx` - ChainTypeBadge
-- `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
+- `src/components/changelog-entry-card.tsx` - ChangelogEntryCard
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
 - `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartAreaGradient, ChartLegendChip, ChartMargin, DateTooltip, MONO_Y_AXIS_WIDTH

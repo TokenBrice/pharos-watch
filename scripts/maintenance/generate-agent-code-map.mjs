@@ -7,7 +7,7 @@ const ROOT = process.cwd();
 const OUTPUT = "docs/agent-code-map.md";
 const CHECK = process.argv.includes("--check");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".json", ".css"]);
-const SKIP_PARTS = new Set(["node_modules", ".next", "out", ".git", ".wrangler", ".cache"]);
+const SKIP_PARTS = new Set(["node_modules", ".next", "out", ".git", ".wrangler", ".cache", ".impeccable"]);
 
 const SECTIONS = [
   { title: "Frontend routes", root: "src/app", maxFiles: 180, include: (file) => /\/(page|client|layout|error|loading|not-found|robots|sitemap)\.(tsx|ts)$/.test(file) },

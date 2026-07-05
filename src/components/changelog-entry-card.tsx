@@ -9,7 +9,7 @@ function toUTCMidnight(ymd: string): Date {
   return new Date(ymd + "T00:00:00Z");
 }
 
-export function formatDateRange(
+function formatDateRange(
   from: string,
   to: string,
   options?: { compact?: boolean },
