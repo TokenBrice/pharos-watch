@@ -1,19 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { formatDateRange } from "@/components/changelog-entry-card";
 
 interface ChangelogWeekNavProps {
   entries: { dateRange: { from: string; to: string } }[];
 }
 
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+interface MonthGroup {
+  /** `YYYY-MM` key for the month. */
+  key: string;
+  year: number;
+  label: string;
+  /** Anchor id (a changelog entry's `to` date) of the newest entry in the month. */
+  anchorId: string;
+}
+
+/**
+ * Reverse-chronological jump index for the changelog. Entries arrive weekly and
+ * unbounded, so a per-week row eventually overflows any single lane. We collapse
+ * weeks into month chips (the natural archive granularity) and let them wrap
+ * instead of scroll — every period stays reachable without a hidden scroller,
+ * and the count grows ~12/year rather than ~52. Week-level detail still lives in
+ * the body timeline below.
+ */
 export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
-  const sectionSignature = entries.map((e) => e.dateRange.to).join("|");
-  const [activeId, setActiveId] = useState(entries[0]?.dateRange.to ?? "");
+  const { months, entryMonthKey } = useMemo(() => {
+    const months: MonthGroup[] = [];
+    const entryMonthKey = new Map<string, string>();
+    const seen = new Set<string>();
+
+    // `entries` is newest-first, so the first entry seen for a month is its newest.
+    for (const { dateRange } of entries) {
+      const to = dateRange.to;
+      const key = to.slice(0, 7);
+      entryMonthKey.set(to, key);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      months.push({
+        key,
+        year: Number(to.slice(0, 4)),
+        label: MONTH_LABELS[Number(to.slice(5, 7)) - 1],
+        anchorId: to,
+      });
+    }
+    return { months, entryMonthKey };
+  }, [entries]);
+
+  const multiYear = new Set(months.map((m) => m.year)).size > 1;
+
+  const idSignature = entries.map((e) => e.dateRange.to).join("|");
+  const [activeMonthKey, setActiveMonthKey] = useState(months[0]?.key ?? "");
 
   useEffect(() => {
-    const ids = sectionSignature.split("|").filter(Boolean);
+    const ids = idSignature.split("|").filter(Boolean);
     const elements = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -34,7 +79,8 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
 
         for (const id of ids) {
           if (visibleIds.has(id)) {
-            setActiveId(id);
+            const key = entryMonthKey.get(id);
+            if (key) setActiveMonthKey(key);
             return;
           }
         }
@@ -44,29 +90,29 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
 
     for (const el of elements) observer.observe(el);
     return () => observer.disconnect();
-  }, [sectionSignature]);
+  }, [idSignature, entryMonthKey]);
 
   return (
-    <div className="relative">
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent sm:hidden"
-        aria-hidden
-      />
-      <nav
-        aria-label="Jump to release"
-        className="overflow-x-auto scrollbar-none -mx-1 px-1 text-xs"
-      >
-        <div className="flex min-w-max items-center gap-1.5">
-          <span className="shrink-0 text-xs font-medium text-muted-foreground pl-1">Jump to:</span>
-          {entries.map((entry, i) => {
-            const id = entry.dateRange.to;
-            const isActive = activeId === id;
-            const isLatest = i === 0;
+    <nav aria-label="Jump to release" className="text-xs">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+        <span className="shrink-0 pl-1 text-xs font-medium text-muted-foreground">
+          Jump to:
+        </span>
+        {months.map((month, i) => {
+          const isActive = activeMonthKey === month.key;
+          const isLatest = i === 0;
+          const showYear =
+            multiYear && (i === 0 || months[i - 1].year !== month.year);
 
-            return (
+          return (
+            <span key={month.key} className="contents">
+              {showYear && (
+                <span className="pharos-numeric shrink-0 pl-1 pr-0.5 text-[11px] font-medium text-muted-foreground/70">
+                  {month.year}
+                </span>
+              )}
               <a
-                key={id}
-                href={`#${id}`}
+                href={`#${month.anchorId}`}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
                   "pharos-focus-ring pharos-control-pill gap-2 whitespace-nowrap",
@@ -82,21 +128,17 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                   )}
                   aria-hidden
                 />
-                <span className="pharos-numeric">
-                  {formatDateRange(entry.dateRange.from, entry.dateRange.to, {
-                    compact: true,
-                  })}
-                </span>
+                <span className="pharos-numeric">{month.label}</span>
                 {isLatest && (
                   <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-foreground">
                     Latest
                   </span>
                 )}
               </a>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
+            </span>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
