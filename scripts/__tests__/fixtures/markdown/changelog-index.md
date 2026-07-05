@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-06-29 to 2026-07-05
+
+The redesigned homepage canon now spans every nav group, a vaults.fyi yield source lands, and kUSD joins pre-launch.
+
+- **Site-wide design canon**: Every nav group — Markets, Risk, Learn, Reference, Analyze — and the coin detail template adopt the redesigned homepage canon: new hero surfaces, flat cards, the Whyte display face, and sidebar remnants removed.
+- **Tablet table workbench**: Tablets now get the full data-table workbench via a new lg breakpoint and auto-fit column priority (useFittedColumns plus a fit toggle), with widened overview columns and fixed header-glyph and price overflow.
+- **Yield intelligence**: A new optional vaults.fyi yield source lands with structured logging and rollout guardrails, and venue risk scores are recalibrated against Yearn’s published reports in yield methodology v8.298.
+- **Coverage & data**: kUSD and Open USD join the pre-launch board, tGLD gains a Euler/JPEG partnership milestone, frozen stablecoins are fully retired from runtime, redemption, and cemetery surfaces, and verified metadata corrections land.
+- **Pipeline hardening**: Worker hardening bounds idempotency reservations, cron leases, and slot timeouts, splits DDR repair debt from cron health, adds append-only D1 retention with queued destructive cleanup, and steadies Telegram failover.
+- **Faster merge gate**: The local merge gate splits into per-root vitest projects, overlaps pages-release with validation, and adds telemetry, artifact-skip, and parallel a11y/smoke to cut wall-clock, with glob-safe coverage includes.
+- **Codebase simplification**: A large dead-code and duplication sweep across worker, frontend, and shared libraries removes orphaned exports and components, unifies helpers for medians, percentiles, dates, and CSV, and trims bundle and hot-path work.
+
 ## 2026-06-22 to 2026-06-28
 
 A redesigned homepage and global top-nav with a new Whyte typeface, plus a worker-hardening rollout and reserve work.
