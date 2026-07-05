@@ -16665,6 +16665,13 @@
         "type": "partnership",
         "title": "Tenbin adopts Chainlink CCIP for cross-chain expansion",
         "sourceUrl": "https://www.cryptowisser.com/news/tenbin-labs-is-migrating-to-chainlink-ccip"
+      },
+      {
+        "date": "2026-06-22",
+        "type": "partnership",
+        "title": "JPEG Trading launches RWA curation with tGLD as inaugural Euler asset",
+        "description": "JPEG Trading launched an RWA curation business with tGLD as its inaugural curated asset, deploying the first DeFi lending vaults for tGLD on Euler with co-deployed capital.",
+        "sourceUrl": "https://www.fintechlaunches.com/announcements/jpeg-trading-launches-rwa-curation-business-tgld-euler-defi-asset-underwriting-liquidity/"
       }
     ],
     "canBeBlacklisted": true,
