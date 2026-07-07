@@ -90,6 +90,34 @@ const BlacklistabilityReviewStatusSchema = z.union([BlacklistabilityStatusSchema
 const ReviewDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const PositiveIntegerSchema = z.number().finite().int().positive();
 
+function isValidIsoDate(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+export const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
+  message: "Expected YYYY-MM-DD",
+});
+
+export const FuzzyDateSchema = z.string().refine((value) => {
+  if (/^\d{4}$/.test(value)) return true;
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
+  if (/^\d{4}-Q[1-4]$/.test(value)) return true;
+  if (/^\d{4}-H[1-2]$/.test(value)) return true;
+  return isValidIsoDate(value);
+}, {
+  message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
+});
+
 const PRIVILEGED_MINT_PATHS = new Set([
   "user-collateralized-governed",
   "issuer-direct-mint",
@@ -745,7 +773,7 @@ export const YieldConfigSchema: z.ZodType<YieldConfig> = z
 
 export const LaunchMilestoneSchema: z.ZodType<LaunchMilestone> = z
   .object({
-    date: z.string(),
+    date: FuzzyDateSchema,
     type: z.enum(LAUNCH_MILESTONE_TYPE_VALUES),
     title: z.string(),
     description: z.string().optional(),
@@ -755,8 +783,8 @@ export const LaunchMilestoneSchema: z.ZodType<LaunchMilestone> = z
 
 export const DateHistoryEntrySchema: z.ZodType<DateHistoryEntry> = z
   .object({
-    date: z.string(),
-    setOn: z.string(),
+    date: FuzzyDateSchema,
+    setOn: StrictIsoDateSchema,
   })
   .strict();
 

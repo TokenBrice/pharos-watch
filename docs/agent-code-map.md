@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPricesDetailed, pickBestTicker
-- ... 251 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 252 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/lighthouse-static-export.test.ts`
 - `scripts/__tests__/merge-gate-parallel-mode.test.ts`
 - `scripts/__tests__/mint-authority-review-audit.test.ts`
-- ... 222 more files omitted; use `rg --files scripts` for the full list.
+- ... 224 more files omitted; use `rg --files scripts` for the full list.

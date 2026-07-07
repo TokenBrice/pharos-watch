@@ -105,48 +105,77 @@ export function getDriftStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Date helpers — parse YYYY, YYYY-MM, YYYY-QN
+// Date helpers — parse YYYY, YYYY-MM, YYYY-MM-DD, YYYY-QN, YYYY-HN
 // ---------------------------------------------------------------------------
 
-/** Convert a fuzzy date string to a Date for calculations. */
+function utcDate(year: number, monthIndex: number, day: number): Date {
+  return new Date(Date.UTC(year, monthIndex, day));
+}
+
+function isValidUtcDate(year: number, month: number, day: number): boolean {
+  const date = utcDate(year, month - 1, day);
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function lastDayOfMonth(year: number, month: number): Date {
+  return utcDate(year, month, 0);
+}
+
+/** Convert a fuzzy date string to a representative end-of-period Date for calculations. */
 export function parseFuzzyDate(raw: string): Date | null {
-  const qMatch = raw.match(/^(\d{4})-Q(\d)$/);
+  const dMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dMatch) {
+    const year = Number(dMatch[1]);
+    const month = Number(dMatch[2]);
+    const day = Number(dMatch[3]);
+    return isValidUtcDate(year, month, day) ? utcDate(year, month - 1, day) : null;
+  }
+  const hMatch = raw.match(/^(\d{4})-H([1-2])$/);
+  if (hMatch) {
+    const year = Number(hMatch[1]);
+    const half = Number(hMatch[2]);
+    return half === 1 ? utcDate(year, 5, 30) : utcDate(year, 11, 31);
+  }
+  const qMatch = raw.match(/^(\d{4})-Q([1-4])$/);
   if (qMatch) {
     const year = Number(qMatch[1]);
     const quarter = Number(qMatch[2]);
-    return new Date(year, (quarter - 1) * 3, 1);
+    return lastDayOfMonth(year, quarter * 3);
   }
-  const mMatch = raw.match(/^(\d{4})-(\d{2})$/);
+  const mMatch = raw.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
   if (mMatch) {
-    return new Date(Number(mMatch[1]), Number(mMatch[2]) - 1, 1);
+    return lastDayOfMonth(Number(mMatch[1]), Number(mMatch[2]));
   }
   const yMatch = raw.match(/^(\d{4})$/);
   if (yMatch) {
-    return new Date(Number(yMatch[1]), 0, 1);
+    return utcDate(Number(yMatch[1]), 11, 31);
   }
   return null;
 }
 
 /** Format a fuzzy date string for display (e.g. "Q2 2026", "Mar 2026"). */
 export function formatFuzzyDate(raw: string): string {
-  const qMatch = raw.match(/^(\d{4})-Q(\d)$/);
+  const dMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dMatch) {
+    const parsed = parseFuzzyDate(raw);
+    return parsed
+      ? parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+      : raw;
+  }
+  const hMatch = raw.match(/^(\d{4})-H([1-2])$/);
+  if (hMatch) return `H${hMatch[2]} ${hMatch[1]}`;
+  const qMatch = raw.match(/^(\d{4})-Q([1-4])$/);
   if (qMatch) return `Q${qMatch[2]} ${qMatch[1]}`;
-  const mMatch = raw.match(/^(\d{4})-(\d{2})$/);
+  const mMatch = raw.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
   if (mMatch) {
-    const d = new Date(Number(mMatch[1]), Number(mMatch[2]) - 1, 1);
-    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    const d = utcDate(Number(mMatch[1]), Number(mMatch[2]) - 1, 1);
+    return d.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
   }
   return raw;
 }
 
 /** Convert fuzzy date strings to a numeric score for chronological sorting. */
 export function dateScore(raw?: string): number {
-  if (!raw) return 999999;
-  const q = raw.match(/^(\d{4})-Q(\d)$/);
-  if (q) return Number(q[1]) * 13 + Number(q[2]) * 3 + 1;
-  const m = raw.match(/^(\d{4})-(\d{2})$/);
-  if (m) return Number(m[1]) * 13 + Number(m[2]);
-  const y = raw.match(/^(\d{4})$/);
-  if (y) return Number(y[1]) * 13 + 13;
-  return 999999;
+  if (!raw) return Number.POSITIVE_INFINITY;
+  return parseFuzzyDate(raw)?.getTime() ?? Number.POSITIVE_INFINITY;
 }

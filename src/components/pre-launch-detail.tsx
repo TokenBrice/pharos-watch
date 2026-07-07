@@ -21,6 +21,7 @@ import {
   getDriftStatus,
   formatFuzzyDate,
   parseFuzzyDate,
+  dateScore,
 } from "@/lib/pre-launch";
 import type { StablecoinMeta, LaunchPhase, LaunchMilestone, FeaturedContent } from "@shared/types";
 
@@ -145,20 +146,13 @@ function InfoGridItem({ label, value }: { label: string; value: string }) {
 // ---------------------------------------------------------------------------
 
 function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
-  const sorted = [...milestones].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = [...milestones].sort((a, b) => dateScore(b.date) - dateScore(a.date));
 
   return (
     <div className="space-y-0">
       {sorted.map((m, i) => {
         const isLast = i === sorted.length - 1;
-        const parsed = new Date(m.date);
-        const dateDisplay = isNaN(parsed.getTime())
-          ? m.date
-          : parsed.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
+        const dateDisplay = formatFuzzyDate(m.date);
 
         return (
           <div key={`${m.date}-${m.title}`} className="relative flex gap-3">

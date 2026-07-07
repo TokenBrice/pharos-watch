@@ -154,6 +154,46 @@ describe("tracked stablecoin metadata", () => {
     expect(algorithmicIds).toEqual([]);
   });
 
+  it("accepts supported fuzzy launch date formats", () => {
+    const accepted = ["2026", "2026-05", "2026-05-27", "2026-Q2", "2026-H1"];
+
+    for (const value of accepted) {
+      expect(parseStablecoinMetaAssets([
+        makeStablecoinAsset({
+          launchDate: value,
+          announcedDate: value,
+          expectedLaunchDate: value,
+          milestones: [{ date: value, type: "milestone", title: "Launch milestone" }],
+          dateHistory: [{ date: value, setOn: "2026-01-15" }],
+        }),
+      ], `accepted ${value}`)[0]).toMatchObject({
+        launchDate: value,
+        announcedDate: value,
+        expectedLaunchDate: value,
+      });
+    }
+  });
+
+  it("rejects unsupported launch date formats", () => {
+    const rejected = ["2026-13", "2026-02-30", "2026-Q5", "2026-H3", "H1 2026", "2026/05/27"];
+
+    for (const value of rejected) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset({ expectedLaunchDate: value }),
+      ], `rejected ${value}`)).toThrow(/Expected YYYY/);
+    }
+  });
+
+  it("keeps dateHistory setOn strict while allowing fuzzy historical dates", () => {
+    expect(parseStablecoinMetaAssets([
+      makeStablecoinAsset({ dateHistory: [{ date: "2026-H2", setOn: "2026-06-28" }] }),
+    ], "dateHistory fuzzy date")).toHaveLength(1);
+
+    expect(() => parseStablecoinMetaAssets([
+      makeStablecoinAsset({ dateHistory: [{ date: "2026-H2", setOn: "2026-H1" }] }),
+    ], "dateHistory fuzzy setOn")).toThrow(/Expected YYYY-MM-DD/);
+  });
+
   it("tracks the current implementation-scope variants", () => {
     const variantIds = ACTIVE_STABLECOINS
       .filter((coin) => isTrackedVariant(coin.id))
