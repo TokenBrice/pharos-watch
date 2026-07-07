@@ -194,6 +194,76 @@ describe("tracked stablecoin metadata", () => {
     ], "dateHistory fuzzy setOn")).toThrow(/Expected YYYY-MM-DD/);
   });
 
+  it("requires http URLs for external evidence fields", () => {
+    const cases: Array<{ label: string; overrides: Record<string, unknown> }> = [
+      {
+        label: "proofOfReserves",
+        overrides: { proofOfReserves: { type: "independent-audit", url: "ftp://example.com/report.pdf" } },
+      },
+      {
+        label: "links",
+        overrides: { links: [{ label: "Docs", url: "/docs" }] },
+      },
+      {
+        label: "mica references",
+        overrides: { mica: { status: "authorized", references: [{ label: "Register", url: "mailto:issuer@example.com" }] } },
+      },
+      {
+        label: "milestone source",
+        overrides: {
+          milestones: [{ date: "2026-01-01", type: "milestone", title: "Milestone", sourceUrl: "ftp://example.com" }],
+        },
+      },
+      {
+        label: "featured content url",
+        overrides: {
+          featuredContent: [{ type: "article", url: "/article", title: "Article" }],
+        },
+      },
+    ];
+
+    for (const { label, overrides } of cases) {
+      expect(() => parseStablecoinMetaAssets([
+        makeStablecoinAsset(overrides),
+      ], `bad ${label}`)).toThrow(/Expected an http\(s\) URL/);
+    }
+  });
+
+  it("allows local or http featured content images only", () => {
+    expect(parseStablecoinMetaAssets([
+      makeStablecoinAsset({
+        featuredContent: [{
+          type: "article",
+          url: "https://example.com/article",
+          title: "Article",
+          image: "/featured/example.png",
+        }],
+      }),
+    ], "local featured image")).toHaveLength(1);
+
+    expect(parseStablecoinMetaAssets([
+      makeStablecoinAsset({
+        featuredContent: [{
+          type: "article",
+          url: "https://example.com/article",
+          title: "Article",
+          image: "https://example.com/image.png",
+        }],
+      }),
+    ], "remote featured image")).toHaveLength(1);
+
+    expect(() => parseStablecoinMetaAssets([
+      makeStablecoinAsset({
+        featuredContent: [{
+          type: "article",
+          url: "https://example.com/article",
+          title: "Article",
+          image: "ftp://example.com/image.png",
+        }],
+      }),
+    ], "bad featured image")).toThrow(/Invalid input/);
+  });
+
   it("tracks the current implementation-scope variants", () => {
     const variantIds = ACTIVE_STABLECOINS
       .filter((coin) => isTrackedVariant(coin.id))

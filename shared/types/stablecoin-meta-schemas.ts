@@ -82,6 +82,7 @@ import {
   GovernanceQualitySchema,
   OracleRiskTierSchema,
 } from "./core";
+import { HttpUrlSchema } from "./validators";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
@@ -117,6 +118,11 @@ export const FuzzyDateSchema = z.string().refine((value) => {
 }, {
   message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
 });
+
+const LocalPathOrHttpUrlSchema = z.union([
+  HttpUrlSchema,
+  z.string().regex(/^\/[A-Za-z0-9][A-Za-z0-9/_\-.]*$/, "Expected a local absolute asset path"),
+]);
 
 const PRIVILEGED_MINT_PATHS = new Set([
   "user-collateralized-governed",
@@ -159,7 +165,7 @@ export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags> = z
 export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
-    url: z.string(),
+    url: HttpUrlSchema,
     provider: z.string().optional(),
     attestorTier: z.enum(ATTESTOR_TIER_VALUES).optional(),
     cadence: z.enum(PROOF_OF_RESERVES_CADENCE_VALUES).optional(),
@@ -171,7 +177,7 @@ export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
 export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z
   .object({
     label: z.string(),
-    url: z.string(),
+    url: HttpUrlSchema,
   })
   .strict();
 
@@ -204,7 +210,7 @@ export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvi
     source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
     name: z.string().min(1),
     slug: z.string().min(1).optional(),
-    url: z.string().url().optional(),
+    url: HttpUrlSchema.optional(),
     bridgeTypes: z.array(z.string().min(1)).min(1).optional(),
     note: z.string().min(1).optional(),
   })
@@ -311,7 +317,7 @@ function hasGeniusReferenceKind(
 const GeniusReferenceSchema: z.ZodType<GeniusReference> = z
   .object({
     label: z.string().min(1),
-    url: z.string().url(),
+    url: HttpUrlSchema,
     sourceKind: z.enum(GENIUS_SOURCE_KIND_VALUES),
     sourceDate: ReviewDateSchema.optional(),
     accessedAt: ReviewDateSchema.optional(),
@@ -358,7 +364,7 @@ export const GeniusProfileSchema: z.ZodType<GeniusProfile> = z
     enforcementStatus: z.enum(GENIUS_ENFORCEMENT_STATUS_VALUES).optional(),
     daspOfferSaleStatus: z.enum(GENIUS_DASP_OFFER_SALE_STATUS_VALUES).optional(),
     reserveDisclosurePresent: z.boolean().optional(),
-    reserveDisclosureUrl: z.string().url().optional(),
+    reserveDisclosureUrl: HttpUrlSchema.optional(),
     redemptionPolicyPresent: z.boolean().optional(),
     monthlyAttestationPresent: z.boolean().optional(),
     latestReportDate: ReviewDateSchema.optional(),
@@ -777,7 +783,7 @@ export const LaunchMilestoneSchema: z.ZodType<LaunchMilestone> = z
     type: z.enum(LAUNCH_MILESTONE_TYPE_VALUES),
     title: z.string(),
     description: z.string().optional(),
-    sourceUrl: z.string().optional(),
+    sourceUrl: HttpUrlSchema.optional(),
   })
   .strict();
 
@@ -791,10 +797,10 @@ export const DateHistoryEntrySchema: z.ZodType<DateHistoryEntry> = z
 export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
   .object({
     type: z.enum(FEATURED_CONTENT_TYPE_VALUES),
-    url: z.string(),
+    url: HttpUrlSchema,
     title: z.string(),
     description: z.string().optional(),
-    image: z.string().optional(),
+    image: LocalPathOrHttpUrlSchema.optional(),
     source: z.string().optional(),
   })
   .strict();
