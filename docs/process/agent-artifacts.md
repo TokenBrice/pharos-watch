@@ -34,11 +34,9 @@ The shared Pharos convention:
 - `.claude/skills/<name>/SKILL.md` is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`.
 - Canonical shared skill bodies must use repo-relative paths such as `.codex/skills/<name>/references/...` or normal repo source paths. Do not use `$CODEX_HOME` paths in a skill that Claude symlinks.
 
-Shared symlinked skills currently include `annotations-refresh`, `coingecko-id-verif`, `contract-enrich`, `contract-populate`, `genius-research`, `mica-research`, `reserve-research`, `resilience-classify`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch`, and `stablecoin-runtime-price-marketcap-gate`.
+Shared symlinked skills currently include `annotations-refresh`, `changelog-collect`, `coingecko-id-verif`, `contract-enrich`, `contract-populate`, `genius-research`, `mica-research`, `pharos-ci-failure-triage`, `pharos-docs-sync-audit`, `pharos-release-runner`, `pre-launch-update`, `reserve-research`, `resilience-classify`, `stablecoin-addition-orchestrator`, `stablecoin-info-fetch`, `stablecoin-runtime-price-marketcap-gate`, and `yield-coverage-audit-drain`. When a canonical skill has companion files the body reads (for example `reference.md`), symlink those alongside `SKILL.md`.
 
-Codex-only Pharos skills currently include `pharos-ci-failure-triage`, `pharos-docs-sync-audit`, `pharos-release-runner`, and `yield-coverage-audit-drain`. Keep these in `.codex/skills/` unless the same workflow becomes useful for Claude, then add the matching `.claude/skills/<name>/SKILL.md` symlink.
-
-Claude-only Pharos skills currently include `ai-summaries-refresh`, `changelog-collect`, `funding-update`, `pre-launch-update`, and `write-ai-summaries`. If one becomes useful for Codex too, add a canonical `.codex/skills/<name>/SKILL.md` and replace the Claude copy with a symlink.
+Claude-only Pharos skills currently include `ai-summaries-refresh`, `funding-update`, and `write-ai-summaries`. If one becomes useful for Codex too, add a canonical `.codex/skills/<name>/SKILL.md` and replace the Claude copy with a symlink. There are currently no Codex-only Pharos skills.
 
 `npm run check:agent-skill-symlinks` validates that skill symlinks are not broken, rejects waivers for symlinks that no longer exist, and requires external-target waivers to carry `owner`, `reason`, and `reviewAfter` metadata. Symlinks that point outside this repository must be listed in `scripts/lib/agent-skill-symlink-waivers.json`.
 
