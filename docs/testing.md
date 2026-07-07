@@ -264,7 +264,7 @@ const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
 
 ### Reserve HTML Fixtures (`worker/src/cron/reserve-adapters/__tests__/fixtures/*.html`)
 
-Seven issuer dashboards feed HTML-parsing adapters (Circle transparency, Buck transparency, FDUSD, Mento reserve, Reserve (RE) metrics, SG Forge, USDH). Their HTML layout drifts over time, so the fixtures need periodic refreshes to keep tests anchored to today's markup rather than a snapshot from months ago.
+Six issuer dashboards feed HTML-parsing adapters (Circle transparency, FDUSD, Mento reserve, Reserve (RE) metrics, SG Forge, USDH). Their HTML layout drifts over time, so the fixtures need periodic refreshes to keep tests anchored to today's markup rather than a snapshot from months ago.
 
 Run:
 
@@ -355,7 +355,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
-- Six content-coverage guardrails run in every deploy-impacting prebuild pass alongside the code checks: `check:glossary-coverage`, `check:one-liner-coverage`, `check:mechanism-archetype-coverage`, `check:archetype-explainer-coverage`, `check:attestor-tier-coverage`, and `check:oracle-risk-coverage:enforce`. They gate editorial/data completeness (glossary wiring, coin one-liners, mechanism archetypes and their explainers, attestor tiers, oracle-risk coverage) rather than code correctness; each is a sub-second registry scan.
+- Six content-coverage guardrails run during the deploy-impacting prebuild pass alongside the code checks: `check:glossary-coverage`, `check:one-liner-coverage`, `check:attestor-tier-coverage`, and `check:oracle-risk-coverage:enforce` run on every pass, while `check:mechanism-archetype-coverage` and `check:archetype-explainer-coverage` are Pages-impact checks that are skipped on worker-only surfaces. They gate editorial/data completeness (glossary wiring, coin one-liners, mechanism archetypes and their explainers, attestor tiers, oracle-risk coverage) rather than code correctness; each is a sub-second registry scan.
 - `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run check:redemption-coverage-audit` validates the Redemption Backstop backlog audit against `scripts/lib/redemption-coverage-audit-baseline.json`, so default-inferred active gaps, total active gaps, and heuristic route counts cannot grow while the backlog is being researched.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.

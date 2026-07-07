@@ -64,7 +64,7 @@ Model contract:
 
 Visible board contract:
 
-- Desktop renders the Dependency Hubs Board near the graph and labels the surface with "Upstream hubs".
+- Desktop renders the Dependency Hubs Board near the graph under the heading "Direct dependency hubs"; "Upstream hubs" appears as one of its metric tiles.
 - The board exposes exact values for upstream hubs, direct dependents, summed direct dependency weight, modeled dependent market-cap context, hub own market cap, examples, and edge type breakdown.
 - Mobile consumes the same model and renders the same ranked hub metrics in the `DependencyMapMobileSummary` card below the graph.
 - Modeled dependent market-cap context is direct and deduped; it is not a transitive total or forecasted dollar outcome.
@@ -142,8 +142,8 @@ This keeps layout stable and prevents node clipping at the frame boundary.
 Workspace canvas:
 
 - The SVG stage is a graph-local HUD surface with its own visual tokens: `--graph-canvas-bg`, `--graph-panel-bg`, and `--graph-grid-line`. The tokens live in `src/app/globals.css` and are scoped to the dependency-map workspace — they are not part of the global semantic layer.
-- Background uses a 24px CSS gradient grid in `--graph-grid-line`. Border is a 1px hairline in the same color with a 2px radius. No shadow.
-- Inner chrome (legend pill) sits on `--graph-panel-bg` with the same hairline border and 2px radius.
+- Background uses a 24px CSS gradient grid in `--graph-grid-line`. Border is a 1px hairline in the same color with a 4px radius. No shadow.
+- Inner chrome (legend pill) sits on `--graph-panel-bg` with the same hairline border and 4px radius.
 - The outer workspace card and the Dependency Hubs Board below it keep the warm system surface ramp; the cold HUD treatment is scoped to the SVG stage only.
 
 Node encoding:

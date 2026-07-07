@@ -155,16 +155,16 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `sync-digests.ts` in the consolidated Pages release job before the build artifact is created
 - `sync-depeg-events.ts` in the same Pages release path so `/depeg/<event>/` static params and feed/static exports use current confirmed events
 - `generate-public-datasets.ts` in the same Pages release path so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
-- `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
-- `generate-case-study-client-index.ts` via the same `prebuild` hook, immediately after `generate-sitemap-dates.ts` (and re-verified by `npm run check:case-study-client-index` / `check:generated-artifacts`), so case-study client imports stay synchronized with authored case-study modules
-- `generate-docs-metadata.ts` via the same `prebuild` hook, immediately after `generate-case-study-client-index.ts`
-- `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
-- `generate-cemetery-dataset.ts` via the same `prebuild` hook, immediately after `generate-depeg-event-search-data.ts`
-- `generate-public-datasets.ts` via the same `prebuild` hook, immediately after `generate-cemetery-dataset.ts`
-- `generate-homepage-bootstrap.ts` via the same `prebuild` hook, immediately after `generate-public-datasets.ts`; `--check` validates the existing generated payload without network fetches
-- `generate-postman-collection.ts` via the same `prebuild` hook, immediately after `generate-homepage-bootstrap.ts`
-- `generate-openapi-spec.ts` via the same `prebuild` hook, immediately after `generate-postman-collection.ts`
-- `generate-llms-txt.ts` via the same `prebuild` hook, immediately after `generate-openapi-spec.ts`
+- `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`. The `prebuild` hook runs the full generated-artifact registry with bounded 4-way parallelism (`GENERATED_ARTIFACTS_MAX_PARALLEL`, in `scripts/maintenance/run-generated-artifacts.mjs`), so the registry order below is dispatch order, not strict serial execution
+- `generate-case-study-client-index.ts` via the same `prebuild` hook (and re-verified by `npm run check:case-study-client-index` / `check:generated-artifacts`), so case-study client imports stay synchronized with authored case-study modules
+- `generate-docs-metadata.ts` via the same `prebuild` hook
+- `generate-depeg-event-search-data.ts` via the same `prebuild` hook, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
+- `generate-cemetery-dataset.ts` via the same `prebuild` hook
+- `generate-public-datasets.ts` via the same `prebuild` hook
+- `generate-homepage-bootstrap.ts` via the same `prebuild` hook; `--check` validates the existing generated payload without network fetches
+- `generate-postman-collection.ts` via the same `prebuild` hook
+- `generate-openapi-spec.ts` via the same `prebuild` hook
+- `generate-llms-txt.ts` via the same `prebuild` hook
 - `generate-markdown-exports.ts` and `inline-homepage-critical-css.mjs` via the `postbuild` hook, after `next build` creates `out/`
 - `generate-stablecoin-per-coin-asset.ts --check` via `npm run check:stablecoin-data` when the stablecoin catalog guard validates generated per-coin source assets
 - `check:world-map` via `validate:prebuild` to fail if `public/maps/world-countries.svg` drifts from `scripts/maintenance/build-world-map-svg.ts`

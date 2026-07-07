@@ -59,7 +59,7 @@ rg '"<coin-id>"' data/logos.json
 test -f "public/logos/<registered-logo-file>"
 ```
 
-If no canonical tracked logo is registered, add one or copy the active logo into the cemetery directory using the symbol-derived fallback filename that `frozenToDeadShape()` resolves. The cemetery tombstone falls back to a single-letter glyph when the file is missing.
+If no canonical tracked logo is registered, add one or copy the active logo into the cemetery directory using the symbol-derived fallback filename that `frozenToDeadShape()` resolves. `frozenToDeadShape()` always resolves a non-empty logo path, and the tombstone renders it through `next/image` with no file-existence check — so a missing PNG shows a broken image, not a glyph. The `test -f` check above is load-bearing.
 
 ### 4. Validate
 

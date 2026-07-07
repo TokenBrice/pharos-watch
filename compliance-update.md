@@ -20,9 +20,9 @@ Current status distribution:
 | Regime | Status | Count |
 |---|---|---:|
 | MiCA | authorized | 16 |
-| MiCA | non-compliant | 19 |
+| MiCA | non-compliant | 18 |
 | MiCA | pending | 2 |
-| MiCA | out-of-scope | 3 |
+| MiCA | out-of-scope | 4 |
 | GENIUS | no-public-authorization-found | 67 |
 | GENIUS | issuer-announced-intent | 22 |
 | GENIUS | not-applicable | 17 |
@@ -56,7 +56,7 @@ The MiCA authorized classifications are well supported by the current ESMA EMT r
 
 The largest issue is not MiCA status accuracy; it is GENIUS semantics and page projection. Several GENIUS rows encode a likely or announced pathway as if it were an achieved pathway. Because implementing regulations and state-certification mechanics remain proposed as of 2026-06-18, these should either move to a separate "intended pathway" field or be reset to `unknown` unless a public application, approval, or registration supports the pathway.
 
-The `/compliance` page does not expose every authored GENIUS data point. The source schema and `StablecoinClientMeta` type include fields such as `primaryFederalRegulator`, `foreignExceptionStatus`, `enforcementStatus`, `daspOfferSaleStatus`, `reserveDisclosurePresent`, `monthlyAttestationPresent`, `latestReportDate`, `reviewer`, and `reviewedAt`. These are now all included in the `GENIUS_CLIENT_PROFILE_FIELDS` projection, so the data is available client-side; surfacing remaining dimensions in the UI is the open work.
+The `/compliance` page does not expose every authored GENIUS data point. The source schema and `StablecoinClientMeta` type include fields such as `primaryFederalRegulator`, `foreignExceptionStatus`, `enforcementStatus`, `daspOfferSaleStatus`, `reserveDisclosurePresent`, `monthlyAttestationPresent`, `latestReportDate`, `reviewer`, and `reviewedAt`. These are now all included in the `GENIUS_COMPLIANCE_PROFILE_FIELDS` projection, so the data is available client-side; surfacing remaining dimensions in the UI is the open work.
 
 The GENIUS reserve-attestation dates need a normalization pass. Many rows have `monthlyAttestationPresent: true` without `latestReportDate`, and several existing dates are stale relative to current public reports.
 
@@ -64,7 +64,7 @@ The GENIUS reserve-attestation dates need a normalization pass. Many rows have `
 
 1. Fix GENIUS client projection.
 
-   FIXED. All of the fields below are now members of `GENIUS_CLIENT_PROFILE_FIELDS` in `shared/types/stablecoin-client-meta.ts`, and `scripts/build-data/build-client-registry.mjs` projects every one via `readGeniusClientFields()` / `projectGeniusProfile()`:
+   FIXED. All of the fields below are now members of `GENIUS_COMPLIANCE_PROFILE_FIELDS` in `shared/types/stablecoin-client-meta.ts`, and `scripts/build-data/build-client-registry.mjs` projects every one via `readGeniusComplianceFields()` / `projectGeniusProfile()` into `coins.compliance.generated.json`:
 
    - `primaryFederalRegulator`
    - `foreignExceptionStatus`
@@ -141,7 +141,7 @@ The following local `mica.status: "authorized"` rows matched the current ESMA EM
 
 | id | Finding | Recommendation |
 |---|---|---|
-| `deuro-deuro` | `mica.status: "non-compliant"` is not aligned with references that argue MiCA Titles II-IV are not applicable due to no central issuer. `tokenType` is also missing. | Reassess. If treated as an in-scope euro-referenced EMT, add `tokenType: "EMT"` and stronger non-compliance evidence. If accepting the no-central-issuer analysis, change to `out-of-scope` or remove MiCA metadata. |
+| `deuro-deuro` | Resolved: `mica.status` is now `"out-of-scope"`, matching references that argue MiCA Titles II-IV are not applicable due to no central issuer. `tokenType` remains unset, which is consistent with an out-of-scope asset. | No further action unless it is re-scoped as an in-scope euro-referenced EMT. |
 | `eur-qivalis` | Pending status is plausible from issuer/BNP public statements, but no current ESMA listing and no official DNB filing source was found. | Keep pending only if public filing evidence is sufficient; otherwise reduce confidence or add official regulator evidence. Confirm lifecycle handling because the row is pre-launch and not visible in the main table. |
 | `usdm-moneta` | Pending status has public issuer/regulator context, but no ESMA row. | Keep pending with a current official regulator source, or mark as lower-confidence pending until official register evidence appears. |
 | `eurr-stablr` / `usdr-stablr` | Authorized status remains supported, but public incident references indicate an unbacked mint/freeze event. | Do not downgrade authorization unless MFSA/ESMA revokes it. Add an incident/compliance caveat that is visible on the detail view. |
