@@ -57,8 +57,36 @@ const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: st
   },
 };
 
-function SourceChip({ label, status }: { label: string; status: RenderedSourceStatus }) {
+const SOURCE_DOT_CLASSES: Record<RenderedSourceStatus, string> = {
+  used: "bg-emerald-500",
+  available: "bg-sky-400",
+  "no-data": "bg-muted-foreground/40",
+};
+
+function SourceChip({
+  label,
+  status,
+  compact = false,
+}: {
+  label: string;
+  status: RenderedSourceStatus;
+  compact?: boolean;
+}) {
   const style = SOURCE_CHIP_STYLES[status];
+  if (compact) {
+    // Rail rendering (Figma coin template): source name + status square dot;
+    // the legend beneath the grid decodes the colors.
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background/30 px-2.5 py-1.5 text-sm">
+        <span className={cn("min-w-0 truncate", style.label)} title={label}>{label}</span>
+        <span
+          className={cn("h-2 w-2 shrink-0 rounded-[2px]", SOURCE_DOT_CLASSES[status])}
+          role="img"
+          aria-label={style.text}
+        />
+      </div>
+    );
+  }
   return (
     <div className={cn("flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm", style.wrap)}>
       <span className={cn("min-w-0 truncate", style.label)} title={label}>{label}</span>
@@ -198,25 +226,38 @@ export function PriceTransparencyCard({
 
         {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
         <div className="space-y-2">
+          {compact ? <p className="pharos-kicker">Sources</p> : null}
           <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3")}>
-            {isProtocolRedeem ? <SourceChip label="Protocol Redemption" status="used" /> : null}
+            {isProtocolRedeem ? <SourceChip label="Protocol Redemption" status="used" compact={compact} /> : null}
 
             {/* Used Sources */}
             {usedSources.map((source) => (
-              <SourceChip key={source.key} label={source.label} status={source.status} />
+              <SourceChip key={source.key} label={source.label} status={source.status} compact={compact} />
             ))}
 
             {/* Available Sources */}
             {availableSources.map((source) => (
-              <SourceChip key={source.key} label={source.label} status={source.status} />
+              <SourceChip key={source.key} label={source.label} status={source.status} compact={compact} />
             ))}
 
             {/* Expandable No-Data Sources */}
             {showAll &&
               noDataSources.map((source) => (
-                <SourceChip key={source.key} label={source.label} status={source.status} />
+                <SourceChip key={source.key} label={source.label} status={source.status} compact={compact} />
               ))}
           </div>
+          {compact ? (
+            <div className="flex items-center justify-center gap-3 pt-1">
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="h-2 w-2 rounded-[2px] bg-emerald-500" aria-hidden="true" />
+                Used
+              </span>
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="h-2 w-2 rounded-[2px] bg-sky-400" aria-hidden="true" />
+                Available
+              </span>
+            </div>
+          ) : null}
 
           {noDataSources.length > 0 && (
             <button type="button"

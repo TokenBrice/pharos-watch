@@ -11,7 +11,6 @@ import type {
 } from "@shared/types";
 import { BREAKDOWN_DIMENSIONS, DIMENSION_LABELS, DIMENSION_ORDER, DRILLDOWN_DIMENSIONS } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { ReportCardRadar } from "@/components/radar-chart";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -236,15 +235,15 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
     <div className="group">
       <div
         className={cn(
-          "relative w-full rounded-lg border border-border/60 px-2.5 py-2 transition-colors",
-          hasDetails ? "cursor-pointer hover:border-border/80 hover:bg-muted/30" : "cursor-default",
+          "relative w-full py-3 transition-colors",
+          hasDetails ? "cursor-pointer hover:bg-muted/20" : "cursor-default",
         )}
       >
         {hasDetails && (
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="pharos-focus-ring absolute inset-0 z-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+            className="pharos-focus-ring absolute inset-0 z-0 cursor-pointer rounded-sm border-0 bg-transparent p-0"
             aria-expanded={expanded}
             aria-controls={detailsId}
           >
@@ -256,37 +255,46 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
         <div
           className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}
         >
+          {/* Figma coin template row: flat hairline row \u2014 label left; score \u00b7
+              grade chip \u00b7 boxed chevron right. */}
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{DIMENSION_LABELS[dimKey]}</span>
+            <span className={cn("truncate text-sm font-medium", expanded && "font-semibold")}>
+              {DIMENSION_LABELS[dimKey]}
+            </span>
             {hintTopic && <MethodologyHint topic={hintTopic} className="pointer-events-auto" />}
-            <ChevronDown
-              aria-hidden="true"
-              className={cn(
-                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-                !hasDetails && "invisible",
-                hasDetails && expanded && "rotate-180",
-              )}
-            />
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <SafetyGradeBadge grade={dim.grade} size="sm" versionTopic="safetyScore" versionVariant="tooltip-only" />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             {dim.score !== null ? (
               <ScoreWithBand score={dim.score} label={DIMENSION_LABELS[dimKey]}>
-                <span className="pointer-events-auto w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
-                  {dim.score}
-                  <span className="text-xs">/100</span>
+                <span className="pointer-events-auto whitespace-nowrap text-right font-mono text-sm tabular-nums text-muted-foreground">
+                  {dim.score} <span className="text-xs">/ 100</span>
                 </span>
               </ScoreWithBand>
             ) : (
-              <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">{"\u2014"}</span>
+              <span className="text-right font-mono text-sm tabular-nums text-muted-foreground">{"\u2014"}</span>
             )}
+            <SafetyGradeBadge grade={dim.grade} size="sm" versionTopic="safetyScore" versionVariant="tooltip-only" />
+            <span
+              aria-hidden="true"
+              className={cn(
+                "flex h-5 w-5 items-center justify-center rounded border border-border/60",
+                !hasDetails && "invisible",
+              )}
+            >
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                  hasDetails && expanded && "rotate-180",
+                )}
+              />
+            </span>
           </div>
         </div>
       </div>
 
       {/* Expanded Details */}
       {expanded && hasDetails && (
-        <div id={detailsId} className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
+        <div id={detailsId} className="space-y-2 pb-3 animate-in slide-in-from-top-1 duration-200">
           {/* Factor breakdown for resilience/decentralization/dependencyRisk */}
           {BREAKDOWN_DIMENSIONS.has(dimKey) && (
             <div className="space-y-1">
@@ -321,46 +329,48 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             </span>
           )}
 
-          {/* Liquidity breakdown */}
+          {/* Liquidity breakdown (Figma coin template): mono uppercase
+              subscore rows, then the gray weighted-component bars with
+              score · weight at the right. */}
           {dimKey === "liquidity" && (
             <div className="space-y-2">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {card.rawInputs.liquidityScore != null ? (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">DEX liquidity</span>
+                  <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
+                    <span className="text-muted-foreground">DEX Liquidity</span>
                     <ScoreWithBand score={card.rawInputs.liquidityScore} label="DEX liquidity">
-                      <span className="tabular-nums text-foreground font-mono">
-                        {card.rawInputs.liquidityScore}/100
+                      <span className="tabular-nums text-foreground">
+                        {card.rawInputs.liquidityScore} / 100
                       </span>
                     </ScoreWithBand>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">DEX liquidity</span>
+                  <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
+                    <span className="text-muted-foreground">DEX Liquidity</span>
                     <span className="text-foreground/60">Unavailable</span>
                   </div>
                 )}
                 {card.rawInputs.redemptionBackstopScore != null && (
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
                     <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">
-                      Redemption backstop
+                      Redemption Backstop
                     </MethodologyLabel>
                     <ScoreWithBand score={card.rawInputs.redemptionBackstopScore} label="Redemption backstop">
-                      <span className="tabular-nums text-foreground font-mono">
-                        {card.rawInputs.redemptionBackstopScore}/100
+                      <span className="tabular-nums text-foreground">
+                        {card.rawInputs.redemptionBackstopScore} / 100
                         {!card.rawInputs.redemptionUsedForLiquidity ? " (not used)" : ""}
                       </span>
                     </ScoreWithBand>
                   </div>
                 )}
                 {card.rawInputs.effectiveExitScore != null && (
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
                     <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">
-                      Effective exit
+                      Effective Exit
                     </MethodologyLabel>
                     <ScoreWithBand score={card.rawInputs.effectiveExitScore} label="Effective exit">
-                      <span className="tabular-nums text-foreground font-mono">
-                        {card.rawInputs.effectiveExitScore}/100
+                      <span className="tabular-nums text-foreground">
+                        {card.rawInputs.effectiveExitScore} / 100
                       </span>
                     </ScoreWithBand>
                   </div>
@@ -369,20 +379,26 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
               {/* Liquidity components */}
               {liquidityComponents && (
-                <div className="pt-2 border-t border-border/30 space-y-1.5">
+                <div className="pt-2 border-t border-border/30 space-y-2">
                   {LIQUIDITY_SCORE_WEIGHTS.map((w) => {
                     const value = liquidityComponents[w.key];
                     return value != null ? (
-                      <div key={w.key} className="flex items-center gap-2">
-                        <span className="w-28 shrink-0 text-xs text-muted-foreground">{w.label}</span>
+                      <div key={w.key} className="flex items-center gap-2.5">
+                        <span className="w-28 shrink-0 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                          {w.label}
+                        </span>
                         <div className="h-1.5 flex-1 rounded-full bg-muted">
                           <div
                             className="h-full rounded-full bg-foreground/40"
                             style={{ width: `${Math.min(100, value)}%` }}
                           />
                         </div>
-                        <span className="w-8 text-right font-mono tabular-nums text-xs">{value.toFixed(0)}</span>
-                        <span className="w-8 text-right text-muted-foreground/70 text-xs">{w.displayWeight}</span>
+                        <span className="w-8 shrink-0 text-right font-mono text-[11px] tabular-nums text-foreground">
+                          {value.toFixed(0)}
+                        </span>
+                        <span className="w-10 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/70">
+                          · {w.displayWeight}
+                        </span>
                       </div>
                     ) : null;
                   })}
@@ -452,31 +468,27 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
 
   const safetyColumn = (
     <div className="space-y-5">
-      {/* Grade hero — left-aligned in split, centered when single-column */}
-      <div className={cn("flex items-center gap-4 pb-1 pt-1", !hasRightColumn && "justify-center")}>
-        <SafetyGradeBadge
-          grade={card.overallGrade}
-          size="lg"
-          className="sm:hidden"
-          versionTopic="safetyScore"
-          versionVariant="tooltip-only"
-        />
-        <SafetyGradeBadge
-          grade={card.overallGrade}
-          size="hero"
-          className="hidden sm:inline-flex"
-          versionTopic="safetyScore"
-          versionVariant="tooltip-only"
-        />
-        <div className="flex min-w-0 flex-col">
+      {/* Grade hero (Figma coin template): inline "B+ 72 / 100" line — the
+          grade as colored text beside the big score, no circular badge. */}
+      <div className={cn("flex flex-col gap-1 pb-1 pt-1", !hasRightColumn && "items-center")}>
+        <div className="flex items-baseline gap-2.5">
+          <span
+            className={cn(
+              "pharos-numeric text-4xl font-extrabold leading-none tracking-tight",
+              getSafetyGradeMetadata(card.overallGrade).pulse.accentClassName,
+            )}
+          >
+            {card.overallGrade}
+          </span>
           {card.overallScore !== null && (
             <ScoreWithBand score={card.overallScore} label="Safety Score">
-              <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
-                {card.overallScore}
-                <span className="text-lg text-muted-foreground">/100</span>
+              <span className="pharos-numeric text-4xl font-extrabold leading-none tracking-tight text-foreground">
+                {card.overallScore} <span className="text-2xl font-bold text-muted-foreground">/ 100</span>
               </span>
             </ScoreWithBand>
           )}
+        </div>
+        <div className="flex min-w-0 flex-col">
           {card.baseScore != null && card.overallScore != null && (
             <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
               <span>
@@ -511,26 +523,18 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         </div>
       ) : null}
 
-      {/* Dimension breakdown. In dual-column mode the radar stacks below the rows:
-          the safety column is ~530px there, and a side-by-side radar crushed the
-          factor labels into mid-word ellipses ("R.", "Dece…"). */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="space-y-2">
-          {DIMENSION_ORDER.map((key) => (
-            <DimensionRow
-              key={key}
-              dimKey={key}
-              dim={card.dimensions[key]}
-              card={card}
-              liquidityComponents={liquidityComponents}
-            />
-          ))}
-        </div>
-        {hasRightColumn ? (
-          <div className="hidden xl:flex xl:justify-center">
-            <ReportCardRadar card={card} labels="short" size={280} />
-          </div>
-        ) : null}
+      {/* Dimension breakdown (Figma coin template): flat hairline-divided
+          rows — no per-row boxes and no radar on the detail card. */}
+      <div className="divide-y divide-border/40 border-y border-border/40">
+        {DIMENSION_ORDER.map((key) => (
+          <DimensionRow
+            key={key}
+            dimKey={key}
+            dim={card.dimensions[key]}
+            card={card}
+            liquidityComponents={liquidityComponents}
+          />
+        ))}
       </div>
     </div>
   );

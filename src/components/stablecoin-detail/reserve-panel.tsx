@@ -81,12 +81,12 @@ export function ReservePanel({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex h-full flex-col gap-6">
       {reserveFetchNotice ? (
         <ReserveStatusNotice notice={reserveFetchNotice} onRetry={onRetry} isFetching={isFetching} />
       ) : null}
       {reserves ? (
-        <section id="reserves" aria-label="Reserve composition" className="min-w-0">
+        <section id="reserves" aria-label="Reserve composition" className="flex min-w-0 flex-1 flex-col">
           <ReserveTreemap
             reserves={reserves.reserves}
             badge={reserves.displayBadge}
@@ -113,10 +113,12 @@ export function ReservePanel({
             <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>
           ) : null}
           {reserveProvenanceNotice ? (
-            <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
-              <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>
-              <p className="mt-1">{reserveProvenanceNotice.message}</p>
-            </div>
+            /* Mono uppercase provenance footnote (Figma coin template) —
+               pinned to the column bottom, replacing the former bordered
+               notice block. */
+            <p className="mt-auto border-t border-border/40 pt-3 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+              {reserveProvenanceNotice.title} — {reserveProvenanceNotice.message}
+            </p>
           ) : null}
           {reserveSyncNotice ? (
             <div

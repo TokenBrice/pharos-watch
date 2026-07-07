@@ -30,7 +30,7 @@ export function AiSummary({
         <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
-        <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic md:px-[15%]">
+        <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
           <TermText text={text} />
         </p>
         {/* Provenance footer (Figma coin template): mono uppercase dateline +

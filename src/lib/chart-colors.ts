@@ -64,11 +64,22 @@ export { THREAT_BAND_HEX } from "@shared/lib/classification";
 // Extracted inline chart colors -- previously defined inside components.
 // ---------------------------------------------------------------------------
 
-/** Reserve-risk treemap colors (from reserve-treemap.tsx) */
+/** Reserve risk-tier treemap block fills (Figma coin template): deep tinted
+ *  solids sampled from the frame — very-low risk is BLUE per the design. */
 export const RISK_COLORS: Record<string, string> = {
-  "very-low": "#16a34a",
+  "very-low": "#003362",
+  low: "#123b29",
+  medium: "#382a00",
+  high: "#462000",
+  "very-high": "#500f1c",
+};
+
+/** Bright accents paired with RISK_COLORS for the treemap legend, in-block
+ *  percentage labels, and tooltips (Figma coin template). */
+export const RISK_ACCENT_COLORS: Record<string, string> = {
+  "very-low": "#3b82f6",
   low: "#22c55e",
-  medium: "#f59e0b",
+  medium: "#eab308",
   high: "#f97316",
   "very-high": "#ef4444",
 };

@@ -5,6 +5,118 @@ import { getNetPrefix } from "@shared/lib/format";
 import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
 import { cn } from "@/lib/utils";
 
+/* Figma coin-template semicircular gauge (Mint & Burn Flows card).
+ * Position scale 0..100: 0 = all burn, 50 = balanced, 100 = all mint.
+ * Zones: burn (red) 0-45, balanced (gray) 45-65, mint (green) 65-100.
+ * The traversed portion renders at full saturation, the rest dimmed, with a
+ * white notch at the current position. Hex literals: CSS vars are unreliable
+ * in SVG stroke/fill. */
+const ARC_ZONES = [
+  { from: 0, to: 45, hex: "#ef4444", dimOpacity: 0.28 },
+  { from: 45, to: 65, hex: "#6b7280", dimOpacity: 0.4 },
+  { from: 65, to: 100, hex: "#22c55e", dimOpacity: 0.45 },
+] as const;
+const ARC_GAP = 1.6; // gap between zone segments, in position units
+const ARC_CX = 80;
+const ARC_CY = 78;
+const ARC_R = 60;
+
+function arcPoint(pos: number): { x: number; y: number } {
+  const theta = Math.PI * (1 - pos / 100); // 0 -> 180deg (left), 100 -> 0deg (right)
+  return { x: ARC_CX + ARC_R * Math.cos(theta), y: ARC_CY - ARC_R * Math.sin(theta) };
+}
+
+function arcPath(from: number, to: number): string {
+  const start = arcPoint(from);
+  const end = arcPoint(to);
+  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${ARC_R} ${ARC_R} 0 0 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+}
+
+function arcZoneValueClass(pos: number): string {
+  if (pos < 45) return "text-red-600 dark:text-red-400";
+  if (pos < 65) return "text-foreground";
+  return "text-emerald-700 dark:text-emerald-400";
+}
+
+export function MintingPressureArcGauge({
+  mintVolume24hUsd,
+  burnVolume24hUsd,
+  className,
+}: MintingPressureGaugeProps) {
+  const score = getLiteralMintingPressureScore({ mintVolume24hUsd, burnVolume24hUsd });
+  const pos = score == null ? null : clamp((score + 100) / 2, 0, 100);
+  const display = pos == null ? null : Math.round(pos);
+  const notch = pos == null ? null : arcPoint(pos);
+
+  return (
+    <div className={cn("relative flex w-full max-w-[300px] flex-col items-center", className)}>
+      <svg
+        viewBox="0 0 160 84"
+        className="w-full"
+        role="img"
+        aria-label={
+          display == null
+            ? "Minting pressure gauge: no 24h activity"
+            : `Minting pressure gauge at ${display} of 100 (0 all burns, 100 all mints)`
+        }
+      >
+        {ARC_ZONES.map((zone) => {
+          const from = zone.from === 0 ? zone.from : zone.from + ARC_GAP;
+          const to = zone.to === 100 ? zone.to : zone.to - ARC_GAP;
+          return (
+            <path
+              key={`dim-${zone.from}`}
+              d={arcPath(from, to)}
+              fill="none"
+              stroke={zone.hex}
+              strokeOpacity={zone.dimOpacity}
+              strokeWidth={13}
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {pos != null
+          ? ARC_ZONES.filter((zone) => zone.from < pos).map((zone) => {
+              const from = zone.from === 0 ? zone.from : zone.from + ARC_GAP;
+              const to = Math.min(pos, zone.to === 100 ? zone.to : zone.to - ARC_GAP);
+              if (to <= from) return null;
+              return (
+                <path
+                  key={`lit-${zone.from}`}
+                  d={arcPath(from, to)}
+                  fill="none"
+                  stroke={zone.hex}
+                  strokeWidth={13}
+                  strokeLinecap="round"
+                />
+              );
+            })
+          : null}
+        {notch ? (
+          <line
+            x1={ARC_CX + (ARC_R - 9) * Math.cos(Math.PI * (1 - pos! / 100))}
+            y1={ARC_CY - (ARC_R - 9) * Math.sin(Math.PI * (1 - pos! / 100))}
+            x2={ARC_CX + (ARC_R + 9) * Math.cos(Math.PI * (1 - pos! / 100))}
+            y2={ARC_CY - (ARC_R + 9) * Math.sin(Math.PI * (1 - pos! / 100))}
+            stroke="#ffffff"
+            strokeOpacity={0.95}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        ) : null}
+      </svg>
+      {/* Value sits inside the arc mouth (Figma coin template). */}
+      <p className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-baseline gap-1.5 pb-0.5">
+        <span className={cn("pharos-numeric text-2xl font-extrabold", display == null ? "text-muted-foreground" : arcZoneValueClass(pos!))}>
+          {display == null ? "NR" : display}
+        </span>
+        <span className="text-sm text-muted-foreground">/</span>
+        <span className="pharos-numeric text-2xl font-extrabold text-foreground">100</span>
+      </p>
+    </div>
+  );
+}
+
 interface MintingPressureGaugeProps {
   mintVolume24hUsd: number;
   burnVolume24hUsd: number;
@@ -18,7 +130,7 @@ interface MintingPressureUi {
   panelClass: string;
 }
 
-function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
+export function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
   if (score === null) {
     return {
       label: "No activity",

@@ -7,7 +7,11 @@ import {
   type ThreeStepMechanismDiagramProps,
 } from "./three-step-diagram";
 
-type ThreeStepArchetype = Exclude<MechanismArchetype, "synthetic-delta-neutral">;
+export type ThreeStepArchetype = Exclude<MechanismArchetype, "synthetic-delta-neutral">;
+
+export function isThreeStepArchetype(archetype: MechanismArchetype): archetype is ThreeStepArchetype {
+  return archetype !== "synthetic-delta-neutral";
+}
 
 type ThreeStepConfig = {
   accentColor: string;
@@ -20,7 +24,7 @@ type ThreeStepConfig = {
   dashed?: boolean;
 };
 
-const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
+export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
   "fiat-cash": {
     accentColor: "var(--mechanism-fiat-cash)",
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",

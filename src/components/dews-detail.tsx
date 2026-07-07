@@ -6,7 +6,11 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
-import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
+import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
+
+/* Figma coin template: the DEWS history chart renders in the frost/teal
+ * chart-primary hue regardless of the current threat band. */
+const DEWS_CHART_HEX = CHART_PALETTE[0];
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -48,7 +52,7 @@ function signalBarHex(value: number): string {
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-1.5 w-full rounded-full bg-muted">
+    <div className="h-2 w-full rounded-full bg-muted/70">
       <div
         className="h-full rounded-full transition-all"
         style={{ width: `${Math.min(value, 100)}%`, backgroundColor: signalBarHex(value) }}
@@ -198,7 +202,6 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const { score, band, signals } = data.current;
   const typedBand = band as ThreatBand;
   const bandColor = THREAT_BAND_COLORS[typedBand] ?? "";
-  const bandHex = THREAT_BAND_HEX[typedBand] ?? THREAT_BAND_HEX.CALM;
   const availableCount = Object.values(signals).filter((s) => s.available).length;
   const amplifiers = getDewsAmplifiers(data.current);
   // 24h-ago score for the ghost notch on the band strip. `history` is
@@ -220,19 +223,54 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
   return (
     <Card className="animate-in fade-in duration-300">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <DetailSectionTitle>
-          <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
-        </DetailSectionTitle>
-        <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
-          <span className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
-            <DewsBandStrip score={score} prevScore={prevScore} className="hidden sm:block" />
-            <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
-              {THREAT_BAND_LABELS[typedBand]}
+      {/* Figma coin template: title row with the Composite/Signal-Breakdown
+          segmented toggle at the right; the big composite score + band chip
+          lead beneath the title. */}
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0">
+          <DetailSectionTitle>
+            <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
+          </DetailSectionTitle>
+          <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
+            <span className="mt-2.5 flex items-center gap-2.5">
+              <span className="pharos-numeric text-3xl font-extrabold leading-none tabular-nums">{score}</span>
+              <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
+                {THREAT_BAND_LABELS[typedBand]}
+              </span>
+              <DewsBandStrip score={score} prevScore={prevScore} className="hidden sm:block" />
             </span>
-          </span>
-        </ScoreBadgeWrapper>
+          </ScoreBadgeWrapper>
+        </div>
+        {chartData.length > 1 ? (
+          <div
+            className="inline-flex shrink-0 items-center rounded-lg border border-border/50 bg-background/40 p-0.5"
+            role="group"
+            aria-label="DEWS chart mode"
+          >
+            <button
+              type="button"
+              aria-pressed={!showBreakdown}
+              onClick={() => setShowBreakdown(false)}
+              className={cn(
+                "pharos-focus-ring rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+                !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Composite
+            </button>
+            <button
+              type="button"
+              aria-pressed={showBreakdown}
+              onClick={() => setShowBreakdown(true)}
+              className={cn(
+                "pharos-focus-ring rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+                showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Signal Breakdown
+            </button>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {availableCount < 4 && (
@@ -254,33 +292,25 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </div>
         )}
 
-        {/* Signal breakdown, sorted by descending score. Single column below xl, two columns at xl+. */}
+        {/* Signal breakdown, sorted by descending score (Figma coin template):
+            mono uppercase label · score line with the metric stat right-aligned,
+            full-width severity bar beneath; two columns at lg+. */}
         {(() => {
-          const rowGrid =
-            "grid grid-cols-[minmax(0,8.5rem)_1fr_auto_auto] items-center gap-x-2 sm:grid-cols-[minmax(0,11rem)_1fr_auto_auto] sm:gap-x-3";
-          const renderHeader = () => (
-            <div className={cn(rowGrid, "text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70")}>
-              <span className="col-span-2">Signal</span>
-              <span className="text-right">Score</span>
-              <span className="w-16 text-right sm:w-20">Value</span>
-            </div>
-          );
           const renderRow = ({ key, meta, signal }: (typeof sortedSignals)[number]) => {
             const metricVal = signal[meta.metricKey];
             const isInactive = Math.round(signal.value) === 0;
             return (
-              <div key={key} className={cn(rowGrid, "text-sm", isInactive && "opacity-50")}>
-                <span className="truncate text-foreground" title={meta.name}>{meta.name}</span>
+              <div key={key} className={cn("space-y-1.5", isInactive && "opacity-60")}>
+                <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
+                  <span className="min-w-0 truncate" title={meta.name}>
+                    <span className="text-foreground">{meta.name}</span>
+                    <span className="text-muted-foreground"> · {Math.round(signal.value)} / 100</span>
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap text-muted-foreground" title={meta.metricLabel}>
+                    {meta.metricLabel} · <span className="text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
+                  </span>
+                </div>
                 <ProgressBar value={signal.value} />
-                <span className="whitespace-nowrap text-right font-mono text-xs tabular-nums">
-                  {Math.round(signal.value)}/100
-                </span>
-                <span
-                  className="w-16 truncate text-right text-xs text-muted-foreground sm:w-20"
-                  title={meta.metricLabel}
-                >
-                  {formatMetric(meta.metricKey, metricVal)}
-                </span>
               </div>
             );
           };
@@ -289,19 +319,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           const rightSignals = sortedSignals.slice(half);
           return (
             <>
-              <div className="space-y-1.5 xl:hidden">
-                {renderHeader()}
-                {sortedSignals.map(renderRow)}
-              </div>
-              <div className="hidden xl:grid xl:grid-cols-2 xl:gap-x-6">
-                <div className="space-y-1.5">
-                  {renderHeader()}
-                  {leftSignals.map(renderRow)}
-                </div>
-                <div className="space-y-1.5">
-                  {renderHeader()}
-                  {rightSignals.map(renderRow)}
-                </div>
+              <div className="space-y-3.5 lg:hidden">{sortedSignals.map(renderRow)}</div>
+              <div className="hidden lg:grid lg:grid-cols-2 lg:gap-x-8">
+                <div className="space-y-3.5">{leftSignals.map(renderRow)}</div>
+                <div className="space-y-3.5">{rightSignals.map(renderRow)}</div>
               </div>
             </>
           );
@@ -325,7 +346,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
                 >
                   <defs>
-                    <ChartAreaGradient id={dewsGradientId} color={bandHex} />
+                    <ChartAreaGradient id={dewsGradientId} color={DEWS_CHART_HEX} />
                   </defs>
                   <TimeGrid />
                   <TimeXAxis
@@ -363,7 +384,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <Area
                       type="monotone"
                       dataKey="score"
-                      stroke={bandHex}
+                      stroke={DEWS_CHART_HEX}
                       fill={`url(#${dewsGradientId})`}
                       strokeWidth={2}
                       isAnimationActive={false}
@@ -391,21 +412,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
         <ShowYourWorkPanel kind="dews" current={data.current} stablecoinId={stablecoinId} />
 
-        <MethodologyCardActions
-          topic="dews"
-          showWorkToggle
-          trailing={
-            chartData.length > 1 ? (
-              <button
-                type="button"
-                onClick={() => setShowBreakdown((v) => !v)}
-                className="pharos-focus-ring min-h-11 rounded-sm py-2 text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
-              >
-                {showBreakdown ? "Show composite" : "Show signal breakdown"}
-              </button>
-            ) : null
-          }
-        />
+        <MethodologyCardActions topic="dews" showWorkToggle />
       </CardContent>
     </Card>
   );

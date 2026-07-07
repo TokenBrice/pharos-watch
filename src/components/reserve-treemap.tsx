@@ -7,7 +7,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { RISK_COLORS } from "@/lib/chart-colors";
+import { RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
 import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
@@ -101,7 +101,6 @@ function TreemapCell({
         height={height}
         rx={4}
         fill={fill}
-        opacity={0.6}
         stroke="var(--color-card)"
         strokeWidth={2}
       />
@@ -109,13 +108,15 @@ function TreemapCell({
         <text
           textAnchor="middle"
           dominantBaseline="central"
-          fill="currentColor"
-          fontSize={Math.min(12, width / 8)}
+          fill="#fafafa"
+          fontSize={Math.min(11, width / 9)}
           fontWeight={600}
+          fontFamily="var(--font-mono, monospace)"
+          letterSpacing="0.06em"
         >
           {lines.map((line, i) => (
             <tspan key={i} x={x + width / 2} y={topY + i * rowHeight}>
-              {line}
+              {line.toUpperCase()}
             </tspan>
           ))}
         </text>
@@ -126,9 +127,9 @@ function TreemapCell({
           y={topY + lines.length * rowHeight}
           textAnchor="middle"
           dominantBaseline="central"
-          fill="currentColor"
+          fill={RISK_ACCENT_COLORS[risk]}
           fontSize={10}
-          opacity={0.7}
+          fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
         >
           {pct}%
@@ -150,7 +151,7 @@ function ReserveTooltip({
   return (
     <PharosChartTooltip active={active}>
       <TooltipLabel>{name}</TooltipLabel>
-      <TooltipRow color={RISK_COLORS[risk]} label={RISK_LABELS[risk]} value={`${pct}%`} />
+      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RISK_LABELS[risk]} value={`${pct}%`} />
     </PharosChartTooltip>
   );
 }
@@ -178,19 +179,11 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             </span>
           )}
         </DetailSectionTitle>
-        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
-            <div key={risk} className="flex min-w-0 items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: RISK_COLORS[risk], opacity: 0.6 }} />
-              <span className="truncate">{label}</span>
-            </div>
-          ))}
-        </div>
       </div>
       <div className="mt-3 min-w-0 overflow-hidden">
         <div
           ref={chartContainerRef}
-          className="h-48 min-w-0 overflow-hidden"
+          className="h-64 min-w-0 overflow-hidden xl:h-80"
           role="figure"
           aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
         >
@@ -215,6 +208,18 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             <ChartSkeleton className="h-full w-full" />
           )}
         </div>
+      </div>
+      {/* Risk-tier legend beneath the map (Figma coin template): square
+          swatches + mono uppercase labels, centered. */}
+      <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
+          <div key={risk} className="flex min-w-0 items-center gap-1.5">
+            <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
+            <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              {label}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

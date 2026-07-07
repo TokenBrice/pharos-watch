@@ -121,7 +121,7 @@ describe("ReportCardDetail", () => {
     expect(screen.queryByText(/Peg:/)).toBeNull();
   });
 
-  it("stacks a fixed-size radar below the dimension rows in split detail layout", () => {
+  it("renders no radar on the detail card (Figma coin template)", () => {
     render(
       <ReportCardDetail
         card={makeReportCard()}
@@ -130,9 +130,9 @@ describe("ReportCardDetail", () => {
       />,
     );
 
-    // 280px stacked under the rows: a side-by-side radar in the ~530px safety
-    // column crushed the dimension labels into mid-word ellipses.
-    expect(screen.getByTestId("report-card-radar").getAttribute("data-size")).toBe("280");
+    // The coin-template safety card is a flat hairline row list; the radar
+    // visualization lives on compare surfaces only.
+    expect(screen.queryByTestId("report-card-radar")).toBeNull();
   });
 
   it("shows reviewed oracle setup inside decentralization details", () => {

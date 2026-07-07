@@ -10,8 +10,11 @@ import {
 } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FlowMachineScene } from "@/components/flow-machine-scene";
-import { MintingPressureGauge } from "@/components/minting-pressure-gauge";
+import {
+  MintingPressureArcGauge,
+  getLiteralMintingPressureUi,
+} from "@/components/minting-pressure-gauge";
+import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
 import {
   useMintBurnFlows,
   useMintBurnFlowsCoin,
@@ -34,32 +37,11 @@ import {
 } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
 import {
-  inferHas24hActivity,
   resolveNetDirection,
   resolvePressureScore,
   resolvePressureState,
 } from "@/lib/mint-burn-coin-helpers";
-import { clamp } from "@shared/lib/math";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
-
-function getBaselineCaption(
-  baselineDailyNetUsd: number | null | undefined,
-  baselineDataDays: number | null | undefined,
-): string | null {
-  if (baselineDailyNetUsd == null) {
-    return null;
-  }
-
-  const prefix = baselineDataDays === 30
-    ? "30D avg daily net"
-    : "Baseline avg daily net";
-  const daysSuffix =
-    baselineDataDays && baselineDataDays !== 30
-      ? ` across ${baselineDataDays} tracked day${baselineDataDays === 1 ? "" : "s"}`
-      : "";
-
-  return `${prefix}: ${formatSignedCurrency(baselineDailyNetUsd)}${daysSuffix}.`;
-}
 
 interface FlowSummaryCardProps {
   stablecoinId: string;
@@ -132,7 +114,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     longWindowData?.netFlowUsd,
   );
 
-  const has24hActivity = inferHas24hActivity(coin);
   const netDirection = resolveNetDirection(coin);
   const pressureScore = resolvePressureScore(coin);
   const pressureState = resolvePressureState(coin);
@@ -141,193 +122,163 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     : null;
   const netSignal = getFlowDirectionUi(netDirection, "summary");
   const pressureSignal = getFlowPressureUi(pressureState, "summary");
-  const baselineCaption = getBaselineCaption(
-    coin.baselineDailyNetUsd,
-    coin.baselineDataDays,
+  const gaugeUi = getLiteralMintingPressureUi(
+    getLiteralMintingPressureScore({
+      mintVolume24hUsd: coin.mintVolume24hUsd,
+      burnVolume24hUsd: coin.burnVolume24hUsd,
+    }),
   );
 
-  const total24hVolume = coin.mintVolume24hUsd + coin.burnVolume24hUsd;
-  const relativeDirectionStrength = has24hActivity
-    ? Math.abs(coin.netFlow24hUsd) / Math.max(total24hVolume, 1)
-    : 0.08;
-  const sceneIntensity = netDirection === "flat"
-    ? 0.12
-    : clamp(relativeDirectionStrength, 0.12, 1);
-  const sceneStatus = netSignal.label;
-  const sceneSubText = pressureState === "nr"
-    ? "Pressure shift NR"
-    : `Pressure ${pressureSignal.label.toLowerCase()}`;
+  // Figma coin template: quadrant layout with hairline-divided regions —
+  // [Minting Pressure gauge | Net window grid] over [Pressure Shift | Avg
+  // Daily Net] — no nested cards.
+  // Cell labels are the bare windows ("24H", "7D", …) — the quadrant header
+  // already says "Net" (Figma coin template).
+  const netCells: { label: string; value: number }[] = [
+    { label: timeframe.shortLabel, value: shortNetFlow },
+    { label: timeframe.longLabel, value: longNetFlow },
+  ];
+  if (timeframe.shortHours !== THIRTY_DAYS_HOURS && timeframe.longHours !== THIRTY_DAYS_HOURS) {
+    netCells.push({ label: "30d", value: coin.netFlow30dUsd });
+  }
+  if (timeframe.shortHours !== NINETY_DAYS_HOURS && timeframe.longHours !== NINETY_DAYS_HOURS) {
+    netCells.push({ label: "90d", value: coin.netFlow90dUsd });
+  }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+      <div className="border-b border-border/40 px-4 py-3 sm:px-5">
         <DetailSectionTitle as="h3">
           <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flows</MethodologyLabel>
         </DetailSectionTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="flex h-full flex-col gap-3">
-            <FlowMachineScene
-              size="mini"
-              mode={netSignal.sceneMode}
-              intensity={sceneIntensity}
-              statusText={sceneStatus}
-              title={netSignal.sceneTitle}
-              subText={sceneSubText}
-              accentHex={netSignal.accentHex}
-            />
-            <div className="mt-auto space-y-2">
-              <MintingPressureGauge
-                mintVolume24hUsd={coin.mintVolume24hUsd}
-                burnVolume24hUsd={coin.burnVolume24hUsd}
-              />
-              <Link
-                href="/flows/"
-                className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                View all flows
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
+      </div>
+
+      <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">
+        {/* Minting Pressure quadrant */}
+        <div className="flex flex-col border-b border-border/40 lg:border-b-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 sm:px-5">
+            <p className="text-sm font-medium text-foreground">
+              Minting Pressure <span className="text-muted-foreground">· 24h</span>
+            </p>
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                gaugeUi.badgeClass,
+              )}
+            >
+              {gaugeUi.label}
+            </span>
           </div>
-
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-border/60 bg-background/35 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Net 24h</p>
-                    <p
-                      className={cn(
-                        "mt-1 font-mono text-2xl font-black leading-none",
-                        netSignal.valueClass,
-                      )}
-                    >
-                      {formatSignedCurrency(coin.netFlow24hUsd)}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                      netSignal.badgeClass,
-                    )}
-                  >
-                    {netSignal.label}
-                  </span>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {netSignal.helper}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border/60 bg-background/35 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      <MethodologyLabel topic="pressureShift">Pressure Shift vs 30D</MethodologyLabel>
-                    </p>
-                    <p
-                      className={cn(
-                        "mt-1 font-mono text-2xl font-black leading-none",
-                        pressureSignal.valueClass,
-                      )}
-                    >
-                      {pressureDisplay != null
-                        ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}`
-                        : "NR"}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                      pressureSignal.badgeClass,
-                    )}
-                  >
-                    {pressureSignal.label}
-                  </span>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {pressureSignal.helper}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-              <p className="text-sm text-foreground">
-                {buildFlowSummaryNarrative(netDirection, pressureState)}
-              </p>
-              {baselineCaption ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {baselineCaption}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Net {timeframe.shortLabel}
-                </p>
-                <p
-                  className={cn(
-                    "font-mono tabular-nums text-sm font-semibold",
-                    getNetColor(shortNetFlow),
-                  )}
-                >
-                  {formatSignedCurrency(shortNetFlow)}
-                </p>
-              </div>
-              <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Net {timeframe.longLabel}
-                </p>
-                <p
-                  className={cn(
-                    "font-mono tabular-nums text-sm font-semibold",
-                    getNetColor(longNetFlow),
-                  )}
-                >
-                  {formatSignedCurrency(longNetFlow)}
-                </p>
-              </div>
-              {/* Skip fixed tiles whose window matches the coin's custom short/long. */}
-              {timeframe.shortHours !== THIRTY_DAYS_HOURS && timeframe.longHours !== THIRTY_DAYS_HOURS && (
-                <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Net 30d
-                  </p>
-                  <p
-                    className={cn(
-                      "font-mono tabular-nums text-sm font-semibold",
-                      getNetColor(coin.netFlow30dUsd),
-                    )}
-                  >
-                    {formatSignedCurrency(coin.netFlow30dUsd)}
-                  </p>
-                </div>
-              )}
-              {timeframe.shortHours !== NINETY_DAYS_HOURS && timeframe.longHours !== NINETY_DAYS_HOURS && (
-                <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Net 90d
-                  </p>
-                  <p
-                    className={cn(
-                      "font-mono tabular-nums text-sm font-semibold",
-                      getNetColor(coin.netFlow90dUsd),
-                    )}
-                  >
-                    {formatSignedCurrency(coin.netFlow90dUsd)}
-                  </p>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-5">
+            <MintingPressureArcGauge
+              mintVolume24hUsd={coin.mintVolume24hUsd}
+              burnVolume24hUsd={coin.burnVolume24hUsd}
+            />
+            <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+              The gauge uses raw 24h mint and burn volume balance
+            </p>
           </div>
         </div>
 
-        <MethodologyCardActions topic="mintBurnFlows" />
-      </CardContent>
+        {/* Net window quadrant */}
+        <div className="flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 sm:px-5">
+            <p className="text-sm font-medium text-foreground">Net</p>
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                netSignal.badgeClass,
+              )}
+            >
+              {netSignal.label}
+            </span>
+          </div>
+          <div className="grid flex-1 grid-cols-2">
+            {netCells.map((cell, index) => (
+              <div
+                key={cell.label}
+                className={cn(
+                  "px-4 py-4 sm:px-5",
+                  index % 2 === 0 && "border-r border-border/40",
+                  index < netCells.length - 2 && "border-b border-border/40",
+                )}
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {cell.label}
+                </p>
+                <p
+                  className={cn(
+                    "mt-1.5 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+                    getNetColor(cell.value),
+                  )}
+                >
+                  {formatSignedCurrency(cell.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-border/40">
+        {/* Pressure Shift quadrant */}
+        <div className="border-b border-border/40 px-4 py-4 sm:px-5 lg:border-b-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-foreground">
+              <MethodologyLabel topic="pressureShift">Pressure Shift</MethodologyLabel>{" "}
+              <span className="text-muted-foreground">· 30d</span>
+            </p>
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                pressureSignal.badgeClass,
+              )}
+            >
+              {pressureSignal.label}
+            </span>
+          </div>
+          <p
+            className={cn(
+              "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+              pressureSignal.valueClass,
+            )}
+          >
+            {pressureDisplay != null ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}` : "NR"}
+          </p>
+          <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+            {pressureSignal.helper}
+          </p>
+        </div>
+
+        {/* Average Daily Net quadrant */}
+        <div className="px-4 py-4 sm:px-5">
+          <p className="text-sm font-medium text-foreground">
+            Average Daily Net <span className="text-muted-foreground">· 30d</span>
+          </p>
+          <p
+            className={cn(
+              "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+              coin.baselineDailyNetUsd != null ? getNetColor(coin.baselineDailyNetUsd) : "text-muted-foreground",
+            )}
+          >
+            {coin.baselineDailyNetUsd != null ? formatSignedCurrency(coin.baselineDailyNetUsd) : "NR"}
+          </p>
+          <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+            {buildFlowSummaryNarrative(netDirection, pressureState)}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 px-4 py-2 sm:px-5">
+        <MethodologyCardActions topic="mintBurnFlows" className="mt-0" />
+        <Link
+          href="/flows/"
+          className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          View all flows
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
     </Card>
   );
 }
