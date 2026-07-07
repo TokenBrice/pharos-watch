@@ -30,10 +30,13 @@ interface LongformScrollspyNavProps {
   /**
    * `watch-rail` (banner only) intensifies the lit pill and adds a
    * reading-progress beam that fills along the bottom edge as the reader
-   * descends the sections. Opt-in for the stablecoin dossier; other banner
+   * descends the sections. Opt-in for legacy dossier surfaces; other banner
    * surfaces keep the calmer default recipe.
+   * `pill-tabs` (banner only) renders the Figma coin-template tab bar: a
+   * rounded-full group on the neutral control fill, elevated-neutral active
+   * pill (no frost), flanked by decorative hairlines on desktop.
    */
-  emphasis?: "watch-rail";
+  emphasis?: "watch-rail" | "pill-tabs";
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
@@ -289,12 +292,15 @@ export function LongformScrollspyNav({
     );
   }
 
+  const isPillTabs = emphasis === "pill-tabs";
+
   return (
     <>
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:mx-0 md:px-4 md:py-2.5 lg:top-[calc(env(safe-area-inset-top)+3px)]",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 bg-background px-3 py-2 md:mx-0 md:px-4 md:py-2.5 lg:top-[calc(env(safe-area-inset-top)+3px)]",
+          isPillTabs ? "border-transparent" : "rounded-xl border border-border/60",
           emphasis === "watch-rail" && "pharos-watch-rail overflow-hidden",
           className,
         )}
@@ -302,7 +308,18 @@ export function LongformScrollspyNav({
         <div className="relative flex items-center gap-3">
           {/* Fade mask hints at off-screen pills on narrow viewports */}
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
-        <nav aria-label={navAriaLabel} className="min-w-0 flex-1 overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+          {isPillTabs ? (
+            <span aria-hidden="true" className="relative hidden h-px flex-1 bg-border lg:block">
+              <span className="absolute -left-px -top-[1.5px] size-1 bg-border" />
+            </span>
+          ) : null}
+        <nav
+          aria-label={navAriaLabel}
+          className={cn(
+            "min-w-0 flex-1 overflow-x-auto scrollbar-none",
+            isPillTabs ? "pharos-pill-tabs-group px-1.5 py-1" : "-mx-1 px-1 pb-0.5",
+          )}
+        >
           <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
             {sections.map((section) => {
               const Icon = section.icon;
@@ -319,18 +336,24 @@ export function LongformScrollspyNav({
                     setActiveId(section.id);
                   }}
                   className={cn(
-                    "group pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
-                    isActive && "pharos-rail-tab-active",
+                    "group pharos-focus-ring relative isolate inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
+                    isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
+                    isPillTabs && isActive && "pharos-pill-tab-active font-semibold",
+                    !isPillTabs && isActive && "pharos-rail-tab-active",
                     emphasis === "watch-rail" && isActive && "font-semibold",
                   )}
                 >
-                  {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+                  {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
                   {Icon ? (
                     <Icon
                       aria-hidden
                       className={cn(
                         "h-3.5 w-3.5 shrink-0",
-                        isActive ? "text-frost-blue" : "text-muted-foreground/80 group-hover:text-foreground",
+                        isActive
+                          ? isPillTabs
+                            ? "text-foreground"
+                            : "text-frost-blue"
+                          : "text-muted-foreground/80 group-hover:text-foreground",
                       )}
                     />
                   ) : null}
@@ -340,6 +363,11 @@ export function LongformScrollspyNav({
             })}
           </div>
         </nav>
+          {isPillTabs ? (
+            <span aria-hidden="true" className="relative hidden h-px flex-1 bg-border lg:block">
+              <span className="absolute -right-px -top-[1.5px] size-1 bg-border" />
+            </span>
+          ) : null}
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>
         {emphasis === "watch-rail" && (

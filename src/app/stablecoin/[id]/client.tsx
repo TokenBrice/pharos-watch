@@ -252,7 +252,10 @@ export default function StablecoinDetailClient({
     summary,
     logoSrc,
     supplementalQueryControls: {
-      flows: activityOrHistoryNear,
+      // Mint & Burn Flows renders in the Risk/overview zone (per the Figma
+      // coin template) while FlowHistorySection stays in History, so the
+      // flows query arms when either region approaches.
+      flows: overviewNear || activityOrHistoryNear,
       blacklist: activityOrHistoryNear,
       reserves: overviewNear,
     },
@@ -420,9 +423,9 @@ export default function StablecoinDetailClient({
         sections={detailSections}
         railLabel="Jump to"
         navAriaLabel="Stablecoin detail section navigation"
-        emphasis="watch-rail"
+        emphasis="pill-tabs"
         onActiveChange={setActiveBannerId}
-        className="mt-6 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:rounded-xl lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+        className="mt-6 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
         rightSlot={
           <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
             <Link
@@ -448,8 +451,11 @@ export default function StablecoinDetailClient({
 
       <div className="mt-6">
         <div className="min-w-0">
-          {/* ── Key Info ── */}
-          <div>
+          {/* ── Overview (the "Risk" tab) ──
+            Per the Figma coin template the Risk zone opens with Key Info and
+            closes with Mint & Burn Flows (FlowHistorySection stays in History). */}
+          <div ref={overviewGateRef} className="space-y-6">
+            <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
             <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
               <KeyInfoCard
                 meta={viewModel.coin}
@@ -460,11 +466,6 @@ export default function StablecoinDetailClient({
                 variantKind={viewModel.coin.variantKind ?? null}
               />
             </section>
-          </div>
-
-          {/* ── Overview ── */}
-          <div ref={overviewGateRef} className="space-y-6">
-            <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
             <section id="report-card">
               {viewModel.reportCard && (
                 <ReportCardDetail
@@ -481,6 +482,14 @@ export default function StablecoinDetailClient({
             ) : null}
             {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
             {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
+            {viewModel.hasFlows ? (
+              <>
+                {frozenNote}
+                <LazySection minHeight={320}>
+                  <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+                </LazySection>
+              </>
+            ) : null}
           </div>
 
           {/* ── Context ── */}
@@ -556,15 +565,6 @@ export default function StablecoinDetailClient({
           <div ref={activityGateRef} className="space-y-6">
             <SectionBanner id="activity" label="Activity" icon={Activity} active={activeBannerId === "activity"} />
             {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
-
-            {viewModel.hasFlows ? (
-              <>
-                {frozenNote}
-                <LazySection minHeight={320}>
-                  <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
-                </LazySection>
-              </>
-            ) : null}
 
             {viewModel.hasBlacklist && (
               <div>

@@ -304,6 +304,25 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
+  it("arms the flows query when only the overview zone is near", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    nearViewportValues.push(true, false, false);
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        supplementalQueryControls: {
+          flows: true,
+          blacklist: false,
+          reserves: true,
+        },
+      }),
+    );
+  });
+
   it("keeps supplemental query controls disabled before their sections are near", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(false, false, false);
@@ -323,12 +342,12 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("keeps activity flow and blacklist children behind their own lazy gates", () => {
+  it("keeps flows and blacklist children behind their own lazy gates", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     nearViewportValues.push(true, true, true);
     lazyViewportValues.push(
+      false, // Overview FlowsSection
       true, // DexLiquidityCard
-      false, // Activity FlowsSection
       false, // Activity BlacklistSection
       true, // SafetyScoreHistorySection
       true, // DepegHistory

@@ -830,6 +830,33 @@
       0 0 16px -3px color-mix(in oklab, var(--frost-blue) 32%, transparent);
   }
 
+  /* Coin-dossier pill tabs (Figma coin template): a rounded-full group on
+     the neutral control fill holding the section pills. Unlike the frost-lit
+     .pharos-rail-tab-active, the selected pill is an ELEVATED NEUTRAL — a
+     raised fill with primary ink — per the design's tab bar; frost stays
+     reserved for live data. */
+  .pharos-pill-tabs-group {
+    @apply rounded-full border;
+    background: var(--control-pill-bg);
+    border-color: var(--control-pill-border);
+  }
+
+  .pharos-pill-tab {
+    color: var(--muted-foreground);
+  }
+
+  .pharos-pill-tab:hover {
+    color: var(--text-primary);
+    background-color: var(--interactive-hover);
+  }
+
+  .pharos-pill-tab-active,
+  .pharos-pill-tab-active:hover {
+    color: var(--text-primary);
+    background-color: var(--interactive-active);
+    box-shadow: inset 0 0 0 1px var(--control-pill-border);
+  }
+
   /* Faint frost-tinted ground that distinguishes "your navigation" from
      the neutral-card "live ticker" tape stacked directly above it. Kept
      very subtle — calm authority, not a loud fill. */
