@@ -292,6 +292,66 @@ describe("site-data proxy", () => {
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
 
+  it("bypasses a Pages cache response without explicit freshness", async () => {
+    cacheMatch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ cached: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ refreshed: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ refreshed: true });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(cachePut).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cache upstream responses without explicit freshness", async () => {
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("uses s-maxage when it follows max-age in cached response directives", async () => {
     vi.setSystemTime(new Date("2026-06-15T10:02:00.000Z"));
     cacheMatch.mockResolvedValueOnce(

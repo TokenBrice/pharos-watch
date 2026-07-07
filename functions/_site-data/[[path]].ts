@@ -81,7 +81,8 @@ function canCacheResponse(response: Response): boolean {
     response.ok &&
     !response.headers.has("Set-Cookie") &&
     !/\bno-store\b/i.test(cacheControl) &&
-    !/(?:^|,\s*)110\b/.test(warning)
+    !/(?:^|,\s*)110\b/.test(warning) &&
+    getCacheMaxAgeSeconds(response) != null
   );
 }
 
@@ -115,7 +116,7 @@ function getCachedResponseAgeSeconds(response: Response): number | null {
 function canServeCachedResponse(response: Response): boolean {
   if (!canCacheResponse(response)) return false;
   const maxAge = getCacheMaxAgeSeconds(response);
-  if (maxAge == null) return true;
+  if (maxAge == null) return false;
   const age = getCachedResponseAgeSeconds(response);
   return age != null && age <= maxAge;
 }
