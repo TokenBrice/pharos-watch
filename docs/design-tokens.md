@@ -71,7 +71,6 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 
 - **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`, `--card-shell-bg`, `--card-shell-highlight`, `--panel-header-bg`
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
-- **Sidebar** (legacy) — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`, `--sidebar-width-expanded`, `--sidebar-width-collapsed`. The left sidebar was retired for the global `TopNav` in the Figma redesign; these tokens are now inert and pending cleanup.
 
 ## Bridge Layer (`src/app/globals.css`)
 
@@ -111,7 +110,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `CHART_GREEN`, `CHART_ORANGE`, `CHART_RED`, `CHART_SLATE`, `CHART_AMBER`, `CHART_TEAL`, `CHART_HEIGHT`, `RECHARTS_TOOLTIP_STYLES` | Shared chart fill/stroke colors, chart-height utility, and tooltip styles (also has module-private `TOKEN` map) |
 | `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers                | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
 
-These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css` where CSS companions exist. Some runtime-only exports, such as threat bands, signal colors, and brand helpers, live only in the JS maps.
+These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css` where CSS companions exist. Some runtime-only exports, such as signal colors and brand helpers, live only in the JS maps.
 
 ## Usage Guidelines
 

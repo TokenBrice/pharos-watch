@@ -154,10 +154,10 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 ## 3. Typography
 
 **Display Font:** ABC Whyte Inktrap (licensed webfont; Bricolage Grotesque fallback) — the Figma display face. Drives `--font-display`, `.pharos-display`, `.pharos-page-title`, and the top-nav wordmark.
-**Body / UI Font:** Geist Sans (fallback `system-ui` stack).
+**Body / UI Font:** system-ui stack (the `--font-geist-sans` token name is retained from a prior Geist iteration; no Geist webfont is loaded).
 **Data Font:** JetBrains Mono (variable; fallback `SFMono-Regular, ui-monospace`) — folded into `--font-geist-mono`, so every existing mono consumer (tables, `.pharos-numeric`, peg hero) inherits it.
 
-**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, the `/timeline/` wire-service tape, detail-page AI summaries, `/depeg/[event]` incident briefings) — never general analytics.
+**Character:** A three-face system on a clear contrast axis — an ink-trap grotesque for editorial display weight, a neutral humanist sans for the dense UI, and a precise mono for figures. The authored-editorial serif register (Newsreader / Georgia / Courier) is a deliberate carve-out (the `/digest/` broadsheet, the homepage Daily Digest card, Cemetery obituary plaques, detail-page AI summaries, `/depeg/[event]` incident briefings) — never general analytics.
 
 ### Hierarchy
 
@@ -181,7 +181,7 @@ Flat by default. Per the Figma redesign, cards are a fill plus a 1px border with
 ### Shadow Vocabulary
 
 - **Rest** (`--elevation-rest`: `0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%)`): Applied on card hover only, paired with a −2px lift.
-- **Raised** (`--elevation-raised`): Overlays, popovers, sticky table columns.
+- **Raised** (`--elevation-raised`): The command-palette overlay and chart tooltip. (Sticky table columns use a dedicated `--table-sticky-column-shadow`; Radix popovers/dropdowns use Tailwind `shadow-md`/`shadow-lg`.)
 - **Featured** (`--elevation-featured`): The rare promoted/featured surface.
 
 ### Named Rules
@@ -212,7 +212,7 @@ A global top bar at `≥lg`; content runs full-width beneath it. The left "watch
 
 The primary interactive control on data surfaces is the pill, not a heavy CTA. Frost-blue stays out of controls.
 
-- **Default:** `rounded-full`, 1px border, `px-3 py-2`, min-height 36px, muted text on translucent fill.
+- **Default:** `.pharos-control-pill` is `rounded-full` with `px-3 py-2`; `.pharos-toggle-pill` is `rounded-xl` with `px-3 py-1.5`. Both: 1px border, min-height 36px, muted text on translucent fill.
 - **Hover:** Text → primary ink; fill warms toward `--interactive-hover`.
 - **Active / On:** Near-black fill (`control-ink`), inverse text, transparent border — a quiet, confident selected state. Density toggle (spacious/compact) and lens/range controls use this language.
 

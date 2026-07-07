@@ -46,7 +46,7 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 - Mono / data token: **JetBrains Mono** (Figma redesign), folded into `--font-geist-mono` so every `.pharos-numeric` / table figure inherits it
 - Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **ABC Whyte Inktrap** for headings + the top-nav wordmark when licensed files are installed at `public/fonts/abc-whyte-inktrap/`; **Bricolage Grotesque** remains the tracked fallback for clean builds.
 - Default corner radius token: `--radius: .5rem`
-- Body background adds two subtle radial glow layers via `--page-glow-top` and `--page-glow-bottom`
+- Body background wires two radial-glow layers via `--page-glow-top` and `--page-glow-bottom`; both tokens are currently set to `none` in every theme, so no glow renders (disabled in the June 2026 chrome refresh)
 
 ### Layout Structure
 
@@ -94,7 +94,7 @@ Public pages use this shell:
   - Mobile: `px-4`
   - Vertical rhythm: `py-6` (`md:py-7`)
   - Desktop: `lg:px-5`, `xl:px-9` (matches the homepage shell)
-- Footer is a compact two-row chip surface: a short one-line legal copy plus `Changelog`, `Methodology`, and `API` on the first row; `Independent`, `Funding`, `MIT`, `Privacy Policy`, and the monochrome social icons on the second row. Footer chips use small square rounded controls with muted fill, not tiny outline labels.
+- Footer is a compact two-row chip surface: a short one-line legal copy plus `Changelog`, `Methodology`, `API`, and `Sitemap` on the first row; `Independent`, `Funding`, `MIT`, `Privacy Policy`, and the monochrome social icons on the second row. Footer chips use small square rounded controls with muted fill, not tiny outline labels.
 - The homepage footer uses an edge-aligned container and suppresses floating feedback/scroll controls so the footer reads as the final visible band beneath the Horizon panel.
 
 ---
@@ -532,7 +532,7 @@ When adding a new freshness stamp:
 - Toolbar becomes a vertical stack on mobile instead of a cramped inline row
 - `Columns` and `Export CSV` keep large tap targets on mobile; density and range controls also stay pill-based instead of collapsing into tiny tabs
 - Density controls collapsed to two modes in the Figma redesign — **spacious** (default for the main overview table) and **compact**; legacy `list` / `comfortable` prefs migrate to the nearest of these on read
-- Table keeps a deliberate horizontal-scroll affordance via helper copy and a dynamic inline min-width: the sum of per-column content minimums (`COLUMN_MIN_WIDTH_PX`) for the visible column set, with a 420px floor. The viewport's `overflow-x-auto` self-degrades — no scrollbar when the columns fit, horizontal scroll when they don't — so fixed-layout cells never squeeze below content width. The mobile/desktop column boundary is `xl` (1280px); the 7d sparkline renders from `2xl` up. Below `xl` the price column is pinned to its content width (`w-[88px]`) so fixed-layout leftover sharing cannot inflate it past the 390px first viewport and clip the fourth peg-price decimal at rest
+- Table keeps a deliberate horizontal-scroll affordance via helper copy and a dynamic inline min-width: the sum of per-column content minimums (`COLUMN_MIN_WIDTH_PX`) for the visible column set, with a 420px floor. The viewport's `overflow-x-auto` self-degrades — no scrollbar when the columns fit, horizontal scroll when they don't — so fixed-layout cells never squeeze below content width. The mobile/desktop column boundary is `lg` (1024px); the 7d sparkline renders from `lg` up. Below `lg` the price column is pinned to its content width (`w-[88px]`) so fixed-layout leftover sharing cannot inflate it past the 390px first viewport and clip the fourth peg-price decimal at rest
 - Bottom spacing is preserved so the mobile utility dock never sits on the last visible rows
 
 ### Sortable Head Pattern
