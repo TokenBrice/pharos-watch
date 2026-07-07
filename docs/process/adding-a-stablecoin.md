@@ -611,7 +611,7 @@ The scanner writes to `agents/mint-authority-candidates/` and never updates stab
 
 ### 5g. Bluechip ratings
 
-If Bluechip covers the asset, update `shared/lib/bluechip-slugs.ts` (the worker re-exports `BLUECHIP_SLUG_MAP` from there).
+If Bluechip covers the asset, update `shared/lib/bluechip-slugs.ts` (the worker imports `BLUECHIP_SLUG_MAP` from there).
 
 Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
 

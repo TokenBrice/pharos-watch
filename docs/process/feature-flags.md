@@ -47,7 +47,7 @@ What must be true before turning each flag on in production:
 
 ### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
 
-- [x] Hero verdict surface lands behind the flag (`<AiSummary>` hoisted above grid when on).
+- [x] Hero verdict surface (`VerdictPill`) lands behind the flag via `shouldShowVerdict()` in `hero-card-identity.tsx`; the hoisted `<AiSummary>` renders unconditionally and is not gated by the flag.
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
 - [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current coverage: verify via `npm run check:one-liner-coverage` and `npm run check:glossary-coverage`; TL;DR-first top-60 editorial QA remains in flight.**
 
@@ -68,7 +68,7 @@ What must be true before turning each flag on in production:
 
 - [x] Runtime-neutral DDRR review logic and schemas validate stored DDR assessments against later `depeg_events`.
 - [x] `/api/depeg-resolver-review` is cache-backed, freshness-aware, and returns degraded empty rows before the first snapshot.
-- [x] `/depeg/` renders DDRR directly below DDR with prominent Recovery likelihood and Recovery duration headline tiles.
+- [x] `/depeg/` renders DDRR below DDR (past the DEWS band, the Outlook Posture module, and the "Live forecasts above · graded below" divider) with prominent Recovery and Duration headline tiles.
 - [ ] Production snapshot has at least one stored DDR assessment after launch; until then the module shows the empty review state.
 
 ## Spec source

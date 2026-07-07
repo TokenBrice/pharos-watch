@@ -5,9 +5,9 @@ Planning doc for the second baseline squash of `worker/migrations/`. Execution i
 ## Why squash now
 
 - The previous squash (`0000_baseline.sql`, S-014) landed on **2026-03-25**, consolidating migrations 0001–0071.
-- Since then the tree has grown to **92 individual migrations** (0072–0164, excluding retired 0086 `treasury_stable_exposure_history`) plus the baseline, with **1 retired** entry recorded in the manifest.
-- Total active `.sql` files under `worker/migrations/` today: **93** (verified via `find worker/migrations -maxdepth 1 -type f -name '*.sql' | wc -l`).
-- Fresh-database setup currently replays the baseline plus 92 sequential migrations — well past where 0001–0071 sat before the first squash. The next squash should be planned, not reactive.
+- Since then the tree has grown to **99 individual migrations** (0072–0171, excluding retired 0086 `treasury_stable_exposure_history`) plus the baseline, with **1 retired** entry recorded in the manifest.
+- Total active `.sql` files under `worker/migrations/` today: **100** (verified via `find worker/migrations -maxdepth 1 -type f -name '*.sql' | wc -l`).
+- Fresh-database setup currently replays the baseline plus 99 sequential migrations — well past where 0001–0071 sat before the first squash. The next squash should be planned, not reactive.
 
 ## Squash policy
 
@@ -43,7 +43,7 @@ Reference: prior squash commit `fb267826d` (`chore: squash D1 migrations 0001-00
 
 ## Settled decisions (2026-05-15)
 
-- **Target date:** **Q1 2027** (≈12 months after the first squash, which landed 2026-03-25). Revisit if the active post-baseline migration count crosses 80 files before then — at that point the count threshold pulls the schedule forward.
+- **Target date:** **Q1 2027** (≈12 months after the first squash, which landed 2026-03-25). The active post-baseline migration count has already crossed 80 files (99 as of this update), so per the count threshold the schedule should be pulled forward rather than left pending for Q1 2027.
 - **Deploy window:** **Sunday early-morning UTC** (≈03:00–05:00 UTC). Catches EU and US in deep off-hours and matches the existing low-traffic deploy pattern.
 - **Migration-freeze rigor:** **Soft freeze with a documented incident-exception path.** Default policy: no PRs touch `worker/migrations/` between the freeze announcement and the squash deploy. Exception: an incident-driven hotfix may land with an explicit announce and a post-squash reconciliation pass against the rehearsal output.
 - **Rehearsal scope:** **Smoke set + one full cron tick** against the rehearsal D1. Existing preview smoke alone is not enough — the cron tick confirms migration-name-drift is invisible to live code (cron_runs / cron_slot_executions ledgers), not just to smoke endpoints. 24h soak is not required; sign-off on a green cron tick.

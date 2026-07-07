@@ -48,6 +48,7 @@ Checked-in `.claude/workflows/*.mjs` files are saved Claude orchestration entryp
 
 Current saved workflows:
 
+- `adverse-data-review` — verify static stablecoin metadata across tracked coins and retain only high-confidence wrong values.
 - `compliance-research` — broad MiCA + GENIUS compliance research and verification pass.
 - `code-health-broad` — broad code-health review pipeline that fans out domain finders, verifies findings, clusters them, and writes an `agents/code-health-report.md` scratch report.
 - `mixed-verify` — reusable mixed-model verification harness for static-data checks, audits, and reviews.

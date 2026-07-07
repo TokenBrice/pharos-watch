@@ -1,6 +1,6 @@
 # Hotspot Waiver Backlog
 
-`scripts/lib/hotspot-ratchet-waivers.json` is the source of truth for the hotspot decomposition backlog. Each waiver entry must keep `owner`, `createdAt`, `reviewAfter`, and `nextAction` current; do not copy the full waiver table into docs.
+`scripts/lib/hotspot-ratchet-waivers.json` is the source of truth for the hotspot decomposition backlog. Each waiver entry must keep `disposition`, `owner`, `createdAt`, `reviewAfter`, and `nextAction` current; do not copy the full waiver table into docs.
 
 Use this export when planning a maintenance tranche:
 
