@@ -248,8 +248,10 @@ export async function runMintBurnConfigPhase(input: {
     bridgeClassificationDeferredRows += summary.bridgeClassificationDeferredRows;
 
     if (result.newLastBlock != null) {
-      await upsertMintBurnSyncState(input.db, key, result.newLastBlock, "replace");
-      input.lastBlocksAfterRun.set(key, result.newLastBlock);
+      const previousLastBlock = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
+      const nextLastBlock = Math.max(previousLastBlock, result.newLastBlock);
+      await upsertMintBurnSyncState(input.db, key, nextLastBlock, "monotonic-max");
+      input.lastBlocksAfterRun.set(key, nextLastBlock);
     }
     input.budget.count += summary.requestBudgetUsed;
 
