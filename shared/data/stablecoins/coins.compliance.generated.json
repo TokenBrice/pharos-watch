@@ -2848,7 +2848,7 @@
       },
       "authorizationStatus": "issuer-announced-intent",
       "issuerPathway": "federal-qualified-nonbank",
-      "issuerEntity": "Bridge Building Inc. (OCC national trust bank applicant; wholly owned by Stripe)",
+      "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC — the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
       "primaryFederalRegulator": "OCC",
@@ -4867,7 +4867,7 @@
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2026-04-30",
+      "latestReportDate": "2026-05-31",
       "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank — not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted — the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
       "references": [
         {
@@ -6020,7 +6020,7 @@
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2026-04-30",
+      "latestReportDate": "2026-05-31",
       "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank — not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective' — forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
       "references": [
         {
@@ -6198,7 +6198,7 @@
         },
         {
           "label": "Anzen transparency",
-          "url": "https://rwa.anzen.finance/transparency",
+          "url": "https://app.anzen.finance/transparency",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-06-07"
         }

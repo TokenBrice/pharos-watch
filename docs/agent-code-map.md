@@ -410,7 +410,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/aznd-mu-digital.json` - 24 keys
 - `shared/data/stablecoins/coins/bbqusdc-steakhouse.json` - 26 keys
 - `shared/data/stablecoins/coins/bc3m-backed.json` - 28 keys
-- `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
+- `shared/data/stablecoins/coins/bd-basedollar.json` - 15 keys
 - `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 29 keys
 - `shared/data/stablecoins/coins/bfusd-binance.json` - 25 keys
 - `shared/data/stablecoins/coins/bib01-backed.json` - 29 keys

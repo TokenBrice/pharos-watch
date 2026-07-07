@@ -97,7 +97,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "PC0000089 is a Tradable-issued LatAm residential SSTL on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x3915a4…902), with no permissionless mint route.",
+    "summary": "PC0000089 is a Tradable-issued LatAm residential SSTL on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…95fe) calling the per-deal contract (0x3915a4…902), with no permissionless mint route.",
     "controls": [
       {
         "label": "Tradable issuance EOA (zkSync)",

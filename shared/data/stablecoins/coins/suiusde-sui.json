@@ -17,7 +17,6 @@
   "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
   "mechanismArchetype": "synthetic-delta-neutral",
   "geckoId": "esui-dollar",
-  "protocolSlug": "sui",
   "links": [
     {
       "label": "Website",

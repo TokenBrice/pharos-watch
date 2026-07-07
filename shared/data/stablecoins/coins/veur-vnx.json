@@ -103,7 +103,7 @@
     {
       "chain": "tezos",
       "address": "KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG",
-      "decimals": 13
+      "decimals": 18
     },
     {
       "chain": "fraxtal",

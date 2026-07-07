@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BNB, ETH, and LSTs via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
+  "collateral": "BNB, ETH, LSTs, and BTCB via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
   "pegMechanism": "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
   "mechanismArchetype": "cdp",
   "llamaId": "79",

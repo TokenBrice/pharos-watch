@@ -104,6 +104,11 @@
       "chain": "tempo",
       "address": "0x20c0000000000000000000009a4a4b17e0dc6651",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

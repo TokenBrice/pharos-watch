@@ -15,7 +15,6 @@
   "pegMechanism": "Users deposit USDC to mint soul-bound sUSD 1:1; Venus lending interest accrues in vUSDC and is distributed to holders by operator-triggered rewardMint() calls (93% to sUSD holders, 7% protocol fee); liquidity is provided only through a one-way hUSDC->sUSD ERC-20 wrapper (no reverse conversion), and redemption is operator-controlled rather than a free liquid backstop",
   "detailProvider": "coingecko",
   "geckoId": "staked-usd-coin",
-  "protocolSlug": "hedgecore",
   "links": [
     {
       "label": "Website",

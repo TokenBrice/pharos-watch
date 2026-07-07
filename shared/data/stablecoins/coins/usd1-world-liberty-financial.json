@@ -38,8 +38,8 @@
   ],
   "jurisdiction": {
     "country": "United States",
-    "regulator": "South Dakota Division of Banking",
-    "license": "South Dakota Trust Charter"
+    "regulator": "Office of the Comptroller of the Currency (OCC)",
+    "license": "National Trust Bank Charter (BitGo Bank & Trust, N.A.)"
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",

@@ -90,32 +90,63 @@
       "chain": "monad",
       "address": "0x9648db94f1e6b19e7d755585542981f97dc806c6",
       "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0xb9827268ebcc4ea7b105cfc787a92c612629a3f1",
+      "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x68fe7f83ba331e32d9fa3def98a5538176635339",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0xd84a49df125f6744018518117fe59a86d39eae75",
+      "decimals": 18
     }
   ],
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "savUSD is an avUSD variant with deployments spanning Avalanche and EVM chains; the available candidate evidence points to Avalanche Bridge lock/mint routing rather than issuer burn/mint controls.",
+    "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external lock/mint exposure.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "confidence": "verified",
     "protocols": [
       {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockAndRelease"
+        ]
+      },
+      {
         "source": "l2beat",
-        "name": "Avalanche Bridge",
-        "slug": "avalanche",
-        "url": "https://l2beat.com/interop/protocols/avalanche",
-        "bridgeTypes": ["lockAndMint"]
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
       }
     ],
     "sources": [
       {
-        "label": "Avant docs",
-        "url": "https://docs.avantprotocol.com/"
+        "label": "Avant contract addresses",
+        "url": "https://docs.avantprotocol.com/security/contract-addresses"
       },
       {
-        "label": "L2BEAT Avalanche Bridge",
-        "url": "https://l2beat.com/interop/protocols/avalanche"
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
       }
     ]
   },

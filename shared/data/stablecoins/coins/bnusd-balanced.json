@@ -41,7 +41,7 @@
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/BalancedDAO"
+      "url": "https://x.com/BalancedDeFi"
     },
     {
       "label": "Docs",
@@ -136,7 +136,7 @@
     }
   },
   "chainTier": "mature-alt-l1",
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "Balanced markets bnUSD as usable across many chains and describes cross-chain connectivity through xCall/IBC-style messaging. Because holder movement is part of a cross-chain DeFi liquidity system rather than issuer redemption-only rails, the route is reviewed as liquidity-route risk.",

@@ -93,7 +93,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EURe issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
+    "summary": "EURR issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
     "mintIncidents": [
       {
         "date": "2026-05-24",

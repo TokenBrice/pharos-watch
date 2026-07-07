@@ -165,7 +165,10 @@
         "name": "LayerZero OFT (Arbitrum MyOFT contract)",
         "slug": "layerzero",
         "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61",
-        "bridgeTypes": ["external-lock-mint", "oft"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft"
+        ],
         "note": "Verified Arbitrum contract named MyOFT, inherits LayerZero OFT standard, uses ILayerZeroEndpointV2 with lzSend/lzReceive. Mint/burn OFT representation on the destination chain."
       },
       {
@@ -173,7 +176,10 @@
         "name": "Rootstock LayerZero/Stargate OFT Adapter integration",
         "slug": "rootstock-layerzero",
         "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter-lockbox"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter-lockbox"
+        ],
         "note": "Rootstock joined LayerZero (Mar 2025); native Rootstock assets go multichain via the OFT (Adapter/Lockbox) standard with Stargate as the first dApp. Home chain locks, destination mints."
       }
     ],
@@ -195,5 +201,6 @@
         "url": "https://docs.stargate.finance/primitives/routes/oft"
       }
     ]
-  }
+  },
+  "deploymentModel": "third-party-bridge"
 }

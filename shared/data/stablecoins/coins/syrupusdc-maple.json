@@ -74,7 +74,7 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, Base, and Plasma are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
+    "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, and Base are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
     "reviewedAt": "2026-06-21",
     "reviewer": "Pharos bridge-route re-verification",
     "confidence": "verified",

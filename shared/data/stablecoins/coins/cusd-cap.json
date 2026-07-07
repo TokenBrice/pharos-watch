@@ -264,31 +264,31 @@
   ],
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "Cap cUSD is deployed on multiple chains and the candidate route evidence points to Across. Across is an intent/liquidity framework, so route execution and solver/liquidity availability are material to cross-chain movement.",
+    "tier": "external-lock-mint",
+    "summary": "Cap cUSD uses LayerZero OFT/Stargate-style omnichain routing for multichain deployments rather than Across intent/liquidity bridging. Because durable cross-chain supply depends on the external OFT messaging stack, Pharos scores the route as external lock/mint exposure.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "docs",
+        "name": "LayerZero OFT / Stargate",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard",
         "bridgeTypes": [
-          "intent",
-          "liquidity"
+          "oft",
+          "burnAndMint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Cap docs",
-        "url": "https://docs.cap.app/"
+        "label": "Cap MegaETH launch",
+        "url": "https://www.cap.app/blog/cap-launches-on-megaeth"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "LayerZero OFT standard",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
       }
     ]
   },

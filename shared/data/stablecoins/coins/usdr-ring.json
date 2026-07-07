@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-  "pegMechanism": "RUSD is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
+  "pegMechanism": "USDR is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
   "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "ring-usd",

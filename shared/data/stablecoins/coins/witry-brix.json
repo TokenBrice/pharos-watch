@@ -58,7 +58,7 @@
   },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",
   "reserves": [
     {

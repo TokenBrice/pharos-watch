@@ -3,7 +3,7 @@
   "detailProvider": "coingecko",
   "name": "LeverUp USD",
   "symbol": "lvUSD",
-  "oneLiner": "lvUSD is LeverUp's liquidity-layer stablecoin on Monad, minted against USDC and MON inside the perpetuals trading engine rather than a standard reserve.",
+  "oneLiner": "lvUSD is LeverUp's Monad liquidity-layer stablecoin minted against USDC; MON backs the separate LVMON token.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,7 +12,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
+  "collateral": "USDC collateral supporting LeverUp's liquidity-layer stablecoin (lvUSD) for perpetuals and margin trading; MON collateral backs the separate LVMON token.",
   "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
   "mechanismArchetype": "algorithmic",
   "geckoId": "leverup-usd",
@@ -58,14 +58,9 @@
   "reserves": [
     {
       "name": "USDC liquidity-layer collateral",
-      "pct": 50,
+      "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle"
-    },
-    {
-      "name": "MON liquidity-layer collateral",
-      "pct": 50,
-      "risk": "high"
     }
   ],
   "notices": [
@@ -79,7 +74,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open positions; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
+    "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
     "controls": [
       {
         "chain": "monad",
@@ -89,8 +84,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "lvUSD is auto-minted by the LeverUp trading engine when a trader opens a position using USDC/MON collateral (one independent pool per collateral); all positions are denominated and settled in lvUSD inside the VMMV, so supply is tied to open collateralized positions.",
-        "evidence": "LeverUp docs state the system automatically mints lvUSD when a trader opens a position with USDC (or MON) collateral, with each token managed in its own trading pool under the VMMV design."
+        "capDescription": "lvUSD is auto-minted by the LeverUp trading engine when a trader opens a position using USDC collateral. MON collateral mints the separate LVMON token, not lvUSD.",
+        "evidence": "LeverUp docs state the system automatically mints lvUSD when a trader opens a position with USDC collateral; MON collateral backs the separate LVMON token."
       },
       {
         "chain": "monad",

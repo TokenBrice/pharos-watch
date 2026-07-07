@@ -48,6 +48,11 @@
       "chain": "base",
       "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
       "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+      "decimals": 18
     }
   ],
   "deploymentModel": "native-multichain",

@@ -167,6 +167,11 @@
       "chain": "solana",
       "address": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
       "decimals": 6
+    },
+    {
+      "chain": "cronos",
+      "address": "0xa6de01a2d62c6b5f3525d768f34d276652c554c8",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

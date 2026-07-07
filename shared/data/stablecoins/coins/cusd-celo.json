@@ -2,7 +2,7 @@
   "id": "cusd-celo",
   "name": "Mento Dollar",
   "symbol": "USDm",
-  "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo (formerly cUSD), backed by a diversified crypto and stablecoin reserve at roughly 1.36x collateral.",
+  "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and CDP/liquidity infrastructure.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento reserve holding sUSDS (~44%), CELO (~14%), USDC (~13%), USDT (~10%), EURC (~10%), plus smaller positions in axlEUROC, stETH, axlUSDC, and AUSD; overcollateralized at ~1.25×",
+  "collateral": "Mento reserve holding AUSD (~41%), CELO (~30%), USDC (~14%), axlEUROC (~8%), USDT (~6%), and smaller EURC/axlUSDC balances; reserve composition is pulled from the live Mento reserve API and changes over time.",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
@@ -27,11 +27,11 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://celo.org/"
+      "url": "https://www.mento.org/"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/celoorg"
+      "url": "https://x.com/MentoLabs"
     },
     {
       "label": "Docs",
@@ -175,55 +175,42 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-      "pct": 44,
+      "name": "AUSD reserve holdings",
+      "pct": 41.3,
       "risk": "low",
-      "coinId": "susds-sky"
+      "coinId": "ausd-agora",
+      "depType": "collateral"
     },
     {
-      "name": "CELO (native token)",
-      "pct": 14,
+      "name": "CELO reserve holdings",
+      "pct": 30.4,
       "risk": "high"
     },
     {
-      "name": "USDC (Circle)",
-      "pct": 13,
+      "name": "USDC reserve holdings",
+      "pct": 13.8,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
     },
     {
-      "name": "USDT (Tether)",
-      "pct": 10,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "EURC (Circle euro stablecoin)",
-      "pct": 10,
-      "risk": "low",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "axlEUROC (Axelar-bridged EUROC)",
-      "pct": 5,
+      "name": "axlEUROC reserve holdings",
+      "pct": 7.8,
       "risk": "medium"
     },
     {
-      "name": "stETH (Lido staked ETH)",
-      "pct": 2,
-      "risk": "low"
-    },
-    {
-      "name": "axlUSDC (Axelar-bridged USDC)",
-      "pct": 1,
-      "risk": "medium",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "AUSD (Agora dollar)",
-      "pct": 1,
+      "name": "USDT reserve holdings",
+      "pct": 6.1,
       "risk": "low",
-      "coinId": "ausd-agora"
+      "coinId": "usdt-tether",
+      "depType": "collateral"
+    },
+    {
+      "name": "EURC and other reserve dust",
+      "pct": 0.6,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {

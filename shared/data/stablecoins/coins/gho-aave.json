@@ -97,6 +97,11 @@
       "chain": "plasma",
       "address": "0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
       "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

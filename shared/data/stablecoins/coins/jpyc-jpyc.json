@@ -51,11 +51,16 @@
       "chain": "avalanche",
       "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
       "decimals": 18
+    },
+    {
+      "chain": "klaytn",
+      "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+      "decimals": 18
     }
   ],
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "JPYC has official deployments across Ethereum, Polygon, and Avalanche. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
+    "summary": "JPYC has official deployments across Ethereum, Polygon, Avalanche, and Kaia. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",

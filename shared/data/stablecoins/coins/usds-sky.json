@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
+  "collateral": "Upgraded 1:1 successor to DAI on the same vault system, with current exposure organized across Sky Agent/Star buckets: Stablecoins/PSM around 38%, Spark around 28%, Grove RWA around 23%, Obex around 5%, Core crypto around 4%, Staking around 1%, and Legacy RWA around 1%; percentages drift with vault and Agent allocation changes.",
   "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
   "mechanismArchetype": "cdp",
   "llamaId": "209",

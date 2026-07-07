@@ -90,7 +90,7 @@
       "risk": "medium"
     },
     {
-      "name": "USDC/USDT bridge reserves",
+      "name": "USDC.e/USDT.e/ctUSD bridge reserves",
       "pct": 0.001,
       "risk": "low",
       "blacklistable": true

@@ -35,12 +35,12 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.backed.fi/"
+      "url": "https://assets.backed.fi/legal-documentation"
     }
   ],
   "jurisdiction": {
-    "country": "Switzerland",
-    "regulator": "FINMA",
+    "country": "Jersey",
+    "regulator": "JFSC",
     "license": "Swiss DLT Act registered uncertificated securities"
   },
   "contracts": [
@@ -94,7 +94,7 @@
     "reviewedAt": "2026-05-12"
   },
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "Backed bC3M has multichain deployments and candidate evidence includes Across plus canonical Arbitrum/Avalanche routes. Because the external liquidity/intent route is material, the reviewed tier is the weaker liquidity-route tier.",
@@ -107,27 +107,34 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["intent", "liquidity"]
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
       },
       {
         "source": "l2beat",
         "name": "Arbitrum Canonical",
         "slug": "arbitrum",
         "url": "https://l2beat.com/interop/protocols/arbitrum",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       },
       {
         "source": "l2beat",
         "name": "Avalanche Bridge",
         "slug": "avalanche",
         "url": "https://l2beat.com/interop/protocols/avalanche",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
       {
         "label": "Backed docs",
-        "url": "https://docs.backed.fi/"
+        "url": "https://assets.backed.fi/legal-documentation"
       },
       {
         "label": "L2BEAT Across",
@@ -202,7 +209,7 @@
         "sources": [
           {
             "label": "Backed Finance docs",
-            "url": "https://docs.backed.fi/"
+            "url": "https://assets.backed.fi/legal-documentation"
           }
         ]
       },
@@ -246,7 +253,7 @@
       "sources": [
         {
           "label": "Backed Finance docs",
-          "url": "https://docs.backed.fi/"
+          "url": "https://assets.backed.fi/legal-documentation"
         },
         {
           "label": "Backed token Ethereum contract",

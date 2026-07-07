@@ -22,7 +22,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
+  "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025. Pooled SNX remained the primary legacy backing, while delta-neutral basis-trade vaults, protocol treasury activity, and buybacks functioned as peg-defense and recovery layers rather than the main reserve base.",
   "pegMechanism": "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
   "mechanismArchetype": "cdp",
   "llamaId": "22",

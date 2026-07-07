@@ -135,12 +135,12 @@
         "canRaiseCap": true,
         "safe": {
           "owners": [
-            "0x389e3d1c46595af7335f8c6d3e403ce2e8a9cf8a",
-            "0x9ed2cdcaae0d3dec193be247b1a529191551be1a",
-            "0x2f999ebfba09fbaf39cac62be4e7dabe33cc9ac3",
+            "0x0a175e478b35fa4d786546ba8b61abd400c600bf",
+            "0x5ca20df7060d1240a3d0a6794a38dff11a897096",
+            "0x71625e859f7e229fae437c1f5acca9c6dc31db0d",
             "0xf37898233e4f5bfca4c666f2d3e3314b7c29b760",
-            "0xa79c3a4cc52ff9d3eb40ddc5e921bdde2a11f760",
-            "0xbe08be07cddbb2dd51df4cbf07a0451fcb4fa9e"
+            "0xcc8f1bde0d42017c0e52321e69325f9b26f7c2d6",
+            "0x68786d7a4ea9c85245edebfe3e399a7ec3a6f1c3"
           ],
           "threshold": 3,
           "enabledModules": [],
@@ -150,11 +150,11 @@
           "observedBlock": 37553335,
           "source": "onchain"
         },
-        "evidence": "Admin chain traced at HyperEVM block 37553335: feUSD ProxyAdmin (0x44a600c0) owner() = 0xf42fdd95 (UUPS proxy → impl 0xd2fe30); 0xf42f owns the Felix AddressesRegistry (0x9de1e57049) per owner() call. The ProxyAdmin of 0xf42f (0xdf1293b4) owner() = 0x699090e73c4077ef2af42773b31788c6564f079c. That Safe: getOwners() = 6 addresses, slot3=6 (ownerCount), slot4=3 (threshold), masterCopy at slot0=0xfb1bffc9d739b8d520daf37df666da4c687191ea (VERSION=1.3.0), getModules()=empty, guard slot=0x0."
+        "evidence": "Latest HyperEVM getOwners() on Safe 0x699090e73c4077ef2af42773b31788c6564f079c returned 6 owners, threshold 3, no modules, no guard. This refresh replaces the prior stale owner snapshot that also contained a malformed 39-hex address."
       }
     ],
     "review": {
-      "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
+      "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [

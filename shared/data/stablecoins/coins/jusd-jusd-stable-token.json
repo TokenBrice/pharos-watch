@@ -19,11 +19,11 @@
   "cmcSlug": "jusd-stable-token",
   "protocolSlug": "jusd",
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "JUSD is tracked on BSC and Polygon and source materials present it as the protocol stable token rather than a bridged representation. No third-party bridge controls were resolved, so the route is reviewed as protocol-native multichain issuance.",
+    "tier": "external-lock-mint",
+    "summary": "JUSD is native on Polygon, while the BSC deployment is a Chainport-bridged BridgeMintableToken with minting gated by classified authority / Chainport-controlled admin infrastructure. Because durable BSC supply depends on a third-party bridge mint route, Pharos scores the route as external lock/mint exposure.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "JUSD website",
@@ -32,6 +32,17 @@
       {
         "label": "JUSD whitepaper",
         "url": "https://jusd.app/whitepaper.pdf"
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainport",
+        "slug": "chainport",
+        "url": "https://www.chainport.io/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ]
   },
@@ -78,7 +89,7 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
+  "deploymentModel": "third-party-bridge",
   "reserves": [
     {
       "name": "Protocol-managed crypto collateral and reserves",

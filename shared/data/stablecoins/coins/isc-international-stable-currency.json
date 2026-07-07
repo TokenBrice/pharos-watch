@@ -104,7 +104,7 @@
     "yieldSource": "ISC purchasing-power basket appreciation",
     "yieldType": "nav-appreciation"
   },
-  "chainTier": "established-alt-l1",
+  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

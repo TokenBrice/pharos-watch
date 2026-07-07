@@ -1,7 +1,7 @@
 {
   "id": "alusd-alchemix",
   "name": "Alchemix USD",
-  "symbol": "ALUSD",
+  "symbol": "alUSD",
   "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin: users borrow against DAI/USDC/USDT collateral and the yield from those deposits gradually repays the debt.",
   "flags": {
     "backing": "crypto-backed",

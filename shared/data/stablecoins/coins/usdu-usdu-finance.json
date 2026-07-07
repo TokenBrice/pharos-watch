@@ -2,7 +2,7 @@
   "id": "usdu-usdu-finance",
   "name": "USDU Finance",
   "symbol": "USDU",
-  "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Curve, Morpho, and TermMax vault shares; the issuer reports ~40% collateralization by design.",
+  "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Morpho and Curve vault shares after a sharp supply wind-down.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -47,18 +47,13 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "TermMax fixed-rate lending vault shares",
-      "pct": 97,
-      "risk": "high"
-    },
-    {
       "name": "Morpho USDU Core vault shares",
-      "pct": 2,
+      "pct": 60.6,
       "risk": "medium"
     },
     {
-      "name": "Curve USDC/USDU LP tokens",
-      "pct": 1,
+      "name": "Curve USDU/USDC LP tokens",
+      "pct": 39.4,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral"
@@ -66,14 +61,14 @@
   ],
   "notices": [
     {
-      "type": "danger",
-      "title": "Undercollateralized by design",
-      "message": "USDU Finance's transparency page currently shows ~40.69% collateralization ($2.06M backing vs $5.06M circulating supply). The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants."
+      "type": "info",
+      "title": "Post-wind-down collateral coverage",
+      "message": "USDU Finance's transparency page currently reports roughly 100% collateralization after a sharp supply wind-down, with backing concentrated in Morpho USDU Core vault shares and Curve USDU/USDC LP tokens."
     },
     {
       "type": "warning",
       "title": "Conflicting issuer disclosures",
-      "message": "USDU Finance's own surfaces disagree: the transparency page headline reports ~40.69% CR while a separate JSON endpoint reports ~97% CR and the gitbook says 'fully backed'. Pharos surfaces the public-page headline as the conservative reference; treat collateralization figures as advisory until USDU publishes a single canonical methodology."
+      "message": "USDU Finance's live transparency endpoint now reports backing approximately equal to circulating supply after the wind-down. Treat exact collateralization and allocation figures as live-snapshot values because supply and adapter balances have moved materially."
     }
   ],
   "mintAuthority": {

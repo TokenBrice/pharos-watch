@@ -22,7 +22,7 @@
     "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
     "provider": "KPMG LLP",
     "attestorTier": "big4",
-    "cadence": "quarterly",
+    "cadence": "annual",
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered"
   },

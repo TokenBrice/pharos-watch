@@ -72,6 +72,11 @@
       "chain": "monad",
       "address": "0xad48f183e586e92a591a610397ebf534609df797",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,

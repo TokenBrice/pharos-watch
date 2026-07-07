@@ -108,7 +108,7 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDv is a synthetic dollar where only KYC'd approved market makers and institutions can mint or burn directly against Solomon's Ceffu-custodied delta-neutral collateral; general users enter and exit via Solana pools, and Solomon's programs and admin operations are governed by a Squads multisig.",
+    "summary": "USDv is a synthetic dollar where only KYC'd approved market makers and institutions can mint or burn directly against Solomon's Ceffu-custodied delta-neutral collateral; general users enter and exit via Solana pools. On-chain review resolves the mint authority to a program-owned PDA whose upgrade authority is an EOA-equivalent keypair; no Squads multisig is confirmed.",
     "controls": [
       {
         "label": "Solomon direct mint/burn permission (approved participants)",
@@ -133,7 +133,7 @@
         "directMintAbility": "none",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
-        "evidence": "Backing assets for USDv (delta-neutral spot-long / perp-short positions) are held in segregated, insured custody with Ceffu, and Solomon's Solana programs are described as restricted to custody transfers with admin operations secured by a Squads multisig."
+        "evidence": "Backing assets for USDv (delta-neutral spot-long / perp-short positions) are held in segregated, insured custody with Ceffu. On-chain review resolves Solomon's Solana mint authority to a program-owned PDA whose upgrade authority is an EOA-equivalent keypair; no Squads multisig is confirmed."
       }
     ],
     "review": {

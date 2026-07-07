@@ -2,7 +2,7 @@
   "id": "usdf-astherus",
   "name": "Aster USDF",
   "symbol": "USDF",
-  "oneLiner": "USDF is Astherus's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
+  "oneLiner": "USDF is Aster's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

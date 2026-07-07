@@ -110,7 +110,7 @@
   ],
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "reserves": [
     {
@@ -152,5 +152,5 @@
       }
     }
   },
-  "launchDate": "2025-07-08"
+  "launchDate": "2025-08-19"
 }

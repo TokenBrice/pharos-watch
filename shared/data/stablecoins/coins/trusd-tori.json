@@ -24,7 +24,7 @@
   ],
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://tori.finance/",
+    "url": "https://app.tori.finance/transparency",
     "provider": "Accountable",
     "attestorTier": "niche",
     "cadence": "real-time"

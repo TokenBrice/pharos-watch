@@ -1,7 +1,7 @@
 {
   "id": "onyc-onre",
   "name": "Onchain Yield Coin",
-  "symbol": "ONYC",
+  "symbol": "ONyc",
   "oneLiner": "ONYC is a Solana-based NAV-accreting yield token backed by OnRe-managed structured insurance and reinsurance positions; not a hard $1 peg.",
   "flags": {
     "backing": "rwa-backed",

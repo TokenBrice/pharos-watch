@@ -129,7 +129,7 @@
         "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1955f5 has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
+        "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
       }
     ],
     "review": {

@@ -94,6 +94,11 @@
       "chain": "bevm",
       "address": "0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
       "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

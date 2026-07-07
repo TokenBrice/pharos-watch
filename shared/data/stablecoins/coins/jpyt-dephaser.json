@@ -13,7 +13,7 @@
   },
   "collateral": "USDT (Optimism) and USDC (Base) deposited by users to mint JPYT; locked collateral is automatically transferred into Aave for safekeeping rather than held directly by DePhaser, backing JPYT against the yen",
   "pegMechanism": "Users lock USDT (Optimism) or USDC (Base) to mint JPYT priced off real-time USD/JPY rates from Chainlink and Pyth oracles; the deposited collateral is routed into Aave, and redemption burns JPYT to return the underlying USDT or USDC",
-  "mechanismArchetype": "cdp",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "dephaser-jpy",
   "oracleRisk": {

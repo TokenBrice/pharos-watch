@@ -154,11 +154,6 @@
       "decimals": 18
     },
     {
-      "chain": "polygon",
-      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-      "decimals": 18
-    },
-    {
       "chain": "avalanche",
       "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
       "decimals": 18

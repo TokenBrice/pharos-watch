@@ -20,6 +20,26 @@
       "chain": "bsc",
       "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x3e6847e5420e1e529619379b004c2f7cc61d0d0d",
+      "decimals": 0
+    },
+    {
+      "chain": "polygon",
+      "address": "0xd9d335045dd7cfec24ca8bd2ba18102cad6ae1e0",
+      "decimals": 0
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+      "decimals": 0
+    },
+    {
+      "chain": "plume",
+      "address": "0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f",
+      "decimals": 0
     }
   ],
   "links": [

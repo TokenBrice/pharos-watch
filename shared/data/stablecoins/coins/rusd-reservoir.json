@@ -299,55 +299,39 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "RLUSD Euler lending markets",
+      "name": "Morpho Sentora PRIME",
       "pct": 37.7,
-      "risk": "medium",
-      "coinId": "rlusd-ripple",
-      "depType": "collateral"
+      "risk": "high"
     },
     {
-      "name": "GHO Aave and Fluid lending markets (Plasma)",
-      "pct": 22.8,
+      "name": "Pendle PT USDat tokenized-treasury principal token",
+      "pct": 20.9,
+      "risk": "high"
+    },
+    {
+      "name": "GHO Aave lending markets (Plasma and Monad)",
+      "pct": 12.7,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral"
     },
     {
-      "name": "Hastra PRIME RWA credit allocation",
-      "pct": 12.2,
-      "risk": "high"
-    },
-    {
-      "name": "Pendle PT USDat tokenized-treasury principal token",
-      "pct": 7.2,
-      "risk": "high"
-    },
-    {
-      "name": "AUSD Morpho lending markets",
-      "pct": 6.5,
-      "risk": "medium",
-      "coinId": "ausd-agora",
-      "depType": "collateral"
-    },
-    {
-      "name": "USD1 Morpho lending markets",
-      "pct": 6.3,
+      "name": "USD1 Morpho Steakhouse High Yield lending markets",
+      "pct": 12.1,
       "risk": "medium",
       "coinId": "usd1-world-liberty-financial",
       "depType": "collateral"
     },
     {
-      "name": "USDC Morpho lending and direct liquidity",
-      "pct": 5.4,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "name": "Hastra PRIME RWA credit allocation",
+      "pct": 11.3,
+      "risk": "high"
     },
     {
-      "name": "PYUSD Morpho and Kamino lending markets",
-      "pct": 1.9,
+      "name": "USDC Morpho lending and direct liquidity",
+      "pct": 5.3,
       "risk": "medium",
-      "coinId": "pyusd-paypal",
+      "coinId": "usdc-circle",
       "depType": "collateral"
     }
   ],

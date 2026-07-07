@@ -2,7 +2,7 @@
   "id": "money-defi-money",
   "name": "defi.money",
   "symbol": "MONEY",
-  "oneLiner": "MONEY is defi.money's crvUSD-style stablecoin minted against overcollateralized loans of WBTC, ETH, and other approved collateral on Arbitrum and Optimism.",
+  "oneLiner": "MONEY is defi.money's CDP-backed dollar stablecoin deployed on Arbitrum, Optimism, and Base.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -35,28 +35,20 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "MONEY is deployed on Arbitrum, Optimism, and Base, all Ethereum rollup ecosystems with canonical bridge infrastructure. No external bridge protocol evidence was resolved, so the route is reviewed as canonical rollup bridging/native rollup deployment.",
+    "tier": "external-lock-mint",
+    "summary": "MONEY is deployed on Arbitrum, Optimism, and Base through LayerZero OFT-style omnichain infrastructure. Because durable cross-chain supply depends on external LayerZero messaging rather than only canonical rollup bridges, Pharos scores the route as external lock/mint exposure.",
     "reviewedAt": "2026-06-13",
     "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
-        "name": "Arbitrum canonical bridge",
-        "slug": "arbitrum",
-        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
         "bridgeTypes": [
-          "canonicalBridge"
-        ]
-      },
-      {
-        "source": "l2beat",
-        "name": "OP Mainnet standard bridge",
-        "slug": "op-mainnet",
-        "url": "https://l2beat.com/scaling/projects/op-mainnet",
-        "bridgeTypes": [
-          "canonicalBridge"
+          "oft",
+          "lockAndMint"
         ]
       }
     ],
@@ -66,12 +58,8 @@
         "url": "https://docs.defi.money/"
       },
       {
-        "label": "Arbitrum token bridging docs",
-        "url": "https://docs.arbitrum.io/how-arbitrum-works/deep-dives/token-bridging"
-      },
-      {
-        "label": "Optimism standard bridge docs",
-        "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
       }
     ]
   },

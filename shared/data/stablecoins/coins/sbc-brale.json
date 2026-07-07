@@ -249,12 +249,12 @@
   "reserves": [
     {
       "name": "Cash and cash equivalents",
-      "pct": 50,
+      "pct": 71,
       "risk": "very-low"
     },
     {
       "name": "Short-duration U.S. Treasury securities",
-      "pct": 50,
+      "pct": 29,
       "risk": "very-low"
     }
   ],

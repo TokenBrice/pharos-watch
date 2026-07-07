@@ -315,7 +315,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [XO Cash (XO)](https://pharos.watch/stablecoin/xo-exodus/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USA₮ (USAT)](https://pharos.watch/stablecoin/usat-tether/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Mento Dollar (USDm)](https://pharos.watch/stablecoin/cusd-celo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Alchemix USD (ALUSD)](https://pharos.watch/stablecoin/alusd-alchemix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Alchemix USD (alUSD)](https://pharos.watch/stablecoin/alusd-alchemix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Felix feUSD (FEUSD)](https://pharos.watch/stablecoin/feusd-felix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Fidelity Digital Dollar (FIDD)](https://pharos.watch/stablecoin/fidd-fidelity/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDGO (USDGO)](https://pharos.watch/stablecoin/usdgo-osl/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -505,7 +505,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [EURO3 (EURO3)](https://pharos.watch/stablecoin/euro3-3a-dao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Euro.
 - [KRWO (KRWO)](https://pharos.watch/stablecoin/krwo-gimswap/): centralized stablecoin backed by real-world assets pegged to Korean Won.
 - [SoFiUSD (SOFID)](https://pharos.watch/stablecoin/sofid-sofi/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Onchain Yield Coin (ONYC)](https://pharos.watch/stablecoin/onyc-onre/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Onchain Yield Coin (ONyc)](https://pharos.watch/stablecoin/onyc-onre/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Hyperbeat USDT (hbUSDT)](https://pharos.watch/stablecoin/hbusdt-hyperbeat/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Wrapped iTRY (wiTRY)](https://pharos.watch/stablecoin/witry-brix/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Rings scUSD (scUSD)](https://pharos.watch/stablecoin/scusd-rings/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

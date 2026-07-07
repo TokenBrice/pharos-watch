@@ -60,7 +60,7 @@
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
-    "issuerEntity": "Bridge Building Inc. (OCC national trust bank applicant; wholly owned by Stripe)",
+    "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC — the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
     "issuerDomicile": "United States",
     "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
     "primaryFederalRegulator": "OCC",

@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Short-duration U.S. Treasury bills and repurchase agreements collateralized by U.S. Treasury obligations, held by a BVI Professional Fund advised by Van Eck Absolute Return Advisers; State Street Bank and Trust Company is custodian, Securitize Fund Services is fund administrator, and Securitize provides tokenization, transfer agency, and KYC",
-  "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire. RedStone is the issuer's designated oracle for daily NAV calculation; Pharos reads the on-chain Chainlink NAVLink 'VBILL NAV' feed (adopted by Securitize for the Aave Horizon collateral market) for live NAV",
+  "pegMechanism": "Institutional T-bill fund token that seeks a stable $1.00 NAV per share; yield accrues daily and is distributed as new tokens issued to holders. Instant mint and redemption at NAV through Securitize Markets against USDC, AUSD, or USD wire. RedStone is the issuer's designated oracle for daily NAV calculation; Pharos reads the on-chain Chainlink NAVLink 'VBILL NAV' feed (adopted by Securitize for the Aave Horizon collateral market) for live NAV",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "vaneck-treasury-fund",
@@ -220,8 +220,8 @@
     }
   },
   "yieldConfig": {
-    "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
-    "yieldType": "nav-appreciation"
+    "yieldSource": "VanEck Treasury Fund daily token distribution",
+    "yieldType": "rebase"
   },
   "notices": [
     {

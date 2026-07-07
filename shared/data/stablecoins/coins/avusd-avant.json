@@ -157,6 +157,16 @@
       "chain": "berachain",
       "address": "0xbca138ded469f5063589bfdfdd4bc68eb1c3f252",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x3af90fda10fc6509df55e959548b1ed3bc3cfa00",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x0d9d741fe423cd5419e4bcb6cb2ffa87afa93ba4",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

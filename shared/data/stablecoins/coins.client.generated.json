@@ -409,7 +409,7 @@
   {
     "id": "alusd-alchemix",
     "name": "Alchemix USD",
-    "symbol": "ALUSD",
+    "symbol": "alUSD",
     "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin: users borrow against DAI/USDC/USDT collateral and the yield from those deposits gradually repays the debt.",
     "flags": {
       "backing": "crypto-backed",
@@ -1464,7 +1464,6 @@
     },
     "mechanismArchetype": "cdp",
     "status": "pre-launch",
-    "expectedLaunchDate": "2026-Q2",
     "launchPhase": "auditing",
     "milestones": [
       {
@@ -1851,7 +1850,7 @@
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H1",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "launching-soon",
     "milestones": [
       {
@@ -1880,10 +1879,6 @@
       {
         "date": "2026-H1",
         "setOn": "2026-06-07"
-      },
-      {
-        "date": "2026-H2",
-        "setOn": "2026-06-28"
       }
     ],
     "collateralQuality": "rwa",
@@ -3626,7 +3621,7 @@
     "id": "cusd-celo",
     "name": "Mento Dollar",
     "symbol": "USDm",
-    "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo (formerly cUSD), backed by a diversified crypto and stablecoin reserve at roughly 1.36x collateral.",
+    "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and CDP/liquidity infrastructure.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -3642,55 +3637,42 @@
     },
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 44,
+        "name": "AUSD reserve holdings",
+        "pct": 41.3,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "ausd-agora",
+        "depType": "collateral"
       },
       {
-        "name": "CELO (native token)",
-        "pct": 14,
+        "name": "CELO reserve holdings",
+        "pct": 30.4,
         "risk": "high"
       },
       {
-        "name": "USDC (Circle)",
-        "pct": 13,
+        "name": "USDC reserve holdings",
+        "pct": 13.8,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "collateral"
       },
       {
-        "name": "USDT (Tether)",
-        "pct": 10,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "EURC (Circle euro stablecoin)",
-        "pct": 10,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "axlEUROC (Axelar-bridged EUROC)",
-        "pct": 5,
+        "name": "axlEUROC reserve holdings",
+        "pct": 7.8,
         "risk": "medium"
       },
       {
-        "name": "stETH (Lido staked ETH)",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "axlUSDC (Axelar-bridged USDC)",
-        "pct": 1,
-        "risk": "medium",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "AUSD (Agora dollar)",
-        "pct": 1,
+        "name": "USDT reserve holdings",
+        "pct": 6.1,
         "risk": "low",
-        "coinId": "ausd-agora"
+        "coinId": "usdt-tether",
+        "depType": "collateral"
+      },
+      {
+        "name": "EURC and other reserve dust",
+        "pct": 0.6,
+        "risk": "low",
+        "coinId": "eurc-circle",
+        "depType": "collateral"
       }
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -5515,7 +5497,7 @@
     "id": "eurq-quantoz",
     "name": "Quantoz EURQ",
     "symbol": "EURQ",
-    "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
+    "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short-dated government bonds.",
     "marketAvailability": "market-traded",
     "flags": {
       "backing": "rwa-backed",
@@ -8093,7 +8075,7 @@
     "mechanismArchetype": "fiat-cash",
     "status": "pre-launch",
     "announcedDate": "2026-03",
-    "expectedLaunchDate": "2026-Q2",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "testnet",
     "milestones": [
       {
@@ -8115,6 +8097,12 @@
         "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
         "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
         "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-Q2",
+        "setOn": "2026-06-07"
       }
     ],
     "genius": {
@@ -8482,7 +8470,7 @@
         "coinId": "usdt-tether"
       },
       {
-        "name": "BYUSD (Berachain Yield USD)",
+        "name": "BYUSD (bridged PayPal USD)",
         "pct": 20,
         "risk": "low",
         "coinId": "pyusd-paypal"
@@ -9455,7 +9443,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dephaser-jpy",
     "launchDate": "2024-10-16",
     "reserves": [
@@ -9642,7 +9630,7 @@
         "risk": "medium"
       },
       {
-        "name": "USDC/USDT bridge reserves",
+        "name": "USDC.e/USDT.e/ctUSD bridge reserves",
         "pct": 0.001,
         "risk": "low",
         "blacklistable": true
@@ -10494,7 +10482,7 @@
     "id": "lvusd-leverup",
     "name": "LeverUp USD",
     "symbol": "lvUSD",
-    "oneLiner": "lvUSD is LeverUp's liquidity-layer stablecoin on Monad, minted against USDC and MON inside the perpetuals trading engine rather than a standard reserve.",
+    "oneLiner": "lvUSD is LeverUp's Monad liquidity-layer stablecoin minted against USDC; MON backs the separate LVMON token.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -10509,14 +10497,9 @@
     "reserves": [
       {
         "name": "USDC liquidity-layer collateral",
-        "pct": 50,
+        "pct": 100,
         "risk": "low",
         "coinId": "usdc-circle"
-      },
-      {
-        "name": "MON liquidity-layer collateral",
-        "pct": 50,
-        "risk": "high"
       }
     ],
     "collateralQuality": "exotic",
@@ -11058,7 +11041,7 @@
           "authorityType": "safe",
           "directMintAbility": "direct",
           "threshold": 5,
-          "signerCount": 10,
+          "signerCount": 11,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected"
         }
@@ -11252,7 +11235,7 @@
     "id": "money-defi-money",
     "name": "defi.money",
     "symbol": "MONEY",
-    "oneLiner": "MONEY is defi.money's crvUSD-style stablecoin minted against overcollateralized loans of WBTC, ETH, and other approved collateral on Arbitrum and Optimism.",
+    "oneLiner": "MONEY is defi.money's CDP-backed dollar stablecoin deployed on Arbitrum, Optimism, and Base.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -12434,7 +12417,7 @@
   {
     "id": "onyc-onre",
     "name": "Onchain Yield Coin",
-    "symbol": "ONYC",
+    "symbol": "ONyc",
     "oneLiner": "ONYC is a Solana-based NAV-accreting yield token backed by OnRe-managed structured insurance and reinsurance positions; not a hard $1 peg.",
     "flags": {
       "backing": "rwa-backed",
@@ -13898,55 +13881,39 @@
     },
     "reserves": [
       {
-        "name": "RLUSD Euler lending markets",
+        "name": "Morpho Sentora PRIME",
         "pct": 37.7,
-        "risk": "medium",
-        "coinId": "rlusd-ripple",
-        "depType": "collateral"
+        "risk": "high"
       },
       {
-        "name": "GHO Aave and Fluid lending markets (Plasma)",
-        "pct": 22.8,
+        "name": "Pendle PT USDat tokenized-treasury principal token",
+        "pct": 20.9,
+        "risk": "high"
+      },
+      {
+        "name": "GHO Aave lending markets (Plasma and Monad)",
+        "pct": 12.7,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "collateral"
       },
       {
-        "name": "Hastra PRIME RWA credit allocation",
-        "pct": 12.2,
-        "risk": "high"
-      },
-      {
-        "name": "Pendle PT USDat tokenized-treasury principal token",
-        "pct": 7.2,
-        "risk": "high"
-      },
-      {
-        "name": "AUSD Morpho lending markets",
-        "pct": 6.5,
-        "risk": "medium",
-        "coinId": "ausd-agora",
-        "depType": "collateral"
-      },
-      {
-        "name": "USD1 Morpho lending markets",
-        "pct": 6.3,
+        "name": "USD1 Morpho Steakhouse High Yield lending markets",
+        "pct": 12.1,
         "risk": "medium",
         "coinId": "usd1-world-liberty-financial",
         "depType": "collateral"
       },
       {
-        "name": "USDC Morpho lending and direct liquidity",
-        "pct": 5.4,
-        "risk": "medium",
-        "coinId": "usdc-circle",
-        "depType": "collateral"
+        "name": "Hastra PRIME RWA credit allocation",
+        "pct": 11.3,
+        "risk": "high"
       },
       {
-        "name": "PYUSD Morpho and Kamino lending markets",
-        "pct": 1.9,
+        "name": "USDC Morpho lending and direct liquidity",
+        "pct": 5.3,
         "risk": "medium",
-        "coinId": "pyusd-paypal",
+        "coinId": "usdc-circle",
         "depType": "collateral"
       }
     ],
@@ -14376,12 +14343,12 @@
     "reserves": [
       {
         "name": "Cash and cash equivalents",
-        "pct": 50,
+        "pct": 71,
         "risk": "very-low"
       },
       {
         "name": "Short-duration U.S. Treasury securities",
-        "pct": 50,
+        "pct": 29,
         "risk": "very-low"
       }
     ],
@@ -15324,7 +15291,7 @@
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
-    "launchDate": "2025-07-08",
+    "launchDate": "2025-08-19",
     "yieldConfig": {
       "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
       "yieldSource": "Cap savings (stcUSD)",
@@ -15629,7 +15596,6 @@
     },
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "esui-dollar",
-    "protocolSlug": "sui",
     "launchDate": "2026-02-11",
     "canBeBlacklisted": true,
     "reserves": [
@@ -15675,7 +15641,6 @@
       "navToken": false
     },
     "geckoId": "staked-usd-coin",
-    "protocolSlug": "hedgecore",
     "launchDate": "2025-10-11",
     "canBeBlacklisted": "possible",
     "yieldConfig": {
@@ -18252,7 +18217,7 @@
     "id": "usdf-astherus",
     "name": "Aster USDF",
     "symbol": "USDF",
-    "oneLiner": "USDF is Astherus's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
+    "oneLiner": "USDF is Aster's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -18582,13 +18547,18 @@
     },
     "reserves": [
       {
-        "name": "U.S. Treasury bills",
-        "pct": 80,
+        "name": "Money market funds",
+        "pct": 74,
         "risk": "very-low"
       },
       {
-        "name": "Cash and cash equivalents",
-        "pct": 20,
+        "name": "BUIDL (BlackRock tokenized MMF)",
+        "pct": 25,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 1,
         "risk": "very-low"
       }
     ],
@@ -20409,7 +20379,7 @@
     "id": "usdu-usdu-finance",
     "name": "USDU Finance",
     "symbol": "USDU",
-    "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Curve, Morpho, and TermMax vault shares; the issuer reports ~40% collateralization by design.",
+    "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Morpho and Curve vault shares after a sharp supply wind-down.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -20421,18 +20391,13 @@
     "launchDate": "2025-07-04",
     "reserves": [
       {
-        "name": "TermMax fixed-rate lending vault shares",
-        "pct": 97,
-        "risk": "high"
-      },
-      {
         "name": "Morpho USDU Core vault shares",
-        "pct": 2,
+        "pct": 60.6,
         "risk": "medium"
       },
       {
-        "name": "Curve USDC/USDU LP tokens",
-        "pct": 1,
+        "name": "Curve USDU/USDC LP tokens",
+        "pct": 39.4,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
@@ -21637,7 +21602,6 @@
       "navToken": false
     },
     "geckoId": "unity-usd",
-    "protocolSlug": "uusd",
     "launchDate": "2026-02-03",
     "reserves": [
       {
@@ -21754,8 +21718,8 @@
     "launchDate": "2025-05-12",
     "canBeBlacklisted": true,
     "yieldConfig": {
-      "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
-      "yieldType": "nav-appreciation"
+      "yieldSource": "VanEck Treasury Fund daily token distribution",
+      "yieldType": "rebase"
     },
     "reserves": [
       {
@@ -22496,7 +22460,7 @@
     "id": "weusd-picwe",
     "name": "WEUSD",
     "symbol": "WEUSD",
-    "oneLiner": "WEUSD is PicWe's omni-chain USDT wrapper minted and redeemed 1:1 against USDT; the token has been trading off-peg near $0.91 despite documented backing.",
+    "oneLiner": "WEUSD is PicWe's omni-chain wrapper with disputed USDC-vs-USDT/MOVE backing and a recent off-peg market price.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -22796,36 +22760,37 @@
     },
     "reserves": [
       {
-        "name": "RLUSD lending markets",
-        "pct": 56.4,
-        "risk": "medium",
-        "coinId": "rlusd-ripple",
-        "depType": "collateral"
+        "name": "Morpho Sentora PRIME",
+        "pct": 37.7,
+        "risk": "high"
       },
       {
-        "name": "PYUSD lending markets",
-        "pct": 21.6,
-        "risk": "medium",
-        "coinId": "pyusd-paypal",
-        "depType": "collateral"
+        "name": "Pendle PT USDat tokenized-treasury principal token",
+        "pct": 20.9,
+        "risk": "high"
       },
       {
-        "name": "AUSD lending markets",
-        "pct": 10.5,
-        "risk": "medium",
-        "coinId": "ausd-agora",
-        "depType": "collateral"
-      },
-      {
-        "name": "GHO lending markets",
-        "pct": 5.7,
+        "name": "GHO Aave lending markets (Plasma and Monad)",
+        "pct": 12.7,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "collateral"
       },
       {
-        "name": "USDC lending/direct liquidity",
-        "pct": 5.8,
+        "name": "USD1 Morpho Steakhouse High Yield lending markets",
+        "pct": 12.1,
+        "risk": "medium",
+        "coinId": "usd1-world-liberty-financial",
+        "depType": "collateral"
+      },
+      {
+        "name": "Hastra PRIME RWA credit allocation",
+        "pct": 11.3,
+        "risk": "high"
+      },
+      {
+        "name": "USDC Morpho lending and direct liquidity",
+        "pct": 5.3,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
@@ -22930,18 +22895,13 @@
     "reserves": [
       {
         "name": "Cash and cash equivalents",
-        "pct": 40,
+        "pct": 75,
         "risk": "very-low"
       },
       {
         "name": "Short-term U.S. Treasury bills",
-        "pct": 55,
+        "pct": 25,
         "risk": "very-low"
-      },
-      {
-        "name": "Basel III liquidity buffer (6% of non-cash)",
-        "pct": 5,
-        "risk": "low"
       }
     ],
     "collateralQuality": "rwa",
@@ -24284,7 +24244,7 @@
       "pegCurrency": "CHF",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "mechanismArchetype": "cdp",

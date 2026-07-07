@@ -312,11 +312,6 @@
       "decimals": 6
     },
     {
-      "chain": "stacks",
-      "address": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
-      "decimals": 6
-    },
-    {
       "chain": "etherlink",
       "address": "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",
       "decimals": 6

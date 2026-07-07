@@ -68,11 +68,6 @@
       "chain": "solana",
       "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
       "decimals": 6
-    },
-    {
-      "chain": "solana",
-      "address": "8v8aBHR7EXFZDwaqaRjAStEcmCj6VZi5iGq1YDtyTok6",
-      "decimals": 6
     }
   ],
   "bridgeRouteRisk": {
@@ -115,7 +110,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on both Solana mints.",
+    "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
     "controls": [
       {
         "chain": "ethereum",

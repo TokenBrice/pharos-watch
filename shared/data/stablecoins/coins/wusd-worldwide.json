@@ -311,18 +311,13 @@
   "reserves": [
     {
       "name": "Cash and cash equivalents",
-      "pct": 40,
+      "pct": 75,
       "risk": "very-low"
     },
     {
       "name": "Short-term U.S. Treasury bills",
-      "pct": 55,
+      "pct": 25,
       "risk": "very-low"
-    },
-    {
-      "name": "Basel III liquidity buffer (6% of non-cash)",
-      "pct": 5,
-      "risk": "low"
     }
   ],
   "liveReservesConfig": {

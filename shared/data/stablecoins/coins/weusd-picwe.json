@@ -2,7 +2,7 @@
   "id": "weusd-picwe",
   "name": "WEUSD",
   "symbol": "WEUSD",
-  "oneLiner": "WEUSD is PicWe's omni-chain USDT wrapper minted and redeemed 1:1 against USDT; the token has been trading off-peg near $0.91 despite documented backing.",
+  "oneLiner": "WEUSD is PicWe's omni-chain wrapper with disputed USDC-vs-USDT/MOVE backing and a recent off-peg market price.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -77,14 +77,18 @@
         "source": "docs",
         "name": "PicWe proprietary cross-chain bridge (burn/mint + Keeper Network)",
         "url": "https://docs.picwe.org/cross-chain-transfer",
-        "bridgeTypes": ["issuer-native-burn-mint"],
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
         "note": "Self-built burn-on-source/mint-on-destination relayer; docs explicitly disclaim LayerZero/Wormhole/CCIP; signed-and-verified messages executed by PicWe keepers/operators."
       },
       {
         "source": "explorer",
         "name": "Movement weusd_cross_chain_gas relayer (batchMintWeUSDCrossChain)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources",
-        "bridgeTypes": ["issuer-native-burn-mint"],
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
         "note": "cross_mint_role_contract = 0x86e5136... (active PicWe relayer EOA) gates destination minting on Movement; EVM side uses MINTER_ROLE on identical CREATE2 token 0xdd73... held by PicWe admin EOA + mint/redeem contract 0x5D54...."
       }
     ],
@@ -109,7 +113,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "multisig",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Disputed USDC versus USDT/MOVE backing disclosure",

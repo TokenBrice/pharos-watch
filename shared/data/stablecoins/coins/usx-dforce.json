@@ -172,11 +172,11 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x9C5b5D8e00FD6B2E6f94Cf8a5E7a05B49b7a3A9c",
-            "0xE291a7f2FDfE00c2b41f46a0cF1a8A71fFb0c8b0",
-            "0xfa003e08C77c45476BD048C3C70E6b5Cf34f5C2D",
-            "0x5eDd3F3e9b6e49C5e9C7C2b5D0F3aB7d1F2e4C8b",
-            "0xae5bF4E7A6C8d9e2B3F1C0D4E5A7b9C2D3E4F5A6"
+            "0xaeEDC8979dF43645b238C40EBD8aF03e6d9e47d9",
+            "0xE2918A6fb9d1Abe005e7380AdCf11202A3E69586",
+            "0xfa001954D5aFC71C6bBE8a8dFd406C1B5C599781",
+            "0x5eDd0C6037f6F30974E53f5C829073fF8b356fB9",
+            "0xae5b5d00CE2e7848e6c4d6461D5263708F213d10"
           ],
           "threshold": 3,
           "enabledModules": [],

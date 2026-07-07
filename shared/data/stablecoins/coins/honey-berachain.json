@@ -126,7 +126,7 @@
       "coinId": "usdt-tether"
     },
     {
-      "name": "BYUSD (Berachain Yield USD)",
+      "name": "BYUSD (bridged PayPal USD)",
       "pct": 20,
       "risk": "low",
       "coinId": "pyusd-paypal"
@@ -191,7 +191,7 @@
           "coinId": "usdt-tether"
         },
         {
-          "name": "BYUSD (Berachain Yield USD)",
+          "name": "BYUSD (bridged PayPal USD)",
           "holder": "0x36a9975acd3b6f2e2cad4e191967ebf80f99d7ce",
           "token": {
             "chain": "berachain",

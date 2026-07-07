@@ -1520,7 +1520,7 @@
     "llamaId": "20",
     "detailProvider": "defillama",
     "name": "Alchemix USD",
-    "symbol": "ALUSD",
+    "symbol": "alUSD",
     "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin: users borrow against DAI/USDC/USDT collateral and the yield from those deposits gradually repays the debt.",
     "flags": {
       "backing": "crypto-backed",
@@ -4799,6 +4799,16 @@
         "chain": "berachain",
         "address": "0xbca138ded469f5063589bfdfdd4bc68eb1c3f252",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x3af90fda10fc6509df55e959548b1ed3bc3cfa00",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x0d9d741fe423cd5419e4bcb6cb2ffa87afa93ba4",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -5548,12 +5558,12 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.backed.fi/"
+        "url": "https://assets.backed.fi/legal-documentation"
       }
     ],
     "jurisdiction": {
-      "country": "Switzerland",
-      "regulator": "FINMA",
+      "country": "Jersey",
+      "regulator": "JFSC",
       "license": "Swiss DLT Act registered uncertificated securities"
     },
     "mintAuthority": {
@@ -5571,7 +5581,7 @@
           "sources": [
             {
               "label": "Backed Finance docs",
-              "url": "https://docs.backed.fi/"
+              "url": "https://assets.backed.fi/legal-documentation"
             }
           ],
           "evidence": "Backed Assets mints bC3M against custodied AMUNDI ETF holdings via KYC-gated primary issuance and retains transfer-agent freeze/burn authority over balances; no permissionless or user-collateralized mint route exists."
@@ -5616,7 +5626,7 @@
         "sources": [
           {
             "label": "Backed Finance docs",
-            "url": "https://docs.backed.fi/"
+            "url": "https://assets.backed.fi/legal-documentation"
           },
           {
             "label": "Backed token Ethereum contract",
@@ -5679,7 +5689,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
@@ -5722,7 +5732,7 @@
       "sources": [
         {
           "label": "Backed docs",
-          "url": "https://docs.backed.fi/"
+          "url": "https://assets.backed.fi/legal-documentation"
         },
         {
           "label": "L2BEAT Across",
@@ -5823,9 +5833,8 @@
       "reviewedAt": "2026-05-12"
     },
     "status": "pre-launch",
-    "expectedLaunchDate": "2026-Q2",
     "launchPhase": "auditing",
-    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); GitHub shows an expanded multi-collateral scope (ETH, wstETH, rETH, cbETH, cbBTC, AERO, and LP tokens) with launch parameters updated for safety; not yet deployed to mainnet, with the Q2 2026 target window (ends June 30) nearing and no official slip announced",
+    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); GitHub shows an expanded multi-collateral scope (ETH, wstETH, rETH, cbETH, cbBTC, AERO, and LP tokens) with launch parameters updated for safety. The prior Q2 2026 target window ended on June 30, 2026 without a public mainnet deployment or sourced replacement launch window.",
     "milestones": [
       {
         "date": "2026-04-03",
@@ -6237,7 +6246,7 @@
       "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
       "attestorTier": "niche",
       "cadence": "daily",
-      "attestorJurisdiction": "Switzerland"
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
@@ -6663,7 +6672,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/BalancedDAO"
+        "url": "https://x.com/BalancedDeFi"
       },
       {
         "label": "Docs",
@@ -6758,7 +6767,7 @@
       "reviewedAt": "2026-05-25"
     },
     "chainTier": "mature-alt-l1",
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
@@ -7267,9 +7276,9 @@
     "governanceQuality": "regulated-entity",
     "status": "pre-launch",
     "announcedDate": "2025-12",
-    "expectedLaunchDate": "2026-H1",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "Latin America's largest stock exchange (B3/São Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), OTC and digital-assets director Humberto Costa clarified that the B3RL settlement stablecoin — backed by cash and government bonds and built on Polygon — targets H1 2026, while the tokenized-share registry/tokenizer advances in H2 2026 (earlier coverage that placed the stablecoin itself in H2 conflated it with the registry). Fills the gap left by the narrowing of Brazil's Drex CBDC scope; ticker B3RL is cited in Brazilian press but not yet officially confirmed by B3 IR/CVM, and no on-chain deployment was visible as of late June 2026",
+    "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), coverage indicated a later-2026 / H2 2026 window for B3RL and the tokenized-asset registry; the prior H1 2026 window has elapsed with no on-chain deployment visible. Stablecoin backing is expected to include cash and government bonds, with Polygon cited in Brazilian press but ticker B3RL not yet officially confirmed by B3 IR/CVM.",
     "featuredContent": [
       {
         "type": "article",
@@ -7325,10 +7334,6 @@
       {
         "date": "2026-H1",
         "setOn": "2026-06-07"
-      },
-      {
-        "date": "2026-H2",
-        "setOn": "2026-06-28"
       }
     ]
   },
@@ -9537,7 +9542,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "CADC is issued by Loon (FINTRAC-registered MSB); on-chain owner/masterMinter across all five deployments is a set of Gnosis Safe multisigs with identical 3 signers (2/3 threshold) operated by the issuer.",
+      "summary": "CADC is issued by Loon (FINTRAC-registered MSB); on-chain owner/masterMinter across the EVM deployments is a set of Gnosis Safe multisigs with identical 3 signers (2/3 threshold) operated by the issuer.",
       "controls": [
         {
           "label": "Loon CADC issuance backend",
@@ -9668,6 +9673,11 @@
         "chain": "linea",
         "address": "0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6",
         "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -13549,31 +13559,31 @@
     "deploymentModel": "third-party-bridge",
     "custodyModel": "onchain",
     "bridgeRouteRisk": {
-      "tier": "liquidity-or-intent-route",
-      "summary": "Cap cUSD is deployed on multiple chains and the candidate route evidence points to Across. Across is an intent/liquidity framework, so route execution and solver/liquidity availability are material to cross-chain movement.",
+      "tier": "external-lock-mint",
+      "summary": "Cap cUSD uses LayerZero OFT/Stargate-style omnichain routing for multichain deployments rather than Across intent/liquidity bridging. Because durable cross-chain supply depends on the external OFT messaging stack, Pharos scores the route as external lock/mint exposure.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "confidence": "verified",
       "protocols": [
         {
-          "source": "l2beat",
-          "name": "Across",
-          "slug": "across",
-          "url": "https://l2beat.com/interop/protocols/across",
+          "source": "docs",
+          "name": "LayerZero OFT / Stargate",
+          "slug": "layerzero",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard",
           "bridgeTypes": [
-            "intent",
-            "liquidity"
+            "oft",
+            "burnAndMint"
           ]
         }
       ],
       "sources": [
         {
-          "label": "Cap docs",
-          "url": "https://docs.cap.app/"
+          "label": "Cap MegaETH launch",
+          "url": "https://www.cap.app/blog/cap-launches-on-megaeth"
         },
         {
-          "label": "L2BEAT Across",
-          "url": "https://l2beat.com/interop/protocols/across"
+          "label": "LayerZero OFT standard",
+          "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
         }
       ]
     },
@@ -13675,7 +13685,7 @@
     "detailProvider": "defillama",
     "name": "Mento Dollar",
     "symbol": "USDm",
-    "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo (formerly cUSD), backed by a diversified crypto and stablecoin reserve at roughly 1.36x collateral.",
+    "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and CDP/liquidity infrastructure.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -13684,7 +13694,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento reserve holding sUSDS (~44%), CELO (~14%), USDC (~13%), USDT (~10%), EURC (~10%), plus smaller positions in axlEUROC, stETH, axlUSDC, and AUSD; overcollateralized at ~1.25×",
+    "collateral": "Mento reserve holding AUSD (~41%), CELO (~30%), USDC (~14%), axlEUROC (~8%), USDT (~6%), and smaller EURC/axlUSDC balances; reserve composition is pulled from the live Mento reserve API and changes over time.",
     "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
@@ -13698,11 +13708,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://celo.org/"
+        "url": "https://www.mento.org/"
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/celoorg"
+        "url": "https://x.com/MentoLabs"
       },
       {
         "label": "Docs",
@@ -13918,55 +13928,42 @@
     },
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 44,
+        "name": "AUSD reserve holdings",
+        "pct": 41.3,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "ausd-agora",
+        "depType": "collateral"
       },
       {
-        "name": "CELO (native token)",
-        "pct": 14,
+        "name": "CELO reserve holdings",
+        "pct": 30.4,
         "risk": "high"
       },
       {
-        "name": "USDC (Circle)",
-        "pct": 13,
+        "name": "USDC reserve holdings",
+        "pct": 13.8,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "collateral"
       },
       {
-        "name": "USDT (Tether)",
-        "pct": 10,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "EURC (Circle euro stablecoin)",
-        "pct": 10,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "axlEUROC (Axelar-bridged EUROC)",
-        "pct": 5,
+        "name": "axlEUROC reserve holdings",
+        "pct": 7.8,
         "risk": "medium"
       },
       {
-        "name": "stETH (Lido staked ETH)",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "axlUSDC (Axelar-bridged USDC)",
-        "pct": 1,
-        "risk": "medium",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "AUSD (Agora dollar)",
-        "pct": 1,
+        "name": "USDT reserve holdings",
+        "pct": 6.1,
         "risk": "low",
-        "coinId": "ausd-agora"
+        "coinId": "usdt-tether",
+        "depType": "collateral"
+      },
+      {
+        "name": "EURC and other reserve dust",
+        "pct": 0.6,
+        "risk": "low",
+        "coinId": "eurc-circle",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -14932,7 +14929,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "canonical-bridge",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
       "tier": "canonical-rollup-bridge",
@@ -16018,11 +16015,10 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
+    "collateral": "Ethereum: USDT0/USDC0-style whitelisted stablecoin and yield-bearing collateral in isolated dUSD reserves. Fraxtal: frxUSD/sfrxUSD and other Frax-aligned USD collateral in isolated reserves. Katana: whitelisted USD stablecoins and yieldcoins in isolated reserves. Sonic: whitelisted USD stablecoins/yieldcoins such as frxUSD/sfrxUSD in isolated reserves. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
     "mechanismArchetype": "algorithmic",
     "geckoId": "dtrinity-usd",
-    "cmcSlug": "dtrinity-dusd",
     "links": [
       {
         "label": "Website",
@@ -16948,7 +16944,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/bluefinapp"
+        "url": "https://x.com/EmberProtocol"
       }
     ],
     "mintAuthority": {
@@ -17977,6 +17973,11 @@
         "chain": "tempo",
         "address": "0x20c0000000000000000000009a4a4b17e0dc6651",
         "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -18282,6 +18283,11 @@
       {
         "chain": "solana",
         "address": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "decimals": 6
+      },
+      {
+        "chain": "cronos",
+        "address": "0xa6de01a2d62c6b5f3525d768f34d276652c554c8",
         "decimals": 6
       }
     ],
@@ -19970,7 +19976,7 @@
     "marketAvailability": "market-traded",
     "name": "Quantoz EURQ",
     "symbol": "EURQ",
-    "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
+    "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short-dated government bonds.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -20318,7 +20324,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "EURe issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
+      "summary": "EURR issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
       "mintIncidents": [
         {
           "date": "2026-05-24",
@@ -21891,7 +21897,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/spiko_eu"
+        "url": "https://x.com/Spiko_finance"
       },
       {
         "label": "Docs",
@@ -22101,11 +22107,6 @@
         "type": "info",
         "title": "Multi-chain EU-regulated MMF",
         "message": "EUTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar, with cross-chain transfers relayed via Chainlink CCIP where supported."
-      },
-      {
-        "type": "info",
-        "title": "Share-class currency mismatch",
-        "message": "EUTBL is a EUR-denominated share class of Spiko U.S. T-Bills Money Market Fund, so its NAV reflects both short-term U.S. Treasury exposure and EUR/USD foreign-exchange movement."
       }
     ],
     "yieldConfig": {
@@ -22485,12 +22486,12 @@
           "safe": {
             "version": "1.3.0",
             "owners": [
-              "0x389e3d1c46595af7335f8c6d3e403ce2e8a9cf8a",
-              "0x9ed2cdcaae0d3dec193be247b1a529191551be1a",
-              "0x2f999ebfba09fbaf39cac62be4e7dabe33cc9ac3",
+              "0x0a175e478b35fa4d786546ba8b61abd400c600bf",
+              "0x5ca20df7060d1240a3d0a6794a38dff11a897096",
+              "0x71625e859f7e229fae437c1f5acca9c6dc31db0d",
               "0xf37898233e4f5bfca4c666f2d3e3314b7c29b760",
-              "0xa79c3a4cc52ff9d3eb40ddc5e921bdde2a11f760",
-              "0xbe08be07cddbb2dd51df4cbf07a0451fcb4fa9e"
+              "0xcc8f1bde0d42017c0e52321e69325f9b26f7c2d6",
+              "0x68786d7a4ea9c85245edebfe3e399a7ec3a6f1c3"
             ],
             "threshold": 3,
             "enabledModules": [],
@@ -22499,7 +22500,7 @@
             "observedBlock": 37553335,
             "source": "onchain"
           },
-          "evidence": "Admin chain traced at HyperEVM block 37553335: feUSD ProxyAdmin (0x44a600c0) owner() = 0xf42fdd95 (UUPS proxy → impl 0xd2fe30); 0xf42f owns the Felix AddressesRegistry (0x9de1e57049) per owner() call. The ProxyAdmin of 0xf42f (0xdf1293b4) owner() = 0x699090e73c4077ef2af42773b31788c6564f079c. That Safe: getOwners() = 6 addresses, slot3=6 (ownerCount), slot4=3 (threshold), masterCopy at slot0=0xfb1bffc9d739b8d520daf37df666da4c687191ea (VERSION=1.3.0), getModules()=empty, guard slot=0x0."
+          "evidence": "Latest HyperEVM getOwners() on Safe 0x699090e73c4077ef2af42773b31788c6564f079c returned 6 owners, threshold 3, no modules, no guard. This refresh replaces the prior stale owner snapshot that also contained a malformed 39-hex address."
         }
       ],
       "review": {
@@ -22513,7 +22514,7 @@
             "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
           }
         ],
-        "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
+        "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11"
       }
@@ -26475,6 +26476,11 @@
         "chain": "plasma",
         "address": "0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
         "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -27203,7 +27209,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
+    "collateral": "Each GRAMG is directly collateralized by PAXG held on-chain as reserve collateral; GRAMG is minted and burned as equivalent PAXG is added to or removed from the reserve wallet. The underlying PAXG is gold-backed through Paxos custody, while Token Teknoloji also discloses physical-gold reserve claims including Turkish Central Bank custody.",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-gold",
@@ -28781,7 +28787,7 @@
       },
       {
         "chain": "stellar",
-        "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB-1",
+        "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB",
         "decimals": 7
       }
     ],
@@ -29600,9 +29606,9 @@
     "custodyModel": "institutional-regulated",
     "status": "pre-launch",
     "announcedDate": "2026-03",
-    "expectedLaunchDate": "2026-Q2",
+    "expectedLaunchDate": "2026-H2",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments; no tokens are yet in public circulation and no deployment contract address has been disclosed as of early June, with the Q2 window (ends June 30) nearly closed",
+    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token and no disclosed deployment contract address, so Pharos now tracks the launch as a broader H2 2026 rollout pending a sourced narrower date.",
     "featuredContent": [
       {
         "type": "article",
@@ -29639,6 +29645,12 @@
         "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
         "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
         "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026-Q2",
+        "setOn": "2026-06-07"
       }
     ]
   },
@@ -30670,7 +30682,7 @@
         "coinId": "usdt-tether"
       },
       {
-        "name": "BYUSD (Berachain Yield USD)",
+        "name": "BYUSD (bridged PayPal USD)",
         "pct": 20,
         "risk": "low",
         "coinId": "pyusd-paypal"
@@ -30735,7 +30747,7 @@
             "coinId": "usdt-tether"
           },
           {
-            "name": "BYUSD (Berachain Yield USD)",
+            "name": "BYUSD (bridged PayPal USD)",
             "holder": "0x36a9975acd3b6f2e2cad4e191967ebf80f99d7ce",
             "token": {
               "chain": "berachain",
@@ -31303,7 +31315,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig + timelock controls",
+    "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig controls",
     "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "idrx",
@@ -31916,7 +31928,7 @@
       "reviewer": "Codex FreezeWatch audit",
       "reviewedAt": "2026-05-25"
     },
-    "chainTier": "established-alt-l1",
+    "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "bridgeRouteRisk": {
@@ -32901,6 +32913,11 @@
         "chain": "monad",
         "address": "0xad48f183e586e92a591a610397ebf534609df797",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -33391,6 +33408,11 @@
         "chain": "avalanche",
         "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "decimals": 18
+      },
+      {
+        "chain": "klaytn",
+        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -33403,7 +33425,7 @@
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
       "tier": "issuer-native-burn-mint",
-      "summary": "JPYC has official deployments across Ethereum, Polygon, and Avalanche. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
+      "summary": "JPYC has official deployments across Ethereum, Polygon, Avalanche, and Kaia. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
       "confidence": "probable",
@@ -33869,7 +33891,7 @@
     },
     "collateral": "USDT (Optimism) and USDC (Base) deposited by users to mint JPYT; locked collateral is automatically transferred into Aave for safekeeping rather than held directly by DePhaser, backing JPYT against the yen",
     "pegMechanism": "Users lock USDT (Optimism) or USDC (Base) to mint JPYT priced off real-time USD/JPY rates from Chainlink and Pyth oracles; the deposited collateral is routed into Aave, and redemption burns JPYT to return the underlying USDT or USDC",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dephaser-jpy",
     "links": [
       {
@@ -34698,7 +34720,7 @@
         "risk": "medium"
       },
       {
-        "name": "USDC/USDT bridge reserves",
+        "name": "USDC.e/USDT.e/ctUSD bridge reserves",
         "pct": 0.001,
         "risk": "low",
         "blacklistable": true
@@ -34815,13 +34837,24 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "native-multichain",
+    "deploymentModel": "third-party-bridge",
     "bridgeRouteRisk": {
-      "tier": "issuer-native-burn-mint",
-      "summary": "JUSD is tracked on BSC and Polygon and source materials present it as the protocol stable token rather than a bridged representation. No third-party bridge controls were resolved, so the route is reviewed as protocol-native multichain issuance.",
+      "tier": "external-lock-mint",
+      "summary": "JUSD is native on Polygon, while the BSC deployment is a Chainport-bridged BridgeMintableToken with minting gated by classified authority / Chainport-controlled admin infrastructure. Because durable BSC supply depends on a third-party bridge mint route, Pharos scores the route as external lock/mint exposure.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
-      "confidence": "manual-review",
+      "confidence": "verified",
+      "protocols": [
+        {
+          "source": "docs",
+          "name": "Chainport",
+          "slug": "chainport",
+          "url": "https://www.chainport.io/",
+          "bridgeTypes": [
+            "lockAndMint"
+          ]
+        }
+      ],
       "sources": [
         {
           "label": "JUSD website",
@@ -35672,6 +35705,26 @@
         "chain": "bsc",
         "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
         "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3e6847e5420e1e529619379b004c2f7cc61d0d0d",
+        "decimals": 0
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd9d335045dd7cfec24ca8bd2ba18102cad6ae1e0",
+        "decimals": 0
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+        "decimals": 0
+      },
+      {
+        "chain": "plume",
+        "address": "0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f",
+        "decimals": 0
       }
     ],
     "blacklistabilityReview": {
@@ -36505,7 +36558,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BNB, ETH, and LSTs via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
+    "collateral": "BNB, ETH, LSTs, and BTCB via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
     "pegMechanism": "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
     "mechanismArchetype": "cdp",
     "geckoId": "helio-protocol-hay",
@@ -37186,7 +37239,7 @@
     "detailProvider": "coingecko",
     "name": "LeverUp USD",
     "symbol": "lvUSD",
-    "oneLiner": "lvUSD is LeverUp's liquidity-layer stablecoin on Monad, minted against USDC and MON inside the perpetuals trading engine rather than a standard reserve.",
+    "oneLiner": "lvUSD is LeverUp's Monad liquidity-layer stablecoin minted against USDC; MON backs the separate LVMON token.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -37195,7 +37248,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
+    "collateral": "USDC collateral supporting LeverUp's liquidity-layer stablecoin (lvUSD) for perpetuals and margin trading; MON collateral backs the separate LVMON token.",
     "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
     "mechanismArchetype": "algorithmic",
     "geckoId": "leverup-usd",
@@ -37217,7 +37270,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open positions; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
+      "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
       "controls": [
         {
           "chain": "monad",
@@ -37225,10 +37278,10 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "lvUSD is auto-minted by the LeverUp trading engine when a trader opens a position using USDC/MON collateral (one independent pool per collateral); all positions are denominated and settled in lvUSD inside the VMMV, so supply is tied to open collateralized positions.",
+          "capDescription": "lvUSD is auto-minted by the LeverUp trading engine when a trader opens a position using USDC collateral. MON collateral mints the separate LVMON token, not lvUSD.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "LeverUp docs state the system automatically mints lvUSD when a trader opens a position with USDC (or MON) collateral, with each token managed in its own trading pool under the VMMV design."
+          "evidence": "LeverUp docs state the system automatically mints lvUSD when a trader opens a position with USDC collateral; MON collateral backs the separate LVMON token."
         },
         {
           "chain": "monad",
@@ -37301,14 +37354,9 @@
     "reserves": [
       {
         "name": "USDC liquidity-layer collateral",
-        "pct": 50,
+        "pct": 100,
         "risk": "low",
         "coinId": "usdc-circle"
-      },
-      {
-        "name": "MON liquidity-layer collateral",
-        "pct": 50,
-        "risk": "high"
       }
     ],
     "notices": [
@@ -39270,7 +39318,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
+      "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/11 Safe with no modules or guard detected.",
       "mintIncidents": [
         {
           "date": "2024-01-30",
@@ -39328,27 +39376,27 @@
           "authorityType": "safe",
           "directMintAbility": "direct",
           "threshold": 5,
-          "signerCount": 10,
+          "signerCount": 11,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "owners": [
+              "0xA765C72712F0DeBFa0fd16564940f7A2c9E0eae1",
               "0x6429602699fEC6D205e0b9531C7f33476BA11Fb0",
-              "0x941ec857134B13c255d6EBEeD1623b1904378De9",
+              "0xfD694815E4038A03145B408553A5b06efd13D5F1",
               "0xA7499Aa6464c078EeB940da2fc95C6aCd010c3Cc",
               "0x740d25cFda3aF381D90B6800C245E670E7841cd8",
               "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
               "0xf7f8eeB9BD56E2480b4A5903254B69a83f0c243b",
-              "0x1081246e16c36fb6A9c1F4E6e28B27CeE28c01CA",
+              "0x557c58E7b76022FD99BE8F4688383963135972fb",
               "0x7897531b47C6dB37570b4d2441a4484Dd5f97133",
-              "0x3c1Cb7D4c0ce0dc72eDc7Ea06acC866e62a8f1d8",
+              "0xBF79E8CA5719C24AB606B9cB3Fa85C3c5fF339BB",
               "0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a"
             ],
             "threshold": 5,
             "enabledModules": [],
             "guard": "0x0000000000000000000000000000000000000000",
             "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-            "observedBlock": 25165875,
             "source": "safe-api"
           },
           "sources": [
@@ -39361,7 +39409,7 @@
               "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
             }
           ],
-          "evidence": "MIM.owner() returned this Safe. Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox."
+          "evidence": "MIM.owner() returns this Safe. Safe Transaction Service returned threshold 5 with 11 current owners, no modules, and nonce 260; Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox."
         }
       ],
       "review": {
@@ -39379,7 +39427,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
           }
         ],
-        "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/10 Safe owner with direct owner-controlled mint functions on the token.",
+        "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token.",
         "reviewer": "Codex mint-authority top100 batch-c",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -40333,7 +40381,7 @@
     "detailProvider": "coingecko",
     "name": "defi.money",
     "symbol": "MONEY",
-    "oneLiner": "MONEY is defi.money's crvUSD-style stablecoin minted against overcollateralized loans of WBTC, ETH, and other approved collateral on Arbitrum and Optimism.",
+    "oneLiner": "MONEY is defi.money's CDP-backed dollar stablecoin deployed on Arbitrum, Optimism, and Base.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -40476,28 +40524,20 @@
       ]
     },
     "bridgeRouteRisk": {
-      "tier": "canonical-rollup-bridge",
-      "summary": "MONEY is deployed on Arbitrum, Optimism, and Base, all Ethereum rollup ecosystems with canonical bridge infrastructure. No external bridge protocol evidence was resolved, so the route is reviewed as canonical rollup bridging/native rollup deployment.",
+      "tier": "external-lock-mint",
+      "summary": "MONEY is deployed on Arbitrum, Optimism, and Base through LayerZero OFT-style omnichain infrastructure. Because durable cross-chain supply depends on external LayerZero messaging rather than only canonical rollup bridges, Pharos scores the route as external lock/mint exposure.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "confidence": "verified",
       "protocols": [
         {
           "source": "l2beat",
-          "name": "Arbitrum canonical bridge",
-          "slug": "arbitrum",
-          "url": "https://l2beat.com/scaling/projects/arbitrum",
+          "name": "LayerZero",
+          "slug": "layerzero",
+          "url": "https://l2beat.com/interop/protocols/layerzero",
           "bridgeTypes": [
-            "canonicalBridge"
-          ]
-        },
-        {
-          "source": "l2beat",
-          "name": "OP Mainnet standard bridge",
-          "slug": "op-mainnet",
-          "url": "https://l2beat.com/scaling/projects/op-mainnet",
-          "bridgeTypes": [
-            "canonicalBridge"
+            "oft",
+            "lockAndMint"
           ]
         }
       ],
@@ -40507,12 +40547,8 @@
           "url": "https://docs.defi.money/"
         },
         {
-          "label": "Arbitrum token bridging docs",
-          "url": "https://docs.arbitrum.io/how-arbitrum-works/deep-dives/token-bridging"
-        },
-        {
-          "label": "Optimism standard bridge docs",
-          "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+          "label": "LayerZero OFT reference",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
         }
       ]
     },
@@ -44242,7 +44278,7 @@
             "url": "https://l2beat.com/bridges/projects/synapse"
           }
         ],
-        "evidence": "At Ethereum block 25295203: NUSD token (0x1B84765…) Blockscout verified as 'LPToken'. owner() = 0x1116898… (SwapFlashLoan pool, confirmed Blockscout). Pool's owner() = 0x67f60b… (GnosisSafeProxy): 3 owners, 2/6 threshold, Safe v1.3, no modules, no guard. OwnershipTransferred log shows 3 transfers; current owner is the 2/3 Safe. NUSD mint is permissioned to the pool contract only; pool admin is a 2-of-3 Safe with no modules.",
+        "evidence": "At Ethereum block 25295203: NUSD token (0x1B84765…) Blockscout verified as 'LPToken'. owner() = 0x1116898… (SwapFlashLoan pool, confirmed Blockscout). Pool's owner() = 0x67f60b… (GnosisSafeProxy): 3 owners, 2/3 threshold, Safe v1.3, no modules, no guard. OwnershipTransferred log shows 3 transfers; current owner is the 2/3 Safe. NUSD mint is permissioned to the pool contract only; pool admin is a 2-of-3 Safe with no modules.",
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11"
       }
@@ -44859,7 +44895,7 @@
     "id": "onyc-onre",
     "detailProvider": "coingecko",
     "name": "Onchain Yield Coin",
-    "symbol": "ONYC",
+    "symbol": "ONyc",
     "oneLiner": "ONYC is a Solana-based NAV-accreting yield token backed by OnRe-managed structured insurance and reinsurance positions; not a hard $1 peg.",
     "flags": {
       "backing": "rwa-backed",
@@ -45745,7 +45781,7 @@
       },
       "authorizationStatus": "issuer-announced-intent",
       "issuerPathway": "federal-qualified-nonbank",
-      "issuerEntity": "Bridge Building Inc. (OCC national trust bank applicant; wholly owned by Stripe)",
+      "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC — the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
       "primaryFederalRegulator": "OCC",
@@ -46120,7 +46156,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "PC0000031 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0xdc3dd9…b667), with no permissionless mint route.",
+      "summary": "PC0000031 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…95fe) calling the per-deal contract (0xdc3dd9…b667), with no permissionless mint route.",
       "controls": [
         {
           "chain": "zksync",
@@ -46253,7 +46289,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "PC0000033 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x9a803e…a70), with no permissionless mint route.",
+      "summary": "PC0000033 is a Tradable-issued senior secured term note on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…95fe) calling the per-deal contract (0x9a803e…a70), with no permissionless mint route.",
       "controls": [
         {
           "chain": "zksync",
@@ -46379,7 +46415,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "PC0000089 is a Tradable-issued LatAm residential SSTL on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x3915a4…902), with no permissionless mint route.",
+      "summary": "PC0000089 is a Tradable-issued LatAm residential SSTL on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…95fe) calling the per-deal contract (0x3915a4…902), with no permissionless mint route.",
       "controls": [
         {
           "chain": "zksync",
@@ -46508,7 +46544,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "PC0000101 is a Tradable-issued legal-financing receivables token on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…bcfe) calling the per-deal contract (0x02d539…0eb), with no permissionless mint route.",
+      "summary": "PC0000101 is a Tradable-issued legal-financing receivables token on zkSync; tokens are minted only by Tradable's permissioned EOA (0x1b8926…95fe) calling the per-deal contract (0x02d539…0eb), with no permissionless mint route.",
       "controls": [
         {
           "chain": "zksync",
@@ -48008,7 +48044,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "chainTier": "stage1-l2",
+    "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
       {
@@ -50165,55 +50201,39 @@
     },
     "reserves": [
       {
-        "name": "RLUSD Euler lending markets",
+        "name": "Morpho Sentora PRIME",
         "pct": 37.7,
-        "risk": "medium",
-        "coinId": "rlusd-ripple",
-        "depType": "collateral"
+        "risk": "high"
       },
       {
-        "name": "GHO Aave and Fluid lending markets (Plasma)",
-        "pct": 22.8,
+        "name": "Pendle PT USDat tokenized-treasury principal token",
+        "pct": 20.9,
+        "risk": "high"
+      },
+      {
+        "name": "GHO Aave lending markets (Plasma and Monad)",
+        "pct": 12.7,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "collateral"
       },
       {
-        "name": "Hastra PRIME RWA credit allocation",
-        "pct": 12.2,
-        "risk": "high"
-      },
-      {
-        "name": "Pendle PT USDat tokenized-treasury principal token",
-        "pct": 7.2,
-        "risk": "high"
-      },
-      {
-        "name": "AUSD Morpho lending markets",
-        "pct": 6.5,
-        "risk": "medium",
-        "coinId": "ausd-agora",
-        "depType": "collateral"
-      },
-      {
-        "name": "USD1 Morpho lending markets",
-        "pct": 6.3,
+        "name": "USD1 Morpho Steakhouse High Yield lending markets",
+        "pct": 12.1,
         "risk": "medium",
         "coinId": "usd1-world-liberty-financial",
         "depType": "collateral"
       },
       {
-        "name": "USDC Morpho lending and direct liquidity",
-        "pct": 5.4,
-        "risk": "medium",
-        "coinId": "usdc-circle",
-        "depType": "collateral"
+        "name": "Hastra PRIME RWA credit allocation",
+        "pct": 11.3,
+        "risk": "high"
       },
       {
-        "name": "PYUSD Morpho and Kamino lending markets",
-        "pct": 1.9,
+        "name": "USDC Morpho lending and direct liquidity",
+        "pct": 5.3,
         "risk": "medium",
-        "coinId": "pyusd-paypal",
+        "coinId": "usdc-circle",
         "depType": "collateral"
       }
     ],
@@ -51339,6 +51359,11 @@
         "chain": "bevm",
         "address": "0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
         "decimals": 18
+      },
+      {
+        "chain": "xlayer",
+        "address": "0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -51575,6 +51600,21 @@
         "chain": "monad",
         "address": "0x9648db94f1e6b19e7d755585542981f97dc806c6",
         "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0xb9827268ebcc4ea7b105cfc787a92c612629a3f1",
+        "decimals": 18
+      },
+      {
+        "chain": "megaeth",
+        "address": "0x68fe7f83ba331e32d9fa3def98a5538176635339",
+        "decimals": 18
+      },
+      {
+        "chain": "sei",
+        "address": "0xd84a49df125f6744018518117fe59a86d39eae75",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -51590,29 +51630,43 @@
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
       "tier": "external-lock-mint",
-      "summary": "savUSD is an avUSD variant with deployments spanning Avalanche and EVM chains; the available candidate evidence points to Avalanche Bridge lock/mint routing rather than issuer burn/mint controls.",
+      "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external lock/mint exposure.",
       "reviewedAt": "2026-06-13",
       "reviewer": "Codex bridge route review",
-      "confidence": "probable",
+      "confidence": "verified",
       "protocols": [
         {
-          "source": "l2beat",
-          "name": "Avalanche Bridge",
-          "slug": "avalanche",
-          "url": "https://l2beat.com/interop/protocols/avalanche",
+          "source": "docs",
+          "name": "Chainlink CCIP",
+          "slug": "chainlink-ccip",
+          "url": "https://docs.chain.link/ccip",
           "bridgeTypes": [
-            "lockAndMint"
+            "burnAndMint",
+            "lockAndRelease"
+          ]
+        },
+        {
+          "source": "l2beat",
+          "name": "LayerZero",
+          "slug": "layerzero",
+          "url": "https://l2beat.com/interop/protocols/layerzero",
+          "bridgeTypes": [
+            "oft"
           ]
         }
       ],
       "sources": [
         {
-          "label": "Avant docs",
-          "url": "https://docs.avantprotocol.com/"
+          "label": "Avant contract addresses",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses"
         },
         {
-          "label": "L2BEAT Avalanche Bridge",
-          "url": "https://l2beat.com/interop/protocols/avalanche"
+          "label": "Chainlink CCIP docs",
+          "url": "https://docs.chain.link/ccip"
+        },
+        {
+          "label": "LayerZero OFT reference",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
         }
       ]
     },
@@ -51913,12 +51967,12 @@
     "reserves": [
       {
         "name": "Cash and cash equivalents",
-        "pct": 50,
+        "pct": 71,
         "risk": "very-low"
       },
       {
         "name": "Short-duration U.S. Treasury securities",
-        "pct": 50,
+        "pct": 29,
         "risk": "very-low"
       }
     ],
@@ -55241,7 +55295,7 @@
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
-    "custodyModel": "institutional-regulated",
+    "custodyModel": "onchain",
     "governanceQuality": "wrapper",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault",
@@ -55285,7 +55339,7 @@
       "yieldSource": "Cap savings (stcUSD)",
       "yieldType": "lending-vault"
     },
-    "launchDate": "2025-07-08"
+    "launchDate": "2025-08-19"
   },
   {
     "id": "steakusdc-steakhouse",
@@ -56086,7 +56140,6 @@
     "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "esui-dollar",
-    "protocolSlug": "sui",
     "links": [
       {
         "label": "Website",
@@ -56208,7 +56261,6 @@
     "collateral": "USDC supplied to the Venus Protocol USDC lending market on BNB Chain via HedgeCore's StrategyRouter and Venus USD vault; the on-chain vUSDC lending position is the only backing (no fiat reserve or attestation)",
     "pegMechanism": "Users deposit USDC to mint soul-bound sUSD 1:1; Venus lending interest accrues in vUSDC and is distributed to holders by operator-triggered rewardMint() calls (93% to sUSD holders, 7% protocol fee); liquidity is provided only through a one-way hUSDC->sUSD ERC-20 wrapper (no reverse conversion), and redemption is operator-controlled rather than a free liquid backstop",
     "geckoId": "staked-usd-coin",
-    "protocolSlug": "hedgecore",
     "links": [
       {
         "label": "Website",
@@ -56588,7 +56640,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
+    "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025. Pooled SNX remained the primary legacy backing, while delta-neutral basis-trade vaults, protocol treasury activity, and buybacks functioned as peg-defense and recovery layers rather than the main reserve base.",
     "pegMechanism": "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
     "mechanismArchetype": "cdp",
     "geckoId": "nusd",
@@ -57960,11 +58012,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://spark.fi/"
+        "url": "https://sky.money/"
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/sparkdotfi"
+        "url": "https://x.com/SkyEcosystem"
       },
       {
         "label": "Docs",
@@ -58725,7 +58777,7 @@
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
       "tier": "external-validated-network",
-      "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, Base, and Plasma are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
+      "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, and Base are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
       "reviewedAt": "2026-06-21",
       "reviewer": "Pharos bridge-route re-verification",
       "confidence": "verified",
@@ -59360,7 +59412,7 @@
     ],
     "jurisdiction": {
       "country": "Georgia",
-      "regulator": "Kutaisi Free Industrial Zone (FEZ)",
+      "regulator": "Kutaisi Free Industrial Zone (FIZ)",
       "license": "Virtual Asset Service Provider (VASP)"
     },
     "mintAuthority": {
@@ -60456,7 +60508,7 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "proofOfReserves": {
       "type": "real-time",
-      "url": "https://tori.finance/",
+      "url": "https://app.tori.finance/transparency",
       "provider": "Accountable",
       "attestorTier": "niche",
       "cadence": "real-time"
@@ -62680,8 +62732,8 @@
     ],
     "jurisdiction": {
       "country": "United States",
-      "regulator": "South Dakota Division of Banking",
-      "license": "South Dakota Trust Charter"
+      "regulator": "Office of the Comptroller of the Currency (OCC)",
+      "license": "National Trust Bank Charter (BitGo Bank & Trust, N.A.)"
     },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -64539,7 +64591,6 @@
     "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdb",
-    "pythFeedId": "0xf85d863ce3b640bf85307be333dedc563aa3a27961c9042f89ed8300ebd3c855",
     "links": [
       {
         "label": "Website",
@@ -65273,11 +65324,6 @@
       {
         "chain": "osmosis",
         "address": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
-        "decimals": 6
-      },
-      {
-        "chain": "stacks",
-        "address": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
         "decimals": 6
       },
       {
@@ -66427,11 +66473,6 @@
         "decimals": 18
       },
       {
-        "chain": "polygon",
-        "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "decimals": 18
-      },
-      {
         "chain": "avalanche",
         "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "decimals": 18
@@ -66643,7 +66684,7 @@
     "detailProvider": "defillama",
     "name": "Aster USDF",
     "symbol": "USDF",
-    "oneLiner": "USDF is Astherus's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
+    "oneLiner": "USDF is Aster's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -67875,7 +67916,7 @@
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2026-04-30",
+      "latestReportDate": "2026-05-31",
       "notes": "Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank — not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted — the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO.",
       "references": [
         {
@@ -68002,13 +68043,18 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "U.S. Treasury bills",
-        "pct": 80,
+        "name": "Money market funds",
+        "pct": 74,
         "risk": "very-low"
       },
       {
-        "name": "Cash and cash equivalents",
-        "pct": 20,
+        "name": "BUIDL (BlackRock tokenized MMF)",
+        "pct": 25,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash",
+        "pct": 1,
         "risk": "very-low"
       }
     ],
@@ -68956,7 +69002,7 @@
           "directMintAbility": "none",
           "canRaiseCap": false,
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1955f5 has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
+          "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
         }
       ],
       "review": {
@@ -69456,8 +69502,8 @@
           "safe": {
             "owners": [
               "0xe3731a0ad5e59c3083fd899e234b7b2361d25b33",
-              "0x73a2063e47a6e20420b40a4655327de631ca70e",
-              "0x0e313794f9a827956d939c0df12732cfdeb5cf27e",
+              "0x73a2063e47a6e20420b40a4655327de631ca70e0",
+              "0xe313794f9a827956d939c0df12732cfdeb5cf27e",
               "0xd1e25f0e9193d7d69acf0348ab6b7936801090ec",
               "0xd2668a22ecbe34cf651a7522312e4563d96a5aed",
               "0x83408cc6157b2bb3a47acc912f7c30520ce4782b",
@@ -72604,7 +72650,7 @@
       "navToken": false
     },
     "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-    "pegMechanism": "RUSD is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
+    "pegMechanism": "USDR is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
     "mechanismArchetype": "algorithmic",
     "geckoId": "ring-usd",
     "protocolSlug": "ring-protocol",
@@ -73161,6 +73207,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
     "oracleRisk": {
       "tier": "standard-external",
@@ -73252,7 +73299,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
+    "collateral": "Upgraded 1:1 successor to DAI on the same vault system, with current exposure organized across Sky Agent/Star buckets: Stablecoins/PSM around 38%, Spark around 28%, Grove RWA around 23%, Obex around 5%, Core crypto around 4%, Staking around 1%, and Legacy RWA around 1%; percentages drift with vault and Agent allocation changes.",
     "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     "mechanismArchetype": "cdp",
     "geckoId": "usds",
@@ -74586,7 +74633,7 @@
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2026-04-30",
+      "latestReportDate": "2026-05-31",
       "notes": "Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank — not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective' — forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter.",
       "references": [
         {
@@ -75071,7 +75118,7 @@
     "detailProvider": "defillama",
     "name": "USDU Finance",
     "symbol": "USDU",
-    "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Curve, Morpho, and TermMax vault shares; the issuer reports ~40% collateralization by design.",
+    "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Morpho and Curve vault shares after a sharp supply wind-down.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -75163,18 +75210,13 @@
     "collateralQuality": "exotic",
     "reserves": [
       {
-        "name": "TermMax fixed-rate lending vault shares",
-        "pct": 97,
-        "risk": "high"
-      },
-      {
         "name": "Morpho USDU Core vault shares",
-        "pct": 2,
+        "pct": 60.6,
         "risk": "medium"
       },
       {
-        "name": "Curve USDC/USDU LP tokens",
-        "pct": 1,
+        "name": "Curve USDU/USDC LP tokens",
+        "pct": 39.4,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
@@ -75182,14 +75224,14 @@
     ],
     "notices": [
       {
-        "type": "danger",
-        "title": "Undercollateralized by design",
-        "message": "USDU Finance's transparency page currently shows ~40.69% collateralization ($2.06M backing vs $5.06M circulating supply). The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants."
+        "type": "info",
+        "title": "Post-wind-down collateral coverage",
+        "message": "USDU Finance's transparency page currently reports roughly 100% collateralization after a sharp supply wind-down, with backing concentrated in Morpho USDU Core vault shares and Curve USDU/USDC LP tokens."
       },
       {
         "type": "warning",
         "title": "Conflicting issuer disclosures",
-        "message": "USDU Finance's own surfaces disagree: the transparency page headline reports ~40.69% CR while a separate JSON endpoint reports ~97% CR and the gitbook says 'fully backed'. Pharos surfaces the public-page headline as the conservative reference; treat collateralization figures as advisory until USDU publishes a single canonical methodology."
+        "message": "USDU Finance's live transparency endpoint now reports backing approximately equal to circulating supply after the wind-down. Treat exact collateralization and allocation figures as live-snapshot values because supply and adapter balances have moved materially."
       }
     ],
     "launchDate": "2025-07-04"
@@ -75243,7 +75285,7 @@
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDv is a synthetic dollar where only KYC'd approved market makers and institutions can mint or burn directly against Solomon's Ceffu-custodied delta-neutral collateral; general users enter and exit via Solana pools, and Solomon's programs and admin operations are governed by a Squads multisig.",
+      "summary": "USDv is a synthetic dollar where only KYC'd approved market makers and institutions can mint or burn directly against Solomon's Ceffu-custodied delta-neutral collateral; general users enter and exit via Solana pools. On-chain review resolves the mint authority to a program-owned PDA whose upgrade authority is an EOA-equivalent keypair; no Squads multisig is confirmed.",
       "controls": [
         {
           "chain": "solana",
@@ -75268,7 +75310,7 @@
           "directMintAbility": "none",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
-          "evidence": "Backing assets for USDv (delta-neutral spot-long / perp-short positions) are held in segregated, insured custody with Ceffu, and Solomon's Solana programs are described as restricted to custody transfers with admin operations secured by a Squads multisig."
+          "evidence": "Backing assets for USDv (delta-neutral spot-long / perp-short positions) are held in segregated, insured custody with Ceffu. On-chain review resolves Solomon's Solana mint authority to a program-owned PDA whose upgrade authority is an EOA-equivalent keypair; no Squads multisig is confirmed."
         }
       ],
       "review": {
@@ -76333,7 +76375,7 @@
         },
         {
           "label": "Anzen transparency",
-          "url": "https://rwa.anzen.finance/transparency",
+          "url": "https://app.anzen.finance/transparency",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-06-07"
         }
@@ -78169,7 +78211,7 @@
       "attestorTier": "big4",
       "cadence": "daily-nav",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "SEC-registered fund (Reg D 506(c))"
+      "attestorLicense": "SEC-exempt private fund (Reg D Rule 506(c) / ICA §3(c)(7))"
     },
     "links": [
       {
@@ -78727,11 +78769,11 @@
           "modulesOrGuardsStatus": "none-detected",
           "safe": {
             "owners": [
-              "0x9C5b5D8e00FD6B2E6f94Cf8a5E7a05B49b7a3A9c",
-              "0xE291a7f2FDfE00c2b41f46a0cF1a8A71fFb0c8b0",
-              "0xfa003e08C77c45476BD048C3C70E6b5Cf34f5C2D",
-              "0x5eDd3F3e9b6e49C5e9C7C2b5D0F3aB7d1F2e4C8b",
-              "0xae5bF4E7A6C8d9e2B3F1C0D4E5A7b9C2D3E4F5A6"
+              "0xaeEDC8979dF43645b238C40EBD8aF03e6d9e47d9",
+              "0xE2918A6fb9d1Abe005e7380AdCf11202A3E69586",
+              "0xfa001954D5aFC71C6bBE8a8dFd406C1B5C599781",
+              "0x5eDd0C6037f6F30974E53f5C829073fF8b356fB9",
+              "0xae5b5d00CE2e7848e6c4d6461D5263708F213d10"
             ],
             "threshold": 3,
             "enabledModules": [],
@@ -79407,6 +79449,11 @@
         "chain": "base",
         "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
         "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": "possible",
@@ -79545,7 +79592,6 @@
     "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
     "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
     "geckoId": "unity-usd",
-    "protocolSlug": "uusd",
     "links": [
       {
         "label": "Website",
@@ -79850,7 +79896,7 @@
       "navToken": true
     },
     "collateral": "Short-duration U.S. Treasury bills and repurchase agreements collateralized by U.S. Treasury obligations, held by a BVI Professional Fund advised by Van Eck Absolute Return Advisers; State Street Bank and Trust Company is custodian, Securitize Fund Services is fund administrator, and Securitize provides tokenization, transfer agency, and KYC",
-    "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire. RedStone is the issuer's designated oracle for daily NAV calculation; Pharos reads the on-chain Chainlink NAVLink 'VBILL NAV' feed (adopted by Securitize for the Aave Horizon collateral market) for live NAV",
+    "pegMechanism": "Institutional T-bill fund token that seeks a stable $1.00 NAV per share; yield accrues daily and is distributed as new tokens issued to holders. Instant mint and redemption at NAV through Securitize Markets against USDC, AUSD, or USD wire. RedStone is the issuer's designated oracle for daily NAV calculation; Pharos reads the on-chain Chainlink NAVLink 'VBILL NAV' feed (adopted by Securitize for the Aave Horizon collateral market) for live NAV",
     "mechanismArchetype": "tbill",
     "geckoId": "vaneck-treasury-fund",
     "proofOfReserves": {
@@ -80064,8 +80110,8 @@
       }
     ],
     "yieldConfig": {
-      "yieldSource": "VanEck Treasury Fund (T-bill NAV accretion)",
-      "yieldType": "nav-appreciation"
+      "yieldSource": "VanEck Treasury Fund daily token distribution",
+      "yieldType": "rebase"
     },
     "launchDate": "2025-05-12"
   },
@@ -80470,7 +80516,7 @@
       "semantics": "collateral-mix",
       "breakerScope": "vcred-vcred",
       "display": {
-        "url": "https://vcred.xyz/",
+        "url": "https://vcred.trade/",
         "label": "vCRED"
       },
       "adapter": "curated-validated",
@@ -80677,7 +80723,7 @@
       {
         "chain": "tezos",
         "address": "KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG",
-        "decimals": 13
+        "decimals": 18
       },
       {
         "chain": "fraxtal",
@@ -82665,7 +82711,7 @@
     "detailProvider": "defillama",
     "name": "WEUSD",
     "symbol": "WEUSD",
-    "oneLiner": "WEUSD is PicWe's omni-chain USDT wrapper minted and redeemed 1:1 against USDT; the token has been trading off-peg near $0.91 despite documented backing.",
+    "oneLiner": "WEUSD is PicWe's omni-chain wrapper with disputed USDC-vs-USDT/MOVE backing and a recent off-peg market price.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -82811,7 +82857,7 @@
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
-    "governanceQuality": "multisig",
+    "governanceQuality": "single-entity",
     "bridgeRouteRisk": {
       "tier": "issuer-native-burn-mint",
       "summary": "WEUSD moves cross-chain via PicWe's own issuer-operated burn-on-source / mint-on-destination route. PicWe's cross-chain-transfer docs state \"Source chain burns, target chain mints\" over a self-built native bridge (\"No Wormhole. No LayerZero. No third-party risk\") with PicWe-operated keepers signing and verifying every cross-chain message. On-chain this is confirmed: the EVM token (identical CREATE2 address 0xdd73... on bsc/base/arbitrum/plume) is a plain ERC20 + AccessControl with no LayerZero/Wormhole/OFT interface, so cross-chain mints flow purely through MINTER_ROLE held by a PicWe admin EOA plus the mint/redeem contract, and on Movement through the weusd_cross_chain_gas cross_mint_role_contract relayer (batchMintWeUSDCrossChain). The durable supply path is therefore issuer-native burn/mint, not an external validated network, canonical bridge, or liquidity route. Trust posture is weak: keeper validation has no published external attestation or audit, control keys are concentrated PicWe EOAs with no multisig/timelock, and the token trades off-peg (~$0.91) under disputed backing.",
@@ -83037,7 +83083,7 @@
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional-unregulated",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "wrapper",
     "bridgeRouteRisk": {
       "tier": "external-lock-mint",
@@ -84064,36 +84110,37 @@
     },
     "reserves": [
       {
-        "name": "RLUSD lending markets",
-        "pct": 56.4,
-        "risk": "medium",
-        "coinId": "rlusd-ripple",
-        "depType": "collateral"
+        "name": "Morpho Sentora PRIME",
+        "pct": 37.7,
+        "risk": "high"
       },
       {
-        "name": "PYUSD lending markets",
-        "pct": 21.6,
-        "risk": "medium",
-        "coinId": "pyusd-paypal",
-        "depType": "collateral"
+        "name": "Pendle PT USDat tokenized-treasury principal token",
+        "pct": 20.9,
+        "risk": "high"
       },
       {
-        "name": "AUSD lending markets",
-        "pct": 10.5,
-        "risk": "medium",
-        "coinId": "ausd-agora",
-        "depType": "collateral"
-      },
-      {
-        "name": "GHO lending markets",
-        "pct": 5.7,
+        "name": "GHO Aave lending markets (Plasma and Monad)",
+        "pct": 12.7,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "collateral"
       },
       {
-        "name": "USDC lending/direct liquidity",
-        "pct": 5.8,
+        "name": "USD1 Morpho Steakhouse High Yield lending markets",
+        "pct": 12.1,
+        "risk": "medium",
+        "coinId": "usd1-world-liberty-financial",
+        "depType": "collateral"
+      },
+      {
+        "name": "Hastra PRIME RWA credit allocation",
+        "pct": 11.3,
+        "risk": "high"
+      },
+      {
+        "name": "USDC Morpho lending and direct liquidity",
+        "pct": 5.3,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
@@ -84794,18 +84841,13 @@
     "reserves": [
       {
         "name": "Cash and cash equivalents",
-        "pct": 40,
+        "pct": 75,
         "risk": "very-low"
       },
       {
         "name": "Short-term U.S. Treasury bills",
-        "pct": 55,
+        "pct": 25,
         "risk": "very-low"
-      },
-      {
-        "name": "Basel III liquidity buffer (6% of non-cash)",
-        "pct": 5,
-        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -85361,6 +85403,11 @@
         "chain": "solana",
         "address": "5aLhp9VnUEKcsdtkfsf2DUgpJfomx7GmYVny24dHUZoB",
         "decimals": 9
+      },
+      {
+        "chain": "stellar",
+        "address": "XAUM-CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -87471,7 +87518,7 @@
       "url": "https://www.straitsx.com/xusd",
       "provider": "KK Yap & Associates",
       "attestorTier": "niche",
-      "cadence": "monthly",
+      "cadence": "semi-monthly",
       "attestorJurisdiction": "Singapore",
       "attestorLicense": "ACRA-registered public accountants"
     },
@@ -87999,7 +88046,7 @@
       "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
       "provider": "KPMG LLP",
       "attestorTier": "big4",
-      "cadence": "quarterly",
+      "cadence": "annual",
       "attestorJurisdiction": "United States",
       "attestorLicense": "PCAOB-registered"
     },
@@ -89623,7 +89670,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
-      "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on both Solana mints.",
+      "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
       "controls": [
         {
           "chain": "ethereum",
@@ -89721,11 +89768,6 @@
         "chain": "solana",
         "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
         "decimals": 6
-      },
-      {
-        "chain": "solana",
-        "address": "8v8aBHR7EXFZDwaqaRjAStEcmCj6VZi5iGq1YDtyTok6",
-        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -89808,7 +89850,7 @@
       "pegCurrency": "CHF",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
@@ -90441,7 +90483,7 @@
       "confidence": "limited",
       "sources": [
         {
-          "label": "Goal3 zkUSD docs",
+          "label": "Goal3 X",
           "url": "https://x.com/Goal3_xyz"
         }
       ]

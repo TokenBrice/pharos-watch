@@ -183,7 +183,7 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203: NUSD token (0x1B84765…) Blockscout verified as 'LPToken'. owner() = 0x1116898… (SwapFlashLoan pool, confirmed Blockscout). Pool's owner() = 0x67f60b… (GnosisSafeProxy): 3 owners, 2/6 threshold, Safe v1.3, no modules, no guard. OwnershipTransferred log shows 3 transfers; current owner is the 2/3 Safe. NUSD mint is permissioned to the pool contract only; pool admin is a 2-of-3 Safe with no modules.",
+      "evidence": "At Ethereum block 25295203: NUSD token (0x1B84765…) Blockscout verified as 'LPToken'. owner() = 0x1116898… (SwapFlashLoan pool, confirmed Blockscout). Pool's owner() = 0x67f60b… (GnosisSafeProxy): 3 owners, 2/3 threshold, Safe v1.3, no modules, no guard. OwnershipTransferred log shows 3 transfers; current owner is the 2/3 Safe. NUSD mint is permissioned to the pool contract only; pool admin is a 2-of-3 Safe with no modules.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [

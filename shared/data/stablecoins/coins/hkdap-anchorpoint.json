@@ -100,9 +100,9 @@
   "custodyModel": "institutional-regulated",
   "status": "pre-launch",
   "announcedDate": "2026-03",
-  "expectedLaunchDate": "2026-Q2",
+  "expectedLaunchDate": "2026-H2",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments; no tokens are yet in public circulation and no deployment contract address has been disclosed as of early June, with the Q2 window (ends June 30) nearly closed",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token and no disclosed deployment contract address, so Pharos now tracks the launch as a broader H2 2026 rollout pending a sourced narrower date.",
   "featuredContent": [
     {
       "type": "article",
@@ -139,6 +139,12 @@
       "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
       "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
       "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
+    }
+  ],
+  "dateHistory": [
+    {
+      "date": "2026-Q2",
+      "setOn": "2026-06-07"
     }
   ]
 }

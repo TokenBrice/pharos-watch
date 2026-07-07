@@ -176,6 +176,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "canonical-bridge",
   "launchDate": "2022-11-03"
 }

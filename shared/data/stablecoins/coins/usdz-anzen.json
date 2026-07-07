@@ -79,7 +79,7 @@
       },
       {
         "label": "Anzen transparency",
-        "url": "https://rwa.anzen.finance/transparency",
+        "url": "https://app.anzen.finance/transparency",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       }

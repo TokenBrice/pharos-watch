@@ -15,7 +15,6 @@
   "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
   "detailProvider": "coingecko",
   "geckoId": "unity-usd",
-  "protocolSlug": "uusd",
   "links": [
     {
       "label": "Website",

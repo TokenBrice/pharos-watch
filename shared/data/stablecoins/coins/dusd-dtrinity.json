@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
+  "collateral": "Ethereum: USDT0/USDC0-style whitelisted stablecoin and yield-bearing collateral in isolated dUSD reserves. Fraxtal: frxUSD/sfrxUSD and other Frax-aligned USD collateral in isolated reserves. Katana: whitelisted USD stablecoins and yieldcoins in isolated reserves. Sonic: whitelisted USD stablecoins/yieldcoins such as frxUSD/sfrxUSD in isolated reserves. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
   "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
   "detailProvider": "coingecko",
   "geckoId": "dtrinity-usd",
@@ -32,7 +32,6 @@
       }
     ]
   },
-  "cmcSlug": "dtrinity-dusd",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "dTRINITY documents dUSD as chain-isolated, with separate native deployments and reserves by network; it explicitly says same-name dUSD tokens are not fungible across chains. The route is therefore reviewed as native per-chain issuance rather than a bridge route.",
