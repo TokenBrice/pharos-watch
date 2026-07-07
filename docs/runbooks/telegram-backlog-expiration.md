@@ -36,7 +36,7 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 ## Remediation
 
 1. **Pause low-priority sends.** Do not run admin broadcasts, broad manual resends, or non-urgent operator notices while risk-alert rows are close to expiry.
-2. **Let healthy drain continue.** If `pendingDeliveries` is decreasing and no rows are expired, wait one or two cycles. Opening the Telegram circuit breaker stops drain too, so avoid it unless Telegram is actively rejecting most sends.
+2. **Let healthy drain continue.** If `pendingDeliveries` is decreasing and no rows are expired, wait one or two cycles. A circuit-open state only gates the fresh subscriber fan-out; the pending drain keeps running (`executeCircuitOpenQueuePath` still calls `drainPendingQueue`), and there is no supported admin action to open the `telegram-api` circuit anyway. To actually pause both delivery and drain, use the dispatcher-pause step in [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
 3. **Preview expired-row cleanup.**
 
    ```bash

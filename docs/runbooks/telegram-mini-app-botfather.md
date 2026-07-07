@@ -30,7 +30,7 @@ Run after each Mini App deploy and after each BotFather UI change. Each test sho
 5. **Direct deep link: watchlist** — Tap `https://t.me/PharosWatchBot?startapp=watchlist`. Mini App loads on the **Watchlist** panel.
 6. **Direct deep link: coin row** — Tap `https://t.me/PharosWatchBot?startapp=coin_usdc-circle`. Mini App loads the **Watchlist** panel scrolled to USDC's row.
 7. **Direct deep link: presets** — Tap `https://t.me/PharosWatchBot?startapp=presets`. Mini App loads on the **Presets** panel.
-8. **Direct deep link: quiet-hours** — Tap `https://t.me/PharosWatchBot?startapp=quiet-hours`. Mini App loads the **Settings** panel with the quiet-hours card focused.
+8. **Direct deep link: quiet-hours** — Tap `https://t.me/PharosWatchBot?startapp=quiet-hours`. Mini App loads on the **Settings** panel, where the quiet-hours card lives.
 9. **Direct deep link: snooze** — Tap `https://t.me/PharosWatchBot?startapp=snooze`. Mini App loads on the **Home** panel, where the snooze controls are visible when a chat snooze is active.
 10. **Direct deep link: health** — Tap `https://t.me/PharosWatchBot?startapp=health`. Mini App loads on the **Home** panel with the delivery-health card visible.
 11. **Direct deep link: forget** — Tap `https://t.me/PharosWatchBot?startapp=forget`. Mini App loads on the **Settings** panel, where the data-deletion control lives.

@@ -164,6 +164,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 **Owned files.**
 - `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)
 - `worker/src/cron/dispatch-telegram-alerts-fanout.ts` (parallel loading of subscriber inputs)
+- `worker/src/cron/dispatch-telegram-fanout-plan.ts` (fan-out plan orchestration: routes all five alert families into per-chat bundles, runs the burst collapse, and builds the overflow-aware plan/format split; owns `buildTelegramFanoutPlan`)
 - `worker/src/cron/dispatch-telegram-events.ts` (DEWS/depeg/safety/launch/reserve-drift snapshot diffing into dispatch events; suppressed-safety-at-seed counting)
 - `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
 - `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets and `DispatchResult` shape)
