@@ -867,6 +867,22 @@ describe("buildDepegResolverReviewSnapshot", () => {
     });
   });
 
+  it("degrades legacy snapshots when stored assessment rows are malformed", async () => {
+    const db = mockD1([
+      { match: "FROM depeg_resolver_assessments", rows: [assessmentRow({ horizons_json: "not-json" })] },
+      { match: "FROM depeg_events", rows: [] },
+    ]);
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
+
+    expect(snapshot._meta.degraded).toBe(true);
+    expect(snapshot._meta.degradedReason).toContain("assessment-parse-issues:1");
+    expect(snapshot._meta.assessedEventCount).toBe(0);
+    expect(snapshot._meta.reviewedEventCount).toBe(0);
+    expect(snapshot.rows).toHaveLength(0);
+    expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
+  });
+
   it("marks missing source events as data issues without dropping the assessment", async () => {
     const db = mockD1([
       { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },
