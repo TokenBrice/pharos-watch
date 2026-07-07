@@ -12,6 +12,7 @@ import {
   validateReserveCompositionTotal,
 } from "../../shared/types/reserves";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
+import { getTrackedAlgorithmicBackingIssue } from "../lib/stablecoin-data-gate-issues";
 import {
   CANONICAL_ORDER_ASSET_FILE,
   findCanonicalOrderIssues,
@@ -444,6 +445,11 @@ if (errorCount === 0) {
 
     for (const reserveDependencyTypeLinkIssue of getReserveDependencyTypeLinkIssues(entry.coin)) {
       reportError(`${entry.file} (${entry.coin.id}): ${reserveDependencyTypeLinkIssue}`);
+    }
+
+    const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
+    if (algorithmicBackingIssue) {
+      reportError(`${entry.file} (${entry.coin.id}): ${algorithmicBackingIssue}`);
     }
 
     const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);

@@ -146,8 +146,8 @@ describe("tracked stablecoin metadata", () => {
     ]);
   });
 
-  it("keeps the active registry free of standalone algorithmic backing classifications", () => {
-    const algorithmicIds = ACTIVE_STABLECOINS
+  it("keeps tracked registry metadata free of standalone algorithmic backing classifications", () => {
+    const algorithmicIds = TRACKED_STABLECOINS
       .filter((coin) => coin.flags.backing === "algorithmic")
       .map((coin) => coin.id);
 
