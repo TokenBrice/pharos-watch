@@ -26,7 +26,7 @@ const DEWS_TABLES = new Set([
 export function computeStressSignalPruneIds(
   allDbIds: Set<string>,
   eligibleIds: Set<string>,
-  frozenIds: Set<string> = FROZEN_IDS,
+  frozenIds: ReadonlySet<string> = FROZEN_IDS,
 ): Set<string> {
   const prune = new Set<string>();
   for (const id of allDbIds) {

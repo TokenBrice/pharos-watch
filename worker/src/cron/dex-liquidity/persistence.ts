@@ -60,7 +60,7 @@ const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
  */
 export function computeDexPruneSet(
   allDbIds: Set<string>,
-  trackedIds: Set<string> = TRACKED_IDS,
+  trackedIds: ReadonlySet<string> = TRACKED_IDS,
 ): Set<string> {
   const prune = new Set<string>();
   for (const id of allDbIds) {

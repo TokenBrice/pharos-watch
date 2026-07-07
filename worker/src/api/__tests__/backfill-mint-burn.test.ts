@@ -19,6 +19,8 @@ import {
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 
+const mutableFrozenIds = FROZEN_IDS as Set<string>;
+
 function makeDb(): D1Database {
   const stmt = (sql: string) => ({
     bind: (..._args: unknown[]) => ({
@@ -49,8 +51,8 @@ describe("handleBackfillMintBurn", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    FROZEN_IDS.clear();
-    for (const id of originalFrozenIds) FROZEN_IDS.add(id);
+    mutableFrozenIds.clear();
+    for (const id of originalFrozenIds) mutableFrozenIds.add(id);
   });
 
   it("requires admin auth", async () => {
@@ -93,7 +95,7 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("skips frozen configs during automatic selection", async () => {
-    FROZEN_IDS.add("usdt-tether");
+    mutableFrozenIds.add("usdt-tether");
 
     const response = await handleBackfillMintBurn(
       makeDb(),

@@ -90,7 +90,7 @@ function buildFrozenSnapshotPayload(): string {
   return JSON.stringify([...FROZEN_IDS]);
 }
 
-export function diffFrozenIds(current: Set<string>, previous: Set<string>): Set<string> {
+export function diffFrozenIds(current: ReadonlySet<string>, previous: ReadonlySet<string>): Set<string> {
   const added = new Set<string>();
   for (const id of current) {
     if (!previous.has(id)) added.add(id);

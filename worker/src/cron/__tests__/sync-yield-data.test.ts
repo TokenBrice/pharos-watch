@@ -201,6 +201,9 @@ import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";
 import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
 
+const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS extends readonly (infer T)[] ? T[] : never;
+const mutableTrackedMetaById = TRACKED_META_BY_ID as Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
+
 // --- Helpers ---
 
 function makeDb() {
@@ -703,7 +706,7 @@ describe("syncYieldData", () => {
     mockHealthyRiskFreeRateCache();
 
     for (let i = 0; i < 120; i++) {
-      ACTIVE_STABLECOINS.push({
+      mutableActiveStablecoins.push({
         id: `extra-${i}`,
         name: `Extra ${i}`,
         symbol: `E${i}`,
@@ -746,7 +749,7 @@ describe("syncYieldData", () => {
 
       await syncYieldData(db);
     } finally {
-      ACTIVE_STABLECOINS.splice(originalLength);
+      mutableActiveStablecoins.splice(originalLength);
     }
 
     const staleDeleteCalls = db
@@ -1555,8 +1558,8 @@ describe("syncYieldData", () => {
     const explicitPoolMap =
       yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
 
-    ACTIVE_STABLECOINS.push(xautMeta as never);
-    TRACKED_META_BY_ID.set("xaut-tether", xautMeta as never);
+    mutableActiveStablecoins.push(xautMeta as never);
+    mutableTrackedMetaById.set("xaut-tether", xautMeta as never);
     explicitPoolMap["xaut-tether"] = [
       {
         poolId: "pool-xaut-yo",
@@ -1622,8 +1625,8 @@ describe("syncYieldData", () => {
       expect(xautRow?.is_best).toBe(1);
     } finally {
       delete explicitPoolMap["xaut-tether"];
-      TRACKED_META_BY_ID.delete("xaut-tether");
-      ACTIVE_STABLECOINS.pop();
+      mutableTrackedMetaById.delete("xaut-tether");
+      mutableActiveStablecoins.pop();
     }
   });
 

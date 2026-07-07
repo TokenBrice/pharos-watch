@@ -8,7 +8,7 @@ import { errorResponse } from "./api-response";
  */
 export function assertNotFrozen(
   stablecoinId: string,
-  frozenIds: Set<string> = FROZEN_IDS,
+  frozenIds: ReadonlySet<string> = FROZEN_IDS,
 ): Response | null {
   if (frozenIds.has(stablecoinId)) {
     return errorResponse(403, `Cannot run backfill for frozen stablecoin: ${stablecoinId}`);

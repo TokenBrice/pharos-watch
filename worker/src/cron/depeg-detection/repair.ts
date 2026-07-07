@@ -27,7 +27,7 @@ export interface OrphanRepairResult {
 export function shouldCloseOrphanedDepeg(
   coinId: string,
   iteratedTrackedIds: Set<string>,
-  frozenIds: Set<string> = FROZEN_IDS,
+  frozenIds: ReadonlySet<string> = FROZEN_IDS,
 ): boolean {
   if (iteratedTrackedIds.has(coinId)) return false;
   if (frozenIds.has(coinId)) return false;

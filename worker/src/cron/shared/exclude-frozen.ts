@@ -7,7 +7,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 export function excludeFrozenIds<T>(
   items: readonly T[],
   getId: (item: T) => string,
-  frozenIds: Set<string> = FROZEN_IDS,
+  frozenIds: ReadonlySet<string> = FROZEN_IDS,
 ): T[] {
   return items.filter((item) => !frozenIds.has(getId(item)));
 }

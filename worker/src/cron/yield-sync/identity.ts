@@ -41,7 +41,7 @@ function normalizeYieldSymbol(symbol: string | null | undefined): string {
 }
 
 export function buildYieldIdentityLookups(
-  stablecoins: StablecoinMeta[] = ACTIVE_STABLECOINS,
+  stablecoins: readonly StablecoinMeta[] = ACTIVE_STABLECOINS,
 ): YieldIdentityLookups {
   const symbolToIds = new Map<string, string[]>();
   const symbolToChainScopedIds = new Map<string, Map<string, string[]>>();
