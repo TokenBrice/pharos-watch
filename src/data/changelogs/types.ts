@@ -33,8 +33,9 @@ export interface ChangelogEntry {
   fieldNotes?: string;
   summary: SummaryItem[];
   /**
-   * `totalCommits` is the total number of commits in the date window (typically
-   * hundreds), NOT the length of the curated `commits` array below.
+   * `totalCommits` is the number of commits in the date window after noise
+   * filtering, and MUST equal `commits.length` below. Every published entry
+   * satisfies this invariant.
    */
   stats: { totalCommits: number };
   commits: CommitRef[];
