@@ -671,8 +671,11 @@ export default function StablecoinDetailClient({
       </div>
       {/* /main column */}
 
-      <aside aria-label="Coin summary rail" className="hidden min-w-0 xl:block">
-        <div className="space-y-4">
+      <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
+        {/* Pins below the top-nav + tape stack (same offset as the pill nav)
+            and scrolls internally when taller than the viewport, so the
+            summary stays alongside every dossier zone. */}
+        <div className="sticky top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] max-h-[calc(100vh-env(safe-area-inset-top)-3.5rem-46px-1.5rem)] space-y-4 overflow-y-auto pb-4 pr-0.5">
           <RailSafetySummary items={heroModel.signalRailItems} />
           <TapeForCoinTeaser coinId={viewModel.id} />
           {(viewModel.coin.contracts?.length ?? 0) > 0 ? (

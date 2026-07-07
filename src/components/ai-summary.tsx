@@ -1,4 +1,5 @@
-import { AiDisclosureBadge } from "@/components/ai-disclosure-badge";
+import Link from "next/link";
+import { buildAiDisclosureLine } from "@/components/ai-disclosure";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
@@ -21,28 +22,31 @@ export function AiSummary({
     year: "numeric",
     timeZone: "UTC",
   });
+  const disclosure = buildAiDisclosureLine({ authoredBy, model, reviewedBy, reviewedAt, factsAsOf });
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-          <DetailSectionTitle>{title}</DetailSectionTitle>
-          <time className="text-xs text-muted-foreground sm:whitespace-nowrap" dateTime={isoDate}>
-            Updated {dateline}
-          </time>
-        </div>
-        <AiDisclosureBadge
-          authoredBy={authoredBy}
-          model={model}
-          reviewedBy={reviewedBy}
-          reviewedAt={reviewedAt}
-          factsAsOf={factsAsOf}
-        />
+        <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
         <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic md:px-[15%]">
           <TermText text={text} />
         </p>
+        {/* Provenance footer (Figma coin template): mono uppercase dateline +
+            disclosure with the policy link at the far edge. */}
+        <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-border/40 pt-3">
+          <p className="min-w-0 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+            <time dateTime={isoDate}>Updated {dateline}</time>
+            {disclosure ? <> · {disclosure}</> : null}
+          </p>
+          <Link
+            href="/about/#editorial-ai-policy"
+            className="pharos-focus-ring shrink-0 rounded-sm font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+          >
+            Policy
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
