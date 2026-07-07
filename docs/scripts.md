@@ -155,7 +155,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `sync-digests.ts` in the consolidated Pages release job before the build artifact is created
 - `sync-depeg-events.ts` in the same Pages release path so `/depeg/<event>/` static params and feed/static exports use current confirmed events
 - `generate-public-datasets.ts` in the same Pages release path so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
-- `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`. The `prebuild` hook runs the full generated-artifact registry with bounded 4-way parallelism (`GENERATED_ARTIFACTS_MAX_PARALLEL`, in `scripts/maintenance/run-generated-artifacts.mjs`), so the registry order below is dispatch order, not strict serial execution
+- `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`. The `prebuild` hook runs the full generated-artifact registry with bounded 4-way parallelism (a constant in `scripts/maintenance/run-generated-artifacts.mjs`), so the registry order below is dispatch order, not strict serial execution
 - `generate-case-study-client-index.ts` via the same `prebuild` hook (and re-verified by `npm run check:case-study-client-index` / `check:generated-artifacts`), so case-study client imports stay synchronized with authored case-study modules
 - `generate-docs-metadata.ts` via the same `prebuild` hook
 - `generate-depeg-event-search-data.ts` via the same `prebuild` hook, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
