@@ -1,4 +1,4 @@
-import { parseQueryParams, jsonResponse, errorResponse } from "../lib/api-utils";
+import { jsonResponse, errorResponse } from "../lib/api-utils";
 import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
@@ -23,16 +23,13 @@ import {
 import type { PsiUniverseCache } from "../lib/psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { deriveDepegSignal } from "../lib/depeg-signals";
+import { parseAuditRequest, type AuditPaginatedRequest, type RepairMode } from "./audit-depeg-history/request";
 
 type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
-type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
 const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
-// Audit history is capped at 25 events per request (default and max are the same).
-const AUDIT_DEPEG_HISTORY_LIMIT = 25;
-const DELETE_ID_PATTERN = /^\d+$/;
 const AUDIT_CG_FETCH_START_INTERVAL_MS = 200;
 const AUDIT_CG_FETCH_CONCURRENCY = 4;
 // If at least this fraction of attempted CG fetches fail, treat it as an
@@ -146,19 +143,6 @@ interface ContradictoryRecoveryRepairResult {
   repairedEventCount: number;
 }
 
-interface AuditPaginatedRequest {
-  limit: number;
-  offset: number;
-  dryRun: boolean;
-  symbolFilter: string | null;
-}
-
-interface ParsedAuditRequest extends AuditPaginatedRequest {
-  minSupply: number;
-  deleteIds: number[] | null;
-  repairMode: RepairMode | null;
-}
-
 interface AuditMutationPlan {
   statements: D1PreparedStatement[];
   affectedDays: Set<number>;
@@ -244,70 +228,6 @@ function buildAuditVerdictProvenanceStmt(
       nowSec,
       nowSec,
     );
-}
-
-function parseDeleteIds(value: string): number[] | Response {
-  const tokens = value.split(",").map((token) => token.trim());
-  if (tokens.length === 0 || tokens.some((token) => token.length === 0 || !DELETE_ID_PATTERN.test(token))) {
-    return errorResponse(400, "Invalid delete parameter: expected comma-separated numeric event IDs");
-  }
-
-  const ids = tokens.map((token) => Number.parseInt(token, 10));
-  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
-    return errorResponse(400, "Invalid delete parameter: expected positive event IDs");
-  }
-  return ids;
-}
-
-function parseRepairMode(value: string | null): RepairMode | null | Response {
-  if (value == null || value.length === 0) return null;
-  if (value === "synthetic-splits" || value === "contradictory-recovery-price") return value;
-  return errorResponse(400, `Unsupported repair mode: ${value}`);
-}
-
-function parseAuditRequest(url: URL, request?: Request): ParsedAuditRequest | Response {
-  const parsed = parseQueryParams(url.searchParams, {
-    limit: {
-      type: "int",
-      default: AUDIT_DEPEG_HISTORY_LIMIT,
-      min: 1,
-      max: AUDIT_DEPEG_HISTORY_LIMIT,
-      rangePolicy: "reject",
-    },
-    offset: { type: "int", default: 0, min: 0, max: 100_000 },
-    "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
-  });
-  if (parsed instanceof Response) return parsed;
-
-  const deleteParam = url.searchParams.get("delete");
-  const hasDeleteParam = deleteParam != null;
-  const repairMode = parseRepairMode(url.searchParams.get("repair"));
-  if (repairMode instanceof Response) return repairMode;
-  if (hasDeleteParam && repairMode) {
-    return errorResponse(400, "Use either delete=... or repair=..., not both");
-  }
-
-  const dryRun = url.searchParams.get("dry-run") === "true";
-  const method = request?.method ?? "GET";
-  if (method === "GET" && !dryRun) {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
-      { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
-    );
-  }
-
-  const deleteIds = deleteParam == null ? null : parseDeleteIds(deleteParam);
-  if (deleteIds instanceof Response) return deleteIds;
-
-  return {
-    limit: parsed.limit,
-    offset: parsed.offset,
-    minSupply: parsed["min-supply"],
-    deleteIds,
-    repairMode,
-    dryRun,
-    symbolFilter: url.searchParams.get("symbol")?.toUpperCase() ?? null,
-  };
 }
 
 async function loadClosedDepegEvents(db: D1Database): Promise<DepegRow[]> {
