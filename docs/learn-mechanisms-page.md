@@ -40,18 +40,7 @@ Current treatment:
 - **Display title:** the `<h1>` uses `.pharos-page-title` — the homepage ABC Whyte Inktrap display face at the fixed `text-3xl/sm:text-4xl` scale (aligned 2026-07-01; previously a bespoke Geist Sans clamp). Section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale so the page title stays the largest type on the page.
 - **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
-- **Per-archetype accent:** lives only in the **section kicker color** via `ARCHETYPE_VISUALS[archetype].kickerClass`. The visual differentiation between archetypes already lives in the diagram itself (return arc for fiat-cash redeem and cdp, dashed reflexive arc for algorithmic, quarterly-redemption arc for rwa-credit-fund, split spot+perp legs for synthetic; tbill is the plain forward three-step flow).
-
-| Archetype               | Kicker pair                            |
-| ----------------------- | -------------------------------------- |
-| fiat-cash               | `text-blue-700 dark:text-blue-400`     |
-| tbill                   | `text-violet-700 dark:text-violet-400` |
-| cdp                     | `text-cyan-700 dark:text-cyan-400`     |
-| synthetic-delta-neutral | `text-teal-700 dark:text-teal-400`     |
-| algorithmic             | `text-rose-700 dark:text-rose-400`     |
-| rwa-credit-fund         | `text-amber-700 dark:text-amber-400`   |
-
-Excludes red/green (peg severity) and emerald (PoR big4) to avoid semantic collisions.
+- **Per-archetype accent:** collapsed to neutral per the 2026-07-02 owner ruling — `ARCHETYPE_VISUALS[archetype].kickerClass` is an empty string for all six archetypes, so `.pharos-kicker`'s muted treatment applies uniformly. The visual differentiation between archetypes lives entirely in the diagram itself (return arc for fiat-cash redeem and cdp, dashed reflexive arc for algorithmic, quarterly-redemption arc for rwa-credit-fund, split spot+perp legs for synthetic; tbill is the plain forward three-step flow).
 
 ---
 
@@ -59,7 +48,7 @@ Excludes red/green (peg severity) and emerald (PoR big4) to avoid semantic colli
 
 Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 
-1. **`ExplainerPageShell` header** — 3-level breadcrumb (`Dashboard / Learn / <Archetype>`), `BreadcrumbJsonLd`, editorial display `<h1>` (`content.headline`), subtitle (larger muted lead), and optional lead paragraphs. Wrapped in `mx-auto w-full max-w-[68rem] space-y-12`.
+1. **`LearnPageShell` header** — 3-level JSON-LD breadcrumb (`Home / Mechanisms / <Archetype>`, schema.org only via `BreadcrumbJsonLd` — no visible breadcrumb UI), editorial display `<h1>` (`content.headline`), subtitle (larger muted lead), and optional lead paragraphs. Wrapped in `mx-auto w-full max-w-[68rem] space-y-12`.
 2. **Diagram hero** — bare diagram, centered, no card wrapper, no kicker label.
 3. **"How it works"** — kicker + `<h2>` + `<ol>` of 3 steps with a left rail and small numbered chips (`-left-[1.875rem] sm:-left-[2.375rem]`).
 4. **"Tracked examples"** (`RepresentativeCoins`) — kicker + `<h2>` + `<ul>` with hairline dividers. Each row: logo + mono ticker + name + 1-sentence note + right arrow. Hover bumps the arrow + colors the ticker `frost-blue`.
@@ -116,7 +105,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`.
 2. Add the label + one-liner entries to `MECHANISM_ARCHETYPE_LABELS` and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
-3. Add visuals to `ARCHETYPE_VISUALS` in `src/app/learn/mechanisms/content/types.ts` (pick a non-semantic accent border).
+3. Add a `{ kickerClass: "" }` entry to `ARCHETYPE_VISUALS` in `src/app/learn/mechanisms/content/types.ts` (kept empty per the 2026-07-02 neutral-hue ruling; do not add a color unless that ruling is revisited).
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).

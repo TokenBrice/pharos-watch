@@ -47,7 +47,7 @@ The reference page is presentation and navigation around the canonical contract,
 
 The route renders:
 
-1. Breadcrumbs: `Dashboard / About / API Reference`
+1. Breadcrumb JSON-LD (structured data only, not a visible element): `Home / About / API Reference`
 2. Hero copy that makes the auth model explicit:
    - external integrations use `https://api.pharos.watch`
    - protected public routes require `X-API-Key`

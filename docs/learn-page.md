@@ -14,7 +14,7 @@ Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mec
 
 All `/learn/*` hub pages carry the homepage design grammar in their Category-C "light editorial" register (canonical record: `docs/design-language.md` → Feature-Page Hero → Learn-group hero calls):
 
-- **Titles** use the homepage ABC Whyte Inktrap display face. `LearnPageShell` (`/learn/`, `/learn/case-studies/`) sets its `h1` via `.pharos-page-title`, and section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale. `/learn/glossary/` already inherits the face through `FeaturePageShell`.
+- **Titles** use the homepage ABC Whyte Inktrap display face. `LearnPageShell` (`/learn/`, `/learn/case-studies/`) sets its `h1` via `.pharos-page-title`, and section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale. `/learn/glossary/` inherits the face through the same `LearnPageShell`.
 - **Header hero** — a lighter shared band, `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`): a flat `pharos-card-shell` with one frost "One Beam" figure + muted sub-metrics. `/learn/` opts out (its `OutcomeLedger` is promoted into a card-shell band and keeps the semantic survived/wounded/died ramp — a directional figure, never frost); `/learn/case-studies/` lights the neutral archive count; `/learn/glossary/` lights the term count.
 - **Controls** — the case-study outcome/mechanism filters use `pharos-toggle-pill` / `pharos-control-pill-active` (never frost on controls). The case-study hub keeps its editorial carve-out: no ordinal ranking, no row→card conversion.
 
@@ -83,7 +83,7 @@ Glossary entries live in `src/app/learn/glossary/content.ts`. Each entry owns:
 
 Primary inbound surfaces:
 
-- Sidebar Learn group in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
+- Top-nav Learn group in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms, Case Studies, and Glossary
 - Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`

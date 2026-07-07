@@ -32,7 +32,7 @@ On mount it:
 - applies `markStartHereOpened(...)`
 - writes the updated state back
 
-This persisted flag retires the shell-level `Start Here` shortcut in the desktop sidebar and mobile nav for repeat sessions.
+This persisted flag retires the shell-level `Start Here` shortcut in the mobile nav for repeat sessions. (The desktop top nav does not surface a Start Here entry at all.)
 
 ---
 

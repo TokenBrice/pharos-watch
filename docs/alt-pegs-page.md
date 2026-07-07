@@ -106,7 +106,7 @@ Current Release 1 behavior:
 
 ## Homepage Integration
 
-The homepage no longer carries a separate alt-peg teaser component. Its top market-cap hero (`src/components/home-alt-hero.tsx`) includes the live non-USD share, and the browse strip links aggregate fiat non-USD traffic to `/?peg=fiat-non-usd-peg#home-alt-rankings`.
+The homepage no longer carries a separate alt-peg teaser component. Its top market-cap hero (`src/components/home-alt-hero.tsx`) includes the live non-USD share as plain text, and its Browse By Peg strip (`PegBrowseStrip` in `src/components/peg-distribution-grid.tsx`) links each peg to its `/stablecoins/[peg]/` cohort page. `useHomeAltFilters` still resolves an inbound `/?peg=fiat-non-usd-peg#home-alt-rankings` deep link into the table's fiat-non-USD filter, but no on-page control currently emits that URL.
 
 The dedicated `/alt-pegs/` route remains the canonical surface for `buildAltPegSnapshot(...)`, cohort history, and crawlable peg drill-down pages.
 
