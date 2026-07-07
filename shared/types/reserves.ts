@@ -25,7 +25,7 @@ export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 
-const RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT = 0.5;
+export const RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT = 0.5;
 
 function getReserveCompositionTotalPct(reserves: readonly Pick<ReserveSlice, "pct">[]): number {
   return reserves.reduce((total, reserve) => total + reserve.pct, 0);

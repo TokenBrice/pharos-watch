@@ -7,6 +7,10 @@ import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
+import {
+  RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
+  validateReserveCompositionTotal,
+} from "../../shared/types/reserves";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import {
   CANONICAL_ORDER_ASSET_FILE,
@@ -23,7 +27,6 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 
-const RESERVE_TOTAL_TOLERANCE = 0.5;
 const DEPENDENCY_RESERVE_WEIGHT_TOLERANCE = 0.005;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
@@ -139,9 +142,9 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
 
   if (
     !RESERVE_TOTAL_ALLOWLIST.has(coin.id)
-    && Math.abs(total - 100) > RESERVE_TOTAL_TOLERANCE
+    && !validateReserveCompositionTotal(coin.reserves, "full")
   ) {
-    return `reserve pct total ${total} is outside 100 +/- ${RESERVE_TOTAL_TOLERANCE}`;
+    return `reserve pct total ${total} is outside 100 +/- ${RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT}`;
   }
 
   return null;

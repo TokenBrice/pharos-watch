@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FullReserveCompositionSchema,
   PartialKnownExposureReserveCompositionSchema,
+  RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
   validateReserveCompositionTotal,
 } from "../reserves";
 
@@ -18,6 +19,18 @@ describe("reserve composition validation", () => {
     ]).success).toBe(true);
   });
 
+  it("uses the shared full-composition tolerance at the boundary", () => {
+    expect(validateReserveCompositionTotal([
+      { pct: 100 - RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT },
+    ], "full")).toBe(true);
+    expect(validateReserveCompositionTotal([
+      { pct: 100 - RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT + 0.001 },
+    ], "full")).toBe(true);
+    expect(validateReserveCompositionTotal([
+      { pct: 100 - RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT - 0.001 },
+    ], "full")).toBe(false);
+  });
+
   it("rejects full compositions with missing exposure", () => {
     const result = FullReserveCompositionSchema.safeParse(partial);
     expect(result.success).toBe(false);
@@ -30,8 +43,11 @@ describe("reserve composition validation", () => {
 
   it("rejects partial known-exposure totals above 100 plus tolerance", () => {
     expect(validateReserveCompositionTotal([
+      { pct: 100 + RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT },
+    ], "partial-known-exposure")).toBe(true);
+    expect(validateReserveCompositionTotal([
       { pct: 70 },
-      { pct: 31 },
+      { pct: 30 + RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT + 0.001 },
     ], "partial-known-exposure")).toBe(false);
   });
 });
