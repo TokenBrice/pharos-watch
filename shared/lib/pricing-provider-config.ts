@@ -40,7 +40,7 @@ export const CEX_PROVIDER_AUDIT_CONFIG = {
 } as const;
 
 export const REDSTONE_SYMBOL_CONFIG = [
-  { stablecoinId: "alusd-alchemix", metaSymbol: "ALUSD", apiSymbol: "ALUSD" },
+  { stablecoinId: "alusd-alchemix", metaSymbol: "alUSD", apiSymbol: "ALUSD" },
   { stablecoinId: "ausd-agora", metaSymbol: "AUSD", apiSymbol: "aUSD" },
   { stablecoinId: "cetes-etherfuse", metaSymbol: "CETES", apiSymbol: "CETES" },
   { stablecoinId: "dai-makerdao", metaSymbol: "DAI", apiSymbol: "DAI" },

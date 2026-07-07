@@ -57,12 +57,12 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
-    "jusd-juicedollar::USDC/USDT bridge reserves::USDC",
-    "JUSD's bridge reserve slice is a de minimis combined USDC/USDT bucket without stablecoin-level weights, so no single coinId is representative.",
+    "jusd-juicedollar::USDC.e/USDT.e/ctUSD bridge reserves::USDC",
+    "JUSD's bridge reserve slice is a de minimis combined USDC.e/USDT.e/ctUSD bucket without stablecoin-level weights, so no single coinId is representative.",
   ],
   [
-    "jusd-juicedollar::USDC/USDT bridge reserves::USDT",
-    "JUSD's bridge reserve slice is a de minimis combined USDC/USDT bucket without stablecoin-level weights, so no single coinId is representative.",
+    "jusd-juicedollar::USDC.e/USDT.e/ctUSD bridge reserves::USDT",
+    "JUSD's bridge reserve slice is a de minimis combined USDC.e/USDT.e/ctUSD bucket without stablecoin-level weights, so no single coinId is representative.",
   ],
   [
     "nxusd-nereus::Nereus overcollateralized crypto positions including DAI collateral::DAI",

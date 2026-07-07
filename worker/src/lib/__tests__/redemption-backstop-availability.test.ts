@@ -136,7 +136,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
         match: "FROM depeg_events",
         rows: [
           {
-            stablecoin_id: "susds-sky",
+            stablecoin_id: "ausd-agora",
             peak_deviation_bps: -3600,
             direction: "below",
             started_at: 2_000_000,
@@ -148,8 +148,8 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
-    expect(cusd?.outputImpairedDependencyId).toBe("susds-sky");
-    expect(cusd?.outputImpairedShare).toBe(0.44);
+    expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.413, 6);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 

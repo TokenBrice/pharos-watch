@@ -1,7 +1,7 @@
 {
-  "staticEdgeCount": 251,
-  "participantCount": 183,
-  "dependentCount": 151,
-  "reserveSlicesMissingCoinId": 454,
+  "staticEdgeCount": 252,
+  "participantCount": 184,
+  "dependentCount": 152,
+  "reserveSlicesMissingCoinId": 453,
   "depTypeWithoutCoinIdWarnings": 0
 }

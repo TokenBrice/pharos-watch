@@ -18554,7 +18554,8 @@
       {
         "name": "BUIDL (BlackRock tokenized MMF)",
         "pct": 25,
-        "risk": "very-low"
+        "risk": "low",
+        "coinId": "buidl-blackrock"
       },
       {
         "name": "Cash",
