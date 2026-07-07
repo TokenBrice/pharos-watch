@@ -261,7 +261,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
-- `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
+- `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every coin — including pre-launch — requires a `blacklistabilityReview` whose `reviewedStatus` matches the resolved status; `check:stablecoin-data` fails on any entry without one. Explicit `canBeBlacklisted: false` overrides that suppress an inherited status additionally need `upstreamSuppressionRationale`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
 - `mintAuthority` is curated metadata that feeds the Mint Authority Score, which since Safety Score v8.0 also drags the Decentralization report-card dimension through a penalty-only blend (a missing review never penalizes). It does not create selector exclusions. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become `NR`.
 - `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. Since Safety Score v8.12 it can drag Decentralization through a penalty-only blend, but missing reviews remain neutral. Use L2BEAT Interop candidate output only as review evidence; verify route docs, contracts, and source links before authoring a sourced profile.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
@@ -477,6 +477,11 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
 - If the asset is a dominant centralized issuer (a top stablecoin or a major centralized RWA token), add its ID to the curated `MAJOR_CENTRALIZED_IDS` allowlist in `src/lib/portfolio-analysis.ts` so the portfolio grouped-exposure view folds it into the "Major Centralized Stablecoins" row.
+- Update the coupled static files that hard-code the tracked set — the build and tests fail on **every** addition (active or pre-launch) until these match the registry:
+  - `src/lib/stablecoin-static-data.ts` — the status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch/frozen entries.
+  - `src/lib/command-palette-search-data.ts` — add a `COMMAND_PALETTE_STABLECOINS` search row; `src/lib/__tests__/stablecoin-static-data.test.ts` enforces sync with the shared registry.
+  - `shared/lib/__tests__/stablecoins.test.ts` — hardcoded tracked/active length expectations.
+  - Verified docs that cite tracked/active counts — run `npm run check:doc-counts` and update whatever it flags.
 - Use `npm run check:stablecoin-data` before moving on.
 
 ---
