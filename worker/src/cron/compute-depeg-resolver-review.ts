@@ -7,7 +7,6 @@ import {
   type DdrrV2InvalidatedPredictionInput,
 } from "@shared/lib/depeg-resolver-review";
 import {
-  DDR_METHODOLOGY_VERSION,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_V2_EFFECTIVE_AT,

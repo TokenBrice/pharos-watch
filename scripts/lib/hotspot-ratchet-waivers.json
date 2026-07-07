@@ -47,6 +47,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "src/components/depeg-resolver-reviewer-module.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The depeg resolver reviewer module combines review-data loading, filter state, projection helpers, table rendering, and action-state handling for the DDRR operator surface. This release is clearing validation debt rather than widening the UI split; keep it queued for a focused reviewer-module decomposition pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-07-07",
+    "reviewAfter": "2026-10-07",
+    "nextAction": "Extract reviewer data/filter orchestration and table/action rendering into focused helpers after the DDRR operator surface stabilizes."
+  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
@@ -66,14 +74,6 @@
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "worker/src/api/audit-depeg-history.ts": {
-    "disposition": "queued-p4",
-    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",

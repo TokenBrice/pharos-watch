@@ -497,6 +497,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/api-key-requests/types.ts` - ApiKeyRequestAdminRow, ApiKeyRequestDb, ApiKeyRequestRow, ApiKeyRequestStatement, ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema
 - `worker/src/api/api-keys.ts` - handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute, handleApiKeysRoute
 - `worker/src/api/audit-depeg-history.ts` - AuditEventsOptions, auditEvents, handleAuditDepegHistory, handleAuditDepegHistoryTrusted
+- `worker/src/api/audit-depeg-history/coingecko-audit.ts` - AuditEventOutcome, AuditedEvent, Verdict, runCoinGeckoAuditBatch
+- `worker/src/api/audit-depeg-history/request.ts` - AuditPaginatedRequest, ParsedAuditRequest, RepairMode, parseAuditRequest
+- `worker/src/api/audit-depeg-history/stability-recompute.ts` - buildRecomputeStabilityStatements, loadSupplyHistoryRowsForWindow
+- `worker/src/api/audit-depeg-history/synthetic-splits.ts` - SyntheticSplitMutationPlan, SyntheticSplitRepairSummary, collectSyntheticSplitGroups, planSyntheticSplitRepair, projectSyntheticSplitDepegEvents, summarizeSyntheticSplitGroup
 - `worker/src/api/backfill-blacklist-current-balances.ts` - handleBackfillBlacklistCurrentBalances
 - `worker/src/api/backfill-cg-prices.ts` - BackfillCgPricesRouteContext, handleBackfillCgPrices, handleBackfillCgPricesTrusted
 - `worker/src/api/backfill-depegs-extraction.ts` - BACKFILL_MIN_CONFIRM_POINTS, BackfillEvent, BackfillEventExtractionOptions, SupplyPoint, SupplySnapshot, extractDepegEvents
@@ -529,11 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/dex-liquidity.ts` - handleDexLiquidity
 - `worker/src/api/digest-archive.ts` - handleDigestArchive
 - `worker/src/api/digest-intelligence-summary.ts` - DigestIntelligenceSummary, selectDigestIntelligence
-- `worker/src/api/digest-risk-summary.ts` - selectDigestRiskSignal
-- `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
-- `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
-- `worker/src/api/events.ts` - handleEvents
-- ... 122 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 126 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -586,6 +586,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-detection/persistence.ts` - persistDepegCommands
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
+- `worker/src/cron/depeg-resolver-review/assessment-loader.ts` - DDRR_ASSESSMENT_ROW_CAP, loadAssessments
 - `worker/src/cron/depeg-resolver-v2-contracts.ts` - DDR_PUBLICATION_SNAPSHOT_KIND, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
 - `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DDR_SNAPSHOT_TTL_SEC, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP
 - `worker/src/cron/depeg-resolver/context.ts` - DdrContextLoadResult, DdrLoadedContext, emptyDdrLineage, loadActiveConfirmedEvents, loadDdrContext, loadPolicyUniverseEvents
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/persistence.ts` - cleanupStaging, hasValidStagedPoolTvl, incrementRunSeq, isValidStagedPoolId, readDiscoveryMeta, updateDiscoveryMeta
 - `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, knownPoolIdKey
 - `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
-- `worker/src/cron/dex-liquidity/challenger-legacy.ts` - loadLegacyDexPoolChallengers
-- ... 343 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 344 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

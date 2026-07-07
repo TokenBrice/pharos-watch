@@ -105,7 +105,7 @@ function isValidIsoDate(value: string): boolean {
   );
 }
 
-export const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
+const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
   message: "Expected YYYY-MM-DD",
 });
 
