@@ -90,19 +90,20 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 2. `HeroCard`
 3. `ExploitNoticeBanner`
 4. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
-5. `AiSummary` when a summary is available
-6. `MobileRiskSnapshot` on `<lg`, using the current report-card/resilience payload so phone users see the grade, peg state, collateral/custody posture, and key caveat before the full report card
-7. `MobileStickySummary`
-8. `LongformScrollspyNav`
-9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
-10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `ReservePanel` as its `rightColumn` slot when report-card data is available) → standalone `ReservePanel` when reserve data exists but report-card data is unavailable → `StablecoinDepegResolverCard` when the coin has an active depeg with a DDR row → `CoinNotices` → `DEWSDetail` for non-NAV coins
+5. `MobileRiskSnapshot` on `<lg`, using the current report-card/resilience payload so phone users see the grade, peg state, collateral/custody posture, and key caveat before the full report card
+6. `MobileStickySummary`
+7. Content grid (Figma coin template): single column below `xl`; at `xl+` an `xl:grid-cols-[minmax(0,1fr)_22rem]` grid places the summary rail beside the main column. The main column holds everything in items 8–16; the rail is item 17.
+8. `AiSummary` when a summary is available (first child of the main column, so the rail tops beside it)
+9. `LongformScrollspyNav` with the `pill-tabs` emphasis — rounded-full group on the neutral control fill, elevated-neutral active pill, flanking hairline rules at `lg+`
+10. Overview zone under a `SectionBanner`: `<section id="info">` first — `KeyInfoCard` alone, or a `lg:grid-cols-2` split of `KeyInfoCard` (with `splitMechanism` + `contractsBelowXlOnly`) beside `PegStabilityCard` (diagram + explainer + peg-mechanism prose, owns `#mechanism` in split mode) when `coin.pegMechanism` exists → `ReportCardDetail` (which embeds `ReservePanel` as its `rightColumn` slot when report-card data is available) → standalone `ReservePanel` when reserve data exists but report-card data is unavailable → `StablecoinDepegResolverCard` when the coin has an active depeg with a DDR row → `CoinNotices` → `DEWSDetail` for non-NAV coins → `FlowsSection` when flows are supported (moved here from the Activity zone per the coin template; the flows query arms when either the overview or activity/history region approaches)
 11. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MintAuthoritySection` only when compact review data exists, `MarketDataSection` for USD-pegged, non-NAV, non-yield-bearing coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
-12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when available, `RedemptionBackstopCard` and `PriceTransparencyCard` render as full-width stacked cards beneath it, in that order
-13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
-14. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
+12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when available, `RedemptionBackstopCard` and `PriceTransparencyCard` render as full-width stacked cards beneath it, in that order — the price-transparency `<section id="price">` carries `xl:hidden` because the rail copy takes over at `xl+`
+13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, and `BlacklistSection` when supported
+14. History zone under a `SectionBanner`: `TapeForCoinTeaser` inside `<section id="coin-timeline">` (`xl:hidden`; the rail copy takes over at `xl+`), `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
 15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
 16. `faqContent` (`FaqSection`) — server-passed Q&A block rendered after the Explore zone, before the feedback modal
-17. `FeedbackModal`
+17. Summary rail `<aside aria-label="Coin summary rail">` (`hidden xl:block`, sticky below the top-nav + tape stack with a viewport-capped internal scroll): `RailSafetySummary` (reuses `HeroSignalsRail`; the hero hides its inline copy at `xl`) → `TapeForCoinTeaser` → compact `ContractDeployments` card when curated contracts exist → compact `PriceTransparencyCard`. Rail copies render without anchor ids — the in-flow instance always owns `#price`, `#coin-timeline`, `#contracts`, and `#price-transparency` (at `xl+` the passport CHAINS jump to `#contracts` is a no-op since its in-flow target is hidden there)
+18. `FeedbackModal`
 
 `StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. For tracked variants, that fallback includes a crawlable variant-relationship block linking to the parent asset and up to four sibling variants so wrapper, savings, strategy-vault, and risk-absorption pages expose their parent risk context even before hydration. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 

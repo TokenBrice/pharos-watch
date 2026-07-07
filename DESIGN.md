@@ -124,7 +124,7 @@ A near-monochrome neutral field with semantic accents that only fire on meaning.
 
 ### Primary
 
-- **Frost Blue** (`#4bc4de`): The lighthouse beam. Reserved for the headline market figure, the primary chart stroke (`chart-primary`), the lit detail-page scrollspy, the mobile-drawer active accent, and the drawn nautical/lighthouse surfaces. It is the only color allowed to draw the eye. `--brand-accent` and `--chart-primary` both resolve to it. The global top-nav does **not** use it — desktop nav active state is a neutral `bg-muted/60`.
+- **Frost Blue** (`#4bc4de`): The lighthouse beam. Reserved for the headline market figure, the primary chart stroke (`chart-primary`), the lit longform scrollspy on methodology surfaces, the mobile-drawer active accent, and the drawn nautical/lighthouse surfaces. It is the only color allowed to draw the eye. `--brand-accent` and `--chart-primary` both resolve to it. The global top-nav does **not** use it — desktop nav active state is a neutral `bg-muted/60` — and the coin-detail pill tabs are elevated-neutral per the Figma coin template.
 
 ### Secondary (data sequence)
 
@@ -198,7 +198,7 @@ A global top bar at `≥lg`; content runs full-width beneath it. The left "watch
 
 - **Contents:** brand mark (ABC Whyte Inktrap wordmark, Bricolage fallback) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
 - **Behavior:** sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`), hairline bottom border. Active menu = neutral `bg-muted/60 text-foreground` (**not** frost). A `CoreTopRail` tape (registry chips + event ticker) sticks below it.
-- **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone, but the **detail-page `LongformScrollspyNav`** retains the frost-lit active pill (`text-frost-blue` + `pharos-nav-beam`).
+- **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone. The stablecoin detail page uses the `LongformScrollspyNav` `pill-tabs` emphasis (Figma coin template): a rounded-full group on the neutral control fill with an elevated-neutral active pill (`.pharos-pill-tab-active`) — no frost. The frost-lit recipe (`.pharos-rail-tab-active` + `pharos-nav-beam`) survives on methodology-family longform pages.
 
 ### Cards (`.pharos-card-shell`)
 

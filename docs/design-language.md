@@ -440,7 +440,7 @@ The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) ha
 - internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
 - stablecoin-detail per-coin notices (`coin-notice.tsx`): the danger/warning/info alert stripe is severity-keyed data, deliberately kept through the June 2026 mythos review and normalized to the same 3px weight
 
-The desktop **top-nav** (`top-nav.tsx`) active state is a neutral `bg-muted/60` fill, not a stripe — the old left "watch column" sidebar was retired in the Figma redesign. The frost lit-tab survives on the **detail-page scrollspy** (`LongformScrollspyNav`: `.pharos-rail-tab-active` + `.pharos-nav-beam` + lit `text-frost-blue`); the **mobile drawer** (`header.tsx`) keeps `border-l-2 border-l-frost-blue` on the active route group. See `### Navigation Active vs Inactive` below.
+The desktop **top-nav** (`top-nav.tsx`) active state is a neutral `bg-muted/60` fill, not a stripe — the old left "watch column" sidebar was retired in the Figma redesign. The frost lit-tab survives on **methodology-family longform scrollspies** (`LongformScrollspyNav` default recipe: `.pharos-rail-tab-active` + `.pharos-nav-beam` + lit `text-frost-blue`); the stablecoin detail page uses the `pill-tabs` emphasis (Figma coin template) with an elevated-neutral active pill (`.pharos-pill-tab-active`), and the **mobile drawer** (`header.tsx`) keeps `border-l-2 border-l-frost-blue` on the active route group. See `### Navigation Active vs Inactive` below.
 
 ### Interactive Card Pattern
 
@@ -601,7 +601,7 @@ The global desktop nav is the **top-nav** (`src/components/top-nav.tsx`, ≥`lg`
 
 The frost lit-tab survives where a **reading position** is tracked, not on the global nav:
 
-- **Detail-page scrollspy** (`LongformScrollspyNav`): the active section pill reuses the frost recipe — `.pharos-rail-tab-active` + the `.pharos-nav-beam` activation sweep + a lit `text-frost-blue` icon (reduced-motion gated).
+- **Methodology-family longform scrollspies** (`LongformScrollspyNav` default recipe): the active section pill reuses the frost recipe — `.pharos-rail-tab-active` + the `.pharos-nav-beam` activation sweep + a lit `text-frost-blue` icon (reduced-motion gated). The stablecoin detail page opts into the `pill-tabs` emphasis instead (Figma coin template): a rounded-full neutral group whose active pill is elevated-neutral, not frost.
 - **Mobile drawer** (`header.tsx`, `<lg`): the active route group keeps a `border-l-2 border-l-frost-blue` accent.
 
 The `CoreTopRail` (`src/components/core-top-rail.tsx`) below the nav is now a live tape (registry chips + event ticker), not a nav pill strip — the horizontal core-nav pills were retired and folded into the Terminal menu.
