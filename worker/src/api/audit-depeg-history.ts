@@ -1,20 +1,16 @@
 import { jsonResponse, errorResponse } from "../lib/api-utils";
 import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
-import { cgUrl, cgHeaders } from "../lib/coingecko";
+import { getDepegThresholdBps } from "../lib/constants";
 import { buildInClause } from "../lib/db";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { mapWithConcurrency } from "../lib/concurrency";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
-import {
-  buildPriceValidationContext,
-  loadPriceValidationReferences,
-  validatePriceCandidate,
-} from "../lib/price-validation";
 import type { PsiDepegEventRow } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { deriveDepegSignal } from "../lib/depeg-signals";
+import {
+  runCoinGeckoAuditBatch,
+  type AuditedEvent,
+  type Verdict,
+} from "./audit-depeg-history/coingecko-audit";
 import { parseAuditRequest, type AuditPaginatedRequest, type RepairMode } from "./audit-depeg-history/request";
 import {
   buildRecomputeStabilityStatements,
@@ -28,10 +24,6 @@ import {
   type SyntheticSplitRepairSummary,
 } from "./audit-depeg-history/synthetic-splits";
 
-type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
-
-const AUDIT_CG_FETCH_START_INTERVAL_MS = 200;
-const AUDIT_CG_FETCH_CONCURRENCY = 4;
 // If at least this fraction of attempted CG fetches fail, treat it as an
 // upstream outage rather than genuine per-event errors: mark the result
 // upstreamReachable=false and refuse to persist provenance for the batch.
@@ -59,17 +51,6 @@ interface DdrSealedEventConflict {
   eventId: number;
   incidentKey: string;
   publicPredictionId: number;
-}
-
-interface AuditedEvent {
-  id: number;
-  symbol: string;
-  startedAt: number;
-  peakBps: number;
-  cgMaxBps: number | null;
-  cgMaxSameDirectionBps?: number | null;
-  cgMaxOppositeDirectionBps?: number | null;
-  verdict: Verdict;
 }
 
 interface AuditResult {
@@ -130,42 +111,6 @@ interface ContradictoryRecoveryRepairResult {
 interface AuditMutationPlan {
   statements: D1PreparedStatement[];
   affectedDays: Set<number>;
-}
-
-interface AuditEventOutcome {
-  event: DepegRow;
-  auditedEvent: AuditedEvent;
-  attemptedCgFetch: boolean;
-  upstreamError: boolean;
-  rejectedByValidationCount: number;
-  falsePositiveFound: boolean;
-  provenanceVerdict: Verdict | null;
-  invalidatesProvenance: boolean;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function createFetchStartLimiter(intervalMs: number): () => Promise<void> {
-  let nextStartAt = 0;
-  let tail = Promise.resolve();
-
-  return async () => {
-    const previous = tail;
-    let release!: () => void;
-    tail = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await previous;
-    const now = Date.now();
-    const waitMs = Math.max(0, nextStartAt - now);
-    nextStartAt = Math.max(now, nextStartAt) + intervalMs;
-    release();
-    if (waitMs > 0) {
-      await sleep(waitMs);
-    }
-  };
 }
 
 function getDeviationSignal(price: number | null | undefined, pegReference: number) {
@@ -301,31 +246,6 @@ function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; s
     startedAt: event.started_at,
     peakBps: event.peak_deviation_bps,
   };
-}
-
-function toAuditedEvent(
-  event: DepegRow,
-  verdict: Verdict,
-  cgDeviation: {
-    cgMaxBps: number | null;
-    cgMaxSameDirectionBps?: number | null;
-    cgMaxOppositeDirectionBps?: number | null;
-  },
-): AuditedEvent {
-  const auditedEvent: Omit<AuditedEvent, "verdict"> = {
-    id: event.id,
-    symbol: event.symbol,
-    startedAt: event.started_at,
-    peakBps: event.peak_deviation_bps,
-    cgMaxBps: cgDeviation.cgMaxBps,
-  };
-  if ("cgMaxSameDirectionBps" in cgDeviation) {
-    auditedEvent.cgMaxSameDirectionBps = cgDeviation.cgMaxSameDirectionBps;
-  }
-  if ("cgMaxOppositeDirectionBps" in cgDeviation) {
-    auditedEvent.cgMaxOppositeDirectionBps = cgDeviation.cgMaxOppositeDirectionBps;
-  }
-  return { ...auditedEvent, verdict };
 }
 
 function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
@@ -639,174 +559,6 @@ export interface AuditEventsOptions {
   dryRun: boolean;
 }
 
-type PriceValidationReferences = Awaited<ReturnType<typeof loadPriceValidationReferences>>;
-
-async function auditSingleEventWithCoinGecko(
-  event: DepegRow,
-  validationReferences: PriceValidationReferences | undefined,
-  waitForCgFetchStart: () => Promise<void>,
-): Promise<AuditEventOutcome> {
-  const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
-  const geckoId = meta?.geckoId;
-
-  if (!geckoId) {
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "skipped", { cgMaxBps: null }),
-      attemptedCgFetch: false,
-      upstreamError: false,
-      rejectedByValidationCount: 0,
-      falsePositiveFound: false,
-      provenanceVerdict: null,
-      invalidatesProvenance: false,
-    };
-  }
-
-  const threshold = getDepegThresholdBps(event.peg_type);
-  const falsePositiveBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
-  const validationContext = buildPriceValidationContext({
-    stablecoinId: event.stablecoin_id,
-    pegType: event.peg_type,
-  });
-
-  const from = event.started_at - 3600;
-  const to = (event.ended_at ?? event.started_at) + 3600;
-  let rejectedByValidationCount = 0;
-
-  try {
-    await waitForCgFetchStart();
-
-    const cgEndpoint = cgUrl(
-      `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
-    );
-    const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
-    const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
-
-    if (!cgRes?.ok) {
-      console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
-        attemptedCgFetch: true,
-        upstreamError: true,
-        rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: null,
-        invalidatesProvenance: false,
-      };
-    }
-
-    const cgData = (await cgRes.json()) as { prices?: [number, number][] };
-    const rawPrices = cgData.prices ?? [];
-    const validatedPrices = rawPrices.filter(([, cgPrice]) => {
-      if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {
-        rejectedByValidationCount++;
-        return false;
-      }
-      const verdict = validatePriceCandidate(
-        cgPrice,
-        validationContext,
-        "historical_backfill",
-        validationReferences,
-      );
-      if (!verdict.accepted) {
-        rejectedByValidationCount++;
-        return false;
-      }
-      return true;
-    });
-
-    if (validatedPrices.length === 0) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "no_data", { cgMaxBps: null }),
-        attemptedCgFetch: true,
-        upstreamError: false,
-        rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "no_data",
-        invalidatesProvenance: true,
-      };
-    }
-
-    let maxCgBps = 0;
-    let maxSameDirectionBps = 0;
-    let maxOppositeDirectionBps = 0;
-    for (const [, cgPrice] of validatedPrices) {
-      const cgSignal = getDeviationSignal(cgPrice, event.peg_reference);
-      if (cgSignal == null) continue;
-      const cgBps = cgSignal.absBps;
-      if (cgBps > maxCgBps) maxCgBps = cgBps;
-      if (cgSignal.direction === event.direction) {
-        if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
-      } else if (cgBps > maxOppositeDirectionBps) {
-        maxOppositeDirectionBps = cgBps;
-      }
-    }
-
-    if (maxSameDirectionBps >= falsePositiveBar) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "confirmed", {
-          cgMaxBps: maxCgBps,
-          cgMaxSameDirectionBps: maxSameDirectionBps,
-          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }),
-        attemptedCgFetch: true,
-        upstreamError: false,
-        rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "confirmed",
-        invalidatesProvenance: false,
-      };
-    }
-
-    if (maxOppositeDirectionBps >= falsePositiveBar) {
-      return {
-        event,
-        auditedEvent: toAuditedEvent(event, "disputed", {
-          cgMaxBps: maxCgBps,
-          cgMaxSameDirectionBps: maxSameDirectionBps,
-          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-        }),
-        attemptedCgFetch: true,
-        upstreamError: false,
-        rejectedByValidationCount,
-        falsePositiveFound: false,
-        provenanceVerdict: "disputed",
-        invalidatesProvenance: true,
-      };
-    }
-
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "false_positive", {
-        cgMaxBps: maxCgBps,
-        cgMaxSameDirectionBps: maxSameDirectionBps,
-        cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-      }),
-      attemptedCgFetch: true,
-      upstreamError: false,
-      rejectedByValidationCount,
-      falsePositiveFound: true,
-      provenanceVerdict: "false_positive",
-      invalidatesProvenance: true,
-    };
-  } catch (err) {
-    console.warn(`[audit] Error auditing ${event.symbol}:`, err);
-    return {
-      event,
-      auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
-      attemptedCgFetch: true,
-      upstreamError: true,
-      rejectedByValidationCount,
-      falsePositiveFound: false,
-      provenanceVerdict: null,
-      invalidatesProvenance: false,
-    };
-  }
-}
-
 /**
  * @internal exported for tests. Runs the standard CG-backed audit loop against
  * a pre-loaded set of closed depeg events.
@@ -870,30 +622,14 @@ export async function auditEvents(
     upstreamReachable: true,
   };
 
-  // Load FX references once so CG prices can be vetted with the same
-  // validation context the live pricing pipeline uses.
-  const validationReferences = paginatedEvents.length > 0
-    ? await loadPriceValidationReferences(db)
-    : undefined;
-
   const affectedDays = new Set<number>();
   const provenanceStatements: D1PreparedStatement[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
-  let attemptedCgFetches = 0;
-
-  // Analyst plan: 500 req/min. A 200ms shared start interval gives ~300
-  // req/min with headroom while allowing validation/fetch waits to overlap.
-  const waitForCgFetchStart = createFetchStartLimiter(AUDIT_CG_FETCH_START_INTERVAL_MS);
-  const outcomes = await mapWithConcurrency(
-    paginatedEvents,
-    AUDIT_CG_FETCH_CONCURRENCY,
-    (event) => auditSingleEventWithCoinGecko(event, validationReferences, waitForCgFetchStart),
-  );
+  const { outcomes, attemptedCgFetches } = await runCoinGeckoAuditBatch(db, paginatedEvents);
 
   for (const outcome of outcomes) {
     result.auditedEvents.push(outcome.auditedEvent);
-    if (outcome.attemptedCgFetch) attemptedCgFetches++;
     if (outcome.upstreamError) result.upstreamErrorCount++;
     result.rejectedByValidationCount += outcome.rejectedByValidationCount;
     if (outcome.falsePositiveFound) result.falsePositivesFound++;
