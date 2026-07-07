@@ -7,7 +7,11 @@ import { SHADOW_META_BY_ID } from "./shadow-stablecoins";
 type ClientPsiEligibleMeta = Pick<StablecoinClientMeta, "id" | "name" | "symbol">;
 
 /** Slim client-side PSI lookup = active tracked + shadow PSI assets. */
-export const CLIENT_PSI_ELIGIBLE_META_BY_ID = new Map<string, ClientPsiEligibleMeta>([
-  ...CLIENT_ACTIVE_META_BY_ID,
-  ...SHADOW_META_BY_ID,
+export const CLIENT_PSI_ELIGIBLE_META_BY_ID: ReadonlyMap<string, ClientPsiEligibleMeta> = new Map([
+  ...[...CLIENT_ACTIVE_META_BY_ID].map(([id, meta]) => [id, meta] as const),
+  ...[...SHADOW_META_BY_ID].map(([id, meta]) => [id, {
+    id: meta.id,
+    name: meta.name,
+    symbol: meta.symbol,
+  }] as const),
 ]);

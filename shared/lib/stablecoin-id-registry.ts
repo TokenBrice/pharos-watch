@@ -5,10 +5,10 @@ import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./
 import type { StablecoinMeta } from "../types";
 
 /** Cross-provider live metadata seed: tracked active/frozen/pre-launch assets plus PSI-only shadow assets. Excludes dead assets. */
-export const ALL_LIVE_COINS: StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
+export const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
 
 /** Lookup of every live coin (tracked + shadow) by canonical id. Includes shadow assets that are NOT in the public readback. */
-export const REGISTRY_BY_ID: Map<string, StablecoinMeta> = new Map();
+const registryById = new Map<string, StablecoinMeta>();
 /** Tracked-only registry: active + frozen + pre-launch, no shadow assets. */
 export const TRACKED_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID;
 /** Public-readback registry: active + frozen tracked coins. Excludes pre-launch and shadow-only ids. */
@@ -16,11 +16,11 @@ export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READ
 /** PSI universe: active tracked coins plus PSI-only shadow assets (used for systemic-importance calculations). */
 export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
 /** Reverse index: DefiLlama numeric id → meta. Guaranteed unique (throws at module load on collision). */
-export const REGISTRY_BY_LLAMA_ID: Map<string, StablecoinMeta> = new Map();
+const registryByLlamaId = new Map<string, StablecoinMeta>();
 /** Reverse index: CoinGecko id → meta. Guaranteed unique (throws at module load on collision). */
-export const REGISTRY_BY_GECKO_ID: Map<string, StablecoinMeta> = new Map();
+const registryByGeckoId = new Map<string, StablecoinMeta>();
 /** Reverse index: CoinMarketCap slug → meta. Guaranteed unique (throws at module load on collision). */
-export const REGISTRY_BY_CMC_SLUG: Map<string, StablecoinMeta> = new Map();
+const registryByCmcSlug = new Map<string, StablecoinMeta>();
 
 function setUniqueExternalId(
   registry: Map<string, StablecoinMeta>,
@@ -53,26 +53,26 @@ function assertUniqueDeadLlamaIds(): void {
 }
 
 for (const meta of ALL_LIVE_COINS) {
-  if (REGISTRY_BY_ID.has(meta.id)) {
+  if (registryById.has(meta.id)) {
     throw new Error(`[stablecoin-id-registry] Duplicate canonical id: ${meta.id}`);
   }
-  REGISTRY_BY_ID.set(meta.id, meta);
+  registryById.set(meta.id, meta);
 
   if (meta.llamaId) {
-    setUniqueExternalId(REGISTRY_BY_LLAMA_ID, "llamaId", meta.llamaId, meta);
+    setUniqueExternalId(registryByLlamaId, "llamaId", meta.llamaId, meta);
   }
 
   if (meta.geckoId) {
-    setUniqueExternalId(REGISTRY_BY_GECKO_ID, "geckoId", meta.geckoId, meta);
+    setUniqueExternalId(registryByGeckoId, "geckoId", meta.geckoId, meta);
   }
 
   if (meta.cmcSlug) {
-    setUniqueExternalId(REGISTRY_BY_CMC_SLUG, "cmcSlug", meta.cmcSlug, meta);
+    setUniqueExternalId(registryByCmcSlug, "cmcSlug", meta.cmcSlug, meta);
   }
 }
 
-for (const [llamaId, meta] of REGISTRY_BY_LLAMA_ID) {
-  const canonicalMatch = REGISTRY_BY_ID.get(llamaId);
+for (const [llamaId, meta] of registryByLlamaId) {
+  const canonicalMatch = registryById.get(llamaId);
   if (canonicalMatch && canonicalMatch.id !== meta.id) {
     throw new Error(
       `[stablecoin-id-registry] Ambiguous id: llamaId ${llamaId} maps to ${meta.id} but canonical id belongs to ${canonicalMatch.id}`,
@@ -91,6 +91,11 @@ if (PSI_INCLUSIVE_REGISTRY_BY_ID.size !== PSI_ELIGIBLE_STABLECOINS.length) {
 }
 
 assertUniqueDeadLlamaIds();
+
+export const REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = registryById;
+export const REGISTRY_BY_LLAMA_ID: ReadonlyMap<string, StablecoinMeta> = registryByLlamaId;
+export const REGISTRY_BY_GECKO_ID: ReadonlyMap<string, StablecoinMeta> = registryByGeckoId;
+export const REGISTRY_BY_CMC_SLUG: ReadonlyMap<string, StablecoinMeta> = registryByCmcSlug;
 
 export type StablecoinIdResolution = { canonicalId: string };
 

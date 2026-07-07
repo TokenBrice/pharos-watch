@@ -87,7 +87,7 @@ export function deriveComparisonCoins({
 }: {
   selectedIds: string[];
   assetMap: Map<string, StablecoinData>;
-  metaMap: Map<string, ComparisonMeta>;
+  metaMap: ReadonlyMap<string, ComparisonMeta>;
   pegCoinMap: Map<string, PegCoinSlice>;
   dexData: DexDataMap | undefined;
   cardMap: Map<string, ReportCard>;
@@ -128,7 +128,7 @@ export function deriveSupplySeries({
 }: {
   selectedIds: string[];
   histories: (SupplyHistoryPoint[] | undefined)[];
-  metaMap: Map<string, { name?: string; symbol?: string }>;
+  metaMap: ReadonlyMap<string, { name?: string; symbol?: string }>;
 }): SupplySeriesEntry[] {
   return selectedIds
     .map((id, index) => {
@@ -155,7 +155,7 @@ export function deriveFlowSeries({
 }: {
   selectedIds: string[];
   flowDetails: (MintBurnPerCoinResponse | undefined)[];
-  metaMap: Map<string, { symbol?: string }>;
+  metaMap: ReadonlyMap<string, { symbol?: string }>;
 }): FlowSeriesEntry[] {
   return selectedIds
     .map((id, index) => {
@@ -182,7 +182,7 @@ export function deriveFlowCardData({
 }: {
   selectedIds: string[];
   flowCoinMap: Map<string, FlowCoinSlice>;
-  metaMap: Map<string, { symbol?: string }>;
+  metaMap: ReadonlyMap<string, { symbol?: string }>;
 }): FlowCardEntry[] {
   if (flowCoinMap.size === 0) return [];
   return selectedIds

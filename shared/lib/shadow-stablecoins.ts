@@ -2,7 +2,7 @@ import type { StablecoinMeta } from "../types";
 
 /** Stablecoins no longer actively displayed but still included in PSI computation
  *  for historical accuracy. Must have a valid DefiLlama or CoinGecko ID. */
-export const SHADOW_STABLECOINS: StablecoinMeta[] = [
+export const SHADOW_STABLECOINS: readonly StablecoinMeta[] = [
   // UST (id=3 on DefiLlama, renamed TerraClassicUSD/USTC post-collapse)
   { id: "ust-terra", llamaId: "3", detailProvider: "defillama", name: "TerraUSD", symbol: "UST", flags: { backing: "algorithmic", pegCurrency: "USD", governance: "decentralized", yieldBearing: false, rwa: false, navToken: false }, geckoId: "terrausd" },
   // IRON Finance (no DL stablecoin id — use geckoId for price backfill via DL coins API)
@@ -10,5 +10,7 @@ export const SHADOW_STABLECOINS: StablecoinMeta[] = [
   { id: "iron-iron-finance", detailProvider: "coingecko", name: "IRON", symbol: "IRON", flags: { backing: "algorithmic", pegCurrency: "USD", governance: "decentralized", yieldBearing: false, rwa: false, navToken: false }, geckoId: "iron-stablecoin" },
 ];
 
-export const SHADOW_IDS = new Set(SHADOW_STABLECOINS.map((s) => s.id));
-export const SHADOW_META_BY_ID = new Map(SHADOW_STABLECOINS.map((s) => [s.id, s]));
+export const SHADOW_IDS: ReadonlySet<string> = new Set(SHADOW_STABLECOINS.map((s) => s.id));
+export const SHADOW_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map(
+  SHADOW_STABLECOINS.map((s) => [s.id, s]),
+);
