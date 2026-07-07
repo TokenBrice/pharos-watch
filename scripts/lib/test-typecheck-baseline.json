@@ -55,9 +55,9 @@
       "message": "Conversion of type 'undefined' to type 'RequestInit' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
       "count": 3,
       "examples": [
-        "358:23",
-        "407:13",
-        "408:14"
+        "387:23",
+        "436:13",
+        "437:14"
       ]
     },
     {
@@ -67,7 +67,7 @@
       "count": 2,
       "examples": [
         "185:45",
-        "405:12"
+        "434:12"
       ]
     },
     {
@@ -76,8 +76,8 @@
       "message": "Tuple type '[]' of length '0' has no element at index '1'.",
       "count": 2,
       "examples": [
-        "358:48",
-        "405:25"
+        "387:48",
+        "434:25"
       ]
     },
     {
@@ -187,7 +187,7 @@
       "message": "Property 'blacklistStatus' does not exist on type '{}'.",
       "count": 1,
       "examples": [
-        "172:22"
+        "178:22"
       ]
     },
     {
@@ -196,7 +196,7 @@
       "message": "Property 'genius' does not exist on type '{}'.",
       "count": 1,
       "examples": [
-        "234:22"
+        "241:22"
       ]
     },
     {
@@ -205,8 +205,8 @@
       "message": "Property 'id' does not exist on type '{}'.",
       "count": 2,
       "examples": [
-        "290:37",
-        "299:39"
+        "302:37",
+        "311:39"
       ]
     },
     {
@@ -215,9 +215,9 @@
       "message": "Property 'mintAuthoritySummary' does not exist on type '{}'.",
       "count": 3,
       "examples": [
-        "125:22",
-        "290:66",
-        "299:68"
+        "131:22",
+        "302:66",
+        "311:68"
       ]
     },
     {
@@ -244,7 +244,7 @@
       "message": "Type '(cmd: any) => { status: number; aborted: boolean; }' is not assignable to type '(cmd: any, extraEnv?: {}, { signal }?: {}) => Promise<any>'.",
       "count": 1,
       "examples": [
-        "54:7"
+        "56:7"
       ]
     },
     {
@@ -253,8 +253,8 @@
       "message": "Type '(status: string | number | null | undefined) => void' is not assignable to type '(code?: string | number | null | undefined) => never'.",
       "count": 2,
       "examples": [
-        "50:7",
-        "82:9"
+        "52:7",
+        "84:9"
       ]
     },
     {
@@ -272,8 +272,8 @@
       "message": "Type 'string | number | null | undefined' is not assignable to type 'number | undefined'.",
       "count": 2,
       "examples": [
-        "51:9",
-        "83:11"
+        "53:9",
+        "85:11"
       ]
     },
     {
@@ -282,7 +282,7 @@
       "message": "Property 'signal' does not exist on type '{}'.",
       "count": 1,
       "examples": [
-        "86:44"
+        "88:44"
       ]
     },
     {
@@ -432,7 +432,7 @@
       "message": "Type 'number | null' is not assignable to type 'number | undefined'.",
       "count": 1,
       "examples": [
-        "68:9"
+        "90:9"
       ]
     },
     {
@@ -441,7 +441,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{ STATIC_EXPORT_PORT: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "51:9"
+        "73:9"
       ]
     },
     {
@@ -450,7 +450,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{}' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "67:9"
+        "89:9"
       ]
     },
     {
@@ -459,7 +459,7 @@
       "message": "No overload matches this call.",
       "count": 1,
       "examples": [
-        "58:53"
+        "80:53"
       ]
     },
     {
@@ -468,7 +468,7 @@
       "message": "Variable 'fallbackCalls' implicitly has an 'any[]' type.",
       "count": 1,
       "examples": [
-        "74:14"
+        "96:14"
       ]
     },
     {
@@ -477,7 +477,7 @@
       "message": "Parameter 'event' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
-        "69:22"
+        "91:22"
       ]
     },
     {
@@ -486,7 +486,7 @@
       "message": "Binding element 'readValue' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
-        "24:26"
+        "27:26"
       ]
     },
     {
@@ -495,7 +495,7 @@
       "message": "Variable 'fallbackCalls' implicitly has type 'any[]' in some locations where its type cannot be determined.",
       "count": 1,
       "examples": [
-        "64:11"
+        "86:11"
       ]
     },
     {
@@ -504,8 +504,8 @@
       "message": "Argument of type '(url: string) => Promise<Response>' is not assignable to parameter of type '{ (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | URL | Request, init?: RequestInit | undefined): Promise<...>; }'.",
       "count": 2,
       "examples": [
-        "529:82",
-        "542:82"
+        "597:82",
+        "610:82"
       ]
     },
     {
@@ -533,7 +533,7 @@
       "message": "Variable 'current' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
-        "39:9"
+        "49:9"
       ]
     },
     {
@@ -542,7 +542,7 @@
       "message": "Variable 'steps' implicitly has an 'any[]' type.",
       "count": 1,
       "examples": [
-        "80:10"
+        "90:10"
       ]
     },
     {
@@ -551,7 +551,7 @@
       "message": "Parameter 'yaml' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
-        "33:26"
+        "43:26"
       ]
     },
     {
@@ -560,7 +560,7 @@
       "message": "Variable 'current' implicitly has type 'any' in some locations where its type cannot be determined.",
       "count": 1,
       "examples": [
-        "36:7"
+        "46:7"
       ]
     },
     {
@@ -569,7 +569,7 @@
       "message": "Variable 'steps' implicitly has type 'any[]' in some locations where its type cannot be determined.",
       "count": 1,
       "examples": [
-        "35:9"
+        "45:9"
       ]
     },
     {
@@ -578,7 +578,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{ CI: string; VALIDATE_PREBUILD_SURFACE: string; VALIDATE_PREBUILD_TIER: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "215:7"
+        "242:7"
       ]
     },
     {
@@ -587,7 +587,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_SURFACE: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "160:7"
+        "181:7"
       ]
     },
     {
@@ -596,16 +596,16 @@
       "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_SURFACE: string; VALIDATE_PREBUILD_TIER: string; VALIDATE_PREBUILD_CONTINUE_ON_ERROR: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "263:7"
+        "303:7"
       ]
     },
     {
       "file": "scripts/__tests__/validate-prebuild-surface.test.ts",
       "code": "TS2741",
-      "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_TIER: string; }' but required in type 'ProcessEnv'.",
+      "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_TIER: string; VALIDATE_PREBUILD_SKIP_COMMANDS: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "189:7"
+        "210:7"
       ]
     },
     {
@@ -614,7 +614,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{}' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "241:7"
+        "270:7"
       ]
     },
     {
@@ -743,7 +743,7 @@
     {
       "file": "src/app/admin/__tests__/client.test.tsx",
       "code": "TS2741",
-      "message": "Property 'transitionsLast24h' is missing in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; availabilityImpactingConsecutiveCronErrors: number; diagnosticIssueCount: number; worstCacheRatio: number; }' but required in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; ... 6 more ...; transitionsLast24h: number; }'.",
+      "message": "Property 'transitionsLast24h' is missing in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; availabilityImpactingConsecutiveCronErrors: number; diagnosticIssueCount: number; worstCacheRatio: number; }' but required in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; ... 20 more ...; transitionsLast24h: number; }'.",
       "count": 1,
       "examples": [
         "227:3"
@@ -806,7 +806,7 @@
     {
       "file": "src/app/coverage/coverage-page-sections.test.tsx",
       "code": "TS2322",
-      "message": "Type '\"complete\"' is not assignable to type '\"full\" | \"disabled\" | \"unknown\" | \"lagging\" | \"partial-history\" | \"bootstrapping\" | null | undefined'.",
+      "message": "Type '\"complete\"' is not assignable to type '\"disabled\" | \"unknown\" | \"full\" | \"lagging\" | \"partial-history\" | \"bootstrapping\" | null | undefined'.",
       "count": 1,
       "examples": [
         "47:5"
@@ -815,7 +815,7 @@
     {
       "file": "src/app/coverage/coverage-page-sections.test.tsx",
       "code": "TS2322",
-      "message": "Type '{ search: string; sort: CoverageSortKey; filter: CoverageFilterKey; rows: CoverageRow[]; dataUpdatedAt: number; logos: {}; hasActiveFilters: boolean; ... 5 more ...; resetFilters: () => void; }' is not assignable to type 'Pick<{ resetFilters: () => void; filter: CoverageFilterKey; setFilter: Dispatch<SetStateAction<CoverageFilterKey>>; ... 19 more ...; staleQueries: { ...; }[]; }, \"search\" | ... 11 more ... | \"resetFilters\">'.",
+      "message": "Type '{ sort: CoverageSortKey; filter: CoverageFilterKey; search: string; rows: CoverageRow[]; dataUpdatedAt: number; logos: {}; hasActiveFilters: boolean; ... 5 more ...; resetFilters: () => void; }' is not assignable to type 'Pick<{ resetFilters: () => void; filter: CoverageFilterKey; setFilter: Dispatch<SetStateAction<CoverageFilterKey>>; ... 19 more ...; staleQueries: { ...; }[]; }, \"sort\" | ... 11 more ... | \"resetFilters\">'.",
       "count": 4,
       "examples": [
         "100:8",
@@ -835,7 +835,7 @@
     {
       "file": "src/app/coverage/coverage-page-sections.test.tsx",
       "code": "TS2740",
-      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; \"tusd-trueusd\": string; ... 438 more ...; \"bils-bitsofgold\": string; }>': \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", \"ust-terra\", and 443 more.",
+      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 440 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 445 more.",
       "count": 2,
       "examples": [
         "57:5",
@@ -845,7 +845,7 @@
     {
       "file": "src/app/dependency-map/client.test.tsx",
       "code": "TS2740",
-      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; \"tusd-trueusd\": string; ... 438 more ...; \"bils-bitsofgold\": string; }>': \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", \"ust-terra\", and 443 more.",
+      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 440 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 445 more.",
       "count": 1,
       "examples": [
         "77:36"
@@ -868,7 +868,7 @@
       "message": "This expression is not callable.",
       "count": 1,
       "examples": [
-        "1107:5"
+        "1106:5"
       ]
     },
     {
@@ -941,7 +941,7 @@
       "message": "Argument of type '{ mintPath: \"issuer-direct-mint\"; authorityPosture: \"concentrated-admin\"; }' is not assignable to parameter of type 'MintAuthorityCoverageSummary'.",
       "count": 1,
       "examples": [
-        "543:33"
+        "554:33"
       ]
     },
     {
@@ -1300,7 +1300,7 @@
       "message": "Property 'dependencyFromLive' is missing in type '{ pegScore: number; activeDepeg: false; activeDepegBps: null; depegEventCount: number; lastEventAt: null; liquidityScore: number; effectiveExitScore: null; redemptionBackstopScore: null; ... 16 more ...; collateralFromLive: false; }' but required in type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; }'.",
       "count": 1,
       "examples": [
-        "53:7"
+        "63:7"
       ]
     },
     {
@@ -1524,11 +1524,11 @@
       "file": "src/hooks/__tests__/query-option-builders.test.ts",
       "code": "TS2349",
       "message": "This expression is not callable.",
-      "count": 5,
+      "count": 4,
       "examples": [
-        "44:19",
-        "59:19",
-        "77:19"
+        "43:19",
+        "57:19",
+        "74:19"
       ]
     },
     {
@@ -1537,7 +1537,7 @@
       "message": "This expression is not callable.",
       "count": 1,
       "examples": [
-        "228:33"
+        "295:33"
       ]
     },
     {
@@ -1679,7 +1679,7 @@
       "message": "Argument of type '{ coin: never; coinData: never; isNavToken: boolean; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; ... 9 more ...; redemptionBackstop: { ...; } | null; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
       "count": 1,
       "examples": [
-        "1549:47"
+        "1589:47"
       ]
     },
     {
@@ -1688,7 +1688,7 @@
       "message": "Argument of type '{ coin: never; coinData: never; isNavToken: false; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; gaugeDeviationBps: number; ... 8 more ...; redemptionBackstop: never; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
       "count": 1,
       "examples": [
-        "1429:53"
+        "1469:53"
       ]
     },
     {
@@ -1697,8 +1697,8 @@
       "message": "Argument of type '{ coin: never; coinData: never; isNavToken: false; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; gaugeDeviationBps: number; ... 8 more ...; redemptionBackstop: null; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
       "count": 2,
       "examples": [
-        "1364:53",
-        "1478:66"
+        "1404:53",
+        "1518:66"
       ]
     },
     {
@@ -1707,8 +1707,8 @@
       "message": "Object literal may only specify known properties, and 'currentBand' does not exist in type '{ id: string; symbol: string; name: string; pegType: string; pegCurrency: string; governance: string; currentDeviationBps: number | null; pegScore: number | null; pegPct: number; severityScore: number; ... 18 more ...; dexPriceCheck?: { ...; } | ... 1 more ... | undefined; }'.",
       "count": 2,
       "examples": [
-        "1176:9",
-        "1315:9"
+        "1217:9",
+        "1355:9"
       ]
     },
     {
@@ -1726,7 +1726,7 @@
       "message": "Object literal may only specify known properties, and 'source' does not exist in type 'ApiMeta'.",
       "count": 1,
       "examples": [
-        "673:21"
+        "714:21"
       ]
     },
     {
@@ -1736,61 +1736,6 @@
       "count": 1,
       "examples": [
         "7:18"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/yield-benchmark.test.ts",
-      "code": "TS2322",
-      "message": "Type 'number | null' is not assignable to type 'number | undefined'.",
-      "count": 1,
-      "examples": [
-        "76:5"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/yield-benchmark.test.ts",
-      "code": "TS2740",
-      "message": "Type '{ confidenceTier: \"curated\"; selectionReason: string; sourceSwitch: false; }' is missing the following properties from type '{ sourceKey: string; sourceObservedAt: number; sourceAgeSeconds: number; confidenceTier: \"fallback\" | \"deterministic\" | \"curated\" | \"discovered\"; selectionMethod: \"confidence-weighted\"; ... 17 more ...; benchmarkIsProxy?: boolean | undefined; }': sourceKey, sourceObservedAt, sourceAgeSeconds, selectionMethod, and 7 more.",
-      "count": 1,
-      "examples": [
-        "88:5"
-      ]
-    },
-    {
-      "file": "src/lib/exports/__tests__/csv.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'Blob' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 2,
-      "examples": [
-        "116:13",
-        "117:41"
-      ]
-    },
-    {
-      "file": "src/lib/exports/__tests__/csv.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '0'.",
-      "count": 1,
-      "examples": [
-        "114:50"
-      ]
-    },
-    {
-      "file": "src/lib/exports/__tests__/ndjson.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'Blob' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "88:13"
-      ]
-    },
-    {
-      "file": "src/lib/exports/__tests__/ndjson.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '0'.",
-      "count": 1,
-      "examples": [
-        "86:50"
       ]
     }
   ]
