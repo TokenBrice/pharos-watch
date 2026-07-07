@@ -84,22 +84,6 @@ const ADJUDICATION_SCHEMA = {
   required: ['doc', 'adjudicated'],
 }
 
-const SYNTH_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    totalConfirmed: { type: 'integer' },
-    autoFixableCount: { type: 'integer' },
-    needsDecisionCount: { type: 'integer' },
-    bySeverity: { type: 'object', additionalProperties: true },
-    docsWithIssues: { type: 'integer' },
-    reportPath: { type: 'string' },
-    findingsJsonPath: { type: 'string' },
-    headline: { type: 'array', items: { type: 'string' }, description: 'up to 12 one-line summaries of the most important confirmed issues' },
-  },
-  required: ['totalConfirmed', 'autoFixableCount', 'needsDecisionCount', 'reportPath', 'findingsJsonPath', 'headline'],
-}
-
 const OUT_OF_SCOPE = `OUT OF SCOPE — CI already guards these, do NOT report them:
 - existence of file paths cited in the doc (check:doc-source-paths passes)
 - internal markdown link targets (check:verified-doc-links passes)
@@ -130,6 +114,7 @@ function buildVerifyPrompt(item) {
   const hints = item.sourceHints && item.sourceHints.length
     ? `Source hints (owning code from doc-ownership.json): ${item.sourceHints.join(', ')}`
     : 'No source hints — Grep/Glob to find the owning code yourself.'
+  const noteLine = item.note ? `\nPER-DOC FOCUS (from manifest): ${item.note}\n` : ''
   const depthNote = item.depth === 'light'
     ? `DEPTH = LIGHT. This is a timeline/version-history or generated map. Do NOT verify historical entries (immutable record). Verify ONLY: (a) the "current"/"latest" version's described formula/behavior matches code, and (b) any "as of today / currently" claims. Sample a few representative entries; skip the rest.`
     : `DEPTH = DEEP. Verify every concrete code-checkable claim in the doc.`
@@ -137,7 +122,7 @@ function buildVerifyPrompt(item) {
 
 DOC: ${item.path}  (category: ${item.category}, ${item.lines} lines)
 ${hints}
-
+${noteLine}
 ${depthNote}
 
 ${VERIFY_RULES}
@@ -191,19 +176,28 @@ const MANIFEST_SCHEMA = {
   required: ['docs'],
 }
 
-const loaded = await agent(
-  `Read the file agents/doc-verify/manifest.json (repo root) and return its contents verbatim as {docs:[...]}. Each element has path, lines, category, sourceHints. Do not modify or filter. Structured output only.`,
-  { label: 'load-manifest', phase: 'Load', schema: MANIFEST_SCHEMA, model: 'haiku' },
-)
+// Prefer the manifest injected via args (deterministic, no risk of an LLM loader
+// silently dropping doc rows). Fall back to a haiku loader for standalone reuse.
+const loaded = (args && args.docs && args.docs.length)
+  ? args
+  : await agent(
+      `Read the file agents/doc-verify/manifest.json (repo root) and return its contents verbatim as {docs:[...]}. Each element has path, lines, category, sourceHints. Do not modify or filter. Structured output only.`,
+      { label: 'load-manifest', phase: 'Load', schema: MANIFEST_SCHEMA, model: 'haiku' },
+    )
 
 if (!loaded || !loaded.docs || !loaded.docs.length) {
   throw new Error('manifest load failed')
 }
+// Guard against a loader silently dropping rows: caller passes the expected count.
+const expectedDocs = (args && args.expectedDocs) || 0
+if (expectedDocs && loaded.docs.length < expectedDocs) {
+  throw new Error(`manifest load incomplete: got ${loaded.docs.length}, expected >= ${expectedDocs}`)
+}
 
-// Assign depth from category; skip the CI-current generated API reference entirely.
+// Honor the manifest's per-doc depth; keep the generated-map/light + api-reference-skip guards.
 const items = loaded.docs
   .map((d) => {
-    let depth = 'deep'
+    let depth = d.depth || 'deep'
     if (d.category === 'timeline-archive' || d.path.endsWith('agent-code-map.md')) depth = 'light'
     if (d.path.endsWith('api-reference.md')) depth = 'skip'
     return { ...d, depth }
@@ -220,7 +214,7 @@ const perDoc = await pipeline(
     label: `verify:${item.path.replace('docs/', '')}`,
     phase: 'Verify',
     schema: FINDINGS_SCHEMA,
-    model: 'sonnet',
+    model: item.model || 'sonnet',
   }),
   (verifyResult, item) => {
     const findings = (verifyResult && verifyResult.findings) || []
@@ -248,22 +242,37 @@ log(`Adjudication complete: ${confirmed.length} confirmed/revised findings acros
 
 // ===========================================================================
 phase('Synthesize')
-const synth = await agent(
-  `You are the synthesis stage of a /docs-vs-code audit for the Pharos dashboard. Below are all CONFIRMED/REVISED doc-vs-code discrepancies after an adversarial adjudication pass.
+// Deterministic synthesis — NO LLM on the persist/serialize step (repo memory
+// [No LLM on serialization stage]: the single-Write agent hard-fails at the 32k
+// output cap with ~100+ findings). Dedup + partition are simple rules; the caller
+// writes report.md + findings.json deterministically from this return value.
+const seen = new Set()
+const deduped = []
+for (const c of confirmed) {
+  const key = `${c.doc}|${c.docLine}|${(c.docQuote || '').slice(0, 80)}`
+  if (seen.has(key)) continue
+  seen.add(key)
+  deduped.push(c)
+}
+const isAutoFixable = (c) =>
+  c.finalClassification === 'doc-wrong' &&
+  (c.confidence ?? 0) >= 0.7 &&
+  typeof c.adjudicatedDocFix === 'string' &&
+  c.adjudicatedDocFix.trim().length > 0 &&
+  !/^\s*(investigate|review|tbd|unclear|consider|verify)\b/i.test(c.adjudicatedDocFix)
+const autoFixable = deduped.filter(isAutoFixable)
+const needsDecision = deduped.filter((c) => !isAutoFixable(c))
+const bySeverity = {}
+for (const c of deduped) bySeverity[c.severity] = (bySeverity[c.severity] || 0) + 1
+log(`Synthesis: ${deduped.length} unique confirmed (${autoFixable.length} auto-fixable, ${needsDecision.length} needs-decision) across ${new Set(deduped.map((c) => c.doc)).size} docs`)
 
-CONFIRMED FINDINGS (JSON):
-${JSON.stringify(confirmed, null, 2)}
-
-Do the following:
-1. Dedupe near-identical findings (same doc + same root claim).
-2. Partition each finding into:
-   - AUTO-FIXABLE: finalClassification == doc-wrong AND confidence >= 0.7 AND adjudicatedDocFix is a concrete text replacement (not "investigate"). These are safe to apply as doc edits.
-   - NEEDS-DECISION: finalClassification == code-wrong (possible code bug — flag, do NOT auto-edit code), or ambiguous, or confidence < 0.7, or fix is non-mechanical.
-3. Write a human report to agents/doc-verify/report.md with: an executive summary (counts by severity and by partition), then a per-doc section listing each finding (docLine, what doc says, what code does, codeEvidence, severity, the fix, and partition). Put NEEDS-DECISION items in their own clearly-marked section at the top so a human reviews them first.
-4. Write the machine-readable array to agents/doc-verify/findings.json with each finding annotated with a "partition" field ("auto-fixable" | "needs-decision"). This file drives the remediation workflow.
-
-Use the Write tool for both files. Then return the structured summary (counts + up to 12 headline one-liners of the most important confirmed issues). reportPath=agents/doc-verify/report.md, findingsJsonPath=agents/doc-verify/findings.json.`,
-  { label: 'synthesize', phase: 'Synthesize', schema: SYNTH_SCHEMA, model: 'opus' },
-)
-
-return { ...synth, confirmedRaw: confirmed.length, docsVerified: items.length }
+return {
+  totalConfirmed: deduped.length,
+  autoFixableCount: autoFixable.length,
+  needsDecisionCount: needsDecision.length,
+  bySeverity,
+  docsWithIssues: new Set(deduped.map((c) => c.doc)).size,
+  docsVerified: items.length,
+  autoFixable,
+  needsDecision,
+}

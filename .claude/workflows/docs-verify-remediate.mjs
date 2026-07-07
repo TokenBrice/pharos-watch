@@ -2,7 +2,7 @@ export const meta = {
   name: 'docs-verify-remediate',
   description: 'Apply adjudicated doc-vs-code fixes from findings.json, one agent per doc (disjoint files)',
   phases: [
-    { title: 'Load', detail: 'read findings.json, group confirmed fixes by doc' },
+    { title: 'Load', detail: 'read findings (pre-split index via args, or whole findings.json), group by doc' },
     { title: 'Apply', detail: 'one agent per doc: re-check code, apply minimal faithful edits' },
   ],
 }
@@ -59,46 +59,50 @@ const APPLY_SCHEMA = {
 }
 
 phase('Load')
-const loaded = await agent(
-  `Read agents/doc-verify/findings.json (repo root, a JSON array) and return it verbatim as {findings:[...]}. Do not modify, filter, or reorder. Structured output only.`,
-  { label: 'load-findings', phase: 'Load', schema: FINDINGS_LOAD_SCHEMA, model: 'haiku' },
-)
-if (!loaded || !loaded.findings || !loaded.findings.length) throw new Error('findings load failed')
-
-function isAutoFixableDocFinding(f) {
-  return f.partition === 'auto-fixable' && f.finalClassification === 'doc-wrong' && typeof f.confidence === 'number' && f.confidence >= 0.7
+// Preferred path: caller passes a pre-split docsIndex ([{doc, findingsPath}]) so each
+// apply agent reads only its own small fixes file — avoids a haiku whole-findings.json
+// load silently truncating a large findings array (repo memory: docs-remediate-robust).
+let heldForReview = (args && args.heldForReview) || 0
+let entries // [{ doc, findingsPath?, findings? }]
+if (args && args.docsIndex && args.docsIndex.length) {
+  entries = args.docsIndex.map((e) => ({ doc: e.doc, findingsPath: e.findingsPath }))
+  log(`Applying pre-split auto-fixable fixes across ${entries.length} docs (each agent reads its own findings file); held ${heldForReview} for human review`)
+} else {
+  const loaded = await agent(
+    `Read agents/doc-verify/findings.json (repo root, a JSON array) and return it verbatim as {findings:[...]}. Do not modify, filter, or reorder. Structured output only.`,
+    { label: 'load-findings', phase: 'Load', schema: FINDINGS_LOAD_SCHEMA, model: 'haiku' },
+  )
+  if (!loaded || !loaded.findings || !loaded.findings.length) throw new Error('findings load failed')
+  const isAutoFixableDocFinding = (f) =>
+    f.partition === 'auto-fixable' && f.finalClassification === 'doc-wrong' && typeof f.confidence === 'number' && f.confidence >= 0.7
+  const autoFixableFindings = loaded.findings.filter(isAutoFixableDocFinding)
+  heldForReview = loaded.findings.length - autoFixableFindings.length
+  if (!autoFixableFindings.length) {
+    log(`No auto-fixable doc-wrong findings found; held ${heldForReview} findings for human review`)
+    return { docsProcessed: 0, totalDocs: 0, applied: 0, skipped: 0, skippedDetail: [], perDoc: [], heldForReview }
+  }
+  const byDoc = {}
+  for (const f of autoFixableFindings) (byDoc[f.doc] ||= []).push(f)
+  entries = Object.keys(byDoc).sort().map((doc) => ({ doc, findings: byDoc[doc] }))
+  log(`Applying ${autoFixableFindings.length} auto-fixable doc-wrong fixes across ${entries.length} docs; held ${heldForReview} findings for human review`)
 }
-
-const autoFixableFindings = loaded.findings.filter(isAutoFixableDocFinding)
-const heldForReview = loaded.findings.length - autoFixableFindings.length
-if (!autoFixableFindings.length) {
-  log(`No auto-fixable doc-wrong findings found; held ${heldForReview} findings for human review`)
-  return { docsProcessed: 0, totalDocs: 0, applied: 0, skipped: 0, skippedDetail: [], perDoc: [], heldForReview }
-}
-
-// Group by doc — one agent per doc so no two agents edit the same file.
-const byDoc = {}
-for (const f of autoFixableFindings) {
-  ;(byDoc[f.doc] ||= []).push(f)
-}
-const docs = Object.keys(byDoc).sort()
-log(
-  `Applying ${autoFixableFindings.length} auto-fixable doc-wrong fixes across ${docs.length} docs (one agent per doc, disjoint files); held ${heldForReview} findings for human review`,
-)
 
 phase('Apply')
 const SPECIAL_NOTE = {
   'docs/learn-mechanisms-page.md':
-    'NOTE: several of this doc\'s findings overlap (lines 63/64/65/67/69/71 all describe the explainer anatomy). Treat src/app/learn/mechanisms/explainer-shell.tsx + src/app/learn/_shared/related-coins-list.tsx as ground truth and rewrite the affected "Page Anatomy"/sections list into ONE coherent, correctly-ordered description rather than applying conflicting line-by-line patches. The :63 adjudicatedDocFix carries the corrected full ordering; fold the smaller edits into it.',
+    'NOTE: several of this doc\'s findings overlap (they describe the explainer anatomy/section ordering). Treat src/app/learn/mechanisms/explainer-shell.tsx + src/app/learn/_shared/related-coins-list.tsx as ground truth and rewrite the affected "Page Anatomy"/sections list into ONE coherent, correctly-ordered description rather than applying conflicting line-by-line patches.',
 }
 
-function buildApplyPrompt(doc, findings) {
-  return `You are applying verified documentation fixes to ONE file: ${doc}. Working dir is the repo root. Each fix below was confirmed against the actual code by an adversarial adjudication pass — the DOC is wrong and the CODE is the source of truth.
+function buildApplyPrompt(entry) {
+  const doc = entry.doc
+  const fixesBlock = entry.findingsPath
+    ? `Your fixes for this doc are in a JSON file. FIRST use Read on: ${entry.findingsPath}\nIt is a JSON array of fix objects, each with: docLine, docQuote (verbatim stale doc text), whatCodeDoes, codeEvidence (file:line), adjudicatedDocFix (intended correction).`
+    : `FIXES (JSON):\n${JSON.stringify(entry.findings, null, 2)}`
+  return `You are applying verified documentation fixes to ONE file: ${doc}. Working dir is the repo root. Each fix was confirmed against the actual code by an adversarial adjudication pass — the DOC is wrong and the CODE is the source of truth.
 
 ${SPECIAL_NOTE[doc] || ''}
 
-FIXES (JSON):
-${JSON.stringify(findings, null, 2)}
+${fixesBlock}
 
 For each fix:
 1. Read ${doc} and locate the stale claim at/near docLine (line numbers may have shifted slightly — match on the docQuote/content).
@@ -112,9 +116,9 @@ Return the structured result: one edits[] entry per fix (applied or skipped + a 
 }
 
 const results = await parallel(
-  docs.map((doc) => () =>
-    agent(buildApplyPrompt(doc, byDoc[doc]), {
-      label: `fix:${doc.replace('docs/', '')}`,
+  entries.map((entry) => () =>
+    agent(buildApplyPrompt(entry), {
+      label: `fix:${entry.doc.replace('docs/', '')}`,
       phase: 'Apply',
       schema: APPLY_SCHEMA,
       model: 'sonnet',
@@ -126,11 +130,11 @@ const ok = results.filter(Boolean)
 const applied = ok.reduce((n, r) => n + (r.appliedCount || 0), 0)
 const skipped = ok.reduce((n, r) => n + (r.skippedCount || 0), 0)
 const skippedDetail = ok.flatMap((r) => (r.edits || []).filter((e) => e.status === 'skipped').map((e) => `${r.doc}:${e.docLine} — ${e.reason}`))
-log(`Applied ${applied}, skipped ${skipped} across ${ok.length}/${docs.length} docs; held ${heldForReview} findings for human review`)
+log(`Applied ${applied}, skipped ${skipped} across ${ok.length}/${entries.length} docs; held ${heldForReview} findings for human review`)
 
 return {
   docsProcessed: ok.length,
-  totalDocs: docs.length,
+  totalDocs: entries.length,
   applied,
   skipped,
   skippedDetail,
