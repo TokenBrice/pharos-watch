@@ -35,7 +35,7 @@ const CacheStatusSchema = z.object({
 });
 export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 
-const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
+export const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
 const StatusHealthOrUnknownSchema = z.enum([...StatusHealthValueSchema.options, "unknown"]);
 export type StatusHealthOrUnknown = z.infer<typeof StatusHealthOrUnknownSchema>;
@@ -1363,8 +1363,8 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
 
 export interface PublicStatusTransition {
   id: number;
-  from: string | null;
-  to: string;
+  from: StatusHealthValue | null;
+  to: StatusHealthValue;
   transitionType: "degrade" | "recover" | "init";
   reason: string;
   at: number;
@@ -1380,6 +1380,22 @@ export interface PublicStatusHistoryResponse {
   lastChangedAt: number | null;
   transitions: PublicStatusTransition[];
 }
+
+export const PublicStatusTransitionSchema: z.ZodType<PublicStatusTransition> = z.object({
+  id: z.number(),
+  from: StatusHealthValueSchema.nullable(),
+  to: StatusHealthValueSchema,
+  transitionType: z.enum(["degrade", "recover", "init"]),
+  reason: z.string(),
+  at: z.number(),
+}).passthrough();
+
+export const PublicStatusHistoryResponseSchema: z.ZodType<PublicStatusHistoryResponse> = z.object({
+  timestamp: z.number(),
+  currentStatus: StatusHealthValueSchema,
+  lastChangedAt: z.number().nullable(),
+  transitions: z.array(PublicStatusTransitionSchema),
+}).passthrough();
 
 const CircuitRecordSchema = z.object({
   state: z.enum(["closed", "half-open", "open"]),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
+import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
 
 function reserveComposition() {
   return {
@@ -171,5 +171,56 @@ describe("StatusResponseSchema reserve composition contract", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("validates public status history payloads", () => {
+    const result = PublicStatusHistoryResponseSchema.safeParse({
+      timestamp: 1_780_000_100,
+      currentStatus: "degraded",
+      lastChangedAt: 1_780_000_000,
+      transitions: [
+        {
+          id: 1,
+          from: "healthy",
+          to: "degraded",
+          transitionType: "degrade",
+          reason: "cache stale",
+          at: 1_780_000_000,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects malformed public status history status values", () => {
+    const result = PublicStatusHistoryResponseSchema.safeParse({
+      timestamp: 1_780_000_100,
+      currentStatus: "unknown",
+      lastChangedAt: null,
+      transitions: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects malformed public status history transition types", () => {
+    const result = PublicStatusHistoryResponseSchema.safeParse({
+      timestamp: 1_780_000_100,
+      currentStatus: "healthy",
+      lastChangedAt: null,
+      transitions: [
+        {
+          id: 1,
+          from: "healthy",
+          to: "degraded",
+          transitionType: "pause",
+          reason: "cache stale",
+          at: 1_780_000_000,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
   });
 });
