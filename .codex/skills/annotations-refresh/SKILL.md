@@ -68,7 +68,7 @@ Entry shape (mirror existing file rules):
 ```ts
 {
   ts: Date.UTC(YYYY, monthIdx, day), // months 0-indexed; comment with ISO date and short note
-  kind: "depeg" | "regulatory" | "governance" | "mint-burn-spike" | "blacklist-surge" | "methodology-change",
+  kind: "depeg" | "regulatory" | "governance" | "mint-burn-spike" | "blacklist-surge" | "methodology-change" | "exploit", // mirror of CHART_ANNOTATION_KINDS — the source file wins
   label: string, // ≤80 chars, SR-only legend text
   severity?: "low" | "med" | "high",
   href?: string, // primary source URL

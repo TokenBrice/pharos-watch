@@ -9,7 +9,7 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 
 ## Read First
 
-- Read `shared/lib/report-cards.ts`, especially `inferResilienceDefaults()`.
+- Read `inferResilienceDefaults()` in `shared/lib/report-card-policy.ts` (imported by `shared/lib/report-cards.ts`).
 - Read `docs/report-cards.md` for the scoring model and tier meanings.
 - This skill is only for `chainTier`, `deploymentModel`, `collateralQuality`, and `custodyModel`. Leave `governanceQuality` alone unless the user explicitly asked for it.
 
@@ -38,6 +38,8 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 7. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 
 ## Tiers
+
+The lists below mirror `CHAIN_TIER_VALUES` / `DEPLOYMENT_MODEL_VALUES` / `COLLATERAL_QUALITY_VALUES` / `CUSTODY_MODEL_VALUES` in `shared/types/core.ts` — the source file wins.
 
 - `chainTier`: `ethereum`, `stage1-l2`, `mature-alt-l1`, `established-alt-l1`, `unproven`
 - `deploymentModel`: `single-chain`, `canonical-bridge`, `third-party-bridge`, `native-multichain`

@@ -131,8 +131,11 @@ Typical files:
 - `shared/lib/methodology-versions/yield-methodology.ts`
 - `shared/data/methodology-changelogs/yield-methodology/v*.ts`
 
-Yield methodology versions are numeric. After `v8.29`, use `v8.291` or a later
-numeric value, not a non-numeric suffix.
+Yield methodology versions are numeric. Read the current version from
+`shared/lib/methodology-versions/yield-methodology.ts` and pick the next
+strictly greater numeric value (integer-segment comparison: `8.3` > `8.292`,
+so extend the same segment, e.g. `8.292` → `8.293`). Never trust a version
+number quoted in a doc or skill — the source file wins.
 
 ## Validation
 

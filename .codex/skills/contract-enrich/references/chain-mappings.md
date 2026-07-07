@@ -1,6 +1,6 @@
-# Contract Enrich Reference
+# Contract Chain Mappings Reference
 
-Use this file only when translating external chain names or applying supply thresholds.
+Shared by `contract-enrich` and `contract-populate` (which symlinks this file). Use it when translating external chain names, applying supply thresholds, or mapping CoinGecko platforms.
 
 - Prefer existing IDs from `shared/lib/chains/index.ts` whenever the repo already supports the chain.
 - This file is a curated translation map, not an exhaustive inventory of every current chain in the repo.
@@ -239,3 +239,15 @@ terra-2
 q-mainnet
 binancecoin
 ```
+
+## New Chain Checklist
+
+When a verified platform maps to a chain ID that is not yet in `shared/lib/chains/index.ts`, add:
+
+- `name`
+- `explorerUrl`
+- `evmChainId` or `null`
+- `type`
+- `logoPath`
+
+Maintain the existing ordering and alignment style in `CHAIN_META`.
