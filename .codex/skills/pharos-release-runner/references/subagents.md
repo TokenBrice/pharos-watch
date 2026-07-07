@@ -1,6 +1,6 @@
 # Pharos Release Runner Subagents
 
-Codex currently exposes generic `explorer` and `worker` subagent roles. Use these prompt templates to create bounded Pharos-specific subagents when the user authorizes subagent use.
+Codex currently exposes generic `explorer` and `worker` subagent roles; in Claude Code, use the read-only `Explore` agent type for both. Use these prompt templates to create bounded Pharos-specific subagents when the user authorizes subagent use.
 
 ## pharos-release-reviewer
 

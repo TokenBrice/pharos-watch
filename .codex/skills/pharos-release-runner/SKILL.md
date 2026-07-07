@@ -87,8 +87,9 @@ npm run test:merge-gate
 Useful controls:
 
 - `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate` to inspect the planned commands.
-- `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip broad/slow Pages smoke.
+- `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke. The full gate runs in roughly 3-4 minutes, so skipping is rarely worth it.
 - `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
+- `npm run test:merge-gate:discover` (full discovery gate) for risky data-model, feed-suspension, or coin-lifecycle releases — it surfaces test-level couplings the standard changed-file gate misses.
 
 Fix failures locally, commit the fixes, and rerun the failing focused command or full gate as appropriate.
 
@@ -117,7 +118,7 @@ gh run list --repo TokenBrice/pharos-watch --branch main --limit 10
 gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status
 ```
 
-If the run fails, switch to `$pharos-ci-failure-triage`.
+If the run fails, switch to `$pharos-ci-failure-triage` (the `pharos-ci-failure-triage` skill in Claude Code).
 
 For successful production-changing deploys, confirm the relevant live smokes from the workflow summary. If the touched area needs extra live confidence, run the narrow smoke command from `docs/testing.md` rather than a broad ad hoc probe.
 

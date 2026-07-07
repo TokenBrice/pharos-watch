@@ -1,0 +1,1 @@
+../../../.codex/skills/pharos-docs-sync-audit/SKILL.md

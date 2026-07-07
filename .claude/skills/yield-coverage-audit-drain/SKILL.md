@@ -1,0 +1,1 @@
+../../../.codex/skills/yield-coverage-audit-drain/SKILL.md

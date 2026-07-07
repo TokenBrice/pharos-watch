@@ -62,7 +62,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 
 8. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
 
-9. Regenerate `shared/data/stablecoins/coins.generated.json`, run `node scripts/build-data/build-client-registry.mjs` (client-projected fields like `geckoId`/`proofOfReserves`/`reserves` flow into `coins.client.generated.json`), then `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+9. Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, run `node scripts/build-data/build-client-registry.mjs` (client-projected fields like `geckoId`/`proofOfReserves`/`reserves` flow into `coins.client.generated.json`), then `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
 
 ## Guardrails
 

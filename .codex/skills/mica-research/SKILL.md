@@ -17,13 +17,13 @@ Research a stablecoin's standing under the EU Markets in Crypto-Assets Regulatio
 
 The `mica` object (exact field names): `status` (`authorized` | `pending` | `transitional` | `non-compliant` | `out-of-scope`), `tokenType` (`EMT` | `ART`), `authorizationType` (`emi` | `credit-institution`), `competentAuthority`, `authorizedEntity`, `significant` (boolean), `references` (`{ label, url }[]`). All but `status` are optional.
 
-**HARD RULE:** `status: "authorized"` requires at least one `references` link — Zod-enforced, `check:stablecoin-data` fails otherwise. Every non-`out-of-scope` status should carry a reference.
+**HARD RULES (Zod-enforced — `check:stablecoin-data` fails otherwise):** every status except `out-of-scope` requires at least one `references` link; and `out-of-scope` rows must not carry `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`.
 
 ## Workflow
 
 1. Read current state: `jurisdiction`, `pegMechanism` / pegged currency, any existing `mica`, and whether the coin is plausibly in EU scope at all.
 
-2. Research the registers with `WebSearch` / `WebFetch` (fall back to agent-browser on 403), in order of weight:
+2. Research the registers with `WebSearch` / `WebFetch` (browser fallback on 403 — claude-in-chrome/Playwright in Claude Code, `agent-browser` in Codex), in order of weight:
 - ESMA register of authorized entities
 - EBA registers of EMT/ART issuers (and the EBA "significant" list for `significant`)
 - national NCA registers: ACPR REGAFI, BaFin, DNB / AFM, MFSA, CBI, Bank of Lithuania
@@ -34,7 +34,7 @@ The `mica` object (exact field names): `status` (`authorized` | `pending` | `tra
 
 4. Assign `status` per the criteria table in `docs/mica-tracker.md`. Set `tokenType`: **EMT** = single official currency (most EUR/USD fiat-backed coins); **ART** = basket/commodity/other value (rare). When uncertain between two statuses, pick the more conservative one and explain why.
 
-5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit the per-coin JSON — placing `mica` immediately after `jurisdiction` — then regenerate and validate:
+5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit the per-coin JSON — placing `mica` immediately after `jurisdiction` (after `genius` if both are present) — then regenerate and validate:
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"
@@ -63,4 +63,4 @@ For full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 
 ## Batch Mode
 
-When processing multiple coins, work one at a time and present findings for 3-5 coins per approval round, then apply and continue — mirror `reserve-research`.
+When processing multiple coins, work one at a time and present findings for 3-5 coins per approval round, then apply and continue — mirror `reserve-research`. For a broad MiCA + GENIUS pass across many coins, use the saved `compliance-research` workflow (research → adversarial verify → reconcile), as in `genius-research`.
