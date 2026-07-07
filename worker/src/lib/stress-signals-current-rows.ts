@@ -1,4 +1,4 @@
-import { readDewsPublishedGeneration } from "./dews-publication-pointer";
+import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
 
 export interface StressSignalCurrentRow {
   stablecoin_id: string;
@@ -35,6 +35,11 @@ interface SingleRowQueries {
   legacy: string;
   legacyBounded: string;
 }
+
+type CompletedDewsScope =
+  | { status: "scoped"; completedAt: number }
+  | { status: "no-pointer" }
+  | { status: "unavailable"; reason: string };
 
 const API_LATEST_ALL_SQL = `SELECT /* pharos:stress-signals:latest-all */
            stablecoin_id, score, band, signals_json, computed_at
@@ -206,11 +211,17 @@ export function mergeNewestStressSignalRows<Row extends { stablecoin_id: string;
   return [...byId.values()];
 }
 
-async function loadCompletedDewsComputedAt(db: D1Database, nowSec: number): Promise<number | null> {
-  try {
-    return await readDewsPublishedGeneration(db, nowSec);
-  } catch {
-    return null;
+async function loadCompletedDewsScope(db: D1Database, nowSec: number): Promise<CompletedDewsScope> {
+  const result = await readDewsPublishedGenerationResult(db, nowSec);
+  switch (result.status) {
+    case "ok":
+      return { status: "scoped", completedAt: result.computedAt };
+    case "no-pointer":
+      return { status: "no-pointer" };
+    case "invalid-pointer":
+      return { status: "unavailable", reason: result.reason };
+    case "read-failed":
+      return { status: "unavailable", reason: result.error };
   }
 }
 
@@ -234,7 +245,11 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   queries: AllRowsQueries,
   options: CurrentRowsOptions,
 ): Promise<Row[]> {
-  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
+  const completedScope = await loadCompletedDewsScope(db, nowSec);
+  if (completedScope.status === "unavailable") {
+    return [];
+  }
+  const completedAt = completedScope.status === "scoped" ? completedScope.completedAt : null;
   let latestRows: Row[] = [];
   try {
     const latestStmt = prepareCompletedAtScoped(
@@ -270,7 +285,11 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   queries: SingleRowQueries,
   options: CurrentRowsOptions,
 ): Promise<Row | null> {
-  const completedAt = await loadCompletedDewsComputedAt(db, nowSec);
+  const completedScope = await loadCompletedDewsScope(db, nowSec);
+  if (completedScope.status === "unavailable") {
+    return null;
+  }
+  const completedAt = completedScope.status === "scoped" ? completedScope.completedAt : null;
   let latest: Row | null = null;
   try {
     const latestStmt = prepareCompletedAtScoped(

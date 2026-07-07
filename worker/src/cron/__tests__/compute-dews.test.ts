@@ -361,6 +361,7 @@ describe("computeAndStoreDEWS", () => {
     vi.mocked(writeFreshnessSentinel).mockClear();
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
+      if (key === "dews:published-generation") return null;
       return {
         value: JSON.stringify({
           peggedAssets: [

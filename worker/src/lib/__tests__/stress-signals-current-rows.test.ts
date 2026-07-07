@@ -95,4 +95,59 @@ describe("stress-signal current-row helpers", () => {
     expect(loaded).toEqual(staleLatest);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
+
+  it("does not read unbounded current rows when the publication pointer is invalid", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [{
+          key: "dews:published-generation",
+          value: JSON.stringify({
+            updatedAt: nowSec - 60,
+            source: "compute-dews",
+            publishStatus: "draft",
+          }),
+          updated_at: nowSec - 60,
+        }],
+        first: {
+          key: "dews:published-generation",
+          value: JSON.stringify({
+            updatedAt: nowSec - 60,
+            source: "compute-dews",
+            publishStatus: "draft",
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual([]);
+    expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("does not read single-coin current rows when the publication pointer cannot be read", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        throwError: new Error("D1 unavailable"),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(
+      db,
+      "usdt-tether",
+      nowSec,
+      { staleAfterSec: 300 },
+    );
+
+    expect(loaded).toBeNull();
+    expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
 });

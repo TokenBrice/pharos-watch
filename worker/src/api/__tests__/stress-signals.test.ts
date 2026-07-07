@@ -114,6 +114,31 @@ function dewsPublicationPointerMatch(updatedAt: number | null = null) {
   };
 }
 
+function invalidDewsPublicationPointerMatch() {
+  return {
+    match: PUBLICATION_POINTER_SQL,
+    matchBinds: ["dews:published-generation"],
+    rows: [{
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedDewsAt,
+        source: "compute-dews",
+        publishStatus: "draft",
+      }),
+      updated_at: completedDewsAt,
+    }],
+    first: {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedDewsAt,
+        source: "compute-dews",
+        publishStatus: "draft",
+      }),
+      updated_at: completedDewsAt,
+    },
+  };
+}
+
 function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt: number | null = null) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
@@ -715,6 +740,27 @@ describe("handleStressSignals contract tests", () => {
     expect(body.coverageReasons).toContain("computed-count-zero");
     expect(res.headers.get("X-Data-Age")).toBeNull();
     expect(res.headers.get("Warning")).toContain("DEWS current rows unavailable");
+  });
+
+  it("marks the aggregate unavailable when the publication pointer is invalid", async () => {
+    const db = mockD1([invalidDewsPublicationPointerMatch()], { strict: true });
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      updatedAt: number;
+      computedCount: number;
+      coverageStatus: string;
+      coverageReasons: string[];
+    };
+    expect(body.updatedAt).toBe(0);
+    expect(body.computedCount).toBe(0);
+    expect(body.coverageStatus).toBe("unavailable");
+    expect(body.coverageReasons).toContain("no-current-rows");
+    expect(res.headers.get("Warning")).toContain("DEWS current rows unavailable");
+    expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("marks all-malformed aggregate rows unavailable without reporting X-Data-Age: 0", async () => {
