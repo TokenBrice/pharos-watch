@@ -72,11 +72,11 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 
 ### Inputs
 
-**Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path / confidence plus recent reviewed mint-authority incident dates, `mechanismArchetype`, governance flag, collateral quality, custody model, deployment model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the Report Card overall score as a coarse prior.
+**Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path plus recent reviewed mint-authority incident dates, `mechanismArchetype`, governance flag, collateral quality, custody model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the Report Card overall score as a coarse prior.
 
 **Event fingerprint** (event row plus live and reconstructed signals): depth bucket from `peak_deviation_bps`; direction; speed from start-to-peak timing; supply behavior (Δ7d / Δ30d from daily supply history plus mint/burn net flow into the break — the supply-weaponization tell); live DEWS band and which sub-signals fire; liquidity and exit signals; concurrent blacklist surge; and the orphan-close flag from related closed events.
 
-Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day TVL change using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop`, and the latest `safety_grade_history` row. If a required context-source query fails, the writer publishes DDR as degraded rather than scoring with silently absent live inputs.
+Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day TVL change using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop_run_rows` (from the latest completed `redemption_backstop_runs` snapshot), and the latest `safety_grade_history` row. If a required context-source query fails, the writer publishes DDR as degraded rather than scoring with silently absent live inputs.
 
 ### Kill signals (terminal pressure)
 
@@ -168,7 +168,7 @@ Review outcomes are deliberately conservative:
 
 - A still-open event remains `pending` unless tracked lifecycle status supplies terminal evidence; open status alone is never counted as proof that a terminal call was right.
 - A closed event with a recovery price is `recovered`.
-- A terminal/frozen tracked asset without a recovery price is `terminal_observed`, even if the underlying depeg row remains open; that lifecycle evidence matures the review as a terminal outcome rather than a pending duration case.
+- A terminal/frozen tracked asset without a recovery price is `terminal` (shown in the UI as "terminal observed"), even if the underlying depeg row remains open; that lifecycle evidence matures the review as a terminal outcome rather than a pending duration case.
 - Missing source rows or closed rows without recovery/terminal evidence are data issues, not wins or losses.
 
 The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the v2 policy universe, while public review rows are capped to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.

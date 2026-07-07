@@ -58,7 +58,7 @@ The `/cemetery/` page also emits a `Dataset` JSON-LD node built from the checked
 Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS` through `shared/lib/cemetery-merged.ts`:
 
 - `buildMergedCemetery()` (via `frozenToDeadShape()`) maps each `FROZEN_STABLECOINS` entry's `obituary.deathDate` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data ->" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
-- Identifier rules: the merged `id` for a frozen row is the registry `id` (the same canonical ticker-issuer ID used everywhere else on the site). Curated dead-coin ids (e.g. `ust-luna-2022`) keep their stable cemetery-only identifiers.
+- Identifier rules: the merged `id` for a frozen row is the registry `id` (the same canonical ticker-issuer ID used everywhere else on the site). Curated dead-coin ids (e.g. `ust-terrausd-2022-05`) keep their stable cemetery-only identifiers.
 - Sort and grouping: the merged list keeps the same year-grouped, newest-first behavior the cemetery already uses. The merged `deathDate` (sourced from the `obituary` block) is the sort input; `frozenAt` is not copied onto the entry and does not participate in the sort key.
 
 The static cemetery dataset export reflects the same merge:
@@ -86,7 +86,7 @@ Each appendix includes the epitaph (when present) for every newly added coin plu
 - Tombstones render newest death-year first by default even though `DEAD_STABLECOINS` remains curated in oldest-first order in-repo.
 - `CemeteryTombstones` renders all year sections inside one continuous atmospheric cemetery scene with shared ground, horizon, fog, and a central path; size still reflects peak market cap.
 - Tombstone logos come from each row's `logo` field and render both on the grave marker and in the hover/focus memorial plaque. Curated dead-coin rows usually point under `public/logos/cemetery/`; frozen tracked rows prefer the canonical `data/logos.json` path and fall back to the legacy cemetery filename heuristic only when no tracked logo is registered.
-- Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead (or the full obituary for the top-20 entries by peak market cap).
+- Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead (or up to the first two sentences, capped at 380 characters, for the top-20 entries by peak market cap).
 - Tombstone selection auto-expands the matching obituary and scrolls into view.
 - `StablecoinCemetery` renders collapsible rows with source links and cause badges, using the same order as the tombstone field above.
 - `CemeteryCharts` receives server-projected cemetery entries and computes all chart series from that payload (no API fetch).

@@ -346,7 +346,7 @@ Invariant: minting vs burning semantics now always come from raw net flow, never
 
 - `getNetFlowDirection24h()`
 - `getPressureShiftState()`
-- `getCoinFlowCompositeState()`
+- `getLiteralMintingPressureScore()`
 
 ### Gauge Bands
 
@@ -595,12 +595,15 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 
 - Auth: Access service-token headers
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
+- Parameters: `since` (unix seconds; default `now - 90 days` via `DEFAULT_SINCE_LOOKBACK_SEC`; pass `since=0` to sweep the whole table at D1 CPU-budget risk), `stablecoinId` (optional; narrows both passes to one coin's rows).
 - Behavior:
   - **Forward pass** — scans up to `1000` `(tx_hash, stablecoin_id, chain_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist, and flips all matching rows in each group to `flow_type='atomic_roundtrip'`.
   - **Reverse pass (new).** Scans up to `1000` groups currently tagged `flow_type='atomic_roundtrip'` that fail the 0.5% tolerance (`|mint_amt - burn_amt| > 0.005 × max(mint_amt, burn_amt)`) and flips them back to `flow_type='standard'`. The SQL mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` in `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts`.
   - Recalculates the affected hourly buckets so downstream flow aggregates pick up both directions of reclassification immediately.
   - Returns `done=true` only when BOTH forward and reverse passes returned fewer than `BATCH_SIZE` groups.
 - Response fields:
+  - `since` — echoed effective lookback cutoff (unix seconds).
+  - `stablecoinId` — echoed coin filter, or null.
   - `toRoundtrip` — forward-pass count (`standard → atomic_roundtrip`).
   - `toStandard` — reverse-pass count (`atomic_roundtrip → standard`).
   - `updated` — legacy scalar kept for backward compat: `toRoundtrip + toStandard`.
@@ -667,7 +670,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Overview shell used by `/flows`; renders the printer/shredder scene, Bank Run Gauge band, literal 24h minting-pressure gauge, and a `FlowReceiptBand` below a dashed tear-line carrying the 24h/7d mint/burn/net receipt tiles plus scope, top minter/burner, and coverage summary. |
 | `FlowReceiptBand` | `src/components/flow-receipt-band.tsx` | Receipt-styled sub-component rendered inside `FlowBrrrOverview`. Shows 24h/7d printed/shredded/net tiles, with the full `/flows` mode including scope caveat, top minter/burner, coverage pills, and any sync warning. |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
-| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest USD-valued event, pressure. Responsive column hiding; `Pressure vs 30D` header uses the shared methodology-hint trigger |
+| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, net30d, net90d, largest USD-valued event, pressure (net30d/net90d columns hidden below lg/xl). Responsive column hiding; `Pressure vs 30D` header uses the shared methodology-hint trigger |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
 | `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
 | `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit `Net 24h`, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model |

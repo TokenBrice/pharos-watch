@@ -91,7 +91,7 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 ## Snapshot Pages Function
 
-`functions/selector-snapshot/[[path]].ts` is the only HTTP surface that the Picker adds. It runs on Cloudflare Pages Functions; no Worker, no D1, no cron.
+`functions/selector-snapshot/[[path]].ts` is the only HTTP surface that the Picker adds. It runs on Cloudflare Pages Functions and adds no Worker HTTP endpoint, but its `POST` write throttle binds D1 (`env.DB`) for a durable per-IP daily quota (`selector_snapshot_daily_quota`, migration 0163); the Worker's daily-0300 cron (`0 3 * * *`) prunes that table.
 
 | Surface | Method | Behavior |
 | --- | --- | --- |
@@ -108,7 +108,7 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 **Size guard:** 100 KB defensive ceiling. Realistic snapshots are ~10–30 KB; bloat past 100 KB is a bug, not a feature.
 
-**Write abuse controls:** the origin gate is spoofable and zone WAF rate limits only cover `api.pharos.watch/api/*`, so `POST` carries its own throttle: a per-isolate hashed-IP sliding window (10 writes/minute, SHA-256-hashed `CF-Connecting-IP` kept in volatile memory only) returning `429` + `Retry-After`. Combined with the 90-day unread TTL, this bounds the KV cost/quota blast radius of unauthenticated write spam. A zone-level rate-limit rule for `/selector-snapshot` remains a recommended ops follow-up for distributed abuse.
+**Write abuse controls:** the origin gate is spoofable and zone WAF rate limits only cover `api.pharos.watch/api/*`, so `POST` carries two throttles: a per-isolate hashed-IP sliding window (10 writes/minute, SHA-256-hashed `CF-Connecting-IP` kept in volatile memory only) returning `429` + `Retry-After`, and a durable D1-backed daily quota (`selector_snapshot_daily_quota`) that caps each hashed IP to 100 writes/UTC day via an atomic conditional upsert, returning `429` + `Retry-After: 86400` when exceeded and `503` if the quota store (`env.DB`) is unavailable or unconfigured. Combined with the 90-day unread TTL, this bounds the KV cost/quota blast radius of unauthenticated write spam (see `functions/AGENTS.md` S-062). A zone-level rate-limit rule for `/selector-snapshot` remains a recommended ops follow-up for distributed abuse.
 
 **Failure modes** (full table in `agents/impl-plan-drafts/03-integration.md` §1.5): malformed JSON / wrong shape → `400`; oversized → `413`; origin mismatch → `404`; KV outage → `503` on POST or `503` on GET-read; corrupt KV value → `502`; missing KV binding → `500`.
 

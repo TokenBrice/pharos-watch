@@ -180,7 +180,7 @@ direction = bps >= 0 ? "above" : "below"
 - If a fresh direct native-peg quote is back inside threshold: close the live row immediately with `close_reason = 'recovered-native'`, but leave `recovery_price = NULL` because the stored USD price still contradicts the native close
 - If a fresh direct native-peg quote still shows a depeg but in a conflicting direction: fail closed and keep the existing row unchanged
 - If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and open the replacement immediately
-- If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
+- If direction changed but the primary price is `confirm_required`: keep the existing (old-direction) live row open (add to `seen`) and log a warning; the flip is only acted on once an authoritative primary reading or corroborated same-direction DEX support confirms it
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
 - Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
 
@@ -279,6 +279,8 @@ Age checks:
 | null | null | false/null | false/null | true | REJECT when DEX or pool contradiction is decisive and no same-direction source rescues the candidate |
 | null | null | null | null | false | Keep pending until the dynamic expiry limit; then expire (or record `unconfirmed-severe` for extreme moves) |
 
+**Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
+
 Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources`, and peak = worst of the stored pending peak, current authoritative primary, and trustworthy same-direction confirmer prices, then deletes from `depeg_pending`.
 
 Pending rows that pass the 45-minute base expiry but still have same-direction primary evidence, unavailable sources, or open confirmation circuits remain pending until their final dynamic limit. Rows that exceed that final limit are deleted with a recorded pending outcome; extreme-move expiries use `unconfirmed-severe` instead of the generic `expired` label.
@@ -342,7 +344,7 @@ Special case:
 While event is open:
   - Peak deviation updated if worse price seen
   - Direction change with authoritative or DEX-confirmed input: close old, open new
-  - Direction change with `confirm_required` input: close old, insert replacement pending candidate
+  - Direction change with `confirm_required` input: keep the old-direction row open and log a warning; the flip is only acted on once authoritative or DEX-confirmed input arrives
   - Trusted DEX disagreement on the same side is logged, but does not by itself close the event
   - Price recovers below threshold: close only when the primary recovery is authoritative, or when trusted aggregate DEX recovery has enough protocol corroboration and no challenger veto; otherwise keep the event open
 
@@ -410,6 +412,9 @@ Query params:
 | `active` | string | -- | If `"true"`, only events where `ended_at IS NULL` |
 | `limit` | number | 100 | Max results; out-of-range values outside `1..1000` are rejected |
 | `offset` | number | 0 | Pagination offset |
+| `cursor` | string | -- | Keyset pagination cursor; advance via the response `nextCursor`. Cannot be combined with a non-zero `offset` |
+| `includePending` | string | `false` | If `"true"`, add a `pending` array of unconfirmed candidates to the response |
+| `includeTotal` | string | `true` | If `"false"`, skip the COUNT query; `total` becomes a lower-bound estimate and `totalExact` is `false` |
 
 Response:
 
@@ -417,6 +422,9 @@ Response:
 {
   "events": [{ "...DepegEvent fields..." }],
   "total": 42,
+  "totalExact": true,
+  "nextCursor": "..." | null,
+  "pending": [{ "...DepegPendingIncident fields (only when includePending=true)..." }],
   "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000, "isCurrent": true }
 }
 ```

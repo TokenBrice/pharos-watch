@@ -224,7 +224,7 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 ## v3.3 - Separated discovery pipeline with staged pool confidence decay (Mar 9, 2026)
 
-- Discovery sources now run on a dedicated half-hourly trigger (`6,36 * * * *`) with a 12-minute shared run budget instead of sharing a short scoring-run budget
+- Discovery sources now run on a dedicated independent 20-minute cron (`3,23,43 * * * *`) with a ~15-minute run budget instead of sharing a short scoring-run budget
 - Individual discovery candidates are capped by a 25-second per-coin crawl budget so one slow asset cannot consume the full run
 - Staged pools merge into scoring with freshness confidence decay `max(0.5, 1 - ageHours/48)` and fall out after 24 hours
 - Chain-aware source routing now skips irrelevant networks, reducing wasted crawl attempts

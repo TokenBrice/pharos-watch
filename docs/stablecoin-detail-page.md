@@ -101,7 +101,8 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
 14. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
 15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
-16. `FeedbackModal`
+16. `faqContent` (`FaqSection`) — server-passed Q&A block rendered after the Explore zone, before the feedback modal
+17. `FeedbackModal`
 
 `StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. For tracked variants, that fallback includes a crawlable variant-relationship block linking to the parent asset and up to four sibling variants so wrapper, savings, strategy-vault, and risk-absorption pages expose their parent risk context even before hydration. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 
@@ -178,9 +179,10 @@ The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `Ex
 
 On the worker side, `GET /api/stablecoin/:id` now uses a small strategy layer:
 
-- `worker/src/api/stablecoin-detail.ts` handles cache lookup, fresh-cache hits, provider selection, and shared response helpers
-- `worker/src/api/stablecoin-detail/commodity.ts`, `coingecko-only.ts`, and `defillama.ts` own provider-specific upstream behavior
-- `worker/src/api/stablecoin-detail/shared.ts` owns cache writes, supply-history fallback loading, and stale-cache vs hard-error response policy
+- `worker/src/api/stablecoin-detail.ts` handles cache lookup, fresh/stale-cache hit decisions, and single-flight refresh de-dupe, then delegates provider selection
+- `worker/src/api/stablecoin-detail/router.ts` (`routeStablecoinDetail`) owns provider selection, branching by commodity / coingecko-only / cache-backed / DefiLlama
+- `worker/src/api/stablecoin-detail/commodity.ts`, `coingecko-only.ts`, `cache-fallback.ts`, and `defillama.ts` own provider-specific upstream behavior
+- `worker/src/api/stablecoin-detail/shared.ts` owns cache writes, supply-history fallback loading, shared response helpers, and stale-cache vs hard-error response policy
 
 Detail API stale-while-refresh is bounded: rows older than the 5-minute D1 TTL but younger than 24 hours are served with `Warning: 110`, `X-Data-Age`, and `Cache-Control: no-store` while a single-flight refresh runs in the background. Rows older than 24 hours are not served as stale fallback; the Worker refreshes synchronously and returns the normal upstream/supply-history fallback result.
 

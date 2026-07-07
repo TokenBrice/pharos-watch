@@ -14,7 +14,7 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ## v6.17 - Tx-context shortfall exclusion recovery (June 7, 2026)
 
 - Bridge-enabled configs now handle residual transaction-context shortfalls at the row level instead of withholding every parsed row in the config window.
-- Rows whose tx or receipt context is unavailable are persisted as `flow_type='bridge_transfer'`, with unresolved burns marked `review_required` / `tx-context-unavailable`, so they remain excluded from counted economic-flow aggregates.
+- Rows whose tx or receipt context was unavailable were persisted as `flow_type='bridge_transfer'`, with unresolved burns marked `review_required` / `tx-context-unavailable`, so they remained excluded from counted economic-flow aggregates. (Superseded 2026-06-19 by `cae9f4df9`: deferred shortfall rows are now filtered out of persistence entirely and retried on a later run once the sync frontier catches up past their block; the then-dead `bridge_transfer` row mutation was removed 2026-07-02 in `2ba8a6811`.)
 - Resolved rows in the same scan window are persisted normally and the sync frontier can advance when event and timestamp coverage are otherwise complete; cron metadata still exposes `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows` as unavailable-context diagnostics rather than provider-error counts.
 
 ---

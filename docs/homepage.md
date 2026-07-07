@@ -57,7 +57,7 @@ The hero's first-paint text summary is server-rendered from `getHomepageHeroSnap
 Derived helpers:
 
 - `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
-- `selectVisibleMcap(...)` and mini-card aggregate helpers in `src/lib/home-alt-aggregates.ts`
+- `bucketByDeviationBps(...)` mini-card aggregate helper in `src/lib/home-alt-aggregates.ts`
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
 
 Starred stablecoin state is local to the browser:
@@ -130,13 +130,13 @@ This section contains:
 - `PegBrowseStrip`
 - `StablecoinTable`
 
-The homepage table seeds every available column as enabled by default, keeps its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
+The homepage table seeds a curated default column set (`HOME_ALT_DEFAULT_COLUMNS`, which omits Mint Authority and Flags), keeps its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
 
 When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
 
 The `Mint Score` column reads `coin.mintAuthoritySummary` from the slim client registry and shows the standalone Mint Authority Score (`0-100`, or `NR`) with a methodology hint. Sorting uses the `mintAuthority` sort key and places unrated rows after scored rows. The row title still includes the compact review bucket used by `/coverage/` and `/screener/` (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`). This score is visible and sortable but does not change the homepage default sort. Since Safety Score v8.0 it also feeds the Decentralization report-card dimension through a penalty-only blend (see report-cards.md). The slim projection carries the cap-mutability fields needed for the homepage score to match full metadata scoring.
 
-`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, CHF, and Fiat Except USD first; remaining active pegs sit behind the "more pegs" disclosure.
+`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, GBP, and BRL first; remaining active fiat pegs sit behind the "more pegs" disclosure.
 
 ---
 

@@ -1,6 +1,13 @@
 # Pricing Pipeline Methodology - Version Timeline - Archive
 
-Older entries moved from [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) to keep routed reads small; the live file holds the 10 most recent.
+Older entries moved from [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) to keep routed reads small; the live file keeps the most recent entries.
+
+---
+
+## v6.08 - Scoped live-parent wrapper price repair (May 24, 2026)
+
+- sBOLD and yBOLD can publish ERC-4626 NAV prices from BOLD when BOLD's same-run consensus is fresh and high-confidence
+- KAST USDK and XO Cash can inherit fresh high-confidence wM pricing as scoped M0 extension units
 
 ---
 

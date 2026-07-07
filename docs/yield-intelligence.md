@@ -155,7 +155,7 @@ Currently configured for 23 generic vaults (all use selector `0x07a2d13a` — `c
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
-| `susde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
+| `susde-ethena` | sUSDe | `0x9D39...3497` | Ethereum |
 | `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
 | `susds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
 | `stusds-sky` | stUSDS | `0x99cd...eB9` | Ethereum |
@@ -561,7 +561,8 @@ https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
 https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
 https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx
 https://evds3.tcmb.gov.tr/igmevdsms-dis/fe
-https://evds3.tcmb.gov.tr/igmevdsms-dis/serieList/fe/type=json&code=bie_bisttlref
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2
+https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.

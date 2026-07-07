@@ -101,7 +101,7 @@ For the safety-score changelog specifically, update both:
 
 `src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
 
-Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, PSI, Mint Authority Score) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
+Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, Mint Authority Score) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
 
 ### Blacklist tracker {#blacklist-tracker}
 
@@ -116,7 +116,7 @@ The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [proce
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster includes mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster includes mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience.
 
 ### Proof of Reserves
 
@@ -128,7 +128,7 @@ Bluechip has two surfaces: the external Bluechip rating sync documented in [blue
 - `self` — amber. Issuer-published self-attestation, no third-party signoff.
 - `none` — red. No attestation surface published.
 
-The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly"). The methodology anchor `#proof-of-reserves` covers the tier ladder and cadence semantics; it intentionally lives under the safety-scores group rather than as a top-level section because it feeds the same Resilience / Dependency dimensions that already anchor under `#safety-scores-methodology`.
+The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly").
 
 ## StablecoinMeta surfacing fields (May 2026)
 

@@ -81,7 +81,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 
 - **Base URL:** `https://api.trongrid.io/v1/`
 - **Events:** `/contracts/{address}/events?event_name={name}&limit=200&order_by=block_timestamp,asc`
-- **Current balances:** `/accounts/{address}` (Pharos converts stored Tron hex addresses to base58 for this path)
+- **Current balances:** JSON-RPC `eth_call` (`balanceOf`) against `https://api.trongrid.io/jsonrpc` first, falling back to REST `/accounts/{address}` when that returns null (Pharos converts stored Tron hex addresses to base58 for the REST path)
 - **Optional auth:** `TRON-PRO-API-KEY` header
 
 ### Rate Limiters
@@ -657,7 +657,7 @@ CREATE TABLE blacklist_sync_state (
 For EVM configs, the stored contract-address segment is canonicalized to lowercase on write. Reads merge both lowercase and legacy mixed-case keys so older cursor rows keep working after contract metadata switches to checksum casing.
 
 **Important:** For EVM chains, `last_block` stores block numbers. For Tron, it stores millisecond timestamps (NOT block numbers).
-For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` coverage now advances `last_block` to the highest contiguous block that was fully scanned so backlogs catch up across runs instead of restarting from `0`.
+For RPC log-scan chains (Base, Optimism, Avalanche, BSC, Gnosis), partial `eth_getLogs` coverage now advances `last_block` to the highest contiguous block that was fully scanned so backlogs catch up across runs instead of restarting from `0`.
 
 ---
 
@@ -910,7 +910,7 @@ address, and transaction link. From `md` upward, the full table remains the prim
 
 - `null` or (`0` and not destroy): show the amount status/source instead of implying a confirmed value
 - Gold coins (PAXG, XAUT, XAUM): 4 decimal places + symbol (converted to USD only when the coin-specific price-cache entry is positive and newer than the 6-hour replay budget)
-- A7A5, EURC, BRZ, EURI, TGBP, EURCV, and JPYC: native amounts are non-USD-denominated and converted to USD only when their coin-specific price-cache entries are positive and newer than the 6-hour replay budget
+- A7A5, EURC, BRZ, EURI, TGBP, EURCV, AEUR, and JPYC: native amounts are non-USD-denominated and converted to USD only when their coin-specific price-cache entries are positive and newer than the 6-hour replay budget
 - USD-pegged stablecoins: `formatCurrency` (USD)
 
 ### Special UI Components
@@ -922,15 +922,18 @@ address, and transaction link. From `md` upward, the full table remains the prim
 
 ### Detail-page block
 
-Stablecoin detail pages (`/stablecoin/<id>`) render a `BlacklistSection` immediately after the Mint & Burn Flow History when both conditions hold:
+Stablecoin detail pages (`/stablecoin/<id>`) render two blacklist blocks, both gated on the same conditions:
 
 1. The coin's symbol is in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`).
 2. `summary.stats.perCoinTotalEvents[symbol] > 0` (real, non-suppressed events exist).
 
-The block consists of:
+`BlacklistSection` (`id="blacklist"`, Activity tab, rendered after the flow-summary card) consists of:
 
 - **BlacklistDetailStats** — three `MetricStatCard`s showing `perCoinFrozenAddressCount`, `perCoinFrozenTotal` (USD), and `perCoinDestroyedTotal` (USD).
 - **BlacklistDetailChart** — quarterly stacked bars with three event-type series (blacklist / unblacklist / destroy), driven by `perCoinQuarterlyEventTypes[symbol]`.
+
+`BlacklistHistorySection` (`id="blacklist-history"`, History tab, rendered immediately after the Mint & Burn Flow History) consists of:
+
 - **BlacklistDetailEventFeed** — latest 10 events for the coin via `useBlacklistEventsPage({ stablecoin: symbol, limit: 10, offset: 0 })`, with a "See all events →" footer link to `/freezewatch/?stablecoin=<symbol>`.
 
 Source files: `src/components/stablecoin-detail/blacklist-section.tsx`, `blacklist-detail-stats.tsx`, `blacklist-detail-chart.tsx`, `blacklist-detail-event-feed.tsx`.
@@ -971,7 +974,7 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` �
 17. **A7A5 is non-USD:** never treat native A7A5 units as USD; amount conversion depends on a fresh `a7a5-old-vector` price-cache entry.
 18. **RLUSD clawback is not covered:** v3.8 tracks account pause/unpause only. Clawback support needs transaction-input classification because the verified ABI does not expose a dedicated clawback event.
 19. **MNEE has independent blacklist and freeze states:** v3.9 tracks MNEE freeze/unfreeze plus confiscation/burn events only. AccountBlacklisted/AccountDelisted need a future restriction-source key to avoid active-state collisions.
-20. **EURC/BRZ/EURI/TGBP/EURCV/JPYC are non-USD:** public USD values depend on fresh price-cache conversion rather than native token units (EUR for EURC/EURI/EURCV, BRL for BRZ, GBP for TGBP, JPY for JPYC).
+20. **EURC/BRZ/EURI/TGBP/EURCV/AEUR/JPYC are non-USD:** public USD values depend on fresh price-cache conversion rather than native token units (EUR for EURC/EURI/EURCV/AEUR, BRL for BRZ, GBP for TGBP, JPY for JPYC).
 21. **Gnosis dRPC free-tier caps log range at 10k blocks:** scan windows must stay at or below 9k blocks per request, otherwise `eth_getLogs` rejects the range and no events are returned.
 
 ---

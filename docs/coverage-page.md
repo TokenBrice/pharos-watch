@@ -59,7 +59,7 @@ Status semantics are intentionally user-facing:
 
 ### Mint Authority Coverage
 
-Mint Authority coverage counts curated review breadth first, then appends standalone score-band breakdowns for reviewed rows. `Unknown` means no compact mint-authority review is available; stablecoin detail pages omit the Mint Authority section until reviewed data exists, while score-oriented aggregate surfaces treat the row as `NR`. Compact projections include cap-mutability evidence so coverage score bands remain equivalent to full metadata scoring.
+Mint Authority coverage counts curated review breadth first, then appends standalone score-band breakdowns for reviewed rows. `Unknown` means no compact mint-authority review is available; stablecoin detail pages always render the Mint Authority section, showing an explicit `Not reviewed by Pharos` / `Mint Authority Score: NR` state when no reviewed data exists, while score-oriented aggregate surfaces treat the row as `NR`. Compact projections include cap-mutability evidence so coverage score bands remain equivalent to full metadata scoring.
 
 Authority posture bands belong in detail text/tooltips only; do not add posture buckets to the coverage headline, risk ranking, or default sort. Score-band chips use `Hardened`, `Governed`, `Managed`, `Concentrated`, `Exposed`, and `NR`.
 

@@ -214,7 +214,7 @@ Primary data marks are `<a>` (atlas) or `<g role="button" tabIndex={0}>` (harbor
 
 ### Selection state lives in the page, not the scene
 
-Selection (`selectedChainId`, `selectedCoinId`) is owned by the client route component and passed down. The scene reports selection changes via callback and renders the current state. This keeps the scene testable in isolation and lets sibling panels (`SelectedHarborPanel`, `DEWSDetail`) react to the same state.
+Selection (`selectedChainId`) is owned by the client route component and passed down. The scene reports selection changes via callback and renders the current state. This keeps the scene testable in isolation and lets a sibling panel (`SelectedHarborPanel`) react to the same state. The DEWS radar instead resolves a coin click by navigating to that coin's own page (`router.push(buildStablecoinUrl(id))`) rather than sharing selection state with a same-page sibling.
 
 ### Ambient attention: auto-cycling
 
@@ -241,7 +241,7 @@ Auto-cycles must pause under `prefers-reduced-motion` and must yield to user sel
 
 Every module is framed by consistent copy architecture:
 
-1. **Kicker** — small uppercase class `pharos-kicker`, e.g., "The Beacon", "Peg Diversity Map", "DEWS: Depeg Early Warning System".
+1. **Kicker** — small uppercase class `pharos-kicker`, e.g., "The Beacon", "Peg Diversity Atlas", "DEWS: Depeg Early Warning System".
 2. **Section title** — `pharos-section-title`, one line with an icon (Compass, Lighthouse, Radar).
 3. **Freshness line** — "Updated every 30 min" in muted text.
 4. **Legend rail** — size scale, band color key, top-3 cohort strip, wake legend.

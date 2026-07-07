@@ -223,8 +223,10 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 | ----------------------------------------- | ---------- | ---------------- | ------------------ | ----------------------- |
 | `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional-regulated |
 | `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional-regulated |
+| `rwa-backed` + `decentralized`            | ethereum   | single-chain     | native             | onchain                 |
 | `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain                 |
 | `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain                 |
+| `crypto-backed` + `centralized`           | ethereum   | single-chain     | native             | onchain                 |
 | `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain                 |
 
 Explicit overrides exist for coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
@@ -275,7 +277,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | `single-source-or-laggy`  | 45    | Single-source, lag-prone, or weakly-fresh feeds                                                             |
 | `opaque-or-unknown`       | 20    | Oracle setup is opaque, unresolved, or not source-verified                                                  |
 
-Since v8.11, `oracleRisk` profiles can include `reviewedAt`, `reviewer`, `confidence`, source links, and optional `branches[]` rows keyed by collateral branch or chain. If branches are present, scoring uses the lowest-scoring branch/profile tier as the oracle score. Report-card payloads also expose a display-only `oracleRisk` object with summary, sources, selected branch, and inherited parent context for wrappers/variants; raw scoring fields stay limited to `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`, and tracked variants with resolvable parents use the inherited parent oracle display instead of a duplicate direct blend. `npm run check:oracle-risk-coverage` reports missing/incomplete/stale direct non-variant CDP oracle reviews without failing, and `npm run check:oracle-risk-coverage:enforce` now runs in the `validate:prebuild` merge gate, failing on any missing or incomplete profile so a new crypto-backed CDP cannot silently skip oracle scoring (staleness stays advisory to avoid a time-based gate failure). `npm run calibrate:oracle-risk-score -- --report agents/oracle-risk-score-calibration.md` prints the direct non-variant CDP Decentralization movement table for blend/tier recalibration.
+Since v8.11, `oracleRisk` profiles can include `reviewedAt`, `reviewer`, `confidence`, source links, and optional `branches[]` rows keyed by collateral branch or chain. If branches are present, scoring uses the lowest-scoring branch/profile tier as the oracle score. Report-card payloads also expose a display-only `oracleRisk` object with summary, sources, selected branch, and inherited parent context for wrappers/variants; raw scoring fields stay limited to `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`, and tracked variants with resolvable parents use the inherited parent oracle display instead of a duplicate direct blend. `npm run check:oracle-risk-coverage` reports missing/incomplete/stale direct non-variant CDP oracle reviews without failing, and `npm run check:oracle-risk-coverage:enforce` now runs in the `validate:prebuild` merge gate, failing on any missing or incomplete profile so a new crypto-backed CDP cannot silently skip oracle scoring (staleness stays advisory to avoid a time-based gate failure). `npm run calibrate:oracle-risk-score -- --report=agents/oracle-risk-score-calibration.md` prints the direct non-variant CDP Decentralization movement table for blend/tier recalibration.
 
 Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redundant-with-failover`), with BOLD split into WETH, wstETH, and rETH branches. Other CDPs stay unchanged until a reviewed profile is curated.
 
@@ -437,7 +439,10 @@ Key types:
 
 ## Portfolio Analyzer & Stress Test
 
-Collapsible panel on `/safety-scores` between the headline stats and the controls/card grid. Two sections stacked vertically:
+Two separate features:
+
+- **Portfolio Analyzer** — standalone `/portfolio` page (`src/app/portfolio/client.tsx`, `usePortfolio`). Holdings editor, portfolio grade/radar, and upstream exposure.
+- **Interactive Stress Test / Contagion Map** — collapsible panel on `/safety-scores` between the headline stats and the controls/card grid (`src/components/stress-test-panel.tsx`, `useStressTest`).
 
 ### Portfolio Analyzer
 
@@ -458,7 +463,6 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
 - **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 463 cards (364 active tracked assets plus 88 cemetery entries plus 11 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
-- **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
 State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
@@ -466,7 +470,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 ## Frontend
 
 - **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with core settlement rail strip/sort affordance, portfolio/stress panel integration, simulation mode, and headline safety stats. Core settlement rail membership is a frontend view-model classification and specifically requires a reviewed offchain issuer exit route.
-- **Portfolio & stress panel**: `src/components/stress-test-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
+- **Stress panel**: `src/components/stress-test-panel.tsx` — collapsible Contagion Map panel with systemic-risk scoreboard, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown; the mobile grade strip wraps and keeps the score-breakdown disclosure on its own row so the chart keeps usable width. The title and key opaque dimensions (`Resilience`, `Dependency Risk`) now expose contextual methodology hints, and the card footer links directly back to the Safety Score methodology / changelog.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge) and a "Core rail" marker for objectively qualified settlement rails; the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
@@ -482,7 +486,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 | `worker/src/api/report-cards.ts`                                    | API handler: serves shared snapshot response with freshness headers                                                                                   |
 | `worker/src/cron/snapshot-safety-grade-history.ts`                  | Daily grade-history event snapshot writer (`safety_grade_history`)                                                                                    |
 | `worker/src/api/safety-score-history.ts`                            | History endpoint for per-coin grade transitions                                                                                                       |
-| `src/components/stress-test-panel.tsx`                              | Combined portfolio analyzer + stress test collapsible panel                                                                                           |
+| `src/components/stress-test-panel.tsx`                              | Stress test / Contagion Map collapsible panel (stress test controls + impact table)                                                                   |
 | `src/components/report-card.tsx`                                    | Full detail card with radar                                                                                                                           |
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI                                                                                                           |
 | `src/components/report-card-mini.tsx`                               | Compact grid tile with simulation mode support                                                                                                        |
