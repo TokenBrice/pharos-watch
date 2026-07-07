@@ -25,9 +25,16 @@ function getContractKey(contract: ContractDeployment): string {
 export function ContractDeployments({
   coinId,
   contracts,
+  compact = false,
 }: {
   coinId: string;
   contracts: ContractDeployment[];
+  /**
+   * Rail rendering (Figma coin template): single-column rows, shorter
+   * preview, and no `#contracts` anchor — the in-flow Key Info instance
+   * owns the deep-link id so dual-rendering never duplicates it.
+   */
+  compact?: boolean;
 }) {
   const [openContractKey, setOpenContractKey] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
@@ -53,7 +60,7 @@ export function ContractDeployments({
   // Desktop shows labeled rows (chain name + address + actions), not an
   // icon-only wall -- recognition fails past the top-10 chain logos. Preview 9
   // keeps the card compact for coins with dozens of deployments.
-  const desktopContractsPreview = contracts.slice(0, 9);
+  const desktopContractsPreview = contracts.slice(0, compact ? 5 : 9);
   const visibleDesktopContracts = showAllContractsDesktop ? contracts : desktopContractsPreview;
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
@@ -69,9 +76,16 @@ export function ContractDeployments({
   }
 
   return (
-    <div id="contracts" className={cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}>
-      <p className="pharos-kicker mb-1.5">Contract Deployments</p>
-      {contractSummary && <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>}
+    <div
+      id={compact ? undefined : "contracts"}
+      className={compact ? undefined : cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}
+    >
+      <p className="pharos-kicker mb-1.5">
+        Contract Deployments{compact ? ` · ${contracts.length}` : ""}
+      </p>
+      {!compact && contractSummary && (
+        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>
+      )}
       {quickCopyContract ? (
         <ContractDetailRow
           contract={quickCopyContract}
@@ -96,9 +110,9 @@ export function ContractDeployments({
       </div>
       <div className="hidden sm:block">
         <div
-          className={`grid grid-cols-1 gap-1.5 md:grid-cols-2 2xl:grid-cols-3 ${
-            showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""
-          }`}
+          className={`grid gap-1.5 ${
+            compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 2xl:grid-cols-3"
+          } ${showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""}`}
         >
           {visibleDesktopContracts.map((c) => (
             <ContractLabeledRow

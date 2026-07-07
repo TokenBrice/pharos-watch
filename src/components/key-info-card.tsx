@@ -20,6 +20,7 @@ export function KeyInfoCard({
   parentSymbol,
   parentArchetype,
   variantKind,
+  contractsBelowXlOnly = false,
 }: {
   meta: StablecoinMeta;
   resolvedMechanismArchetype?: MechanismArchetype | null;
@@ -27,6 +28,12 @@ export function KeyInfoCard({
   parentSymbol?: string | null;
   parentArchetype?: MechanismArchetype | null;
   variantKind?: VariantKind | null;
+  /**
+   * At xl+ the detail right rail renders its own Contracts card (Figma coin
+   * template), so the in-card section CSS-hides there while keeping the
+   * `#contracts` deep-link anchor for narrower viewports.
+   */
+  contractsBelowXlOnly?: boolean;
 }) {
   const { governanceFullLabel, backingFullLabel, pegFullLabel } = getKeyInfoSentenceLabels(meta);
 
@@ -52,7 +59,13 @@ export function KeyInfoCard({
         <InfrastructureSection meta={meta} />
         <ProofAndJurisdictionSection meta={meta} />
         <LaunchDateSection launchDate={meta.launchDate} />
-        <ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />
+        {contractsBelowXlOnly ? (
+          <div className="xl:hidden">
+            <ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />
+          </div>
+        ) : (
+          <ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />
+        )}
       </CardContent>
     </Card>
   );

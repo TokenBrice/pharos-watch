@@ -228,7 +228,9 @@ export function HeroCardDesktopSection({
           </div>
         </div>
 
-        <div className="w-56 shrink-0">
+        {/* At xl+ the detail right rail renders the safety summary card
+            (Figma coin template), so the inline copy CSS-hides there. */}
+        <div className="w-56 shrink-0 xl:hidden">
           <HeroSignalsRail items={signalRailItems} />
         </div>
       </div>

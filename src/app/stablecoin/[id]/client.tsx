@@ -27,6 +27,8 @@ import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemptio
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
+import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
+import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import { CoinNotices } from "@/components/coin-notice";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
@@ -402,8 +404,6 @@ export default function StablecoinDetailClient({
           />
         ) : null}
 
-        {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
-
         <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
       </div>
 
@@ -416,6 +416,15 @@ export default function StablecoinDetailClient({
         observeTarget={heroRef}
       />
 
+      {/* ── Content grid ──
+        Single column up to xl; at xl+ the Figma coin-template right rail
+        (safety summary, news, contracts, price transparency) sits beside the
+        dossier while the relocated in-flow copies CSS-hide. The in-flow
+        instance always owns the deep-link anchor id. */}
+      <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
+      <div className="min-w-0">
+      {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+
       {/* ── Navigation zone ──
         The scrollspy stays in the normal vertical flow so the dossier sections
         can use the full content width on desktop. */}
@@ -425,7 +434,7 @@ export default function StablecoinDetailClient({
         navAriaLabel="Stablecoin detail section navigation"
         emphasis="pill-tabs"
         onActiveChange={setActiveBannerId}
-        className="mt-6 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+        className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
         rightSlot={
           <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
             <Link
@@ -464,6 +473,7 @@ export default function StablecoinDetailClient({
                 parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
                 parentArchetype={parentArchetype}
                 variantKind={viewModel.coin.variantKind ?? null}
+                contractsBelowXlOnly
               />
             </section>
             <section id="report-card">
@@ -548,7 +558,9 @@ export default function StablecoinDetailClient({
                   <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
                 ) : null}
                 {hasPriceTransparency ? (
-                  <section id="price" aria-label="Price transparency">
+                  /* Relocates to the right rail at xl+; this in-flow copy
+                     keeps the #price deep-link anchor below that. */
+                  <section id="price" aria-label="Price transparency" className="xl:hidden">
                     <PriceTransparencyCard
                       coinData={viewModel.coinData}
                       consensusSources={viewModel.consensusSources ?? []}
@@ -582,7 +594,9 @@ export default function StablecoinDetailClient({
           <div ref={historyGateRef} className="space-y-6">
             <SectionBanner id="history" label="History" icon={HistoryIcon} active={activeBannerId === "history"} />
             {frozenNote}
-            <section id="coin-timeline" aria-label="Coin event timeline">
+            {/* Relocates to the right rail at xl+; this in-flow copy keeps
+                the #coin-timeline deep-link anchor below that. */}
+            <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
               <TapeForCoinTeaser coinId={viewModel.id} />
             </section>
             <LazySection minHeight={220}>
@@ -632,6 +646,35 @@ export default function StablecoinDetailClient({
         {/* /min-w-0 content column */}
       </div>
       {/* /content wrapper */}
+      </div>
+      {/* /main column */}
+
+      <aside aria-label="Coin summary rail" className="hidden min-w-0 xl:block">
+        <div className="space-y-4">
+          <RailSafetySummary items={heroModel.signalRailItems} />
+          <TapeForCoinTeaser coinId={viewModel.id} />
+          {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
+            <div className="pharos-card-shell p-4">
+              <ContractDeployments
+                coinId={viewModel.coin.id}
+                contracts={viewModel.coin.contracts ?? []}
+                compact
+              />
+            </div>
+          ) : null}
+          {hasPriceTransparency ? (
+            <PriceTransparencyCard
+              coinData={viewModel.coinData}
+              consensusSources={viewModel.consensusSources ?? []}
+              agreeSources={viewModel.agreeSources ?? []}
+              dexPriceCheck={viewModel.dexPriceCheck}
+              compact
+            />
+          ) : null}
+        </div>
+      </aside>
+      </div>
+      {/* /content grid */}
 
       <FeedbackModal
         open={feedbackOpen}

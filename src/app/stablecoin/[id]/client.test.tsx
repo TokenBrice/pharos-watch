@@ -406,6 +406,22 @@ describe("StablecoinDetailClient", () => {
     expect(longformScrollspyNavMock).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "rail" }));
   });
 
+  it("renders the xl summary rail with in-flow copies owning the deep-link anchors", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const rail = container.querySelector('aside[aria-label="Coin summary rail"]');
+    expect(rail).toBeTruthy();
+    // Dual-rendered rail modules must never duplicate anchor ids: the in-flow
+    // (below-xl) instance owns #price / #coin-timeline / #contracts.
+    expect(container.querySelectorAll("#price").length).toBeLessThanOrEqual(1);
+    expect(container.querySelectorAll("#coin-timeline")).toHaveLength(1);
+    expect(container.querySelectorAll("#contracts").length).toBeLessThanOrEqual(1);
+    expect(container.querySelectorAll("#price-transparency").length).toBeLessThanOrEqual(1);
+  });
+
   it("renders reserve view in the overview stream when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
@@ -534,8 +550,14 @@ describe("StablecoinDetailClient", () => {
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
-    const priceCard = screen.getByTestId("price-transparency-card");
-    const priceSection = priceCard.closest("section");
+    // Two instances render (liquidity zone + xl right rail); the in-flow
+    // liquidity copy is the one wrapped in the #price section.
+    const priceCards = screen.getAllByTestId("price-transparency-card");
+    expect(priceCards).toHaveLength(2);
+    const priceSection = priceCards
+      .map((card) => card.closest("section#price"))
+      .find((section) => section != null);
+    expect(priceSection).toBeTruthy();
     const redemptionCard = screen.getByTestId("redemption-backstop-card");
     expect(redemptionCard.parentElement).toBe(priceSection?.parentElement);
   });
@@ -552,7 +574,7 @@ describe("StablecoinDetailClient", () => {
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
-    expect(screen.getByTestId("price-transparency-card")).toBeTruthy();
+    expect(screen.getAllByTestId("price-transparency-card").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
   });
 

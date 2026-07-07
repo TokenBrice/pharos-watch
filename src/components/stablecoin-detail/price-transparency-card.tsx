@@ -74,7 +74,15 @@ export function PriceTransparencyCard({
   consensusSources,
   agreeSources,
   dexPriceCheck,
-}: PriceTransparencyCardProps) {
+  compact = false,
+}: PriceTransparencyCardProps & {
+  /**
+   * Rail rendering (Figma coin template): two-up source grid sized for the
+   * ~22rem column and no `#price-transparency` anchor — the in-flow
+   * Liquidity instance owns the id so dual-rendering never duplicates it.
+   */
+  compact?: boolean;
+}) {
   const [showAll, setShowAll] = useState(false);
 
   const hasNoPrice = coinData.price == null;
@@ -109,7 +117,7 @@ export function PriceTransparencyCard({
         : "border-border/60 bg-muted/40 text-muted-foreground";
 
   return (
-    <Card className="pharos-card-shell" id="price-transparency">
+    <Card className="pharos-card-shell" id={compact ? undefined : "price-transparency"}>
       <CardHeader className="pb-2">
         <DetailSectionTitle>
           <MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>
@@ -190,7 +198,7 @@ export function PriceTransparencyCard({
 
         {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
         <div className="space-y-2">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3")}>
             {isProtocolRedeem ? <SourceChip label="Protocol Redemption" status="used" /> : null}
 
             {/* Used Sources */}
