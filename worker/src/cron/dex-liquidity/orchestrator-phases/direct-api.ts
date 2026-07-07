@@ -46,6 +46,7 @@ import {
   DIRECT_API_PROVIDER_TIMEOUT_MS,
 } from "../direct-api-policy";
 import { toErrorMessage } from "../../../lib/error-utils";
+import { mapWithConcurrency } from "../../../lib/concurrency";
 
 export interface DirectApiFetcher {
   name: string;
@@ -199,7 +200,7 @@ export async function runDirectApiFetchPhase(
     db,
     signal,
   });
-  const entries = await runBounded(fetchers, DIRECT_API_FETCH_PHASE_CONCURRENCY, async ({
+  const entries = await mapWithConcurrency(fetchers, DIRECT_API_FETCH_PHASE_CONCURRENCY, async ({
     name,
     circuitKey,
     normalizedProtocol,
@@ -287,26 +288,6 @@ export async function runDirectApiFetchPhase(
     fallbackSignals: entries.flatMap((entry) => entry.fallbackSignals),
     circuitEvents: entries.flatMap((entry) => entry.circuitEvents),
   };
-}
-
-async function runBounded<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.max(1, Math.min(concurrency, items.length));
-
-  await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex++;
-      results[currentIndex] = await worker(items[currentIndex]!);
-    }
-  }));
-
-  return results;
 }
 
 function buildDirectApiProviderPolicy(
