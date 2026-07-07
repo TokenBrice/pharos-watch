@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { onRequest } from "../api/admin/[[path]].ts";
 
 const { verifyAccessJwt } = vi.hoisted(() => ({
@@ -420,6 +421,36 @@ describe("ops admin proxy", () => {
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
       env: BASE_ENV,
       params: { path: "status" },
+    });
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
+  });
+
+  it("declares ops proxy timeout budgets in endpoint metadata", () => {
+    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.status(), 10_000)).toBe(20_000);
+    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.statusHistoryBase(), 10_000)).toBe(20_000);
+    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.auditDepegHistoryBase(), 10_000)).toBe(45_000);
+    expect(getEndpointOpsProxyTimeoutMs(API_PATHS.requestSourceStatsBase(), 10_000)).toBe(10_000);
+  });
+
+  it("gives status-history the status proxy timeout budget", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    )));
+
+    const responsePromise = onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status-history?limit=10"),
+      env: BASE_ENV,
+      params: { path: "status-history" },
     });
 
     await vi.advanceTimersByTimeAsync(20_000);

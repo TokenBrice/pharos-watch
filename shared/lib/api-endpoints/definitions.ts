@@ -42,6 +42,8 @@ export interface EndpointDefinition {
   strictContract?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
+  /** Optional Pages ops-admin proxy timeout override for slow admin endpoints. */
+  opsProxyTimeoutMs?: number;
   statusPageAction?: EndpointStatusPageActionConfig;
   /** Worker-only dependency hydration hints consumed by the route registry/context builder. */
   routeDependencies?: readonly EndpointDependency[];
@@ -471,12 +473,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.status(),
     routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"],
     probeGroup: "admin",
+    opsProxyTimeoutMs: 20_000,
   }),
   adminGet({
     key: "status-history",
     path: API_PATHS.statusHistoryBase(),
     probeGroup: "admin",
     probePath: API_PATHS.statusHistory({ limit: 10 }),
+    opsProxyTimeoutMs: 20_000,
   }),
   adminGet({
     key: "request-source-stats",
@@ -670,6 +674,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.auditDepegHistoryBase(),
     probeGroup: "manual",
     probePath: API_PATHS.auditDepegHistoryDryRun(),
+    opsProxyTimeoutMs: 45_000,
     statusPageAction: {
       label: "Audit Depegs",
       confirm: "Run depeg history audit (dry-run)?",
@@ -818,6 +823,10 @@ export function getEndpointDefinition(path: string): EndpointDefinition | undefi
 
 export function getEndpointDefinitionByKey(key: EndpointKey): EndpointDefinition | undefined {
   return ENDPOINT_DEFINITION_BY_KEY.get(key);
+}
+
+export function getEndpointOpsProxyTimeoutMs(path: string, fallbackMs: number): number {
+  return ENDPOINT_DEFINITION_BY_PATH.get(path)?.opsProxyTimeoutMs ?? fallbackMs;
 }
 
 /** Pre-computed strict contract paths (module-load-time). */

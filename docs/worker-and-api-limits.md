@@ -182,7 +182,7 @@ JSON/text fetch callers that need per-request timeout coverage across body consu
 | Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts` |
 | DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts` |
 | Direct DEX API requests             | `15_000 ms` per request     | `worker/src/cron/dex-liquidity/direct-api-policy.ts`                 |
-| Ops admin proxy reads               | `20_000 ms` for `/api/status` and `/api/status-history`; `45_000 ms` for `/api/audit-depeg-history` | `functions/api/admin/[[path]].ts` |
+| Ops admin proxy reads               | `20_000 ms` for `/api/status` and `/api/status-history`; `45_000 ms` for `/api/audit-depeg-history` | `shared/lib/api-endpoints/definitions.ts` (`opsProxyTimeoutMs`) |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-config.ts`             |
 | Public dataset snapshot outer deadline | `10 * 60_000 ms`          | `worker/src/lib/public-dataset-snapshot-budget.ts`, `worker/src/lib/cron-lease.ts` | Covers the 4 × 120s stablecoins-cache retry window plus D1 read/compress/insert tail room |

@@ -1,4 +1,4 @@
-import { API_PATHS, isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import { getEndpointOpsProxyTimeoutMs, isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
@@ -40,22 +40,6 @@ const FORWARDED_RESPONSE_HEADERS = [
 ] as const;
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
 
-// Per-endpoint upstream-timeout overrides for slow Worker routes, keyed by the
-// canonical route (via API_PATHS, not stringly-typed literals) so each value is
-// tied to one named endpoint. These budgets must stay >= the Worker's own
-// processing time for the same route — the Worker enforces no explicit
-// per-endpoint timeout, so a route that grows slower upstream (more rows to
-// scan, etc.) needs its budget here raised in lockstep, or the Pages proxy will
-// emit spurious 504s before the Worker can respond. Anything not listed uses
-// DEFAULT_PROXY_TIMEOUT_MS.
-const OPS_PROXY_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
-  // Status snapshot + history can fan out across cron-backed tables.
-  [API_PATHS.status()]: 20_000,
-  [API_PATHS.statusHistoryBase()]: 20_000,
-  // Depeg-history audit scans the full event log; slowest admin route.
-  [API_PATHS.auditDepegHistoryBase()]: 45_000,
-};
-
 type OpsAdminProxyContext = PagesProxyContext<OpsAdminProxyEnv>;
 
 function isCloudflareAccessLocation(location: string | null): boolean {
@@ -69,7 +53,7 @@ function isCloudflareAccessLocation(location: string | null): boolean {
 }
 
 function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
-  return OPS_PROXY_TIMEOUT_OVERRIDES_MS[upstreamPath] ?? DEFAULT_PROXY_TIMEOUT_MS;
+  return getEndpointOpsProxyTimeoutMs(upstreamPath, DEFAULT_PROXY_TIMEOUT_MS);
 }
 
 function buildUpstreamHeaders(
