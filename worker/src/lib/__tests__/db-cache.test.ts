@@ -79,6 +79,30 @@ describe("getPriceCache", () => {
     expect(queries[0]).toContain("source, confidence, observed_at");
   });
 
+  it("falls back to empty source arrays when cached source JSON is malformed", async () => {
+    const { db } = makeDb({
+      fullRows: [
+        {
+          asset_id: "usdc-circle",
+          price: 0.9998,
+          updated_at: 1800000000,
+          source: "coingecko",
+          confidence: "high",
+          observed_at: 1799999900,
+          observed_at_mode: "upstream",
+          synced_at: 1800000010,
+          agree_sources_json: "{bad-json",
+          consensus_sources_json: JSON.stringify({ not: "array" }),
+        },
+      ],
+    });
+
+    const cache = await getPriceCache(db);
+
+    expect(cache.get("usdc-circle")?.agreeSources).toEqual([]);
+    expect(cache.get("usdc-circle")?.consensusSources).toEqual([]);
+  });
+
   it("propagates missing metadata-column errors without fallback", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { db, queries } = makeDb({

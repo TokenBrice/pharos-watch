@@ -8,6 +8,7 @@ import {
   type FreshnessSentinelBackedCacheKey,
 } from "./freshness-sentinels";
 import { toErrorMessage } from "./error-utils";
+import { parseJsonStringArray } from "./json-parse";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await runWithOverloadRetry(() =>
@@ -165,16 +166,6 @@ export interface PriceCacheEntry {
   syncedAt?: number | null;
   agreeSources?: string[];
   consensusSources?: string[];
-}
-
-function parseJsonStringArray(value: string | null | undefined): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
-  } catch {
-    return [];
-  }
 }
 
 export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCacheEntry>> {

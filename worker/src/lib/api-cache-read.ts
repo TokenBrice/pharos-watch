@@ -6,6 +6,7 @@ import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 import { toErrorMessage } from "./error-utils";
+import { parseJson } from "./json-parse";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
 const RESPONSE_READY_CACHE_VERSION = 2;
@@ -46,13 +47,11 @@ export function resetCacheJsonParseFailureCountersForTests(): void {
 }
 
 export function safeJsonParse<T>(json: string | null | undefined, fallback: T, context: string): T {
-  if (json == null) return fallback;
-  try {
-    return JSON.parse(json) as T;
-  } catch (err) {
-    recordJsonParseFailure(context, toErrorMessage(err));
-    return fallback;
-  }
+  const parsed = parseJson(json, {
+    context,
+    onFailure: (failure) => recordJsonParseFailure(context, failure.message),
+  });
+  return parsed.ok ? parsed.value as T : fallback;
 }
 
 export type CachedJsonReadResult<T> =
@@ -69,11 +68,16 @@ export function readCachedJson<T>(
     return { status: "missing" };
   }
 
-  try {
-    return { status: "ok", data: JSON.parse(cached.value) as T };
-  } catch (err) {
-    const message = toErrorMessage(err);
-    recordJsonParseFailure(`${endpoint}:${cacheKey}`, message);
+  const context = `${endpoint}:${cacheKey}`;
+  const parsed = parseJson(cached.value, {
+    context,
+    onFailure: (failure) => recordJsonParseFailure(context, failure.message),
+  });
+  if (parsed.ok) {
+    return { status: "ok", data: parsed.value as T };
+  }
+  {
+    const message = parsed.message;
     return { status: "malformed", message };
   }
 }

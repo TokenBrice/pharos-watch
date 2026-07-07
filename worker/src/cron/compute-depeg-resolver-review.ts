@@ -32,6 +32,7 @@ import { buildInClause, chunkArray } from "../lib/db";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { toErrorMessage } from "../lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
+import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 import type {
@@ -189,15 +190,6 @@ function buildDdrrResponseEnvelope(input: {
   };
 }
 
-function tryJsonParse(value: string | null | undefined): unknown {
-  if (!value) return null;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
-
 function utcSec(year: number, monthIndex: number, day: number): number {
   return Math.floor(Date.UTC(year, monthIndex, day) / 1000);
 }
@@ -274,7 +266,7 @@ function registryTerminalEvidence(stablecoinId: string): TerminalEvidence | null
 }
 
 function tapeTerminalEvidence(row: TapeTerminalEvidenceRow): TerminalEvidence | null {
-  const payload = recordValue(tryJsonParse(row.payload_json));
+  const payload = recordValue(tryParseJson(row.payload_json));
   if (row.type === "lifecycle.tracked.frozen") {
     return dateIntervalFromSourceDate(payloadStringValue(payload.frozenAt)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
   }
@@ -399,7 +391,7 @@ async function readTapeTerminalEvidenceCache(
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY)
       .first<{ value: string | null }>();
     abortIf(signal, "compute-depeg-resolver-review");
-    const payload = tapeTerminalEvidenceCachePayload(tryJsonParse(row?.value));
+    const payload = tapeTerminalEvidenceCachePayload(tryParseJson(row?.value));
     if (!payload || !sameTapeTerminalEvidenceToken(payload.token, token)) return null;
     return payload;
   } catch (err) {
