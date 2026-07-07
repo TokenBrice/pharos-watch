@@ -6,6 +6,7 @@ import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } 
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
 export { parseChainlinkLatestRoundData, parseSignedInt256Word } from "./chainlink-round-data";
 import { DRPC_NETWORK } from "./drpc";
+import { mapWithConcurrency } from "./concurrency";
 
 const DRPC_PUBLIC_RPC_URL: Partial<Record<string, string>> = {
   arbitrum: "https://arbitrum.drpc.org",
@@ -194,31 +195,6 @@ type SummaryCounterKey = Exclude<keyof ChainlinkReferenceQuoteSummary, "configur
 interface SingleFeedResult {
   counter: SummaryCounterKey | null;
   quote: ChainlinkReferenceQuote | null;
-}
-
-async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>,
-): Promise<R[]> {
-  if (items.length === 0) {
-    return [];
-  }
-
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-
-  async function worker() {
-    while (nextIndex < items.length) {
-      const index = nextIndex;
-      nextIndex++;
-      results[index] = await mapper(items[index]);
-    }
-  }
-
-  const workerCount = Math.min(Math.max(1, Math.floor(concurrency)), items.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
-  return results;
 }
 
 async function fetchSingleFeedQuote(
