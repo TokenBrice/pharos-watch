@@ -35,6 +35,7 @@ The client, compliance, prevalidated runtime, and legacy redirect projections ar
 
 - Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
 - Add or update exactly one base file under `shared/data/stablecoins/coins/*.json`, then update `canonical-order.json`.
+- The base file name and the JSON `id` must match exactly; `foo-issuer.json` must contain `"id": "foo-issuer"`.
 - For fields already migrated to a sidecar, edit the sidecar instead of duplicating the field in the base coin. The first migrated domain is reserve composition: edit `shared/data/stablecoins/domains/reserves/<id>.json` for the selected migrated coins (`usdc-circle`, `usdt-tether`, `pyusd-paypal`, `usde-ethena`, and `usds-sky`).
 - Sidecars are strict and must use the same `id` as the base coin. A field may exist in the base coin or in a sidecar, not both; duplicate fields fail catalog loading.
 - Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin or sidecar edits, and keep the client, prevalidated runtime, and legacy redirect projections fresh.

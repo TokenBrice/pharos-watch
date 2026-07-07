@@ -119,6 +119,18 @@ function parseSingleAsset(relativePath: string, rootDir: string): StablecoinMeta
   return parseSingleAssetValue(readJson(relativePath, rootDir), relativePath);
 }
 
+function parseGeneratedPerCoinAsset(value: unknown): StablecoinMeta[] {
+  const result = StablecoinMetaAssetArraySchema.safeParse(value);
+  if (result.success) {
+    return result.data as StablecoinMeta[];
+  }
+
+  throw new Error(
+    `[stablecoin-assets] Generated ${GENERATED_PER_COIN_ASSET_FILE} is invalid: ` +
+    formatSchemaIssues(result.error.issues),
+  );
+}
+
 function parseReservesSidecar(relativePath: string, rootDir: string): StablecoinDomainSidecarEntry {
   const result = StablecoinReservesSidecarSchema.safeParse(readJson(relativePath, rootDir));
   if (!result.success) {
@@ -316,6 +328,13 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
     .map((entry) => {
       const relativePath = `${PER_COIN_SOURCE_DIR}/${entry.name}`;
       const coin = parseSingleAsset(relativePath, rootDir);
+      const expectedId = stablecoinIdFromJsonFileName(entry.name);
+      if (coin.id !== expectedId) {
+        throw new Error(
+          `[stablecoin-assets] ${relativePath}: coin id "${coin.id}" must match file id "${expectedId}"`,
+        );
+      }
+
       return {
         coin,
         file: relativePath,
@@ -447,7 +466,7 @@ export function syncGeneratedPerCoinAsset({
     throw new Error(`Duplicate per-coin stablecoin IDs detected while generating per-coin asset: ${details}`);
   }
 
-  const expected = formatJson(buildGeneratedPerCoinAsset(perCoinEntries));
+  const expected = formatJson(parseGeneratedPerCoinAsset(buildGeneratedPerCoinAsset(perCoinEntries)));
   const absoluteGeneratedPath = resolve(rootDir, GENERATED_PER_COIN_ASSET_FILE);
   // Repo-owned catalog helpers only check the checked-in generated aggregate path.
   const current = existsSync(absoluteGeneratedPath)

@@ -184,6 +184,16 @@ describe("stablecoin catalog source helpers", () => {
     );
   });
 
+  it("rejects base coin files whose id does not match the file id", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("other-usd"));
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /coin id "other-usd" must match file id "base-usd"/,
+    );
+  });
+
   it("rejects sidecars that duplicate a field still present in the base coin", () => {
     const rootDir = makeTempRoot();
 
@@ -316,7 +326,35 @@ describe("stablecoin catalog source helpers", () => {
     expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([perCoin]);
   });
 
-  it("rejects duplicate per-coin IDs before generating the aggregate", () => {
+  it("validates the newly generated aggregate before writing it", () => {
+    const rootDir = makeTempRoot();
+
+    writeLegacyShards(rootDir);
+    writeJson(rootDir, "shared/data/stablecoins/coins/parent-usd.json", makeCoin("parent-usd"));
+    writeJson(
+      rootDir,
+      "shared/data/stablecoins/coins/variant-usd.json",
+      makeCoin("variant-usd", {
+        flags: {
+          backing: "rwa-backed",
+          pegCurrency: "USD",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: false,
+          navToken: true,
+        },
+        variantKind: "savings-passthrough",
+        variantOf: "parent-usd",
+      }),
+    );
+    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
+
+    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(
+      /active variants require mintAuthority review/,
+    );
+  });
+
+  it("rejects copied per-coin files before generating the aggregate", () => {
     const rootDir = makeTempRoot();
     const duplicateCoin = makeCoin("duplicate-usd");
 
@@ -325,6 +363,8 @@ describe("stablecoin catalog source helpers", () => {
     writeJson(rootDir, "shared/data/stablecoins/coins/duplicate-usd-copy.json", duplicateCoin);
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
 
-    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(/Duplicate per-coin stablecoin IDs detected/);
+    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(
+      /coin id "duplicate-usd" must match file id "duplicate-usd-copy"/,
+    );
   });
 });
