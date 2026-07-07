@@ -6,6 +6,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { buildInClause } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { mapWithConcurrency } from "../lib/concurrency";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
 import {
   buildPriceValidationContext,
@@ -197,25 +198,6 @@ function createFetchStartLimiter(intervalMs: number): () => Promise<void> {
       await sleep(waitMs);
     }
   };
-}
-
-async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  concurrency: number,
-  mapper: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, concurrency), items.length);
-
-  await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (nextIndex < items.length) {
-      const index = nextIndex++;
-      results[index] = await mapper(items[index] as T, index);
-    }
-  }));
-
-  return results;
 }
 
 function getDeviationSignal(price: number | null | undefined, pegReference: number) {
