@@ -5,6 +5,13 @@ import { buildBrowserProbeSummary, buildStatusDashboardData } from "../status-da
 
 const BASE_STATUS = makeHealthyStatusResponse();
 const BASE_HEALTH = makeHealthyHealthResponse();
+const BASE_QUERY_SYNCS = {
+  statusUpdatedAt: 1_000_000,
+  healthUpdatedAt: 1_000_000,
+  probesUpdatedAt: 1_000_000,
+  historyUpdatedAt: 1_000_000,
+  requestSourceUpdatedAt: 1_000_000,
+};
 
 describe("status dashboard model", () => {
   it("treats semantic degradation as an unhealthy browser probe", () => {
@@ -62,4 +69,117 @@ describe("status dashboard model", () => {
     expect(model.notices.some((notice) => notice.id === "client-stale")).toBe(true);
   });
 
+  it("surfaces endpoint errors as operator notices", () => {
+    const model = buildStatusDashboardData({
+      data: BASE_STATUS,
+      healthData: BASE_HEALTH,
+      probes: [],
+      querySyncs: BASE_QUERY_SYNCS,
+      nowMs: 1_000_000,
+      healthError: new Error("health down"),
+      probesError: new Error("probes down"),
+      historyError: new Error("history down"),
+      requestSourceError: new Error("request source down"),
+      historyTransitions: undefined,
+    });
+
+    expect(model.notices.map((notice) => notice.id)).toEqual([
+      "health-error",
+      "probe-error",
+      "history-error",
+      "request-source-error",
+    ]);
+    expect(model.notices.map((notice) => notice.detail)).toEqual([
+      "health down",
+      "probes down",
+      "history down",
+      "request source down",
+    ]);
+  });
+
+  it("surfaces public health divergence with mint/burn context", () => {
+    const healthData = {
+      ...BASE_HEALTH,
+      status: "degraded" as const,
+      blacklist: { ...BASE_HEALTH.blacklist, missingAmounts: 3 },
+      mintBurn: {
+        ...BASE_HEALTH.mintBurn,
+        majorStaleCount: 2,
+        staleMajorSymbols: ["USDC", "USDT"],
+        sync: {
+          ...BASE_HEALTH.mintBurn.sync,
+          lastSuccessfulSyncAt: BASE_STATUS.timestamp - 600,
+          warning: "critical lane delayed",
+        },
+      },
+    };
+
+    const model = buildStatusDashboardData({
+      data: BASE_STATUS,
+      healthData,
+      probes: [],
+      querySyncs: BASE_QUERY_SYNCS,
+      nowMs: 1_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+
+    expect(model.healthDiffersFromStatus).toBe(true);
+    expect(model.publicHealthNeedsCallout).toBe(true);
+    expect(model.notices.find((notice) => notice.id === "public-health")).toMatchObject({
+      title: "Public /api/health reports degraded",
+      tone: "warning",
+    });
+    expect(model.notices.find((notice) => notice.id === "public-health")?.detail).toContain(
+      "Public /api/health differs from /api/status (healthy). critical lane delayed",
+    );
+    expect(model.notices.find((notice) => notice.id === "public-health")?.detail).toContain(
+      "Impacted majors: USDC, USDT.",
+    );
+  });
+
+  it("orders attention sections by operational priority", () => {
+    const data = {
+      ...BASE_STATUS,
+      dataQualityStatus: "stale" as const,
+      causes: {
+        availability: [],
+        overall: [],
+        dataQuality: [{
+          code: "missing-prices",
+          layer: "data-quality" as const,
+          severity: "critical" as const,
+          message: "Missing prices",
+        }],
+      },
+      summary: {
+        ...BASE_STATUS.summary,
+        availabilityImpactingUnhealthyCrons: 1,
+        availabilityImpactingCronErrors: 1,
+        degradedCrons: 1,
+      },
+    };
+
+    const model = buildStatusDashboardData({
+      data,
+      healthData: BASE_HEALTH,
+      probes: [],
+      querySyncs: BASE_QUERY_SYNCS,
+      nowMs: 1_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+
+    expect(model.attentionSections.map((section) => section.id).slice(0, 3)).toEqual([
+      "pipeline",
+      "crons",
+      "reliability",
+    ]);
+  });
 });

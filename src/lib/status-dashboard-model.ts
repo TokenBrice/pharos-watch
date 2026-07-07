@@ -225,74 +225,33 @@ function getCauses(causes: StatusResponse["causes"], kind: "blocker" | "watch"):
   );
 }
 
-interface BuildStatusDashboardOptions {
-  data: StatusResponse;
-  healthData: HealthResponse | null | undefined;
-  probes: EndpointProbeResult[] | undefined;
-  querySyncs: {
-    statusUpdatedAt: number;
-    healthUpdatedAt: number;
-    probesUpdatedAt: number;
-    historyUpdatedAt: number;
-    requestSourceUpdatedAt: number;
-  };
-  nowMs: number;
-  healthError: Error | null;
-  probesError: Error | null;
-  historyError: Error | null;
-  requestSourceError: Error | null;
-  historyTransitions: StatusResponse["timeline"] | undefined;
-}
+type StatusActionRecommendation = ReturnType<typeof deriveStatusActionRecommendations>[number];
 
-export function buildStatusDashboardData({
-  data,
-  healthData,
-  probes,
-  querySyncs,
-  nowMs,
+function buildDashboardNotices({
+  clientDataStale,
+  staleQuerySyncs,
   healthError,
   probesError,
   historyError,
   requestSourceError,
-  historyTransitions,
-}: BuildStatusDashboardOptions) {
-  const syncDetails = [
-    buildQuerySync("status", "Status API", querySyncs.statusUpdatedAt, nowMs),
-    buildQuerySync("health", "Public health", querySyncs.healthUpdatedAt, nowMs),
-    buildQuerySync("probes", "Browser probes", querySyncs.probesUpdatedAt, nowMs),
-    buildQuerySync("history", "Status history", querySyncs.historyUpdatedAt, nowMs),
-    buildQuerySync("requestSource", "API attribution", querySyncs.requestSourceUpdatedAt, nowMs),
-  ];
-  const criticalSyncs = syncDetails.filter((sync) => sync.key !== "history" && sync.key !== "requestSource" && sync.updatedAtMs > 0);
-  const freshnessFloorMs =
-    criticalSyncs.length > 0
-      ? Math.min(...criticalSyncs.map((sync) => sync.updatedAtMs))
-      : 0;
-  const clientDataAgeSec =
-    freshnessFloorMs > 0 ? Math.max(0, Math.floor((nowMs - freshnessFloorMs) / 1000)) : 0;
-  const browserProbeSummary = buildBrowserProbeSummary(probes, querySyncs.probesUpdatedAt);
-  const cronEntries = Object.entries(data.crons);
-  const cronGroups = CRON_GROUPS.map((group) => ({
-    ...group,
-    entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
-  })).filter((group) => group.entries.length > 0);
-  const runningCrons = cronEntries.filter(([, cron]) => cron.inFlight && !cron.inFlight.stale).length;
-  const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
-  const publicHealthNeedsCallout =
-    healthData != null && (healthData.status !== "healthy" || healthDiffersFromStatus);
-  const allTransitions = historyTransitions ?? data.timeline;
-  const latestTransition = allTransitions[0] ?? null;
-  const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const blockerCauses = getCauses(data.causes, "blocker");
-  const watchCauses = getCauses(data.causes, "watch");
-  const overallCauseCount = blockerCauses.length;
-  const watchCauseCount = watchCauses.length;
-  const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
-  const overallTone = getStatusTone(data.overallStatus);
-  const pipelineTone = getStatusTone(data.dataQualityStatus);
-  const staleQuerySyncs = criticalSyncs.filter((sync) => sync.stale);
-  const clientDataStale = staleQuerySyncs.length > 0;
-
+  publicHealthNeedsCallout,
+  healthDiffersFromStatus,
+  healthData,
+  status,
+  timestamp,
+}: {
+  clientDataStale: boolean;
+  staleQuerySyncs: readonly DashboardQuerySync[];
+  healthError: Error | null;
+  probesError: Error | null;
+  historyError: Error | null;
+  requestSourceError: Error | null;
+  publicHealthNeedsCallout: boolean;
+  healthDiffersFromStatus: boolean;
+  healthData: HealthResponse | null | undefined;
+  status: StatusResponse["overallStatus"];
+  timestamp: number;
+}): DashboardNotice[] {
   const notices: DashboardNotice[] = [];
   if (clientDataStale) {
     const staleLabels = staleQuerySyncs.map((sync) => sync.label).join(", ");
@@ -336,11 +295,11 @@ export function buildStatusDashboardData({
     });
   }
   if (publicHealthNeedsCallout && healthData) {
-    const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${data.overallStatus}). ` : "";
+    const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${status}). ` : "";
     const mintBurnWarning = healthData.mintBurn.sync.warning != null ? `${healthData.mintBurn.sync.warning} ` : "";
     const mintBurnSyncAge =
       healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-        ? `Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, data.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
+        ? `Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
         : "";
     const impactedMajors =
       healthData.mintBurn.majorStaleCount > 0
@@ -354,7 +313,22 @@ export function buildStatusDashboardData({
       tone: healthData.status === "stale" ? "critical" : healthData.status === "degraded" ? "warning" : "neutral",
     });
   }
+  return notices;
+}
 
+function buildSectionPriority({
+  data,
+  healthData,
+  browserProbeSummary,
+  blockerCauses,
+  recommendedActions,
+}: {
+  data: StatusResponse;
+  healthData: HealthResponse | null | undefined;
+  browserProbeSummary: BrowserProbeSummary | null;
+  blockerCauses: readonly StatusCause[];
+  recommendedActions: readonly StatusActionRecommendation[];
+}): Record<DashboardSectionId, number> {
   const reliabilityStatus = Math.max(
     STATUS_PRIORITY[data.availabilityStatus],
     healthData ? STATUS_PRIORITY[healthData.status] : 0,
@@ -377,7 +351,8 @@ export function buildStatusDashboardData({
     (telegramDispatch != null && telegramDispatch.status !== "ok")
       ? 1
       : 0;
-  const sectionPriority: Record<DashboardSectionId, number> = {
+
+  return {
     overview: 999,
     pipeline: STATUS_PRIORITY[data.dataQualityStatus] * 100 + blockerCauses.filter((cause) => cause.layer === "data-quality").length,
     crons: cronStatus * 100 + data.summary.availabilityImpactingUnhealthyCrons * 10 + data.summary.availabilityImpactingCronErrors,
@@ -387,8 +362,52 @@ export function buildStatusDashboardData({
     comms: commsStatus * 100 + (data.telegramBot?.pendingDeliveries ?? 0),
     history: -1,
   };
+}
+
+function buildAttentionSections(
+  sections: readonly DashboardSection[],
+  sectionPriority: Record<DashboardSectionId, number>,
+): DashboardSection[] {
   const sectionOrder: DashboardSectionId[] = ["overview", "pipeline", "crons", "reliability", "actions", "credentials", "comms", "history"];
-  const baseSections: DashboardSection[] = [
+  return sections
+    .filter((section) => section.id !== "overview" && section.id !== "credentials" && section.id !== "history")
+    .filter((section) => sectionPriority[section.id] > 0)
+    .sort((a, b) => {
+      const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
+      if (priorityDelta !== 0) return priorityDelta;
+
+      return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
+    });
+}
+
+function buildDashboardSections({
+  data,
+  allTransitions,
+  latestTransition,
+  overallTone,
+  pipelineTone,
+  overallCauseCount,
+  watchCauseCount,
+  statusHoldingAge,
+  browserProbeSummary,
+  cronGroups,
+  runningCrons,
+  recommendedActions,
+}: {
+  data: StatusResponse;
+  allTransitions: StatusResponse["timeline"];
+  latestTransition: StatusResponse["timeline"][number] | null;
+  overallTone: ReturnType<typeof getStatusTone>;
+  pipelineTone: ReturnType<typeof getStatusTone>;
+  overallCauseCount: number;
+  watchCauseCount: number;
+  statusHoldingAge: number;
+  browserProbeSummary: BrowserProbeSummary | null;
+  cronGroups: Array<(typeof CRON_GROUPS)[number] & { entries: Array<[string, StatusResponse["crons"][string]]> }>;
+  runningCrons: number;
+  recommendedActions: readonly StatusActionRecommendation[];
+}): DashboardSection[] {
+  return [
     {
       id: "overview",
       label: "Triage",
@@ -487,15 +506,110 @@ export function buildStatusDashboardData({
       summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
     },
   ];
-  const attentionSections = baseSections
-    .filter((section) => section.id !== "overview" && section.id !== "credentials" && section.id !== "history")
-    .filter((section) => sectionPriority[section.id] > 0)
-    .sort((a, b) => {
-      const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
-      if (priorityDelta !== 0) return priorityDelta;
+}
 
-      return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
-    });
+interface BuildStatusDashboardOptions {
+  data: StatusResponse;
+  healthData: HealthResponse | null | undefined;
+  probes: EndpointProbeResult[] | undefined;
+  querySyncs: {
+    statusUpdatedAt: number;
+    healthUpdatedAt: number;
+    probesUpdatedAt: number;
+    historyUpdatedAt: number;
+    requestSourceUpdatedAt: number;
+  };
+  nowMs: number;
+  healthError: Error | null;
+  probesError: Error | null;
+  historyError: Error | null;
+  requestSourceError: Error | null;
+  historyTransitions: StatusResponse["timeline"] | undefined;
+}
+
+export function buildStatusDashboardData({
+  data,
+  healthData,
+  probes,
+  querySyncs,
+  nowMs,
+  healthError,
+  probesError,
+  historyError,
+  requestSourceError,
+  historyTransitions,
+}: BuildStatusDashboardOptions) {
+  const syncDetails = [
+    buildQuerySync("status", "Status API", querySyncs.statusUpdatedAt, nowMs),
+    buildQuerySync("health", "Public health", querySyncs.healthUpdatedAt, nowMs),
+    buildQuerySync("probes", "Browser probes", querySyncs.probesUpdatedAt, nowMs),
+    buildQuerySync("history", "Status history", querySyncs.historyUpdatedAt, nowMs),
+    buildQuerySync("requestSource", "API attribution", querySyncs.requestSourceUpdatedAt, nowMs),
+  ];
+  const criticalSyncs = syncDetails.filter((sync) => sync.key !== "history" && sync.key !== "requestSource" && sync.updatedAtMs > 0);
+  const freshnessFloorMs =
+    criticalSyncs.length > 0
+      ? Math.min(...criticalSyncs.map((sync) => sync.updatedAtMs))
+      : 0;
+  const clientDataAgeSec =
+    freshnessFloorMs > 0 ? Math.max(0, Math.floor((nowMs - freshnessFloorMs) / 1000)) : 0;
+  const browserProbeSummary = buildBrowserProbeSummary(probes, querySyncs.probesUpdatedAt);
+  const cronEntries = Object.entries(data.crons);
+  const cronGroups = CRON_GROUPS.map((group) => ({
+    ...group,
+    entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
+  })).filter((group) => group.entries.length > 0);
+  const runningCrons = cronEntries.filter(([, cron]) => cron.inFlight && !cron.inFlight.stale).length;
+  const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
+  const publicHealthNeedsCallout =
+    healthData != null && (healthData.status !== "healthy" || healthDiffersFromStatus);
+  const allTransitions = historyTransitions ?? data.timeline;
+  const latestTransition = allTransitions[0] ?? null;
+  const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
+  const blockerCauses = getCauses(data.causes, "blocker");
+  const watchCauses = getCauses(data.causes, "watch");
+  const overallCauseCount = blockerCauses.length;
+  const watchCauseCount = watchCauses.length;
+  const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
+  const overallTone = getStatusTone(data.overallStatus);
+  const pipelineTone = getStatusTone(data.dataQualityStatus);
+  const staleQuerySyncs = criticalSyncs.filter((sync) => sync.stale);
+  const clientDataStale = staleQuerySyncs.length > 0;
+  const notices = buildDashboardNotices({
+    clientDataStale,
+    staleQuerySyncs,
+    healthError,
+    probesError,
+    historyError,
+    requestSourceError,
+    publicHealthNeedsCallout,
+    healthDiffersFromStatus,
+    healthData,
+    status: data.overallStatus,
+    timestamp: data.timestamp,
+  });
+  const sectionPriority = buildSectionPriority({
+    data,
+    healthData,
+    browserProbeSummary,
+    blockerCauses,
+    recommendedActions,
+  });
+  const baseSections = buildDashboardSections({
+    data,
+    allTransitions,
+    latestTransition,
+    overallTone,
+    pipelineTone,
+    overallCauseCount,
+    watchCauseCount,
+    statusHoldingAge,
+    browserProbeSummary,
+    cronGroups,
+    runningCrons,
+    recommendedActions,
+  });
+  const attentionSections = buildAttentionSections(baseSections, sectionPriority);
 
   return {
     allTransitions,
