@@ -10,6 +10,7 @@ import {
   loadPriceValidationReferences,
   validatePriceCandidate,
 } from "../../lib/price-validation";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
 
@@ -136,7 +137,16 @@ async function auditSingleEventWithCoinGecko(
     const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
 
     if (!cgRes?.ok) {
-      console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
+      logWorkerEvent({
+        scope: "admin",
+        level: "warn",
+        message: "CoinGecko audit fetch failed",
+        event: "audit-depeg-history-cg-fetch-failed",
+        route: "audit-depeg-history",
+        provider: "coingecko",
+        status: cgRes?.status ?? "no-response",
+        metadata: { stablecoinId: event.stablecoin_id, symbol: event.symbol, geckoId },
+      });
       return {
         event,
         auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
@@ -246,7 +256,16 @@ async function auditSingleEventWithCoinGecko(
       invalidatesProvenance: true,
     };
   } catch (err) {
-    console.warn(`[audit] Error auditing ${event.symbol}:`, err);
+    logWorkerEvent({
+      scope: "admin",
+      level: "warn",
+      message: "CoinGecko audit event failed",
+      event: "audit-depeg-history-cg-audit-error",
+      route: "audit-depeg-history",
+      provider: "coingecko",
+      error: err,
+      metadata: { stablecoinId: event.stablecoin_id, symbol: event.symbol, geckoId },
+    });
     return {
       event,
       auditedEvent: toAuditedEvent(event, "error", { cgMaxBps: null }),
