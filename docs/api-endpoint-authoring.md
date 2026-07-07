@@ -15,7 +15,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Messaging and ops route bindings | `worker/src/routes/messaging-routes.ts`, `worker/src/routes/ops-routes.ts` |
 | Dynamic route bindings | `worker/src/routes/dynamic-routes.ts` |
 | Frontend API helpers | `src/hooks/api-hooks.ts`, `src/hooks/use-api-query.ts`, `src/lib/api.ts` |
-| Frontend API query registry | `src/lib/api-query-runtime-registry.ts` — runtime descriptor table (Zod-free) consumed by `src/lib/homepage-bootstrap-runtime.ts`; the schema-bearing `src/lib/api-query-registry.ts` is consumed by `src/hooks/api-hooks.ts` and `src/lib/homepage-bootstrap.ts` |
+| Frontend API query registry | `src/lib/api-query-runtime-registry.ts` — runtime descriptor table (Zod-free) consumed by `src/hooks/api-hooks.ts` (and other browser hooks) and by `src/lib/homepage-bootstrap-runtime.ts`; the schema-bearing `src/lib/api-query-registry.ts` is consumed only by `src/lib/homepage-bootstrap.ts` for build-time bootstrap generation |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
 

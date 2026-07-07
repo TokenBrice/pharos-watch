@@ -100,7 +100,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 ## Remediation
 
 - If `sync-yield-data` is stale but not leased, wait for the next hourly `20 * * * *` run if the last failure was transient.
-- If the cron is repeatedly `skipped_locked`, confirm the lease is stale before using the existing admin reset-lease action from `/admin/` or `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-yield-data` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
+- If the cron is repeatedly `skipped_locked`, confirm the lease is stale before calling `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-yield-data` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).
 - If the degraded reason points to deterministic on-chain cooldown or all-fail state, use [`yield-deterministic-cooldown.md`](./yield-deterministic-cooldown.md).

@@ -280,11 +280,7 @@ The `missing_prices_elevated` info cause exists to preserve operator observabili
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 
-Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-config.ts`:
-
-- major symbols: `USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`
-- warning threshold: `6h`
-- critical threshold: `24h`
+Mint/burn freshness classification (`computeMintBurnSyncFreshnessStatus` in `worker/src/lib/mint-burn-health-config.ts`) keys off the critical-lane sync age against a `60m` window (`2 * expectedIntervalSec`): `fresh` ≤ `60m`, `degraded` ≤ `90m` (1.5x), `stale` beyond — the same floor described under Availability status above. The file's `majorSymbols` default (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`) feeds backfill auto-select ordering; its `6h`/`24h` `MINT_BURN_STALE_WARN_SEC`/`MINT_BURN_STALE_CRIT_SEC` env defaults are not currently wired into the freshness bands.
 
 The public `/api/health` lane now keys mint/burn freshness to the critical-lane sync timestamp / latest run status rather than raw event timestamps, matching the `/flows` semantics and avoiding quiet-period false stale alerts.
 
@@ -626,7 +622,7 @@ Each row shows:
 - absolute USD difference
 - raw flow net, raw chain delta, and ratio
 
-Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at >$100M absolute or >30% ratio, warn at >$25M or >12%.
+Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at ≥$100M absolute or ≥30% ratio, warn at ≥$25M or ≥12%.
 
 This is an operator integrity signal, not a public user-facing score. Large gaps typically mean one of:
 

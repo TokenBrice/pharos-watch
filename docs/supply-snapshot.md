@@ -222,7 +222,7 @@ The handler explicitly supports `detailProvider === "coingecko"` and `detailProv
 
 **File:** `src/components/mcap-chart.tsx`
 
-Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, all). Used on the stablecoin detail page.
+Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, 1y, all). Used on the stablecoin detail page.
 
 ### HomeAltHero Market-Cap Chart
 

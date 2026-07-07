@@ -25,7 +25,7 @@ Inside the worker route, the handler is intentionally split into focused modules
 
 ### `FeedbackButton` (`src/components/feedback-button.tsx`)
 
-A fixed-position FAB mounted globally in `src/app/layout.tsx` but shown only on `sm+` viewports (`hidden ... sm:flex`). Renders at `bottom-6 right-6 z-50`. Opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` provides the equivalent entry.
+A fixed-position FAB mounted globally in `src/app/layout.tsx` but shown only on `sm+` viewports (`hidden ... sm:flex`). Both it and `MobileUtilityDock` also return `null` on the homepage (`pathname === "/"`), independent of viewport. Renders at `bottom-6 right-6 z-50`. Opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` provides the equivalent entry.
 
 ```tsx
 <FeedbackButton />
@@ -106,7 +106,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 | Field | Rule |
 |-------|------|
 | `type` | Must be one of the three valid values |
-| `description` | 10–2000 characters after trim |
+| `description` | 10–2000 characters (raw length; not trimmed) |
 | `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
 | `expectedValue` | Optional; server accepts up to 500 characters after trim (`data-correction` only in the browser UI) |
 | `pageUrl` | Must be a single-slash internal app path such as `"/stablecoin/usdc-circle/"`; protocol-relative `"//..."` values are rejected |
@@ -225,11 +225,12 @@ User-supplied strings are normalized before the GitHub write:
 |--------|------|-----------|
 | `200` | `{"ok": true}` | Accepted (including honeypot trap) |
 | `400` | `{"error": "<message>"}` | Validation failure |
+| `413` | `{"error": "Request body too large"}` | Request body exceeds 16 KB |
 | `429` | `{"error": "Too many submissions. Please wait a few minutes."}` | Rate limit exceeded |
 | `500` | `{"error": "Failed to submit feedback. Please try again."}` | GitHub API error |
 | `503` | `{"error": "Service misconfigured"}` | `FEEDBACK_IP_SALT` missing |
 | `503` | `{"error": "Feedback service temporarily unavailable"}` | `GITHUB_PAT` not configured |
-| `503` | `{"error": "Feedback service temporarily unavailable. Please try again.", "retryAfterSec": 60}` | Rate-limit dependency / D1 unavailable |
+| `503` | `{"error": "Feedback service temporarily unavailable. Please try again."}` (with a `Retry-After: 60` response header) | Rate-limit dependency / D1 unavailable |
 
 ---
 

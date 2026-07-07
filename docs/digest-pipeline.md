@@ -51,7 +51,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Total mcap ATH | derived from `daily_digest` archive (`json_extract` on stored `totalMcapUsd`) | Anchors current total mcap against its Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), all band changes (any rank-changing band move), elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
-| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>15 simultaneous changes excluded) |
+| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>15 simultaneous changes that are >=80% one-directional excluded) |
 | PSI contributors | `stability_index_samples` (input_snapshot) | Top 3 coins driving PSI severity by market impact (|bps| x mcap x factor) |
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
 | DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
@@ -203,7 +203,7 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
 
   {extended}
 
-  <a href="https://pharos.watch/digest/YYYY-MM-DD">Read on Pharos →</a>
+  <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
   ```
 - Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
 
