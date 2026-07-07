@@ -36,6 +36,9 @@ export interface HeroTertiaryMetricConfig {
   subValue?: string;
   colorClass?: string;
   accentClass?: string;
+  /** Extra classes on the rendered chip (e.g. xl:hidden when the metric is
+   *  promoted to a KPI tile at xl per the Figma coin template). */
+  className?: string;
 }
 
 export interface HeroSignalRailItem {
@@ -57,6 +60,7 @@ function MetricChip({
   mobile = false,
   mobileFull = false,
   mobileHideSub = false,
+  className,
 }: {
   metricKey?: string;
   label: React.ReactNode;
@@ -67,6 +71,7 @@ function MetricChip({
   mobile?: boolean;
   mobileFull?: boolean;
   mobileHideSub?: boolean;
+  className?: string;
 }) {
   const isEmpty = value === "—";
   const methodologyMetric = metricKey ? METRIC_TO_METHODOLOGY[metricKey] : undefined;
@@ -78,7 +83,7 @@ function MetricChip({
     <div
       className={`rounded-lg border border-border/60 bg-background/45 ${
         mobile ? `flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${mobileFull ? "col-span-2" : ""}` : "flex items-center gap-2 px-3 py-2"
-      } ${accentClass ?? ""}`}
+      } ${accentClass ?? ""} ${className ?? ""}`}
     >
       {label ? (
         <span className={`${mobile ? "text-[10px]" : "text-[11px]"} font-medium uppercase tracking-wider text-muted-foreground`}>
@@ -175,6 +180,7 @@ export function HeroTertiaryMetrics({
             subValue={metric.subValue}
             colorClass={metric.colorClass}
             accentClass={metric.accentClass}
+            className={metric.className}
           />
         ))}
         {trailing}

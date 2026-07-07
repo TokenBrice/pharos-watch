@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import {
   ClassificationAndLinks,
+  CollateralSection,
   InfrastructureSection,
   LaunchDateSection,
   MechanismSection,
@@ -21,6 +22,7 @@ export function KeyInfoCard({
   parentArchetype,
   variantKind,
   contractsBelowXlOnly = false,
+  splitMechanism = false,
 }: {
   meta: StablecoinMeta;
   resolvedMechanismArchetype?: MechanismArchetype | null;
@@ -34,6 +36,12 @@ export function KeyInfoCard({
    * `#contracts` deep-link anchor for narrower viewports.
    */
   contractsBelowXlOnly?: boolean;
+  /**
+   * Figma coin-template split: the sibling PegStabilityCard renders the
+   * diagram + peg-mechanism prose (and owns #mechanism), so this card keeps
+   * only the collateral half of the mechanism section.
+   */
+  splitMechanism?: boolean;
 }) {
   const { governanceFullLabel, backingFullLabel, pegFullLabel } = getKeyInfoSentenceLabels(meta);
 
@@ -48,14 +56,18 @@ export function KeyInfoCard({
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4">
         <ClassificationAndLinks meta={meta} />
-        <MechanismSection
-          meta={meta}
-          resolvedMechanismArchetype={resolvedMechanismArchetype}
-          isWrapper={isWrapper}
-          parentSymbol={parentSymbol}
-          parentArchetype={parentArchetype}
-          variantKind={variantKind}
-        />
+        {splitMechanism ? (
+          <CollateralSection meta={meta} />
+        ) : (
+          <MechanismSection
+            meta={meta}
+            resolvedMechanismArchetype={resolvedMechanismArchetype}
+            isWrapper={isWrapper}
+            parentSymbol={parentSymbol}
+            parentArchetype={parentArchetype}
+            variantKind={variantKind}
+          />
+        )}
         <InfrastructureSection meta={meta} />
         <ProofAndJurisdictionSection meta={meta} />
         <LaunchDateSection launchDate={meta.launchDate} />

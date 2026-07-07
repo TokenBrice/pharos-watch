@@ -179,6 +179,14 @@ export function HeroCardDesktopSection({
   signalRailItems: HeroSignalRailItem[];
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
+  // At xl+ the 30d-excess metric graduates from a tertiary chip to the
+  // fourth KPI tile (the Figma coin template's fourth column); below xl it
+  // stays a chip so the 3-col band + signals rail keep their layout.
+  const excessMetric = tertiaryMetrics.find((metric) => metric.key === "excess-yield");
+  const inlineTertiaryMetrics = tertiaryMetrics.map((metric) =>
+    metric.key === "excess-yield" ? { ...metric, className: "xl:hidden" } : metric,
+  );
+
   return (
     <div className="hidden px-5 pb-3.5 pt-5 lg:block">
       <div className="flex gap-6">
@@ -192,7 +200,7 @@ export function HeroCardDesktopSection({
             verdict={verdict}
           />
 
-          <div className="mt-5 grid grid-cols-3 gap-4">
+          <div className={`mt-5 grid grid-cols-3 gap-4 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
             <HeroPriceCard
               coin={coin}
               coinData={coinData}
@@ -215,11 +223,26 @@ export function HeroCardDesktopSection({
               safePrevMonth={market.safePrevMonth}
               prevMonthTrendClass={market.prevMonthTrendClass}
             />
+            {excessMetric ? (
+              <div className="hidden rounded-xl bg-background/30 px-4 py-3 xl:block">
+                <p className="pharos-kicker">{excessMetric.label}</p>
+                <p
+                  className={`mt-0.5 text-2xl font-extrabold pharos-numeric tracking-tight xl:text-3xl ${
+                    excessMetric.colorClass ?? "text-foreground"
+                  }`}
+                >
+                  {excessMetric.value}
+                </p>
+                {excessMetric.subValue ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{excessMetric.subValue}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-3">
             <HeroTertiaryMetrics
-              metrics={tertiaryMetrics}
+              metrics={inlineTertiaryMetrics}
               earlyPegScore={peg.earlyPegScore}
               trackingSpanDays={peg.trackingSpanDays}
               activeDepeg={peg.activeDepeg}

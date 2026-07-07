@@ -127,6 +127,13 @@ const KeyInfoCard = dynamic(
   },
 );
 
+const PegStabilityCard = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.PegStabilityCard),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
 const YieldDetailSection = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.YieldDetailSection),
   {
@@ -466,15 +473,30 @@ export default function StablecoinDetailClient({
           <div ref={overviewGateRef} className="space-y-6">
             <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
             <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
-              <KeyInfoCard
-                meta={viewModel.coin}
-                resolvedMechanismArchetype={resolvedMechanismArchetype}
-                isWrapper={isWrapperVariant}
-                parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
-                parentArchetype={parentArchetype}
-                variantKind={viewModel.coin.variantKind ?? null}
-                contractsBelowXlOnly
-              />
+              {/* Figma coin-template split first row: Key Information beside
+                  the Peg Stability diagram card when a peg mechanism exists. */}
+              <div className={viewModel.coin.pegMechanism ? "grid gap-6 lg:grid-cols-2" : undefined}>
+                <KeyInfoCard
+                  meta={viewModel.coin}
+                  resolvedMechanismArchetype={resolvedMechanismArchetype}
+                  isWrapper={isWrapperVariant}
+                  parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+                  parentArchetype={parentArchetype}
+                  variantKind={viewModel.coin.variantKind ?? null}
+                  contractsBelowXlOnly
+                  splitMechanism={Boolean(viewModel.coin.pegMechanism)}
+                />
+                {viewModel.coin.pegMechanism ? (
+                  <PegStabilityCard
+                    meta={viewModel.coin}
+                    resolvedMechanismArchetype={resolvedMechanismArchetype}
+                    isWrapper={isWrapperVariant}
+                    parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+                    parentArchetype={parentArchetype}
+                    variantKind={viewModel.coin.variantKind ?? null}
+                  />
+                ) : null}
+              </div>
             </section>
             <section id="report-card">
               {viewModel.reportCard && (

@@ -135,23 +135,37 @@ export function ClassificationAndLinks({ meta }: { meta: StablecoinMeta }) {
   );
 }
 
-export function MechanismSection({
-  meta,
-  resolvedMechanismArchetype,
-  isWrapper,
-  parentSymbol,
-  parentArchetype,
-  variantKind,
-}: {
+export function CollateralSection({ meta }: { meta: StablecoinMeta }) {
+  if (!meta.collateral) return null;
+  return (
+    <div className={cn(SECTION_DIVIDER_CLASS)}>
+      <p className="pharos-kicker mb-1.5">Collateral</p>
+      <p className="text-base leading-relaxed">{meta.collateral}</p>
+    </div>
+  );
+}
+
+export interface PegStabilityBodyProps {
   meta: StablecoinMeta;
   resolvedMechanismArchetype?: MechanismArchetype | null;
   isWrapper: boolean;
   parentSymbol?: string | null;
   parentArchetype?: MechanismArchetype | null;
   variantKind?: VariantKind | null;
-}) {
-  const hasDescription = meta.collateral || meta.pegMechanism;
-  if (!hasDescription) return null;
+}
+
+/** Diagram + explainer link + peg-mechanism prose, shared by the inline
+ *  Key Info section and the standalone Peg Stability card (Figma coin
+ *  template's split Risk-zone row). */
+export function PegStabilityBody({
+  meta,
+  resolvedMechanismArchetype,
+  isWrapper,
+  parentSymbol,
+  parentArchetype,
+  variantKind,
+}: PegStabilityBodyProps) {
+  if (!meta.pegMechanism) return null;
 
   const effectiveArchetype =
     resolvedMechanismArchetype !== undefined ? resolvedMechanismArchetype : (meta.mechanismArchetype ?? null);
@@ -168,6 +182,47 @@ export function MechanismSection({
   };
 
   return (
+    <div>
+      {effectiveArchetype ? (
+        <div className="mb-3 space-y-2">
+          <div className="flex justify-start">{mechanismDiagramFor(effectiveArchetype, meta.symbol, diagramOptions)}</div>
+          <Link
+            href={getMechanismExplainerPath(effectiveArchetype)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-xs font-medium text-frost-blue hover:underline sm:min-h-0 sm:py-0"
+          >
+            Learn how {getMechanismArchetypeCtaNoun(effectiveArchetype)} stablecoins work
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
+        </div>
+      ) : (
+        <div className="mb-3 rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1.5">
+          <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This coin doesn&apos;t fit the six tracked archetypes. See the description below and the{" "}
+            <Link href="/methodology/" className="pharos-focus-ring text-frost-blue hover:underline">
+              methodology page
+            </Link>{" "}
+            for how Pharos scores it.
+          </p>
+        </div>
+      )}
+      <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
+    </div>
+  );
+}
+
+export function MechanismSection({
+  meta,
+  resolvedMechanismArchetype,
+  isWrapper,
+  parentSymbol,
+  parentArchetype,
+  variantKind,
+}: PegStabilityBodyProps) {
+  const hasDescription = meta.collateral || meta.pegMechanism;
+  if (!hasDescription) return null;
+
+  return (
     <div id="mechanism" className={cn("grid gap-x-6 gap-y-3 sm:grid-cols-2", SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}>
       {meta.collateral && (
         <div>
@@ -178,30 +233,14 @@ export function MechanismSection({
       {meta.pegMechanism && (
         <div>
           <p className="pharos-kicker mb-1.5">Peg Stability</p>
-          {effectiveArchetype ? (
-            <div className="mb-3 space-y-2">
-              <div className="flex justify-start">{mechanismDiagramFor(effectiveArchetype, meta.symbol, diagramOptions)}</div>
-              <Link
-                href={getMechanismExplainerPath(effectiveArchetype)}
-                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-xs font-medium text-frost-blue hover:underline sm:min-h-0 sm:py-0"
-              >
-                Learn how {getMechanismArchetypeCtaNoun(effectiveArchetype)} stablecoins work
-                <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-              </Link>
-            </div>
-          ) : meta.pegMechanism ? (
-            <div className="mb-3 rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1.5">
-              <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                This coin doesn&apos;t fit the six tracked archetypes. See the description below and the{" "}
-                <Link href="/methodology/" className="pharos-focus-ring text-frost-blue hover:underline">
-                  methodology page
-                </Link>{" "}
-                for how Pharos scores it.
-              </p>
-            </div>
-          ) : null}
-          <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
+          <PegStabilityBody
+            meta={meta}
+            resolvedMechanismArchetype={resolvedMechanismArchetype}
+            isWrapper={isWrapper}
+            parentSymbol={parentSymbol}
+            parentArchetype={parentArchetype}
+            variantKind={variantKind}
+          />
         </div>
       )}
     </div>
