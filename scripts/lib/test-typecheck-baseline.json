@@ -8,8 +8,8 @@
       "message": "Property 'headers' does not exist on type 'never'.",
       "count": 2,
       "examples": [
-        "256:27",
-        "283:27"
+        "257:27",
+        "284:27"
       ]
     },
     {
@@ -18,8 +18,8 @@
       "message": "Tuple type '[]' of length '0' has no element at index '1'.",
       "count": 2,
       "examples": [
-        "255:14",
-        "282:14"
+        "256:14",
+        "283:14"
       ]
     },
     {
@@ -55,9 +55,9 @@
       "message": "Conversion of type 'undefined' to type 'RequestInit' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
       "count": 3,
       "examples": [
-        "387:23",
-        "436:13",
-        "437:14"
+        "447:23",
+        "496:13",
+        "497:14"
       ]
     },
     {
@@ -67,7 +67,7 @@
       "count": 2,
       "examples": [
         "185:45",
-        "434:12"
+        "494:12"
       ]
     },
     {
@@ -76,8 +76,8 @@
       "message": "Tuple type '[]' of length '0' has no element at index '1'.",
       "count": 2,
       "examples": [
-        "387:48",
-        "434:25"
+        "447:48",
+        "494:25"
       ]
     },
     {
@@ -743,7 +743,7 @@
     {
       "file": "src/app/admin/__tests__/client.test.tsx",
       "code": "TS2741",
-      "message": "Property 'transitionsLast24h' is missing in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; availabilityImpactingConsecutiveCronErrors: number; diagnosticIssueCount: number; worstCacheRatio: number; }' but required in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; ... 20 more ...; transitionsLast24h: number; }'.",
+      "message": "Property 'transitionsLast24h' is missing in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; availabilityImpactingConsecutiveCronErrors: number; diagnosticIssueCount: number; worstCacheRatio: number; }' but required in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; ... 22 more ...; transitionsLast24h: number; }'.",
       "count": 1,
       "examples": [
         "227:3"
@@ -835,7 +835,7 @@
     {
       "file": "src/app/coverage/coverage-page-sections.test.tsx",
       "code": "TS2740",
-      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 440 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 445 more.",
+      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 441 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 446 more.",
       "count": 2,
       "examples": [
         "57:5",
@@ -845,7 +845,7 @@
     {
       "file": "src/app/dependency-map/client.test.tsx",
       "code": "TS2740",
-      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 440 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 445 more.",
+      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 441 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 446 more.",
       "count": 1,
       "examples": [
         "77:36"
@@ -1339,7 +1339,7 @@
       "message": "Type '\"mixed\"' is not assignable to type '\"native\" | \"rwa\" | \"eth-lst\" | \"alt-lst-bridged-or-mixed\" | \"exotic\"'.",
       "count": 1,
       "examples": [
-        "179:5"
+        "184:5"
       ]
     },
     {
@@ -1348,7 +1348,7 @@
       "message": "Type '\"multi-chain\"' is not assignable to type '\"single-chain\" | \"canonical-bridge\" | \"third-party-bridge\" | \"native-multichain\"'.",
       "count": 1,
       "examples": [
-        "178:5"
+        "183:5"
       ]
     },
     {
@@ -1357,7 +1357,7 @@
       "message": "Object literal may only specify known properties, and 'currentBand' does not exist in type '{ id: string; symbol: string; name: string; pegType: string; pegCurrency: string; governance: string; currentDeviationBps: number | null; pegScore: number | null; pegPct: number; severityScore: number; ... 18 more ...; dexPriceCheck?: { ...; } | ... 1 more ... | undefined; }'.",
       "count": 1,
       "examples": [
-        "98:3"
+        "103:3"
       ]
     },
     {
@@ -1366,7 +1366,7 @@
       "message": "Type '{ backing: \"rwa-backed\"; governance: \"centralized\"; pegCurrency: \"USD\"; rwa: true; }' is missing the following properties from type 'StablecoinFlags': yieldBearing, navToken",
       "count": 1,
       "examples": [
-        "62:3"
+        "67:3"
       ]
     },
     {
@@ -1375,7 +1375,7 @@
       "message": "Type '{ id: string; name: string; symbol: string; geckoId: string; pegType: string; pegMechanism: string; price: number; priceSource: string; priceConfidence: \"high\"; consensusSources: string[]; agreeSources: string[]; ... 7 more ...; chains: string[]; }' is missing the following properties from type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<string, number>; circulatingPrevDay: Record<...>; ... 22 more ...; agreeSources: string[]; }': priceObservedAt, priceObservedAtMode, priceSyncedAt",
       "count": 1,
       "examples": [
-        "70:7"
+        "75:7"
       ]
     },
     {
@@ -1384,55 +1384,7 @@
       "message": "Type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: {}; chainTvl: {}; topPools: never[]; liquidityScore: number; ... 23 more ...; scoreComponents: { ...; }; }' is missing the following properties from type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }': lockedLiquidityPct, methodologyVersion",
       "count": 1,
       "examples": [
-        "103:7"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'pegReferenceUnavailable' is missing in type '{ coin: StablecoinMeta; coinData: { frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<...>; ... 23 more ...; agreeSources: string[]; }; ... 16 more ...; onOpenFeedback: () => void; }' but required in type 'Omit<BuildHeroCardViewModelParams, \"mintAuthority\" | \"redemptionBackstop\" | \"resolvedMechanismArchetype\" | \"verdict\">'.",
-      "count": 2,
-      "examples": [
-        "387:8",
-        "489:8"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'pegReferenceUnavailable' is missing in type '{ coin: StablecoinMeta; coinData: { frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<...>; ... 23 more ...; agreeSources: string[]; }; ... 17 more ...; onOpenFeedback: () => void; }' but required in type 'Omit<BuildHeroCardViewModelParams, \"mintAuthority\" | \"redemptionBackstop\" | \"resolvedMechanismArchetype\" | \"verdict\">'.",
-      "count": 1,
-      "examples": [
-        "280:8"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'pegReferenceUnavailable' is missing in type '{ coin: StablecoinMeta; coinData: { id: string; name: string; symbol: string; frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; ... 21 more ...; agreeSources: string[]; }; ... 16 more ...; onOpenFeedback: () => void; }' but required in type 'Omit<BuildHeroCardViewModelParams, \"mintAuthority\" | \"redemptionBackstop\" | \"resolvedMechanismArchetype\" | \"verdict\">'.",
-      "count": 3,
-      "examples": [
-        "352:8",
-        "554:8",
-        "591:8"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'pegReferenceUnavailable' is missing in type '{ coin: StablecoinMeta; coinData: { id: string; name: string; symbol: string; frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; ... 21 more ...; agreeSources: string[]; }; ... 18 more ...; onOpenFeedback: () => void; }' but required in type 'Omit<BuildHeroCardViewModelParams, \"mintAuthority\" | \"redemptionBackstop\" | \"resolvedMechanismArchetype\" | \"verdict\">'.",
-      "count": 1,
-      "examples": [
-        "435:8"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'pegReferenceUnavailable' is missing in type '{ coin: StablecoinMeta; coinData: { price: number; circulating: { peggedUSD: number; }; frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; ... 22 more ...; agreeSources: string[]; }; ... 16 more ...; onOpenFeedback: () => void; }' but required in type 'Omit<BuildHeroCardViewModelParams, \"mintAuthority\" | \"redemptionBackstop\" | \"resolvedMechanismArchetype\" | \"verdict\">'.",
-      "count": 1,
-      "examples": [
-        "518:8"
+        "108:7"
       ]
     },
     {

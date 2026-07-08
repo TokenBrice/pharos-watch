@@ -369,6 +369,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/csv.ts` - CsvColumn, buildCsv, buildCsvBody, escapeCsvField
 - `shared/lib/data-dependency-registry.ts` - DATA_DEPENDENCY_BY_ID, DATA_DEPENDENCY_REGISTRY, DataDependencyDefinition
+- `shared/lib/data-surface-descriptors.ts` - DATA_SURFACE_DESCRIPTORS, DATA_SURFACE_DESCRIPTOR_LIST, DataSurfaceDescriptor, DataSurfaceDescriptorKey, YieldHistoryMode
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
-- `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
-- ... 257 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -587,6 +587,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
 - `worker/src/cron/depeg-resolver-review/assessment-loader.ts` - DDRR_ASSESSMENT_ROW_CAP, loadAssessments
+- `worker/src/cron/depeg-resolver-review/coverage-rows.ts` - baseFieldsForSealedExposure, buildEffectiveIncidentByKey, coverageRowForIncident, failedPublicationCoverageRow
+- `worker/src/cron/depeg-resolver-review/response-envelope.ts` - buildDdrrResponseEnvelope, buildEmptyDdrrSummary
+- `worker/src/cron/depeg-resolver-review/terminal-evidence.ts` - DdrrActualEventWithTerminalEvidence, loadActualEventsByEventIds
 - `worker/src/cron/depeg-resolver-v2-contracts.ts` - DDR_PUBLICATION_SNAPSHOT_KIND, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
 - `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DDR_SNAPSHOT_TTL_SEC, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP
 - `worker/src/cron/depeg-resolver/context.ts` - DdrContextLoadResult, DdrLoadedContext, emptyDdrLineage, loadActiveConfirmedEvents, loadDdrContext, loadPolicyUniverseEvents
@@ -614,10 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/crawl-geckoterminal-pools.ts` - GeckoTerminalPoolsStageDependencies, crawlGeckoTerminalPoolsStage
 - `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
 - `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS, DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun
-- `worker/src/cron/dex-discovery/persistence.ts` - cleanupStaging, hasValidStagedPoolTvl, incrementRunSeq, isValidStagedPoolId, readDiscoveryMeta, updateDiscoveryMeta
-- `worker/src/cron/dex-discovery/staged-pool.ts` - CrawlStageContext, DISCOVERY_STAGE_TIMEOUT_MS, StagedPriceObservation, buildStageSignal, createCrawlStageContext, knownPoolIdKey
-- `worker/src/cron/dex-discovery/types.ts` - DISCOVERY_TIERS, DiscoveryMeta, STAGED_POOL_DEFAULTS, STAGED_POOL_MAX_TVL_USD, StagedPool, stagedPoolConfidence
-- ... 344 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 347 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
