@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
@@ -166,7 +167,9 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
 export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
   const { data, isLoading } = useLatestEvents({ coin: coinId, limit: 5 });
   const events = data?.events ?? [];
-  const nowMs = Date.now();
+  // Lazy initializer keeps the render pure (react-hooks/purity); freshness
+  // labels only need mount-time "now", matching safety-score-history-section.
+  const [nowMs] = useState(() => Date.now());
 
   if (!isLoading && events.length === 0) {
     return null;
