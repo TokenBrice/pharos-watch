@@ -135,9 +135,6 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
   for (const error of result.errors) {
     console.warn("[fetch-meteora]", error);
   }
-  for (const warning of result.warnings) {
-    console.warn("[fetch-meteora]", warning);
-  }
 
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,

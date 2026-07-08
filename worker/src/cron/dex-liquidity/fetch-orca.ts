@@ -202,9 +202,6 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
   for (const error of errors) {
     console.warn("[fetch-orca]", error);
   }
-  for (const warning of warnings) {
-    console.warn("[fetch-orca]", warning);
-  }
   return makeDexApiFetchResult(results, {
     ok: successfulPages > 0,
     degraded: degraded || errors.length > 0,

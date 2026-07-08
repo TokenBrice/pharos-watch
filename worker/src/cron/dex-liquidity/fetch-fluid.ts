@@ -200,7 +200,6 @@ export async function fetchFluidPools(
         if (!isEvmAddress(t.pool_id)) {
           const warning = `${chain} pool_id ${formatInvalidFluidPoolId(t.pool_id)} skipped: invalid EVM address`;
           warnings.push(warning);
-          console.warn("[fetch-fluid]", warning);
           return null;
         }
 

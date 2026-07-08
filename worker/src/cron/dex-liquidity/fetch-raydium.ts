@@ -128,9 +128,6 @@ async function fetchPoolType(
   for (const error of result.errors) {
     console.warn("[fetch-raydium]", error);
   }
-  for (const warning of result.warnings) {
-    console.warn("[fetch-raydium]", warning);
-  }
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,
     degraded: result.errors.length > 0,
