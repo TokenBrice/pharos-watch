@@ -103,13 +103,13 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
   },
-  "worker/src/cron/compute-depeg-resolver-review.ts": {
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
     "disposition": "queued-p4",
-    "notes": "DDRv2 terminal-evidence completion added registry, cemetery, and tape lifecycle timestamp derivation to the review snapshot builder. Keep waived for the first v2 rollout; split terminal-evidence extraction and coverage-row assembly once the reviewer contract has production mileage.",
+    "notes": "FX-rate helper module crossed the file-length candidate threshold after the multi-currency benchmark and provider-fallback work. Behavior is heavily tested; waive for this gate and split provider adapters from normalization in a dedicated FX cleanup pass.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-27",
-    "reviewAfter": "2026-08-27",
-    "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
+    "createdAt": "2026-07-08",
+    "reviewAfter": "2026-10-08",
+    "nextAction": "Extract per-provider fetch/parse adapters from the shared normalization and benchmark-selection helpers."
   },
   "worker/src/cron/sync-yield-data.ts": {
     "disposition": "queued-p4",
@@ -118,6 +118,14 @@
     "createdAt": "2026-06-12",
     "reviewAfter": "2026-09-12",
     "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
+  },
+  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts": {
+    "disposition": "queued-p4",
+    "notes": "The supplemental optional-protocol yield source crossed the branch-count candidate threshold after the Beefy chain-nested TVL fix and abort-awareness work. Waive for this gate; split per-protocol payload parsing from the shared supplemental family pipeline in a focused yield-source cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-07-08",
+    "reviewAfter": "2026-10-08",
+    "nextAction": "Extract per-protocol (Beefy/peers) payload parsing into focused helpers behind the existing source-family contract."
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
