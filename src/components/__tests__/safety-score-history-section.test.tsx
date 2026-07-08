@@ -101,7 +101,8 @@ describe("SafetyScoreHistorySection", () => {
 
     // Initial grade still present
     expect(html).toContain("Initial grade");
-    expect(html).toContain("Updated: 2h ago");
+    expect(html).toContain('aria-label="Updated at ');
+    expect(html).toContain(">2h</span>");
   });
 
   it("caps visible entries at 3 and shows 'Show more' button", () => {
