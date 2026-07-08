@@ -401,6 +401,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
       providerFamilies: directApiPhase.results.map((entry) => entry.normalizedProtocol),
       failedSources: directApiPhase.failedSources,
       fallbackSignals: directApiPhase.fallbackSignals,
+      sourceWarnings: directApiPhase.sourceWarnings,
       countTotals: {
         sourceFamilies: directApiFetchers.length,
         directApiPools: directApiPhase.results.reduce((sum, entry) => sum + entry.result.pools.length, 0),
@@ -817,6 +818,7 @@ function buildDexLiquidityCronResult(
           acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
           excludedByReason: poolState.directApiIntegration.excludedByReason,
           circuitEvents: sourceState.directApiPhase.circuitEvents,
+          sourceWarnings: sourceState.directApiPhase.sourceWarnings,
         },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,

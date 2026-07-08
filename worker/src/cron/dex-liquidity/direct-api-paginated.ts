@@ -21,6 +21,7 @@ export interface PaginatedFetchOptions<TRow> {
   mapRow: (raw: unknown, context: { page: number }) => TRow | null;
   afterPage?: (context: {
     errors: string[];
+    warnings: string[];
     mappedRows: TRow[];
     page: number;
     rawRows: unknown[];
@@ -32,6 +33,7 @@ export interface PaginatedFetchOptions<TRow> {
 export interface PaginatedFetchResult<TRow> {
   rows: TRow[];
   errors: string[];
+  warnings: string[];
   successfulPages: number;
   completed: boolean;
   nextPage: number | null;
@@ -56,6 +58,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
 
   const rows: TRow[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   let successfulPages = 0;
   let completed = false;
   let nextPage: number | null = startPage;
@@ -119,6 +122,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
 
     const afterPageResult = afterPage?.({
       errors,
+      warnings,
       mappedRows,
       page,
       rawRows: pageRows,
@@ -142,5 +146,5 @@ export async function runPaginatedDirectApiFetch<TRow>(
     }
   }
 
-  return { rows, errors, successfulPages, completed, nextPage };
+  return { rows, errors, warnings, successfulPages, completed, nextPage };
 }

@@ -121,10 +121,10 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
         balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
       };
     },
-    afterPage: ({ errors, page }) => {
+    afterPage: ({ warnings, page }) => {
       const malformedRows = malformedRowsByPage.get(page) ?? 0;
       if (malformedRows > 0) {
-        errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+        warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
       }
     },
   });
@@ -135,10 +135,14 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
   for (const error of result.errors) {
     console.warn("[fetch-meteora]", error);
   }
+  for (const warning of result.warnings) {
+    console.warn("[fetch-meteora]", warning);
+  }
 
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,
     degraded: result.errors.length > 0,
     errors: result.errors,
+    warnings: result.warnings,
   });
 }

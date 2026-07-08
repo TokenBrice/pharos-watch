@@ -66,6 +66,7 @@ export interface DirectApiFetchPhaseResult {
   }>;
   failedSources: string[];
   fallbackSignals: string[];
+  sourceWarnings: string[];
   circuitEvents: DirectApiCircuitEvent[];
 }
 
@@ -209,6 +210,7 @@ export async function runDirectApiFetchPhase(
   }) => {
     const failedSources: string[] = [];
     const fallbackSignals: string[] = [];
+    const sourceWarnings: string[] = [];
     const circuitEvents: DirectApiCircuitEvent[] = [];
 
     try {
@@ -220,6 +222,7 @@ export async function runDirectApiFetchPhase(
       const result = execution.value;
       const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
       if (event) circuitEvents.push(event);
+      sourceWarnings.push(...(result.warnings ?? []).map((warning) => `${circuitKey}: ${warning}`));
       if (!result.ok || result.degraded) {
         failedSources.push(circuitKey);
       }
@@ -231,6 +234,7 @@ export async function runDirectApiFetchPhase(
       return {
         failedSources,
         fallbackSignals,
+        sourceWarnings,
         circuitEvents,
         entry: { name, circuitKey, normalizedProtocol, supportedChains, result },
       };
@@ -242,6 +246,7 @@ export async function runDirectApiFetchPhase(
         return {
           failedSources,
           fallbackSignals,
+          sourceWarnings,
           circuitEvents,
           entry: {
             name,
@@ -266,6 +271,7 @@ export async function runDirectApiFetchPhase(
       return {
         failedSources,
         fallbackSignals,
+        sourceWarnings,
         circuitEvents,
         entry: {
           name,
@@ -286,6 +292,7 @@ export async function runDirectApiFetchPhase(
     results: entries.map((entry) => entry.entry),
     failedSources: entries.flatMap((entry) => entry.failedSources),
     fallbackSignals: entries.flatMap((entry) => entry.fallbackSignals),
+    sourceWarnings: entries.flatMap((entry) => entry.sourceWarnings),
     circuitEvents: entries.flatMap((entry) => entry.circuitEvents),
   };
 }

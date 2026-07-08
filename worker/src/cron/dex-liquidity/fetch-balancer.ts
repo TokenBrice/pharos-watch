@@ -131,6 +131,7 @@ function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">):
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   const pageSize = 1000;
   let successfulPages = 0;
 
@@ -248,7 +249,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       });
     }
     if (malformedRows > 0) {
-      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+      warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (pools.length < pageSize) break;
@@ -282,9 +283,24 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       },
     });
   }
+  if (warnings.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "fetch-balancer.warnings",
+      job: "sync-dex-liquidity",
+      message: "Fetcher skipped one or more rows",
+      metadata: {
+        warningCount: warnings.length,
+        source: "balancer",
+        warnings,
+      },
+    });
+  }
   return makeDexApiFetchResult(results, {
     ok: successfulPages > 0,
     degraded: errors.length > 0,
     errors,
+    warnings,
   });
 }

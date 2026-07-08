@@ -198,7 +198,9 @@ export async function fetchFluidPools(
         const targetVol = parseFloat(t.target_volume);
         if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
         if (!isEvmAddress(t.pool_id)) {
-          errors.push(`${chain} pool_id ${formatInvalidFluidPoolId(t.pool_id)} skipped: invalid EVM address`);
+          const warning = `${chain} pool_id ${formatInvalidFluidPoolId(t.pool_id)} skipped: invalid EVM address`;
+          warnings.push(warning);
+          console.warn("[fetch-fluid]", warning);
           return null;
         }
 

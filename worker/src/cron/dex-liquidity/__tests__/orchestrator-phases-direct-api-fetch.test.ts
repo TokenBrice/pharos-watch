@@ -143,6 +143,28 @@ describe("runDirectApiFetchPhase", () => {
 
     expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual([]);
+    expect(result.sourceWarnings).toEqual(["warning-only-circuit: retained pool enrichment failed"]);
     expect(result.results[0]?.result.warnings).toEqual(["retained pool enrichment failed"]);
+  });
+
+  it("marks mixed warning and failure direct API results as failed", async () => {
+    const fetchers = [
+      makeFetcher("mixed", async () =>
+        makeDexApiFetchResult([], {
+          ok: true,
+          degraded: true,
+          errors: ["page 2 returned 503"],
+          warnings: ["page 1 skipped 1 malformed pool rows"],
+        }),
+      ),
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.failedSources).toEqual(["mixed-circuit"]);
+    expect(result.fallbackSignals).toEqual(["mixed-circuit-partial"]);
+    expect(result.sourceWarnings).toEqual(["mixed-circuit: page 1 skipped 1 malformed pool rows"]);
+    expect(result.results[0]?.result.errors).toEqual(["page 2 returned 503"]);
+    expect(result.results[0]?.result.warnings).toEqual(["page 1 skipped 1 malformed pool rows"]);
   });
 });

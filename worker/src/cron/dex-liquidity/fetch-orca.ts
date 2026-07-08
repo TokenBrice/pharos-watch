@@ -71,6 +71,7 @@ function getOrcaNextCursor(meta: unknown): string | null {
 export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   let successfulPages = 0;
   let degraded = false;
   let url: string | null = `${ORCA_API}?sortBy=tvl&sortDirection=desc&minTvl=${DIRECT_API_POOL_MIN_TVL_USD}&size=200`;
@@ -171,8 +172,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       });
     }
     if (malformedRows > 0) {
-      degraded = true;
-      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+      warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
     }
 
     if (!pageHasEligiblePool) {
@@ -202,9 +202,13 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
   for (const error of errors) {
     console.warn("[fetch-orca]", error);
   }
+  for (const warning of warnings) {
+    console.warn("[fetch-orca]", warning);
+  }
   return makeDexApiFetchResult(results, {
     ok: successfulPages > 0,
     degraded: degraded || errors.length > 0,
     errors,
+    warnings,
   });
 }

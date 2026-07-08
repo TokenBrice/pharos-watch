@@ -101,10 +101,10 @@ async function fetchPoolType(
           : null,
       };
     },
-    afterPage: ({ errors, page, rawRows }) => {
+    afterPage: ({ warnings, page, rawRows }) => {
       const malformedRows = malformedRowsByPage.get(page) ?? 0;
       if (malformedRows > 0) {
-        errors.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
+        warnings.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
       }
 
       if (rawRows.length < PAGE_SIZE) {
@@ -128,10 +128,14 @@ async function fetchPoolType(
   for (const error of result.errors) {
     console.warn("[fetch-raydium]", error);
   }
+  for (const warning of result.warnings) {
+    console.warn("[fetch-raydium]", warning);
+  }
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,
     degraded: result.errors.length > 0,
     errors: result.errors,
+    warnings: result.warnings,
   });
 }
 
@@ -143,6 +147,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
 
   const results: DexApiPool[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   let ok = false;
   let degraded = false;
 
@@ -155,6 +160,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
       ok = ok || settled.value.ok;
       degraded = degraded || settled.value.degraded;
       errors.push(...settled.value.errors);
+      warnings.push(...(settled.value.warnings ?? []));
     } else {
       const message = settled.reason instanceof Error ? settled.reason.message : String(settled.reason);
       errors.push(`${label} request failed: ${message}`);
@@ -165,5 +171,5 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   if (results.length > 0) {
     console.log(`[fetch-raydium] Fetched ${results.length} pools`);
   }
-  return makeDexApiFetchResult(results, { ok, degraded, errors });
+  return makeDexApiFetchResult(results, { ok, degraded, errors, warnings });
 }

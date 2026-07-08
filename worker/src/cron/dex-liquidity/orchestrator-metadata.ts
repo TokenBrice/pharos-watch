@@ -43,6 +43,7 @@ export function buildDexLiquidityCronMetadata(params: {
     acceptedByProtocolChain: Record<string, number>;
     excludedByReason: Record<string, number>;
     circuitEvents: Array<{ circuitKey: string; from: string; to: string; at: number | null }>;
+    sourceWarnings: string[];
   };
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
   challengerPublication: {

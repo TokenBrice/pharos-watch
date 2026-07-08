@@ -11,6 +11,22 @@ function textResponse(body: string, status = 200): Response {
   return new Response(body, { status });
 }
 
+function validMeteoraPool(index: number) {
+  return {
+    address: `Pool${index}`,
+    token_x: { address: `TokenX${index}`, symbol: "SOL", decimals: 9, price: 90 },
+    token_y: { address: `TokenY${index}`, symbol: "USDC", decimals: 6, price: 1 },
+    token_x_amount: 100,
+    token_y_amount: 9000,
+    current_price: 90,
+    tvl: 18_000,
+    volume: { "24h": 25_000 },
+    pool_config: { base_fee_pct: 0.01 },
+    dynamic_fee_pct: 0.002,
+    is_blacklisted: false,
+  };
+}
+
 describe("fetchMeteoraPools", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", mockFetch);
@@ -106,10 +122,36 @@ describe("fetchMeteoraPools", () => {
     const result = await fetchMeteoraPools();
 
     expect(result.ok).toBe(true);
-    expect(result.degraded).toBe(true);
+    expect(result.degraded).toBe(false);
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0].poolAddress).toBe("Pool111");
-    expect(result.errors).toContain("page 1 skipped 1 malformed pool rows");
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain("page 1 skipped 1 malformed pool rows");
+  });
+
+  it("keeps malformed-row notes as warnings but degrades when a later page fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [
+          {
+            address: "BrokenPool",
+            token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+            token_x_amount: 100,
+            token_y_amount: 100,
+            tvl: 20_000,
+          },
+          ...Array.from({ length: 499 }, (_, index) => validMeteoraPool(index)),
+        ],
+      }))
+      .mockResolvedValueOnce(textResponse("upstream down", 503));
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.ok).toBe(true);
+    expect(result.degraded).toBe(true);
+    expect(result.pools).toHaveLength(499);
+    expect(result.warnings).toContain("page 1 skipped 1 malformed pool rows");
+    expect(result.errors[0]).toContain("returned 503");
   });
 
   it("uses current_price and ignores imbalanced reserve ratio on DLMM pools", async () => {
