@@ -331,6 +331,100 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
+  it("routes large-cap native-peg openings to pending confirmation", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.191187,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedREAL",
+        circulating: { gnosis: 2_000_000_000 },
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.9758,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.trackedCoinId).toBe("brz-transfero");
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "upsert-pending",
+      payload: {
+        stablecoinId: "brz-transfero",
+        direction: "below",
+        bps: -242,
+        price: 0.9758,
+        pegReference: 1,
+        reason: "large-cap",
+      },
+    });
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against direct BRL quote",
+      },
+    ]);
+  });
+
+  it("routes extreme native-peg openings to pending confirmation", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.191187,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedREAL",
+        circulating: { gnosis: 22_000_000 },
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.2,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.trackedCoinId).toBe("brz-transfero");
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "upsert-pending",
+      payload: {
+        stablecoinId: "brz-transfero",
+        direction: "below",
+        bps: -8000,
+        price: 0.2,
+        pegReference: 1,
+        reason: "extreme-move",
+      },
+    });
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Pending native-peg confirmation for BRZ: -8000bps against direct BRL quote",
+      },
+    ]);
+  });
+
   it("keeps an existing event open when the native quote still supports it", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
