@@ -4,6 +4,7 @@ const STATUS_SECTION_MESSAGES: Partial<Record<keyof StatusResponse["sectionError
   dependencyHealth: "Dependency health unavailable.",
   jobAttempts: "Worker job attempt diagnostics unavailable.",
   reserveComposition: "Reserve composition overview unavailable.",
+  scheduledSlots: "Scheduled slot diagnostics unavailable.",
   telegramBot: "Telegram bot diagnostics unavailable.",
 };
 

@@ -26,6 +26,7 @@ export interface CronHealthSnapshot {
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
   jobAttemptQueryFailed: boolean;
+  scheduledSlotEventMarkerQueryFailed: boolean;
   scheduledSlots: ScheduledSlotHealthSummary;
 }
 
@@ -34,6 +35,7 @@ export interface ScheduledSlotHealthSummary {
   staleCandidateSlots: number;
   oldestRunningAgeSec: number | null;
   oldestStaleAgeSec: number | null;
+  /** Failed read from cron_slot_executions for currently running scheduled slots. */
   queryFailed: boolean;
 }
 
@@ -389,6 +391,7 @@ export async function loadCronHealth(
     fetchRunningCronSlotRows(db),
     loadWorkerJobAttemptHealth(db, cronJobs, now),
   ]);
+  const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
 
   const cronRows: { results?: CronHistoryRow[] } = { results: historyResult.rows };
@@ -653,6 +656,7 @@ export async function loadCronHealth(
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
     jobAttemptQueryFailed: jobAttemptHealth.queryFailed,
+    scheduledSlotEventMarkerQueryFailed,
     scheduledSlots,
   };
 }

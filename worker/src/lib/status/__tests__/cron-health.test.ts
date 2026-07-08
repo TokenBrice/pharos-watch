@@ -359,6 +359,33 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
       oldestStaleAgeSec: 2_400,
       queryFailed: false,
     });
+    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(false);
+  });
+
+  it("surfaces running-slot query failures distinctly from event-marker failures", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      { match: "FROM cache", rows: [] },
+      {
+        match: "FROM cron_slot_executions",
+        rows: [],
+        throwError: new Error("cron_slot_executions unavailable"),
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.scheduledSlots).toEqual({
+      runningSlots: 0,
+      staleCandidateSlots: 0,
+      oldestRunningAgeSec: null,
+      oldestStaleAgeSec: null,
+      queryFailed: true,
+    });
+    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(false);
   });
 });
 
@@ -412,6 +439,63 @@ describe("loadCronHealth — cron event markers", () => {
       },
     });
     expect(snapshot.crons["sync-stablecoins"]?.latestEvent).toBeUndefined();
+    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(false);
+  });
+
+  it("surfaces event-marker query failures distinctly from running-slot failures", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "FROM cache",
+        rows: [],
+        throwError: new Error("cache unavailable"),
+      },
+      { match: "FROM cron_slot_executions", rows: [] },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.scheduledSlots).toEqual({
+      runningSlots: 0,
+      staleCandidateSlots: 0,
+      oldestRunningAgeSec: null,
+      oldestStaleAgeSec: null,
+      queryFailed: false,
+    });
+    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(true);
+  });
+
+  it("surfaces both scheduled-slot query failure paths when both reads fail", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "FROM cache",
+        rows: [],
+        throwError: new Error("cache unavailable"),
+      },
+      {
+        match: "FROM cron_slot_executions",
+        rows: [],
+        throwError: new Error("cron_slot_executions unavailable"),
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.scheduledSlots).toEqual({
+      runningSlots: 0,
+      staleCandidateSlots: 0,
+      oldestRunningAgeSec: null,
+      oldestStaleAgeSec: null,
+      queryFailed: true,
+    });
+    expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(true);
   });
 });
 

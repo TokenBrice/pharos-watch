@@ -129,6 +129,8 @@ function countDiagnosticIssues(input: {
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
   jobAttemptQueryFailed?: boolean;
+  scheduledSlotRunningQueryFailed?: boolean;
+  scheduledSlotEventMarkerQueryFailed?: boolean;
   cronBudgetSurfaceTelemetryQueryFailed?: boolean;
 }): number {
   let count = input.publicHealth.cacheFailures.length;
@@ -138,6 +140,8 @@ function countDiagnosticIssues(input: {
   if (input.cronProgressQueryFailed) count += 1;
   if (input.cronLeaseQueryFailed) count += 1;
   if (input.jobAttemptQueryFailed) count += 1;
+  if (input.scheduledSlotRunningQueryFailed) count += 1;
+  if (input.scheduledSlotEventMarkerQueryFailed) count += 1;
   if (input.cronBudgetSurfaceTelemetryQueryFailed) count += 1;
   if (input.reserveCompositionQueryFailed) count += 1;
   count += input.dataQuality.sourceFailures.filter((failure) => failure.source !== "stablecoins-cache").length;
@@ -159,14 +163,35 @@ export function countStatusDiagnosticIssues(input: {
     cronProgressQueryFailed: input.cronHealth.cronProgressQueryFailed,
     cronLeaseQueryFailed: input.cronHealth.cronLeaseQueryFailed,
     jobAttemptQueryFailed: input.cronHealth.jobAttemptQueryFailed,
+    scheduledSlotRunningQueryFailed: input.cronHealth.scheduledSlots.queryFailed,
+    scheduledSlotEventMarkerQueryFailed: input.cronHealth.scheduledSlotEventMarkerQueryFailed,
     cronBudgetSurfaceTelemetryQueryFailed: input.cronBudgetSurfaceTelemetryQueryFailed,
   });
+}
+
+function getScheduledSlotSectionErrorCode(
+  cronHealth: CronHealthSnapshot,
+): string | null {
+  const runningQueryFailed = cronHealth.scheduledSlots.queryFailed;
+  const eventMarkerQueryFailed = cronHealth.scheduledSlotEventMarkerQueryFailed;
+  if (runningQueryFailed && eventMarkerQueryFailed) return "scheduled_slot_queries_failed";
+  if (runningQueryFailed) return "scheduled_slot_running_query_failed";
+  if (eventMarkerQueryFailed) return "scheduled_slot_event_marker_query_failed";
+  return null;
 }
 
 export function applyCronHealthSectionErrors(
   sectionErrors: StatusResponse["sectionErrors"],
   cronHealth: CronHealthSnapshot,
 ): void {
+  const scheduledSlotErrorCode = getScheduledSlotSectionErrorCode(cronHealth);
+  if (scheduledSlotErrorCode) {
+    sectionErrors.scheduledSlots = {
+      code: scheduledSlotErrorCode,
+      message: getStatusSectionMessage("scheduledSlots"),
+    };
+  }
+
   if (cronHealth.jobAttemptQueryFailed) {
     sectionErrors.jobAttempts = {
       code: "job_attempts_query_failed",

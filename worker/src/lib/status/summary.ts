@@ -38,6 +38,10 @@ export function buildStatusSummary(input: {
   transitionsLast24h: number;
 }): StatusSummary {
   const { cronHealth } = input;
+  const scheduledSlotQueryFailures = {
+    ...(cronHealth.scheduledSlots.queryFailed ? { scheduledSlotRunningQueryFailed: true } : {}),
+    ...(cronHealth.scheduledSlotEventMarkerQueryFailed ? { scheduledSlotEventMarkerQueryFailed: true } : {}),
+  };
   return {
     unhealthyCrons: cronHealth.unhealthyCrons,
     availabilityImpactingUnhealthyCrons: cronHealth.availabilityImpactingUnhealthyCrons,
@@ -54,6 +58,7 @@ export function buildStatusSummary(input: {
     scheduledSlotRunning: cronHealth.scheduledSlots.runningSlots,
     scheduledSlotStaleCandidates: cronHealth.scheduledSlots.staleCandidateSlots,
     scheduledSlotOldestRunningAgeSec: cronHealth.scheduledSlots.oldestRunningAgeSec,
+    ...scheduledSlotQueryFailures,
     budgetOnlySurfaceCount: input.budgetOnlySurfaces.length,
     budgetOnlySurfaceMissingTelemetry: input.budgetOnlySurfaces.filter((surface) => surface.telemetryStatus === "missing").length,
     budgetOnlySurfaceStaleTelemetry: input.budgetOnlySurfaces.filter((surface) => surface.telemetryStatus === "stale").length,

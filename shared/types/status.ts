@@ -1080,6 +1080,7 @@ export type StatusSectionKey =
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
   | "jobAttempts"
+  | "scheduledSlots"
   | "mintBurnReconciliation"
   | "reserveDrift"
   | "classificationWarnings";
@@ -1133,6 +1134,8 @@ export interface StatusResponse {
     scheduledSlotRunning?: number;
     scheduledSlotStaleCandidates?: number;
     scheduledSlotOldestRunningAgeSec?: number | null;
+    scheduledSlotRunningQueryFailed?: boolean;
+    scheduledSlotEventMarkerQueryFailed?: boolean;
     budgetOnlySurfaceCount?: number;
     budgetOnlySurfaceMissingTelemetry?: number;
     budgetOnlySurfaceStaleTelemetry?: number;
