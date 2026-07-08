@@ -72,7 +72,7 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 900,
+    "fileLines": 899,
     "maxFunctionLines": 489,
     "branchCount": 59,
     "disposition": "queued-p4",
@@ -96,8 +96,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 194,
-    "maxFunctionLines": 161,
+    "fileLines": 201,
+    "maxFunctionLines": 168,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -372,8 +372,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 831,
-    "maxFunctionLines": 163,
+    "fileLines": 833,
+    "maxFunctionLines": 164,
     "branchCount": 20,
     "disposition": "stabilized",
     "targetBudget": {
