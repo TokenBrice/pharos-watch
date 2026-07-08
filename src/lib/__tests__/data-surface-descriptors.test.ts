@@ -408,7 +408,7 @@ describe("data surface descriptors", () => {
     for (const { surface, id, explicit } of cases) {
       const definition = dependency(id);
       expect(definition?.producerJob).toBe(surface.producerJob ?? null);
-      expect(definition?.cacheKey).toBe(surface.cacheKey ?? null);
+      expect(definition?.cacheKey).toBe("cacheKey" in surface ? surface.cacheKey ?? null : null);
       expect(definition?.criticality).toBe(surface.dependencyCriticality);
       expect({
         label: definition?.label,
@@ -438,10 +438,14 @@ describe("data surface descriptors", () => {
     });
 
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      if (!surface.dataHealthPresetKey) continue;
+      const surfaceKey: string = surface.key;
+      if (!("dataHealthPresetKey" in surface) || !surface.dataHealthPresetKey) continue;
 
       const preset = DATA_HEALTH_PRESETS_BY_KEY[surface.dataHealthPresetKey];
       expect(preset).toBeDefined();
+      if (!("uiLabel" in surface) || !("endpointMaxAgeSec" in surface)) {
+        throw new Error(`descriptor ${surfaceKey} has dataHealthPresetKey but lacks uiLabel/endpointMaxAgeSec`);
+      }
       expect(surface.uiLabel).toBe(preset.label);
       expect(surface.endpointMaxAgeSec).toBe(preset.staleTime / 1000);
     }
