@@ -1037,6 +1037,279 @@ describe("buildDepegResolverReviewSnapshot", () => {
     });
   });
 
+  it("characterizes durable v2 coverage row states and headline counts", async () => {
+    const nowSec = ELIGIBLE_AT + 3_600;
+    const pendingEligibleAt = nowSec + 3_600;
+    const terminalBeforeAt = ELIGIBLE_AT - 900;
+    const terminalAfterAt = ELIGIBLE_AT + 600;
+    const incidents = [
+      {
+        incidentKey: "ddr2:matrix-missing-source",
+        eventId: 201,
+        currentEventId: 201,
+        stablecoinId: "matrix-missing-source",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-pre-lock-recovered",
+        eventId: 202,
+        currentEventId: 202,
+        stablecoinId: "matrix-pre-lock-recovered",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-terminal-before",
+        eventId: 203,
+        currentEventId: 203,
+        stablecoinId: "matrix-terminal-before",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-pending",
+        eventId: 204,
+        currentEventId: 204,
+        stablecoinId: "matrix-pending",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: pendingEligibleAt,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-missed-recovered",
+        eventId: 205,
+        currentEventId: 205,
+        stablecoinId: "matrix-missed-recovered",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-orphan",
+        eventId: 206,
+        currentEventId: 206,
+        stablecoinId: "matrix-orphan",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-terminal-after",
+        eventId: 207,
+        currentEventId: 207,
+        stablecoinId: "matrix-terminal-after",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:matrix-system-deferral",
+        eventId: 208,
+        currentEventId: 208,
+        stablecoinId: "matrix-system-deferral",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+        lockState: {
+          eligibleAt: ELIGIBLE_AT,
+          lastState: "lock_deferred" as const,
+          lastDeferralReason: "cache stale",
+          deferralCount: 2,
+        },
+      },
+      {
+        incidentKey: "ddr2:matrix-cron-gap",
+        eventId: 209,
+        currentEventId: 209,
+        stablecoinId: "matrix-cron-gap",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 202,
+            stablecoin_id: "matrix-pre-lock-recovered",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT - 60,
+            recovery_price: 1,
+          },
+          {
+            id: 203,
+            stablecoin_id: "matrix-terminal-before",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+          {
+            id: 204,
+            stablecoin_id: "matrix-pending",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+          {
+            id: 205,
+            stablecoin_id: "matrix-missed-recovered",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 60,
+            recovery_price: 1,
+          },
+          {
+            id: 206,
+            stablecoin_id: "matrix-orphan",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 60,
+            recovery_price: null,
+          },
+          {
+            id: 207,
+            stablecoin_id: "matrix-terminal-after",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+          {
+            id: 208,
+            stablecoin_id: "matrix-system-deferral",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+          {
+            id: 209,
+            stablecoin_id: "matrix-cron-gap",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+      {
+        match: "FROM tape_events",
+        rows: [
+          {
+            coin_id: "matrix-terminal-before",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalBeforeAt * 1000,
+            payload_json: JSON.stringify({}),
+          },
+          {
+            coin_id: "matrix-terminal-after",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalAfterAt * 1000,
+            payload_json: JSON.stringify({}),
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, nowSec, undefined, {
+      storeContracts: stores,
+    });
+    const rowsByIncident = new Map(snapshot.rows.map((row) => [row.incidentKey, row]));
+
+    expect(rowsByIncident.get("ddr2:matrix-missing-source")).toMatchObject({
+      kind: "coverage",
+      sourceEventState: "missing",
+      predictionState: "data_quality_gap",
+      coverageCause: "data_quality_gap",
+      reason: "source_event_missing",
+    });
+    expect(rowsByIncident.get("ddr2:matrix-pre-lock-recovered")).toMatchObject({
+      predictionState: "resolved_before_prediction",
+      coverageCause: "pre_lock_recovered",
+      actualEndedAt: ELIGIBLE_AT - 60,
+    });
+    expect(rowsByIncident.get("ddr2:matrix-terminal-before")).toMatchObject({
+      sourceEventState: "terminal",
+      predictionState: "terminal_before_prediction",
+      coverageCause: "pre_lock_terminal",
+      terminalEvidenceAt: terminalBeforeAt,
+    });
+    expect(rowsByIncident.get("ddr2:matrix-pending")).toMatchObject({
+      eligibleAt: pendingEligibleAt,
+      predictionState: "pending_lock",
+      coverageCause: "active_pending_lock",
+    });
+    expect(rowsByIncident.get("ddr2:matrix-missed-recovered")).toMatchObject({
+      predictionState: "missed_lock_recovered",
+      coverageCause: "lock_missed",
+      operationalCoverageCause: "lock_missed",
+    });
+    expect(rowsByIncident.get("ddr2:matrix-orphan")).toMatchObject({
+      sourceEventState: "orphan_closed",
+      predictionState: "orphan_closed",
+      coverageCause: "orphan_closed",
+      outcomeQualityState: "orphan_closed",
+    });
+    expect(rowsByIncident.get("ddr2:matrix-terminal-after")).toMatchObject({
+      sourceEventState: "terminal",
+      predictionState: "missed_lock_terminal",
+      coverageCause: "lock_missed",
+      terminalEvidenceAt: terminalAfterAt,
+    });
+    expect(rowsByIncident.get("ddr2:matrix-system-deferral")).toMatchObject({
+      predictionState: "lock_deferred",
+      coverageCause: "active_lock_deferred",
+      operationalCoverageCause: "system_deferral",
+      reason: "cache stale",
+    });
+    expect(rowsByIncident.get("ddr2:matrix-cron-gap")).toMatchObject({
+      predictionState: "lock_deferred",
+      coverageCause: "cron_gap",
+      operationalCoverageCause: "cron_gap",
+      reason: "eligible_active_incident_without_public_prediction",
+    });
+    expect(snapshot.summary.headline).toMatchObject({
+      policyUniverseIncidentCount: 9,
+      pendingLockCount: 1,
+      lockDeferredCount: 2,
+      resolvedBeforePredictionCount: 1,
+      terminalBeforePredictionCount: 1,
+      dataQualityGapCount: 1,
+      orphanClosedCount: 1,
+      missedLockRecoveredCount: 1,
+      missedLockTerminalCount: 1,
+      missedNoPredictionCount: 2,
+      missedOperationalLockCount: 4,
+    });
+    expect(snapshot._meta).toMatchObject({
+      assessedEventCount: 9,
+      reviewedEventCount: 9,
+      pendingEventCount: 3,
+      publicRowsTruncated: false,
+    });
+    expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
+  });
+
   it("classifies terminal_before_prediction from tracked frozenAt evidence", async () => {
     const incident = {
       incidentKey: "ddr2:usr-frozen-before-lock",
