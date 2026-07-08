@@ -4,7 +4,8 @@
     "asOfISO": "2026-05-16T21:20:16.676Z",
     "sourceUrl": "https://pharos.watch/datasets/top-stablecoins/latest.json",
     "methodologyLabel": "safety-score v7.25",
-    "rowCount": 547
+    "rowCount": 547,
+    "freshnessContract": "point-in-time sample; not guaranteed to track production freshness"
   },
   "rows": [
     {

@@ -1,4 +1,4 @@
-{"_meta":{"endpoint":"peg-mechanism-distribution","asOfISO":"2026-05-16T21:20:16.676Z","sourceUrl":"https://pharos.watch/datasets/peg-mechanism-distribution/latest.ndjson","methodologyLabel":"safety-score v7.25"}}
+{"_meta":{"endpoint":"peg-mechanism-distribution","asOfISO":"2026-05-16T21:20:16.676Z","sourceUrl":"https://pharos.watch/datasets/peg-mechanism-distribution/latest.ndjson","methodologyLabel":"safety-score v7.25","freshnessContract":"point-in-time sample; not guaranteed to track production freshness"}}
 {"mechanismArchetype":"cdp","mechanismLabel":"CDP","pegReferenceId":"unknown","jurisdiction":"unknown","coinCount":71}
 {"mechanismArchetype":"unknown","mechanismLabel":"Unknown","pegReferenceId":"unknown","jurisdiction":"unknown","coinCount":53}
 {"mechanismArchetype":"fiat-cash","mechanismLabel":"Fiat-Backed","pegReferenceId":"unknown","jurisdiction":"United States","coinCount":27}

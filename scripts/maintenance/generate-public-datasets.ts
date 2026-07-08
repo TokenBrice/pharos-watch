@@ -56,11 +56,16 @@ const CHECK_MODE = parseCheckMode(process.argv);
 const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
-  "top-stablecoins": 1,
-  "depeg-history": 1,
-  "scores-latest": 1,
-  "peg-mechanism-distribution": 1,
+  "top-stablecoins": 493,
+  // depeg-history floor reflects the post-rework incident model (rolling
+  // cutoff over deduplicated events, ~333 live rows on 2026-07-08), not the
+  // pre-rework 2068-row legacy corpus the 2026-05-16 mirror was built from.
+  "depeg-history": 300,
+  "scores-latest": 493,
+  "peg-mechanism-distribution": 99,
 };
+const FRESHNESS_CONTRACT =
+  "point-in-time sample; not guaranteed to track production freshness";
 
 interface SnapshotEnvelope {
   snapshotDate: string;
@@ -247,7 +252,7 @@ interface Preamble {
 }
 
 function preambleLine(p: Preamble): string {
-  return `Pharos pharos.watch | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel}`;
+  return `Pharos pharos.watch | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel} | Freshness: ${FRESHNESS_CONTRACT}`;
 }
 
 function buildCsv<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
@@ -275,6 +280,7 @@ function buildJson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): s
           asOfISO: preamble.asOfISO,
           sourceUrl: preamble.sourceUrl,
           methodologyLabel: preamble.methodologyLabel,
+          freshnessContract: FRESHNESS_CONTRACT,
           rowCount: rows.length,
         },
         rows: objects,
@@ -292,6 +298,7 @@ function buildNdjson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble):
       asOfISO: preamble.asOfISO,
       sourceUrl: preamble.sourceUrl,
       methodologyLabel: preamble.methodologyLabel,
+      freshnessContract: FRESHNESS_CONTRACT,
     },
   });
   const body = rows.map((row, rowIndex) => {

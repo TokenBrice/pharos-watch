@@ -1,4 +1,4 @@
-# Pharos pharos.watch | Endpoint: scores-latest | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/datasets/scores-latest/latest.csv | Methodology: safety-score v7.25 | dews v6.0 | liquidity v5.6
+# Pharos pharos.watch | Endpoint: scores-latest | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/datasets/scores-latest/latest.csv | Methodology: safety-score v7.25 | dews v6.0 | liquidity v5.6 | Freshness: point-in-time sample; not guaranteed to track production freshness
 stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass
 buidl-blackrock,BUIDL,100,67,B-,1,CALM,,unobserved
 u-united-stables,U,100,52,C-,10,CALM,55,mixed

@@ -1,4 +1,4 @@
-# Pharos pharos.watch | Endpoint: depeg-history | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/datasets/depeg-history/latest.csv | Methodology: depeg-dews v6.0
+# Pharos pharos.watch | Endpoint: depeg-history | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/datasets/depeg-history/latest.csv | Methodology: depeg-dews v6.0 | Freshness: point-in-time sample; not guaranteed to track production freshness
 id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source
 90005,usdxl-last,USDXL,below,-100,2026-05-16T10:05:33.000Z,2026-05-16T10:20:27.000Z,894,0.989791,0.989791,0.991483,0.9998167930806197,live
 90003,usdxl-last,USDXL,below,-110,2026-05-16T08:35:11.000Z,2026-05-16T08:50:35.000Z,924,0.98878242,0.98878242,0.9935690000000004,0.999792,live

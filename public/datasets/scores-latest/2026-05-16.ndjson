@@ -1,4 +1,4 @@
-{"_meta":{"endpoint":"scores-latest","asOfISO":"2026-05-16T21:20:16.676Z","sourceUrl":"https://pharos.watch/datasets/scores-latest/latest.ndjson","methodologyLabel":"safety-score v7.25 | dews v6.0 | liquidity v5.6"}}
+{"_meta":{"endpoint":"scores-latest","asOfISO":"2026-05-16T21:20:16.676Z","sourceUrl":"https://pharos.watch/datasets/scores-latest/latest.ndjson","methodologyLabel":"safety-score v7.25 | dews v6.0 | liquidity v5.6","freshnessContract":"point-in-time sample; not guaranteed to track production freshness"}}
 {"stablecoinId":"buidl-blackrock","symbol":"BUIDL","pegScore":100,"safetyScore":67,"safetyGrade":"B-","dewsScore":1,"dewsBand":"CALM","liquidityScore":null,"coverageClass":"unobserved"}
 {"stablecoinId":"u-united-stables","symbol":"U","pegScore":100,"safetyScore":52,"safetyGrade":"C-","dewsScore":10,"dewsBand":"CALM","liquidityScore":55,"coverageClass":"mixed"}
 {"stablecoinId":"apxusd-apyx","symbol":"apxUSD","pegScore":100,"safetyScore":68,"safetyGrade":"B-","dewsScore":6,"dewsBand":"CALM","liquidityScore":74,"coverageClass":"mixed"}
