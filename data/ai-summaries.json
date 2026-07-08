@@ -231,13 +231,13 @@
   },
   "eure-monerium": {
     "title": "SEPA Native, DeFi Adopted",
-    "text": "EURE is Monerium's MiCA-regulated euro e-money; SEPA-native mint and burn, mostly backed by an LVNAV fund plus bank deposits. Monerium's EURe is what happens when a Icelandic EMI license meets actual product-market fit: SEPA-to-IBAN integration that lets users move between euros and on-chain tokens without the friction that plagues most stablecoin on-ramps, backed by 70% State Street AAA-rated EUR liquidity fund and 30% bank deposits at Arion and LHV. The B grade at 73 matches EURC's safety profile despite Monerium's smaller scale, and supply growth of roughly 16% month-over-month to 34M EUR signals that the seven-chain deployment across Ethereum, Gnosis, Polygon, Arbitrum, and Cosmos is finding traction. DEX liquidity remains the weak point — an HHI of 0.86 means virtually all on-chain depth sits in a single pool, making EURe vulnerable to concentrated withdrawal risk that the underlying reserves would comfortably cover but the market might not wait for. Iceland's FSA may lack the brand cachet of France's ACPR, but the reserve structure and {{term:custody}}custody{{/term}} model are functionally indistinguishable from the top tier. The 70% State Street allocation is a low-volatility {{term:money-market-fund}}money-market fund{{/term}}, and {{term:redemption}}redemption{{/term}} burns EURe and credits EUR via SEPA.",
-    "updatedAt": "2026-05-15",
+    "text": "EURE is Monerium's MiCA-regulated euro e-money; SEPA-native mint and burn, mostly backed by an LVNAV fund plus bank deposits. Monerium's EURe is what happens when an Icelandic EMI license meets actual product-market fit: SEPA-to-IBAN integration that lets users move between euros and on-chain tokens without the friction that plagues most stablecoin on-ramps, backed by 70% State Street AAA-rated EUR liquidity fund and 30% bank deposits at Arion and LHV. The B grade matches EURC's safety profile despite Monerium's smaller scale, and steady double-digit monthly supply growth signals that a deployment now spanning nine chains — Ethereum and its L2s, Gnosis, Polygon, and Cosmos rails — is finding traction. DEX liquidity remains the weak point — depth still tilts toward a couple of dominant pools even as the venue count has widened, leaving EURe exposed to concentrated withdrawal risk that the underlying reserves would comfortably cover but the market might not wait for. Iceland's FSA may lack the brand cachet of France's ACPR, but the reserve structure and {{term:custody}}custody{{/term}} model are functionally indistinguishable from the top tier. The 70% State Street allocation is a low-volatility {{term:money-market-fund}}money-market fund{{/term}}, and {{term:redemption}}redemption{{/term}} burns EURe and credits EUR via SEPA.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "eusd-electronic-usd": {
     "title": "The Boring Basket That Works",
@@ -361,13 +361,13 @@
   },
   "vchf-vnx": {
     "title": "Liechtenstein's Franc Experiment",
-    "text": "VNX's VCHF is a 100% CHF-backed stablecoin operating under Liechtenstein's TVTG Blockchain Act with Areva audits and FMA oversight — among the most regulated non-USD stablecoins on Pharos, and one of the few to hold a solid B safety grade despite a tiny float. At roughly 3.4 million CHF in circulation spread across a dozen chains in the contract data, VCHF is structurally overbuilt for its current demand, carrying more {{term:custody}}custody{{/term}} infrastructure and {{term:attestation}}attestation{{/term}} reporting than its thin DEX liquidity can justify. The token rarely strays from the calm end of Pharos's stress scale, which is exactly what you would expect from cash-backed CHF that almost nobody is trading. Its sub-percent Morpho lending yield reflects both the Swiss franc's low-rate environment and the reality that CHF-denominated DeFi demand is a rounding error in global stablecoin markets. No depeg events on record and same-day issuer {{term:redemption}}redemption{{/term}} make this a quietly competent product waiting for a use case — whether that's MiCA-era European DeFi, Swiss franc remittance corridors, or something nobody has imagined yet.",
-    "updatedAt": "2026-06-03",
+    "text": "VNX's VCHF is a 100% CHF-backed stablecoin operating under Liechtenstein's TVTG Blockchain Act with Areva audits and FMA oversight — among the most regulated non-USD stablecoins on Pharos, and one of the few to hold a B+ safety grade despite a tiny float. At roughly 3.4 million CHF in circulation spread across a dozen chains in the contract data, VCHF is structurally overbuilt for its current demand, carrying more {{term:custody}}custody{{/term}} infrastructure and {{term:attestation}}attestation{{/term}} reporting than its thin DEX liquidity can justify. The token rarely strays from the calm end of Pharos's stress scale, which is exactly what you would expect from cash-backed CHF that almost nobody is trading. Its sub-percent Morpho lending yield reflects both the Swiss franc's low-rate environment and the reality that CHF-denominated DeFi demand is a rounding error in global stablecoin markets. No depeg events on record and same-day issuer {{term:redemption}}redemption{{/term}} make this a quietly competent product waiting for a use case — whether that's MiCA-era European DeFi, Swiss franc remittance corridors, or something nobody has imagined yet.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "veur-vnx": {
     "title": "Eleven Chains, Three Users",
@@ -511,23 +511,23 @@
   },
   "ausd-agora": {
     "title": "VanEck's Quiet Dollar",
-    "text": "AUSD is Agora's centralized dollar stablecoin, redeemable 1:1 and backed by cash, short-dated U.S. {{term:treasury}}Treasury bills{{/term}}, and overnight repos managed by VanEck. Agora's institutional stack is unusually explicit: VanEck manages the reserves, State Street provides {{term:custody}}custody{{/term}} through a bankruptcy-remote Delaware Statutory Trust, and Grant Thornton publishes monthly {{term:attestation}}reserve attestations{{/term}} rather than a token-specific real-time proof feed. The revenue-sharing model with distribution partners, where Agora splits reserve yield with platforms that drive adoption, has supported broad multichain expansion and meaningful DEX liquidity without changing the basic risk profile. AUSD rarely strays from the calm end of the stress scale, and its B+ safety grade reflects strong peg behavior and high-quality reserves offset by centralized issuance, issuer-operated controls, and off-chain custody. The main read is simple: AUSD is one of the cleaner institutional fiat-backed dollars, but its transparency is monthly attestation-based, not live on-chain reserve verification.",
-    "updatedAt": "2026-06-26",
+    "text": "AUSD is Agora's centralized dollar stablecoin, redeemable 1:1 and backed by cash, short-dated U.S. {{term:treasury}}Treasury bills{{/term}}, and overnight repos managed by VanEck. Agora's institutional stack is unusually explicit: VanEck manages the reserves, State Street provides {{term:custody}}custody{{/term}} through a bankruptcy-remote Delaware Statutory Trust, and Grant Thornton publishes monthly {{term:attestation}}reserve attestations{{/term}} rather than a token-specific real-time proof feed. The revenue-sharing model with distribution partners, where Agora splits reserve yield with platforms that drive adoption, has supported broad multichain expansion and meaningful DEX liquidity without changing the basic risk profile. AUSD rarely strays from the calm end of the stress scale, and its A safety grade reflects strong peg behavior and high-quality reserves offset by centralized issuance, issuer-operated controls, and off-chain custody. The main read is simple: AUSD is one of the cleaner institutional fiat-backed dollars, but its transparency is monthly attestation-based, not live on-chain reserve verification.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-26",
-    "factsAsOf": "2026-06-26"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usds-sky": {
     "title": "The PSM Moat Deepens",
-    "text": "Sky Dollar still commands the single best {{term:redemption}}redemption{{/term}} infrastructure in stablecoins: a permissionless {{term:psm}}PSM{{/term}} with atomic, zero-fee settlement and nearly half of total supply available as immediate exit capacity — no other stablecoin at scale offers anything close. The B+ safety grade now reflects strength tempered by where the cracks actually are, with the reserve mix of 38% stablecoins via PSM, 28% Spark lending {{term:cdp}}CDP{{/term}} positions, and 23% Grove {{term:rwa}}RWA{{/term}} providing genuine diversification rather than the concentration risk that plagues most competitors. The peg itself is the easy part — USDS sits at the calm end of the stress scale and clears its worst sub-day wobbles within hours, with only a handful of brief deviations across the rolling window. The yield-to-risk story through the Sky Savings Rate still rewards holders without the exotic risk profiles that higher-yielding alternatives require. The structural dependency on USDC as mechanism-critical PSM collateral remains the one tension in a DAO-governed system that aspires to monetary sovereignty — roughly a third of Sky Dollar's backing ultimately traces back to Circle's banking relationships, with {{term:overcollateralization}}overcollateralized{{/term}} Maker vaults backing the rest.",
-    "updatedAt": "2026-06-03",
+    "text": "Sky Dollar still commands the single best {{term:redemption}}redemption{{/term}} infrastructure in stablecoins: a permissionless {{term:psm}}PSM{{/term}} with atomic, zero-fee settlement and well over half of total supply available as immediate exit capacity — no other stablecoin at scale offers anything close. The A- safety grade reflects strength tempered by where the cracks actually are, with a reserve mix split across PSM stablecoins, Spark lending {{term:cdp}}CDP{{/term}} positions, and Grove {{term:rwa}}RWA{{/term}} allocations providing genuine diversification rather than the concentration risk that plagues most competitors. The peg itself is the easy part — USDS sits at the calm end of the stress scale and clears its worst sub-day wobbles within hours, with only a handful of brief deviations across the rolling window. The yield-to-risk story through the Sky Savings Rate still rewards holders without the exotic risk profiles that higher-yielding alternatives require. The structural dependency on USDC as mechanism-critical PSM collateral remains the one tension in a DAO-governed system that aspires to monetary sovereignty — roughly a third of Sky Dollar's backing ultimately traces back to Circle's banking relationships, with {{term:overcollateralization}}overcollateralized{{/term}} Maker vaults backing the rest.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "m-m0": {
     "title": "The Middleware Dollar",
@@ -601,13 +601,13 @@
   },
   "zchf-frankencoin": {
     "title": "Oracle-Free Alpine Defiance",
-    "text": "A CHF-pegged CDP with auction-priced collateral, no oracle dependency, no team tokens, and a B safety grade that has slipped as the collateral mix has drifted away from its crypto-and-gold roots.\n\nFrankencoin remains the most ideologically committed stablecoin on the dashboard — no foundation, no team tokens, no VC money, no price oracles — and that orthodoxy still earns it a top-tier decentralization mark. But the overall B grade is a step down from where it once sat, and the reason is sitting in the collateral pool: a single corporate equity, BOSS (Boss Info AG), now makes up roughly a third of the backing — rivaling wrapped BTC as the largest position and introducing issuer- and liquidity-specific risk the crypto and gold lines never carried. The collateral is still valued through auction-based {{term:liquidation}}liquidation{{/term}} that trades capital efficiency for oracle manipulation resistance, a tradeoff most {{term:cdp}}CDP{{/term}} protocols wouldn't dare make, and {{term:overcollateralization}}overcollateralization{{/term}} is enforced through veto-governed minting limits — but governance has plainly let the mix tilt toward a riskier single name. The peg itself is unbothered, holding near-perfect with only a handful of shallow deviations under 230 bps and rarely straying from the calm end of the stress scale, which is genuinely impressive for a CHF token priced against dollar reference rates on thin liquidity. The 3.5% APY from Frankencoin Savings remains a rare risk-adjusted draw for a non-USD stablecoin, but the widening gap between Frankencoin's decentralization purity and its collateral discipline is the thing to watch from here.",
-    "updatedAt": "2026-06-03",
+    "text": "A CHF-pegged CDP with auction-priced collateral, no oracle dependency, no team tokens, and a safety grade that has slipped to B- as the collateral mix has drifted away from its crypto-and-gold roots.\n\nFrankencoin remains the most ideologically committed stablecoin on the dashboard — no foundation, no team tokens, no VC money, no price oracles — and that orthodoxy still earns it a top-tier decentralization mark. But the overall B- grade is another step down from where it once sat, and the reason is sitting in the collateral pool: a single corporate equity, BOSS (Boss Info AG), now makes up roughly a third of the backing — rivaling wrapped BTC as the largest position and introducing issuer- and liquidity-specific risk the crypto and gold lines never carried. The collateral is still valued through auction-based {{term:liquidation}}liquidation{{/term}} that trades capital efficiency for oracle manipulation resistance, a tradeoff most {{term:cdp}}CDP{{/term}} protocols wouldn't dare make, and {{term:overcollateralization}}overcollateralization{{/term}} is enforced through veto-governed minting limits — but governance has plainly let the mix tilt toward a riskier single name. The peg itself is unbothered, holding near-perfect with only a handful of shallow deviations under 230 bps and rarely straying from the calm end of the stress scale, which is genuinely impressive for a CHF token priced against dollar reference rates on thin liquidity. The 3.5% APY from Frankencoin Savings remains a rare risk-adjusted draw for a non-USD stablecoin, but the widening gap between Frankencoin's decentralization purity and its collateral discipline is the thing to watch from here.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usn-noon": {
     "title": "Yield Portfolio, Base Token",
@@ -641,13 +641,13 @@
   },
   "frxusd-frax": {
     "title": "Frax's Clean Slate",
-    "text": "frxUSD is Frax's tokenized-{{term:treasury}}T-bill{{/term}}-backed dollar minted 1:1 by approved custodians — a {{term:rwa}}RWA{{/term}} do-over without legacy FRAX's depeg history. Where legacy FRAX racked up hundreds of depeg events and a C grade, frxUSD launched clean and reserves it with tokenized cash-equivalents: WisdomTree WTGXX and Superstate USTB split the bulk roughly down the middle, BlackRock BUIDL fills out most of the rest, and a residual sliver of tokenized deposits rounds it off, earning a B safety grade with only a handful of brief depeg blips so far. Atomic {{term:redemption}}redemption{{/term}} through enshrined {{term:custody}}custodians{{/term}} gives it one of the strongest exit routes in crypto-native stablecoins, and liquidity is genuinely diversified across two dozen-plus chains rather than concentrated on a single venue. The sfrxUSD staking wrapper passes through reserve yield — modest but honest, never the headline. The catch is dependency: a C- on that axis reflects how much frxUSD leans on a small set of tokenized money-market issuers, and the centralized-dependent governance means Frax DAO retains the keys to custodian approvals — the one thread connecting this otherwise institutional-grade product to its wilder ancestry.",
-    "updatedAt": "2026-06-03",
+    "text": "frxUSD is Frax's tokenized-{{term:treasury}}T-bill{{/term}}-backed dollar minted 1:1 by approved custodians — a {{term:rwa}}RWA{{/term}} do-over without legacy FRAX's depeg history. Where legacy FRAX racked up hundreds of depeg events and a C grade, frxUSD launched clean and reserves it with tokenized cash-equivalents: WisdomTree WTGXX and Superstate USTB split the bulk roughly down the middle, BlackRock BUIDL fills out most of the rest, and a residual sliver of tokenized deposits rounds it off, earning a B- safety grade with only a handful of brief depeg blips so far. Atomic {{term:redemption}}redemption{{/term}} through enshrined {{term:custody}}custodians{{/term}} gives it one of the strongest exit routes in crypto-native stablecoins, and liquidity is genuinely diversified across two dozen-plus chains rather than concentrated on a single venue. The sfrxUSD staking wrapper passes through reserve yield — modest but honest, never the headline. The catch is dependency: a C on that axis reflects how much frxUSD leans on a small set of tokenized money-market issuers, and the centralized-dependent governance means Frax DAO retains the keys to custodian approvals — the one thread connecting this otherwise institutional-grade product to its wilder ancestry.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usyc-hashnote": {
     "title": "Circle USYC Goes Multichain",
@@ -831,13 +831,13 @@
   },
   "pusd-plume": {
     "title": "USDC With a Detour",
-    "text": "A USDC wrapper that routes through a Nucleus BoringVault with OFAC checks — extra trust layers on top of an asset that was already perfectly functional.\n\nPlume's pUSD takes USDC, routes it through a Nucleus BoringVault with OFAC compliance checks, and issues a wrapped token on Ethereum and Plume Chain — adding smart contract risk, {{term:custody}}custody{{/term}} abstraction, and a new trust layer to an asset that was already perfectly functional. The C- safety grade with zero-fee same-day {{term:redemption}}redemption{{/term}} suggests the wrapper functions, but the stress reading has crept off the calm end into watch territory, and the deviation history — a dozen-plus blips capped by a catastrophic 4,049-basis-point negative excursion — reveals at least one moment when it emphatically did not. Supply has drifted down 9% month-over-month to $6.1M with $258K in effective DEX liquidity, raising the question of whether the RWAfi ecosystem narrative generates enough demand to justify the wrapper's existence. pUSD remains a solution in search of a problem that Plume hasn't yet proven it has.",
-    "updatedAt": "2026-06-03",
+    "text": "A USDC wrapper that routes through a Nucleus BoringVault with OFAC checks — extra trust layers on top of an asset that was already perfectly functional.\n\nPlume's pUSD takes USDC, routes it through a Nucleus BoringVault with OFAC compliance checks, and issues a wrapped token on Ethereum and Plume Chain — adding smart contract risk, {{term:custody}}custody{{/term}} abstraction, and a new trust layer to an asset that was already perfectly functional. The safety grade has sunk to a D on a failing liquidity mark, and while zero-fee same-day {{term:redemption}}redemption{{/term}} suggests the wrapper functions, the deviation history — a dozen-plus blips capped by a catastrophic 4,049-basis-point negative excursion — records at least one moment when it emphatically did not. Supply idles in the single-digit millions with on-chain depth confined to a single thin pool, raising the question of whether the RWAfi ecosystem narrative generates enough demand to justify the wrapper's existence. pUSD remains a solution in search of a problem that Plume hasn't yet proven it has.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "bold-liquity": {
     "title": "Immutable Code, Perfect Scores",
@@ -881,13 +881,13 @@
   },
   "usdn-noble": {
     "title": "Cosmos Dollar, Shrinking",
-    "text": "Noble's USDN is an IBC-native rebasing dollar backed 100% by {{term:treasury}}T-bills{{/term}} held in bankruptcy-remote SPVs via M0 — solid fundamentals, vanishing demand. The asset has shed much of its supply over a single month, a trajectory that undercuts the bullish thesis even though the peg itself barely flinches and stress readings sit at the calm end of the scale. The C+ safety grade is the honest verdict here: the collateral story is clean, with real-time reserve verification through M0's dashboard and on-chain {{term:attestation}}attestations{{/term}}, but the asset has no rated liquidity to speak of, and only a couple of shallow depeg blips on record do little to offset that. The rebasing mechanism that passes T-bill yield directly to holders is an elegant design that would normally support adoption, yet the supply contraction suggests Cosmos ecosystem demand alone cannot sustain it. Noble's proven IBC infrastructure has moved billions in USDC transfers, but USDN still needs a reason for those dollars to stay as USDN rather than passing through.",
-    "updatedAt": "2026-06-03",
+    "text": "Noble's USDN is an IBC-native rebasing dollar backed 100% by {{term:treasury}}T-bills{{/term}} held in bankruptcy-remote SPVs via M0 — solid fundamentals, vanishing demand. The asset has kept shedding supply month after month, a trajectory that undercuts the bullish thesis even though the peg itself barely flinches and stress readings sit at the calm end of the scale. The D safety grade is the blunt verdict here: the collateral story is clean, with real-time reserve verification through M0's dashboard and on-chain {{term:attestation}}attestations{{/term}}, but the asset has no rated liquidity to speak of, and a clean peg with a couple of shallow blips cannot carry a scorecard that liquidity and dependency drag down. The rebasing mechanism that passes T-bill yield directly to holders is an elegant design that would normally support adoption, yet the supply contraction suggests Cosmos ecosystem demand alone cannot sustain it. Noble's proven IBC infrastructure has moved billions in USDC transfers, but USDN still needs a reason for those dollars to stay as USDN rather than passing through.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdu-unitas": {
     "title": "The JLP Hedge Fund",
@@ -941,13 +941,13 @@
   },
   "vgbp-vnx": {
     "title": "The Loneliest Pound",
-    "text": "VNX's VGBP is Liechtenstein-licensed on-chain British sterling, backed 1:1 by GBP deposits in Swiss and Liechtenstein bank accounts and redeemable through verified issuer accounts. The niche is almost empty: VGBP gives Base, Celo, and Solana users a pound unit, but its market depth is so small that the product still reads more like settlement infrastructure than a liquid trading asset. AREVA's ad-hoc audit and FMA TVTG licensing give the reserve story more formal {{term:attestation}}attestation{{/term}} and {{term:custody}}custody{{/term}} structure than the on-chain footprint suggests, while same-day issuer {{term:redemption}}redemption{{/term}} is the real exit path. Pharos now reads the live DEWS band as calm, but that calm is fragile because thin pools can move quickly without implying reserve failure. The UK regulatory wildcard remains existential: if banks or UK-regulated issuers bring serious sterling liquidity on-chain, VGBP's first-mover advantage could vanish.",
-    "updatedAt": "2026-06-12",
+    "text": "VNX's VGBP is Liechtenstein-licensed on-chain British sterling, backed 1:1 by GBP deposits in Swiss and Liechtenstein bank accounts and redeemable through verified issuer accounts. The niche is almost empty: VGBP gives Base, Celo, and Solana users a pound unit, but its market depth is so small that the product still reads more like settlement infrastructure than a liquid trading asset. AREVA's ad-hoc audit and FMA TVTG licensing give the reserve story more formal {{term:attestation}}attestation{{/term}} and {{term:custody}}custody{{/term}} structure than the on-chain footprint suggests, while same-day issuer {{term:redemption}}redemption{{/term}} is the real exit path. The stress gauge is the one dial that actually moves here — pools this thin can push the reading from calm to watchful on modest flows without implying anything about the reserves, and price coverage is sparse enough that Pharos cannot always hold a continuous peg read at all. The UK regulatory wildcard remains existential: if banks or UK-regulated issuers bring serious sterling liquidity on-chain, VGBP's first-mover advantage could vanish.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "cusd-cap": {
     "title": "The Stablecoin Basket Case",
@@ -991,13 +991,13 @@
   },
   "hyusd-hylo": {
     "title": "Staked SOL, Stable Dollar",
-    "text": "Solana LST-backed dollar with xSOL absorbing SOL volatility; oracle-free, admin-free, only a handful of brief depeg events on record. Hylo's hyUSD converts Solana staking yield into dollar stability through a dual-token design where xSOL absorbs SOL's volatility so hyUSD doesn't have to — backed entirely by a basket of liquid staking tokens (mSOL, JitoSOL, bSOL, JupSOL) at 150%+ overcollateralization with no upstream stablecoin dependencies. The B safety grade with only a few shallow depeg events (worst: -171 bps) is a quietly remarkable result for a stablecoin whose entire backing is volatile crypto. DAO governance and the absence of admin keys earn genuine decentralization marks, a rarity among crypto-backed competitors. DEWS keeps Hylo at the cautious end of the stress scale, and a slight monthly supply contraction from $17M to $15.5M suggests it is in a consolidation phase rather than a growth one, while $3.1M in DEX TVL across six pools provides adequate but not deep exit liquidity for the current supply. Oracle-free and admin-free is an elegant thesis — the question is whether the Solana LST ecosystem remains healthy enough to keep the collateral basket liquid. Mechanically this is a dual-token {{term:cdp}}CDP{{/term}} with explicit {{term:overcollateralization}}overcollateralization{{/term}} and xSOL absorbing {{term:liquidation}}liquidation{{/term}} burden ahead of hyUSD holders.",
-    "updatedAt": "2026-06-03",
+    "text": "Solana LST-backed dollar with xSOL absorbing SOL volatility; oracle-free, admin-free, only a handful of brief depeg events on record. Hylo's hyUSD converts Solana staking yield into dollar stability through a dual-token design where xSOL absorbs SOL's volatility so hyUSD doesn't have to — backed entirely by a basket of liquid staking tokens (mSOL, JitoSOL, bSOL, JupSOL) at 150%+ overcollateralization with no upstream stablecoin dependencies. The B+ safety grade with only a few shallow depeg events (worst: -171 bps) is a quietly remarkable result for a stablecoin whose entire backing is volatile crypto. DAO governance and the absence of admin keys earn genuine decentralization marks, a rarity among crypto-backed competitors. Stress readings have settled back toward the calm end of the scale, supply has resumed growing after a consolidation dip, and a handful of Solana pools provide adequate but not deep exit liquidity for the current float. Oracle-free and admin-free is an elegant thesis — the question is whether the Solana LST ecosystem remains healthy enough to keep the collateral basket liquid. Mechanically this is a dual-token {{term:cdp}}CDP{{/term}} with explicit {{term:overcollateralization}}overcollateralization{{/term}} and xSOL absorbing {{term:liquidation}}liquidation{{/term}} burden ahead of hyUSD holders.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "meusd-mezo": {
     "title": "Bitcoin Maxis Get CDPs",
@@ -1011,13 +1011,13 @@
   },
   "usdu-usdu-finance": {
     "title": "Undercollateralized by Design",
-    "text": "USDU Finance is refreshingly honest about what it is: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who can price the risk. The C- safety grade and a failing liquidity score mean exit liquidity is essentially nonexistent for any meaningful position, with DEX depth thin and concentrated in a single venue. Supply has sat flat near $5 million for weeks, suggesting the professional audience it targets has sized its exposure and stopped. The modular adapter architecture is genuinely interesting engineering — dynamic Curve liquidity management, fixed-rate TermMax lending, Morpho vault integration — but building sophisticated infrastructure around a product that deliberately skips the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't.",
-    "updatedAt": "2026-06-03",
+    "text": "USDU Finance was refreshingly honest about what it was: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who could price the risk. Apparently they priced it — supply has since been all but wound down in a sharp, near-total contraction, and the issuer's transparency endpoint now reports backing roughly equal to the little that remains outstanding. The C+ safety grade is less a vote of confidence than arithmetic: a nearly empty book is easy to cover one-for-one, and thin, single-venue exit liquidity matters less when there is almost nothing left to exit. The modular adapter architecture — dynamic Curve liquidity management, fixed-rate TermMax lending, Morpho vault integration — was genuinely interesting engineering, but building sophisticated infrastructure around a product that deliberately skipped the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't. USDU's distinction is ending in the rare exit lane: wound down in orderly fashion before the market could write the depeg headline.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "uty-xsy": {
     "title": "Frozen on the Avalanche",
@@ -1291,13 +1291,13 @@
   },
   "nusd-neutrl": {
     "title": "The Contraction Test",
-    "text": "Delta-neutral synthetic dollar backed mainly by stablecoins plus hedged OTC positions; weathering a 24% one-month supply contraction without breaking peg, with whitelisted queue-based redemption and ~8.7% sNUSD yield. Neutrl's NUSD is being stress-tested by something more revealing than a depeg event: a 24% supply contraction in a single month, from $225M to $170M, as holders queue for the exit. The {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar backed by 93.5% stablecoins with OTC and hedged {{term:perpetual}}perpetual{{/term}} positions in a {{term:basis-trade}}basis-trade{{/term}} structure has held its peg cleanly through the drawdown — only a handful of shallow sub-200-bps blips on record — which says more about the mechanism than any bull-market AUM figure could. But the composite has slipped to a C+ safety grade, and the stress gauge has drifted off the calm end into a more watchful posture, the dashboard's quiet acknowledgment that an outflow of this size is not free even when the price never moves. The peg engine is still doing its job with the quiet competence of a product built for exactly this scenario; whether the contraction is profit-taking or eroding confidence is the question the next quarter answers, and the grade slip suggests the market is leaning toward the latter.",
-    "updatedAt": "2026-06-03",
+    "text": "Delta-neutral synthetic dollar backed mainly by stablecoins plus hedged OTC positions; weathering a deep, months-long supply contraction without breaking peg, with whitelisted queue-based redemption and a yield-bearing sNUSD wrapper. Neutrl's NUSD has been stress-tested by something more revealing than a depeg event: a contraction that erased a quarter of supply in a single month and has kept grinding lower since, as holders queue for the exit. The {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar backed by 93.5% stablecoins with OTC and hedged {{term:perpetual}}perpetual{{/term}} positions in a {{term:basis-trade}}basis-trade{{/term}} structure has held its peg cleanly through the drawdown — only a handful of shallow sub-200-bps blips on record — which says more about the mechanism than any bull-market AUM figure could. The composite grade, which slipped while the outflow was at its worst, has recovered to a B- as the mechanism kept clearing redemptions without drama — the dashboard's quiet acknowledgment that surviving an exit queue is itself a credential. The peg engine is still doing its job with the quiet competence of a product built for exactly this scenario; whether the shrunken base settles into a core of committed holders or keeps draining is the question the next quarter answers — and the scoring, at least, has stopped leaning toward the pessimistic reading.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdgo-osl": {
     "title": "The Quiet Surge",
