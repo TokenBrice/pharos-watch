@@ -80,25 +80,32 @@ export { THREAT_BAND_HEX } from "@shared/lib/classification";
 // Extracted inline chart colors -- previously defined inside components.
 // ---------------------------------------------------------------------------
 
-/** Reserve risk-tier treemap block fills (Figma coin template): deep tinted
- *  solids sampled from the frame — very-low risk is BLUE per the design. */
+const RESERVE_MEDIUM_RISK_YELLOW = "#d4c63a";
+
+/** Reserve risk-tier treemap block fills (Figma coin template).
+ *  Medium intentionally matches the legend yellow instead of the older brown. */
 export const RISK_COLORS: Record<string, string> = {
   "very-low": "#01315f",
   low: "#133929",
-  medium: "#372902",
+  medium: RESERVE_MEDIUM_RISK_YELLOW,
   high: "#441f02",
   "very-high": "#4d0f1c",
 };
 
-/** Bright accents paired with RISK_COLORS for the treemap legend, in-block
- *  percentage labels, and tooltips (Figma coin template). */
+/** Bright accents for the treemap legend, in-block percentage labels, and tooltips. */
 export const RISK_ACCENT_COLORS: Record<string, string> = {
   "very-low": "#3a97f4",
   low: "#32a870",
-  medium: "#f4f354",
+  medium: RESERVE_MEDIUM_RISK_YELLOW,
   high: "#f47a1f",
   "very-high": "#e2595b",
 };
+
+/** Readable in-block label ink for the bright reserve treemap fills. */
+export const RESERVE_TREEMAP_LABEL_COLOR = "#07111f";
+
+/** In-block label color for the dark reserve treemap fills. */
+export const RESERVE_TREEMAP_INVERSE_LABEL_COLOR = "#fafafa";
 
 /** Per-DEWS-signal chart colors (from dews-detail.tsx) */
 export const SIGNAL_CHART_COLORS: Record<string, string> = {

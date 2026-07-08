@@ -7,7 +7,12 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
+import {
+  RESERVE_TREEMAP_INVERSE_LABEL_COLOR,
+  RESERVE_TREEMAP_LABEL_COLOR,
+  RISK_ACCENT_COLORS,
+  RISK_COLORS,
+} from "@/lib/chart-colors";
 import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
@@ -71,6 +76,8 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
   if (depth === 0) return <g />;
 
   const fill = RISK_COLORS[risk];
+  const labelFill = risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RESERVE_TREEMAP_INVERSE_LABEL_COLOR;
+  const pctFill = risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RISK_ACCENT_COLORS[risk];
   const showLabel = width > 50 && height > 30;
   const showPct = showLabel && width > 40 && height > 40;
 
@@ -87,7 +94,7 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
         <text
           textAnchor="middle"
           dominantBaseline="central"
-          fill="#fafafa"
+          fill={labelFill}
           fontSize={Math.min(11, width / 9)}
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
@@ -106,7 +113,7 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
           y={topY + lines.length * rowHeight}
           textAnchor="middle"
           dominantBaseline="central"
-          fill={RISK_ACCENT_COLORS[risk]}
+          fill={pctFill}
           fontSize={10}
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
