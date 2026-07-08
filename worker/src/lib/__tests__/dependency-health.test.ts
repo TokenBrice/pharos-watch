@@ -72,6 +72,49 @@ function failedDexPublication(): PublicationHealth {
 }
 
 describe("buildDependencyHealth", () => {
+  it("surfaces failed publication metadata as a degraded dependency signal", () => {
+    const dependencyHealth = buildDependencyHealth({
+      now: NOW,
+      publicationHealth: {
+        checkedAt: NOW - 30,
+        surfaces: {},
+        failedSurfaces: [
+          {
+            surface: "yield-rankings",
+            code: "publication_surface_query_failed",
+            message: "Publication surface query failed.",
+          },
+        ],
+      },
+      caches: {
+        stablecoins: cache(),
+        "dex-liquidity": cache({
+          producerJob: "sync-dex-liquidity",
+          maxAge: 43_200,
+        }),
+        "yield-data": cache({
+          producerJob: "sync-yield-data",
+          producerIntervalSec: 3_600,
+        }),
+      },
+      crons: {
+        "sync-stablecoins": cron(),
+        "sync-dex-liquidity": cron(),
+        "sync-yield-data": cron({
+          expectedIntervalSec: 3_600,
+        }),
+      },
+    });
+
+    expect(dependencyHealth.dependencies["yield-rankings"]).toMatchObject({
+      status: "degraded",
+      updatedAt: NOW - 30,
+      ageSeconds: 30,
+      reason: "publication_surface_query_failed: Publication surface query failed.",
+    });
+    expect(dependencyHealth.dependencies["yield-rankings"].reason).not.toContain("unavailable");
+  });
+
   it("groups downstream symptoms under a stale DEX liquidity root", () => {
     const dependencyHealth = buildDependencyHealth({
       now: NOW,

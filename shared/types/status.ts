@@ -930,9 +930,16 @@ export interface PublicationSurfaceHealth {
   dependencyWatermarks: Record<string, unknown> | null;
 }
 
+export interface PublicationSurfaceFailure {
+  surface: PublicationSurfaceId;
+  code: string;
+  message: string;
+}
+
 export interface PublicationHealth {
   checkedAt: number;
   surfaces: Partial<Record<PublicationSurfaceId, PublicationSurfaceHealth>>;
+  failedSurfaces?: PublicationSurfaceFailure[];
 }
 
 export type DependencyHealthStatus = "healthy" | "degraded" | "stale" | "unknown";

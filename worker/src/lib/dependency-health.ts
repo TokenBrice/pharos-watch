@@ -7,7 +7,9 @@ import type {
   DependencyHealthItem,
   DependencyHealthStatus,
   PublicationHealth,
+  PublicationSurfaceFailure,
   PublicationSurfaceHealth,
+  PublicationSurfaceId,
 } from "@shared/types/status";
 
 type DependencySignal = {
@@ -168,6 +170,23 @@ function publicationTimestamp(surface: PublicationSurfaceHealth): number | null 
     ?? null;
 }
 
+function failedPublicationSurfaceSignal(
+  failedSurfaces: PublicationSurfaceFailure[] | undefined,
+  surfaceId: PublicationSurfaceId,
+  checkedAt: number,
+  now: number,
+): DependencySignal | null {
+  const failure = failedSurfaces?.find((entry) => entry.surface === surfaceId);
+  if (!failure) return null;
+  return {
+    status: "degraded",
+    updatedAt: checkedAt,
+    ageSeconds: Math.max(0, now - checkedAt),
+    maxAgeSec: null,
+    reason: `${failure.code}: ${failure.message}`,
+  };
+}
+
 function publicationSignal(surface: PublicationSurfaceHealth | undefined, now: number): DependencySignal {
   if (!surface) {
     return {
@@ -231,6 +250,15 @@ function signalForDefinition(
     signal = worseSignal(signal, cacheSignal(input.caches[definition.cacheKey], input.now));
   }
   if (definition.publicationSurface) {
+    signal = worseSignal(
+      signal,
+      failedPublicationSurfaceSignal(
+        input.publicationHealth?.failedSurfaces,
+        definition.publicationSurface,
+        input.publicationHealth?.checkedAt ?? input.now,
+        input.now,
+      ),
+    );
     signal = worseSignal(
       signal,
       publicationSignal(input.publicationHealth?.surfaces[definition.publicationSurface], input.now),

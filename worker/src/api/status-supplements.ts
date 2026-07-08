@@ -53,6 +53,7 @@ import { loadCanaryStatus } from "../lib/canary-checks";
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
+  publication_health_partial_failure: "Publication health partially unavailable.",
   publication_health_query_failed: "Publication health unavailable.",
   provider_circuit_health_query_failed: "Provider circuit health unavailable.",
   canary_status_query_failed: "Data-invariant canaries unavailable.",
@@ -348,6 +349,11 @@ export async function loadStatusSupplements(
   let publicationHealth: PublicationHealth | null = null;
   try {
     publicationHealth = await loadPublicationHealth(db, now);
+    if ((publicationHealth.failedSurfaces?.length ?? 0) > 0) {
+      sectionErrors.publicationHealth = sectionError(
+        "publication_health_partial_failure",
+      );
+    }
   } catch (err) {
     logStatusSupplementWarning(
       "publication_health_query_failed",

@@ -147,6 +147,37 @@ describe("StatusResponseSchema reserve composition contract", () => {
     expect(parsed.canaries).toBeNull();
   });
 
+  it("accepts additive publication-health failed surface metadata", () => {
+    const parsed = StatusResponseSchema.parse({
+      ...statusResponse(),
+      publicationHealth: {
+        checkedAt: 1_780_000_100,
+        surfaces: {},
+        failedSurfaces: [
+          {
+            surface: "yield-rankings",
+            code: "publication_surface_query_failed",
+            message: "Publication surface query failed.",
+          },
+        ],
+      },
+      sectionErrors: {
+        publicationHealth: {
+          code: "publication_health_partial_failure",
+          message: "Publication health partially unavailable.",
+        },
+      },
+    });
+
+    expect(parsed.publicationHealth?.failedSurfaces).toEqual([
+      {
+        surface: "yield-rankings",
+        code: "publication_surface_query_failed",
+        message: "Publication surface query failed.",
+      },
+    ]);
+  });
+
   it("rejects reserve composition payloads missing cursor observability fields", () => {
     const payload = statusResponse();
     const { cursorTailState: _cursorTailState, ...reserveWithoutCursorState } = payload.reserveComposition;

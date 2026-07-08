@@ -302,6 +302,51 @@ describe("loadPublicationHealth", () => {
     });
   });
 
+  it("keeps successful surfaces when one surface query throws", async () => {
+    const updatedAt = NOW - 120;
+    const db = mockD1([
+      {
+        match: "FROM yield_publication_generations",
+        rows: [],
+        throwError: new Error("D1_ERROR: query failed: yield publication ledger unavailable"),
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: stablecoinPayload(2),
+            updated_at: updatedAt,
+          },
+          {
+            key: "stablecoins:response-ready:v2",
+            value: "{}",
+            updated_at: updatedAt,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces["dex-liquidity"]).toBeDefined();
+    expect(health.surfaces.stablecoins).toMatchObject({
+      sourceOfTruth: "cache[stablecoins]",
+      lastPublishedGeneration: {
+        generationId: `stablecoins-cache:${updatedAt}`,
+        state: "published",
+      },
+    });
+    expect(health.surfaces["yield-rankings"]).toBeUndefined();
+    expect(health.failedSurfaces).toEqual([
+      {
+        surface: "yield-rankings",
+        code: "publication_surface_query_failed",
+        message: "Publication surface query failed.",
+      },
+    ]);
+  });
+
   it("falls back to the canonical stablecoins cache when the generic surface table is absent", async () => {
     const updatedAt = NOW - 180;
     const db = mockD1([
@@ -344,6 +389,7 @@ describe("loadPublicationHealth", () => {
         publishedRows: 2,
       },
     });
+    expect(health.failedSurfaces).toBeUndefined();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
   });
 
@@ -447,5 +493,6 @@ describe("loadPublicationHealth", () => {
       lastFailureReason: "missing-cache",
       candidateAgeSec: null,
     });
+    expect(health.failedSurfaces).toBeUndefined();
   });
 });

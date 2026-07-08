@@ -1,4 +1,5 @@
 import type {
+  PublicationSurfaceFailure,
   PublicationGenerationHealth,
   PublicationGenerationState,
   PublicationHealth,
@@ -31,6 +32,11 @@ interface PublicationSurfaceDefinition {
   surface: PublicationSurfaceId;
   label: string;
   sourceOfTruth: string;
+}
+
+interface PublicationSurfaceLoader {
+  definition: PublicationSurfaceDefinition;
+  load: (db: D1Database, now: number) => Promise<PublicationSurfaceHealth | null>;
 }
 
 const DEX_LIQUIDITY_SURFACE: PublicationSurfaceDefinition = {
@@ -649,24 +655,76 @@ async function loadReportCardCachePublicationSurface(
   return buildSurfaceHealth(REPORT_CARD_CACHE_FALLBACK_SURFACE, now, failedRow, null, failedRow);
 }
 
+const PUBLICATION_SURFACE_LOADERS: PublicationSurfaceLoader[] = [
+  {
+    definition: DEX_LIQUIDITY_SURFACE,
+    load: loadDexLiquidityPublicationSurface,
+  },
+  {
+    definition: YIELD_RANKINGS_SURFACE,
+    load: loadYieldRankingsPublicationSurface,
+  },
+  {
+    definition: STABLECOINS_SURFACE,
+    load: loadStablecoinsPublicationSurface,
+  },
+  {
+    definition: DEWS_SURFACE,
+    load: loadDewsPublicationSurface,
+  },
+  {
+    definition: PSI_SURFACE,
+    load: loadPsiPublicationSurface,
+  },
+  {
+    definition: REPORT_CARD_CACHE_SURFACE,
+    load: loadReportCardCachePublicationSurface,
+  },
+];
+
+function publicationSurfaceFailure(
+  surface: PublicationSurfaceId,
+  error: unknown,
+): PublicationSurfaceFailure {
+  if (isMissingTableError(error)) {
+    return {
+      surface,
+      code: "publication_surface_table_missing",
+      message: "Publication surface storage is not available in this environment.",
+    };
+  }
+  return {
+    surface,
+    code: "publication_surface_query_failed",
+    message: "Publication surface query failed.",
+  };
+}
+
 export async function loadPublicationHealth(db: D1Database, now: number): Promise<PublicationHealth> {
-  const [dexLiquidity, yieldRankings, stablecoins, dews, psi, reportCardCache] = await Promise.all([
-    loadDexLiquidityPublicationSurface(db, now),
-    loadYieldRankingsPublicationSurface(db, now),
-    loadStablecoinsPublicationSurface(db, now),
-    loadDewsPublicationSurface(db, now),
-    loadPsiPublicationSurface(db, now),
-    loadReportCardCachePublicationSurface(db, now),
-  ]);
+  const settled = await Promise.allSettled(
+    PUBLICATION_SURFACE_LOADERS.map(async (loader) => ({
+      definition: loader.definition,
+      surfaceHealth: await loader.load(db, now),
+    })),
+  );
+  const surfaces: Partial<Record<PublicationSurfaceId, PublicationSurfaceHealth>> = {};
+  const failedSurfaces: PublicationSurfaceFailure[] = [];
+
+  for (let index = 0; index < settled.length; index += 1) {
+    const result = settled[index];
+    const loader = PUBLICATION_SURFACE_LOADERS[index];
+    if (!result || !loader) continue;
+    if (result.status === "fulfilled") {
+      const surfaceHealth = result.value.surfaceHealth;
+      if (surfaceHealth) surfaces[result.value.definition.surface] = surfaceHealth;
+      continue;
+    }
+    failedSurfaces.push(publicationSurfaceFailure(loader.definition.surface, result.reason));
+  }
+
   return {
     checkedAt: now,
-    surfaces: {
-      "dex-liquidity": dexLiquidity,
-      "yield-rankings": yieldRankings,
-      stablecoins,
-      dews,
-      psi,
-      "report-card-cache": reportCardCache,
-    },
+    surfaces,
+    ...(failedSurfaces.length > 0 ? { failedSurfaces } : {}),
   };
 }
