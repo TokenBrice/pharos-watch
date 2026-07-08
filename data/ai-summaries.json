@@ -11,23 +11,23 @@
   },
   "usdt-tether": {
     "title": "Treasury-Heavy Dollar Base",
-    "text": "USDT's B-grade profile is not a peg indictment; Pharos still sees an A+ peg record, while liquidity and especially decentralization do the dragging. Tether's Q1 2026 attestation shows $191.77B of assets against $183.54B of liabilities, led by about $141B of direct and indirect U.S. Treasury-bill exposure, with gold, Bitcoin, and an excess reserve buffer making the balance sheet less boring than its dollar promise. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and another reminder that omnichain convenience is not the same thing as issuer decentralization. The redemption floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly BDO Italia attestation cadence rather than continuous bank-style disclosure. On-chain supply authority is still concentrated around Tether-controlled mint infrastructure, and the 2019 accidental 5B USDT mint remains the canonical lesson in why the biggest stablecoin can be operationally serious and structurally centralized at the same time.",
-    "updatedAt": "2026-06-12",
+    "text": "USDT's B-grade profile is not a peg indictment; Pharos still sees an A+ peg record, while liquidity and especially decentralization do the dragging. Tether's Q1 2026 attestation shows $191.77B of assets against $183.54B of liabilities, led by about $141B of direct and indirect U.S. Treasury-bill exposure, with gold, Bitcoin, and an excess reserve buffer making the balance sheet less boring than its dollar promise. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and another reminder that omnichain convenience is not the same thing as issuer decentralization. The redemption floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly BDO Italia attestation cadence rather than continuous bank-style disclosure. July put both faces of the franchise on display in one week: when OFAC attached 131 TRON addresses to its ISIS-K designation, Tether froze every one of them within hours — sanction-machine reflexes no bank can match — while in Europe, MiCA's transitional period closed with USDT off licensed venues entirely and its regulated-market liquidity there down by more than two-thirds. On-chain supply authority is still concentrated around Tether-controlled mint infrastructure, and the 2019 accidental 5B USDT mint remains the canonical lesson in why the biggest stablecoin can be operationally serious and structurally centralized at the same time.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdc-circle": {
     "title": "The Institutional Default",
-    "text": "USDC is the compliance-first reserve currency of crypto: 100% very-low-risk {{term:treasury}}Treasuries{{/term}}, overnight repos, and cash under BlackRock management and BNY Mellon {{term:custody}}custody{{/term}}, paired with the most distributed DEX liquidity profile on the dashboard. USDC crossed $79.6 billion in circulation this week — up $2.1 billion in seven days — cementing its position as the stablecoin that institutions choose when compliance is non-negotiable. It deploys natively across 127 chains with $3.7 billion in DEX TVL spread across 2,700 pools at a near-perfect HHI of 0.009, the most fragmentation-resistant liquidity in the stablecoin market. The B+ safety grade reflects a product that rarely leaves the calm end of the stress scale, where the SVB weekend now reads as a historical footnote rather than a structural concern — the deep wound in its history, not a recurring habit, with only a handful of recent peg breaks on record. The one genuine weakness is the {{term:redemption}}redemption{{/term}} path: same-day settlement through an issuer API is slower than on-chain alternatives, and Circle remains the single gatekeeper for every dollar redeemed. For yield-seekers, Morpho's Steakhouse Reservoir vault offers 7% APY on what is otherwise the most boring asset in crypto — which is exactly the profile a reserve currency is built to have.",
-    "updatedAt": "2026-06-03",
+    "text": "USDC is the compliance-first reserve currency of crypto: 100% very-low-risk {{term:treasury}}Treasuries{{/term}}, overnight repos, and cash under BlackRock management and BNY Mellon {{term:custody}}custody{{/term}}, paired with the most distributed DEX liquidity profile on the dashboard. USDC's float sits in the mid-$70 billions — off its early-summer high-water mark as the whole sector deflates — but the institutional position has never looked stronger: MiCA's transitional period closed on July 1 with USDC and EURC as the only fully authorized names among the giants. It deploys natively across 127 chains with $3.7 billion in DEX TVL spread across 2,700 pools at a near-perfect HHI of 0.009, the most fragmentation-resistant liquidity in the stablecoin market. The B+ safety grade reflects a product that rarely leaves the calm end of the stress scale, where the SVB weekend now reads as a historical footnote rather than a structural concern — the deep wound in its history, not a recurring habit, with only a handful of recent peg breaks on record. The one genuine weakness is the {{term:redemption}}redemption{{/term}} path: same-day settlement through an issuer API is slower than on-chain alternatives, and Circle remains the single gatekeeper for every dollar redeemed. The new threat is competitive rather than regulatory: late June's unveiling of OUSD — a consortium stablecoin backed by more than 140 firms including Visa, Stripe, Mastercard, and BlackRock — was aimed squarely at the distribution moat, and the double-digit drop in Circle's stock said the market took it seriously. For yield-seekers, Morpho's Steakhouse Reservoir vault offers 7% APY on what is otherwise the most boring asset in crypto — which is exactly the profile a reserve currency is built to have.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "dai-makerdao": {
     "title": "The OG Decentralized Dollar",
@@ -71,13 +71,13 @@
   },
   "mim-abracadabra": {
     "title": "The Cockroach of DeFi",
-    "text": "Battle-scarred {{term:cdp}}CDP{{/term}} stablecoin minted against Abracadabra cauldrons; reflexive peg, no modeled {{term:redemption}}redemption{{/term}} backstop, and a remaining user base too stubborn or leveraged to leave. Magic Internet Money has survived multiple cauldron exploits, a treasury-manager scandal, a governance token collapse, and a long history of violent peg excursions, which makes its continued existence less a triumph than a lab result. The collateral base still reads like a museum of DeFi exotica: yvDAI dominates, WBTC is material, and smaller yvWETH/WETH cauldrons keep the wrapper risk alive. The mechanism is reflexive rather than structural — borrowers buy discounted MIM to repay debt, which only works when borrowers exist and care about their positions. That keeps MIM tethered most days, but the weaker live grade now says what the narrative has been saying for years: survival is not the same thing as health.",
-    "updatedAt": "2026-06-12",
+    "text": "Battle-scarred {{term:cdp}}CDP{{/term}} stablecoin minted against Abracadabra cauldrons; reflexive peg, no modeled {{term:redemption}}redemption{{/term}} backstop, and a remaining user base too stubborn or leveraged to leave. Magic Internet Money has survived multiple cauldron exploits, a treasury-manager scandal, a governance token collapse, and a long history of violent peg excursions, which makes its continued existence less a triumph than a lab result. The collateral base still reads like a museum of DeFi exotica: yvDAI dominates, WBTC is material, and smaller yvWETH/WETH cauldrons keep the wrapper risk alive. The mechanism is reflexive rather than structural — borrowers buy discounted MIM to repay debt, which only works when borrowers exist and care about their positions. June finally broke the pattern: MIM crashed through half a dollar in its worst depeg on record, Abracadabra's emergency response — rate hikes, incentive pauses, a token Curve-pool injection — failed to hold the line, and Pharos's multi-source feed now prices the token at a deep double-digit discount with the report card at F. The cockroach earned its title by surviving what killed everything else; this time the exterminator appears to be arithmetic.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdp-paxos": {
     "title": "The Regulator's Pet",
@@ -140,14 +140,14 @@
     "factsAsOf": "2026-06-03"
   },
   "susd-synthetix": {
-    "title": "Still Underwater",
-    "text": "Synthetix's sUSD is no longer the simple SNX debt-pool dollar older DeFi muscle memory remembers. The current reserve story is split across legacy SNX exposure, V3 USDC/stataUSDC collateral, ETH/LST collateral, and protocol treasury or SLP-vault activity, which is a long way of saying the peg now depends on governance executing a cleanup plan. Pharos flags the prolonged discount because this is not a theoretical stress test; the token has been living below its target while the V3 transition and basis-trade restoration plan try to rebuild demand. The mint path is governed through Synthetix admin control rather than immutable borrower autonomy, so holders are underwriting both collateral volatility and political patience. It is a dollar stablecoin with a recovery roadmap, which is better than denial and worse than a peg.",
-    "updatedAt": "2026-06-12",
+    "title": "Retired Below Par",
+    "text": "Synthetix's sUSD is no longer the simple SNX debt-pool dollar older DeFi muscle memory remembers. The current reserve story is split across legacy SNX exposure, V3 USDC/stataUSDC collateral, ETH/LST collateral, and protocol treasury or SLP-vault activity, which is a long way of saying the peg now depends on governance executing a cleanup plan. Pharos flags the prolonged discount because this is not a theoretical stress test; the token has been living below its target while the V3 transition and basis-trade restoration plan try to rebuild demand. The mint path is governed through Synthetix admin control rather than immutable borrower autonomy, so holders are underwriting both collateral volatility and political patience. In June the roadmap ran out: governance passed SIP-423, retiring sUSD outright — the contract frozen, holders compensated at four SNX per sUSD on a year's lock and a year's vest, and Pharos no longer gets a continuous price read on what was DeFi's original synthetic dollar. Eight years of peg engineering ends not with a bang but with a conversion schedule.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "ousd-origin-protocol": {
     "title": "The Passive Yield Play",
@@ -161,23 +161,23 @@
   },
   "cusd-celo": {
     "title": "Stablecoins All the Way Down",
-    "text": "USDm is Mento's oracle-priced USD stablecoin on Celo, mostly backed by other stablecoins with a CELO wildcard. Mento Dollar (USDm, formerly cUSD) is an exercise in recursive stablecoin nesting: the reserve leans on sUSDS (~44%), with USDC, USDT, and EURC slices on top, meaning the majority of USDm's backing is itself backed by other stablecoins, each with its own dependency chain and failure modes. A long tail of mostly minor depeg events and a worst drawdown past 11% are hard numbers to look past, though the C report card and a DEWS reading that rarely leaves the calm end of the stress scale suggest the Mento AMM's circuit breakers have tightened since the worst of it. The thesis remains phone-number wallets in places like Nairobi, not DeFi composability on Ethereum. The ~14% CELO allocation is the wildcard in an otherwise stablecoin-heavy reserve: the one asset that can crater in a downturn precisely when the {{term:overcollateralization}}overcollateralization{{/term}} ratio matters most, and the reserve only runs around 1.25x. {{term:redemption}}Redemption{{/term}} runs through Mento reserve swaps rather than fiat off-ramps.",
-    "updatedAt": "2026-06-03",
+    "text": "USDm is Mento's oracle-priced USD stablecoin on Celo, mostly backed by other stablecoins with a CELO wildcard. Mento Dollar (USDm, formerly cUSD) is an exercise in recursive stablecoin nesting: the reserve leans on sUSDS (~44%), with USDC, USDT, and EURC slices on top, meaning the majority of USDm's backing is itself backed by other stablecoins, each with its own dependency chain and failure modes. A long tail of mostly minor depeg events and a worst drawdown past 11% are hard numbers to look past, though the C report card suggests the Mento AMM's circuit breakers have tightened since the worst of it, even if the stress gauge still flickers off the calm end from time to time. The thesis remains phone-number wallets in places like Nairobi, not DeFi composability on Ethereum. The ~14% CELO allocation is the wildcard in an otherwise stablecoin-heavy reserve: the one asset that can crater in a downturn precisely when the {{term:overcollateralization}}overcollateralization{{/term}} ratio matters most, and the reserve only runs around 1.25x. {{term:redemption}}Redemption{{/term}} runs through Mento reserve swaps rather than fiat off-ramps.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "eurc-circle": {
     "title": "MiCA's Compliance Moat",
-    "text": "Circle's EURC is the regulatory standard-bearer for euro stablecoins: ACPR-licensed EMI under MiCA, {{term:attestation}}Deloitte-attested{{/term}}, 99% of reserves in deposits at systemically important European institutions, deployed natively across six chains — Ethereum, Base, Avalanche, Solana, Stellar, and World Chain. The B+ grade reflects institutional plumbing that works exactly as designed, with top-tier resilience and a DEWS reading that rarely leaves the calm end of the stress scale — though its handful of logged depeg events includes one brutal drawdown near 95% below peg, almost certainly a data artifact or thin-market episode that skews an otherwise pristine record. At roughly 414M EUR circulating, EURC is the largest euro stablecoin by a wide margin, yet that figure would barely register as a rounding error on USDC's balance sheet — the structural gap between dollar and euro stablecoin demand remains the defining constraint. Liquidity earns an A on the back of organic, well-distributed depth, the kind that comes from being the default euro pair on every major DEX. Institutional {{term:custody}}custody{{/term}} backs 1:1 {{term:redemption}}redemption{{/term}} via Circle Mint.",
-    "updatedAt": "2026-06-03",
+    "text": "Circle's EURC is the regulatory standard-bearer for euro stablecoins: ACPR-licensed EMI under MiCA, {{term:attestation}}Deloitte-attested{{/term}}, 99% of reserves in deposits at systemically important European institutions, deployed natively across six chains — Ethereum, Base, Avalanche, Solana, Stellar, and World Chain. The B+ grade reflects institutional plumbing that works exactly as designed, with top-tier resilience and a DEWS reading that rarely leaves the calm end of the stress scale — though its handful of logged depeg events includes one brutal drawdown near 95% below peg, almost certainly a data artifact or thin-market episode that skews an otherwise pristine record. At several hundred million euros circulating, EURC is the largest euro stablecoin by a wide margin, yet that figure would barely register as a rounding error on USDC's balance sheet — the structural gap between dollar and euro stablecoin demand remains the defining constraint. The moat in the title stopped being theoretical on July 1, when MiCA's transitional period lapsed for good: USDT liquidity on regulated European venues has collapsed, and Circle's pair — USDC and EURC — is what remains on licensed shelves. Liquidity earns an A on the back of organic, well-distributed depth, the kind that comes from being the default euro pair on every major DEX. Institutional {{term:custody}}custody{{/term}} backs 1:1 {{term:redemption}}redemption{{/term}} via Circle Mint.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "eurs-stasis": {
     "title": "First Mover, Fading Advantage",
@@ -201,13 +201,13 @@
   },
   "fpi-frax": {
     "title": "CPI on a Blockchain",
-    "text": "FPI is Frax's CPI-tracking stablecoin backed by FRAX reserves and {{term:amo}}AMO{{/term}}-generated yield — an inflation derivative with single-issuer dependency. Frax Price Index does not peg to a dollar — it pegs to purchasing power, with a {{term:redemption}}redemption{{/term}} price that ratchets upward every second at the trailing 12-month CPI-U rate via Chainlink oracle. That makes it both a stablecoin and an inflation derivative, backed entirely by FRAX reserves and AMO yield, which is exactly the recursive dependency the C- safety grade punishes: FPI's collateral quality is only as good as FRAX itself, and the chain inherits every flaw upstream carries. Liquidity is the other anchor dragging it down — a failing F grade and one of the thinnest markets tracked on Pharos, spread across a handful of DEX pools with no depth to absorb a real exit. A clever idea trapped in a thin market with a single-issuer dependency chain.",
-    "updatedAt": "2026-06-03",
+    "text": "FPI is Frax's CPI-tracking stablecoin backed by FRAX reserves and {{term:amo}}AMO{{/term}}-generated yield — an inflation derivative with single-issuer dependency. Frax Price Index does not peg to a dollar — it pegs to purchasing power, with a {{term:redemption}}redemption{{/term}} price that ratchets upward every second at the trailing 12-month CPI-U rate via Chainlink oracle. That makes it both a stablecoin and an inflation derivative, backed entirely by FRAX reserves and AMO yield, which is exactly the recursive dependency the safety grade — now down at D — punishes: FPI's collateral quality is only as good as FRAX itself, and the chain inherits every flaw upstream carries. Liquidity is the other anchor dragging it down — a failing F grade and one of the thinnest markets tracked on Pharos, spread across a handful of DEX pools with no depth to absorb a real exit. A clever idea trapped in a thin market with a single-issuer dependency chain.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "uusd-youves": {
     "title": "Dead Protocol Walking",
@@ -261,13 +261,13 @@
   },
   "gho-aave": {
     "title": "DeFi's Most Liquid Dollar",
-    "text": "GHO is Aave's decentralized dollar minted by borrowing against any Aave V3 collateral — a diversified {{term:overcollateralization}}overcollateralized{{/term}} {{term:cdp}}CDP{{/term}} dollar drawn from the protocol's battle-tested pools. It carries a B overall safety grade on Pharos, a grade that undersells its two best traits and fairly prices its weakest: peg behavior and liquidity both rate near the top of the scale, while reliance on Aave governance and on a handful of yield-bearing GSM facilitators keeps decentralization and dependency capped in the B range. The redemption backstop, anchored by the {{term:psm}}PSM{{/term}} swap mechanism and stablecoin-backed stability modules, is about as clean as on-chain exit routes get. The hundreds of brief sub-peg blips and a worst-case deviation north of 600 bps are scars from GHO's rocky early months that the current architecture has largely healed; the peg has long since settled into the calm end of the stress scale. Liquidity is the standout — a deeply distributed DEX footprint earns the highest grade on the board, and sGHO staking layers a yield on top without leaning on exotic collateral. Aave proved a lending protocol can birth a credible dollar if it is willing to iterate in public; the B grade is the bill for the governance dependency that credibility still rides on.",
-    "updatedAt": "2026-06-03",
+    "text": "GHO is Aave's decentralized dollar minted by borrowing against any Aave V3 collateral — a diversified {{term:overcollateralization}}overcollateralized{{/term}} {{term:cdp}}CDP{{/term}} dollar drawn from the protocol's battle-tested pools. It carries a B overall safety grade on Pharos, a grade that undersells its two best traits and fairly prices its weakest: peg behavior and liquidity both rate near the top of the scale, while reliance on Aave governance and on a handful of yield-bearing GSM facilitators keeps decentralization and dependency capped in the B range. The redemption backstop, anchored by the {{term:psm}}PSM{{/term}} swap mechanism and stablecoin-backed stability modules, is about as clean as on-chain exit routes get. The hundreds of brief sub-peg blips and a worst-case deviation north of 600 bps are scars from GHO's rocky early months that the current architecture has largely healed; the peg has long since settled into the calm end of the stress scale. Liquidity is the standout — a deeply distributed DEX footprint earns the highest grade on the board, and sGHO staking layers a yield on top without leaning on exotic collateral. That dependency got a live test this spring: the Aave Chan Initiative — the delegate shop that shepherded GHO from $35 million to over half a billion — completed its exit from the DAO amid a governance rift that also saw core developer BGD Labs walk away. GHO itself kept moving regardless; the Monad deployment, its first beyond Ethereum and its L2s, drew nine figures of deposits within days. Aave proved a lending protocol can birth a credible dollar if it is willing to iterate in public; the B grade is the bill for the governance dependency that credibility still rides on.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "fdusd-first-digital": {
     "title": "Binance's Current Favorite",
@@ -280,14 +280,14 @@
     "factsAsOf": "2026-05-15"
   },
   "pyusd-paypal": {
-    "title": "Four Billion Reasons",
-    "text": "PayPal's KPMG-attested PYUSD has one of the cleanest reserve profiles tracked; the open question is whether PayPal's enormous user base will ever use it natively. The reserve composition remains almost aggressively boring: 97% {{term:treasury}}Treasury{{/term}} reverse repos, 3% cash, KPMG-{{term:attestation}}attested{{/term}}, under Paxos's OCC national trust charter. Pharos still treats the structure as high quality, but the live grade has softened from the earlier top-tier claim as liquidity and real adoption do more work in the score than brand recognition does. Multi-chain deployment, zero-fee {{term:redemption}}redemption{{/term}}, and Morpho yield routes make the token technically easy to defend. The lingering question has shifted from whether PYUSD can compete to whether PayPal's retail network will ever use it on-chain, or whether the float is mostly crypto-native capital parking in a very respectable waiting room.",
-    "updatedAt": "2026-06-12",
+    "title": "The Respectable Waiting Room",
+    "text": "PayPal's KPMG-attested PYUSD has one of the cleanest reserve profiles tracked; the open question is whether PayPal's enormous user base will ever use it natively. The reserve composition remains almost aggressively boring: 97% {{term:treasury}}Treasury{{/term}} reverse repos, 3% cash, KPMG-{{term:attestation}}attested{{/term}}, under Paxos's OCC national trust charter. Pharos still treats the structure as high quality, but the live grade has softened from the earlier top-tier claim as liquidity and real adoption do more work in the score than brand recognition does. Multi-chain deployment, zero-fee {{term:redemption}}redemption{{/term}}, and Morpho yield routes make the token technically easy to defend. One adoption vector firmed up in June: Mastercard added PYUSD to its stablecoin settlement expansion, putting Paxos-issued rails into card back-office flows — B2B plumbing rather than retail spending, but real usage nonetheless. The lingering question has shifted from whether PYUSD can compete to whether PayPal's retail network will ever use it on-chain, or whether the float is mostly crypto-native capital parking in a very respectable waiting room.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "gyen-gyen": {
     "title": "Regulated in the Wrong Country",
@@ -331,13 +331,13 @@
   },
   "usde-ethena": {
     "title": "The Basis Trade, Tokenized",
-    "text": "Ethena's USDe is still the tokenized basis trade, but the current reserve mix is more conservative and more complicated than the original pitch: roughly three quarters liquid stablecoins, about 16% BTC delta-neutral exposure, and about 8% ETH or LST delta-neutral exposure. The liquid-stable sleeve leans heavily on USDtb and therefore BlackRock BUIDL, while the hedged crypto sleeve still depends on off-exchange custody and CEX perpetual markets through venues such as Binance, Bybit, and OKX. Pharos captures the contradiction cleanly: an A+ peg record sitting beside F resilience and D decentralization, which is what happens when the price behaves beautifully but the machinery remains a stack of counterparties. Real-time transparency from Ethena's dashboard helps, but it does not turn CEX custody, backend-signed mint flows, or USDtb-to-BUIDL dependency into neutral facts. USDe's trick is making a risky institutional trade look calm at the token level; the dashboard's job is to keep pointing at the machinery underneath.",
-    "updatedAt": "2026-06-12",
+    "text": "Ethena's USDe is still the tokenized basis trade, but the current reserve mix is more conservative and more complicated than the original pitch: roughly three quarters liquid stablecoins, about 16% BTC delta-neutral exposure, and about 8% ETH or LST delta-neutral exposure. The liquid-stable sleeve leans heavily on USDtb and therefore BlackRock BUIDL, while the hedged crypto sleeve still depends on off-exchange custody and CEX perpetual markets through venues such as Binance, Bybit, and OKX. Pharos captures the contradiction cleanly: an A+ peg record sitting beside F resilience and D decentralization, which is what happens when the price behaves beautifully but the machinery remains a stack of counterparties. Real-time transparency from Ethena's dashboard helps, but it does not turn CEX custody, backend-signed mint flows, or USDtb-to-BUIDL dependency into neutral facts. The institutional surface area keeps growing regardless — Robinhood's new chain launched with USDe as a primary collateral asset in its Earn program, curated by Steakhouse Financial. USDe's trick is making a risky institutional trade look calm at the token level; the dashboard's job is to keep pointing at the machinery underneath.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "aeur-anchored-coins": {
     "title": "Death of a Swiss Euro",
@@ -571,23 +571,23 @@
   },
   "usda-avalon": {
     "title": "The BTC-Backed Misnomer",
-    "text": "Avalon USDa calls itself a BTC-backed CDP, but the reserve mix is messier: FBTC custody exposure, a large USDT leg, and assorted BTC LSTs all sit under the Bitcoin banner. The design adds 1:1 USDT convertibility, Redstone-priced collateral, HFT liquidation machinery, and LayerZero bridge distribution, which is a lot of plumbing for a token marketed as simple Bitcoin-backed dollars. Pharos keeps the collateral-quality view conservative because wrapped BTC, centralized stablecoin exposure, and permissioned mint controls are not the same thing as holding native BTC in a trustless vault. The interesting contradiction is that the liquidation machinery can look sophisticated while the holder still depends on Cobo, Fireblocks, Coinbase Prime, role-gated minting, and cross-chain infrastructure behaving well at the same time. It is a Bitcoin stablecoin in the way a finance committee is a wallet: technically connected to the asset, heavily mediated by everyone in the room.",
-    "updatedAt": "2026-06-12",
+    "text": "Avalon USDa calls itself a BTC-backed CDP, but the reserve mix is messier: FBTC custody exposure, a large USDT leg, and assorted BTC LSTs all sit under the Bitcoin banner. The design adds 1:1 USDT convertibility, Redstone-priced collateral, HFT liquidation machinery, and LayerZero bridge distribution, which is a lot of plumbing for a token marketed as simple Bitcoin-backed dollars. Pharos keeps the collateral-quality view conservative because wrapped BTC, centralized stablecoin exposure, and permissioned mint controls are not the same thing as holding native BTC in a trustless vault. The interesting contradiction is that the liquidation machinery can look sophisticated while the holder still depends on Cobo, Fireblocks, Coinbase Prime, role-gated minting, and cross-chain infrastructure behaving well at the same time. Lately the room has been emptying: supply has roughly halved inside a month — the Ethereum leg alone shrank by nine figures — while the token trades persistently soft of the dollar and price coverage has thinned enough that the report card now reads F across peg and liquidity. Nobody published a post-mortem; the exits are simply visible on-chain. It is a Bitcoin stablecoin in the way a finance committee is a wallet: technically connected to the asset, heavily mediated by everyone in the room.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdtb-ethena": {
     "title": "The Load-Bearing Wall",
-    "text": "USDtb is the $939M stable ballast inside Ethena's USDe reserve, 90% allocated to BlackRock BUIDL via Anchorage Digital under an OCC charter — designed to be held by its parent protocol, not traded retail. USDtb has grown to $939 million with a clear mandate: serve as the stable ballast inside Ethena's USDe reserve structure, where it constitutes the majority of backing for a multibillion-dollar synthetic dollar. The 90% BUIDL allocation channeled through Anchorage Digital under an OCC charter means the underlying assets are overwhelmingly U.S. {{term:treasury}}Treasuries{{/term}} via tokenized {{term:rwa}}RWA{{/term}} rails, yet the C+ safety grade at 62 reflects the layered counterparty chain — from holder to USDtb to BUIDL to BlackRock to the actual bonds. Five depeg events with a worst deviation of 202 basis points and CALM stress suggest the product functions as intended, while $25.3 million in DEX TVL concentrated across just two pools on primary-class coverage confirms this is not optimized for retail DeFi composability. USDtb is a product designed to be held by its parent protocol rather than traded by individuals — a perfectly rational design that nevertheless means most holders are exposed to Ethena's risk management decisions whether they realize it or not.",
-    "updatedAt": "2026-05-15",
+    "text": "USDtb is the stable ballast inside Ethena's USDe reserve, roughly 90% allocated to BlackRock BUIDL via Anchorage Digital under an OCC charter — designed to be held by its parent protocol, not traded retail. USDtb's float breathes with its parent's balance sheet — it swelled toward a billion dollars, then shed roughly a quarter of that in the sector-wide June contraction — and the mandate is unchanged: serve as the stable ballast inside Ethena's USDe reserve structure, where it constitutes the majority of backing for a multibillion-dollar synthetic dollar. The 90% BUIDL allocation channeled through Anchorage Digital under an OCC charter means the underlying assets are overwhelmingly U.S. {{term:treasury}}Treasuries{{/term}} via tokenized {{term:rwa}}RWA{{/term}} rails, yet the C+ safety grade reflects the layered counterparty chain — from holder to USDtb to BUIDL to BlackRock to the actual bonds. Five depeg events with a worst deviation of 202 basis points and CALM stress suggest the product functions as intended, while $25.3 million in DEX TVL concentrated across just two pools on primary-class coverage confirms this is not optimized for retail DeFi composability. USDtb is a product designed to be held by its parent protocol rather than traded by individuals — a perfectly rational design that nevertheless means most holders are exposed to Ethena's risk management decisions whether they realize it or not.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "zeusd-zoth": {
     "title": "Wrappers All the Way Down",
@@ -601,7 +601,7 @@
   },
   "zchf-frankencoin": {
     "title": "Oracle-Free Alpine Defiance",
-    "text": "A CHF-pegged CDP with auction-priced collateral, no oracle dependency, no team tokens, and a safety grade that has slipped to B- as the collateral mix has drifted away from its crypto-and-gold roots.\n\nFrankencoin remains the most ideologically committed stablecoin on the dashboard — no foundation, no team tokens, no VC money, no price oracles — and that orthodoxy still earns it a top-tier decentralization mark. But the overall B- grade is another step down from where it once sat, and the reason is sitting in the collateral pool: a single corporate equity, BOSS (Boss Info AG), now makes up roughly a third of the backing — rivaling wrapped BTC as the largest position and introducing issuer- and liquidity-specific risk the crypto and gold lines never carried. The collateral is still valued through auction-based {{term:liquidation}}liquidation{{/term}} that trades capital efficiency for oracle manipulation resistance, a tradeoff most {{term:cdp}}CDP{{/term}} protocols wouldn't dare make, and {{term:overcollateralization}}overcollateralization{{/term}} is enforced through veto-governed minting limits — but governance has plainly let the mix tilt toward a riskier single name. The peg itself is unbothered, holding near-perfect with only a handful of shallow deviations under 230 bps and rarely straying from the calm end of the stress scale, which is genuinely impressive for a CHF token priced against dollar reference rates on thin liquidity. The 3.5% APY from Frankencoin Savings remains a rare risk-adjusted draw for a non-USD stablecoin, but the widening gap between Frankencoin's decentralization purity and its collateral discipline is the thing to watch from here.",
+    "text": "A CHF-pegged CDP with auction-priced collateral, no oracle dependency, no team tokens, and a safety grade that has slipped to B- as the collateral mix has drifted away from its crypto-and-gold roots.\n\nFrankencoin remains the most ideologically committed stablecoin on the dashboard — no foundation, no team tokens, no VC money, no price oracles — and that orthodoxy still earns it a top-tier decentralization mark. But the overall B- grade is another step down from where it once sat, and the reason is sitting in the collateral pool: a single corporate equity, BOSS (Boss Info AG), now makes up roughly a third of the backing — rivaling wrapped BTC as the largest position and introducing issuer- and liquidity-specific risk the crypto and gold lines never carried. The collateral is still valued through auction-based {{term:liquidation}}liquidation{{/term}} that trades capital efficiency for oracle manipulation resistance, a tradeoff most {{term:cdp}}CDP{{/term}} protocols wouldn't dare make, and {{term:overcollateralization}}overcollateralization{{/term}} is enforced through veto-governed minting limits — but governance has plainly let the mix tilt toward a riskier single name. The peg itself is unbothered, holding near-perfect with only a handful of shallow deviations under 230 bps and rarely straying from the calm end of the stress scale, which is genuinely impressive for a CHF token priced against dollar reference rates on thin liquidity. A MiCA whitepaper filed in the EU register days before the July 1 transition deadline keeps ZCHF on regulated European shelves — pragmatism from the purists, timed to the wire. The 3.5% APY from Frankencoin Savings remains a rare risk-adjusted draw for a non-USD stablecoin, but the widening gap between Frankencoin's decentralization purity and its collateral discipline is the thing to watch from here.",
     "updatedAt": "2026-07-08",
     "authoredBy": "ai",
     "model": "claude-fable-5",
@@ -661,23 +661,23 @@
   },
   "eurr-stablr": {
     "title": "Malta's Euro Bet",
-    "text": "EURR is StablR's Malta MFSA MiCA euro stablecoin with Grant Thornton {{term:attestation}}attestations{{/term}} — distinguished mostly by Tether's strategic backing. StablR's EURR is backed 100% by fiat euro at European financial institutions under a Malta MFSA EMI license with MiCA compliance and Grant Thornton attestations — the same regulatory infrastructure as its dollar sibling USDR, with Tether's strategic investment providing both capital and the awkward question of whether a Tether-backed entity can win institutional trust in a market built on regulatory purity. Ethereum-only deployment with institutional-regulated {{term:custody}}custody{{/term}} gives EURR clean infrastructure, but the euro stablecoin market remains a fraction of the dollar market, and competition from Circle's EURC, SocGen's EURCV, and Banking Circle's EURI means EURR must differentiate on something beyond compliance alone. The Tether connection is both asset and liability — distribution relationships and brand recognition offset by the regulatory scrutiny that follows Tether everywhere. Whether Malta's MFSA license carries the same weight as France's ACPR or the Netherlands' DNB in the MiCA credibility hierarchy remains the competitive question.",
-    "updatedAt": "2026-05-15",
+    "text": "EURR is StablR's Malta MFSA MiCA euro stablecoin with Grant Thornton {{term:attestation}}attestations{{/term}} — distinguished mostly by Tether's strategic backing. StablR's EURR is backed 100% by fiat euro at European financial institutions under a Malta MFSA EMI license with MiCA compliance and Grant Thornton attestations — the same regulatory infrastructure as its dollar sibling USDR, with Tether's strategic investment providing both capital and the awkward question of whether a Tether-backed entity can win institutional trust in a market built on regulatory purity. Compliance stopped being a differentiator in May 2026, when an attacker compromised StablR's 1-of-3 minting multisig and printed 4.5 million unbacked EURR alongside millions in USDR — the token broke as low as the mid-$0.50s, minting and redemption were frozen, and StablR had to tell Malta's MFSA that supply was no longer fully backed. The strange coda: after the EU's MiCA transition closed on July 1, EURR still stood among the handful of authorized euro stablecoins — hacked, suspended, and compliant all at once, while the report card reads F. The Tether connection is both asset and liability — distribution relationships and brand recognition offset by the regulatory scrutiny that follows Tether everywhere. Whether Malta's MFSA carries the same weight as France's ACPR in the MiCA credibility hierarchy is no longer an abstract question — the answer is being written in the enforcement file.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdr-stablr": {
-    "title": "MiCA Compliant, Market Indifferent",
-    "text": "StablR's USDR holds a Malta MFSA EMI license under MiCA with 100% reserves in cash and short-term government bonds, reviewed quarterly by Grant Thornton — a regulatory stack including formal {{term:attestation}}attestations{{/term}} that checks every European compliance box while the market barely notices at single-digit-millions in supply. That gap shows up in the grades: a strong A- on peg discipline and a near-perfect A+ on dependency, dragged to a C+ overall by a C- liquidity score and a D for decentralization. A handful of brief depeg episodes — one with a punishing downside excursion well past a thousand basis points — betray a thin on-chain footprint concentrated in a single Ethereum pool, and the asset still leans toward the stressed end of the volatility scale more than a regulated dollar token should. With liquidity that shallow, any meaningful exit runs through StablR's own issuer API {{term:redemption}}redemption{{/term}} route rather than the order book. Europe's MiCA framework was supposed to be the catalyst for regulated stablecoins, and USDR has the credentials to benefit — but credentialing and adoption remain stubbornly separate problems at this scale.",
-    "updatedAt": "2026-06-03",
+    "title": "One Key From Compliant",
+    "text": "StablR's USDR holds a Malta MFSA EMI license under MiCA with 100% reserves in cash and short-term government bonds, reviewed quarterly by Grant Thornton — a regulatory stack including formal {{term:attestation}}attestations{{/term}} that checks every European compliance box while the market barely notices at single-digit-millions in supply. Then May 2026 rewrote the story: an attacker compromised StablR's 1-of-3 minting multisig and printed $13.5 million of unbacked USDR and EURR, the quote broke violently below par, and the issuer froze minting and redemption while disclosing to Malta's MFSA that circulating supply was no longer fully 1:1 backed — MiCA's cardinal sin, committed by a MiCA poster child. Weeks later the report card reads F with the primary market still suspended, and the thin single-pool Ethereum footprint that once merely embarrassed the liquidity score now defines the only exit anyone has. With liquidity that shallow, any meaningful exit runs through StablR's own issuer API {{term:redemption}}redemption{{/term}} route rather than the order book. Europe's MiCA framework was supposed to be the catalyst for regulated stablecoins; USDR is now the test of what the framework does after the incident report is filed.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdo-openeden": {
     "title": "Treasury Yield, Repackaged",
@@ -691,13 +691,13 @@
   },
   "usda-anzens": {
     "title": "Cardano's Lonely Dollar",
-    "text": "Cardano's only MSB-licensed dollar pairs clean BitGo-custodied reserves with one of the worst peg records on Pharos, dragged down by absent DeFi depth. Anzens USDA offers the cleanest backing on Cardano — 60% USD cash, 40% U.S. {{term:treasury}}Treasury{{/term}} bills, all {{term:custody}}custody{{/term}}-managed by BitGo Trust under a FinCEN MSB license — yet it has logged hundreds of recorded depeg events, with deviations spiking as far as +2558 bps. The problem isn't the backing; it's the chain. A single thin DEX pool and Cardano-only deployment mean there is no meaningful arbitrage infrastructure to enforce the peg, producing a C- safety grade despite reserves that would earn a much higher mark on any chain with real DeFi depth. The only exit is KYC-verified bank transfers through Anzens for {{term:redemption}}redemption{{/term}}, with multi-day settlement and no quick on-chain escape hatch. USDA is proof that sound reserves are necessary but nowhere near sufficient — you also need a market that can actually trade the thing.",
-    "updatedAt": "2026-06-03",
+    "text": "Cardano's only MSB-licensed dollar pairs clean BitGo-custodied reserves with one of the worst peg records on Pharos, dragged down by absent DeFi depth. Anzens USDA offers the cleanest backing on Cardano — 60% USD cash, 40% U.S. {{term:treasury}}Treasury{{/term}} bills, all {{term:custody}}custody{{/term}}-managed by BitGo Trust under a FinCEN MSB license — yet it has logged hundreds of recorded depeg events, with deviations spiking as far as +2558 bps. The problem isn't the backing; it's the chain. A single thin DEX pool and Cardano-only deployment mean there is no meaningful arbitrage infrastructure to enforce the peg, producing a C- safety grade despite reserves that would earn a much higher mark on any chain with real DeFi depth. The only exit is KYC-verified bank transfers through Anzens for {{term:redemption}}redemption{{/term}}, with multi-day settlement and no quick on-chain escape hatch. Supply has drained by nearly half over the past month, suggesting holders have reached the same conclusion. USDA is proof that sound reserves are necessary but nowhere near sufficient — you also need a market that can actually trade the thing.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdf-falcon": {
     "title": "Ethena's Wilder Cousin",
@@ -711,13 +711,13 @@
   },
   "europ-schuman": {
     "title": "Credentials Without Scale",
-    "text": "EUROP is Schuman Financial's ACPR-licensed euro stablecoin backed by euro cash at EU banks — credentials in abundance, market share negligible. Schuman Financial stacks every credential the euro stablecoin market demands — ACPR EMI license under MiCA, KPMG {{term:attestation}}attestations{{/term}}, 98% of reserves in euro cash at Societe Generale and peer EU banks, a 2% buffer beyond par — and still sits at barely 8.6M EUR circulating, roughly the size of a mid-tier DeFi protocol's {{term:treasury}}treasury{{/term}}. That mismatch is now showing up in the score: a B- overall, dragged down by a D on liquidity, says the credentials are no longer enough to lift a token this small out of the second tier. The peg itself is not the worry — it holds an A-grade tightness and rarely strays from the calm end of the stress scale, with dozens of brief sub-par blips and a worst drawdown of 229 bps that read as thin-market noise rather than structural instability. The five-chain deployment including XRPL and Plasma is an unusual distribution bet — reaching beyond EVM chains where the established euro competitors have not yet planted flags — but distribution without depth just spreads the same thin float across more order books.",
-    "updatedAt": "2026-06-03",
+    "text": "EUROP is Schuman Financial's ACPR-licensed euro stablecoin backed by euro cash at EU banks — credentials in abundance, market share negligible. Schuman Financial stacks every credential the euro stablecoin market demands — ACPR EMI license under MiCA, KPMG {{term:attestation}}attestations{{/term}}, 98% of reserves in euro cash at Societe Generale and peer EU banks, a 2% buffer beyond par — and still sits at barely 8.6M EUR circulating, roughly the size of a mid-tier DeFi protocol's {{term:treasury}}treasury{{/term}}. That mismatch is now showing up in the score: a B- overall, dragged down by a D on liquidity, says the credentials are no longer enough to lift a token this small out of the second tier. The peg itself is not the worry — it holds an A-grade tightness and rarely strays from the calm end of the stress scale, with dozens of brief sub-par blips and a worst drawdown of 229 bps that read as thin-market noise rather than structural instability. The July 1 MiCA cutover at least thinned the field — EUROP now stands among the eight authorized euro stablecoins in a market that just repriced compliance from credential to prerequisite. The five-chain deployment including XRPL and Plasma is an unusual distribution bet — reaching beyond EVM chains where the established euro competitors have not yet planted flags — but distribution without depth just spreads the same thin float across more order books.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "brz-transfero": {
     "title": "Pegged to Volatility Itself",
@@ -731,13 +731,13 @@
   },
   "rlusd-ripple": {
     "title": "The Institutional On-Ramp",
-    "text": "Ripple's NYDFS-supervised dollar is backed by a very-low-risk reserve split across {{term:treasury}}T-bills{{/term}}, government {{term:money-market-fund}}money-market funds{{/term}}, and cash, with monthly {{term:attestation}}attestations{{/term}} from Deloitte under a New York trust charter. That reserve is the kind of boring institutional machinery a settlement token should have, and RLUSD is very much a settlement token rather than a DeFi primitive. The live grade has eased from the earlier headline because secondary-market depth and concentration still matter even when the collateral is immaculate. Brief depeg events from early price discovery are less a reserve indictment than a reminder that new tokens need time to build market plumbing. DEX liquidity remains concentrated in a handful of pools, consistent with a payments corridor product whose real exit is issuer {{term:redemption}}redemption{{/term}}. RLUSD looks sturdy, but it is sturdy in the way a bank product is sturdy: excellent paperwork, narrow on-chain spontaneity.",
-    "updatedAt": "2026-06-12",
+    "text": "Ripple's NYDFS-supervised dollar is backed by a very-low-risk reserve split across {{term:treasury}}T-bills{{/term}}, government {{term:money-market-fund}}money-market funds{{/term}}, and cash, with monthly {{term:attestation}}attestations{{/term}} from Deloitte under a New York trust charter. That reserve is the kind of boring institutional machinery a settlement token should have, and RLUSD is very much a settlement token rather than a DeFi primitive. The live grade has eased from the earlier headline because secondary-market depth and concentration still matter even when the collateral is immaculate. Brief depeg events from early price discovery are less a reserve indictment than a reminder that new tokens need time to build market plumbing. DEX liquidity remains concentrated in a handful of pools, consistent with a payments corridor product whose real exit is issuer {{term:redemption}}redemption{{/term}}. The paperwork keeps compounding: RLUSD launched in Japan as the first stablecoin approved under the Type 4 electronic-payment-instrument regime via SBI, Ripple's Luxembourg entity upgraded to a full MiCA CASP authorization covering the EEA, and Mastercard added RLUSD to its stablecoin settlement stack. RLUSD looks sturdy, but it is sturdy in the way a bank product is sturdy: excellent paperwork, narrow on-chain spontaneity.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "feusd-felix": {
     "title": "Liquity Fork on Hyperliquid",
@@ -801,13 +801,13 @@
   },
   "a7a5-old-vector": {
     "title": "The Sanctioned Dollar's Mirror",
-    "text": "A7A5 is a centralized ruble stablecoin from Old Vector LLC, backed 1:1 by RUB deposits at sanctioned Russian state bank Promsvyazbank. A7A5 is a ruble-pegged stablecoin backed 100% by deposits at Promsvyazbank — a Russian state-owned bank under Western sanctions — which is why Pharos classifies its {{term:custody}}custody{{/term}} as institutional-sanctioned and its reserve risk as very-high despite the collateral being plain fiat currency. Issued by Old Vector LLC under a Kyrgyz VASP license with quarterly audits from an independent Kyrgyz firm, the regulatory architecture is technically compliant with its home jurisdiction while being functionally untouchable by Western financial infrastructure. Since 2026-02-09 the issuer has passed through nearly all of the reserve yield to holders as additional A7A5 at the CBR key rate minus one percentage point — a step up from the previous 50% split that makes A7A5 one of the few {{term:yield-bearing}}yield-bearing{{/term}} stablecoins whose holders directly capture a sanctioned bank's deposit rate. Whether A7A5 represents financial innovation for an isolated economy or sanctions evasion with a token wrapper depends entirely on whose compliance framework you're applying.",
-    "updatedAt": "2026-05-15",
+    "text": "A7A5 is a centralized ruble stablecoin from Old Vector LLC, backed 1:1 by RUB deposits at sanctioned Russian state bank Promsvyazbank. A7A5 is a ruble-pegged stablecoin backed 100% by deposits at Promsvyazbank — a Russian state-owned bank under Western sanctions — which is why Pharos classifies its {{term:custody}}custody{{/term}} as institutional-sanctioned and its reserve risk as very-high despite the collateral being plain fiat currency. Issued by Old Vector LLC under a Kyrgyz VASP license with quarterly audits from an independent Kyrgyz firm, the regulatory architecture is technically compliant with its home jurisdiction while being functionally untouchable by Western financial infrastructure. Since 2026-02-09 the issuer has passed through nearly all of the reserve yield to holders as additional A7A5 at the CBR key rate minus one percentage point — a step up from the previous 50% split that makes A7A5 one of the few {{term:yield-bearing}}yield-bearing{{/term}} stablecoins whose holders directly capture a sanctioned bank's deposit rate. Since spring the net has only widened: the EU's 20th sanctions package extended the ban beyond the token to the exchanges and payment agents distributing it, Moscow retaliated by sanctioning a British teenage researcher who documented A7A5's war-finance flows, and blockchain-analytics firms now dispute the issuer's headline volumes — attributing roughly a third to wash trading and noting activity collapsed after the Grinex shutdown. Whether A7A5 represents financial innovation for an isolated economy or sanctions evasion with a token wrapper depends entirely on whose compliance framework you're applying.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usd1-world-liberty-financial": {
     "title": "The Presidential Stablecoin",
@@ -881,7 +881,7 @@
   },
   "usdn-noble": {
     "title": "Cosmos Dollar, Shrinking",
-    "text": "Noble's USDN is an IBC-native rebasing dollar backed 100% by {{term:treasury}}T-bills{{/term}} held in bankruptcy-remote SPVs via M0 — solid fundamentals, vanishing demand. The asset has kept shedding supply month after month, a trajectory that undercuts the bullish thesis even though the peg itself barely flinches and stress readings sit at the calm end of the scale. The D safety grade is the blunt verdict here: the collateral story is clean, with real-time reserve verification through M0's dashboard and on-chain {{term:attestation}}attestations{{/term}}, but the asset has no rated liquidity to speak of, and a clean peg with a couple of shallow blips cannot carry a scorecard that liquidity and dependency drag down. The rebasing mechanism that passes T-bill yield directly to holders is an elegant design that would normally support adoption, yet the supply contraction suggests Cosmos ecosystem demand alone cannot sustain it. Noble's proven IBC infrastructure has moved billions in USDC transfers, but USDN still needs a reason for those dollars to stay as USDN rather than passing through.",
+    "text": "Noble's USDN is an IBC-native rebasing dollar backed 100% by {{term:treasury}}T-bills{{/term}} held in bankruptcy-remote SPVs via M0 — solid fundamentals, vanishing demand. The asset has kept shedding supply month after month, a trajectory that undercuts the bullish thesis even though the peg itself barely flinches and stress readings sit at the calm end of the scale. The D safety grade is the blunt verdict here: the collateral story is clean, with real-time reserve verification through M0's dashboard and on-chain {{term:attestation}}attestations{{/term}}, but the asset has no rated liquidity to speak of, and a clean peg with a couple of shallow blips cannot carry a scorecard that liquidity and dependency drag down. The rebasing mechanism that passes T-bill yield directly to holders is an elegant design that would normally support adoption, yet the supply contraction suggests Cosmos ecosystem demand alone cannot sustain it. Noble's proven IBC infrastructure has moved billions in USDC transfers, but USDN still needs a reason for those dollars to stay as USDN rather than passing through — and now even the ground underneath is moving: Noble has announced it is migrating its Cosmos SDK chain to a standalone EVM Layer 1, which makes the IBC-native rebasing dollar a legacy design on its own home turf.",
     "updatedAt": "2026-07-08",
     "authoredBy": "ai",
     "model": "claude-fable-5",
@@ -901,23 +901,23 @@
   },
   "mnee-mnee": {
     "title": "BSV Refugee, T-Bill Convert",
-    "text": "Fiat-backed USD stablecoin with pristine T-bill plus cash reserves and Wolf and Company attestations, dragged down to a C+ by Antigua licensing, institutional-unregulated custody, and near-zero on-chain liquidity. MNEE wraps 85% short-dated {{term:treasury}}Treasuries{{/term}} and 15% cash into a clean reserve profile attested by Wolf and Company — the kind of composition that earns an A+ dependency score and a peg score of 97. The C+ safety grade is a product of infrastructure, not reserves: Antigua FSRC licensing, institutional-unregulated {{term:custody}}custody{{/term}}, and a single Ethereum deployment with effectively no usable DEX depth leave holders dependent on issuer-API {{term:redemption}}redemption{{/term}} as the only credible exit. A handful of depeg events, including one plunge past 600 basis points, expose what happens when a nine-figure stablecoin has no on-chain arbitrage infrastructure to defend parity. MNEE proved a fiat-backed coin can have pristine reserves and still score like a mid-tier product when the plumbing around it is this thin.",
-    "updatedAt": "2026-06-03",
+    "text": "Fiat-backed USD stablecoin with pristine T-bill plus cash reserves and Wolf and Company attestations, dragged down to a C+ by Antigua licensing, institutional-unregulated custody, and near-zero on-chain liquidity. MNEE wraps 85% short-dated {{term:treasury}}Treasuries{{/term}} and 15% cash into a clean reserve profile attested by Wolf and Company — the kind of composition that earns an A+ dependency score and a peg score of 97. The C+ safety grade is a product of infrastructure, not reserves: Antigua FSRC licensing, institutional-unregulated {{term:custody}}custody{{/term}}, and a single Ethereum deployment with effectively no usable DEX depth leave holders dependent on issuer-API {{term:redemption}}redemption{{/term}} as the only credible exit. A handful of depeg events, including one plunge past 600 basis points, expose what happens when a nine-figure stablecoin has no on-chain arbitrage infrastructure to defend parity. Lately the plumbing has thinned further: listed venues have gone quiet enough that Pharos currently has no usable price feed for the token, and supply has drifted down double digits — for a coin whose only credible exit was already the issuer API, dark price discovery is not a detail. MNEE proved a fiat-backed coin can have pristine reserves and still score like a mid-tier product when the plumbing around it is this thin.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdg-paxos": {
     "title": "Paxos's Singapore Sequel",
-    "text": "Paxos's USDG is the Singapore sequel under MAS supervision, with all-very-low-risk reserves at DBS and Standard Chartered and a dual-jurisdiction MiCA EU issuance no competitor matches. After Binance's BUSD died under regulatory fire, Paxos relocated its stablecoin ambitions to Singapore, where USDG now sits under a MAS Major Payment Institution license with reserves split between DBS Bank and Standard Chartered — institutional-top {{term:custody}}custody{{/term}} that matches Circle and exceeds Tether. The all-very-low-risk reserve composition and A+ resilience grade make USDG structurally one of the safest stablecoins in existence, which makes the lowest peg score among rated top-ten coins a curious anomaly — a brief tracking history with early growing pains rather than structural fragility. The zero-fee {{term:redemption}}redemption{{/term}} and additional EU issuance via a MiCA-compliant Finnish entity give USDG a dual-jurisdiction strategy that no competitor currently matches. The catch is on-chain presence: concentrated on just a few chains with modest DEX depth, USDG's institutional pedigree still outpaces its DeFi footprint.",
-    "updatedAt": "2026-05-15",
+    "text": "Paxos's USDG is the Singapore sequel under MAS supervision, with all-very-low-risk reserves at DBS and Standard Chartered and a dual-jurisdiction MiCA EU issuance no competitor matches. After Binance's BUSD died under regulatory fire, Paxos relocated its stablecoin ambitions to Singapore, where USDG now sits under a MAS Major Payment Institution license with reserves split between DBS Bank and Standard Chartered — institutional-top {{term:custody}}custody{{/term}} that matches Circle and exceeds Tether. The all-very-low-risk reserve composition and A+ resilience grade make USDG structurally one of the safest stablecoins in existence, which makes the lowest peg score among rated top-ten coins a curious anomaly — a brief tracking history with early growing pains rather than structural fragility. The zero-fee {{term:redemption}}redemption{{/term}} and additional EU issuance via a MiCA-compliant Finnish entity give USDG a dual-jurisdiction strategy that no competitor currently matches. The pedigree now includes card rails: Mastercard's June settlement expansion put USDG — alongside its Paxos siblings PYUSD and USDP — into the set of regulated stablecoins eligible to settle card obligations across its network. The catch is on-chain presence: concentrated on just a few chains with modest DEX depth, USDG's institutional pedigree still outpaces its DeFi footprint.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "xsgd-straitsx": {
     "title": "Southeast Asia's FX Shortcut",
@@ -951,13 +951,13 @@
   },
   "cusd-cap": {
     "title": "The Stablecoin Basket Case",
-    "text": "cUSD is Cap's diversified basket of regulated stablecoins and tokenized T-bill funds; clever distribution if everything works, shared contagion if one fails. Cap's cUSD is a basket wrapper backed by 35% USDC, 25% USDT, 20% BlackRock's BUIDL, 10% WisdomTree's WTGXX, and 10% PayPal's PYUSD — five institutional-grade stablecoins blended into a single token with a maximum 40% concentration cap per asset. The dynamic-fee vault mechanism adjusts minting and {{term:redemption}}redemption{{/term}} costs in real-time to prevent full utilization, ensuring atomic redemptions remain available, while EigenLayer AVS provides the economic security layer. Redemptions return a proportional basket of all underlying assets rather than a single stablecoin, which socializes any individual reserve depeg across all redeemers — clever risk distribution if everything works, shared contagion if one component fails. Deployed on Ethereum and MegaETH with wrapper-classified governance, cUSD is less an independent stablecoin and more a diversification instrument for holders who want institutional {{term:rwa}}RWA{{/term}} exposure without choosing sides. The BUIDL and WTGXX slices are tokenized {{term:treasury}}Treasury{{/term}} {{term:money-market-fund}}money-market funds{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "cUSD is Cap's diversified basket of regulated stablecoins and tokenized T-bill funds; clever distribution if everything works, shared contagion if one fails. Cap's cUSD is a basket wrapper backed by 35% USDC, 25% USDT, 20% BlackRock's BUIDL, 10% WisdomTree's WTGXX, and 10% PayPal's PYUSD — five institutional-grade stablecoins blended into a single token with a maximum 40% concentration cap per asset. The dynamic-fee vault mechanism adjusts minting and {{term:redemption}}redemption{{/term}} costs in real-time to prevent full utilization, ensuring atomic redemptions remain available, while EigenLayer AVS provides the economic security layer. Redemptions return a proportional basket of all underlying assets rather than a single stablecoin, which socializes any individual reserve depeg across all redeemers — clever risk distribution if everything works, shared contagion if one component fails. Deployed on Ethereum and MegaETH with wrapper-classified governance, cUSD is less an independent stablecoin and more a diversification instrument for holders who want institutional {{term:rwa}}RWA{{/term}} exposure without choosing sides. Cap itself decentralized a notch in late June, launching its CAP governance token after a heavily oversubscribed auction. The BUIDL and WTGXX slices are tokenized {{term:treasury}}Treasury{{/term}} {{term:money-market-fund}}money-market funds{{/term}}.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "msusd-main-street": {
     "title": "Redemption Target, Not A Clean Vault",
@@ -1061,13 +1061,13 @@
   },
   "susdai-usd-ai": {
     "title": "The GPU-Credit Sleeve",
-    "text": "sUSDai is where USD.AI moves from a PYUSD-backed base dollar into the actual AI-credit bet. The reserve stack currently combines a large PYUSD liquid sleeve with a smaller but meaningful GPU-backed infrastructure-loan sleeve, so the token behaves like a NAV-appreciating credit product rather than a clean payment stablecoin. Accountable-style real-time reserve visibility helps separate the liquid assets from the loan book, which is useful because GPU collateral is not cash no matter how fashionable the acronym is. Exits run through staking mechanics and a queued withdrawal flow, not a simple always-on issuer redemption promise. sUSDai may be the interesting product in the USD.AI pair, but it is also where the yield stops being free and starts being underwriting.",
-    "updatedAt": "2026-06-12",
+    "text": "sUSDai is where USD.AI moves from a PYUSD-backed base dollar into the actual AI-credit bet. The reserve stack currently combines a large PYUSD liquid sleeve with a smaller but meaningful GPU-backed infrastructure-loan sleeve, so the token behaves like a NAV-appreciating credit product rather than a clean payment stablecoin. Accountable-style real-time reserve visibility helps separate the liquid assets from the loan book, which is useful because GPU collateral is not cash no matter how fashionable the acronym is. Exits run through staking mechanics and a queued withdrawal flow, not a simple always-on issuer redemption promise. The exit story improved at the margin in June, when USD.AI stood up a $100 million liquidity facility with Fluid — a real secondary venue, though a facility is a buffer, not a bottomless bid. sUSDai may be the interesting product in the USD.AI pair, but it is also where the yield stops being free and starts being underwriting.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usx-solstice": {
     "title": "The Solana Wrapper",
@@ -1091,23 +1091,23 @@
   },
   "musd-metamask": {
     "title": "Distribution as Moat",
-    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The B- safety grade reflects a split decision: near-flawless peg behavior and institutional-regulated {{term:custody}}custody{{/term}} that rarely leaves the calm end of the stress scale, dragged down by a wholly centralized control model and liquidity that earns no better than a passing grade. The reserve composition reads like a compliance team's wishlist, but the secondary market hasn't fully caught up with primary-market confidence — a few dozen brief depeg blips, including a 557-bps positive spike, show that arbitrage works in theory while DEX liquidity stays spread wide and shallow. For a product with that distribution funnel the supply is still modest, which keeps the moat narrative aspirational rather than realized: the funnel exists, the float to fill it does not yet.",
-    "updatedAt": "2026-06-03",
+    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The B- safety grade reflects a split decision: near-flawless peg behavior and institutional-regulated {{term:custody}}custody{{/term}} that rarely leaves the calm end of the stress scale, dragged down by a wholly centralized control model and liquidity that earns no better than a passing grade. The reserve composition reads like a compliance team's wishlist, but the secondary market hasn't fully caught up with primary-market confidence — a few dozen brief depeg blips, including a 557-bps positive spike, show that arbitrage works in theory while DEX liquidity stays spread wide and shallow. The funnel switched on at the end of June: MetaMask's new Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert those tens of millions of users into float. The moat narrative is still more aspiration than balance sheet — but the plumbing to realize it now exists.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "cash-phantom": {
     "title": "The Wallet's Dollar",
-    "text": "CASH is Phantom's wallet-native dollar on Solana, T-bill backed by Bridge Building Inc.; distribution edge over decentralization. Phantom's CASH leverages what no DeFi protocol can replicate: distribution through crypto's most popular Solana wallet, giving millions of users a native stablecoin without requiring them to understand anything about stablecoin infrastructure. Under the hood, Bridge Building Inc. backs CASH with {{term:treasury}}T-bills{{/term}}, reverse repos, {{term:money-market-fund}}government money-market funds{{/term}}, bank deposits, and a 10% allocation to tokenized treasuries including BUIDL — 90% of reserves in very-low-risk assets with bankruptcy-remote segregation under FinCEN and state money transmitter licenses. The B report card reflects a genuinely stable product: a handful of depeg events, none worse than 181 bps, and a peg that rarely strays from the calm end of the stress scale, while over $72M in DEX liquidity across Solana pools provides workable exit depth. Solana-only deployment is a feature, not a limitation — CASH exists to be Phantom's default dollar, and the growing supply suggests that for wallet-native users, the trade-off between decentralization purity and tap-to-buy convenience was decided before it was ever offered. Bankruptcy-remote {{term:custody}}custody{{/term}} backs 1:1 {{term:redemption}}redemption{{/term}}; the BUIDL slice is a tokenized {{term:rwa}}RWA{{/term}} exposure.",
-    "updatedAt": "2026-06-03",
+    "text": "CASH is Phantom's wallet-native dollar on Solana, T-bill backed by Bridge Building Inc.; distribution edge over decentralization. Phantom's CASH leverages what no DeFi protocol can replicate: distribution through crypto's most popular Solana wallet, giving millions of users a native stablecoin without requiring them to understand anything about stablecoin infrastructure. Under the hood, Bridge Building Inc. backs CASH with {{term:treasury}}T-bills{{/term}}, reverse repos, {{term:money-market-fund}}government money-market funds{{/term}}, bank deposits, and a 10% allocation to tokenized treasuries including BUIDL — 90% of reserves in very-low-risk assets with bankruptcy-remote segregation under FinCEN and state money transmitter licenses. The B- report card reflects a genuinely stable product: a handful of depeg events, none worse than 181 bps, and a peg that rarely strays from the calm end of the stress scale, while over $72M in DEX liquidity across Solana pools provides workable exit depth. Solana-only deployment is a feature, not a limitation — CASH exists to be Phantom's default dollar, and the growing supply suggests that for wallet-native users, the trade-off between decentralization purity and tap-to-buy convenience was decided before it was ever offered. That default status now extends to new surfaces: World, the fully on-chain prediction market unveiled inside Phantom, settles winning positions in CASH — the clearest sign yet that Phantom intends CASH to be the unit of account for everything the wallet touches. Bankruptcy-remote {{term:custody}}custody{{/term}} backs 1:1 {{term:redemption}}redemption{{/term}}; the BUIDL slice is a tokenized {{term:rwa}}RWA{{/term}} exposure.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "tgbp-tokenised": {
     "title": "The FCA's First Bet",
@@ -1130,24 +1130,24 @@
     "factsAsOf": "2026-05-15"
   },
   "usdh-native-markets": {
-    "title": "Stripe's Stablecoin Beachhead",
-    "text": "Native Markets' USDH on HyperEVM is a Bridge-issued (Stripe) dollar with 40% short-term {{term:treasury}}T-bills{{/term}} at JP Morgan plus tokenized treasuries — a bet on Hyperliquid traction beyond the current niche. USDH sits at $94 million on HyperEVM with one of the more credible reserve compositions in the market: 40% short-term T-bills managed by BlackRock at JP Morgan, 20% tokenized {{term:treasury}}treasuries{{/term}} via BUIDL and USTB, and the rest in cash, repos, and {{term:money-market-fund}}treasury funds{{/term}} — all flowing through Bridge Building Inc., Stripe's stablecoin subsidiary. The 12 depeg events with swings as wide as 227 basis points tell the story of a young stablecoin on a single chain still building the arbitrage infrastructure to enforce its peg tightly. A 7.8% APY on Morpho lending at B- safety is a respectable yield-to-risk ratio, though the fallback-class DEX liquidity and concentrated pool structure mean size limits on exits remain real. The validator vote that chose USDH over Paxos and Ethena was a bet on revenue redirection from Circle — whether that bet pays off depends on whether Hyperliquid's ecosystem grows beyond its current niche.",
-    "updatedAt": "2026-05-15",
+    "title": "The Evacuated Beachhead",
+    "text": "Native Markets' USDH on HyperEVM is a Bridge-issued (Stripe) dollar with 40% short-term {{term:treasury}}T-bills{{/term}} at JP Morgan plus tokenized treasuries — a bet on Hyperliquid traction that ended in a structured wind-down. USDH built to nine figures on HyperEVM with one of the more credible reserve compositions in the market: 40% short-term T-bills managed by BlackRock at JP Morgan, 20% tokenized {{term:treasury}}treasuries{{/term}} via BUIDL and USTB, and the rest in cash, repos, and {{term:money-market-fund}}treasury funds{{/term}} — all flowing through Bridge Building Inc., Stripe's stablecoin subsidiary. The 12 depeg events with swings as wide as 227 basis points tell the story of a young stablecoin on a single chain still building the arbitrage infrastructure to enforce its peg tightly. The bet did not get to play out: in late May Native Markets announced a structured wind-down as Coinbase took over as Hyperliquid's official USDC treasury deployer, the deployer liquidated its unlocked HYPE allocation, and by mid-June USDH's markets were settled and delisted. The validator vote that chose USDH over Paxos and Ethena was a bet on revenue redirection from Circle; the ecosystem re-voted with its treasury, and the beachhead is being evacuated in orderly fashion.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "sbc-brale": {
     "title": "Infrastructure Demo Reel",
-    "text": "Brale's SBC tripled to $12.2M with very-low-risk reserves and broader chain distribution than tokens 50x its size — a reference implementation for its stablecoin-as-a-service platform.\n\nBrale's SBC tripled from $3.9M to $12.2M in the past month — the fastest proportional growth in the tracked set — yet its safety grade has slipped to B-, dragged down by a liquidity grade that lands near the bottom of the scale. The backing is not the problem: reserves are 100% very-low-risk, split evenly between cash and short-duration {{term:treasury}}Treasuries{{/term}}, deployed across 10 chains from a FinCEN-licensed money transmitter with regulated bank {{term:custody}}custody{{/term}} and zero-fee {{term:redemption}}redemption{{/term}}. The tension the grade reflects is the one this token was always going to live with: a recurring series of brief depeg blips and an effective DEX TVL of just $5M spread thin across a 10-chain footprint, broader distribution than tokens fifty times its size can claim. That is entirely the point — this is a reference implementation for Brale's stablecoin-as-a-service platform, not a consumer product. SBC exists so Brale can tell enterprise clients their infrastructure works, and the tripling supply suggests those conversations are landing; the slipping grade just confirms that distribution breadth is not the same as liquidity depth.",
-    "updatedAt": "2026-06-03",
+    "text": "Brale's SBC tripled to $12.2M with very-low-risk reserves and broader chain distribution than tokens 50x its size — a reference implementation for its stablecoin-as-a-service platform.\n\nBrale's SBC tripled from $3.9M to $12.2M in the past month — the fastest proportional growth in the tracked set — yet its safety grade has slipped to B-, dragged down by a liquidity grade that lands near the bottom of the scale. The backing is not the problem: reserves are 100% very-low-risk, split evenly between cash and short-duration {{term:treasury}}Treasuries{{/term}}, deployed across 10 chains from a FinCEN-licensed money transmitter with regulated bank {{term:custody}}custody{{/term}} and zero-fee {{term:redemption}}redemption{{/term}}. The tension the grade reflects is the one this token was always going to live with: a recurring series of brief depeg blips and an effective DEX TVL of just $5M spread thin across a 10-chain footprint, broader distribution than tokens fifty times its size can claim. That is entirely the point — this is a reference implementation for Brale's stablecoin-as-a-service platform, not a consumer product. SBC exists so Brale can tell enterprise clients their infrastructure works — and the conversations now include Visa, which ran a June proof-of-concept exploring SBC-based institutional settlement on Canton — while the tripling supply suggests the pitch is landing; the slipping grade just confirms that distribution breadth is not the same as liquidity depth.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "euri-banking-circle": {
     "title": "The Binance Distribution Play",
@@ -1191,23 +1191,23 @@
   },
   "usp-pikudao": {
     "title": "Turkish Carry Trade, Tokenized",
-    "text": "PikuDAO's USP is a NAV-appreciating token with 50% in a Turkish lira {{term:basis-trade}}basis trade{{/term}} via Balsa Technologies, 40% in DeFi protocols, and 10% in stablecoin buffer — KYC-gated with whitelisted queue redemption. PikuDAO's USP is a NAV-appreciating token — 50% deployed into a Turkish lira FX arbitrage strategy via Balsa Technologies ({{term:delta-neutral}}delta-neutral{{/term}} TRY/USD trades capturing Turkey's inflation-driven {{term:basis-trade}}basis trade{{/term}} carry), 40% across DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap), and 10% in a USDC/USDT buffer. The very-high risk classification on the Turkish FX strategy and high risk on the DeFi allocations are reflected in the exotic collateral quality rating and a backstop of 65 with whitelisted queue-based {{term:redemption}}redemption{{/term}} at 0.2% fee — KYC/KYB required to mint or redeem, with a 24-hour FIFO settlement queue. It's a genuinely novel yield source for DeFi — Turkish carry trade returns are uncorrelated with crypto markets — but also one that concentrates geopolitical and counterparty risk in a single emerging market whose currency has lost over 90% against the dollar in a decade. The NAV has appreciated above $1.07, which proves the strategy works when it works — the question is what happens when it doesn't.",
-    "updatedAt": "2026-05-15",
+    "text": "PikuDAO's USP is a NAV-appreciating token with 50% in a Turkish lira {{term:basis-trade}}basis trade{{/term}} via Balsa Technologies, 40% in DeFi protocols, and 10% in stablecoin buffer — KYC-gated with whitelisted queue redemption. PikuDAO's USP is a NAV-appreciating token — 50% deployed into a Turkish lira FX arbitrage strategy via Balsa Technologies ({{term:delta-neutral}}delta-neutral{{/term}} TRY/USD trades capturing Turkey's inflation-driven {{term:basis-trade}}basis trade{{/term}} carry), 40% across DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap), and 10% in a USDC/USDT buffer. The very-high risk classification on the Turkish FX strategy and high risk on the DeFi allocations are reflected in the exotic collateral quality rating and a backstop of 65 with whitelisted queue-based {{term:redemption}}redemption{{/term}} at 0.2% fee — KYC/KYB required to mint or redeem, with a 24-hour FIFO settlement queue. It's a genuinely novel yield source for DeFi — Turkish carry trade returns are uncorrelated with crypto markets — but also one that concentrates geopolitical and counterparty risk in a single emerging market whose currency has lost over 90% against the dollar in a decade. The NAV has appreciated above $1.07, which proves the strategy works when it works — but half the float has queued out inside a month, so a meaningful share of holders decided not to wait around for the answer to what happens when it doesn't.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "pmusd-precious-metals": {
     "title": "Gold Bars, Sky Strings",
-    "text": "Gold-backed supply paired with a sUSDS-funded {{term:psm}}PSM{{/term}} means pmUSD's peg defense depends on Sky Protocol staying healthy — a meaningful external dependency. The structure runs on two awkward logics: supply is backed by gold via RAAC's RWf(x) fork and ION.au tokenized claims, while dollar recovery relies on a PSM holding Sky's {{term:yield-bearing}}yield-bearing{{/term}} savings wrapper. Arbitrageurs can swap discounted pmUSD for sUSDS at a $1 internal valuation, but the flow is one-directional and halts if sUSDS reserves fall below the module's threshold. That ties pmUSD's dollar recovery to Sky stability, which is a strange dependency for a coin whose collateral narrative begins with precious metals. The weak live grade still reflects poor resilience and decentralization, with a long depeg history accumulated as gold's dollar-independent price path creates a recurring gap to close. Real-time Chainlink Proof of Reserves and Instruxi {{term:attestation}}attestations{{/term}} document the gold backing with genuine rigor; the question is whether gold is the right asset to stabilize with someone else's savings-dollar plumbing.",
-    "updatedAt": "2026-06-12",
+    "text": "Gold-backed supply paired with a sUSDS-funded {{term:psm}}PSM{{/term}} means pmUSD's peg defense depends on Sky Protocol staying healthy — a meaningful external dependency. The structure runs on two awkward logics: supply is backed by gold via RAAC's RWf(x) fork and ION.au tokenized claims, while dollar recovery relies on a PSM holding Sky's {{term:yield-bearing}}yield-bearing{{/term}} savings wrapper. Arbitrageurs can swap discounted pmUSD for sUSDS at a $1 internal valuation, but the flow is one-directional and halts if sUSDS reserves fall below the module's threshold. That ties pmUSD's dollar recovery to Sky stability, which is a strange dependency for a coin whose collateral narrative begins with precious metals. That failure mode is no longer hypothetical: pmUSD is currently trading far below the dollar — a four-figure-basis-point gap with the stress gauge at alert — and the report card has collapsed to an F while the one-directional PSM does what it can from its side of the door. Real-time Chainlink Proof of Reserves and Instruxi {{term:attestation}}attestations{{/term}} document the gold backing with genuine rigor; the question is whether gold is the right asset to stabilize with someone else's savings-dollar plumbing.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "jupusd-jupiter": {
     "title": "Three Layers to Treasuries",
@@ -1241,13 +1241,13 @@
   },
   "rwausdi-multipli": {
     "title": "The RWA Middleware Layer",
-    "text": "A KYB-gated UAE wrapper aggregating 100+ tokenized T-bills, gold, and market-neutral funds — with a Lloyd's de-pegging insurance policy that's a genuinely novel backstop.\n\nMultipli's rwaUSDi wraps 100+ tokenized treasury products, gold tokens, and market-neutral fund units into a single mintable stablecoin — 50% in tokenized {{term:treasury}}T-bills{{/term}} (BUIDL, USDY, OUSG), 25% in aggregated treasury-backed stablecoins, 15% in tokenized gold, and 10% in institutional fund units from Nomura, Fasanara, and Edge Capital. The pitch is that lending protocols can't individually underwrite hundreds of {{term:rwa}}RWA{{/term}} tokens, so rwaUSDi does the aggregation and due diligence — backed by a Lloyd's insurance policy covering de-pegging risk, which is a genuinely novel backstop for a stablecoin. UAE-domiciled with AFI-audited on-chain reserves, it operates on Ethereum only with KYB-gated institutional minting, making it less a retail product and more a composable RWA building block. The elegant abstraction adds a trust layer between holder and underlying assets, but with 99 peg score and only two depeg events on record, the machinery has functioned as designed.",
-    "updatedAt": "2026-05-15",
+    "text": "A KYB-gated UAE wrapper aggregating 100+ tokenized T-bills, gold, and market-neutral funds — with a Lloyd's de-pegging insurance policy that's a genuinely novel backstop.\n\nMultipli's rwaUSDi wraps 100+ tokenized treasury products, gold tokens, and market-neutral fund units into a single mintable stablecoin — 50% in tokenized {{term:treasury}}T-bills{{/term}} (BUIDL, USDY, OUSG), 25% in aggregated treasury-backed stablecoins, 15% in tokenized gold, and 10% in institutional fund units from Nomura, Fasanara, and Edge Capital. The pitch is that lending protocols can't individually underwrite hundreds of {{term:rwa}}RWA{{/term}} tokens, so rwaUSDi does the aggregation and due diligence — backed by a Lloyd's insurance policy covering de-pegging risk, which is a genuinely novel backstop for a stablecoin. UAE-domiciled with AFI-audited on-chain reserves, it has spread from Ethereum across Base, Arbitrum, and Monad while keeping KYB-gated institutional minting, making it less a retail product and more a composable RWA building block. The elegant abstraction adds a trust layer between holder and underlying assets, but with 99 peg score and only two depeg events on record, the machinery has functioned as designed.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdm-mega": {
     "title": "Funding the Sequencer",
@@ -1301,13 +1301,13 @@
   },
   "usdgo-osl": {
     "title": "The Quiet Surge",
-    "text": "OSL's USDGO has doubled supply to $134M with a near-perfect peg, backed 80% {{term:treasury}}T-bills{{/term}} and 20% cash at Anchorage Digital under an OCC charter — on-chain liquidity is the bottleneck, not credentials. USDGO has more than doubled in supply over the past month to $134 million, a growth rate that makes most stablecoin launches look lethargic, all while maintaining a near-perfect peg with zero depeg events. The safety grade has climbed to B at 71, reflecting 80% {{term:treasury}}T-bills{{/term}} and 20% cash held at Anchorage Digital under an OCC federal bank charter — credentials that outclass most competitors five times its size, with institutional {{term:custody}}custody{{/term}} and same-day {{term:redemption}}redemption{{/term}}. Solana-only deployment and a modest $1 million in DEX TVL across just two pools make this an issuer-API exit story rather than an on-chain arbitrage play, but the CALM stress band and same-day settlement suggest OSL's institutional pipeline is doing the heavy lifting. The real question is whether USDGO's trajectory is sustainable demand from the Asia-Pacific trade corridor or a one-time institutional onboarding that plateaus once the initial wave settles.",
-    "updatedAt": "2026-05-15",
+    "text": "OSL's USDGO has been compounding supply at triple-digit monthly rates with a near-perfect peg, backed by T-bills and cash at Anchorage Digital under an OCC charter — on-chain liquidity is the bottleneck, not credentials. USDGO has kept compounding at a rate that makes most stablecoin launches look lethargic — supply has multiplied again since spring and now sits in the high hundreds of millions — all while holding a near-perfect peg. The safety grade has settled back to a C+ as on-chain liquidity strains to keep pace with issuance, but the reserve stack keeps upgrading: Treasury bills and cash under an OCC federal bank charter, now diversified across tokenized money-market funds from JPMorgan, BlackRock, and Goldman Sachs — credentials that outclass most competitors several times its size, with institutional {{term:custody}}custody{{/term}} and same-day {{term:redemption}}redemption{{/term}}. Thin on-chain depth against a nine-figure float makes this an issuer-API exit story rather than an on-chain arbitrage play, with OSL's institutional pipeline doing the heavy lifting. The old question was whether the surge was one-time onboarding; several consecutive months of steep growth suggest the Asia-Pacific institutional pipeline is a durable bid — the question now is whether the on-chain plumbing ever catches up to it.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "fidd-fidelity": {
     "title": "Fidelity's Trillion-Dollar Entrance",
@@ -1331,13 +1331,13 @@
   },
   "apxusd-apyx": {
     "title": "Dividends as Collateral",
-    "text": "apxUSD is Apyx's dollar stablecoin backed by preferred shares of Digital Asset Treasury companies plus a cash and {{term:treasury}}T-bill{{/term}} buffer — an experimental collateral type that bets equity dividends from crypto-holding firms can stay near par. Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies — publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD is so new that market cap data barely exists. The Protocol-Owned Liquidity buffer is meant to absorb stress, but the underlying question is whether equity dividends from crypto-holding companies are truly uncorrelated with the crypto market they depend on. Pharos treats the reserve profile as closer to {{term:rwa}}real-world-asset{{/term}} credit than to a cash-only stablecoin.",
-    "updatedAt": "2026-05-15",
+    "text": "apxUSD is Apyx's dollar stablecoin backed by preferred shares of Digital Asset Treasury companies plus a cash and {{term:treasury}}T-bill{{/term}} buffer — an experimental collateral type that bets equity dividends from crypto-holding firms can stay near par. Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies — publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD scaled to nine figures fast — and then the theory met June 2026. The answer arrived quickly: as Bitcoin fell, Strategy's STRC preferred traded below par and apxUSD followed it down — first to the $0.90s in early June, then through $0.80 by late month — and the token still sits well below the dollar with the stress gauge parked at watchful and the report card reading F. The issuer calls preferred-share pass-through a feature rather than a bug, which is honest as far as it goes, but a dollar that trades at a structural discount whenever its collateral does is a tracking certificate wearing a stablecoin's clothing. Pharos treats the reserve profile as closer to {{term:rwa}}real-world-asset{{/term}} credit than to a cash-only stablecoin.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "jpyc-jpyc": {
     "title": "The Yen's Licensed Pioneer",
@@ -1351,13 +1351,13 @@
   },
   "xaut-tether": {
     "title": "Tether Mints Bullion",
-    "text": "Tether's Swiss-vaulted LBMA gold token rides USDT's brand and BDO Italia attestations but is steadily losing share to PAXG's bar-level transparency.\n\nTether's gold token is backed 100% by LBMA Good Delivery bars in Swiss vaults with BDO Italia {{term:attestation}}attestations{{/term}}, operating under El Salvador's CNAD jurisdiction with institutional-regulated custody — the same transparency framework as USDT, applied to physical bullion. XAUT commands the largest share of the tokenized gold market, which sounds impressive until you notice that share has been eroding as PAXG and newer competitors chip away at the margins. Deployed on Ethereum only, XAUT works exactly like you'd expect from Tether: a market that trades on brand recognition over the granular bar-level transparency that Paxos offers with PAXG's allocated serial numbers. With gold's rally inflating all boats, XAUT's real significance may be Tether's own physical gold accumulation rather than the tokenized wrapper itself.",
-    "updatedAt": "2026-05-15",
+    "text": "Tether's Swiss-vaulted LBMA gold token rides USDT's brand and BDO Italia attestations but is steadily losing share to PAXG's bar-level transparency.\n\nTether's gold token is backed 100% by LBMA Good Delivery bars in Swiss vaults with BDO Italia {{term:attestation}}attestations{{/term}}, operating under El Salvador's CNAD jurisdiction with institutional-regulated custody — the same transparency framework as USDT, applied to physical bullion. XAUT commands the largest share of the tokenized gold market, which sounds impressive until you notice that share has been eroding as PAXG and newer competitors chip away at the margins. Deployed across nearly a dozen chains from Ethereum to Solana and TON, XAUT works exactly like you'd expect from Tether: a market that trades on brand recognition over the granular bar-level transparency that Paxos offers with PAXG's allocated serial numbers. Tether has meanwhile tightened the family around the flagship, winding down its Alloy platform and the XAUT-collateralized aUSDT — holders have until mid-September to pull their gold collateral out — a quiet admission that the market wanted the bullion token, not derivatives of it. With gold's rally inflating all boats, XAUT's real significance may be Tether's own physical gold accumulation rather than the tokenized wrapper itself.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "paxg-paxos": {
     "title": "Fort Knox With a Charter",
@@ -1381,13 +1381,13 @@
   },
   "xaum-matrixdock": {
     "title": "Asia's Institutional Bullion",
-    "text": "LBMA gold vaulted in Singapore and Hong Kong with Bureau Veritas audits — a deliberate Asia-domicile bet against London- and Swiss-vaulted competitors.\n\nMatrixdock's XAUm is backed by LBMA-certified 99.99% gold bars at Brink's and Malca-Amit in Singapore and Hong Kong, Bureau Veritas audited via independent {{term:attestation}}attestation{{/term}}, with institutional-regulated custody and a minimum redemption of 32.148 XAUm (1 kg) restricted to KYC'd accredited investors. The Asia-Pacific custody thesis — Singapore and Hong Kong vaults rather than London or Switzerland — is a deliberate choice targeting institutions that prefer regional domicile for their gold exposure. Deployed on Ethereum and BSC, XAUm remains a modest share of the tokenized gold market, but the partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization signals ambitions beyond retail. Whether institutions actually prefer Asia-domiciled custody over the London and Swiss vaults that XAUT and PAXG offer remains the strategic bet.",
-    "updatedAt": "2026-05-15",
+    "text": "LBMA gold vaulted in Singapore and Hong Kong with Bureau Veritas audits — a deliberate Asia-domicile bet against London- and Swiss-vaulted competitors.\n\nMatrixdock's XAUm is backed by LBMA-certified 99.99% gold bars at Brink's and Malca-Amit in Singapore and Hong Kong, Bureau Veritas audited via independent {{term:attestation}}attestation{{/term}}, with institutional-regulated custody and a minimum redemption of 32.148 XAUm (1 kg) restricted to KYC'd accredited investors. The Asia-Pacific custody thesis — Singapore and Hong Kong vaults rather than London or Switzerland — is a deliberate choice targeting institutions that prefer regional domicile for their gold exposure. Deployed on Ethereum and BSC, XAUm remains a modest share of the tokenized gold market, but the utility résumé keeps growing — in June it became the first tokenized gold accepted as collateral in Cap's on-chain credit markets — and the partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization signals ambitions beyond retail. Whether institutions actually prefer Asia-domiciled custody over the London and Swiss vaults that XAUT and PAXG offer remains the strategic bet.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "cgo-comtech": {
     "title": "DMCC-Stamped Bullion",
@@ -1461,13 +1461,13 @@
   },
   "syrupusdc-maple": {
     "title": "Institutional Lending, Vaulted",
-    "text": "Maple's syrupUSDC turns USDC into an ERC-4626 receipt for institutional lending, which is a tidy way to make private credit look like a composable stablecoin. The vault channels deposits into overcollateralized fixed-rate loans, accrues value through NAV appreciation, and serves withdrawals through a FIFO liquidity queue rather than pretending every lender can exit at once. The Network Firm proof-of-reserves layer is useful because it verifies the loan-book collateral story, but it does not repeal borrower default, collateral liquidation, or queue timing. Pharos tracks the USDC dependency and the RWA-like credit exposure separately because this is not just Circle risk with a nicer APY. The product is sophisticated; the old credit-cycle problem underneath is stubbornly analogue.",
-    "updatedAt": "2026-06-12",
+    "text": "Maple's syrupUSDC turns USDC into an ERC-4626 receipt for institutional lending, which is a tidy way to make private credit look like a composable stablecoin. The vault channels deposits into overcollateralized fixed-rate loans, accrues value through NAV appreciation, and serves withdrawals through a FIFO liquidity queue rather than pretending every lender can exit at once. The Network Firm proof-of-reserves layer is useful because it verifies the loan-book collateral story, but it does not repeal borrower default, collateral liquidation, or queue timing. Pharos tracks the USDC dependency and the RWA-like credit exposure separately because this is not just Circle risk with a nicer APY. Maple keeps institutionalizing the front end — June brought an on-chain warehouse lending facility with Kraken, separating exchange custody from Maple's underwriting. The product is sophisticated; the old credit-cycle problem underneath is stubbornly analogue.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "syrupusdt-maple": {
     "title": "The Mirror Vault",
@@ -1491,13 +1491,13 @@
   },
   "ustb-superstate": {
     "title": "Wall Street's On-Chain Fund",
-    "text": "Superstate's USTB sits at $810 million in 100% short-duration government securities at BNY Mellon, sub-advised by Federated Hermes, audited by Ernst & Young — a pedigree that reads like a traditional fund prospectus because it essentially is one. The C safety grade looks middling until you read the breakdown: A+ in both resilience and dependency risk, dragged down almost entirely by an F in liquidity, which for a Reg D {{term:money-market-fund}}money-market fund{{/term}} restricted to qualified purchasers and accredited investors is less a flaw than a category error. {{term:treasury}}Treasury{{/term}} bills and {{term:rwa}}RWA{{/term}} {{term:attestation}}attestation{{/term}} sit underneath, with institutional {{term:custody}}custody{{/term}} at BNY Mellon as the anchor. Zero DEX liquidity and zero pool count confirm that USTB doesn't trade on decentralized markets at all; this is a subscribe-and-redeem product at daily NAV, now at $11.05 per share yielding 3.20%. The real significance remains infrastructural: USTB appears in the collateral stacks of other stablecoins that want {{term:treasury}}Treasury{{/term}} exposure without the BNY Mellon relationship, making Superstate less a consumer {{term:yield-bearing}}yield-bearing{{/term}} product than the institutional plumbing beneath DeFi's yield layer — which is exactly why a liquidity-driven grade penalty undersells what it actually is.",
-    "updatedAt": "2026-06-03",
+    "text": "USTB holds nine figures of short-duration government securities at BNY Mellon and now answers to a new name on the door: Invesco took over as investment manager this spring — same ticker, same contracts, with Superstate retreating to the on-chain plumbing — a pedigree that reads like a traditional fund prospectus because it essentially is one. The C safety grade looks middling until you read the breakdown: A+ in both resilience and dependency risk, dragged down almost entirely by an F in liquidity, which for a Reg D {{term:money-market-fund}}money-market fund{{/term}} restricted to qualified purchasers and accredited investors is less a flaw than a category error. {{term:treasury}}Treasury{{/term}} bills and {{term:rwa}}RWA{{/term}} {{term:attestation}}attestation{{/term}} sit underneath, with institutional {{term:custody}}custody{{/term}} at BNY Mellon as the anchor. Zero DEX liquidity and zero pool count confirm that USTB doesn't trade on decentralized markets at all; this is a subscribe-and-redeem product at daily NAV, full stop. The real significance remains infrastructural: USTB appears in the collateral stacks of other stablecoins that want {{term:treasury}}Treasury{{/term}} exposure without the BNY Mellon relationship, making Superstate less a consumer {{term:yield-bearing}}yield-bearing{{/term}} product than the institutional plumbing beneath DeFi's yield layer — which is exactly why a liquidity-driven grade penalty undersells what it actually is.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "ousg-ondo-finance": {
     "title": "The Hundred-Dollar Stablecoin",
@@ -1591,13 +1591,13 @@
   },
   "thbill-theo": {
     "title": "Wrapping the Wrappers",
-    "text": "Theo's thBILL is a NAV-accreting T-bill wrapper whose reserve is currently tULTRA, itself a wrapped representation of Standard Chartered Libeara's ULTRA fund managed by Wellington. That means the holder gets institutional Treasury exposure, but only after passing through Theo, tULTRA, Libeara, Wellington, Standard Chartered custody, and the fund administration stack. Pharos gives the underlying collateral credit for being real T-bill exposure while still treating the wrapper depth and single-entity governance as operational risk, because a bond with four nameplates is still not direct bond ownership. Mint and redemption are KYC-gated, institutional, and not built for casual retail exit. thBILL is clean at the bottom and baroque at the top, which is apparently what tokenized Treasuries become when everyone wants their logo in the trust chain.",
-    "updatedAt": "2026-06-12",
+    "text": "Theo's thBILL is a NAV-accreting T-bill wrapper whose reserve is currently tULTRA, itself a wrapped representation of Standard Chartered Libeara's ULTRA fund managed by Wellington. That means the holder gets institutional Treasury exposure, but only after passing through Theo, tULTRA, Libeara, Wellington, Standard Chartered custody, and the fund administration stack. Pharos gives the underlying collateral credit for being real T-bill exposure while still treating the wrapper depth and single-entity governance as operational risk, because a bond with four nameplates is still not direct bond ownership. Mint and redemption are KYC-gated, institutional, and not built for casual retail exit. Theo's own attention has visibly moved on — the last thBILL points market has ended and the issuer's incentives now push its new gold-carry product, leaving thBILL as inventory rather than flagship. thBILL is clean at the bottom and baroque at the top, which is apparently what tokenized Treasuries become when everyone wants their logo in the trust chain.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdp-parallel": {
     "title": "Parallelizer Dollar",
@@ -1611,13 +1611,13 @@
   },
   "usdpt-western-union": {
     "title": "Launched Settlement Dollar",
-    "text": "USDPT is Western Union's attempt to turn agent and treasury settlement into an on-chain dollar rail without pretending to be a DeFi-native coin. Anchorage Digital Bank issues it on Solana, with reserves described as bank deposits, Treasury bills, and cash-equivalent instruments under a regulated U.S. banking setup. The interesting part is distribution: Western Union already has the physical agent network most stablecoin issuers would pitch as a 2030 roadmap slide. The boring part is also the point, because mint and redemption are centralized issuer operations for a corporate payments product. Until public market data and secondary liquidity mature, USDPT is less a traded stablecoin than a live settlement primitive waiting for the dashboard to prove it has circulation beyond the press release.",
-    "updatedAt": "2026-06-12",
+    "text": "USDPT is Western Union's attempt to turn agent and treasury settlement into an on-chain dollar rail without pretending to be a DeFi-native coin. Anchorage Digital Bank issues it on Solana, with reserves described as bank deposits, Treasury bills, and cash-equivalent instruments under a regulated U.S. banking setup. The interesting part is distribution: Western Union already has the physical agent network most stablecoin issuers would pitch as a 2030 roadmap slide. The boring part is also the point, because mint and redemption are centralized issuer operations for a corporate payments product. The proof has started to arrive, at pilot scale: Solana circulation has multiplied from four-figure dust toward seven figures in a matter of weeks. USDPT is still less a traded stablecoin than a live settlement primitive — but the primitive is now demonstrably being used.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "roughrider-bnd": {
     "title": "State-Owned Banking Goes On-Chain",
@@ -1771,13 +1771,13 @@
   },
   "tryb-bilira": {
     "title": "The Lira's Digital Outpost",
-    "text": "BiLira's TRYB is a Turkish-lira stablecoin backed by TRY cash reserves, with native deployments broad enough to make it one of the more widely distributed local-currency tokens in the region. The use case is obvious: Turkish users need on-chain TRY rails in a country where inflation and currency weakness make dollar rails dominant but local denomination still matters. The risk is not clever DeFi engineering; it is issuer custody, centralized mint and redemption, and whether quarterly audit materials keep enough confidence behind a fiat currency that already has a macro credibility problem. Pharos treats the reserve as simple cash and the governance as centralized, which is the honest shape of the product. TRYB is useful infrastructure, not monetary magic, and that distinction matters most when the lira itself is doing lira things.",
-    "updatedAt": "2026-06-12",
+    "text": "BiLira's TRYB is a Turkish-lira stablecoin backed by TRY cash reserves, with native deployments broad enough to make it one of the more widely distributed local-currency tokens in the region. The use case is obvious: Turkish users need on-chain TRY rails in a country where inflation and currency weakness make dollar rails dominant but local denomination still matters. The risk is not clever DeFi engineering; it is issuer custody, centralized mint and redemption, and whether quarterly audit materials keep enough confidence behind a fiat currency that already has a macro credibility problem. Pharos treats the reserve as simple cash and the governance as centralized, which is the honest shape of the product. The float has been doing lira things too — supply is down by roughly two-thirds over the past month with no incident on record, the kind of quiet drain that tests how much demand for on-chain lira actually exists. TRYB is useful infrastructure, not monetary magic, and that distinction matters most when the lira itself is doing lira things.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "ebusd-ebisu": {
     "title": "Exotic Collateral at Micro-Cap Scale",
@@ -1851,13 +1851,13 @@
   },
   "mxnb-juno": {
     "title": "Peso Stablecoin, New Issuer Jurisdiction",
-    "text": "1:1 MXN-pegged stablecoin with quarterly attestations; issuer just moved from Mexico (CNBV) to El Salvador (CNAD) as of April 2026, with reserves still in regulated peso banking. MXNB remains a 1:1 Mexican peso stablecoin with quarterly reserve {{term:attestation}}attestations{{/term}} and the same multichain FiatToken-style deployment across Ethereum, Polygon, Arbitrum, and Avalanche. The material change is issuer jurisdiction: beginning April 8, 2026, MXNB says issuance moved to Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador. The reserves are still described as Mexican peso assets held with regulated financial institutions under bank {{term:custody}}custody{{/term}}, so Pharos keeps the fiat-backed model while updating the regulatory owner from Mexico/CNBV to El Salvador/CNAD.",
-    "updatedAt": "2026-05-15",
+    "text": "1:1 MXN-pegged stablecoin with quarterly attestations; issuer just moved from Mexico (CNBV) to El Salvador (CNAD) as of April 2026, with reserves still in regulated peso banking. MXNB remains a 1:1 Mexican peso stablecoin with quarterly reserve {{term:attestation}}attestations{{/term}} and the same multichain FiatToken-style deployment across Ethereum, Polygon, Arbitrum, and Avalanche. The material change is issuer jurisdiction: beginning April 8, 2026, MXNB says issuance moved to Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador. The reserves are still described as Mexican peso assets held with regulated financial institutions under bank {{term:custody}}custody{{/term}}, so Pharos keeps the fiat-backed model while updating the regulatory owner from Mexico/CNBV to El Salvador/CNAD. Distribution took an institutional turn in June with MXNB joining XRP Ledger's permissioned DEX paired against RLUSD for cross-border USD/MXN settlement — corridor plumbing, which is exactly the job a peso stablecoin should want.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "cjpy-yamato": {
     "title": "ETH-Backed Yen, Quietly Running",
@@ -1911,13 +1911,13 @@
   },
   "usdat-saturn": {
     "title": "Saylor's Yield, M0's Backing",
-    "text": "Saturn's USDat is a permissioned M0 wrapper of short-term {{term:treasury}}T-bills{{/term}}, with the actual Saylor exposure sitting one floor up in the sUSDat vault that rotates into Strategy's perpetual preferred equity. Saturn pitches itself as the digital monetary layer for a financial system backed by Bitcoin, but at launch USDat is just another M0 wrapper — 100% of the collateral is short-term Treasury bills via M0 Protocol, which means the dollar in your wallet is bankrupt-remote SPV plumbing wearing Saturn's logo. The Bitcoin part lives one floor up, in the sUSDat staking vault, where capital is dynamically rotated into STRC — Strategy's perpetual preferred equity — based on Michael Saylor's loan-to-value ratio, targeting 11%+ APY routed through Clear Street {{term:custody}}custody{{/term}} and a Securitize-administered BVI fund. USDat is permissioned and geofenced from the United States, the EEA, and OFAC jurisdictions, so the audience is sophisticated offshore capital comfortable with both KYC onboarding and a 3-7 day unstaking queue. With $33 million in circulation barely a month after the March 2026 deployment, three audits from Certora and Three Sigma, and live proof-of-reserves still pending Accountable and Chainlink integration, USDat is the cleanest expression yet of the thesis that crypto's next yield wave doesn't come from on-chain perps or {{term:rwa}}RWA{{/term}} T-bills — it comes from being long whatever Saylor is short.",
-    "updatedAt": "2026-05-15",
+    "text": "Saturn's USDat is a permissioned M0 wrapper of short-term {{term:treasury}}T-bills{{/term}}, with the actual Saylor exposure sitting one floor up in the sUSDat vault that rotates into Strategy's perpetual preferred equity. Saturn pitches itself as the digital monetary layer for a financial system backed by Bitcoin, but at launch USDat is just another M0 wrapper — 100% of the collateral is short-term Treasury bills via M0 Protocol, which means the dollar in your wallet is bankrupt-remote SPV plumbing wearing Saturn's logo. The Bitcoin part lives one floor up, in the sUSDat staking vault, where capital is dynamically rotated into STRC — Strategy's perpetual preferred equity — based on Michael Saylor's loan-to-value ratio, targeting 11%+ APY routed through Clear Street {{term:custody}}custody{{/term}} and a Securitize-administered BVI fund. June stress-tested the split-level design: Strategy's STRC preferred traded below par as Bitcoin fell, marking down the sleeve that holds it, while the T-bill floor under USDat itself never moved — Pharos still reads the base token pinned at the dollar. USDat is permissioned and geofenced from the United States, the EEA, and OFAC jurisdictions, so the audience is sophisticated offshore capital comfortable with both KYC onboarding and a 3-7 day unstaking queue. Circulation has since grown to nine figures — though it leaked double digits during June's stress — with three audits from Certora and Three Sigma on the books, and USDat remains the cleanest expression yet of the thesis that crypto's next yield wave doesn't come from on-chain perps or {{term:rwa}}RWA{{/term}} T-bills — it comes from being long whatever Saylor is short.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdk-orki": {
     "title": "Swellchain's Restaked Dollar",
@@ -2031,13 +2031,13 @@
   },
   "ausdt-tether-alloy": {
     "title": "Gold Collateral, Dollar Target",
-    "text": "aUSDT is Alloy by Tether's dollar stablecoin — a {{term:cdp}}CDP{{/term}} where verified users deposit Tether Gold (XAUT) and mint dollars at up to 75% LTV, so the peg sits on top of {{term:overcollateralization}}overcollateralized{{/term}} gold rather than a bank account. Alloy Tether turns Tether Gold into a dollar-tracking credit instrument: verified users deposit XAUT into an Ethereum vault, mint aUSDT against a 75% mint-to-value ceiling, and return aUSDT plus fees to withdraw collateral. That gives Pharos a clean on-chain reserve view because the XAUT backing sits in the CMPVault, but it also means aUSDT inherits Tether Gold {{term:custody}}custody{{/term}}, gold-price volatility, whitelist access, and {{term:liquidation}}liquidation{{/term}} mechanics. The peg is not a bank-account promise; it is an overcollateralized gold position engineered to trade near one dollar.",
-    "updatedAt": "2026-05-15",
+    "text": "aUSDT is Alloy by Tether's dollar stablecoin — a {{term:cdp}}CDP{{/term}} where verified users deposit Tether Gold (XAUT) and mint dollars at up to 75% LTV, so the peg sits on top of {{term:overcollateralization}}overcollateralized{{/term}} gold rather than a bank account. Alloy Tether turns Tether Gold into a dollar-tracking credit instrument: verified users deposit XAUT into an Ethereum vault, mint aUSDT against a 75% mint-to-value ceiling, and return aUSDT plus fees to withdraw collateral. That gives Pharos a clean on-chain reserve view because the XAUT backing sits in the CMPVault, but it also means aUSDT inherits Tether Gold {{term:custody}}custody{{/term}}, gold-price volatility, whitelist access, and {{term:liquidation}}liquidation{{/term}} mechanics. The peg is not a bank-account promise; it is an overcollateralized gold position engineered to trade near one dollar. It is also now a position in run-off: Tether is winding down the Alloy platform, new minting is halted, and holders have until mid-September 2026 to return aUSDT and pull their XAUT collateral before the exit window closes. The experiment ends as a footnote to Tether's gold strategy — the market wanted the bullion token, not a dollar derivative of it.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdsui-sui": {
     "title": "Sui Gets Its Native Dollar",
@@ -2061,13 +2061,13 @@
   },
   "usdglo-glo": {
     "title": "Public-Goods Float",
-    "text": "Glo Dollar is Brale-issued dollar plumbing with an unusual allocation decision: reserve yield funds public-goods causes instead of being rebated to holders, exchanges, or the issuer's distribution partners. The backing itself is deliberately ordinary, split between cash-like assets and U.S. government-backed debt with monthly attestations and 1:1 mint and redemption through Brale. That makes USDGLO's differentiation moral and distributional, not mechanical, which is more interesting than another fake innovation label. Pharos also tracks it because small stablecoins can still become meaningful dependencies when they show up inside other reserve stacks. USDGLO is not trying to out-engineer Circle; it is trying to redirect the float, which is both noble and commercially inconvenient.",
-    "updatedAt": "2026-06-12",
+    "text": "Glo Dollar is Brale-issued dollar plumbing with an unusual allocation decision: reserve yield funds public-goods causes instead of being rebated to holders, exchanges, or the issuer's distribution partners. The backing itself is deliberately ordinary, split between cash-like assets and U.S. government-backed debt with monthly attestations and 1:1 mint and redemption through Brale. That makes USDGLO's differentiation moral and distributional, not mechanical, which is more interesting than another fake innovation label. Pharos also tracks it because small stablecoins can still become meaningful dependencies when they show up inside other reserve stacks. Commercially inconvenient is currently winning: the float halved inside a month, most of it leaving Celo in a single week, and redirected yield only works when there is a float to redirect. USDGLO is not trying to out-engineer Circle; it is trying to redirect the float, which is both noble and commercially inconvenient.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usdon-ondo": {
     "title": "Ondo Settlement Cash",
@@ -2251,13 +2251,13 @@
   },
   "stkgho-umbrella-aave": {
     "title": "Aave Umbrella GHO Staking",
-    "text": "Aave Umbrella stkGHO is a slashable staking receipt over GHO, which makes it much more interesting than a passive savings wrapper and much less comfortable to hold during a deficit event. Depositors earn Umbrella rewards, but they also accept cooldowns, withdrawal windows, and automated loss absorption if covered GHO shortfalls materialize. The wrapper minting is deposit accounting, while durable GHO issuance still inherits Aave's facilitator and governance controls underneath. Pharos therefore treats stkGHO as a risk-absorption asset, not a cleaner version of the base CDP stablecoin. The yield is the payment for being useful when something goes wrong, which is a sentence no one should skip over.",
-    "updatedAt": "2026-06-12",
+    "text": "Aave Umbrella stkGHO is a slashable staking receipt over GHO, which makes it much more interesting than a passive savings wrapper and much less comfortable to hold during a deficit event. Depositors earn Umbrella rewards, but they also accept cooldowns, withdrawal windows, and automated loss absorption if covered GHO shortfalls materialize. The wrapper minting is deposit accounting, while durable GHO issuance still inherits Aave's facilitator and governance controls underneath. Pharos therefore treats stkGHO as a risk-absorption asset, not a cleaner version of the base CDP stablecoin. A June restructuring sharpened the sorting: Aave auto-migrated passive legacy stakers into the non-slashable sGHO wrapper, leaving Umbrella stkGHO as the explicit opt-in vault for those paid to absorb losses. The yield is the payment for being useful when something goes wrong, which is a sentence no one should skip over.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "myrc-blox": {
     "title": "First Malaysian Ringgit stablecoin",
@@ -2271,13 +2271,13 @@
   },
   "krwq-iq": {
     "title": "First Korean Won stablecoin, RWA-backed",
-    "text": "First 1:1 KRW stablecoin from IQ/Frax, transitioning from USDC backing to a Korean T-bond-heavy reserve via Etherfuse Stablebonds; KYC-gated institutional access. KRWQ is the first stablecoin pegged 1:1 to the South Korean won, launched October 2025 by IQ in partnership with Frax. It uses LayerZero's Omnichain Fungible Token (OFT) standard with Ethereum as the canonical mint chain and Base as the primary bridged destination, sharing unified supply across deployments. Reserves are transitioning from initial USDC backing toward a target mix dominated by short-term Korean Treasury Bonds, which are tokenized through Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities, alongside USDC and Frax frxUSD. Mint and redemption are KYC-gated to institutional counterparties (exchanges, market makers, OTC desks), and KRWQ is explicitly not marketed to South Korean residents while domestic stablecoin legislation moves through the National Assembly. The issuer commits to independent monthly attestations starting 2025 but has not yet named an auditor or published a report; live reserves are currently a self-reported on-chain dashboard. Reserves anchor on tokenized Korean {{term:treasury}}treasury bonds{{/term}} as {{term:rwa}}RWA{{/term}} held in segregated Shinhan Securities {{term:custody}}custody{{/term}}, with KYC-gated {{term:redemption}}redemption{{/term}} and LayerZero OFT acting as the cross-chain {{term:bridge}}bridge{{/term}}.",
-    "updatedAt": "2026-05-15",
+    "text": "First 1:1 KRW stablecoin from IQ/Frax, transitioning from USDC backing to a Korean T-bond-heavy reserve via Etherfuse Stablebonds; KYC-gated institutional access. KRWQ is the first stablecoin pegged 1:1 to the South Korean won, launched October 2025 by IQ in partnership with Frax. It uses LayerZero's Omnichain Fungible Token (OFT) standard with Ethereum as the canonical mint chain and Base as the primary bridged destination, sharing unified supply across deployments. Reserves are transitioning from initial USDC backing toward a target mix dominated by short-term Korean Treasury Bonds, which are tokenized through Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities, alongside USDC and Frax frxUSD. Mint and redemption are KYC-gated to institutional counterparties (exchanges, market makers, OTC desks), and KRWQ is explicitly not marketed to South Korean residents while domestic stablecoin legislation moves through the National Assembly. The transparency stack took a real step in June when KRWQ became the first Korean won stablecoin wired into Chainlink Proof of Reserve for automated verification, though the promised independent monthly attestations still lack a named auditor. Reserves anchor on tokenized Korean {{term:treasury}}treasury bonds{{/term}} as {{term:rwa}}RWA{{/term}} held in segregated Shinhan Securities {{term:custody}}custody{{/term}}, with KYC-gated {{term:redemption}}redemption{{/term}} and LayerZero OFT acting as the cross-chain {{term:bridge}}bridge{{/term}}.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "reur-royal-euro": {
     "title": "Euro Rail, Early Liquidity",
@@ -2311,13 +2311,13 @@
   },
   "cngn-compliant-naira": {
     "title": "Naira Settlement Goes Multichain",
-    "text": "cNGN is a Nigerian naira stablecoin that looks more like regulated settlement plumbing than a speculative dollar substitute. The reserve mix is split between commercial-bank naira deposits and naira money-market or short-term FGN treasury-bill exposure, with monthly independent attestations noted in Pharos metadata. Nigerian SEC oversight gives it a clearer regulatory anchor than most local-currency experiments, though that does not magically create deep secondary liquidity. The multichain footprint improves utility for payments and exchange settlement, while issuer-controlled Safes and a Solana mint key keep governance firmly centralized. cNGN's best argument is not crypto novelty; it is that compliant naira rails are useful precisely because everyone else keeps trying to dollarize the problem.",
-    "updatedAt": "2026-06-12",
+    "text": "cNGN is a Nigerian naira stablecoin that looks more like regulated settlement plumbing than a speculative dollar substitute. The reserve mix is split between commercial-bank naira deposits and naira money-market or short-term FGN treasury-bill exposure, with monthly independent attestations noted in Pharos metadata. Nigerian SEC oversight gives it a clearer regulatory anchor than most local-currency experiments, though that does not magically create deep secondary liquidity. The multichain footprint improves utility for payments and exchange settlement, while issuer-controlled Safes and a Solana mint key keep governance firmly centralized. The argument is starting to attract builders — HyperFX, a new on-chain FX engine, settles its naira leg in cNGN. cNGN's best argument is not crypto novelty; it is that compliant naira rails are useful precisely because everyone else keeps trying to dollarize the problem.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "brl1-brl1": {
     "title": "Small-Cap Real Exposure",
@@ -2341,13 +2341,13 @@
   },
   "pusd-polymarket": {
     "title": "The Prediction-Market Wrapper",
-    "text": "An application-tier dollar balance token mapped to USDC on Polygon, with risk concentrated in the Polymarket app rails rather than a new reserve.\n\nPolymarket USD is the dollar balance token used around Polymarket deposits and withdrawals on Polygon. Its collateral story is simple: the token is intended to map to USDC and USDC.e in Polymarket rails, so reserve risk is mostly wrapper, {{term:bridge}}bridge{{/term}}, and app-access risk rather than a new asset mix. Pharos enables curated reserve validation against the Polygon contract and keeps the {{term:redemption}}redemption{{/term}} path documented through Polymarket docs. The token functions as an application dollar, not an independent issuer reserve.",
-    "updatedAt": "2026-05-15",
+    "text": "An application-tier dollar balance token mapped to USDC on Polygon, with risk concentrated in the Polymarket app rails rather than a new reserve.\n\nPolymarket USD is the dollar balance token used around Polymarket deposits and withdrawals on Polygon. Its collateral story is simple: the token is intended to map to USDC and USDC.e in Polymarket rails, so reserve risk is mostly wrapper, {{term:bridge}}bridge{{/term}}, and app-access risk rather than a new asset mix. Pharos enables curated reserve validation against the Polygon contract and keeps the {{term:redemption}}redemption{{/term}} path documented through Polymarket docs. Scale is the new fact: supply has blown past half a billion dollars on record prediction-market volume — an election cycle and a World Cup will do that — which makes the wrapper's app-rail risk a materially bigger number than it was in spring. The token functions as an application dollar, not an independent issuer reserve.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "rusd-royal-dollar": {
     "title": "The Royal Reserve Claim",
@@ -2441,13 +2441,13 @@
   },
   "hbd-hive": {
     "title": "The Hive Conversion Dollar",
-    "text": "HBD is Hive's {{term:algorithmic}}algorithmic{{/term}} dollar redeemable on-chain for $1 of HIVE via witness-set conversion, with haircut rules when system debt exceeds thresholds. Hive Backed Dollar is a protocol-native dollar claim inside the Hive ecosystem. It targets $1 through HIVE conversion rules and witness-set savings parameters, not through cash or Treasury {{term:custody}}custody{{/term}}. That makes the collateral base reflexive to the value and governance of Hive itself, especially under haircut conditions. Pharos classifies HBD as crypto-backed and decentralized while flagging that the {{term:redemption}}redemption{{/term}} backstop is protocol conversion capacity, not liquid off-chain reserves.",
-    "updatedAt": "2026-05-15",
+    "text": "HBD is Hive's {{term:algorithmic}}algorithmic{{/term}} dollar redeemable on-chain for $1 of HIVE via witness-set conversion, with haircut rules when system debt exceeds thresholds. Hive Backed Dollar is a protocol-native dollar claim inside the Hive ecosystem. It targets $1 through HIVE conversion rules and witness-set savings parameters, not through cash or Treasury {{term:custody}}custody{{/term}}. That makes the collateral base reflexive to the value and governance of Hive itself, especially under haircut conditions. Pharos classifies HBD as crypto-backed and decentralized while flagging that the {{term:redemption}}redemption{{/term}} backstop is protocol conversion capacity, not liquid off-chain reserves — a distinction the market is currently pricing, with the token trading several percent soft of the dollar on sparse venues while the stress gauge leans toward the alarm end.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "jpyc-jpyc-v1": {
     "title": "The Legacy JPYC Series",
@@ -2531,13 +2531,13 @@
   },
   "eusd-telcoin": {
     "title": "The Telcoin Bank Dollar",
-    "text": "Telcoin eUSD is a bank-issued dollar token from Telcoin Digital Asset Bank, operating under Nebraska's digital-asset depository framework rather than the usual offshore issuer maze. That regulatory posture is stronger than most long-tail additions, but Pharos still keeps the reserve slice conservative because detailed public telemetry and published monthly attestations are not yet as mature as the charter story. The token spans Ethereum, Base, Polygon, and Solana, with issuer and multisig controls doing the minting work behind the scenes. Redemption is a KYC-gated banking-rail process, not a permissionless DeFi backstop, so the trust boundary is the bank. eUSD is what happens when a stablecoin gets a bank charter before it gets market depth, which is progress of a very specific kind.",
-    "updatedAt": "2026-06-12",
+    "text": "Telcoin eUSD is a bank-issued dollar token from Telcoin Digital Asset Bank, operating under Nebraska's digital-asset depository framework rather than the usual offshore issuer maze. That regulatory posture is stronger than most long-tail additions, but Pharos still keeps the reserve slice conservative because detailed public telemetry and published monthly attestations are not yet as mature as the charter story. The token spans Ethereum, Base, Polygon, and Solana, with issuer and multisig controls doing the minting work behind the scenes. Redemption is a KYC-gated banking-rail process, not a permissionless DeFi backstop, so the trust boundary is the bank. The charter started paying rent in June, when Telcoin launched the first U.S. regulated on-chain bank accounts tied natively to eUSD through its Wallet V5 — deposit banking and a stablecoin sharing one regulated container. eUSD is what happens when a stablecoin gets a bank charter before it gets market depth, and the bank part is no longer theoretical.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "money-defi-money": {
     "title": "The defi.money Stablecoin",
@@ -2621,13 +2621,13 @@
   },
   "susd-solayer": {
     "title": "The Solana T-Bill Rebase",
-    "text": "Solayer sUSD is a Solana Token-2022 interest-bearing dollar whose balances grow from T-bill exposure rather than staying as a static par token. The structure is simple on paper: Solayer workflows handle minting, the interest extension handles balance growth, and the reserve model points to U.S. T-bill or RWA partner exposure. The risk is in the operational wrapper, because holder exits depend on issuer workflows, Solana token semantics, and institutional custody assumptions rather than a permissionless redemption contract. Pharos uses the Solana mint for curated reserve validation and keeps the reserve slice conservative until a stronger transparency feed exists. It is a neat Solana-native yield wrapper, which is another way of saying the boring Treasury bill has acquired chain-specific footnotes.",
-    "updatedAt": "2026-06-12",
+    "text": "Solayer sUSD is a Solana Token-2022 interest-bearing dollar whose balances grow from T-bill exposure rather than staying as a static par token. The structure is simple on paper: Solayer workflows handle minting, the interest extension handles balance growth, and the reserve model points to U.S. T-bill or RWA partner exposure. The risk is in the operational wrapper, because holder exits depend on issuer workflows, Solana token semantics, and institutional custody assumptions rather than a permissionless redemption contract. Pharos uses the Solana mint for curated reserve validation and keeps the reserve slice conservative until a stronger transparency feed exists. The float, meanwhile, has drained roughly 85% inside a month with no public explanation — issuer-workflow exits working exactly as designed, in the direction issuers least like to advertise. It is a neat Solana-native yield wrapper, which is another way of saying the boring Treasury bill has acquired chain-specific footnotes.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "usx-dforce": {
     "title": "The Discounted dForce Dollar",
@@ -2641,13 +2641,13 @@
   },
   "home-homecoin": {
     "title": "The Property-Lien Dollar",
-    "text": "USD stablecoin backed by U.S. home-loan liens and property receivables; foreclosure is the recovery path, not redemption liquidity. HomeCoin is backed by U.S. home loan liens and property-backed receivables rather than cash, T-bills, or crypto collateral. That makes the asset interesting but illiquid: a foreclosure right is not the same thing as immediate redemption liquidity. Pharos tracks the Ethereum contract, self-reported collateral source, and DefiLlama provider entry while assigning high reserve risk. The real-estate lending model is documented in metadata, but HOME is not classified as yield-bearing until a holder-level yield source is verified. Reserve risk is dominated by mortgage-lien {{term:rwa}}RWA{{/term}} quality rather than cash {{term:attestation}}attestation{{/term}}, and the {{term:redemption}}redemption{{/term}} path runs through loan workouts, not an issuer window.",
-    "updatedAt": "2026-05-15",
+    "text": "USD stablecoin backed by U.S. home-loan liens and property receivables; foreclosure is the recovery path, not redemption liquidity. HomeCoin is backed by U.S. home loan liens and property-backed receivables rather than cash, T-bills, or crypto collateral. That makes the asset interesting but illiquid: a foreclosure right is not the same thing as immediate redemption liquidity. Pharos tracks the Ethereum contract, self-reported collateral source, and DefiLlama provider entry while assigning high reserve risk. The real-estate lending model is documented in metadata, but HOME is not classified as yield-bearing until a holder-level yield source is verified. Reserve risk is dominated by mortgage-lien {{term:rwa}}RWA{{/term}} quality rather than cash {{term:attestation}}attestation{{/term}}, and the {{term:redemption}}redemption{{/term}} path runs through loan workouts, not an issuer window. The market has started pricing that structure honestly: the one thin pool where HOME trades currently marks it at a double-digit discount to par.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "cdxusd-cod3x": {
     "title": "The Facilitator-Minted Dollar",
@@ -2771,13 +2771,13 @@
   },
   "gldy-streamex": {
     "title": "The Yield-Bearing Gold Ounce",
-    "text": "GLDY is Streamex's {{term:yield-bearing}}yield-bearing{{/term}} tokenized gold ounce on Base, with Chainlink Proof of Reserve and gold-leasing receivables as the source of returns. Streamex GLDY tracks one troy ounce of gold while passing gold-leasing yield back to token holders. The entry is stronger than most new commodity tokens because it has a Chainlink proof-of-reserves feed on Base and a documented primary-market {{term:redemption}}redemption{{/term}} route for eligible investors. The main caveat is that the yield comes from issuer-managed gold leasing rather than passive vault storage, so Pharos separates the live reserve feed from the not-yet-integrated APY source. GLDY is tracked as a commodity stablecoin, not as a generic RWA fund.",
-    "updatedAt": "2026-05-15",
+    "text": "GLDY is Streamex's {{term:yield-bearing}}yield-bearing{{/term}} tokenized gold ounce on Base, with Chainlink Proof of Reserve and gold-leasing receivables as the source of returns. Streamex GLDY tracks one troy ounce of gold while passing gold-leasing yield back to token holders. The entry is stronger than most new commodity tokens because it has a Chainlink proof-of-reserves feed on Base and a documented primary-market {{term:redemption}}redemption{{/term}} route for eligible investors. The main caveat is that the yield comes from issuer-managed gold leasing rather than passive vault storage, so Pharos separates the live reserve feed from the not-yet-integrated APY source. Distribution is being built with unusual seriousness for a token this young — 24/7 secondary liquidity infrastructure with Orca, then a June brokerage-channel deal routing GLDY through Siebert's wealth-management desks with tZERO. GLDY is tracked as a commodity stablecoin, not as a generic RWA fund.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "vnxau-vnx": {
     "title": "The Liechtenstein Gram-Gold Token",
@@ -3281,23 +3281,23 @@
   },
   "eutbl-spiko": {
     "title": "Europe's First Tokenised T-Bill MMF",
-    "text": "EUTBL is Spiko's AMF-regulated UCITS short-term {{term:money-market-fund}}MMF{{/term}} backed by Eurozone {{term:treasury}}T-bills{{/term}} — Europe's first tokenized {{term:rwa}}RWA{{/term}} sovereign fund. EUTBL is Spiko's EUR-denominated short-term money market fund — the first AMF-regulated UCITS MMF tokenised on Ethereum. The fund holds short-dated Eurozone sovereign T-bills with weighted average maturity under two months, and EUTBL behaves as a VNAV (variable-NAV) share that accretes value as T-bill yield compounds. Primary subscriptions and redemptions settle same-day at fund NAV with a €1k minimum; Chainlink CCIP bridges issuance to Arbitrum and Polygon. EUTBL is one of Pharos's few EUR-pegged RWA assets and one of the cleanest fits for European institutional users seeking regulatory-grade tokenised cash.",
-    "updatedAt": "2026-05-15",
+    "text": "EUTBL is Spiko's AMF-regulated UCITS short-term {{term:money-market-fund}}MMF{{/term}} backed by Eurozone {{term:treasury}}T-bills{{/term}} — Europe's first tokenized {{term:rwa}}RWA{{/term}} sovereign fund. EUTBL is Spiko's EUR-denominated short-term money market fund — the first AMF-regulated UCITS MMF tokenised on Ethereum. The fund holds short-dated Eurozone sovereign T-bills with weighted average maturity under two months, and EUTBL behaves as a VNAV (variable-NAV) share that accretes value as T-bill yield compounds. Primary subscriptions and redemptions settle same-day at fund NAV with a €1k minimum; Chainlink CCIP bridges issuance to Arbitrum and Polygon. EUTBL is one of Pharos's few EUR-pegged RWA assets and one of the cleanest fits for European institutional users seeking regulatory-grade tokenised cash — a fit that got materially easier to access in June, when Coinbase opened stablecoin-funded subscriptions and redemptions for Spiko's UCITS funds settling on Base.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "ustbl-spiko": {
     "title": "Spiko's USD T-Bill MMF Cousin",
-    "text": "USTBL is Spiko's USD-denominated AMF-regulated UCITS {{term:money-market-fund}}money-market fund{{/term}} holding short-dated U.S. {{term:treasury}}Treasury{{/term}} bills, deployed across Ethereum, Arbitrum, and Polygon via Chainlink CCIP. USTBL is the USD-denominated sister fund to Spiko's EUTBL — same AMF-regulated UCITS {{term:money-market-fund}}money-market fund{{/term}} architecture, same ERC-1967 upgradeable proxy, same Chainlink CCIP multi-chain rollout (Ethereum, Arbitrum, Polygon), but holding short-dated U.S. {{term:treasury}}Treasury{{/term}} bills instead of Eurozone sovereigns. The VNAV share accretes value as T-bill yield compounds, with $1k minimums and same-day NAV settlement. Backed by {{term:rwa}}RWA{{/term}} collateral with institutional {{term:custody}}custody{{/term}} and AMF {{term:attestation}}attestation{{/term}}, USTBL behaves as a {{term:yield-bearing}}yield-bearing{{/term}} share rather than a par stablecoin. The combined Spiko AUM passed $1 billion in late 2025, making the pair one of the larger EU-regulated tokenised treasury franchises in market.",
-    "updatedAt": "2026-05-15",
+    "text": "USTBL is Spiko's USD-denominated AMF-regulated UCITS {{term:money-market-fund}}money-market fund{{/term}} holding short-dated U.S. {{term:treasury}}Treasury{{/term}} bills, deployed across Ethereum, Arbitrum, and Polygon via Chainlink CCIP. USTBL is the USD-denominated sister fund to Spiko's EUTBL — same AMF-regulated UCITS {{term:money-market-fund}}money-market fund{{/term}} architecture, same ERC-1967 upgradeable proxy, same Chainlink CCIP multi-chain rollout (Ethereum, Arbitrum, Polygon), but holding short-dated U.S. {{term:treasury}}Treasury{{/term}} bills instead of Eurozone sovereigns. The VNAV share accretes value as T-bill yield compounds, with $1k minimums and same-day NAV settlement. Backed by {{term:rwa}}RWA{{/term}} collateral with institutional {{term:custody}}custody{{/term}} and AMF {{term:attestation}}attestation{{/term}}, USTBL behaves as a {{term:yield-bearing}}yield-bearing{{/term}} share rather than a par stablecoin. The combined Spiko AUM passed $1 billion in late 2025, making the pair one of the larger EU-regulated tokenised treasury franchises in market. Distribution took its biggest step yet in June, when Coinbase opened USDC and EURC subscriptions and redemptions for Spiko's UCITS funds settling on Base — EU-regulated money-market shares, one tap from an exchange balance.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "jtrsy-anemoy": {
     "title": "S&P's Highest-Rated Tokenised Fund",
@@ -3391,13 +3391,13 @@
   },
   "sgho-aave": {
     "title": "Aave's non-slashable GHO savings module",
-    "text": "Aave's non-slashable GHO yield product — 1:1 deposits, governance-set savings rate, no cooldown — separate from the slashable Umbrella stkGHO safety module.\n\nAave Savings GHO (sGHO) is the non-slashable GHO {{term:yield-bearing}}yield product{{/term}} offered alongside the slashable Umbrella stkGHO safety module. Depositors mint sGHO against GHO at a 1:1 conversion and receive GHO-denominated emissions at the Aave-governance-set savings rate. The contract holds approximately $267M of GHO and pays out without cooldown or slashing risk; it is distinct from the Umbrella stkGHO position that absorbs deficit events for the GHO market, and underneath sits GHO's own {{term:cdp}}CDP{{/term}} collateral profile. Yield is governance-set, so emissions can move with Aave DAO decisions.",
-    "updatedAt": "2026-05-15",
+    "text": "Aave's non-slashable GHO yield product — 1:1 deposits, governance-set savings rate, no cooldown — separate from the slashable Umbrella stkGHO safety module.\n\nAave Savings GHO (sGHO) is the non-slashable GHO {{term:yield-bearing}}yield product{{/term}} offered alongside the slashable Umbrella stkGHO safety module. Depositors mint sGHO against GHO at a 1:1 conversion and receive GHO-denominated emissions at the Aave-governance-set savings rate. The module holds a nine-figure pile of GHO and pays out without cooldown or slashing risk; it is distinct from the Umbrella stkGHO position that absorbs deficit events for the GHO market, and underneath sits GHO's own {{term:cdp}}CDP{{/term}} collateral profile. Yield is governance-set, so emissions can move with Aave DAO decisions.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "gtusdcp-gauntlet": {
     "title": "Gauntlet's curated USDC MetaMorpho V2 vault",
@@ -3431,13 +3431,13 @@
   },
   "aa-falconx-mev-capital": {
     "title": "FalconX Credit Vault",
-    "text": "AA_FalconXUSDC is a Pareto credit-vault tranche, not a Falcon Finance stablecoin and not a MEV Capital strategy token despite the naming fog. The underlying exposure is USDC deployed into FalconX institutional credit lines curated by M11 Credit, so the risk is private-credit performance and redemption timing rather than peg arbitrage. Pharos treats it as a yield-bearing NAV token because monthly exits and vault accounting are the product, not incidental details. The on-chain tranche cannot mint itself independently of the IdleCDO deposit path, which is good plumbing but not a credit guarantee. This is stablecoin infrastructure being used to tokenize a lender's balance-sheet slice, and the word 'USDC' in the symbol should not lull anyone into reading it as cash.",
-    "updatedAt": "2026-06-12",
+    "text": "AA_FalconXUSDC is a Pareto credit-vault tranche, not a Falcon Finance stablecoin and not a MEV Capital strategy token despite the naming fog. The underlying exposure is USDC deployed into FalconX institutional credit lines curated by M11 Credit, so the risk is private-credit performance and redemption timing rather than peg arbitrage. Pharos treats it as a yield-bearing NAV token because monthly exits and vault accounting are the product, not incidental details. The on-chain tranche cannot mint itself independently of the IdleCDO deposit path, which is good plumbing but not a credit guarantee. Distribution is scaling up around it — Plume's new FALX facility now routes on-chain capital into the same FalconX credit book, with ambitions toward a billion dollars of capacity. This is stablecoin infrastructure being used to tokenize a lender's balance-sheet slice, and the word 'USDC' in the symbol should not lull anyone into reading it as cash.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "vndc-jade-labs": {
     "title": "Vietnam's most-trafficked VND stablecoin with weak attestation",
@@ -3711,13 +3711,13 @@
   },
   "jaaa-janus-henderson-anemoy": {
     "title": "AAA CLO Exposure as a Tokenized Fund",
-    "text": "NAV-accreting AAA CLO fund share via Anemoy/Centrifuge; permissioned, KYC-gated, not a $1 redeemable stablecoin. JAAA is not a dollar redeemable stablecoin in the usual sense: it is a NAV-accreting Janus Henderson AAA CLO fund share issued through Anemoy and Centrifuge rails. Pharos treats the Chainlink NAV feed as live reserve evidence, while the reserve-risk model stays conservative because even AAA CLO tranches are structured credit rather than cash or Treasury bills. The token has multi-chain contract coverage, but primary-market access remains permissioned and KYC-gated. The fund share is {{term:yield-bearing}}yield-bearing{{/term}} structured-credit {{term:rwa}}RWA{{/term}}, with Centrifuge {{term:custody}}custody{{/term}} and permissioned {{term:redemption}}redemption{{/term}} at NAV rather than open par exit.",
-    "updatedAt": "2026-05-15",
+    "text": "NAV-accreting AAA CLO fund share via Anemoy/Centrifuge; permissioned, KYC-gated, not a $1 redeemable stablecoin. JAAA is not a dollar redeemable stablecoin in the usual sense: it is a NAV-accreting Janus Henderson AAA CLO fund share issued through Anemoy and Centrifuge rails. Pharos treats the Chainlink NAV feed as live reserve evidence, while the reserve-risk model stays conservative because even AAA CLO tranches are structured credit rather than cash or Treasury bills. The token has multi-chain contract coverage, but primary-market access remains permissioned and KYC-gated. Institutional plumbing keeps thickening around it — Kraken added JAAA to qualified custody and Ethena's risk committee approved it as an eligible reserve asset, pulling a permissioned CLO share ever deeper into stablecoin collateral stacks. The fund share is {{term:yield-bearing}}yield-bearing{{/term}} structured-credit {{term:rwa}}RWA{{/term}}, with Centrifuge {{term:custody}}custody{{/term}} and permissioned {{term:redemption}}redemption{{/term}} at NAV rather than open par exit.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "acrdx-anemoy-apollo": {
     "title": "Apollo Credit Through Anemoy",
@@ -3731,23 +3731,23 @@
   },
   "stac-securitize": {
     "title": "CLO Fund Access on Securitize",
-    "text": "STAC is a Securitize-issued tokenized fund share for a BNY-advised AAA CLO portfolio, which makes it dollar-denominated without making it a dollar. The token is priced by fund NAV and investor access runs through Securitize's qualification, transfer-control, and primary-market process, so there is no open $1 redemption backstop hiding behind the ticker. Chronicle proof-of-asset coverage improves transparency around the fund exposure, but Pharos still treats the collateral as high-risk structured credit rather than cash-like reserves. The funny part is that AAA appears in the fund name while the stablecoin dashboard still has to ask the rude question: can you actually exit when you need to?",
-    "updatedAt": "2026-06-12",
+    "text": "STAC is a Securitize-issued tokenized fund share for a BNY-advised AAA CLO portfolio, which makes it dollar-denominated without making it a dollar. The token is priced by fund NAV and investor access runs through Securitize's qualification, transfer-control, and primary-market process, so there is no open $1 redemption backstop hiding behind the ticker. Chronicle proof-of-asset coverage improves transparency around the fund exposure, but Pharos still treats the collateral as high-risk structured credit rather than cash-like reserves. The distribution story has broadened — the fund expanded to Solana with Ethena committing $250 million, one of the larger tokenized-credit allocations on that chain, while issuer Securitize moved toward public markets through a Cantor SPAC merger. The funny part is that AAA appears in the fund name while the stablecoin dashboard still has to ask the rude question: can you actually exit when you need to?",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "hlscope-hamilton-lane": {
     "title": "Hamilton Lane Private Credit Rail",
-    "text": "Tokenized senior secured private-credit fund priced at NAV; primary access permissioned, not an open-redemption $1 stablecoin. HLSCOPE tokenizes Hamilton Lane Senior Credit Opportunities Fund exposure through Securitize. The asset belongs in the NAV-token cohort: price follows fund NAV, while subscriptions and redemptions are handled through permissioned fund infrastructure rather than open stablecoin liquidity. Reserve risk is high because the backing is private credit, not short-term cash instruments. This is an {{term:rwa}}RWA{{/term}} fund share rather than a par dollar — subscriptions and {{term:redemption}}redemption{{/term}} run through Securitize's permissioned {{term:custody}}custody{{/term}} rail at NAV.",
-    "updatedAt": "2026-05-15",
+    "text": "Tokenized senior secured private-credit fund priced at NAV; primary access permissioned, not an open-redemption $1 stablecoin. HLSCOPE tokenizes Hamilton Lane Senior Credit Opportunities Fund exposure through Securitize. The asset belongs in the NAV-token cohort: price follows fund NAV, while subscriptions and redemptions are handled through permissioned fund infrastructure rather than open stablecoin liquidity. Reserve risk is high because the backing is private credit, not short-term cash instruments. Distribution keeps stretching — a June TRON deployment via Wormhole made HLSCOPE the first Securitize-issued asset on that chain, an odd-couple pairing of private credit and payments rails. This is an {{term:rwa}}RWA{{/term}} fund share rather than a par dollar — subscriptions and {{term:redemption}}redemption{{/term}} run through Securitize's permissioned {{term:custody}}custody{{/term}} rail at NAV.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "claude-fable-5",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "pc0000031-tradable": {
     "title": "Private Credit Note, Not a Liquid Dollar",
@@ -3811,13 +3811,13 @@
   },
   "mglobal-midas-fasanara": {
     "title": "Receivables, With Rails",
-    "text": "mGLOBAL is Midas's tokenized certificate over Fasanara's global private-credit strategy, largely short-dated trade receivables and digital invoices from SMEs. It accrues NAV through issuer-priced portfolio performance, so the important sentence is the boring one: this is not a fixed $1 payment stablecoin. Pharos models the reserve as a single high-risk Fasanara strategy slice and surfaces the contract-priced strategy-token warning because secondary-market volume is not doing much work here. The Midas attestation engine provides daily NAV and proof tooling, but primary issuance and redemption remain permissioned through Midas rails. The appeal is access to an asset-backed lending portfolio; the bill comes as issuer discretion, private-credit opacity, and a 1-of-3 admin posture that does not scream institutional serenity.",
-    "updatedAt": "2026-06-12",
+    "text": "mGLOBAL is Midas's tokenized certificate over Fasanara's global private-credit strategy, largely short-dated trade receivables and digital invoices from SMEs. It accrues NAV through issuer-priced portfolio performance, so the important sentence is the boring one: this is not a fixed $1 payment stablecoin. Pharos models the reserve as a single high-risk Fasanara strategy slice and surfaces the contract-priced strategy-token warning because secondary-market volume is not doing much work here. The Midas attestation engine provides daily NAV and proof tooling, but primary issuance and redemption remain permissioned through Midas rails. Utility improved in June when mGLOBAL went live as collateral on Aave's Horizon RWA market with tens of millions in TVL, giving the certificate its first serious borrowing venue. The appeal is access to an asset-backed lending portfolio; the bill comes as issuer discretion, private-credit opacity, and a 1-of-3 admin posture that does not scream institutional serenity.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "mhyper-midas": {
     "title": "Market Neutral, Maybe",
@@ -3830,14 +3830,14 @@
     "factsAsOf": "2026-06-12"
   },
   "mmev-midas": {
-    "title": "MEV Capital Strategy in a Midas Wrapper",
-    "text": "mMEV is a Midas NAV token tied to MEV Capital's DeFi lending, liquidity, arbitrage, carry, and liquidation strategies, which is a long way of saying the dollar reference is doing more work than the cash reserve. The token accrues through NAV appreciation and mints or redeems through Midas rails, not through an open par redemption path built for payments. Daily self-reported Midas transparency gives Pharos a valuation route, but the underlying strategy remains high-risk, complex, and not especially interested in being mistaken for a checking account. The Midas control stack adds its own concentrated-admin flavor, because apparently tokenized strategy access was not already operationally spicy enough.",
-    "updatedAt": "2026-06-12",
+    "title": "Strategy Wrapper, New Driver",
+    "text": "mMEV is a Midas NAV token whose original strategy manager no longer runs it: after the deUSD daisy-chain implosion gutted MEV Capital's assets, Midas concluded all business with the firm in February 2026 and handed strategy and risk oversight to RockawayX, processing pending redemptions at the last verified price. The wrapper survived its manager, which is either a compliment to the wrapper or a warning about strategy tokens generally. The token accrues through NAV appreciation and mints or redeems through Midas rails, not through an open par redemption path built for payments. Daily self-reported Midas transparency gives Pharos a valuation route, but the underlying strategy remains high-risk, complex, and not especially interested in being mistaken for a checking account. The Midas control stack adds its own concentrated-admin flavor, because apparently tokenized strategy access was not already operationally spicy enough.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "mapollo-midas": {
     "title": "Apollo Crypto Strategy via Midas",
@@ -3851,13 +3851,13 @@
   },
   "safo-spiko-usd": {
     "title": "Spiko Smart Cash USD Share Class",
-    "text": "SAFO is the USD share class of Spiko and Amundi's Smart Cash exposure, built around fully collateralized overnight total-return swaps rather than direct T-bill ownership. That distinction matters: Pharos classifies the reserve as medium-risk RWA strategy exposure because the holder is exposed to fund structure, swap counterparties, collateral packages, and regulated NAV mechanics. The AMF/UCITS context and PwC audit coverage help, but they do not turn a fund share into a simple par-redeemable stablecoin. Primary market access remains permissioned through Spiko rails, with subscriptions and redemptions happening at fund NAV. SAFO is conservative by DeFi standards and still absolutely a fund share, which is exactly the nuance stablecoin tickers are built to blur.",
-    "updatedAt": "2026-06-12",
+    "text": "SAFO is the USD share class of Spiko and Amundi's Smart Cash exposure, built around fully collateralized overnight total-return swaps rather than direct T-bill ownership. That distinction matters: Pharos classifies the reserve as medium-risk RWA strategy exposure because the holder is exposed to fund structure, swap counterparties, collateral packages, and regulated NAV mechanics. The AMF/UCITS context and PwC audit coverage help, but they do not turn a fund share into a simple par-redeemable stablecoin. Primary market access remains permissioned through Spiko rails, with subscriptions and redemptions happening at fund NAV. The franchise keeps scaling — Spiko pushed the fund natively onto Solana in early July, its first deployment beyond EVM and Stellar rails, with flows settling in Circle's stablecoins. SAFO is conservative by DeFi standards and still absolutely a fund share, which is exactly the nuance stablecoin tickers are built to blur.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "spkcc-spiko": {
     "title": "Spiko Cash and Carry Fund Share",
@@ -3871,13 +3871,13 @@
   },
   "eursafo-spiko": {
     "title": "EUR Smart Cash Through Spiko",
-    "text": "EURSAFO is the euro share class of Spiko and Amundi's Smart Cash fund, an AMF-authorized UCITS structure that behaves like a NAV-accreting fund token rather than a bank-deposit stablecoin. The reserve is fully collateralized overnight total-return swap exposure with tier-1 bank counterparties and liquid collateral, so Pharos treats it as medium-risk RWA strategy exposure instead of pretending it is a plain euro cash account. PwC quarterly audit coverage and regulated French fund status help, but subscriptions and redemptions still run through KYC-gated Spiko rails. It is conservative by crypto standards and still absolutely a fund share, which is the sort of nuance stablecoin tickers tend to flatten on contact.",
-    "updatedAt": "2026-06-12",
+    "text": "EURSAFO is the euro share class of Spiko and Amundi's Smart Cash fund, an AMF-authorized UCITS structure that behaves like a NAV-accreting fund token rather than a bank-deposit stablecoin. The reserve is fully collateralized overnight total-return swap exposure with tier-1 bank counterparties and liquid collateral, so Pharos treats it as medium-risk RWA strategy exposure instead of pretending it is a plain euro cash account. PwC quarterly audit coverage and regulated French fund status help, but subscriptions and redemptions still run through KYC-gated Spiko rails. Distribution is widening — Spiko opened Solana subscriptions and redemptions for the fund in early July, its first deployment beyond EVM and Stellar rails, settling through Circle's stablecoins. It is conservative by crypto standards and still absolutely a fund share, which is the sort of nuance stablecoin tickers tend to flatten on contact.",
+    "updatedAt": "2026-07-08",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "claude-fable-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
   },
   "eurspkcc-spiko": {
     "title": "Euro Carry, Fund First",
