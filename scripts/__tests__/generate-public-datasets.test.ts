@@ -282,7 +282,7 @@ describe("generate-public-datasets", () => {
 
     expect(testExports.checkTopic("top-stablecoins", { datasetsDir, sheetsDir })).toEqual({
       ok: false,
-      reason: expect.stringContaining("rowCount 0 below required floor 1"),
+      reason: expect.stringContaining("rowCount 0 below required floor 493"),
     });
   });
 
