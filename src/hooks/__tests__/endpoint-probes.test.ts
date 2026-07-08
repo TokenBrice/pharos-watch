@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { collectEndpointProbes, ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
 
 interface Deferred<T> {
@@ -19,17 +19,24 @@ describe("collectEndpointProbes", () => {
     vi.restoreAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("cancels unread bodies for non-semantic probe routes", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
+    const json = vi.fn();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
       body: { cancel },
+      json,
     } as unknown as Response);
 
     const result = await collectEndpointProbes(["/api/chains"]);
 
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(json).not.toHaveBeenCalled();
     expect(cancel).toHaveBeenCalledOnce();
     expect(result).toEqual([
       expect.objectContaining({
@@ -37,6 +44,28 @@ describe("collectEndpointProbes", () => {
         status: 200,
       }),
     ]);
+    expect(result[0]).not.toHaveProperty("semanticStatus");
+  });
+
+  it("parses semantic probe routes via endpoint metadata", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({
+        status: "degraded",
+        warnings: ["Health cache is delayed."],
+      }), {
+        status: 200,
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/health"]);
+
+    expect(result[0]).toEqual(expect.objectContaining({
+      path: "/api/health",
+      status: 200,
+      semanticStatus: "degraded",
+      semanticScope: "health",
+      semanticDetail: "Health cache is delayed.",
+    }));
   });
 
   it("routes admin probe paths through the same-origin proxy", async () => {
@@ -113,6 +142,54 @@ describe("collectEndpointProbes", () => {
       semanticScope: "freshness",
       semanticDetail: '110 - "Response is degraded (3600s old, max 1800s)"',
     }));
+  });
+
+  it("lets stale freshness Warning severity override healthy parsed semantics", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({
+        status: "healthy",
+        warnings: [],
+      }), {
+        status: 200,
+        headers: {
+          Warning: '110 - "Response is stale (7200s old, max 900s)"',
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/health"]);
+
+    expect(result[0]).toEqual(expect.objectContaining({
+      path: "/api/health",
+      status: 200,
+      semanticStatus: "stale",
+      semanticScope: "freshness",
+      semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
+    }));
+  });
+
+  it("returns the existing timeout error shape", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason ?? new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+
+    const resultPromise = collectEndpointProbes(["/api/chains"]);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await expect(resultPromise).resolves.toEqual([
+      expect.objectContaining({
+        path: "/api/chains",
+        status: null,
+        error: "Browser probe timed out",
+      }),
+    ]);
   });
 
   it("limits concurrent browser probes to avoid transport saturation", async () => {

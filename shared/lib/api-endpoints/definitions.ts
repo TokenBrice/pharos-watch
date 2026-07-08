@@ -44,6 +44,8 @@ export interface EndpointDefinition {
   probePath?: string;
   /** Optional Pages ops-admin proxy timeout override for slow admin endpoints. */
   opsProxyTimeoutMs?: number;
+  /** Optional semantic parser kind for status-page probes. */
+  probeSemanticKind?: "health" | "status";
   statusPageAction?: EndpointStatusPageActionConfig;
   /** Worker-only dependency hydration hints consumed by the route registry/context builder. */
   routeDependencies?: readonly EndpointDependency[];
@@ -260,6 +262,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.health(),
     publicApiAccess: "exempt",
     probeGroup: "public",
+    probeSemanticKind: "health",
   }),
   publicGet({
     key: "public-status-history",
@@ -474,6 +477,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"],
     probeGroup: "admin",
     opsProxyTimeoutMs: 20_000,
+    probeSemanticKind: "status",
   }),
   adminGet({
     key: "status-history",

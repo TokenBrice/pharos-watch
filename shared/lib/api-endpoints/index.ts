@@ -52,6 +52,7 @@ export {
   STATIC_ENDPOINT_CACHE_POLICIES,
   STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,
+  getEndpointProbeDescriptors,
   getEndpointProbePaths,
   getStaticEndpointDependenciesByKey,
   isStaticEndpointPath,

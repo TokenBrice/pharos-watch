@@ -67,6 +67,7 @@ export interface EndpointDefinitionProbe {
   definitionPath: string;
   path: string;
   group: EndpointProbeGroup;
+  probeSemanticKind?: EndpointDefinition["probeSemanticKind"];
 }
 
 export interface StaticEndpointDependencyHydrationPolicy {
@@ -166,6 +167,7 @@ export const ENDPOINT_DEFINITION_PROBES: readonly EndpointDefinitionProbe[] = EN
         definitionPath: endpoint.path,
         path: endpoint.probePath ?? endpoint.path,
         group: endpoint.probeGroup,
+        ...(endpoint.probeSemanticKind ? { probeSemanticKind: endpoint.probeSemanticKind } : {}),
       },
     ];
   },
@@ -203,4 +205,13 @@ export function getStaticEndpointDependenciesByKey(key: EndpointKey | string): r
 
 export function getEndpointProbePaths(group: EndpointProbeGroup): string[] {
   return ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === group).map((probe) => probe.path);
+}
+
+export function getEndpointProbeDescriptors(
+  group: EndpointProbeGroup,
+): { path: string; probeSemanticKind?: EndpointDefinition["probeSemanticKind"] }[] {
+  return ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === group).map((probe) => ({
+    path: probe.path,
+    probeSemanticKind: probe.probeSemanticKind,
+  }));
 }

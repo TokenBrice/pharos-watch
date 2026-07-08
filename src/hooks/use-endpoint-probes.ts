@@ -3,7 +3,12 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
-import { getProbePaths } from "@shared/lib/api-endpoints";
+import {
+  getEndpointProbeDescriptors,
+  getProbePaths,
+  type EndpointDefinition,
+  type EndpointProbeGroup,
+} from "@shared/lib/api-endpoints";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
@@ -28,6 +33,8 @@ const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
 const ADMIN_PROBE_TIMEOUT_MS = 20_000;
 export const ENDPOINT_PROBE_CONCURRENCY = 6;
+
+type ProbeSemanticKind = NonNullable<EndpointDefinition["probeSemanticKind"]>;
 
 function getProbeTimeoutMs(path: string): number {
   return ADMIN_PATHS.has(path) ? ADMIN_PROBE_TIMEOUT_MS : PUBLIC_PROBE_TIMEOUT_MS;
@@ -194,15 +201,27 @@ function extractStatusProbeSemantics(body: unknown): Partial<EndpointProbeResult
 }
 
 const SEMANTIC_PROBE_PARSERS = new Map<
-  string,
+  ProbeSemanticKind,
   (body: unknown) => Partial<EndpointProbeResult> | null
 >([
-  ["/api/health", extractHealthProbeSemantics],
-  ["/api/status", extractStatusProbeSemantics],
+  ["health", extractHealthProbeSemantics],
+  ["status", extractStatusProbeSemantics],
 ]);
 
-async function probeEndpoint(
+const PROBE_DESCRIPTOR_GROUPS = ["public", "admin", "manual"] as const satisfies readonly EndpointProbeGroup[];
+const PROBE_SEMANTIC_KIND_BY_PATH = new Map<string, ProbeSemanticKind>();
+
+for (const group of PROBE_DESCRIPTOR_GROUPS) {
+  for (const descriptor of getEndpointProbeDescriptors(group)) {
+    if (descriptor.probeSemanticKind) {
+      PROBE_SEMANTIC_KIND_BY_PATH.set(descriptor.path, descriptor.probeSemanticKind);
+    }
+  }
+}
+
+async function runProbeFetch(
   path: string,
+  handleResponse: (response: Response, latencyMs: number) => Promise<EndpointProbeResult>,
 ): Promise<EndpointProbeResult> {
   const controller = new AbortController();
   const timeoutMs = getProbeTimeoutMs(path);
@@ -219,7 +238,26 @@ async function probeEndpoint(
       headers: request.headers,
     });
     const latencyMs = Math.round(performance.now() - start);
-    const parser = SEMANTIC_PROBE_PARSERS.get(path);
+    return await handleResponse(res, latencyMs);
+  } catch (err) {
+    const latencyMs = Math.round(performance.now() - start);
+    return {
+      path,
+      status: null,
+      latencyMs,
+      error: getProbeErrorMessage(err, controller.signal),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function probeEndpoint(
+  path: string,
+): Promise<EndpointProbeResult> {
+  return runProbeFetch(path, async (res, latencyMs) => {
+    const semanticKind = PROBE_SEMANTIC_KIND_BY_PATH.get(path);
+    const parser = semanticKind ? SEMANTIC_PROBE_PARSERS.get(semanticKind) : undefined;
     let semanticFields: Partial<EndpointProbeResult> | undefined;
 
     if (parser && res.ok && typeof res.json === "function") {
@@ -236,17 +274,7 @@ async function probeEndpoint(
     semanticFields = mergeSemanticFields(semanticFields, extractFreshnessWarningSemantics(res));
 
     return { path, status: res.status, latencyMs, ...semanticFields };
-  } catch (err) {
-    const latencyMs = Math.round(performance.now() - start);
-    return {
-      path,
-      status: null,
-      latencyMs,
-      error: getProbeErrorMessage(err, controller.signal),
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  });
 }
 
 export async function collectEndpointProbes(

@@ -7,6 +7,7 @@ import {
   getEndpointDefinitionByKey,
   getSiteDataAccess,
   getPublicApiAccess,
+  getEndpointProbeDescriptors,
   getEndpointProbePaths,
   getProbePaths,
   getStatusPageActions,
@@ -311,13 +312,55 @@ describe("api endpoint registry", () => {
             definitionPath: endpoint.path,
             path: endpoint.probePath ?? endpoint.path,
             group: endpoint.probeGroup,
+            ...(endpoint.probeSemanticKind ? { probeSemanticKind: endpoint.probeSemanticKind } : {}),
           },
         ];
       }),
     );
+    expect(getEndpointProbeDescriptors("public")).toEqual(
+      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "public").map((probe) => ({
+        path: probe.path,
+        probeSemanticKind: probe.probeSemanticKind,
+      })),
+    );
+    expect(getEndpointProbeDescriptors("admin")).toEqual(
+      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "admin").map((probe) => ({
+        path: probe.path,
+        probeSemanticKind: probe.probeSemanticKind,
+      })),
+    );
+    expect(getEndpointProbeDescriptors("manual")).toEqual(
+      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "manual").map((probe) => ({
+        path: probe.path,
+        probeSemanticKind: probe.probeSemanticKind,
+      })),
+    );
     expect(getEndpointProbePaths("public")).toEqual(getProbePaths("public"));
     expect(getEndpointProbePaths("admin")).toEqual(getProbePaths("admin"));
     expect(getEndpointProbePaths("manual")).toEqual(getProbePaths("manual"));
+  });
+
+  it("declares semantic probe metadata only for health and status", () => {
+    expect(
+      ENDPOINT_DEFINITIONS
+        .filter((endpoint) => endpoint.probeSemanticKind)
+        .map((endpoint) => ({
+          key: endpoint.key,
+          path: endpoint.path,
+          probeSemanticKind: endpoint.probeSemanticKind,
+        })),
+    ).toEqual([
+      { key: "health", path: "/api/health", probeSemanticKind: "health" },
+      { key: "status", path: "/api/status", probeSemanticKind: "status" },
+    ]);
+
+    expect(getEndpointProbeDescriptors("public").filter((probe) => probe.probeSemanticKind)).toEqual([
+      { path: "/api/health", probeSemanticKind: "health" },
+    ]);
+    expect(getEndpointProbeDescriptors("admin").filter((probe) => probe.probeSemanticKind)).toEqual([
+      { path: "/api/status", probeSemanticKind: "status" },
+    ]);
+    expect(getEndpointProbeDescriptors("manual").filter((probe) => probe.probeSemanticKind)).toEqual([]);
   });
 
   it("derives static and dynamic dependency hydration policies", () => {
