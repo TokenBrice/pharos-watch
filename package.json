@@ -192,7 +192,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@cloudflare/workers-types": "4.20260702.1",
+    "@cloudflare/workers-types": "5.20260708.1",
     "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@testing-library/react": "^16.3.0",

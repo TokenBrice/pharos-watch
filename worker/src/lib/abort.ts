@@ -78,7 +78,9 @@ export async function yieldToEventLoop(signal?: AbortSignal): Promise<void> {
     };
 
     signal?.addEventListener("abort", onAbort, { once: true });
-    if (typeof globalThis.MessageChannel === "function") {
+    // workers-types v5 no longer declares MessageChannel on typeof globalThis;
+    // the runtime capability probe is unchanged.
+    if (typeof (globalThis as { MessageChannel?: unknown }).MessageChannel === "function") {
       const messageChannel = new MessageChannel();
       channel = messageChannel;
       messageChannel.port1.onmessage = () => settle(resolve);
