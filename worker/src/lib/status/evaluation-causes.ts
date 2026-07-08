@@ -204,7 +204,9 @@ export function buildAvailabilityCauses(input: {
       code: "mint_burn_health_query_failed",
       layer: "availability",
       severity: "info",
-      message: "Mint/burn health query failed; diagnostics are temporarily unavailable.",
+      message:
+        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+        `Latest critical cron run status: ${input.publicHealth.mintBurnLastRunStatus ?? "unknown"}.`,
     });
   } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus === "stale") {
     pushCause(availabilityCauses, {

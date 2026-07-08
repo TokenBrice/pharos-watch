@@ -1420,6 +1420,11 @@ export interface TelegramHealthSummary extends SafetyAlertFieldsNullable {
   lastDispatchStatus: string | null;
 }
 
+export interface MintBurnHealthQueryErrors {
+  latestSuccessfulSyncAt: string | null;
+  rowCount: string | null;
+}
+
 export interface HealthResponse {
   status: StatusHealthValue;
   timestamp: number;
@@ -1439,6 +1444,7 @@ export interface HealthResponse {
     freshnessAgeSec: number | null;
     majorStaleCount: number;
     staleMajorSymbols: string[];
+    queryErrors?: MintBurnHealthQueryErrors;
     sync: {
       lastSuccessfulSyncAt: number | null;
       freshnessStatus: "fresh" | "degraded" | "stale";
@@ -1456,6 +1462,11 @@ const TelegramHealthSummarySchema = z.object({
   lastDispatchAt: z.number().nullable(),
   lastDispatchStatus: z.string().nullable(),
   ...SafetyAlertFieldsNullableSchemaShape,
+});
+
+const MintBurnHealthQueryErrorsSchema: z.ZodType<MintBurnHealthQueryErrors> = z.object({
+  latestSuccessfulSyncAt: z.string().nullable(),
+  rowCount: z.string().nullable(),
 });
 
 export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
@@ -1477,6 +1488,7 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     freshnessAgeSec: z.number().nullable(),
     majorStaleCount: z.number(),
     staleMajorSymbols: z.array(z.string()),
+    queryErrors: MintBurnHealthQueryErrorsSchema.optional(),
     sync: z.object({
       lastSuccessfulSyncAt: z.number().nullable(),
       freshnessStatus: z.enum(["fresh", "degraded", "stale"]),

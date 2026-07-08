@@ -49,6 +49,10 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   freshnessAgeSec: null,
   majorStaleCount: 0,
   staleMajorSymbols: [],
+  queryErrors: {
+    latestSuccessfulSyncAt: null,
+    rowCount: null,
+  },
   sync: {
     lastSuccessfulSyncAt: null,
     freshnessStatus: "stale",
@@ -143,6 +147,42 @@ function readMintBurnWatchdogRowCount(row: { item_count: number | null; metadata
   }
 }
 
+type MintBurnSubqueryName = keyof NonNullable<HealthResponse["mintBurn"]["queryErrors"]>;
+
+type MintBurnSubqueryResult<T> =
+  | { ok: true; value: T; error: null }
+  | { ok: false; value: null; error: string };
+
+function mintBurnSubqueryErrorMessage(name: MintBurnSubqueryName): string {
+  switch (name) {
+    case "latestSuccessfulSyncAt":
+      return "Latest successful mint/burn sync timestamp unavailable.";
+    case "rowCount":
+      return "Mint/burn row-count diagnostics unavailable.";
+  }
+}
+
+async function captureMintBurnSubquery<T>(
+  name: MintBurnSubqueryName,
+  run: () => Promise<T>,
+): Promise<MintBurnSubqueryResult<T>> {
+  try {
+    return { ok: true, value: await run(), error: null };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "mint_burn_health_subquery_failed",
+      route: "health",
+      job: MINT_BURN_CRON_JOB,
+      source: name,
+      message: mintBurnSubqueryErrorMessage(name),
+      error: err,
+    });
+    return { ok: false, value: null, error: mintBurnSubqueryErrorMessage(name) };
+  }
+}
+
 async function loadMintBurnHealth(
   db: D1Database,
   now: number,
@@ -154,7 +194,7 @@ async function loadMintBurnHealth(
   mintBurnBootstrap: boolean;
 }> {
   try {
-    const [latestRun, latestSuccessfulSyncAt, totalEvents] = await Promise.all([
+    const [latestRun, latestSuccessfulSyncResult, totalEventsResult] = await Promise.all([
       db
         .prepare(
           `SELECT status
@@ -165,32 +205,44 @@ async function loadMintBurnHealth(
         )
         .bind(MINT_BURN_CRON_JOB)
         .first<{ status: string | null }>(),
-      db
-        .prepare(
-          "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
-        )
-        .bind(MINT_BURN_CRON_JOB)
-        .first<{ started_at: number | null }>()
-        .then((row) => row?.started_at ?? null)
-        .catch(() => null),
+      captureMintBurnSubquery(
+        "latestSuccessfulSyncAt",
+        () =>
+          db
+            .prepare(
+              "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+            )
+            .bind(MINT_BURN_CRON_JOB)
+            .first<{ started_at: number | null }>()
+            .then((row) => row?.started_at ?? null),
+      ),
       // O(1) advisory row count from the daily growth watchdog's cron_runs
       // result. Avoids public health scans of mint_burn_events/mint_burn_hourly
       // while not relying on sqlite_sequence, which only tracks AUTOINCREMENT
       // tables and therefore cannot track mint_burn_events' TEXT primary key.
-      db
-        .prepare(
-          `SELECT item_count, metadata
-           FROM cron_runs
-           WHERE job = ? AND status IN ('ok', 'degraded')
-           ORDER BY started_at DESC
-           LIMIT 1`,
-        )
-        .bind("mint-burn-growth-watchdog")
-        .first<{ item_count: number | null; metadata: string | null }>()
-        .then(readMintBurnWatchdogRowCount)
-        .catch(() => null),
+      captureMintBurnSubquery(
+        "rowCount",
+        () =>
+          db
+            .prepare(
+              `SELECT item_count, metadata
+               FROM cron_runs
+               WHERE job = ? AND status IN ('ok', 'degraded')
+               ORDER BY started_at DESC
+               LIMIT 1`,
+            )
+            .bind("mint-burn-growth-watchdog")
+            .first<{ item_count: number | null; metadata: string | null }>()
+            .then(readMintBurnWatchdogRowCount),
+      ),
     ]);
 
+    const queryErrors: NonNullable<HealthResponse["mintBurn"]["queryErrors"]> = {
+      latestSuccessfulSyncAt: latestSuccessfulSyncResult.error,
+      rowCount: totalEventsResult.error,
+    };
+    const latestSuccessfulSyncAt = latestSuccessfulSyncResult.ok ? latestSuccessfulSyncResult.value : null;
+    const totalEvents = totalEventsResult.ok ? totalEventsResult.value : null;
     const sync = buildMintBurnSyncHealth(now, latestSuccessfulSyncAt, latestRun?.status ?? null);
     const mintBurn: HealthResponse["mintBurn"] = {
       totalEvents,
@@ -199,15 +251,20 @@ async function loadMintBurnHealth(
       freshnessAgeSec: null,
       majorStaleCount: 0,
       staleMajorSymbols: [],
+      queryErrors,
       sync,
     };
+    const mintBurnQueryError = queryErrors.latestSuccessfulSyncAt
+      ? publicHealthErrorMessage("mint-burn")
+      : null;
 
     return {
       mintBurn,
-      mintBurnImpactStatus: getPublicMintBurnStatus(sync),
-      mintBurnQueryError: null,
+      mintBurnImpactStatus: mintBurnQueryError ? "degraded" : getPublicMintBurnStatus(sync),
+      mintBurnQueryError,
       mintBurnLastRunStatus: latestRun?.status ?? null,
-      mintBurnBootstrap: latestRun?.status == null && latestSuccessfulSyncAt == null,
+      mintBurnBootstrap:
+        !mintBurnQueryError && latestRun?.status == null && latestSuccessfulSyncAt == null,
     };
   } catch (err) {
     logWorkerEvent({

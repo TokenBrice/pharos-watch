@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assessPublicHealth } from "../public-health-assessment";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 
 /**
  * Minimal D1 mock that returns a stablecoins cache row and empty results for
@@ -34,6 +35,90 @@ function makeMinimalDb(nowSec: number): D1Database {
   } as unknown as D1Database;
 }
 
+function makeMintBurnAssessmentDb(
+  nowSec: number,
+  options: {
+    latestRunStatus?: string | null;
+    latestSuccessfulSyncAt?: number | null;
+    latestSuccessfulSyncError?: unknown;
+    rowCount?: number | null;
+    rowCountError?: unknown;
+  } = {},
+): D1Database {
+  const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
+  const latestSuccessfulSyncAt =
+    options.latestSuccessfulSyncAt !== undefined ? options.latestSuccessfulSyncAt : nowSec - 300;
+  const rowCount = options.rowCount !== undefined ? options.rowCount : 4321;
+  const cacheRows = [
+    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
+    { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
+    { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
+    { key: "fx-rates", updated_at: nowSec - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
+    {
+      key: "freshness:dex-liquidity",
+      updated_at: nowSec - 60,
+      value: JSON.stringify({
+        updatedAt: nowSec - 60,
+        source: "sync-dex-liquidity",
+        publishStatus: "ok",
+      }),
+    },
+    {
+      key: "freshness:yield-data",
+      updated_at: nowSec - 60,
+      value: JSON.stringify({
+        updatedAt: nowSec - 60,
+        source: "sync-yield-data",
+        publishStatus: "ok",
+      }),
+    },
+    {
+      key: "freshness:dews",
+      updated_at: nowSec - 60,
+      value: JSON.stringify({
+        updatedAt: nowSec - 60,
+        source: "compute-dews",
+        publishStatus: "ok",
+      }),
+    },
+  ];
+  const timestampLookup: MockTableConfig = {
+    match: "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+    matchBinds: ["sync-mint-burn"],
+    rows: [],
+    ...(options.latestSuccessfulSyncError
+      ? { throwError: options.latestSuccessfulSyncError }
+      : { first: { started_at: latestSuccessfulSyncAt } }),
+  };
+  const rowCountLookup: MockTableConfig = {
+    match: "item_count, metadata",
+    matchBinds: ["mint-burn-growth-watchdog"],
+    rows: [],
+    ...(options.rowCountError
+      ? { throwError: options.rowCountError }
+      : {
+          first:
+            rowCount == null
+              ? null
+              : { item_count: rowCount, metadata: JSON.stringify({ rowCount }) },
+        }),
+  };
+
+  return mockD1([
+    { match: "cache WHERE key IN", rows: cacheRows },
+    { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+    {
+      match: "SELECT status",
+      matchBinds: ["sync-mint-burn"],
+      rows: [],
+      first: latestRunStatus == null ? null : { status: latestRunStatus },
+    },
+    timestampLookup,
+    rowCountLookup,
+  ]);
+}
+
 describe("assessPublicHealth upstream provider enrichment", () => {
   it("tags the stablecoins cache with upstreamProvider = 'DefiLlama'", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -55,5 +140,77 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     // than just the stablecoins lane.
     expect(result.caches["fx-rates"]?.upstreamProvider).toBe("Frankfurter");
     expect(result.caches["bluechip-ratings"]?.upstreamProvider).toBe("Bluechip");
+  });
+});
+
+describe("assessPublicHealth mint/burn subquery failures", () => {
+  it("preserves timestamp lookup failures as mint/burn query errors", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      latestSuccessfulSyncError: new Error("timestamp lookup failed"),
+    });
+
+    try {
+      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+      expect(result.mintBurnQueryError).toBe("Mint/burn health data unavailable.");
+      expect(result.mintBurn.queryErrors).toEqual({
+        latestSuccessfulSyncAt: "Latest successful mint/burn sync timestamp unavailable.",
+        rowCount: null,
+      });
+      expect(result.mintBurn.totalEvents).toBe(4321);
+      expect(result.mintBurnImpactStatus).toBe("degraded");
+      expect(result.overallStatus).not.toBe("stale");
+      expect(result.mintBurnBootstrap).toBe(false);
+      expect(result.warnings).toContain("mint-burn-query-failed");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("keeps row-count lookup failures distinct from timestamp query errors", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      rowCountError: new Error("row-count lookup failed"),
+    });
+
+    try {
+      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+      expect(result.mintBurnQueryError).toBeNull();
+      expect(result.mintBurn.queryErrors).toEqual({
+        latestSuccessfulSyncAt: null,
+        rowCount: "Mint/burn row-count diagnostics unavailable.",
+      });
+      expect(result.mintBurn.totalEvents).toBeNull();
+      expect(result.mintBurn.sync.lastSuccessfulSyncAt).toBe(nowSec - 300);
+      expect(result.mintBurnImpactStatus).toBe("healthy");
+      expect(result.warnings).not.toContain("mint-burn-query-failed");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("keeps successful missing-sync results classified as stale instead of query errors", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      latestRunStatus: "error",
+      latestSuccessfulSyncAt: null,
+      rowCount: null,
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.mintBurnQueryError).toBeNull();
+    expect(result.mintBurn.queryErrors).toEqual({
+      latestSuccessfulSyncAt: null,
+      rowCount: null,
+    });
+    expect(result.mintBurn.sync.lastSuccessfulSyncAt).toBeNull();
+    expect(result.mintBurnImpactStatus).toBe("stale");
+    expect(result.mintBurnBootstrap).toBe(false);
+    expect(result.warnings).not.toContain("mint-burn-query-failed");
   });
 });

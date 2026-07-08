@@ -133,6 +133,21 @@ function makeDataQuality(overrides?: Partial<DataQuality>): DataQuality {
   };
 }
 
+function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
+  return {
+    publicHealth,
+    availabilityImpactingUnhealthyCrons: 0,
+    watchUnhealthyCrons: 0,
+    degradedCronRuns: 0,
+    cronErrorCount: 0,
+    availabilityImpactingCronErrors: 0,
+    availabilityImpactingConsecutiveCronErrors: 0,
+    cronHistoryQueryFailed: false,
+    cronProgressQueryFailed: false,
+    cronLeaseQueryFailed: false,
+  };
+}
+
 describe("status evaluation policy", () => {
   it("keeps reserve status healthy for low-count issues when fresh coverage remains high", () => {
     const assessment = deriveReserveCompositionStatus(makeReserveComposition({
@@ -295,6 +310,55 @@ describe("status cause text", () => {
       metric: "dexLiquidityAgeSeconds",
       value: 8_000,
     }));
+  });
+
+  it("gives mint/burn query failure precedence over stale public classification", () => {
+    const causes = buildAvailabilityCauses(makeAvailabilityCauseInput(makePublicHealth({
+      mintBurnImpactStatus: "stale",
+      mintBurnQueryError: "Mint/burn health data unavailable.",
+      mintBurnLastRunStatus: "error",
+      mintBurn: {
+        ...makePublicHealth().mintBurn,
+        sync: {
+          lastSuccessfulSyncAt: null,
+          freshnessStatus: "stale",
+          warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+          criticalLaneHealthy: false,
+        },
+      },
+    })));
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "mint_burn_health_query_failed",
+      severity: "info",
+      message:
+        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+        "Latest critical cron run status: error.",
+    }));
+    expect(causes.some((cause) => cause.code === "mint_burn_public_stale")).toBe(false);
+  });
+
+  it("emits stale mint/burn cause when the timestamp query succeeds with no recent sync", () => {
+    const causes = buildAvailabilityCauses(makeAvailabilityCauseInput(makePublicHealth({
+      mintBurnImpactStatus: "stale",
+      mintBurnQueryError: null,
+      mintBurnLastRunStatus: "error",
+      mintBurn: {
+        ...makePublicHealth().mintBurn,
+        sync: {
+          lastSuccessfulSyncAt: null,
+          freshnessStatus: "stale",
+          warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+          criticalLaneHealthy: false,
+        },
+      },
+    })));
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "mint_burn_public_stale",
+      severity: "critical",
+    }));
+    expect(causes.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(false);
   });
 
   it("includes persistent stale independent feed details in degraded reserve sync causes", () => {
@@ -494,5 +558,18 @@ describe("deriveAvailabilityStatus cron-error semantic", () => {
         }),
       }),
     ).toBe("stale");
+  });
+
+  it("excludes mintBurnImpactStatus from availability when mintBurnQueryError is set", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        publicHealth: makePublicHealth({
+          mintBurnImpactStatus: "stale",
+          mintBurnQueryError: "Mint/burn health data unavailable.",
+          mintBurnLastRunStatus: "error",
+        }),
+      }),
+    ).toBe("healthy");
   });
 });
