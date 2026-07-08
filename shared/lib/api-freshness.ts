@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
+import { DATA_SURFACE_DESCRIPTORS } from "./data-surface-descriptors";
 import { DAY_SECONDS } from "./time-constants";
 
 export interface CacheFreshnessLaneConfig {
@@ -118,13 +119,13 @@ export function getCacheFreshnessLane(cacheKey: string): CacheFreshnessLaneConfi
 // warning layer. Keep these aligned with the worker handlers that emit
 // X-Data-Age / Warning headers.
 export const API_FRESHNESS_MAX_AGE_SEC = {
-  stablecoins: CACHE_FRESHNESS_LANES.stablecoins.endpointMaxAgeSec,
+  stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
   stablecoinCharts: CACHE_FRESHNESS_LANES.stablecoinCharts.endpointMaxAgeSec,
   chains: 1800,
   pegSummary: 900,
   depegEvents: 900,
-  stressSignals: CACHE_FRESHNESS_LANES.dews.endpointMaxAgeSec,
-  reportCards: 900,
+  stressSignals: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
+  reportCards: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
   depegResolver: 900,
   depegResolverReview: 900,
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
@@ -133,9 +134,9 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   mintBurnEvents: 900,
   blacklist: CRON_INTERVALS["sync-blacklist"],
   blacklistSummary: CRON_INTERVALS["sync-blacklist"],
-  dexLiquidity: CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec,
-  yieldRankings: CACHE_FRESHNESS_LANES.yieldData.endpointMaxAgeSec,
-  yieldHistory: CACHE_FRESHNESS_LANES.yieldData.endpointMaxAgeSec,
+  dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
+  yieldRankings: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
+  yieldHistory: DATA_SURFACE_DESCRIPTORS.yieldHistory.endpointMaxAgeSec,
   stabilityIndex: DAY_SECONDS,
   dailyDigest: DAY_SECONDS,
   digestArchive: DAY_SECONDS,
