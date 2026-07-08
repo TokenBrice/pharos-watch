@@ -69895,13 +69895,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 1,
-        "type": "collateral"
-      }
-    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "USDM is backed by USDC, so blacklistability resolves through the upstream Circle collateral dependency rather than a separate Pharos override.",
