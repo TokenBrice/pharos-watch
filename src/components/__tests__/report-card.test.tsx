@@ -83,8 +83,17 @@ describe("ReportCardDetail", () => {
     const { container } = render(<ReportCardDetail card={makeReportCard()} liquidityComponents={null} />);
 
     expect(container.querySelector("button button")).toBeNull();
+    expect(screen.getByRole("button", { name: "Hide Exit Liquidity details" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Show Resilience details" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Explain Resilience" }).length).toBeGreaterThan(0);
+  });
+
+  it("opens exit liquidity details by default", () => {
+    render(<ReportCardDetail card={makeReportCard()} liquidityComponents={null} />);
+
+    expect(screen.getByRole("button", { name: "Hide Exit Liquidity details" })).toBeTruthy();
+    expect(screen.getByText("DEX Liquidity")).toBeTruthy();
+    expect(screen.getByText("72 / 100")).toBeTruthy();
   });
 
   it("expands dimension details from the disclosure control", () => {

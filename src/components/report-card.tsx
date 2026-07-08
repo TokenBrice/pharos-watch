@@ -295,7 +295,7 @@ interface DimensionRowProps {
 }
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(dimKey === "liquidity");
   const hasDetails = DRILLDOWN_DIMENSIONS.has(dimKey) && dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
   const hintTopic = dimensionHintTopic(dimKey);
