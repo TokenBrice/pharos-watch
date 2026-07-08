@@ -13,7 +13,7 @@ import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   decimalNumberFromBigInt,
   fetchJsonPostWithRetry,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -358,6 +358,16 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   }
 
   let withdrawableRaw = totalIdleRaw;
+  const onchain = makeOnchainCallers(
+    { chain: args.chain, rpcMode: args.rpcMode },
+    {
+      signal: args.signal,
+      ctx: args.ctx,
+      rpcUrl: args.rpcUrl,
+      fallbackRpcUrl: args.fallbackRpcUrl,
+      timeoutMs: args.timeoutMs,
+    },
+  );
 
   for (const strategyAddress of defaultQueue) {
     throwIfAborted(args.signal);
@@ -376,17 +386,10 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
     }
     if (currentDebtRaw === 0n) continue;
 
-    const maxRedeemRaw = await fetchOnchainUint256({
-      contract: strategyAddress,
-      data: `${YEARN_V3_MAX_REDEEM_SELECTOR}${encodeAddress(args.contractAddress)}` as `0x${string}`,
-      signal: args.signal,
-      ctx: args.ctx,
-      rpcMode: args.rpcMode,
-      chain: args.chain,
-      rpcUrl: args.rpcUrl,
-      fallbackRpcUrl: args.fallbackRpcUrl,
-      timeoutMs: args.timeoutMs,
-    });
+    const maxRedeemRaw = await onchain.uint256(
+      strategyAddress,
+      `${YEARN_V3_MAX_REDEEM_SELECTOR}${encodeAddress(args.contractAddress)}` as `0x${string}`,
+    );
     if (maxRedeemRaw == null) {
       return {
         telemetry: null,
@@ -400,17 +403,10 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
     }
     if (maxRedeemRaw === 0n) continue;
 
-    const strategyWithdrawableRaw = await fetchOnchainUint256({
-      contract: strategyAddress,
-      data: `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(maxRedeemRaw)}` as `0x${string}`,
-      signal: args.signal,
-      ctx: args.ctx,
-      rpcMode: args.rpcMode,
-      chain: args.chain,
-      rpcUrl: args.rpcUrl,
-      fallbackRpcUrl: args.fallbackRpcUrl,
-      timeoutMs: args.timeoutMs,
-    });
+    const strategyWithdrawableRaw = await onchain.uint256(
+      strategyAddress,
+      `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(maxRedeemRaw)}` as `0x${string}`,
+    );
     if (strategyWithdrawableRaw == null) {
       return {
         telemetry: null,
@@ -851,29 +847,16 @@ export async function fetchErc4626SingleAssetReserves(
 
   let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
   if (assetAddress) {
+    const onchain = makeOnchainCallers(primaryInput, {
+      signal,
+      ctx: _ctx,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    });
     const [idleUnderlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
-      fetchOnchainUint256({
-        contract: assetAddress,
-        data: encodeBalanceOfCallData(contractAddress),
-        signal,
-        ctx: _ctx,
-        rpcMode: primaryInput.rpcMode,
-        chain: primaryInput.chain,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-        timeoutMs: timeout,
-      }),
-      fetchOnchainUint256({
-        contract: assetAddress,
-        data: DECIMALS_SELECTOR,
-        signal,
-        ctx: _ctx,
-        rpcMode: primaryInput.rpcMode,
-        chain: primaryInput.chain,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-        timeoutMs: timeout,
-      }),
+      onchain.uint256(assetAddress, encodeBalanceOfCallData(contractAddress)),
+      onchain.uint256(assetAddress, DECIMALS_SELECTOR),
     ]);
     const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
     let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;

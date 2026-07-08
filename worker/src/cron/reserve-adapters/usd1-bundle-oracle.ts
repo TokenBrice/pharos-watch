@@ -6,8 +6,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   requireOnchainInput,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -120,37 +119,16 @@ export async function fetchUsd1BundleOracleReserves(
     throw new Error(`usd1-bundle-oracle missing ${input.chain} USD1 contract metadata`);
   }
 
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+  });
   const [rawBundle, latestBundleTimestamp, rawBundleDecimals, totalSupplyRaw] = await Promise.all([
-    fetchOnchainRawCall({
-      contract: USD1_BUNDLE_ORACLE,
-      data: LATEST_BUNDLE_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-    }),
-    fetchOnchainUint256({
-      contract: USD1_BUNDLE_ORACLE,
-      data: LATEST_BUNDLE_TIMESTAMP_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-    }),
-    fetchOnchainRawCall({
-      contract: USD1_BUNDLE_ORACLE,
-      data: BUNDLE_DECIMALS_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-    }),
+    onchain.raw(USD1_BUNDLE_ORACLE, LATEST_BUNDLE_SELECTOR),
+    onchain.uint256(USD1_BUNDLE_ORACLE, LATEST_BUNDLE_TIMESTAMP_SELECTOR),
+    onchain.raw(USD1_BUNDLE_ORACLE, BUNDLE_DECIMALS_SELECTOR),
     fetchErc20TotalSupply(
       input,
       tokenContract.address,

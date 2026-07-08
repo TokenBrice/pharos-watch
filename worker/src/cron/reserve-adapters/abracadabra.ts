@@ -5,7 +5,7 @@ import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   slicesFromValues,
@@ -122,19 +122,16 @@ export async function fetchAbracadabraReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "abracadabra");
   const params = readParams(config);
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+  });
 
   const shareReadings = await Promise.all(
     params.cauldrons.map(async (cauldron) => {
-      const raw = await fetchOnchainUint256({
-        contract: cauldron.address,
-        data: TOTAL_COLLATERAL_SHARE_SELECTOR,
-        signal,
-        ctx,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-      });
+      const raw = await onchain.uint256(cauldron.address, TOTAL_COLLATERAL_SHARE_SELECTOR);
 
       if (raw == null) {
         throw new Error(
@@ -158,16 +155,7 @@ export async function fetchAbracadabraReserves(
       const cached = cache?.get(cacheKey) as Promise<bigint | null> | undefined;
       const promise: Promise<bigint | null> =
         cached
-        ?? fetchOnchainUint256({
-          contract: params.bentoBoxAddress,
-          data: encodeToAmountCall(cauldron.collateralAddress, share),
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-        });
+        ?? onchain.uint256(params.bentoBoxAddress, encodeToAmountCall(cauldron.collateralAddress, share));
       if (!cached && cache) cache.set(cacheKey, promise);
       const amount = await promise;
 

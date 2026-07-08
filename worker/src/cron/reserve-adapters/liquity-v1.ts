@@ -7,7 +7,7 @@ import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
@@ -48,30 +48,17 @@ export async function fetchLiquityV1Reserves(
   const input = requireOnchainInput(config.inputs.primary, "liquity-v1");
   const params = readParams(config);
   const timeoutMs = 12_000;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
 
   const [totalCollateralRaw, totalDebtRaw, redemptionFeeBps] = await Promise.all([
-    fetchOnchainUint256({
-      contract: params.troveManagerAddress,
-      data: LIQUITY_V1_GET_ENTIRE_SYSTEM_COLL_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: params.troveManagerAddress,
-      data: LIQUITY_V1_GET_ENTIRE_SYSTEM_DEBT_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
+    onchain.uint256(params.troveManagerAddress, LIQUITY_V1_GET_ENTIRE_SYSTEM_COLL_SELECTOR),
+    onchain.uint256(params.troveManagerAddress, LIQUITY_V1_GET_ENTIRE_SYSTEM_DEBT_SELECTOR),
     probeOptionalRedemptionRateBps(
       input,
       params.redemptionRateProbe,

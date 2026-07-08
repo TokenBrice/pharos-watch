@@ -5,9 +5,21 @@ import { encodeFunctionResult, parseAbi } from "viem/utils";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
-    fetchOnchainRawCall: vi.fn(),
+    fetchOnchainRawCall,
+    makeOnchainCallers: vi.fn((input, options) => ({
+      uint256: vi.fn(),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          ...options,
+          contract,
+          data,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        }),
+    })),
   };
 });
 

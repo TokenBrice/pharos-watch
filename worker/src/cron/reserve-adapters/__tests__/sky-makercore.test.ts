@@ -12,11 +12,31 @@ import {
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainRawCall = vi.fn();
+  const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
-    fetchOnchainRawCall: vi.fn(),
-    fetchOnchainUint256: vi.fn(),
+    fetchOnchainRawCall,
+    fetchOnchainUint256,
+    makeOnchainCallers: vi.fn((input, options) => ({
+      uint256: (contract: string, data: string) =>
+        fetchOnchainUint256({
+          ...options,
+          contract,
+          data,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        }),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          ...options,
+          contract,
+          data,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        }),
+    })),
   };
 });
 

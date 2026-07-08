@@ -10,9 +10,8 @@ import {
   computeUnknownExposurePct,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
   isHttpJsonInput,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   parsePositiveNumericLike,
   requireJsonInputFromConfig,
@@ -300,21 +299,19 @@ async function fetchReserveProtocolDtfOnchainReserves(
     throw new Error(`reserve-protocol-dtf found no ${input.chain} RToken contract for ${coin.id}`);
   }
 
-  const callBase = {
-    chain: input.chain,
-    rpcMode: input.rpcMode,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs: 12_000,
-  };
-  const rawMain = await fetchOnchainRawCall({ ...callBase, contract: rTokenAddress, data: MAIN_SELECTOR });
+  });
+  const rawMain = await onchain.raw(rTokenAddress, MAIN_SELECTOR);
   const mainAddress = parseAddressResult(rawMain, "main()");
   const [rawAssetRegistry, rawBasketHandler, rawBasketsNeeded] = await Promise.all([
-    fetchOnchainRawCall({ ...callBase, contract: mainAddress, data: ASSET_REGISTRY_SELECTOR }),
-    fetchOnchainRawCall({ ...callBase, contract: mainAddress, data: BASKET_HANDLER_SELECTOR }),
-    fetchOnchainUint256({ ...callBase, contract: rTokenAddress, data: BASKETS_NEEDED_SELECTOR }),
+    onchain.raw(mainAddress, ASSET_REGISTRY_SELECTOR),
+    onchain.raw(mainAddress, BASKET_HANDLER_SELECTOR),
+    onchain.uint256(rTokenAddress, BASKETS_NEEDED_SELECTOR),
   ]);
   const assetRegistry = parseAddressResult(rawAssetRegistry, "assetRegistry()");
   const basketHandler = parseAddressResult(rawBasketHandler, "basketHandler()");
@@ -322,16 +319,8 @@ async function fetchReserveProtocolDtfOnchainReserves(
     throw new Error("reserve-protocol-dtf basketsNeeded() call failed");
   }
   const quoteAmount = rawBasketsNeeded;
-  const rawFullyCollateralized = await fetchOnchainRawCall({
-    ...callBase,
-    contract: basketHandler,
-    data: FULLY_COLLATERALIZED_SELECTOR,
-  });
-  const rawQuote = await fetchOnchainRawCall({
-    ...callBase,
-    contract: basketHandler,
-    data: encodeQuoteCall(quoteAmount),
-  });
+  const rawFullyCollateralized = await onchain.raw(basketHandler, FULLY_COLLATERALIZED_SELECTOR);
+  const rawQuote = await onchain.raw(basketHandler, encodeQuoteCall(quoteAmount));
   if (!rawQuote) {
     throw new Error("reserve-protocol-dtf quote() call failed");
   }
@@ -356,18 +345,14 @@ async function fetchReserveProtocolDtfOnchainReserves(
   for (const entry of quoteEntries) {
     throwIfAborted(signal);
     const [rawDecimals, rawAsset] = await Promise.all([
-      fetchOnchainUint256({ ...callBase, contract: entry.address, data: DECIMALS_SELECTOR }),
-      fetchOnchainRawCall({
-        ...callBase,
-        contract: assetRegistry,
-        data: encodeAddressCall(TO_ASSET_SELECTOR, entry.address),
-      }),
+      onchain.uint256(entry.address, DECIMALS_SELECTOR),
+      onchain.raw(assetRegistry, encodeAddressCall(TO_ASSET_SELECTOR, entry.address)),
     ]);
     const tokenDecimals = decodeDecimals(rawDecimals, entry.address);
     const assetAddress = parseAddressResult(rawAsset, `toAsset(${entry.address})`);
     const [rawPrice, rawStatus] = await Promise.all([
-      fetchOnchainRawCall({ ...callBase, contract: assetAddress, data: PRICE_SELECTOR }),
-      fetchOnchainUint256({ ...callBase, contract: assetAddress, data: COLLATERAL_STATUS_SELECTOR }),
+      onchain.raw(assetAddress, PRICE_SELECTOR),
+      onchain.uint256(assetAddress, COLLATERAL_STATUS_SELECTOR),
     ]);
     const price = decodePriceResult(rawPrice, entry.address);
     const value = decimalNumberFromBigInt(entry.quantity * price.mid, tokenDecimals + PRICE_DECIMALS);

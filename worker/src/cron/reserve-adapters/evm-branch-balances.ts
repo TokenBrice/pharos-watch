@@ -4,7 +4,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -29,6 +29,12 @@ export async function fetchEvmBranchBalancesReserves(
   const params = readBranchBalanceParams(config, ADAPTER_KEY);
   const debtSelector = params.debtSelector;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+  });
 
   const [balances, redemptionFeeBps, debtRaw] = await Promise.all([
     fetchBranchBalances(input, params, signal, ctx),
@@ -41,16 +47,7 @@ export async function fetchEvmBranchBalancesReserves(
       params.fallbackRpcUrl,
     ),
     debtSelector
-      ? fetchOnchainUint256({
-          contract: params.debtContract ?? params.branches[0].holder,
-          data: debtSelector,
-          signal,
-          ctx,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-        })
+      ? onchain.uint256(params.debtContract ?? params.branches[0].holder, debtSelector)
       : Promise.resolve(null),
   ]);
 

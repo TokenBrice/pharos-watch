@@ -6,8 +6,8 @@ import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
-  fetchOnchainUint256,
   isHttpJsonInput,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireJsonInput,
   requireOnchainInput,
@@ -193,19 +193,16 @@ async function fetchFxOnchainReserves(
   const balances = await Promise.all(
     (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>).map(async (key): Promise<FxBalance> => {
       const meta = TOKEN_META[key];
-      const callBase = {
-        contract: meta.poolAddress,
+      const onchain = makeOnchainCallers(input, {
         signal,
         ctx,
-        chain: input.chain,
-        rpcMode: input.rpcMode,
         rpcUrl: params.rpcUrl,
         fallbackRpcUrl: params.fallbackRpcUrl,
         timeoutMs: 12_000,
-      };
+      });
       const [amountRaw, debtRaw] = await Promise.all([
-        fetchOnchainUint256({ ...callBase, data: GET_TOTAL_RAW_COLLATERALS_SELECTOR }),
-        fetchOnchainUint256({ ...callBase, data: GET_TOTAL_RAW_DEBTS_SELECTOR }),
+        onchain.uint256(meta.poolAddress, GET_TOTAL_RAW_COLLATERALS_SELECTOR),
+        onchain.uint256(meta.poolAddress, GET_TOTAL_RAW_DEBTS_SELECTOR),
       ]);
       if (amountRaw == null) {
         throw new Error(`fx on-chain collateral read failed for ${key}`);

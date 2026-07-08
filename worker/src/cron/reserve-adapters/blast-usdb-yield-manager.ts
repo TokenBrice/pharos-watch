@@ -6,7 +6,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
@@ -34,29 +34,26 @@ export async function fetchBlastUsdbYieldManagerReserves(
   const input = requireOnchainInput(config.inputs.primary, "blast-usdb-yield-manager");
   const params = readParams(config);
   const timeoutMs = 12_000;
-  const [totalValueRaw, totalSupplyRaw] = await Promise.all([
-    fetchOnchainUint256({
-      contract: params.yieldManagerAddress,
-      data: TOTAL_VALUE_SELECTOR,
+  const managerOnchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
+  const supplyOnchain = makeOnchainCallers(
+    { chain: params.supplyChain, rpcMode: "public-rpc" },
+    {
       signal,
       ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    }),
-    fetchOnchainUint256({
-      contract: params.supplyTokenAddress,
-      data: TOTAL_SUPPLY_SELECTOR,
-      signal,
-      ctx,
-      rpcMode: "public-rpc",
-      chain: params.supplyChain,
       rpcUrl: params.supplyRpcUrl,
       fallbackRpcUrl: params.fallbackSupplyRpcUrl,
       timeoutMs,
-    }),
+    },
+  );
+  const [totalValueRaw, totalSupplyRaw] = await Promise.all([
+    managerOnchain.uint256(params.yieldManagerAddress, TOTAL_VALUE_SELECTOR),
+    supplyOnchain.uint256(params.supplyTokenAddress, TOTAL_SUPPLY_SELECTOR),
   ]);
   if (totalValueRaw == null || totalValueRaw <= 0n) {
     throw new Error("blast-usdb-yield-manager totalValue probe failed");

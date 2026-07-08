@@ -6,15 +6,27 @@ import { fetchSghoWrapperReserves } from "../sgho-wrapper";
 
 vi.mock("../helpers", async () => {
   const actual = await vi.importActual<typeof import("../helpers")>("../helpers");
+  const fetchOnchainRawCall = vi.fn(async ({ data }: { data: string }) => {
+    if (data === "0x18160ddd") return `0x${(1000n * 10n ** 18n).toString(16).padStart(64, "0")}`;
+    if (data === `0x4cdad506${encodeUint256(1000n * 10n ** 18n)}`) {
+      return `0x${(1005n * 10n ** 18n).toString(16).padStart(64, "0")}`;
+    }
+    return null;
+  });
   return {
     ...actual,
-    fetchOnchainRawCall: vi.fn(async ({ data }: { data: string }) => {
-      if (data === "0x18160ddd") return `0x${(1000n * 10n ** 18n).toString(16).padStart(64, "0")}`;
-      if (data === `0x4cdad506${encodeUint256(1000n * 10n ** 18n)}`) {
-        return `0x${(1005n * 10n ** 18n).toString(16).padStart(64, "0")}`;
-      }
-      return null;
-    }),
+    fetchOnchainRawCall,
+    makeOnchainCallers: vi.fn((input, options) => ({
+      uint256: vi.fn(),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          ...options,
+          contract,
+          data,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        }),
+    })),
   };
 });
 

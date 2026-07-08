@@ -9,8 +9,7 @@ import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
@@ -149,19 +148,20 @@ async function fetchSkyLitePsmUsdcCapacity(signal: AbortSignal, ctx?: AdapterCon
   capacityRaw: string;
 } | null> {
   try {
-    const callBase = {
-      signal,
-      ctx,
+    const onchain = makeOnchainCallers({
       chain: "ethereum",
       rpcMode: "public-rpc" as const,
+    }, {
+      signal,
+      ctx,
       rpcUrl: SKY_LITE_PSM_RPC_URL,
       fallbackRpcUrl: SKY_LITE_PSM_FALLBACK_RPC_URL,
       timeoutMs: 12_000,
-    };
+    });
 
     const [gemRaw, pocketRaw] = await Promise.all([
-      fetchOnchainRawCall({ ...callBase, contract: SKY_LITE_PSM_ADDRESS, data: GEM_SELECTOR }),
-      fetchOnchainRawCall({ ...callBase, contract: SKY_LITE_PSM_ADDRESS, data: POCKET_SELECTOR }),
+      onchain.raw(SKY_LITE_PSM_ADDRESS, GEM_SELECTOR),
+      onchain.raw(SKY_LITE_PSM_ADDRESS, POCKET_SELECTOR),
     ]);
     const gem = decodeAddressResult(gemRaw);
     const pocket = decodeAddressResult(pocketRaw);
@@ -169,11 +169,10 @@ async function fetchSkyLitePsmUsdcCapacity(signal: AbortSignal, ctx?: AdapterCon
       return null;
     }
 
-    const balanceRaw = await fetchOnchainUint256({
-      ...callBase,
-      contract: SKY_LITE_PSM_USDC_ADDRESS,
-      data: encodeBalanceOfCallData(SKY_LITE_PSM_USDC_POCKET),
-    });
+    const balanceRaw = await onchain.uint256(
+      SKY_LITE_PSM_USDC_ADDRESS,
+      encodeBalanceOfCallData(SKY_LITE_PSM_USDC_POCKET),
+    );
     if (balanceRaw == null) return null;
     return {
       capacityUsd: decimalNumberFromBigInt(balanceRaw, SKY_LITE_PSM_USDC_DECIMALS),

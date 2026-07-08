@@ -9,7 +9,7 @@ import { encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   slicesFromValues,
@@ -285,28 +285,22 @@ export async function fetchResupplyPairsReserves(
   if (!params.pairs || params.pairs.length === 0) {
     throw new Error("resupply-pairs requires at least one configured pair");
   }
-  const callBase = {
-    chain: input.chain,
-    rpcMode: input.rpcMode,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs: 12_000,
-  };
+  });
 
   let redemptionHandlerAddress: `0x${string}` | undefined;
   let guard: RedemptionGuardSnapshot | undefined;
   if (params.redemptionHandlerAddress) {
     redemptionHandlerAddress = parseConfiguredAddress(params.redemptionHandlerAddress, "redemption handler");
     const [rawGuardEnabled, rawThreshold, rawOraclePrice] = await Promise.all([
-      fetchOnchainRawCall({ ...callBase, contract: redemptionHandlerAddress, data: GUARD_ENABLED_SELECTOR }),
-      fetchOnchainRawCall({
-        ...callBase,
-        contract: redemptionHandlerAddress,
-        data: PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR,
-      }),
-      fetchOnchainRawCall({ ...callBase, contract: redemptionHandlerAddress, data: REUSD_ORACLE_PRICE_SELECTOR }),
+      onchain.raw(redemptionHandlerAddress, GUARD_ENABLED_SELECTOR),
+      onchain.raw(redemptionHandlerAddress, PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR),
+      onchain.raw(redemptionHandlerAddress, REUSD_ORACLE_PRICE_SELECTOR),
     ]);
     guard = {
       guardEnabled: decodeBooleanResult(rawGuardEnabled, `guardEnabled() for ${redemptionHandlerAddress}`),
@@ -322,25 +316,20 @@ export async function fetchResupplyPairsReserves(
     throwIfAborted(signal);
     const pairAddress = parseConfiguredAddress(pair.address, `configured pair ${pair.key}`);
     const [rawUnderlying, rawAccounting, rawMaxRedeemableDebt] = await Promise.all([
-      fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: UNDERLYING_SELECTOR }),
-      fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: GET_PAIR_ACCOUNTING_SELECTOR }),
+      onchain.raw(pairAddress, UNDERLYING_SELECTOR),
+      onchain.raw(pairAddress, GET_PAIR_ACCOUNTING_SELECTOR),
       redemptionHandlerAddress
-        ? fetchOnchainRawCall({
-            ...callBase,
-            contract: redemptionHandlerAddress,
-            data: encodeGetMaxRedeemableDebtCall(pairAddress),
-          })
+        ? onchain.raw(redemptionHandlerAddress, encodeGetMaxRedeemableDebtCall(pairAddress))
         : Promise.resolve(null),
     ]);
     const underlyingAddress = parseAddressResult(rawUnderlying, `underlying() for ${pairAddress}`);
     const accounting = decodePairAccounting(rawAccounting, pairAddress);
-    const rawCollateral = await fetchOnchainRawCall({ ...callBase, contract: pairAddress, data: COLLATERAL_SELECTOR });
+    const rawCollateral = await onchain.raw(pairAddress, COLLATERAL_SELECTOR);
     const collateralAddress = parseAddressResult(rawCollateral, `collateral() for ${pairAddress}`);
-    const rawCollateralAssets = await fetchOnchainRawCall({
-      ...callBase,
-      contract: collateralAddress,
-      data: encodeConvertToAssetsCall(accounting.totalCollateral),
-    });
+    const rawCollateralAssets = await onchain.raw(
+      collateralAddress,
+      encodeConvertToAssetsCall(accounting.totalCollateral),
+    );
     const totalCollateralAssets = decodeUint256Result(
       rawCollateralAssets,
       `convertToAssets() for ${collateralAddress}`,

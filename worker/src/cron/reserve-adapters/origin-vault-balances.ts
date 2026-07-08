@@ -7,7 +7,7 @@ import {
   buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   slicesFromValues,
@@ -54,30 +54,17 @@ export async function fetchOriginVaultBalancesReserves(
   const input = requireOnchainInput(config.inputs.primary, "origin-vault-balances");
   const params = readParams(config);
   const timeoutMs = 12_000;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
   const values: OriginVaultAssetState[] = await Promise.all(params.assets.map(async (asset) => {
     const [raw, idleRaw] = await Promise.all([
-      fetchOnchainUint256({
-        contract: params.vaultAddress,
-        data: `${CHECK_BALANCE_SELECTOR}${encodeAddress(asset.address)}`,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
-        timeoutMs,
-      }),
-      fetchOnchainUint256({
-        contract: asset.address,
-        data: encodeBalanceOfCallData(params.vaultAddress),
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
-        timeoutMs,
-      }),
+      onchain.uint256(params.vaultAddress, `${CHECK_BALANCE_SELECTOR}${encodeAddress(asset.address)}`),
+      onchain.uint256(asset.address, encodeBalanceOfCallData(params.vaultAddress)),
     ]);
     if (raw == null) {
       throw new Error(`origin-vault-balances checkBalance failed for ${asset.name}`);
@@ -96,17 +83,7 @@ export async function fetchOriginVaultBalancesReserves(
     };
   }));
 
-  const totalValueRaw = await fetchOnchainUint256({
-    contract: params.vaultAddress,
-    data: TOTAL_VALUE_SELECTOR,
-    signal,
-    ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    timeoutMs,
-  });
+  const totalValueRaw = await onchain.uint256(params.vaultAddress, TOTAL_VALUE_SELECTOR);
   if (totalValueRaw == null || totalValueRaw <= 0n) {
     throw new Error("origin-vault-balances totalValue probe failed");
   }

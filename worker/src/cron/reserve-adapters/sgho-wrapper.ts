@@ -5,7 +5,7 @@ import { TOTAL_SUPPLY_SELECTOR, encodeUint256 } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
@@ -38,19 +38,13 @@ export async function fetchSghoWrapperReserves(
     throw new Error(`No ${input.chain} contract configured for ${coin.id}`);
   }
 
-  const callBase = {
-    contract: contractAddress,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
-  };
-  const totalSupplyRawHex = await fetchOnchainRawCall({
-    ...callBase,
-    data: TOTAL_SUPPLY_SELECTOR,
   });
+  const totalSupplyRawHex = await onchain.raw(contractAddress, TOTAL_SUPPLY_SELECTOR);
   if (!totalSupplyRawHex) {
     throw new Error(`sgho-wrapper: totalSupply() call failed for ${coin.id}`);
   }
@@ -59,10 +53,10 @@ export async function fetchSghoWrapperReserves(
     throw new Error(`sgho-wrapper: totalSupply() is zero for ${coin.id}`);
   }
 
-  const previewRedeemRawHex = await fetchOnchainRawCall({
-    ...callBase,
-    data: `${PREVIEW_REDEEM_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
-  });
+  const previewRedeemRawHex = await onchain.raw(
+    contractAddress,
+    `${PREVIEW_REDEEM_SELECTOR}${encodeUint256(totalSupplyRaw)}`,
+  );
   if (!previewRedeemRawHex) {
     throw new Error(`sgho-wrapper: previewRedeem(totalSupply) call failed for ${coin.id}`);
   }

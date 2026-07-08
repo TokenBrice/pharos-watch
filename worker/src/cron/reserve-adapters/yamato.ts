@@ -5,8 +5,8 @@ import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
   isReserveRisk,
+  makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
@@ -260,32 +260,19 @@ export async function fetchYamatoReserves(
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readParams(config);
   const timeoutMs = 12_000;
+  const onchain = makeOnchainCallers(input, {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
 
   const [statesRaw, priceFeedAddress] = await Promise.all([
-    fetchOnchainRawCall({
-      contract: params.yamatoAddress,
-      data: YAMATO_GET_STATES_SELECTOR,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      timeoutMs,
-    }),
+    onchain.raw(params.yamatoAddress, YAMATO_GET_STATES_SELECTOR),
     params.priceFeedAddress
       ? Promise.resolve(params.priceFeedAddress)
-      : fetchOnchainRawCall({
-          contract: params.yamatoAddress,
-          data: YAMATO_PRICE_FEED_SELECTOR,
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          timeoutMs,
-        }).then((raw) => {
+      : onchain.raw(params.yamatoAddress, YAMATO_PRICE_FEED_SELECTOR).then((raw) => {
           if (!raw) throw new Error("yamato priceFeed() call failed");
           return decodeYamatoPriceFeedAddress(raw);
         }),
@@ -295,17 +282,7 @@ export async function fetchYamatoReserves(
     throw new Error("yamato getStates() call failed");
   }
 
-  const priceRaw = await fetchOnchainRawCall({
-    contract: priceFeedAddress,
-    data: YAMATO_GET_PRICE_SELECTOR,
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-    timeoutMs,
-  });
+  const priceRaw = await onchain.raw(priceFeedAddress, YAMATO_GET_PRICE_SELECTOR);
   if (!priceRaw) {
     throw new Error("yamato priceFeed.getPrice() call failed");
   }

@@ -9,8 +9,7 @@ import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
+  makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -209,31 +208,22 @@ export async function fetchChainlinkPorReserves(
     reserveUnit: inferReserveUnit(coin, parsedParams),
   };
 
-  const callBase = {
-    contract: params.porFeedAddress,
+  const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-  };
+  });
 
   // 1. Fetch feed decimals (single uint8)
-  const rawDecimals = await fetchOnchainUint256({
-    ...callBase,
-    data: DECIMALS_SELECTOR,
-  });
+  const rawDecimals = await onchain.uint256(params.porFeedAddress, DECIMALS_SELECTOR);
   if (rawDecimals == null) {
     throw new Error("chainlink-por: decimals() call failed");
   }
   const decimals = Number(rawDecimals);
 
   // 2. Fetch latestRoundData() (5 words)
-  const rawRoundData = await fetchOnchainRawCall({
-    ...callBase,
-    data: LATEST_ROUND_DATA_SELECTOR,
-  });
+  const rawRoundData = await onchain.raw(params.porFeedAddress, LATEST_ROUND_DATA_SELECTOR);
   if (rawRoundData == null) {
     throw new Error("chainlink-por: latestRoundData() call failed");
   }
