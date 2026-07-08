@@ -14,14 +14,14 @@ import {
   FRESHNESS_SENTINEL_CACHE_KEYS,
   getCacheFreshnessLane,
   type CacheFreshnessLaneConfig,
-} from "../api-freshness";
-import { DATA_DEPENDENCY_BY_ID } from "../data-dependency-registry";
+} from "@shared/lib/api-freshness";
+import { DATA_DEPENDENCY_BY_ID } from "@shared/lib/data-dependency-registry";
 import {
   DATA_SURFACE_DESCRIPTOR_LIST,
   DATA_SURFACE_DESCRIPTORS,
   type DataSurfaceDescriptor,
-} from "../data-surface-descriptors";
-import { PHAROSVILLE_API_CONTRACT } from "../pharosville-api-contract";
+} from "@shared/lib/data-surface-descriptors";
+import { PHAROSVILLE_API_CONTRACT } from "@shared/lib/pharosville-api-contract";
 
 interface FrontendStaticQueryDescriptor {
   queryKey: readonly unknown[];
@@ -148,8 +148,12 @@ describe("data surface descriptors", () => {
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
       if (!surface.dataHealthPresetKey) continue;
 
+      const surfaceKey: string = surface.key;
       const preset = DATA_HEALTH_PRESETS_BY_KEY[surface.dataHealthPresetKey];
       expect(preset).toBeDefined();
+      if (!("uiLabel" in surface) || !("endpointMaxAgeSec" in surface)) {
+        throw new Error(`descriptor ${surfaceKey} has dataHealthPresetKey but lacks uiLabel/endpointMaxAgeSec`);
+      }
       expect(surface.uiLabel).toBe(preset.label);
       expect(surface.endpointMaxAgeSec).toBe(preset.staleTime / 1000);
     }
@@ -157,11 +161,15 @@ describe("data surface descriptors", () => {
 
   it("keeps PharosVille schema reference keys in parity without importing schemas", () => {
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      if (!surface.pharosVilleSchemaKey) continue;
+      if (!("pharosVilleSchemaKey" in surface) || !surface.pharosVilleSchemaKey) continue;
 
+      const surfaceKey: string = surface.key;
       const contract = PHAROSVILLE_CONTRACT_BY_KEY[surface.pharosVilleSchemaKey];
       expect(contract).toBeDefined();
       expect(surface.pharosVilleSchemaKey).toBe(contract.key);
+      if (!("apiPath" in surface) || !("endpointMaxAgeSec" in surface)) {
+        throw new Error(`descriptor ${surfaceKey} has pharosVilleSchemaKey but lacks apiPath/endpointMaxAgeSec`);
+      }
       expect(surface.apiPath).toBe(contract.path);
       expect(surface.endpointMaxAgeSec).toBe(contract.metaMaxAgeSec);
       expect(surface.producerIntervalSec).toBe(contract.producerIntervalSec);
