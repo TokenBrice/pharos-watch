@@ -353,6 +353,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
   return {
     ...baseEnv,
     CRITICAL_COVERAGE_CHANGED_FILES: changedFiles.join(","),
+    ...(env.CRITICAL_COVERAGE_RATCHET_ALL ? {} : { CRITICAL_COVERAGE_RATCHET_ALL: "1" }),
   };
 }
 

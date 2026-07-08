@@ -70,15 +70,23 @@ describe("critical coverage changed-file detection", () => {
     expect(warnings[0]).toContain('Could not diff against ref "bad-ref"');
   });
 
-  it("derives high-stakes pricing, depeg, and reserve candidates from source prefixes", () => {
+  it("derives high-stakes pricing, depeg, reserve, score, publication, and proxy candidates from source paths", () => {
     const candidates = collectCriticalCoverageCandidates({
       sourceFiles: [
+        "functions/lib/upstream-proxy.ts",
+        "functions/lib/csp-inject.ts",
+        "shared/lib/peg-score.ts",
+        "shared/lib/safety-score-version.ts",
+        "shared/lib/psi-colors.ts",
+        "worker/src/api/safety-score-history.ts",
         "worker/src/cron/sync-stablecoins/new-price-path.ts",
         "worker/src/cron/depeg-detection/new-decision-helper.ts",
         "worker/src/cron/sync-live-reserves-new-helper.ts",
+        "worker/src/lib/mint-burn-scoring.ts",
         "worker/src/lib/live-reserves-store-extra.ts",
         "worker/src/lib/depeg-resolver-store-validators.ts",
         "worker/src/lib/price-consensus.ts",
+        "worker/src/lib/publication-contract.ts",
         "worker/src/lib/pricing-types.ts",
         "worker/src/cron/depeg-detection/types.ts",
         "worker/src/cron/sync-stablecoins/__tests__/new-price-path.test.ts",
@@ -87,12 +95,17 @@ describe("critical coverage changed-file detection", () => {
     });
 
     expect(candidates).toEqual([
+      "functions/lib/upstream-proxy.ts",
+      "shared/lib/peg-score.ts",
+      "worker/src/api/safety-score-history.ts",
       "worker/src/cron/depeg-detection/new-decision-helper.ts",
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
       "worker/src/lib/depeg-resolver-store-validators.ts",
       "worker/src/lib/live-reserves-store-extra.ts",
+      "worker/src/lib/mint-burn-scoring.ts",
       "worker/src/lib/price-consensus.ts",
+      "worker/src/lib/publication-contract.ts",
     ]);
   });
 
@@ -290,7 +303,15 @@ describe("critical coverage changed-file detection", () => {
     expect(CRITICAL_FILES).toEqual(expect.arrayContaining([
       "worker/src/lib/depeg-resolver-incident-store.ts",
       "worker/src/lib/depeg-resolver-publication-store.ts",
+      "worker/src/lib/publication-contract.ts",
+      "functions/lib/upstream-proxy.ts",
+      "shared/lib/peg-score.ts",
     ]));
+    expect(CRITICAL_COVERAGE_WAIVERS).toEqual(expect.objectContaining({
+      "worker/src/api/safety-score-history.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
+      "worker/src/lib/psi-recompute.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
+      "shared/lib/redemption-backstop-scoring.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
+    }));
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {

@@ -7,6 +7,7 @@ export const CRITICAL_FILES = [
   "src/lib/api.ts",
   "worker/src/lib/api-cache-read.ts",
   "worker/src/lib/api-freshness.ts",
+  "worker/src/lib/freshness-sentinels.ts",
   "worker/src/lib/api-history.ts",
   "worker/src/lib/api-pagination.ts",
   "worker/src/lib/api-params.ts",
@@ -18,6 +19,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/evm-rpc.ts",
   "worker/src/lib/stablecoins-cache.ts",
   "worker/src/lib/safety-scores.ts",
+  "worker/src/lib/mint-burn-scoring.ts",
   "worker/src/handlers/scheduled.ts",
   "worker/src/handlers/http/gates.ts",
   "worker/src/api/health.ts",
@@ -31,6 +33,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/pending-depeg-confirmation-evidence.ts",
   "worker/src/cron/compute-dews.ts",
   "worker/src/lib/dews/signal-families.ts",
+  "worker/src/lib/dews-publication-pointer.ts",
   "worker/src/cron/compute-depeg-resolver.ts",
   "worker/src/cron/compute-depeg-resolver-review.ts",
   "worker/src/cron/depeg-detection/decision-engine.ts",
@@ -89,6 +92,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/live-reserves-store-statements.ts",
   "worker/src/lib/live-reserves-store-views.ts",
   "worker/src/lib/live-reserves-store-write.ts",
+  "worker/src/lib/publication-contract.ts",
   "worker/src/cron/daily-digest.ts",
   "worker/src/cron/sync-yield-data.ts",
   "worker/src/api/discovery.ts",
@@ -113,13 +117,29 @@ export const CRITICAL_FILES = [
   "worker/src/api/blacklist-summary.ts",
   "worker/src/lib/blacklist-contracts.ts",
   "worker/src/cron/sync-blacklist.ts",
+  "shared/lib/api-freshness.ts",
+  "shared/lib/liquidity-score-weights.ts",
+  "shared/lib/mint-authority-scoring.ts",
+  "shared/lib/peg-score.ts",
+  "shared/lib/psi-eligible.ts",
+  "shared/lib/yield-scoring.ts",
   "shared/lib/report-card-blacklist-matchers.ts",
   "shared/lib/blacklist-active-records.ts",
   "functions/api/admin/[[path]].ts",
   "functions/_site-data/[[path]].ts",
+  "functions/lib/pages-proxy-harness.ts",
+  "functions/lib/proxy-paths.ts",
+  "functions/lib/proxy-utils.ts",
+  "functions/lib/upstream-proxy.ts",
 ];
 
-const HIGH_STAKES_COVERAGE_SCAN_ROOTS = ["worker/src/cron", "worker/src/lib"];
+const HIGH_STAKES_COVERAGE_SCAN_ROOTS = [
+  "worker/src/cron",
+  "worker/src/lib",
+  "shared/lib",
+  "worker/src/api",
+  "functions/lib",
+];
 const HIGH_STAKES_COVERAGE_SCAN_EXTENSIONS = new Set([".ts"]);
 const HIGH_STAKES_COVERAGE_SCAN_EXCLUDED_DIRS = new Set();
 const HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES = [
@@ -149,6 +169,10 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^worker\/src\/cron\/sync-live-reserves-[a-z0-9-]+\.ts$/,
   /^worker\/src\/lib\/[^/]*(price|pricing)[^/]*\.ts$/,
   /^worker\/src\/lib\/live-reserves-store.*\.ts$/,
+  /^worker\/src\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
+  /^worker\/src\/api\/[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
+  /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|psi)[^/]*\.ts$/,
+  /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
 const CRITICAL_COVERAGE_WAIVER_CREATED_AT = "2026-06-05";
 const CRITICAL_COVERAGE_WAIVER_DEFAULT_REVIEW_AFTER = "2026-09-05";
@@ -206,6 +230,7 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
   "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts",
   "worker/src/cron/sync-stablecoins/zephyr-zsd.ts",
+  "worker/src/api/safety-score-history.ts",
   "worker/src/lib/address-price-providers/alchemy.ts",
   "worker/src/lib/address-price-providers/birdeye.ts",
   "worker/src/lib/address-price-providers/coingecko-onchain.ts",
@@ -224,6 +249,13 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/lib/native-peg-implied-prices.ts",
   "worker/src/lib/pricing-provider-diagnostics.ts",
   "worker/src/lib/pricing-provider-lifecycle.ts",
+  "worker/src/lib/psi-history-universe.ts",
+  "worker/src/lib/psi-recompute.ts",
+  "worker/src/lib/psi-replay.ts",
+  "shared/lib/psi-contribution.ts",
+  "shared/lib/psi-eligible-client.ts",
+  "shared/lib/psi-view-model.ts",
+  "shared/lib/redemption-backstop-scoring.ts",
 ];
 
 export const CRITICAL_COVERAGE_WAIVERS = Object.fromEntries(
@@ -440,7 +472,10 @@ function buildCriticalCoverageWaiver(file) {
     file.endsWith("storage-adapters.ts") ||
     file.endsWith("pricing-provider-lifecycle.ts") ||
     file.endsWith("pricing-provider-diagnostics.ts") ||
-    file.endsWith("pricing-source-policy.ts");
+    file.endsWith("pricing-source-policy.ts") ||
+    file.endsWith("redemption-backstop-scoring.ts") ||
+    file.endsWith("safety-score-history.ts") ||
+    file.includes("/psi-");
   const disposition = isContractOnly ? "barrel-or-contract" : isDeferred ? "deferred-ratchet" : "covered-by-enrolled-entrypoint";
 
   return {
@@ -486,6 +521,15 @@ function waiverReasonForFile(file) {
   if (file.includes("sync-live-reserves")) {
     return "Live-reserve support/config helper is covered by the enrolled sync-live-reserves suite; promote it if it starts owning persistence or scoring logic.";
   }
+  if (file.includes("/psi-")) {
+    return "PSI support module has focused tests outside the critical coverage lane; keep waived until PSI recompute/history or client-display tests join the critical suite.";
+  }
+  if (file.endsWith("redemption-backstop-scoring.ts")) {
+    return "Redemption backstop scoring has focused tests outside the critical coverage lane; keep waived until report-card scoring joins the critical suite.";
+  }
+  if (file.endsWith("safety-score-history.ts")) {
+    return "Safety score history endpoint has focused API tests outside the critical coverage lane; keep waived until that endpoint joins the critical suite.";
+  }
   return "Reviewed high-stakes support module; current critical behavior is covered by an enrolled entrypoint test suite.";
 }
 
@@ -510,6 +554,15 @@ function waiverNextActionForFile(file, disposition) {
   }
   if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
     return "Promote reserve support modules when persistence, scoring, or row-decoding behavior has direct critical tests.";
+  }
+  if (file.includes("/psi-")) {
+    return "Promote PSI support modules when the PSI recompute/history or client-display test lane is added to critical coverage.";
+  }
+  if (file.endsWith("redemption-backstop-scoring.ts")) {
+    return "Promote redemption backstop scoring when report-card scoring tests become part of critical coverage.";
+  }
+  if (file.endsWith("safety-score-history.ts")) {
+    return "Promote the safety-score history endpoint when its focused API tests become part of critical coverage.";
   }
   return "Review whether entrypoint coverage still exercises the file's critical behavior; add direct tests before enrollment.";
 }
@@ -538,6 +591,15 @@ function waiverDirectEnrollmentConditionForFile(file, disposition) {
   }
   if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
     return "Direct reserve tests cover persistence, row decoding, or scoring behavior owned by the module.";
+  }
+  if (file.includes("/psi-")) {
+    return "Direct PSI recompute, replay, eligibility, contribution, or display tests are included in the critical coverage suite.";
+  }
+  if (file.endsWith("redemption-backstop-scoring.ts")) {
+    return "Direct redemption backstop scoring tests are included in the critical coverage suite.";
+  }
+  if (file.endsWith("safety-score-history.ts")) {
+    return "Focused safety-score history API tests are included in the critical coverage suite.";
   }
   return "Direct critical tests cover this module's high-stakes behavior independently of the enrolled entrypoint suite.";
 }

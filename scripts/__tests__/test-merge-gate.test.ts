@@ -133,6 +133,18 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
+      CRITICAL_COVERAGE_RATCHET_ALL: "1",
+    });
+
+    expect(
+      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv({
+        CRITICAL_COVERAGE_RATCHET_ALL: "0",
+      })),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
     });
 
     expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], testEnv())).toEqual({
@@ -314,6 +326,7 @@ describe("buildCommandPlan", () => {
       getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
     ).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
+      CRITICAL_COVERAGE_RATCHET_ALL: "1",
     });
 
     expect(
@@ -592,6 +605,7 @@ describe("buildCommandPlan", () => {
     expect(envByCommand.get("npm run test:noncritical")).toEqual({});
     expect(envByCommand.get("npm run coverage:critical")).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "src/app/page.tsx,worker/src/api/status.ts",
+      CRITICAL_COVERAGE_RATCHET_ALL: "1",
     });
   });
 
