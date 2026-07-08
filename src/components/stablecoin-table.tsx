@@ -111,7 +111,7 @@ const COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
 const OVERVIEW_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   rank: 44,
   name: 190,
-  price: 88,
+  price: 104,
   peg: 84,
   mcap: 100,
   change24h: 84,
@@ -187,10 +187,9 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     label: "Price",
     sortKey: "price",
     // Pinned to content width in the phone layout (<lg): fixed-layout leftover
-    // sharing otherwise inflates the column past the 390px first viewport and
-    // clips the fourth peg-price decimal at rest. From lg it pins wider so
-    // four-digit prices (gold pegs, ~$4,030.1234) never overflow into Peg.
-    className: "w-[88px] text-right lg:w-[116px]",
+    // sharing otherwise inflates the column past the 390px first viewport. The
+    // mobile width still fits gold pegs with four decimals; lg pins wider.
+    className: "w-[104px] text-right lg:w-[116px]",
   },
   {
     id: "peg",
@@ -260,7 +259,7 @@ const OVERVIEW_HEADER_LABELS: Partial<Record<ColumnId, string>> = {
 const OVERVIEW_HEADER_CLASS_NAMES: Partial<Record<ColumnId, string>> = {
   rank: "w-[44px] text-right",
   name: "w-[190px] max-w-[190px]",
-  price: "w-[88px] text-right",
+  price: "w-[104px] text-right",
   peg: "w-[84px] text-right",
   mcap: "w-[100px] text-right",
   change24h: "w-[84px] text-right",

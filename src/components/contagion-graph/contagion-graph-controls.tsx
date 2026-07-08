@@ -91,7 +91,7 @@ export function ContagionGraphControls({
           <label className="flex items-center gap-2">
             <span className="pharos-kicker shrink-0">Trace coin</span>
             <select
-              className="pharos-focus-ring h-9 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 text-xs font-medium text-foreground 2xl:w-[11rem]"
+              className="pharos-focus-ring h-11 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 text-xs font-medium text-foreground md:h-9 2xl:w-[11rem]"
               value={selectedNeighborhoodId ?? ""}
               onChange={(event) => onTraceNodeChange(event.target.value || null)}
             >

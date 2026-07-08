@@ -91,9 +91,9 @@ function ScoreWithBand({ score, label, children }: { score: number; label: strin
 }
 
 const HEADER_ICON_BUTTON_CLASS =
-  "pharos-focus-ring inline-flex !h-5 !min-h-0 !w-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
+  "pharos-focus-ring inline-flex !h-11 !min-h-11 !w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
 const SAFETY_INLINE_HINT_BUTTON_CLASS =
-  "pharos-focus-ring inline-flex h-4 min-h-0 w-4 shrink-0 items-center justify-center rounded-full border border-transparent bg-muted/70 p-0 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground";
+  "pharos-focus-ring -mx-3.5 -my-3.5 inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent bg-muted/70 p-0 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground md:mx-0 md:my-0 md:h-4 md:min-h-0 md:w-4";
 
 function ReportCardHeaderActions({ updatedAtMs }: { updatedAtMs?: number | null }) {
   const methodology = METHODOLOGY_CONTEXT.safetyScore;

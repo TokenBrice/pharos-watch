@@ -247,7 +247,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={!showBreakdown}
                 onClick={() => setShowBreakdown(false)}
                 className={cn(
-                  "pharos-focus-ring rounded-[4px] px-2 py-1 text-[11px] font-medium leading-none transition-colors",
+                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-[11px] font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -258,7 +258,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={showBreakdown}
                 onClick={() => setShowBreakdown(true)}
                 className={cn(
-                  "pharos-focus-ring rounded-[4px] px-2 py-1 text-[11px] font-medium leading-none transition-colors",
+                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-[11px] font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -271,9 +271,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </span>
           <MethodologyHint
             topic="dews"
-            buttonClassName="!h-5 !min-h-0 !w-5 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
+            buttonClassName="!h-11 !min-h-11 !w-11 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
           />
-          <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-5 w-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">
+          <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-11 min-h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:h-5 md:min-h-0 md:w-5">
             <Table2 className="h-3 w-3" aria-hidden="true" />
             <span className="sr-only">Show inputs</span>
           </ShowYourWorkToggle>
