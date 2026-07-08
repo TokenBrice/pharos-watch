@@ -54,7 +54,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "dgld-gold-token-sa", dustThreshold: 10 },
   { stablecoinId: "axcnh-anchorx", dustThreshold: 10_000 },
   { stablecoinId: "eurq-quantoz", dustThreshold: 10_000 },
-  { stablecoinId: "gyen-gyen", dustThreshold: 10_000 },
   { stablecoinId: "usdu-usdu-finance", dustThreshold: 10_000 },
   { stablecoinId: "zarp-zarp", dustThreshold: 10_000 },
   { stablecoinId: "usdp-parallel", dustThreshold: 10_000 },

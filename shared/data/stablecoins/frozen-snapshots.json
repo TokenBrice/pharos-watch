@@ -717,5 +717,104 @@
         }
       ]
     }
+  },
+  {
+    "id": "gyen-gyen",
+    "capturedAt": "2026-07-08T18:49:27Z",
+    "peggedAssetRow": {
+      "id": "gyen-gyen",
+      "name": "GYEN",
+      "symbol": "GYEN",
+      "geckoId": "gyen",
+      "pegType": "peggedJPY",
+      "pegMechanism": "fiat-backed",
+      "price": 0.00316788,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1783535497,
+      "priceObservedAt": 1783535497,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1783535463,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedJPY": 2224063.31575051
+      },
+      "circulatingPrevDay": {
+        "peggedJPY": 2224063.31575051
+      },
+      "circulatingPrevWeek": {
+        "peggedJPY": 2224063.31575051
+      },
+      "circulatingPrevMonth": {
+        "peggedJPY": 2224063.352991629
+      },
+      "chainCirculating": {
+        "OP Mainnet": {
+          "current": 0.22125605813540924,
+          "circulatingPrevDay": 0.22125605813540924,
+          "circulatingPrevWeek": 0.22125605813540924,
+          "circulatingPrevMonth": 0.22125605813540924
+        },
+        "Ethereum": {
+          "current": 1999775.2863087947,
+          "circulatingPrevDay": 1999775.2863087947,
+          "circulatingPrevWeek": 1999775.2863087947,
+          "circulatingPrevMonth": 1999775.2863087947
+        },
+        "Stellar": {
+          "current": 220968.90501306817,
+          "circulatingPrevDay": 220968.90501306817,
+          "circulatingPrevWeek": 220968.90501306817,
+          "circulatingPrevMonth": 220968.94225418687
+        },
+        "Solana": {
+          "current": 18.397112635853137,
+          "circulatingPrevDay": 18.397112635853137,
+          "circulatingPrevWeek": 18.397112635853137,
+          "circulatingPrevMonth": 18.397112635853137
+        },
+        "Arbitrum": {
+          "current": 3300.5060599532194,
+          "circulatingPrevDay": 3300.5060599532194,
+          "circulatingPrevWeek": 3300.5060599532194,
+          "circulatingPrevMonth": 3300.5060599532194
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Stellar",
+        "Arbitrum",
+        "Solana",
+        "OP Mainnet"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xc08512927d12348f6620a698105e1baac6ecd911",
+          "decimals": 6
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7",
+          "decimals": 6
+        },
+        {
+          "chain": "solana",
+          "address": "Crn4x1Y2HUKko7ox2EZMT6N2t2ZyH7eKtwkBGVnhEq1g",
+          "decimals": 6
+        },
+        {
+          "chain": "stellar",
+          "address": "GYEN-GDF6VOEGRWLOZ64PQQGKD2IYWA22RLT37GJKS2EJXZHT2VLAGWLC5TOB",
+          "decimals": 7
+        }
+      ]
+    }
   }
 ]

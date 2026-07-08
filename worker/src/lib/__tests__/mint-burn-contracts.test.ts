@@ -371,7 +371,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "dgld-gold-token-sa", symbol: "DGLD", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18, dustThreshold: 10 },
     { stablecoinId: "axcnh-anchorx", symbol: "AxCNH", address: "0x2925ac3be7d585874b88ea51ed50add376ad8239", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "eurq-quantoz", symbol: "EURQ", address: "0x8df723295214ea6f21026eeeb4382d475f146f9f", decimals: 6, dustThreshold: 10_000 },
-    { stablecoinId: "gyen-gyen", symbol: "GYEN", address: "0xc08512927d12348f6620a698105e1baac6ecd911", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "usdu-usdu-finance", symbol: "USDU", address: "0xdde3ec717f220fc6a29d6a4be73f91da5b718e55", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "zarp-zarp", symbol: "ZARP", address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usdp-parallel", symbol: "USDp", address: "0x9b3a8f7cec208e247d97dee13313690977e24459", decimals: 18, dustThreshold: 10_000 },

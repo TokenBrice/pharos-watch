@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 365 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 364 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 99 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 100 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -365,7 +365,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Savings rUSD (srUSD)](https://pharos.watch/stablecoin/srusd-reservoir/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Parallel USDp (USDp)](https://pharos.watch/stablecoin/usdp-parallel/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StraitsX XSGD (XSGD)](https://pharos.watch/stablecoin/xsgd-straitsx/): centralized stablecoin backed by real-world assets pegged to Singapore Dollar.
-- [GYEN (GYEN)](https://pharos.watch/stablecoin/gyen-gyen/): centralized stablecoin backed by real-world assets pegged to Japanese Yen.
 - [AUDD (AUDD)](https://pharos.watch/stablecoin/audd-novatti/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [JPY Coin (JPYC)](https://pharos.watch/stablecoin/jpyc-jpyc/): centralized stablecoin backed by real-world assets pegged to Japanese Yen.
 - [JPY Coin v1 (JPYC)](https://pharos.watch/stablecoin/jpyc-jpyc-v1/): centralized stablecoin backed by real-world assets pegged to Japanese Yen.

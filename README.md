@@ -5,7 +5,7 @@
 [![CodeQL](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Pharos is an open-source stablecoin intelligence dashboard tracking 410 stablecoins in repo metadata: 365 active assets on public data surfaces, 34 pre-launch entries, 11 frozen historical archives, 88 curated dead stablecoins in the cemetery dataset, and 2 PSI-only shadow assets. It is a pure information site: no wallet connectivity, no trading, no custody, and no user accounts.
+Pharos is an open-source stablecoin intelligence dashboard tracking 410 stablecoins in repo metadata: 364 active assets on public data surfaces, 34 pre-launch entries, 12 frozen historical archives, 88 curated dead stablecoins in the cemetery dataset, and 2 PSI-only shadow assets. It is a pure information site: no wallet connectivity, no trading, no custody, and no user accounts.
 
 Pharos is research infrastructure, not financial advice. Data can be delayed, incomplete, or degraded when upstream providers fail; public surfaces include freshness and status signals so users can judge whether a snapshot is current enough for their use case.
 

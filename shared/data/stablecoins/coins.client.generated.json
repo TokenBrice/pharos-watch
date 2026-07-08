@@ -7756,6 +7756,8 @@
     },
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gyen",
+    "status": "frozen",
+    "frozenAt": "2026-07-08",
     "launchDate": "2021-03-01",
     "genius": {
       "authorizationStatus": "no-public-authorization-found"
@@ -7835,8 +7837,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    },
-    "liveReserveAdapter": "attestation-pdf-index"
+    }
   },
   {
     "id": "gynusd-gyndore",

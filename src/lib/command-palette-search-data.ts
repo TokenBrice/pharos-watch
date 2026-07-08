@@ -228,7 +228,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["srusd-reservoir", "Savings rUSD", "srUSD"],
   ["usdp-parallel", "Parallel USDp", "USDp"],
   ["xsgd-straitsx", "StraitsX XSGD", "XSGD"],
-  ["gyen-gyen", "GYEN", "GYEN"],
+  ["gyen-gyen", "GYEN", "GYEN", "frozen", "2026-07-08"],
   ["audd-novatti", "AUDD", "AUDD"],
   ["jpyc-jpyc", "JPY Coin", "JPYC"],
   ["jpyc-jpyc-v1", "JPY Coin v1", "JPYC"],

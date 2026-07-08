@@ -28824,34 +28824,6 @@
         "risk": "very-low"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "attestation-mix",
-      "breakerScope": "gyen-gyen",
-      "display": {
-        "url": "https://stablecoin.z.com/attestation/",
-        "label": "GMO Trust"
-      },
-      "scoring": {
-        "maxSourceAgeSec": 4000000
-      },
-      "adapter": "attestation-pdf-index",
-      "inputs": {
-        "primary": {
-          "kind": "http-html",
-          "url": "https://stablecoin.z.com/attestation/"
-        }
-      },
-      "params": {
-        "slices": [
-          {
-            "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
-            "pct": 100,
-            "risk": "very-low"
-          }
-        ]
-      }
-    },
     "notices": [
       {
         "type": "danger",
@@ -28864,6 +28836,17 @@
         "message": "GYEN suffered multiple de-pegging events shortly after its 2021 launch (notably hitting >1.5x its peg in May 2021), causing material holder losses on Coinbase. A class action filed in 2022 (Donovan v. Coinbase / GMO Trust) led to a $6.75M proposed settlement; motion for final approval was filed on April 17, 2026 with a final-approval hearing set for May 27, 2026. Settlement class covers GYEN purchasers in New York or California between Dec 29, 2020 and Oct 10, 2025. Methodology-relevant historical record of peg failure for an otherwise NYDFS-supervised issuer."
       }
     ],
+    "status": "frozen",
+    "frozenAt": "2026-07-08",
+    "obituary": {
+      "causeOfDeath": "abandoned",
+      "deathDate": "2026-05",
+      "epitaph": "Pristine custody, wound down for want of demand",
+      "obituary": "GYEN was GMO-Z.com Trust's NYDFS-chartered yen stablecoin — backed by FDIC-insured cash and short-dated U.S. Treasury bills, with monthly Network Firm attestations and one of the most tightly regulated issuer stacks of any JPY stablecoin. Its weakness was never custody but demand: thin secondary liquidity and a history of depegs (most infamously a squeeze above 1.5x peg in 2021 that triggered the Donovan v. Coinbase class action) left it trading more like a neglected FX derivative than a stablecoin. On May 15, 2026 GMO-Z.com Trust Company announced an orderly wind-down of GYEN and ZUSD, disabling purchases and opening a redemption-only window through November 11, 2026; parent GMO Internet Group moved to dissolve the U.S. subsidiary and recorded a ¥2.2bn write-down. With issuance ended and only redemption remaining, Pharos freezes GYEN as an archived wind-down asset rather than an active redeemable stablecoin.",
+      "peakMcap": 216000000,
+      "sourceUrl": "https://stablecoin.z.com/press/",
+      "sourceLabel": "GMO Trust GYEN/ZUSD wind-down announcement"
+    },
     "launchDate": "2021-03-01"
   },
   {
