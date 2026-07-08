@@ -1,23 +1,41 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+/**
+ * Generate the mechanism-explainer OG staging SVGs (`agents/og-learn-staging/`)
+ * for `/learn/mechanisms/<slug>/`; the published `public/og-learn-<slug>.png`
+ * files are rendered from these and committed.
+ *
+ * The desktop diagram SVG is rendered directly from the mechanism-diagram
+ * components via `renderToStaticMarkup` (this script previously scraped the
+ * markup out of a vitest snapshot, which the snapshot-test retirement in
+ * 12971d83f deleted).
+ *
+ *   tsx scripts/maintenance/build-og-learn-images.ts
+ *   tsx scripts/maintenance/build-og-learn-images.ts --check
+ */
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderToStaticMarkup } from "react-dom/server";
+import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mechanism-diagrams";
+import type { MechanismArchetype } from "@shared/types";
 import { escapeXml } from "../lib/og-svg.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const CHECK_MODE = process.argv.includes("--check");
 
-const SNAP_PATH = resolve(
-  REPO_ROOT,
-  "src/components/stablecoin-detail/mechanism-diagrams/__tests__/__snapshots__/mechanism-diagrams.test.tsx.snap",
-);
-
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
 
-const SLUGS = ["fiat-cash", "tbill", "cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"];
+const SLUGS: MechanismArchetype[] = [
+  "fiat-cash",
+  "tbill",
+  "cdp",
+  "synthetic-delta-neutral",
+  "algorithmic",
+  "rwa-credit-fund",
+];
 
-const TITLES = {
+const TITLES: Record<string, string> = {
   "fiat-cash": "Fiat-Backed Stablecoins, Explained",
   tbill: "Tokenized Treasury Stablecoins, Explained",
   cdp: "CDP Stablecoins, Explained",
@@ -26,9 +44,9 @@ const TITLES = {
   "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
 };
 
-function checkPublishedPngs() {
-  const missing = [];
-  const empty = [];
+function checkPublishedPngs(): void {
+  const missing: string[] = [];
+  const empty: string[] = [];
   for (const slug of SLUGS) {
     const path = resolve(REPO_ROOT, "public", `og-learn-${slug}.png`);
     if (!existsSync(path)) {
@@ -62,7 +80,7 @@ mkdirSync(OUT_DIR, { recursive: true });
 
 // Dark-mode token substitutions. var() doesn't resolve in standalone SVG;
 // inline literal oklch() colors keep the dark-mode appearance.
-const TOKEN_MAP = {
+const TOKEN_MAP: Record<string, string> = {
   "var(--card)": "oklch(0.140 0.010 260)",
   "var(--border-default)": "oklch(1 0 0 / 0.18)",
   "var(--text-tertiary)": "oklch(0.708 0 0)",
@@ -71,27 +89,14 @@ const TOKEN_MAP = {
   "var(--severity-healthy)": "oklch(0.690 0.180 155)",
 };
 
-const snap = readFileSync(SNAP_PATH, "utf-8");
-
-function decodeSnapValue(raw) {
-  return raw.replace(/\\"/g, '"').replace(/\\n/g, "\n");
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractDesktopSvg(slug) {
-  // eslint-disable-next-line security/detect-non-literal-regexp
-  const re = new RegExp(
-    `exports\\[\`mechanismDiagramFor > renders the ${escapeRegExp(slug)} diagram 1\`\\] = \`"(.*?)"\`;`,
-    "s",
-  );
-  const m = snap.match(re);
-  if (!m) throw new Error(`Snapshot not found for ${slug}`);
-  const html = decodeSnapValue(m[1]);
+function extractDesktopSvg(slug: MechanismArchetype): { inner: string; viewBoxH: number } {
+  // Same render call the retired snapshot test used: USDC as the sample
+  // symbol (substituted to STBL below), no wrapper/override options.
+  const node = mechanismDiagramFor(slug, "USDC");
+  if (node == null) throw new Error(`No diagram rendered for ${slug}`);
+  const html = renderToStaticMarkup(node);
   // Pull just the first <svg ...>...</svg> (the hidden sm:block desktop variant)
-  const svgMatch = html.match(/<svg viewBox="0 0 600 (\d+)"[^>]*>(.*?)<\/svg>/s);
+  const svgMatch = html.match(/<svg[^>]*viewBox="0 0 600 (\d+)"[^>]*>(.*?)<\/svg>/s);
   if (!svgMatch) throw new Error(`Desktop SVG not found for ${slug}`);
   const heightAttr = Number.parseInt(svgMatch[1], 10);
   let inner = svgMatch[2];
@@ -106,7 +111,7 @@ function extractDesktopSvg(slug) {
   return { inner, viewBoxH: heightAttr };
 }
 
-function buildOgSvg(slug) {
+function buildOgSvg(slug: MechanismArchetype): string {
   const { inner, viewBoxH } = extractDesktopSvg(slug);
   const title = TITLES[slug];
 

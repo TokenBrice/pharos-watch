@@ -97,5 +97,5 @@ Primary inbound surfaces:
 - `npm run check:archetype-explainer-coverage` covers mechanism explainer completeness.
 - `src/app/learn/case-studies/__tests__/content.test.ts` checks case-study content invariants and internal links.
 - `npm run check:case-study-client-index` verifies the generated client-safe case-study registry.
-- `npm run check:generated-artifacts` verifies mechanism-explainer OG images through `scripts/maintenance/build-og-learn-images.mjs --check`, case-study OG PNGs through `scripts/maintenance/build-og-case-studies.ts --check`, and editorial OG cards through `scripts/maintenance/build-og-editorial.mjs --check`.
+- `npm run check:generated-artifacts` verifies mechanism-explainer OG images through `scripts/maintenance/build-og-learn-images.ts --check`, case-study OG PNGs through `scripts/maintenance/build-og-case-studies.ts --check`, and editorial OG cards through `scripts/maintenance/build-og-editorial.mjs --check`.
 - `npm run seo:check` verifies sitemap coverage, OG references, and crawlability after a Pages build.

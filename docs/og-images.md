@@ -80,7 +80,7 @@ npm run check:og-editorial
 
 ## 3. Mechanism explainer cards (`public/og-learn-*.png`)
 
-Generated for `/learn/mechanisms/[archetype]` pages. The pipeline reuses the mechanism diagram SVG produced by `src/components/stablecoin-detail/mechanism-diagrams/__tests__/mechanism-diagrams.test.tsx` snapshots so the OG card stays diagram-consistent.
+Generated for `/learn/mechanisms/[archetype]` pages. The pipeline renders the mechanism diagram SVG directly from `src/components/stablecoin-detail/mechanism-diagrams/` so the OG card stays diagram-consistent.
 
 | Image | Slug |
 | --- | --- |
@@ -94,15 +94,15 @@ Generated for `/learn/mechanisms/[archetype]` pages. The pipeline reuses the mec
 ### How to renew
 
 ```bash
-node scripts/maintenance/build-og-learn-images.mjs   # writes SVGs to agents/og-learn-staging/
+tsx scripts/maintenance/build-og-learn-images.ts   # writes SVGs to agents/og-learn-staging/
 # Then convert SVG → PNG (e.g. via the svg-to-png skill / Playwright Firefox)
 # and move the PNGs into public/og-learn-<slug>.png
 ```
 
 ### When to renew
 
-- After a mechanism diagram update (`mechanism-diagrams.test.tsx.snap` changed).
-- After an archetype title change in `build-og-learn-images.mjs`.
+- After a mechanism diagram update (any change under `src/components/stablecoin-detail/mechanism-diagrams/`).
+- After an archetype title change in `build-og-learn-images.ts`.
 - After a new mechanism archetype is added (also requires a new content module per `docs/learn-mechanisms-page.md`).
 
 ## 4. Case-study cards (`public/og-learn-case-*.png`)

@@ -286,7 +286,7 @@ describe("validate-ci parity", () => {
       "node scripts/build-data/build-client-registry.mjs",
       "node scripts/maintenance/generate-api-reference.mjs",
       "node scripts/maintenance/build-og-editorial.mjs",
-      "node scripts/maintenance/build-og-learn-images.mjs",
+      "tsx scripts/maintenance/build-og-learn-images.ts",
       "tsx scripts/maintenance/build-og-case-studies.ts",
     ];
     const expectedCheckCommands = [
@@ -306,7 +306,7 @@ describe("validate-ci parity", () => {
       "node scripts/build-data/build-client-registry.mjs --check",
       "node scripts/maintenance/generate-api-reference.mjs --check",
       "node scripts/maintenance/build-og-editorial.mjs --check",
-      "node scripts/maintenance/build-og-learn-images.mjs --check",
+      "tsx scripts/maintenance/build-og-learn-images.ts --check",
       "tsx scripts/maintenance/build-og-case-studies.ts --check",
     ];
 

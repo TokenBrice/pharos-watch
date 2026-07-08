@@ -69,7 +69,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 - Title: hand-tuned per archetype, all ending in `, Explained` (see `TITLE_BY_ARCHETYPE` in the route module); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
-- OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
+- OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `tsx scripts/maintenance/build-og-learn-images.ts` followed by the `svg-to-png` skill against the staged SVGs.
 - JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
 ---
@@ -109,7 +109,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).
-7. Run `node scripts/maintenance/build-og-learn-images.mjs` and the `svg-to-png` skill on the new staged SVG.
+7. Run `tsx scripts/maintenance/build-og-learn-images.ts` and the `svg-to-png` skill on the new staged SVG.
 8. Run `npm run check:archetype-explainer-coverage` until it passes; this is the gate.
 
 ---

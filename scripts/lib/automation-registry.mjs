@@ -270,9 +270,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   },
   {
     id: "og-learn",
-    checkCommand: "node scripts/maintenance/build-og-learn-images.mjs --check",
-    command: "node scripts/maintenance/build-og-learn-images.mjs",
-    script: "scripts/maintenance/build-og-learn-images.mjs",
+    checkCommand: "tsx scripts/maintenance/build-og-learn-images.ts --check",
+    command: "tsx scripts/maintenance/build-og-learn-images.ts",
+    script: "scripts/maintenance/build-og-learn-images.ts",
   },
   {
     id: "og-case-studies",

@@ -149,7 +149,7 @@
     "analyze:gsc-coverage": "node scripts/maintenance/analyze-gsc-coverage.mjs",
     "analyze:gsc-performance": "node scripts/maintenance/analyze-gsc-performance.mjs",
     "og:capture": "node scripts/maintenance/screenshot-og.mjs",
-    "check:og-learn": "node scripts/maintenance/build-og-learn-images.mjs --check",
+    "check:og-learn": "tsx scripts/maintenance/build-og-learn-images.ts --check",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
     "check:og-editorial": "node scripts/maintenance/build-og-editorial.mjs --check",
     "build:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts",
