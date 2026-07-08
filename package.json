@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "dev": "node scripts/maintenance/dev.mjs",
-    "dev:next": "next dev",
+    "dev:next": "next dev --webpack",
     "dev:proxy": "node scripts/maintenance/dev-api-proxy.mjs",
     "prebuild": "node scripts/maintenance/run-generated-artifacts.mjs",
     "build": "next build --webpack",

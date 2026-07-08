@@ -46,4 +46,4 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 spawnChild("proxy", process.execPath, ["scripts/maintenance/dev-api-proxy.mjs"]);
-spawnChild("next", "next", ["dev"]);
+spawnChild("next", "next", ["dev", "--webpack"]);
