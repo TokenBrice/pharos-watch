@@ -3,6 +3,10 @@ import type {
   DependencyImpactLayer,
   PublicationSurfaceId,
 } from "../types/status";
+import {
+  DATA_SURFACE_DESCRIPTORS,
+  type DataSurfaceDescriptor,
+} from "./data-surface-descriptors";
 
 export interface DataDependencyDefinition {
   id: string;
@@ -18,16 +22,18 @@ export interface DataDependencyDefinition {
   runbookPath: string | null;
 }
 
+const REPORT_CARDS_SURFACE: DataSurfaceDescriptor = DATA_SURFACE_DESCRIPTORS.reportCards;
+
 export const DATA_DEPENDENCY_REGISTRY = [
   {
     id: "stablecoins",
     label: "Stablecoin market snapshot",
     sourceOfTruth: "cache:stablecoins",
-    producerJob: "sync-stablecoins",
-    cacheKey: "stablecoins",
+    producerJob: DATA_SURFACE_DESCRIPTORS.stablecoins.producerJob,
+    cacheKey: DATA_SURFACE_DESCRIPTORS.stablecoins.cacheKey,
     publicationSurface: null,
     impactLayer: "availability",
-    criticality: "critical",
+    criticality: DATA_SURFACE_DESCRIPTORS.stablecoins.dependencyCriticality,
     dependsOn: [],
     consumers: ["home", "stablecoin-detail", "report-cards", "api:stablecoins"],
     runbookPath: "docs/runbooks/stablecoins-cache.md",
@@ -62,11 +68,11 @@ export const DATA_DEPENDENCY_REGISTRY = [
     id: "dex-liquidity",
     label: "DEX liquidity scoring",
     sourceOfTruth: "dex_liquidity_publication_generations",
-    producerJob: "sync-dex-liquidity",
-    cacheKey: "dex-liquidity",
+    producerJob: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerJob,
+    cacheKey: DATA_SURFACE_DESCRIPTORS.dexLiquidity.cacheKey,
     publicationSurface: "dex-liquidity",
     impactLayer: "availability",
-    criticality: "critical",
+    criticality: DATA_SURFACE_DESCRIPTORS.dexLiquidity.dependencyCriticality,
     dependsOn: ["stablecoins"],
     consumers: ["liquidity-ranking", "dews", "report-cards", "redemption-backstops", "yield-rankings"],
     runbookPath: null,
@@ -75,11 +81,11 @@ export const DATA_DEPENDENCY_REGISTRY = [
     id: "yield-rankings",
     label: "Yield rankings",
     sourceOfTruth: "yield_publication_generations",
-    producerJob: "sync-yield-data",
-    cacheKey: "yield-data",
+    producerJob: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerJob,
+    cacheKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.cacheKey,
     publicationSurface: "yield-rankings",
     impactLayer: "availability",
-    criticality: "critical",
+    criticality: DATA_SURFACE_DESCRIPTORS.yieldRankings.dependencyCriticality,
     dependsOn: ["dex-liquidity"],
     consumers: ["yield-intelligence", "report-cards", "api:yield"],
     runbookPath: null,
@@ -88,11 +94,11 @@ export const DATA_DEPENDENCY_REGISTRY = [
     id: "dews",
     label: "DEWS risk signals",
     sourceOfTruth: "cache:dews",
-    producerJob: "compute-dews",
-    cacheKey: "dews",
+    producerJob: DATA_SURFACE_DESCRIPTORS.stressSignals.producerJob,
+    cacheKey: DATA_SURFACE_DESCRIPTORS.stressSignals.cacheKey,
     publicationSurface: "dews",
     impactLayer: "availability",
-    criticality: "critical",
+    criticality: DATA_SURFACE_DESCRIPTORS.stressSignals.dependencyCriticality,
     dependsOn: ["dex-liquidity"],
     consumers: ["stress-signals", "telegram-alerts", "report-cards"],
     runbookPath: null,
@@ -127,11 +133,11 @@ export const DATA_DEPENDENCY_REGISTRY = [
     id: "report-card-cache",
     label: "Report-card cache",
     sourceOfTruth: "cron_runs:publish-report-card-cache",
-    producerJob: "publish-report-card-cache",
-    cacheKey: null,
+    producerJob: DATA_SURFACE_DESCRIPTORS.reportCards.producerJob,
+    cacheKey: REPORT_CARDS_SURFACE.cacheKey ?? null,
     publicationSurface: "report-card-cache",
     impactLayer: "availability",
-    criticality: "critical",
+    criticality: DATA_SURFACE_DESCRIPTORS.reportCards.dependencyCriticality,
     dependsOn: ["stablecoins", "dex-liquidity", "yield-rankings", "dews"],
     consumers: ["report-cards", "stablecoin-detail"],
     runbookPath: null,
