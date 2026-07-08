@@ -35,7 +35,7 @@ interface DewsBandStripProps {
  * notch for the 24h-ago score. Pure inline SVG so it composes anywhere
  * (badges, card headers, table cells).
  */
-export function DewsBandStrip({
+function DewsBandStrip({
   score,
   prevScore,
   width = 60,

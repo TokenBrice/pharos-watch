@@ -227,7 +227,7 @@ export interface ApiQueryWithMetaResult<T>
   meta: ApiMeta | null;
 }
 
-export function unwrapApiQueryWithMetaResult<T>(
+function unwrapApiQueryWithMetaResult<T>(
   query: UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
 ): ApiQueryWithMetaResult<T> {
   const { data, ...rest } = query;

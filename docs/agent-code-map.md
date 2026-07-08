@@ -177,7 +177,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-joined-key.ts` - useJoinedKey
 - `src/hooks/use-just-entered.ts` - useJustEntered
 - `src/hooks/use-logos.ts` - useLogos
-- `src/hooks/use-mint-burn-flows.ts` - mintBurnFlowsCoinQueryOptions, useMintBurnEvents, useMintBurnFlows, useMintBurnFlowsCoin
+- `src/hooks/use-mint-burn-flows.ts` - mintBurnFlowsCoinQueryOptions, useMintBurnEvents, useMintBurnFlows
 - `src/hooks/use-motion-preference.ts` - MotionPreference, getEffectiveReducedMotion, motionPreferenceStore
 - `src/hooks/use-nav-collapse.ts` - STORAGE_KEY, getExpandedState, setExpandedState, useNavCollapse
 - `src/hooks/use-near-viewport.ts` - useNearViewport

@@ -130,7 +130,7 @@ interface MintingPressureUi {
   panelClass: string;
 }
 
-export function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
+function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
   if (score === null) {
     return {
       label: "No activity",

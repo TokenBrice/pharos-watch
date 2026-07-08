@@ -1,11 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { ApiMeta } from "@/lib/api";
-import {
-  unwrapApiQueryWithMetaResult,
-} from "./use-api-query";
 import {
   createRegisteredApiPollingQueryOptionsWithMeta,
   useRegisteredApiQueryWithMeta,
@@ -84,15 +79,6 @@ export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, 
   return createRegisteredApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours),
     { enabled: !!stablecoinId && (opts?.enabled ?? true) },
-  );
-}
-
-/** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
-export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
-  return unwrapApiQueryWithMetaResult(
-    useQuery<{ data: MintBurnPerCoinResponse; meta: ApiMeta | null }, Error>(
-      mintBurnFlowsCoinQueryOptions(stablecoinId, hours, opts),
-    ),
   );
 }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import {
   formatCurrency,
   formatNativePrice,
@@ -364,66 +363,6 @@ export function HeroTertiaryMetrics({
         </div>
       )}
     </>
-  );
-}
-
-/** Renders a signal value span with the standard data-unavailable aria/sr-only pair. */
-function SignalValue({ value, className }: { value: string; className: string }) {
-  return (
-    <>
-      <span className={className} aria-hidden={value === "—" ? "true" : undefined}>
-        {value}
-      </span>
-      {value === "—" && <span className="sr-only">data unavailable</span>}
-    </>
-  );
-}
-
-export function HeroSignalsRail({ items }: { items: HeroSignalRailItem[] }) {
-  const [hero, ...rest] = items;
-  return (
-    <nav aria-label="Hero signals" className="flex flex-col gap-1.5">
-      {hero && (
-        <Link
-          key={hero.key}
-          href={hero.href}
-          className={`pharos-focus-ring group relative flex aspect-[3/2] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border-2 px-3 py-3 transition-colors ${hero.colorClass}`}
-        >
-          <span className="pharos-kicker">
-            {hero.label}
-          </span>
-          <SignalValue
-            value={hero.primary}
-            className={`pharos-numeric font-black leading-none tracking-tight ${
-              hero.primary.length > 2 ? "text-4xl" : "text-5xl"
-            }`}
-          />
-          {hero.secondary ? (
-            <span className="pharos-numeric text-xs text-muted-foreground">{hero.secondary}</span>
-          ) : null}
-        </Link>
-      )}
-      {rest.map((item) => (
-        <Link
-          key={item.key}
-          href={item.href}
-          className="pharos-focus-ring group flex items-baseline justify-between gap-3 rounded-lg border border-border/60 bg-background/45 px-3 py-2 transition-colors hover:border-border hover:bg-background/70"
-        >
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            {item.label}
-          </span>
-          <span className="flex items-baseline gap-1.5">
-            <SignalValue
-              value={item.primary}
-              className={`pharos-numeric text-sm font-semibold ${item.colorClass}`}
-            />
-            {item.secondary ? (
-              <span className="pharos-numeric text-[10px] text-muted-foreground">{item.secondary}</span>
-            ) : null}
-          </span>
-        </Link>
-      ))}
-    </nav>
   );
 }
 
