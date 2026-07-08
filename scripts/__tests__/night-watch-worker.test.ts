@@ -166,6 +166,17 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("digest-trigger-poll");
   });
 
+  it("escapes Markdown table pipes without letting existing backslashes change the table shape", () => {
+    const tableEvidence = evidence();
+    tableEvidence.scheduleMatrix.cronJobs[0]!.job = String.raw`sync\job|tenant`;
+    tableEvidence.scheduleMatrix.cronJobs[0]!.scheduleKey = String.raw`quarter|hourly`;
+
+    const markdown = renderNightWatchMarkdown(tableEvidence);
+
+    expect(markdown).toContain(String.raw`sync\\job\|tenant`);
+    expect(markdown).toContain(String.raw`quarter\|hourly`);
+  });
+
   it("renders D1 child watcher failures as access gaps", () => {
     const failedEvidence = evidence() as TestEvidence;
     failedEvidence.snapshots.push({

@@ -101,7 +101,7 @@ export function buildCriticalContractTestArgs(extraArgs = []) {
 // functions/api/admin/[[path]].ts would otherwise parse as character classes
 // and silently drop those files from lcov (surfacing as MISSING failures).
 export function escapeCoverageIncludeGlob(file) {
-  return file.replace(/[[\](){}*?!+@|]/g, "\\$&");
+  return file.replace(/[\\[\](){}*?!+@|]/g, "\\$&");
 }
 
 export function buildCriticalCoverageArgs(extraArgs = []) {

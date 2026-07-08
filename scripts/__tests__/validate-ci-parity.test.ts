@@ -363,6 +363,9 @@ describe("validate-ci parity", () => {
   });
 
   it("keeps critical and non-critical test runners derived from one critical test list", () => {
+    expect(escapeCoverageIncludeGlob(String.raw`functions/api/admin/[[path]]\draft.ts`)).toBe(
+      String.raw`functions/api/admin/\[\[path\]\]\\draft.ts`,
+    );
     expect(buildCriticalCoverageArgs()).toEqual([
       "run",
       "--coverage",

@@ -492,7 +492,11 @@ function summarizeAnalysis(evidence) {
 
 function markdownTable(rows, headers) {
   if (rows.length === 0) return "_None._";
-  const escapeCell = (value) => String(value ?? "").replace(/\n/g, " ").replace(/\|/g, "\\|");
+  const escapeCell = (value) =>
+    String(value ?? "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\n/g, " ")
+      .replace(/\|/g, "\\|");
   return [
     `| ${headers.map((header) => escapeCell(header.label)).join(" | ")} |`,
     `| ${headers.map(() => "---").join(" | ")} |`,
