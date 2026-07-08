@@ -254,15 +254,17 @@ function HeroCardUnderTest({
   resolvedMechanismArchetype = null,
   mintAuthority = NOT_REVIEWED_MINT_AUTHORITY,
   redemptionBackstop = null,
+  pegReferenceUnavailable = false,
   ...props
 }: Omit<
   HeroBuilderParams,
-  "verdict" | "resolvedMechanismArchetype" | "mintAuthority" | "redemptionBackstop"
+  "verdict" | "resolvedMechanismArchetype" | "mintAuthority" | "redemptionBackstop" | "pegReferenceUnavailable"
 > & {
   verdict?: HeroBuilderParams["verdict"];
   resolvedMechanismArchetype?: HeroBuilderParams["resolvedMechanismArchetype"];
   mintAuthority?: HeroBuilderParams["mintAuthority"];
   redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
+  pegReferenceUnavailable?: HeroBuilderParams["pegReferenceUnavailable"];
   onOpenFeedback: () => void;
 }) {
   return (
@@ -273,6 +275,7 @@ function HeroCardUnderTest({
         resolvedMechanismArchetype,
         mintAuthority,
         redemptionBackstop,
+        pegReferenceUnavailable,
       })}
       onOpenFeedback={onOpenFeedback}
     />
@@ -346,6 +349,39 @@ describe("HeroCard", () => {
     expect(html).toContain('data-testid="methodology-hint-dewsBand"');
     expect(html).not.toContain("Issuer controls");
     expect(html).toContain("Compare");
+  });
+
+  it("keeps the subject case study callout docked inside the hero card", () => {
+    const html = renderToStaticMarkup(
+      <HeroCardUnderTest
+        coin={coin}
+        coinData={coinData}
+        logoSrc="/logos/usdc.svg"
+        isNavToken={false}
+        mcap={1_000_000_000}
+        supply={1_000_000_000}
+        prevDay={995_000_000}
+        prevWeek={980_000_000}
+        prevMonth={970_000_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        liquidityData={liquidityData}
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={null}
+        verdict={verdict}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain('href="/learn/case-studies/usdc-svb-2023/"');
+    expect(html).toContain("Read the case study: USDC and the Silicon Valley Bank weekend");
+    expect(html).toContain("Survived");
+    expect(html).toContain("sm:justify-between");
+    expect(html).not.toContain("-mb-4");
   });
 
   it("prefers resolved report-card blacklist status for inherited-risk coins", () => {

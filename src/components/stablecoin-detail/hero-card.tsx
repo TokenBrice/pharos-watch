@@ -152,6 +152,37 @@ function HeroDesktopIdentityToolbar({
   );
 }
 
+function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewModel["caseStudyCallout"]> }) {
+  return (
+    <Link
+      href={callout.href}
+      aria-label={`Read the case study: ${callout.title} (outcome: ${callout.outcomeLabel})`}
+      className="pharos-focus-ring group flex flex-col gap-2 rounded-b-xl border-t border-border/60 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/45 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5"
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="pharos-kicker shrink-0">Case study</span>
+        <span aria-hidden="true" className="hidden h-3 w-px shrink-0 bg-border sm:block" />
+        <span className="min-w-0 text-sm font-medium leading-snug text-foreground sm:truncate">
+          {callout.title}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
+        <Badge
+          variant="outline"
+          className={`px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${callout.outcomeChipClass}`}
+        >
+          {callout.outcomeLabel}
+        </Badge>
+        <ArrowRight
+          aria-hidden="true"
+          className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+        />
+      </span>
+    </Link>
+  );
+}
+
 export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   const {
     coin,
@@ -203,30 +234,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
           tertiaryMetrics={desktopTertiaryMetrics}
         />
         <HeroPassportStrip items={model.passportItems} compactDesktop />
-        {model.caseStudyCallout ? (
-          <Link
-            href={model.caseStudyCallout.href}
-            aria-label={`Read the case study: ${model.caseStudyCallout.title} (outcome: ${model.caseStudyCallout.outcomeLabel})`}
-            className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-border/60 bg-muted/30 px-4 py-2.5 transition-colors hover:bg-muted/50 sm:gap-3 sm:px-5"
-          >
-            <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="pharos-kicker shrink-0">Case study</span>
-            <span aria-hidden="true" className="h-3 w-px shrink-0 bg-border" />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-              {model.caseStudyCallout.title}
-            </span>
-            <Badge
-              variant="outline"
-              className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${model.caseStudyCallout.outcomeChipClass}`}
-            >
-              {model.caseStudyCallout.outcomeLabel}
-            </Badge>
-            <ArrowRight
-              aria-hidden="true"
-              className="h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
-            />
-          </Link>
-        ) : null}
+        {model.caseStudyCallout ? <HeroCaseStudyCallout callout={model.caseStudyCallout} /> : null}
       </Card>
     </>
   );

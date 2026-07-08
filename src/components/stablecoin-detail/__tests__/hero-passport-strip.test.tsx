@@ -116,4 +116,14 @@ describe("HeroPassportStrip", () => {
     const { container } = render(<HeroPassportStrip items={ITEMS.slice(0, 2)} />);
     expect(container.firstChild).toBeNull();
   });
+
+  it("uses an explicit desktop grid template for compact hero rows", () => {
+    const { container, getAllByRole } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
+
+    const desktopGrid = container.querySelector(".hidden.lg\\:grid") as HTMLDivElement | null;
+    expect(desktopGrid).not.toBeNull();
+    expect(desktopGrid?.style.gridTemplateColumns).toBe("repeat(6, minmax(0, 1fr))");
+    expect(desktopGrid?.className).not.toContain("grid-cols-[repeat");
+    expect(getAllByRole("link")).toHaveLength(13);
+  });
 });

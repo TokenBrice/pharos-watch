@@ -66,7 +66,7 @@ export function HeroPassportStrip({
     ? items.filter((item) => item.category !== "Mechanism")
     : items;
   const desktopGridStyle = {
-    "--passport-cols": String(Math.max(desktopItems.length, 1)),
+    gridTemplateColumns: `repeat(${Math.max(desktopItems.length, 1)}, minmax(0, 1fr))`,
   } as CSSProperties;
 
   return (
@@ -121,7 +121,7 @@ export function HeroPassportStrip({
       </div>
       {compactDesktop ? (
         <div
-          className="hidden lg:grid lg:grid-cols-[repeat(var(--passport-cols),minmax(0,1fr))]"
+          className="hidden lg:grid"
           style={desktopGridStyle}
         >
           {desktopItems.map((item) => {
