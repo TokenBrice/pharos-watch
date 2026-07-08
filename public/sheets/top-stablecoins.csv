@@ -1,549 +1,569 @@
-# Pharos pharos.watch | Endpoint: top-stablecoins | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/sheets/top-stablecoins.csv | Methodology: safety-score v7.25
+# Pharos pharos.watch | Endpoint: top-stablecoins | As of: 2026-07-08T08:00:33.000Z | URL: https://pharos.watch/sheets/top-stablecoins.csv | Methodology: safety-score v8.13 | Freshness: point-in-time sample; not guaranteed to track production freshness
 id,symbol,name,pegType,pegMechanism,price,circulatingUsd,chainCount,chains
-usdt-tether,USDT,Tether,peggedUSD,fiat-backed,0.9995695611391253,189694178759.65176,127,Tron;Ethereum;BSC;Solana;Arbitrum;Aptos;Plasma;Polygon;TON;Avalanche;Mantle;Kaia;Hyperliquid L1;OP Mainnet;Celo;Ink;X Layer;Monad;Fantom;Near;Kava;Tezos;Berachain;Polkadot;Katana;Mixin;Flare;Injective;Sui;Stable;OKTChain;KCC;MegaETH;Linea;Unichain;Morph;Conflux;Tempo;PulseChain;Scroll;NEO;Zilliqa;Starknet;Sei;ICP;CORE;Rootstock;Metis;Manta;ZKsync Era;Abstract;Movement;Vaulta;Aurora;IoTeX;Etherlink;Gnosis;EDU Chain;Peaq;Algorand;Moonriver;MultiversX;Soneium;Redbelly;Osmosis;Stacks;Mode;IOTA EVM;Hemi;Canto;Cardano;Oasis Emerald;Bittorrent;ThunderCore;Gravity by Galxe;Kusama;Moonbeam;Telos;Waves;Viction;Meter;Wanchain;Zircuit;Boba;Corn;Harmony;Taiko;Fuse;Immutable zkEVM;MANTRA;Syscoin;ApeChain;XDC;Dogechain;GOAT;Somnia;Plume Mainnet;Citrea;EthereumClassic;Shiden;Rari;Evmos;Story;LightLink;Flow;Theta;Vana;Nibiru;Swellchain;Arbitrum Nova;0G;Milkomeda C1 (Deprecated);SX Network;DefiChain;Ontology;Kardia;Crab;Astar;Heco;ZKsync Lite;Terra Classic;Everscale;Loopring;Reinetwork;Statemine;Glue;Omni
-usdc-circle,USDC,USD Coin,peggedUSD,fiat-backed,0.999811,77058377191.53372,151,Ethereum;Solana;Hyperliquid L1;Base;Arbitrum;Polygon;BSC;Avalanche;Sui;Starknet;Stellar;Aptos;Monad;OP Mainnet;Fantom;Cronos;Noble;Sonic;Algorand;XDC;Mantle;Near;Sei;Ink;Hedera;Polkadot;ZKsync Era;Unichain;Katana;Linea;Tron;edgeX L1;Berachain;Osmosis;Celo;World Chain;Gnosis;Cardano;Etherlink;PulseChain;Stacks;X Layer;Abstract;Morph;MultiversX;Scroll;Plume Mainnet;Kava;XRPL;Flare;Tempo;Metis;Canto;Moonriver;Immutable zkEVM;Flow;Kaia;IoTeX;Soneium;Mixin;Fogo;Aurora;Manta;KCC;ICP;Botanix;Moonbeam;Movement;Taiko;Wanchain;Boba;Story;Injective;Polygon zkEVM;Gravity by Galxe;Doma;Mode;DFK;Somnia;Perennial;CORE;Lisk;Meter;Telos;Citrea;IOTA EVM;Hemi;Dogechain;Arbitrum Nova;Nibiru;Zircuit;ApeChain;OKTChain;GateLayer;Harmony;Shape;MANTRA;Rootstock;EDU Chain;BSquared;GOAT;Syscoin;BOB;Peaq;Fuse;Superposition;Elastos;Vana;ThunderCore;Redbelly;Zkfair;Bitlayer;Oasis Emerald;Karura;Evmos;LightLink;Rari;Waves;Theta;Corn;EthereumClassic;Stable;Degen;Viction;Camp Network;Orderly Network;Xai;WEMIX3.0;0G;Ronin;Milkomeda C1 (Deprecated);SX Network;DefiChain;Kardia;Crab;Kadena;Astar;ZKsync Lite;Terra Classic;Everscale;Horizen;Edu_chain;Loopring;Moca;Reinetwork;Glue;Codex;Xc;Ap3x;Gensyn;Nero
-usds-sky,USDS,Sky Dollar,peggedUSD,crypto-backed,0.9998317034286918,8799272055.344715,7,Ethereum;Base;OP Mainnet;Unichain;Arbitrum;Solana;Avalanche
-susds-sky,sUSDS,Sky Savings USDS,peggedUSD,crypto-backed,1.0966386779671626,6059487874.197127,2,Ethereum;Base
-dai-makerdao,DAI,Dai,peggedUSD,crypto-backed,0.9996500500000001,4615941328.422776,49,Ethereum;Polygon;Fantom;BSC;Arbitrum;OP Mainnet;PulseChain;Avalanche;Kaia;Kava;Near;Moonriver;Solana;Starknet;ZKsync Era;Boba;Linea;Metis;Astar;Osmosis;Mixin;Harmony;Scroll;Arbitrum Nova;Aurora;Moonbeam;Rootstock;Gnosis;KCC;Syscoin;Velas;Cardano;Unichain;Shiden;ThunderCore;Evmos;Taiko;Morph;Hemi;Oasis Emerald;EDU Chain;ZKsync Lite;Milkomeda C1 (Deprecated);SX Network;Terra Classic;Everscale;Glue;Aztec;Loopring
-usd1-world-liberty-financial,USD1,World Liberty Financial USD,peggedUSD,fiat-backed,0.9998624969997445,4520099496.438613,8,BSC;Ethereum;Solana;Aptos;Tron;Monad;Plume Mainnet;Abcore
-usde-ethena,USDe,Ethena USDe,peggedUSD,crypto-backed,1.0001837558313107,4333453779.529046,28,Ethereum;Solana;MegaETH;BSC;TON;Plasma;Mantle;Hyperliquid L1;Berachain;Arbitrum;Blast;Base;Tempo;Avalanche;Zircuit;Movement;Swellchain;Fraxtal;Ink;OP Mainnet;Linea;Scroll;ZKsync Era;Manta;Mode;Metis;Kava;X Layer
-pyusd-paypal,PYUSD,PayPal USD,peggedUSD,fiat-backed,0.9999682755015917,3458414633.1988215,17,Ethereum;Solana;Arbitrum;Sei;Polygon;Flow;Berachain;Plume Mainnet;Cardano;Avalanche;Tron;Ink;Stable;Abstract;Fraxtal;Glue;Codex
-buidl-blackrock,BUIDL,BlackRock USD,peggedUSD,fiat-backed,1,3225558400.6404486,8,Ethereum;Solana;Aptos;BSC;Avalanche;OP Mainnet;Arbitrum;Polygon
-usyc-hashnote,USYC,Circle USYC,peggedUSD,fiat-backed,1.1251789984230638,2971935107.8022876,2,BSC;Ethereum
-usdg-paxos,USDG,Global Dollar,peggedUSD,fiat-backed,0.9997444925895026,2914364295.1586895,5,X Layer;Solana;Ethereum;Ink;Hyperliquid L1
-xaut-tether,XAUT,Tether Gold,peggedGOLD,rwa-backed,4534.9945020000005,2687352218.8694706,1,Ethereum
-usdy-ondo-finance,USDY,Ondo US Dollar Yield,peggedUSD,fiat-backed,1.13200335,2133944329.7587044,15,Ethereum;Plume Mainnet;Sei;Solana;Stellar;Mantle;Sui;Noble;Aptos;Osmosis;Arbitrum;MANTRA;Injective;Penumbra;Glue
-paxg-paxos,PAXG,PAX Gold,peggedGOLD,rwa-backed,4534.610000000001,2132359058.0025432,1,Ethereum
-susde-ethena,sUSDe,Ethena Staked USDe,peggedUSD,crypto-backed,1.23070196,1794476918.5034904,1,Ethereum
-usdf-falcon,USDf,Falcon USD,peggedUSD,crypto-backed,0.9979581374401447,1780349307.4751897,4,Ethereum;BSC;Base;XDC Network
-rlusd-ripple,RLUSD,Ripple USD,peggedUSD,fiat-backed,1.0000677,1545683872.706378,2,Ethereum;XRPL
-usdd-tron-dao-reserve,USDD,USDD,peggedUSD,crypto-backed,0.99950707,1506100733.2032392,4,Tron;Ethereum;BSC;Bittorrent
-syrupusdc-maple,syrupUSDC,Maple syrupUSDC,peggedUSD,rwa-backed,1.1641689031341376,1384244996.9437904,4,Ethereum;Base;Arbitrum;Solana
-bfusd-binance,BFUSD,BFUSD,peggedUSD,rwa-backed,0.9993001000000001,1318944708.8514447,0,
-susdt-spark,spUSDT,Spark Savings USDT,peggedUSD,crypto-backed,1.0206924651051172,1246788650.373241,1,Ethereum
-usdtb-ethena,USDTB,Ethena USDtb,peggedUSD,fiat-backed,0.9996579897507549,1131602728.3450148,2,Ethereum;Solana
-jtrsy-anemoy,JTRSY,Janus Henderson Anemoy Treasury Fund,peggedUSD,rwa-backed,1.103396,1063551687.7859644,1,Ethereum
-u-united-stables,U,United Stables,peggedUSD,crypto-backed,0.999604314306558,1062438224.9954138,3,BSC;Tron;Ethereum
-eutbl-spiko,EUTBL,Spiko EU T-Bills Money Market Fund,peggedEUR,rwa-backed,1.22283031940592,1024390663.1310217,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Stellar;Starknet
-ustb-superstate,USTB,Superstate USTB,peggedUSD,rwa-backed,11.08224799,1001702033.0604883,3,Ethereum;Plume;Solana
-wtgxx-wisdomtree,WTGXX,WisdomTree Government Money Market Digital Fund,peggedUSD,rwa-backed,1,958338475.6952723,1,Ethereum
-susdc-spark,spUSDC,Spark Savings USDC,peggedUSD,crypto-backed,1.022568697982,929688349.548969,2,Ethereum;Avalanche
-gho-aave,GHO,GHO,peggedUSD,crypto-backed,0.999680295,583651429.1012987,1,Ethereum
-a7a5-old-vector,A7A5,A7A5,peggedRUB,fiat-backed,0.01274035,564334211.1073362,2,Tron;Ethereum
-usd0-usual,USD0,Usual USD,peggedUSD,fiat-backed,0.9984493400000001,556642712.7029217,2,Ethereum;Arbitrum
-ousg-ondo-finance,OUSG,Ondo OUSG,peggedUSD,rwa-backed,115.250409,554425860.065581,3,Ethereum;Polygon;Solana
-ylds-figure,YLDS,YLDS,peggedUSD,fiat-backed,0.9998370010526714,536935296.6073111,4,Solana;Provenance;Ethereum;Stellar
-busd0-usual,bUSD0,Bond USD0,peggedUSD,rwa-backed,0.963969299370319,504210008.3359933,2,Ethereum;Arbitrum
-tusd-trueusd,TUSD,TrueUSD,peggedUSD,fiat-backed,0.9994147782847028,484201187.89178765,10,Ethereum;Tron;BSC;Avalanche;Fantom;Polygon;Arbitrum;Syscoin;Near;Heco
-apxusd-apyx,apxUSD,apxUSD,peggedUSD,crypto-backed,0.999857,461144979.17775923,1,Ethereum
-eurc-circle,EURC,EURC,peggedEUR,fiat-backed,1.16137518,450397417.7149511,10,Ethereum;Solana;Base;Avalanche;Stellar;Sonic;Tempo;Polygon;Cardano;ICP
-jaaa-janus-henderson-anemoy,JAAA,Janus Henderson Anemoy AAA CLO Fund,peggedUSD,rwa-backed,1.034628,424205475.4851961,5,Ethereum;Base;BSC;Avalanche;Monad
-eursafo-spiko,EURSAFO,Spiko Amundi Overnight Swap Fund (EUR),peggedEUR,rwa-backed,1.17,417535057.0131053,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Starknet;Stellar
-usdgo-osl,USDGO,USDGO,peggedUSD,fiat-backed,0.9997630916127201,401445101.7516827,1,Solana
-fdusd-first-digital,FDUSD,First Digital USD,peggedUSD,fiat-backed,0.997780756,393542058.02226967,6,Ethereum;BSC;Sui;Solana;Arbitrum;TON
-syrupusdt-maple,syrupUSDT,Maple syrupUSDT,peggedUSD,rwa-backed,1.12748178,389748445.6685413,1,Ethereum
-usx-solstice,USX,Solstice USX,peggedUSD,crypto-backed,0.999678641686139,378618907.64113617,1,Solana
-brz-transfero,BRZ,Brazilian Digital,peggedREAL,fiat-backed,0.1968469747709401,358908340.9047564,14,Gnosis;Polygon;Ethereum;BSC;Base;Avalanche;Celo;OP Mainnet;Solana;Moonbeam;Mantle;Arbitrum;Rootstock;Tron
-pusd-polymarket,PUSD,Polymarket USD,peggedUSD,crypto-backed,1.0015131483723365,346089543.18435425,1,Polygon
-kau-kinesis,KAU,Kinesis Gold,peggedGOLD,rwa-backed,140.83152549331777,336055495.0115567,1,Ethereum
-m-m0,M,M by M0,peggedUSD,fiat-backed,0.999856,325639128.347392,7,Ethereum;Solana;Noble;Hyperliquid L1;Arbitrum;OP Mainnet;Plume Mainnet
-rwausdi-multipli,rwaUSDi,rwaUSDi,peggedUSD,crypto-backed,0.9998795904917785,309972831.8290908,4,Ethereum;Base;Monad;Arbitrum
-susdd-tron-dao-reserve,sUSDD,Savings USDD,peggedUSD,crypto-backed,1.051,293268741.5486335,2,Ethereum;BSC
-kag-kinesis,KAG,Kinesis Silver,peggedSILVER,rwa-backed,76.69,289680197.38031715,1,Ethereum
-susdai-usd-ai,sUSDai,Staked USDai,peggedUSD,rwa-backed,1.0851414691020862,284338616.77449834,4,Ethereum;Arbitrum;Base;Plasma
-usdai-usd-ai,USDai,USD.AI,peggedUSD,crypto-backed,0.9999682755015917,284246361.861884,3,Arbitrum;Plasma;Ethereum
-usdm-mega,USDM,MegaUSD,peggedUSD,crypto-backed,0.9990416246813977,281275585.61472356,2,MegaETH;Ethereum
-frax-frax,FRAX,Frax,peggedUSD,algorithmic,0.993367,273996871.60556835,24,Ethereum;Fraxtal;Harmony;Moonriver;Arbitrum;Near;BSC;Avalanche;OP Mainnet;Moonbeam;Fantom;Polygon;Boba;Evmos;Aurora;ZKsync Era;Osmosis;Solana;Dogechain;ZKsync Lite;Milkomeda C1 (Deprecated);Everscale;Optimism;Polygon zkEVM
-sgho-aave,sGHO,Aave Savings GHO,peggedUSD,crypto-backed,0.999680295,272426094.99181885,1,Ethereum
-usda-avalon,USDA,Avalon USDa,peggedUSD,crypto-backed,0.9835093655430525,266377999.50171015,19,Ethereum;Movement;Kaia;BSC;Berachain;Nibiru;Taiko;Sonic;Sei;Bitlayer;Mode;Morph;Corn;Base;BOB;Zircuit;Avalanche;ZKsync Era;Mantle
-crvusd-curve,crvUSD,crvUSD,peggedUSD,crypto-backed,0.999725801779473,250143494.98008022,12,Ethereum;Arbitrum;OP Mainnet;Fraxtal;Base;Taiko;Sonic;Polygon;Gnosis;ZKsync Era;BSC;Waves
-rusd-royal-dollar,RUSD,Royal Dollar,peggedUSD,rwa-backed,0.999976,249971069.2719418,3,Ethereum;BSC;Tron
-153,BUSD,Binance Peg BUSD,peggedUSD,crypto-backed,1.001,233068709.36670592,27,BSC;Avalanche;Meter;Polygon;Moonriver;Moonbeam;ZKsync Era;Fantom;Astar;OKTChain;Kaia;ThunderCore;Boba;KCC;Solana;OP Mainnet;Aurora;Shiden;Theta;Rootstock;Elastos;Evmos;Syscoin;Metis;Oasis Emerald;Milkomeda C1 (Deprecated);Terra Classic
+usdt-tether,USDT,Tether,peggedUSD,fiat-backed,0.9991764999999999,182984655114.5454,130,Tron;Ethereum;BSC;Solana;Arbitrum;Plasma;Polygon;Aptos;TON;Mantle;Avalanche;OP Mainnet;Kaia;Hyperliquid L1;X Layer;Fantom;Monad;Celo;Near;Ink;Kava;Tezos;Berachain;Polkadot;Mixin;Flare;Stable;Conflux;Injective;OKTChain;Tempo;KCC;Linea;Morph;Unichain;Katana;Scroll;PulseChain;Starknet;MegaETH;CORE;Rootstock;Manta;Sei;ICP;Movement;Vaulta;Metis;Abstract;Aurora;Peaq;IoTeX;EDU Chain;Algorand;Gnosis;Moonriver;Redbelly;MultiversX;Osmosis;Soneium;Etherlink;Stacks;Mode;IOTA EVM;Canto;Bittorrent;Oasis Emerald;ThunderCore;Hemi;Kusama;Moonbeam;Gravity by Galxe;Cardano;Telos;Waves;Wanchain;Viction;Meter;Zircuit;Boba;Harmony;Hedera;Fuse;Citrea;Immutable zkEVM;MANTRA;Syscoin;XDC;Taiko;ApeChain;Dogechain;GOAT;Somnia;Plume Mainnet;Shiden;Rari;Data Network;LightLink;Flow;Theta;Vana;Nibiru;Arbitrum Nova;0G;Zora;Corn;Zilliqa;Evmos;SX Network;Milkomeda C1 (Deprecated);DefiChain;Ontology;EthereumClassic;Kardia;Crab;Astar;Heco;ZKsync Lite;Sui;ZKsync Era;Terra Classic;NEO;Swellchain;Everscale;Loopring;Reinetwork;Statemine;Glue;Omni;Rls
+usdc-circle,USDC,USD Coin,peggedUSD,fiat-backed,0.999815,73380007806.1607,154,Ethereum;Solana;Hyperliquid L1;Base;Arbitrum;Polygon;BSC;Avalanche;Sui;Stellar;Monad;Aptos;OP Mainnet;Fantom;Cronos;Starknet;Noble;XDC;Sonic;Algorand;Near;Sei;Hedera;Ink;Cardano;Tron;Polkadot;Mantle;Celo;Unichain;Linea;World Chain;Osmosis;Katana;Gnosis;PulseChain;Etherlink;Plume Mainnet;Stacks;X Layer;Tempo;Berachain;Morph;Injective;Scroll;MultiversX;edgeX L1;Pharos;Abstract;XRPL;Kava;Metis;Canto;Moonriver;Flow;Flare;Kaia;Immutable zkEVM;IoTeX;Soneium;Mixin;Aurora;ICP;KCC;Manta;Moonbeam;Fogo;Wanchain;Boba;Data Network;Gensyn;Doma;Polygon zkEVM;DFK;Taiko;CORE;Mode;Somnia;Movement;Lisk;IOTA EVM;Meter;Gravity by Galxe;Telos;Dogechain;Hemi;Zircuit;Arbitrum Nova;Nibiru;GateLayer;Harmony;OKTChain;Shape;ApeChain;EDU Chain;Rootstock;BSquared;Syscoin;MANTRA;Peaq;BOB;Fuse;Redbelly;Citrea;ThunderCore;Superposition;Zkfair;GOAT;Oasis Emerald;Vana;Karura;Bitlayer;LightLink;Waves;Rari;Theta;Botanix;Stable;Degen;Bittensor EVM;0G;Viction;Camp Network;Orderly Network;Xai;WEMIX3.0;Ronin;Moca;Corn;Evmos;SX Network;Milkomeda C1 (Deprecated);DefiChain;EthereumClassic;Kardia;Crab;Kadena;Astar;ZKsync Lite;ZKsync Era;Terra Classic;Elastos;Perennial;Everscale;Horizen;Edu_chain;Loopring;Reinetwork;Glue;Codex;Xc;Ap3x;Rls;Nero
+usds-sky,USDS,Sky Dollar,peggedUSD,crypto-backed,0.9997463406356685,7645536876.81204,7,Ethereum;Arbitrum;Solana;Base;Unichain;OP Mainnet;Avalanche
+susds-sky,sUSDS,Sky Savings USDS,peggedUSD,crypto-backed,1.1,5449789687.415943,4,Ethereum;Base;Optimism;Arbitrum
+dai-makerdao,DAI,Dai,peggedUSD,crypto-backed,0.9998736719348047,4853370255.283869,49,Ethereum;Polygon;Fantom;BSC;Arbitrum;OP Mainnet;PulseChain;Avalanche;Kaia;Kava;Near;Moonriver;Solana;Starknet;Boba;Metis;Astar;Linea;Osmosis;Mixin;Harmony;Scroll;Arbitrum Nova;Aurora;Moonbeam;Rootstock;Gnosis;KCC;Syscoin;Cardano;Velas;Shiden;Unichain;ThunderCore;Taiko;Morph;Hemi;Oasis Emerald;EDU Chain;ZKsync Lite;Evmos;Milkomeda C1 (Deprecated);SX Network;ZKsync Era;Terra Classic;Everscale;Glue;Aztec;Loopring
+usd1-world-liberty-financial,USD1,World Liberty Financial USD,peggedUSD,fiat-backed,0.998786598280148,4528313626.478971,8,Ethereum;BSC;Solana;Aptos;Tron;Monad;Plume Mainnet;Abcore
+usde-ethena,USDe,Ethena USDe,peggedUSD,crypto-backed,0.9988419947405534,4403156208.214617,31,Ethereum;Solana;MegaETH;BSC;Base;Plasma;TON;Mantle;Robinhood Chain;Berachain;Hyperliquid L1;Arbitrum;Blast;Avalanche;Morph;Zircuit;Ink;Fraxtal;Movement;OP Mainnet;Linea;Scroll;Manta;Monad;Mode;Metis;Kava;X Layer;Tempo;ZKsync Era;Swellchain
+usyc-hashnote,USYC,Circle USYC,peggedUSD,fiat-backed,1.1303261424481525,3107511333.66171,2,BSC;Ethereum
+buidl-blackrock,BUIDL,BlackRock USD,peggedUSD,fiat-backed,1,3053713036.6804485,8,Ethereum;Aptos;Solana;Avalanche;BSC;OP Mainnet;Arbitrum;Polygon
+usdg-paxos,USDG,Global Dollar,peggedUSD,fiat-backed,0.9999028488236017,2988069615.1475077,6,X Layer;Solana;Ethereum;Robinhood Chain;Ink;Hyperliquid L1
+pyusd-paypal,PYUSD,PayPal USD,peggedUSD,fiat-backed,0.99999446,2817657071.3396635,19,Ethereum;Solana;Arbitrum;Flow;Polygon;Sei;Berachain;Cardano;Avalanche;Tron;Ink;Plume Mainnet;Abstract;Stable;Fraxtal;OP Mainnet;Kiteai;Glue;Codex
+xaut-tether,XAUT,Tether Gold,peggedGOLD,rwa-backed,4109.15,2520568138.6087594,11,Ethereum;Arbitrum;TON;HyperEVM;Polygon;Plasma;Ink;Avalanche;Celo;Solana;Monad
+usdy-ondo-finance,USDY,Ondo US Dollar Yield,peggedUSD,fiat-backed,1.1386585871090946,2151764487.457244,15,Ethereum;Stellar;Sei;Solana;Mantle;Sui;Aptos;Noble;Osmosis;Arbitrum;MANTRA;Injective;Penumbra;Plume Mainnet;Glue
+paxg-paxos,PAXG,PAX Gold,peggedGOLD,rwa-backed,4111.98717498,1859906935.8286815,1,Ethereum
+susde-ethena,sUSDe,Ethena Staked USDe,peggedUSD,crypto-backed,1.2366006157539158,1633552053.2691905,26,Ethereum;Plasma;Linea;Fraxtal;HyperEVM;Berachain;Zircuit;Metis;X Layer;Base;BSC;Morph;Scroll;Kava;Swellchain;Mode;Mantle;Arbitrum;Manta;Blast;Optimism;TON;Solana;zkSync;Avalanche;Aptos
+rlusd-ripple,RLUSD,Ripple USD,peggedUSD,fiat-backed,1.0000237137941794,1581611084.7046652,2,XRPL;Ethereum
+usdd-tron-dao-reserve,USDD,USDD,peggedUSD,crypto-backed,0.9991140247099382,1506907085.2955623,4,Tron;Ethereum;BSC;Bittorrent
+usdf-falcon,USDf,Falcon USD,peggedUSD,crypto-backed,0.997307,1423454959.1844785,4,Ethereum;BSC;Base;XDC Network
+syrupusdc-maple,syrupUSDC,Maple syrupUSDC,peggedUSD,rwa-backed,1.1723908406189396,1392721167.130669,4,Ethereum;Base;Arbitrum;Solana
+bfusd-binance,BFUSD,BFUSD,peggedUSD,crypto-backed,0.998047,1317294920.647288,0,
+u-united-stables,U,United Stables,peggedUSD,crypto-backed,0.9997004999999999,1028054011.2376066,3,BSC;Tron;Ethereum
+eutbl-spiko,EUTBL,Spiko EU T-Bills Money Market Fund,peggedEUR,rwa-backed,1.2052762831267745,1024965176.411107,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Stellar;Starknet
+jtrsy-anemoy,JTRSY,Janus Henderson Anemoy Treasury Fund,peggedUSD,rwa-backed,1.108804,870876412.6657325,7,Ethereum;Base;Arbitrum;Avalanche;Plume;BSC;Monad
+usdgo-osl,USDGO,USDGO,peggedUSD,fiat-backed,0.999865,868130628.2692034,1,Solana
+ustb-superstate,USTB,Invesco Short Duration US Government Securities Fund,peggedUSD,rwa-backed,11.13724,866168507.3802786,3,Ethereum;Plume;Solana
+usdtb-ethena,USDTB,Ethena USDtb,peggedUSD,fiat-backed,1.0006434770197097,774932370.3382512,2,Ethereum;Solana
+eursafo-spiko,EURSAFO,Spiko Amundi Overnight Swap Fund (EUR),peggedEUR,rwa-backed,1.15,712633132.0108864,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Starknet;Stellar
+jaaa-janus-henderson-anemoy,JAAA,Janus Henderson Anemoy AAA CLO Fund,peggedUSD,rwa-backed,1.040239,682750205.0802907,6,Ethereum;Base;BSC;Avalanche;Monad;Solana
+406,pUSD,Polymarket USD,peggedUSD,crypto-backed,0.996543,606811118.033015,1,Polygon
+pusd-polymarket,PUSD,Polymarket USD,peggedUSD,crypto-backed,0.9957817089,600263867.6349062,1,Polygon
+gho-aave,GHO,GHO,peggedUSD,crypto-backed,0.9986252708500001,598077319.0122582,2,Ethereum;Monad
+a7a5-old-vector,A7A5,A7A5,peggedRUB,fiat-backed,0.01251712,561120126.8739572,2,Tron;Ethereum
+usd0-usual,USD0,Usual USD,peggedUSD,fiat-backed,0.998865579353071,552715043.1468229,2,Ethereum;Arbitrum
+susdt-spark,spUSDT,Spark Savings USDT,peggedUSD,crypto-backed,1.0239181084929998,543451340.139006,1,Ethereum
+ylds-figure,YLDS,YLDS,peggedUSD,fiat-backed,0.9998195,533601070.5014723,4,Ethereum;Solana;Provenance;Stellar
+usx-solstice,USX,Solstice USX,peggedUSD,crypto-backed,0.9997891733324665,512728450.05347717,1,Solana
+tusd-trueusd,TUSD,TrueUSD,peggedUSD,fiat-backed,0.9988358346499039,483506478.7246368,10,Ethereum;Tron;BSC;Avalanche;Fantom;Polygon;Arbitrum;Syscoin;Near;Heco
+syrupusdt-maple,syrupUSDT,Maple syrupUSDT,peggedUSD,rwa-backed,1.1329865226292033,451548359.53986555,3,Ethereum;Plasma;BSC
+eurc-circle,EURC,EURC,peggedEUR,fiat-backed,1.1424436267161215,428298445.8507566,10,Ethereum;Base;Solana;Avalanche;Stellar;Sonic;Tempo;Polygon;Cardano;ICP
+ousg-ondo-finance,OUSG,Ondo OUSG,peggedUSD,rwa-backed,115.818452,402664904.03843707,4,Ethereum;Polygon;Solana;XRP Ledger
+apxusd-apyx,apxUSD,apxUSD,peggedUSD,crypto-backed,0.8487847129033842,373106243.19416076,3,Ethereum;Base;BSC
+rwausdi-multipli,rwaUSDi,rwaUSDi,peggedUSD,crypto-backed,0.9999269953734929,359983877.5927305,4,Ethereum;Base;Monad;Arbitrum
+fdusd-first-digital,FDUSD,First Digital USD,peggedUSD,fiat-backed,0.997008475,347102700.1216619,6,Ethereum;BSC;Sui;Solana;Arbitrum;TON
+gusd-gate,GUSD,Gate USD,peggedUSD,fiat-backed,0.9982515000000001,319422393.25396395,1,Ethereum
+m-m0,M,M by M0,peggedUSD,fiat-backed,0.999760745109255,317192329.820074,8,Ethereum;Solana;Monad;Noble;Hyperliquid L1;Arbitrum;OP Mainnet;Plume Mainnet
+kau-kinesis,KAU,Kinesis Gold,peggedGOLD,rwa-backed,132.85931173106133,317030945.3188141,1,Ethereum
+susdai-usd-ai,sUSDai,Staked USDai,peggedUSD,rwa-backed,1.0955551827299193,304789632.60186327,4,Ethereum;Arbitrum;Base;Plasma
+susdc-spark,spUSDC,Spark Savings USDC,peggedUSD,crypto-backed,1.027796822405,297733968.449001,2,Ethereum;Avalanche
+usdm-mega,USDM,MegaUSD,peggedUSD,crypto-backed,0.999374558478564,243914646.75115103,2,MegaETH;Ethereum
+frax-frax,FRAX,Frax,peggedUSD,algorithmic,0.9890866179873821,236835906.1974514,24,Ethereum;Harmony;Fraxtal;Moonriver;Arbitrum;BSC;Avalanche;OP Mainnet;Moonbeam;Fantom;Polygon;Near;Boba;Aurora;Osmosis;Solana;Dogechain;ZKsync Lite;Evmos;Milkomeda C1 (Deprecated);ZKsync Era;Everscale;Optimism;Polygon zkEVM
+153,BUSD,Binance Peg BUSD,peggedUSD,crypto-backed,0.999325,232666795.40977374,27,BSC;Avalanche;Meter;Polygon;Moonriver;Moonbeam;Fantom;Astar;OKTChain;Kaia;ThunderCore;Boba;KCC;OP Mainnet;Aurora;Shiden;Theta;Solana;Rootstock;Syscoin;Metis;Oasis Emerald;Evmos;Milkomeda C1 (Deprecated);Terra Classic;Elastos;ZKsync Era
+kag-kinesis,KAG,Kinesis Silver,peggedSILVER,rwa-backed,60.84170811090467,229811978.74318272,1,Ethereum
+onyc-onre,ONyc,Onchain Yield Coin,peggedUSD,rwa-backed,1.1208226078753125,217066609.4698138,1,Solana
+crvusd-curve,crvUSD,crvUSD,peggedUSD,crypto-backed,0.9993296930398563,216600057.04542089,12,Ethereum;Arbitrum;OP Mainnet;Base;Fraxtal;Sonic;Polygon;Gnosis;BSC;Taiko;Waves;ZKsync Era
+susdd-tron-dao-reserve,sUSDD,Savings USDD,peggedUSD,crypto-backed,1.0573477555009037,215534536.1349695,2,Ethereum;BSC
 pc0000031-tradable,PC0000031,Tradable NA Rent Financing Platform SSTN,peggedUSD,rwa-backed,1,202500000,1,zkSync
-stusds-sky,stUSDS,Staked USDS,peggedUSD,crypto-backed,1.052,198613509.73351103,1,Ethereum
-sdai-sky,sDAI,Savings Dai,peggedUSD,crypto-backed,1.17601162,190080909.95364252,3,Ethereum;Base;Optimism
-onyc-onre,ONYC,Onchain Yield Coin,peggedUSD,rwa-backed,1.1020002079342839,175291967.50531778,1,Solana
-reusd-re-protocol,reUSD,Re Protocol reUSD,peggedUSD,crypto-backed,1.0778129096442304,175132868.81489184,9,Ethereum;Avalanche;Base;Plasma;BSC;Ink;Arbitrum;Katana;Tempo
-ustbl-spiko,USTBL,Spiko US T-Bills Money Market Fund,peggedUSD,rwa-backed,1.083478,171306515.5326283,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Stellar;Starknet
-apyusd-apyx,apyUSD,apyUSD,peggedUSD,rwa-backed,1.3664463747825075,168166185.3129988,2,Ethereum;Base
-21,FLEXUSD,flexUSD,peggedUSD,crypto-backed,0.9998795904917785,166330215.1805155,2,Ethereum;smartBCH
-gusd-gate,GUSD,Gate USD,peggedUSD,fiat-backed,1.0000526780291743,165466876.0097796,1,Ethereum
+usdai-usd-ai,USDai,USD.AI,peggedUSD,crypto-backed,0.99999446,196067811.06581008,3,Arbitrum;Plasma;Ethereum
+17,HUSD,HUSD,peggedUSD,fiat-backed,,192313547.97963187,5,Ethereum;Tron;Solana;Elastos;Heco
+ausd-agora,AUSD,Agora Dollar,peggedUSD,fiat-backed,0.99976835,190459812.19863117,14,Monad;Ethereum;Immutable zkEVM;Mantle;Avalanche;Solana;Polygon;Sui;Katana;Arbitrum;BSC;CORE;Plasma;Plume Mainnet
+usat-tether,USAT,USAT,peggedUSD,fiat-backed,0.9995500276594035,185127756.51400635,1,Ethereum
+sdai-sky,sDAI,Savings Dai,peggedUSD,crypto-backed,1.17777254,174535336.32968834,3,Ethereum;Base;Optimism
+stusds-sky,stUSDS,Staked USDS,peggedUSD,crypto-backed,1.0618608943105285,171116039.2127675,1,Ethereum
+ustbl-spiko,USTBL,Spiko US T-Bills Money Market Fund,peggedUSD,rwa-backed,1.088866,170567030.02661306,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Stellar;Starknet
+21,FLEXUSD,flexUSD,peggedUSD,crypto-backed,0.9999269953734929,166338100.99421862,2,Ethereum;smartBCH
 pc0000033-tradable,PC0000033,Tradable APAC Diversified Finance Provider SSTN,peggedUSD,rwa-backed,1,162500000,1,zkSync
-satusd-river,satUSD,River Stablecoin,peggedUSD,crypto-backed,0.994824,157800549.7491372,11,BSC;Base;BOB;Arbitrum;Ethereum;BSquared;Hemi;X Layer;Bitlayer;Sonic;BEVM
-328,MUST,Mustang Finance,peggedUSD,crypto-backed,0.9998795904917785,154345961.13562706,1,Saga
-usat-tether,USAT,USAT,peggedUSD,fiat-backed,0.9989822663022138,152595428.77340677,1,Ethereum
-ausd-agora,AUSD,Agora Dollar,peggedUSD,fiat-backed,0.9997965,150739144.28933206,14,Ethereum;Monad;Avalanche;Immutable zkEVM;Sui;Mantle;Polygon;Solana;Katana;BSC;CORE;Arbitrum;Plasma;Plume Mainnet
-gtusdc-gauntlet,gtUSDC,Gauntlet USDC Prime V1,peggedUSD,crypto-backed,1.116146008527,149180417.05112612,1,Ethereum
-nusd-neutrl,NUSD,Neutrl USD,peggedUSD,crypto-backed,0.998864939259898,147814133.54784757,1,Ethereum
-frxusd-frax,FRXUSD,Frax USD,peggedUSD,fiat-backed,0.99980902,132807907.57588188,22,Ethereum;Fraxtal;Sonic;Base;Polygon;Solana;OP Mainnet;Avalanche;BSC;Linea;Sei;Katana;Unichain;Arbitrum;Ink;X Layer;Plume Mainnet;Tempo;Movement;Mode;Polygon zkEVM;Blast
-thbill-theo,thBILL,Theo thBILL,peggedUSD,rwa-backed,1.02616335,131966558.25260727,4,Ethereum;Arbitrum;Base;HyperEVM
-eurcv-societe-generale-forge,EURCV,EUR CoinVertible,peggedEUR,fiat-backed,1.1607524785022036,122221637.3709676,4,Ethereum;Solana;XRP Ledger;Stellar
-safo-spiko-usd,SAFO,Spiko Amundi Overnight Swap Fund,peggedUSD,rwa-backed,1.008,119198591.05068198,6,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar
-tbill-openeden,TBILL,OpenEden TBILL,peggedUSD,fiat-backed,1.14375224,119044840.67986451,4,Ethereum;XRPL;Solana;Arbitrum
-cash-phantom,CASH,CASH,peggedUSD,fiat-backed,0.999701,118010935.03788374,1,Solana
-cusd-cap,CUSD,Cap cUSD,peggedUSD,crypto-backed,1.00000258,117793044.7517709,3,Ethereum;MegaETH;Tempo
-aa-falconx-mev-capital,AA_FalconXUSDC,MEV Capital Falcon USDC Senior Tranche,peggedUSD,crypto-backed,1.0818954831,117448325.40029824,1,Ethereum
-moveusd-cfx,MOVEUSD,CFX MoveUSD,peggedUSD,fiat-backed,0.9998795904917785,116439129.54112805,1,Solana
-usdf-astherus,USDF,Astherus,peggedUSD,crypto-backed,0.99811,115102092.27447468,1,BSC
-acred-apollo-securitize,ACRED,Apollo Diversified Credit Securitize Fund,peggedUSD,rwa-backed,1097.60875,114483288.20128796,6,Aptos;Avalanche;Ethereum;Ink;Polygon;Solana
-wsrusd-reservoir,wsrUSD,Wrapped Savings rUSD,peggedUSD,rwa-backed,1.0800578076140344,109169102.66605443,16,Ethereum;Base;Berachain;Sonic;Arbitrum;BSC;Avalanche;Unichain;Plume;Sei;World Chain;Katana;HyperEVM;Linea;Monad;Solana
-gtusdcp-gauntlet,gtUSDCp,Gauntlet USDC Prime,peggedUSD,crypto-backed,1.021977809681,104961812.85505308,2,Ethereum;Base
-usdat-saturn,USDat,Saturn USDat,peggedUSD,rwa-backed,0.9989660777204402,104434893.5966411,1,Ethereum
-stac-securitize,STAC,Securitize Tokenized AAA CLO Fund,peggedUSD,rwa-backed,1017.7825763973831,101879725.14087734,1,Ethereum
-stcusd-cap,stcUSD,Staked Cap USD,peggedUSD,rwa-backed,1.0622310763571257,101700876.10438107,1,Ethereum
-mnee-mnee,MNEE,MNEE USD,peggedUSD,fiat-backed,1.00020001,101407188.54819955,1,Ethereum
-dusd-standx,DUSD,StandX DUSD,peggedUSD,crypto-backed,0.999306,100686274.32493159,2,BSC;Solana
-sofid-sofi,SOFID,SoFiUSD,peggedUSD,rwa-backed,1,100011704,1,Ethereum
-uusd-anything-labs,UUSD,Unity USD,peggedUSD,crypto-backed,0.999273,99927273.77657166,1,BSC
+susd1plus-lorenzo,sUSD1+,staked USD1+,peggedUSD,rwa-backed,1.0273784055,162287461.58918852,1,BSC
+reusd-re-protocol,reUSD,Re Protocol reUSD,peggedUSD,crypto-backed,1.0874303250684865,158432877.06487542,10,Ethereum;Avalanche;Base;Plasma;BSC;Ink;Arbitrum;Katana;Tempo;Monad
+satusd-river,satUSD,River Stablecoin,peggedUSD,crypto-backed,0.9938413412771848,158287432.70935047,11,BSC;Base;BOB;Arbitrum;Ethereum;BSquared;Hemi;X Layer;Bitlayer;Sonic;BEVM
+328,MUST,Mustang Finance,peggedUSD,crypto-backed,0.9999269953734929,154376279.27559978,1,Saga
+sgho-aave,sGHO,Aave Savings GHO,peggedUSD,crypto-backed,0.9986252708500001,151003706.42731357,1,Ethereum
+usda-avalon,USDA,Avalon USDa,peggedUSD,crypto-backed,0.980977434,148011894.42194125,19,Ethereum;Movement;BSC;Kaia;Berachain;Nibiru;Taiko;Sonic;Sei;Bitlayer;Mode;Morph;Base;BOB;Zircuit;Avalanche;Mantle;ZKsync Era;Corn
+eurcv-societe-generale-forge,EURCV,EUR CoinVertible,peggedEUR,fiat-backed,1.1413323505894666,147077636.73987705,4,Ethereum;Solana;XRP Ledger;Stellar
+apyusd-apyx,apyUSD,apyUSD,peggedUSD,rwa-backed,1.1808363728712654,143234907.61034963,2,Ethereum;Base
+aa-falconx-mev-capital,AA_FalconXUSDC,Pareto FalconX Credit Vault,peggedUSD,rwa-backed,1.0945494708799999,136989327.77463493,1,Ethereum
+safo-spiko-usd,SAFO,Spiko Amundi Overnight Swap Fund,peggedUSD,rwa-backed,1.013029,135636553.91266155,7,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar;Etherlink
+cash-phantom,CASH,CASH,peggedUSD,fiat-backed,0.99963077,126213053.89015056,1,Solana
+moveusd-cfx,MOVEUSD,CFX MoveUSD,peggedUSD,fiat-backed,0.9960773826365082,118641538.56687863,1,Solana
+thbill-theo,thBILL,Theo thBILL,peggedUSD,rwa-backed,1.0154611454508042,117635498.23083973,4,Ethereum;Arbitrum;Base;HyperEVM
+acred-apollo-securitize,ACRED,Apollo Diversified Credit Securitize Fund,peggedUSD,rwa-backed,1103.1120331416885,115129205.93610287,6,Aptos;Avalanche;Ethereum;Ink;Polygon;Solana
+usdf-astherus,USDF,Astherus,peggedUSD,crypto-backed,0.9972477824,113115901.47034018,1,BSC
+frxusd-frax,FRXUSD,Frax USD,peggedUSD,fiat-backed,0.9997245,108331848.4778005,22,Ethereum;Fraxtal;Sonic;Polygon;Base;Solana;OP Mainnet;Avalanche;BSC;Sei;Linea;Katana;Arbitrum;Unichain;Ink;X Layer;Plume Mainnet;Tempo;Movement;Mode;Polygon zkEVM;Blast
+avusd-avant,avUSD,Avant USD,peggedUSD,fiat-backed,0.9997487497813521,108284936.90581162,2,Avalanche;Monad
+gtusdcp-gauntlet,gtUSDCp,Gauntlet USDC Prime,peggedUSD,crypto-backed,1.02747188253,108191259.70443748,3,Ethereum;Base;Arbitrum
+dusd-standx,DUSD,StandX DUSD,peggedUSD,crypto-backed,0.9977926076,105976245.01236992,2,BSC;Solana
+400,USDAT,Saturn Dollar,peggedUSD,crypto-backed,0.999488,104082204.82383692,1,Ethereum
+usdat-saturn,USDat,Saturn USDat,peggedUSD,rwa-backed,0.999488,103109821.01830052,1,Ethereum
+stac-securitize,STAC,Securitize Tokenized AAA CLO Fund,peggedUSD,rwa-backed,1022.8224370102132,102488020.60285917,2,Ethereum;Solana
+uusd-anything-labs,UUSD,Unity USD,peggedUSD,crypto-backed,0.9987666555,99933964.47392839,1,BSC
+407,UUSD,Unity USD,peggedUSD,crypto-backed,0.999308,99923319.40512589,1,BSC
 315,USPD,US Permissionless Dollar,peggedUSD,crypto-backed,,98934783.08929051,6,Ethereum;Base;BSC;OP Mainnet;Polygon;Arbitrum
-fpi-frax,FPI,Frax Price Index,peggedVAR,algorithmic,1.14,97316374.90655397,2,Ethereum;ZKsync Era
-210,DEUSD,Elixir deUSD,peggedUSD,crypto-backed,,92153211.3337797,4,Ethereum;Avalanche;Sei;Polygon
-wm-m0,wM,Wrapped M,peggedUSD,rwa-backed,0.999856,90415003.19322109,4,Ethereum;Arbitrum;Plume;Solana
-pgold-pleasing,PGOLD,Pleasing Gold,peggedGOLD,rwa-backed,4578.667519688707,89383738.45458297,2,Arbitrum;ApeChain
-pmusd-precious-metals,pmUSD,pmUSD,peggedUSD,crypto-backed,0.8900502463478924,89184105.96831422,1,Ethereum
-jusd-jusd-stable-token,JUSD,JUSD,peggedUSD,crypto-backed,0.999538,86183831.80988091,2,BSC;Polygon
-usda-alpha-partner,USDA,Alpha Partner USDA,peggedUSD,crypto-backed,0.9913,86140849.97671668,1,BSC
-avusd-avant,avUSD,Avant USD,peggedUSD,fiat-backed,0.9991379791602458,86068428.80342539,1,Avalanche
-usdh-native-markets,USDH,USDH Stablecoin,peggedUSD,fiat-backed,1.0001069001020284,82578148.19889598,1,Hyperliquid L1
-iusd-infinifi,IUSD,infiniFi USD,peggedUSD,crypto-backed,1,80733538.91496526,2,Ethereum;Tempo
-dola-inverse-finance,DOLA,Dola,peggedUSD,crypto-backed,0.9929797160528886,80439418.24886648,8,Ethereum;Arbitrum;BSC;Fantom;Base;OP Mainnet;Avalanche;Polygon
-susd1plus-lorenzo,sUSD1+,staked USD1+,peggedUSD,rwa-backed,1.023,79185077.64999929,1,BSC
-xdai-gnosis,xDAI,xDAI,peggedUSD,crypto-backed,0.999799,78970081.37204874,0,
-usdu-unitas,USDU,Unitas,peggedUSD,crypto-backed,0.999056,78726428.42075714,2,BSC;Solana
-msusd-main-street,MSUSD,Main Street USD,peggedUSD,crypto-backed,0.999928424934929,77659866.62054807,2,Ethereum;Sonic
+fpi-frax,FPI,Frax Price Index,peggedVAR,algorithmic,1.1420036055999998,96779410.42981853,2,Ethereum;ZKsync Era
+cusd-cap,CUSD,Cap cUSD,peggedUSD,crypto-backed,0.99999963,91768888.03568967,3,Ethereum;MegaETH;Tempo
+savusd-avant,savUSD,Avant Staked USD,peggedUSD,crypto-backed,1.1825379424149631,91666974.59126742,10,Avalanche;Ethereum;Linea;Plasma;Berachain;BSC;Monad;Katana;MegaETH;Sei
+mnee-mnee,MNEE,MNEE USD,peggedUSD,fiat-backed,,91462198.0123,1,Ethereum
+dola-inverse-finance,DOLA,Dola,peggedUSD,crypto-backed,0.995619,90588579.11338168,8,Ethereum;Arbitrum;BSC;Fantom;Base;OP Mainnet;Avalanche;Polygon
+wm-m0,wM,Wrapped M,peggedUSD,rwa-backed,0.999876,87683819.8197892,5,Ethereum;Arbitrum;Plume;Base;Solana
+usda-alpha-partner,USDA,Alpha Partner USDA,peggedUSD,crypto-backed,0.9749397337,84991986.08050065,1,BSC
+405,USDA,USDA,peggedUSD,fiat-backed,0.977286,84637986.80122207,1,BSC
+stcusd-cap,stcUSD,Staked Cap USD,peggedUSD,rwa-backed,1.0697524685485853,83917249.79158877,1,Ethereum
+pgold-pleasing,PGOLD,Pleasing Gold,peggedGOLD,rwa-backed,4130.0237147845,80536281.71010655,3,Arbitrum;ApeChain;Ethereum
+steakusdt-steakhouse,steakUSDT,Steakhouse USDT V2,peggedUSD,crypto-backed,1.018636461514,77761157.4938006,1,Ethereum
 pc0000101-tradable,PC0000101,Tradable NA Post-Settlement Legal Financing Receivables,peggedUSD,rwa-backed,1,76722080.574195,1,zkSync
-lisusd-lista,LISUSD,Lista USD,peggedUSD,crypto-backed,0.997927,75489478.84211718,1,BSC
-usdsui-sui,USDSUI,Sui Dollar,peggedUSD,fiat-backed,1.002,75280708.37566125,1,Sui
-cgusd-cygnus-finance,cgUSD,Cygnus Finance Global USD,peggedUSD,fiat-backed,0.993215,75145041.61187014,1,Base
-feusd-felix,FEUSD,Felix feUSD,peggedUSD,crypto-backed,0.99794,74805902.08791491,2,Hyperliquid L1;HyperEVM
-brlv-crown,BRLV,Crown BRLV,peggedBRL,rwa-backed,0.1971417350084614,72775284.71363641,2,Base;Ethereum
-mf-one-midas,mF-ONE,Midas mF-ONE,peggedUSD,rwa-backed,1.086,70932973.5820653,1,Ethereum
-xaum-matrixdock,XAUm,Matrixdock Gold,peggedGOLD,rwa-backed,4521.17,70905483.27060717,2,Ethereum;BSC
-usdon-ondo,USDon,Ondo U.S. Dollar Token,peggedUSD,rwa-backed,1,68742149.98835549,3,Ethereum;BSC;Solana
-savusd-avant,savUSD,Avant Staked USD,peggedUSD,rwa-backed,1.1682539718750693,66475117.50320571,6,Avalanche;Ethereum;Linea;Plasma;Berachain;BSC
-97,USP,USP Stablecoin,peggedUSD,crypto-backed,0.9998795904917785,65430009.41223859,1,Avalanche
-steakusdc-steakhouse,steakUSDC,Steakhouse USDC V2,peggedUSD,crypto-backed,1.018631442264,62556552.42080455,1,Ethereum
-euri-banking-circle,EURI,Eurite,peggedEUR,fiat-backed,1.160948,59190230.554016806,2,Ethereum;BSC
-vbill-vaneck,VBILL,VanEck Treasury Fund,peggedUSD,rwa-backed,1,58673378.022445,4,Avalanche;BSC;Ethereum;Solana
-msy-main-street,msY,Main Street Yield,peggedUSD,crypto-backed,1.0531338429999995,57375688.11167979,1,Ethereum
-jupusd-jupiter,JUPUSD,JupUSD,peggedUSD,crypto-backed,0.9995151525421828,55252246.0999172,1,Solana
-fxusd-f-x-protocol,fxUSD,fxUSD,peggedUSD,crypto-backed,1.0004575174052777,53977211.518855035,2,Ethereum;Base
-mtbill-midas,mTBILL,Midas mTBILL,peggedUSD,rwa-backed,1.06047278,53970628.102006316,5,Ethereum;Base;Rootstock;Plume;Etherlink
-xusd-straitsx,XUSD,StraitsX XUSD,peggedUSD,fiat-backed,0.9997378490853396,53848560.84990953,2,BSC;Ethereum
-syzusd-yuzu,syzUSD,Staked Yuzu USD,peggedUSD,crypto-backed,1.0529999999999997,53462075.710333936,2,Plasma;Monad
-usdq-quantoz,USDQ,Quantoz USDQ,peggedUSD,fiat-backed,1.0000435456485437,52089809.000384,4,Ethereum;XRPL;Algorand;Polygon
-srusde-strata,srUSDe,Strata Senior USDe,peggedUSD,crypto-backed,1.0214678761939897,51674392.69733827,1,Ethereum
-fidd-fidelity,FIDD,Fidelity Digital Dollar,peggedUSD,fiat-backed,0.999559,51532870.42724082,1,Ethereum
-acrdx-anemoy-apollo,ACRDX,Anemoy Tokenized Apollo Diversified Credit Fund,peggedUSD,rwa-backed,1.017,50861971.117144,3,Ethereum;Plume;Monad
-fxsave-f-x-protocol,fxSAVE,f(x) USD Saving,peggedUSD,crypto-backed,1.0981911831156241,50393207.82874968,1,Ethereum
-usdkg-gold-dollar,USDKG,USDKG,peggedUSD,rwa-backed,0.9998814537068458,49995239.441097565,2,Tron;Ethereum
-ausdt-tether-alloy,aUSD₮,Alloy Tether,peggedUSD,rwa-backed,0.99909,49954512.252751425,1,Ethereum
-benji-franklin-templeton,BENJI,Franklin OnChain U.S. Government Money Fund,peggedUSD,rwa-backed,1,47579152.68974039,1,Ethereum
-yzusd-yuzu,YZUSD,Yuzu USD,peggedUSD,crypto-backed,0.9994229017053236,42582496.584083386,2,Plasma;Monad
-sfrxusd-frax,sfrxUSD,Staked Frax USD,peggedUSD,rwa-backed,1.2,42578120.59912537,2,Ethereum;Fraxtal
-usdp-paxos,USDP,Pax Dollar,peggedUSD,fiat-backed,0.999666,40555362.92284351,4,Ethereum;Solana;BSC;Linea
-zchf-frankencoin,ZCHF,Frankencoin,peggedCHF,crypto-backed,1.2715469319641648,40520981.92325105,8,Ethereum;Gnosis;Base;Polygon;OP Mainnet;Arbitrum;Avalanche;Sonic
-gusd-gemini,GUSD,Gemini Dollar,peggedUSD,fiat-backed,0.9993998000000001,39899512.39795185,2,Ethereum;Wanchain
-4,BUSD,Binance USD,peggedUSD,fiat-backed,0.998654,37788474.31888036,33,Ethereum;IoTeX;Avalanche;Solana;Osmosis;EthereumClassic;Near;ThunderCore;ZKsync Era;Metis;Moonriver;Kaia;Harmony;Meter;BSC;Astar;Oasis Emerald;Shiden;Fantom;OKTChain;Evmos;Milkomeda C1 (Deprecated);Terra Classic;KCC;Rootstock;Moonbeam;Elastos;Boba;Aurora;Theta;Polygon;Syscoin;Loopring
-usdx-hex-trust,USDX,Hex Trust USDX,peggedUSD,fiat-backed,0.9994599975963241,37062009.89601463,3,Flare;Songbird;Ethereum
+cgusd-cygnus-finance,cgUSD,Cygnus Finance Global USD,peggedUSD,fiat-backed,0.9970951623685349,75684099.99769408,1,Base
+lisusd-lista,LISUSD,Lista USD,peggedUSD,crypto-backed,0.99569170515,74903145.18191592,1,BSC
+feusd-felix,FEUSD,Felix feUSD,peggedUSD,crypto-backed,0.998330975,74776555.79214558,2,Hyperliquid L1;HyperEVM
+usdx-kava,USDX,USDX,peggedUSD,crypto-backed,0.663368,74009580.62762187,2,Kava;Osmosis
+mf-one-midas,mF-ONE,Midas mF-ONE,peggedUSD,rwa-backed,1.1045073498168485,73421571.28210956,1,Ethereum
+brlv-crown,BRLV,Crown BRLV,peggedBRL,rwa-backed,0.1937168215975789,71995091.48415092,2,Base;Ethereum
+pmusd-precious-metals,pmUSD,pmUSD,peggedUSD,crypto-backed,0.7592279787949889,71267696.89101657,1,Ethereum
+susd-synthetix,SUSD,sUSD,peggedUSD,crypto-backed,,69836695.22363867,5,Ethereum;OP Mainnet;Arbitrum;Fantom;Ontology
+xdai-gnosis,xDAI,xDAI,peggedUSD,crypto-backed,0.9998000000000001,69212002.25530204,0,
+nusd-neutrl,NUSD,Neutrl USD,peggedUSD,crypto-backed,0.9995168621352998,68396774.56931072,1,Ethereum
+xaum-matrixdock,XAUm,Matrixdock Gold,peggedGOLD,rwa-backed,4134.104804674,66483203.40379731,8,Ethereum;BSC;Polygon;Tron;Sui;Plume;Solana;Stellar
+usdsui-sui,USDSUI,Sui Dollar,peggedUSD,fiat-backed,0.99887628,65781849.52794888,1,Sui
+97,USP,USP Stablecoin,peggedUSD,crypto-backed,0.9999269953734929,65433111.48761472,1,Avalanche
+408,USDon,Ondo U.S. Dollar Token,peggedUSD,fiat-backed,1,65293128.35605836,2,BSC;Ethereum
+usdon-ondo,USDon,Ondo U.S. Dollar Token,peggedUSD,rwa-backed,1,65171587.1269477,3,Ethereum;BSC;Solana
+iusd-infinifi,IUSD,infiniFi USD,peggedUSD,crypto-backed,1,64838552.34663237,2,Ethereum;Tempo
+mglobal-midas-fasanara,mGLOBAL,Midas Fasanara Global,peggedUSD,rwa-backed,1.0058824,60622111.91634102,1,Ethereum
+vbill-vaneck,VBILL,VanEck Treasury Fund,peggedUSD,rwa-backed,1,56689026.60965499,4,Avalanche;BSC;Ethereum;Solana
+steakusdc-steakhouse,steakUSDC,Steakhouse USDC V2,peggedUSD,crypto-backed,1.0241654943249998,55797741.16956264,1,Ethereum
+usdu-unitas,USDU,Unitas,peggedUSD,crypto-backed,0.99925068905,55462546.80991157,2,BSC;Solana
+mtbill-midas,mTBILL,Midas mTBILL,peggedUSD,rwa-backed,1.06519674,54292704.43619594,5,Ethereum;Base;Rootstock;Plume;Etherlink
+fxusd-f-x-protocol,fxUSD,fxUSD,peggedUSD,crypto-backed,1.0001448710836376,54207878.90414001,2,Ethereum;Base
+wsrusd-reservoir,wsrUSD,Wrapped Savings rUSD,peggedUSD,rwa-backed,1.087532991281468,52890076.07004969,16,Ethereum;Base;Berachain;Sonic;Arbitrum;BSC;Avalanche;Unichain;Plume;Sei;World Chain;Katana;HyperEVM;Linea;Monad;Solana
+jupusd-jupiter,JUPUSD,JupUSD,peggedUSD,crypto-backed,1.0001847772507273,51579759.66948458,1,Solana
+brz-transfero,BRZ,Brazilian Digital,peggedBRL,rwa-backed,0.19261177475556188,51282569.561091974,9,Ethereum;Polygon;BSC;Gnosis;Base;Optimism;Arbitrum;Avalanche;Solana
+fxsave-f-x-protocol,fxSAVE,f(x) USD Saving,peggedUSD,crypto-backed,1.1059949655868935,51105818.3139501,1,Ethereum
+acrdx-anemoy-apollo,ACRDX,Anemoy Tokenized Apollo Diversified Credit Fund,peggedUSD,rwa-backed,1.02005,51019515.941392,4,Ethereum;Plume;Monad;Base
+401,trUSD,Tori trUSD,peggedUSD,crypto-backed,,50024747.558963016,1,Ethereum
+usdkg-gold-dollar,USDKG,USDKG,peggedUSD,rwa-backed,0.9999491298743648,49997528.52131941,2,Tron;Ethereum
+409,USDKG,USDKG,peggedUSD,fiat-backed,0.999951,49996214.97871643,2,Tron;Ethereum
+ausdt-tether-alloy,aUSD₮,Alloy Tether,peggedUSD,rwa-backed,0.9996619573423076,49983100.914486274,1,Ethereum
+syzusd-yuzu,syzUSD,Staked Yuzu USD,peggedUSD,crypto-backed,1.0384174925,49778374.312172204,2,Plasma;Monad
+fidd-fidelity,FIDD,Fidelity Digital Dollar,peggedUSD,fiat-backed,1.0000915033236586,49546166.23421746,1,Ethereum
+xusd-straitsx,XUSD,StraitsX XUSD,peggedUSD,fiat-backed,0.9998823185060142,49493490.254512556,2,BSC;Ethereum
+chfau-allunity,CHFAU,AllUnity CHF,peggedCHF,rwa-backed,1.240295,48842844.28932032,1,Ethereum
+398,USDV,Valtorum USD,peggedUSD,fiat-backed,,47370999.99999999,2,XRPL;Stellar
+mhyper-midas,mHYPER,Midas mHYPER,peggedUSD,crypto-backed,1.11047378,45809509.75659013,4,Ethereum;Monad;Plasma;Katana
+yzusd-yuzu,YZUSD,Yuzu USD,peggedUSD,crypto-backed,0.999175,44635638.64356886,2,Plasma;Monad
+zchf-frankencoin,ZCHF,Frankencoin,peggedCHF,crypto-backed,1.2386744218249561,42136367.93599958,8,Ethereum;Base;Gnosis;Polygon;OP Mainnet;Arbitrum;Avalanche;Sonic
+gusd-gemini,GUSD,Gemini Dollar,peggedUSD,fiat-backed,0.9992746100000001,38966475.38035974,2,Ethereum;Wanchain
+euri-banking-circle,EURI,Eurite,peggedEUR,fiat-backed,1.1414244406346103,38653035.07104595,2,Ethereum;BSC
+4,BUSD,Binance USD,peggedUSD,fiat-backed,0.998264,37736633.16755582,33,Ethereum;IoTeX;Avalanche;Solana;Osmosis;Near;ThunderCore;Metis;Moonriver;Kaia;Harmony;Meter;BSC;Astar;Oasis Emerald;Shiden;EthereumClassic;Fantom;OKTChain;Evmos;Milkomeda C1 (Deprecated);Terra Classic;KCC;Rootstock;Moonbeam;Elastos;Boba;ZKsync Era;Aurora;Theta;Polygon;Syscoin;Loopring
 pc0000089-tradable,PC0000089,Tradable LatAm Residential SSTL,peggedUSD,rwa-backed,1,37000012.390813,1,zkSync
-yusd-aegis,YUSD,Aegis YUSD,peggedUSD,fiat-backed,0.9986523399700009,35860410.73053132,2,Ethereum;BSC
-usdo-openeden,USDO,OpenDollar USDO,peggedUSD,fiat-backed,,34265630.110113524,4,Ethereum;BSC;Base;Plasma
-mglobal-midas-fasanara,mGLOBAL,Midas Fasanara Global,peggedUSD,rwa-backed,1,33630836.57805337,1,Ethereum
-susd-synthetix,SUSD,sUSD,peggedUSD,crypto-backed,0.6380913286969816,33489584.685797654,5,Ethereum;OP Mainnet;Arbitrum;Fantom;Ontology
-67,BEAN,Bean,peggedUSD,algorithmic,,33391303.127731,1,Ethereum
-musd-metamask,MUSD,Metamask USD,peggedUSD,crypto-backed,0.9998134901006973,33313156.431461796,2,Ethereum;Linea
-reusd-resupply,REUSD,Resupply USD,peggedUSD,crypto-backed,0.999598,33089431.629127163,1,Ethereum
-xtusd-xt,XTUSD,XTUSD,peggedUSD,rwa-backed,0.999715,32788955.464925103,0,
-12,USDN,Neutrino USD,peggedUSD,algorithmic,,32164187.30361315,4,Waves;Ethereum;BSC;Polygon
-eurspkcc-spiko,EURSPKCC,Spiko Digital Assets Cash & Carry Fund - Euro Share Class,peggedEUR,rwa-backed,1.16,31966371.58868763,6,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar
-tgbp-tokenised,tGBP,Tokenised GBP,peggedGBP,fiat-backed,1.3329632140754284,31848817.06219273,6,Ethereum;Base;Polygon;Solana;BSC;Avalanche
-bold-liquity,BOLD,Liquity BOLD,peggedUSD,crypto-backed,1.001,31769576.194820207,7,Ethereum;OP Mainnet;Base;Hyperliquid L1;Scroll;Arbitrum;Avalanche
-hbd-hive,HBD,Hive Backed Dollar,peggedUSD,crypto-backed,0.934218,30967024.62637263,0,
-meusd-mezo,MUSD,Mezo USD,peggedUSD,crypto-backed,1.0056076584374922,30873498.172172602,2,Mezo;Ethereum
-msusd-metronome,MSUSD,Metronome Synth USD,peggedUSD,crypto-backed,0.995688,30568525.124774992,4,Base;Ethereum;Plasma;OP Mainnet
-eure-monerium,EURE,Monerium EUR emoney,peggedEUR,fiat-backed,1.1601107955222327,30519979.274405714,8,Gnosis;Ethereum;Arbitrum;Polygon;Linea;Noble;Algorand;Scroll
-tryb-bilira,TRYB,Bilira,peggedTRY,fiat-backed,,30221125.45,7,BSC;Ethereum;Polygon;Avalanche;Plasma;Solana;Base
-mim-abracadabra,MIM,Magic Internet Money,peggedUSD,crypto-backed,0.998429120563516,29290876.321258634,14,Ethereum;Arbitrum;Avalanche;Kava;Fantom;Blast;Moonriver;Nibiru;BSC;OP Mainnet;Polygon;Base;Berachain;Linea
-268,YU,YU,peggedUSD,crypto-backed,,29009629.02913487,4,Ethereum;Solana;Base;BSC
-lusd-liquity,LUSD,Liquity USD,peggedUSD,crypto-backed,1.0033367590069109,28646798.6365634,10,Ethereum;Arbitrum;OP Mainnet;Scroll;Polygon;BSC;Fantom;Avalanche;Polygon zkEVM;ZKsync Era
-steakusdt-steakhouse,steakUSDT,Steakhouse USDT V2,peggedUSD,crypto-backed,1.013606516486202,28007642.61369751,1,Ethereum
-zeusd-zoth,ZeUSD,Zoth ZeUSD,peggedUSD,fiat-backed,0.9998795904917785,27642608.355994668,4,Ethereum;Manta;Metis;Avalanche
-usn-noon,USN,Noon USN,peggedUSD,crypto-backed,1.0004334804966661,27283038.13007575,3,Ethereum;ZKsync Era;Sophon
+yusd-aegis,YUSD,Aegis YUSD,peggedUSD,fiat-backed,0.998692,35829288.37938546,2,Ethereum;BSC
+sfrxusd-frax,sfrxUSD,Staked Frax USD,peggedUSD,rwa-backed,1.2012959089389266,34795346.8451345,8,Ethereum;Fraxtal;Sei;Mode;X Layer;Katana;Sonic;Arbitrum
+67,BEAN,Bean,peggedUSD,algorithmic,,33391285.501681,1,Ethereum
+musd-metamask,MUSD,Metamask USD,peggedUSD,crypto-backed,0.9998516077187262,33146478.533114534,3,Ethereum;Linea;Monad
+srusde-strata,srUSDe,Strata Senior USDe,peggedUSD,crypto-backed,1.024726545543777,33111479.696831536,1,Ethereum
+xtusd-xt,XTUSD,XTUSD,peggedUSD,rwa-backed,0.99959,32786813.39856638,0,
+eure-monerium,EURE,Monerium EUR emoney,peggedEUR,fiat-backed,1.1414638205675558,32450966.4581566,9,Gnosis;Arbitrum;Ethereum;Polygon;Linea;Noble;Base;Algorand;Scroll
+reusd-resupply,REUSD,Resupply USD,peggedUSD,crypto-backed,0.9990168992162207,32433399.99721252,1,Ethereum
+usdp-paxos,USDP,Pax Dollar,peggedUSD,fiat-backed,0.999417,31929422.134670284,4,Ethereum;Solana;BSC;Linea
+hbd-hive,HBD,Hive Backed Dollar,peggedUSD,crypto-backed,0.964747,31842197.695186056,0,
+ggbr-goldfish-gold,GGBR,Goldfish Gold,peggedGOLD,rwa-backed,4.112945842840665,31674996.34889742,1,Ethereum
+usdo-openeden,USDO,OpenDollar USDO,peggedUSD,fiat-backed,0.9970425990929137,31634637.79275073,4,Ethereum;BSC;Base;Plasma
+gtusdc-gauntlet,gtUSDC,Gauntlet USDC Prime V1,peggedUSD,crypto-backed,1.1221683604400001,31616566.9660081,1,Ethereum
+tgbp-tokenised,tGBP,Tokenised GBP,peggedGBP,fiat-backed,1.336780007463597,31514964.15941823,8,Ethereum;Base;Solana;Polygon;Arbitrum;BSC;Gnosis;Avalanche
+eurspkcc-spiko,EURSPKCC,Spiko Digital Assets Cash & Carry Fund - Euro Share Class,peggedEUR,rwa-backed,1.1391198804076017,31440188.66705827,6,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar
+usn-noon,USN,Noon USN,peggedUSD,crypto-backed,0.9985677774302797,30872484.579077374,3,Ethereum;Sophon;ZKsync Era
+bold-liquity,BOLD,Liquity BOLD,peggedUSD,crypto-backed,1.0001159953,30204976.705181263,7,Ethereum;OP Mainnet;Base;Arbitrum;Avalanche;Hyperliquid L1;Scroll
+susn-noon,sUSN,Staked USN,peggedUSD,rwa-backed,1.2014147369955834,28907224.76784308,4,Ethereum;zkSync;Sophon;Starknet
+gbpsafo-spiko,GBPSAFO,Spiko Amundi Overnight Swap Fund (GBP),peggedGBP,rwa-backed,1.3541074404797704,28639276.204975586,7,Arbitrum;Polygon;Base;Etherlink;Ethereum;Stellar;Starknet
+nopal-nest,nOPAL,Nest BlackOpal LiquidStone II Vault,peggedUSD,rwa-backed,1.0748105,28458611.195112877,3,Ethereum;Plume;BSC
+msusd-metronome,MSUSD,Metronome Synth USD,peggedUSD,crypto-backed,0.9951807300741409,28424683.66044603,4,Base;Ethereum;OP Mainnet;Plasma
+lusd-liquity,LUSD,Liquity USD,peggedUSD,crypto-backed,1.0081198156325062,27928544.127249315,10,Ethereum;Arbitrum;OP Mainnet;Scroll;Polygon;BSC;Fantom;Avalanche;Polygon zkEVM;ZKsync Era
+meusd-mezo,MUSD,Mezo USD,peggedUSD,crypto-backed,0.9945476242315001,27755988.20110484,2,Mezo;Ethereum
+zeusd-zoth,ZeUSD,Zoth ZeUSD,peggedUSD,fiat-backed,0.9999269953734929,27643918.90837703,4,Ethereum;Manta;Metis;Avalanche
+jpyc-jpyc,JPYC,JPY Coin,peggedJPY,fiat-backed,0.00615962877042416,26845167.74253089,3,Polygon;Ethereum;Avalanche
 185,GYD,Gyroscope GYD,peggedUSD,crypto-backed,,26558618.801549315,2,Ethereum;Polygon
-buck-bucket-protocol,BUCK,Bucket Protocol BUCK Stablecoin,peggedUSD,crypto-backed,1.00009994882521,25973968.424367536,1,Sui
-ggbr-goldfish-gold,GGBR,Goldfish Gold,peggedGOLD,rwa-backed,4.542224795903899,25756743.893033218,1,Ethereum
-nbasis-nest,nBASIS,Nest Basis Vault,peggedUSD,crypto-backed,1.06,25603512.43362444,2,Ethereum;Plume
-yvusdc-yearn,yvUSDC-1,Yearn v3 USDC Vault,peggedUSD,crypto-backed,1.1057099813090001,25117984.286611,1,Ethereum
-usdk-kast,USDK,KAST Dollar,peggedUSD,rwa-backed,0.999856,25039622.803829,1,Solana
-uktbl-spiko,UKTBL,Spiko UK T-Bills Money Market Fund,peggedGBP,rwa-backed,1.3568945662373113,24626422.158042118,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Starknet;Stellar
-honey-berachain,HONEY,Honey,peggedUSD,crypto-backed,1.0001012992169935,24200383.667774092,1,Berachain
-mhyper-midas,mHYPER,Midas mHYPER,peggedUSD,crypto-backed,1.09564471,24128897.390548013,4,Ethereum;Monad;Plasma;Katana
-eusd-electronic-usd,EUSD,Electronic USD,peggedUSD,crypto-backed,0.9939593855818831,23662851.3963831,3,Base;Ethereum;Arbitrum
-ctusd-citrea,ctUSD,Citrea USD,peggedUSD,fiat-backed,0.999439,23552622.165645,1,Citrea
-cusdo-openeden,cUSDO,Compounding OpenDollar,peggedUSD,rwa-backed,1.0455276583896738,21753764.830241557,4,Ethereum;Base;BSC;Solana
-uty-xsy,UTY,XSY UTY,peggedUSD,crypto-backed,0.9994536194692549,20977802.298683926,1,Avalanche
-355,JPYC,JPY Coin,peggedJPY,fiat-backed,0.006293531589522793,20614352.18790176,3,Polygon;Ethereum;Avalanche
-jpyc-jpyc-v1,JPYC,JPY Coin v1,peggedJPY,rwa-backed,0.00628255147656,20576651.828173086,3,Ethereum;Polygon;Gnosis
-scrvusd-curve,scrvUSD,Savings crvUSD,peggedUSD,crypto-backed,1.1021902850539427,20251247.921139352,1,Ethereum
-susn-noon,sUSN,Staked USN,peggedUSD,crypto-backed,1.1899043168217445,19877099.37364693,4,Ethereum;zkSync;Sophon;Starknet
-jpyc-jpyc,JPYC,JPY Coin,peggedJPY,rwa-backed,0.007530055432235517,19805346.713766232,5,Ethereum;Polygon;Avalanche;Gnosis;Astar
-aid-gaib,AID,GAIB AID,peggedUSD,fiat-backed,,19266145.075606484,4,Ethereum;Base;Arbitrum;BSC
-63,FUSD,Fantom USD,peggedUSD,crypto-backed,0.9998795904917785,18934715.322977565,1,Fantom
-bib01-backed,bIB01,Backed IB01 Treasury Bond 0-1yr,peggedUSD,rwa-backed,120.39,18740608.658824064,7,Ethereum;Base;BSC;Polygon;Arbitrum;Gnosis;Avalanche
-said-gaib,sAID,GAIB sAID,peggedUSD,rwa-backed,1.04,18228811.525904205,1,Ethereum
-brla-brla-digital,BRLA,BRLA Digital,peggedREAL,fiat-backed,0.196765,18125918.108545598,4,Celo;Polygon;Gnosis;Moonbeam
-31,USDS,SpiceUSD,peggedUSD,algorithmic,0.9998795904917785,18045555.508782238,4,Avalanche;BSC;Polygon;Ethereum
-reur-royal-euro,REUR,Royal Euro,peggedEUR,rwa-backed,1.1609823018382415,17431117.488974836,3,Ethereum;BSC;Tron
-usdb-blast,USDB,USDB Blast,peggedUSD,crypto-backed,0.9935191913786536,17244526.28347142,1,Blast
+buck-bucket-protocol,BUCK,Bucket Protocol BUCK Stablecoin,peggedUSD,crypto-backed,0.9988732300000001,25925785.08944568,1,Sui
+410,USDU,Universal USD,peggedUSD,fiat-backed,,25651543.81,1,Ethereum
+usdk-kast,USDK,KAST Dollar,peggedUSD,rwa-backed,0.999876,24539622.844939,1,Solana
+slvon-ondo,SLVon,iShares Silver Trust (Ondo Tokenized),peggedUSD,rwa-backed,54.94873077877128,24012918.899434786,4,Ethereum;BSC;Solana;HyperEVM
+ctusd-citrea,ctUSD,Citrea USD,peggedUSD,fiat-backed,0.999228,23878621.555211,1,Citrea
+eusd-electronic-usd,EUSD,Electronic USD,peggedUSD,crypto-backed,0.9994220564260539,23249312.009999257,3,Base;Ethereum;Arbitrum
+yvusdc-yearn,yvUSDC-1,Yearn v3 USDC Vault,peggedUSD,crypto-backed,1.110837457045,22938383.315473,1,Ethereum
+msusd-main-street,MSUSD,Main Street USD,peggedUSD,crypto-backed,,22203710.73218732,2,Ethereum;Sonic
+spusd-soulpeg,spUSD,SoulPeg USD,peggedUSD,crypto-backed,1.002,21352134.174971662,1,BSC
+usdh-native-markets,USDH,USDH Stablecoin,peggedUSD,fiat-backed,0.9998927,21351529.213065293,2,Hyperliquid L1;HyperEVM
+usdx-hex-trust,USDX,Hex Trust USDX,peggedUSD,fiat-backed,0.9901352323144761,21315855.295748644,3,Flare;Ethereum;Songbird
+413,SPUSD,SoulPeg USD,peggedUSD,crypto-backed,1.002,21305612.528250717,1,BSC
+uty-xsy,UTY,XSY UTY,peggedUSD,crypto-backed,0.99911996153765,20977115.278941642,1,Avalanche
+uktbl-spiko,UKTBL,Spiko UK T-Bills Money Market Fund,peggedGBP,rwa-backed,1.37,20839088.075554468,7,Arbitrum;Ethereum;Polygon;Base;Etherlink;Starknet;Stellar
+usx-dforce,USX,dForce USD,peggedUSD,crypto-backed,0.9970021905,20811012.24606181,9,Arbitrum;OP Mainnet;Ethereum;Base;BSC;Polygon;Avalanche;Conflux;Kava
+nbasis-nest,nBASIS,Nest Basis Vault,peggedUSD,rwa-backed,1.0649585,20519721.994390257,3,Ethereum;Plume;Plasma
+85,USDR,Real USD,peggedUSD,algorithmic,,20425122.148754466,2,Polygon;re.al
+aid-gaib,AID,GAIB AID,peggedUSD,fiat-backed,1,20193720.110477857,4,Ethereum;Base;Arbitrum;BSC
+scrvusd-curve,scrvUSD,Savings crvUSD,peggedUSD,crypto-backed,1.1070625366265694,20035698.687272187,1,Ethereum
+pathusd-bridge,pathUSD,PathUSD,peggedUSD,fiat-backed,0.9998,19688965.78046941,1,Tempo
+63,FUSD,Fantom USD,peggedUSD,crypto-backed,0.9999269953734929,18935613.02901009,1,Fantom
+jpyc-jpyc-v1,JPYC,JPY Coin v1,peggedJPY,rwa-backed,,18881878.355325483,3,Ethereum;Polygon;Gnosis
+bib01-backed,bIB01,Backed IB01 Treasury Bond 0-1yr,peggedUSD,rwa-backed,120.98,18832451.495510716,7,Ethereum;Base;BSC;Polygon;Arbitrum;Gnosis;Avalanche
+cusdo-openeden,cUSDO,Compounding OpenDollar,peggedUSD,rwa-backed,1.0515529105004493,18507507.818290245,4,Ethereum;Base;BSC;Solana
+msy-main-street,msY,Main Street Yield,peggedUSD,crypto-backed,0.289244,18379272.009520162,1,Ethereum
+31,USDS,SpiceUSD,peggedUSD,algorithmic,0.99944,18046411.05922301,4,Avalanche;BSC;Polygon;Ethereum
+12,USDN,Neutrino USD,peggedUSD,algorithmic,,17573561.95559986,4,Waves;Ethereum;BSC;Polygon
+bbqusdc-steakhouse,bbqUSDC,Smokehouse USDC,peggedUSD,crypto-backed,1.1171492891400001,17358667.94744704,1,Ethereum
+reur-royal-euro,REUR,Royal Euro,peggedEUR,rwa-backed,,17106642.856701374,3,Ethereum;BSC;Tron
 29,TOR,TOR,peggedUSD,crypto-backed,,17070481.490329992,1,Fantom
-cusd-celo,USDm,Mento Dollar,peggedUSD,algorithmic,0.998536,16483054.396238675,5,Celo;Monad;Ethereum;Solana;Kaia
-yousd-yield-optimizer,yoUSD,Yield Optimizer USD,peggedUSD,crypto-backed,1.049,16116090.201371582,1,Base
-usp-pikudao,USP,USP,peggedUSD,crypto-backed,1.0932803731164604,15636207.391964126,1,Ethereum
-hyusd-hylo,HYUSD,Hylo HYUSD,peggedUSD,crypto-backed,1.0002907044976062,15341437.562365,1,Solana
-xsgd-straitsx,XSGD,XSGD,peggedSGD,fiat-backed,0.78226027,15049665.51470152,7,Ethereum;Avalanche;Polygon;Zilliqa;Arbitrum;Hedera;XRPL
-usdm-moneta,USDM,Moneta,peggedUSD,fiat-backed,1.003,14543910.494000252,1,Cardano
-wemix-dollar-wemix,WEMIX$,WEMIX Dollar,peggedUSD,crypto-backed,0.983216,14294900.932371816,0,
-gldy-streamex,GLDY,Streamex Gold Yield,peggedGOLD,rwa-backed,4540.444853,13974252.431275154,1,Base
-suiusde-sui,suiUSDe,eSui Dollar,peggedUSD,crypto-backed,0.9996884706237923,13886625.63911835,1,Sui
-stkgho-umbrella-aave,stkGHO.v1,Aave Umbrella stkGHO,peggedUSD,crypto-backed,0.999680295,12989507.014262168,1,Ethereum
-usdcv-societe-generale-forge,USDCV,USD CoinVertible,peggedUSD,fiat-backed,0.9996997478009962,12892897.948522765,2,Ethereum;Solana
-eurr-stablr,EURR,StablR Euro,peggedEUR,fiat-backed,1.1600000000000001,12826134.486512631,2,Ethereum;Solana
-syusd-aegis,sYUSD,Aegis Staked YUSD,peggedUSD,crypto-backed,1.03,12752773.733209696,2,Ethereum;BSC
-vcred-vcred,vCRED,vCred,peggedUSD,crypto-backed,0.996394,12554561.74609495,1,Hemi
-spusd-soulpeg,spUSD,SoulPeg USD,peggedUSD,crypto-backed,1.002,12485009.73009848,1,BSC
-mre7yield-midas,mRe7YIELD,Midas mRe7YIELD,peggedUSD,crypto-backed,1.06500638,12476241.610802088,3,Ethereum;Etherlink;Starknet
-85,USDR,Real USD,peggedUSD,algorithmic,,12292423.373314098,2,Polygon;re.al
-alusd-alchemix,ALUSD,Alchemix USD,peggedUSD,algorithmic,0.963921,12152812.40402087,4,Ethereum;OP Mainnet;Arbitrum;Fantom
-nopal-nest,nOPAL,Nest BlackOpal LiquidStone II Vault,peggedUSD,crypto-backed,1.058035,11956130.144370802,2,Ethereum;Plume
-sbc-brale,SBC,Stable Coin,peggedUSD,fiat-backed,1.001,11891189.69926665,11,Solana;Polygon;Ethereum;Base;EthereumClassic;Stellar;Celo;Avalanche;Arbitrum;OP Mainnet;Tempo
-13,YUSD,YUSD Stablecoin,peggedUSD,crypto-backed,0.9960485289988523,11790601.517803742,1,Avalanche
-mmev-midas,mMEV,Midas mMEV,peggedUSD,crypto-backed,1.1214408,11733002.269393107,3,Ethereum;Plume;Etherlink
-uusd-youves,UUSD,Youves uUSD,peggedUSD,crypto-backed,0.9363539778421301,11711281.649461221,1,Tezos
-mai-qidao,MAI,MAI,peggedUSD,crypto-backed,0.983967,11653622.764216421,9,Polygon;Ethereum;Arbitrum;Optimism;Base;Avalanche;Gnosis;BSC;Linea
-214,USDX,USDX Money USDX,peggedUSD,crypto-backed,,11507588.41473682,3,BSC;Arbitrum;Ethereum
-wusd-worldwide,WUSD,Worldwide USD,peggedUSD,fiat-backed,0.998188,11502200.260547118,2,Ethereum;Polygon
-hollar-hydrated,HOLLAR,Hydrated Dollar,peggedUSD,crypto-backed,0.997923,11029131.298687886,1,Hydration
-yusd-yieldfi,YUSD,YieldFi yUSD,peggedUSD,crypto-backed,0.998454,10860312.786317687,7,Ethereum;Arbitrum;Base;Optimism;Sonic;Plume;Katana
-115,R,R,peggedUSD,crypto-backed,0.9998795904917785,10720892.452470321,2,Ethereum;Base
-232,PINTO,Pinto,peggedUSD,crypto-backed,,10636548.346207,1,Base
-spkcc-spiko,SPKCC,Spiko Digital Assets Cash & Carry Fund,peggedUSD,rwa-backed,1.015,10494896.376322813,6,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar
-inalpha-nest,inALPHA,Nest Alpha Vault LP,peggedUSD,crypto-backed,0.9542,10442661.72701829,2,Ethereum;Plume
-308,D,Saga Dollar,peggedUSD,crypto-backed,0.9998795904917785,10394152.808964578,1,Saga
-bc3m-backed,bC3M,Backed GOVIES 0-6 months EURO investment grade,peggedEUR,rwa-backed,146.73275454121597,10040379.878388772,1,Ethereum
-eusd-telcoin,eUSD,eUSD,peggedUSD,rwa-backed,0.999822,9998317.172709549,4,Ethereum;Base;Polygon;Solana
-fusd-freedom-dollar,FUSD,Freedom Dollar,peggedUSD,crypto-backed,0.999606,9897775.776466245,0,
-money-defi-money,MONEY,defi.money,peggedUSD,crypto-backed,0.9891497752729308,9885003.822576828,2,Arbitrum;Optimism
-idrt-rupiah-token,IDRT,Rupiah Token,peggedIDR,rwa-backed,0.00005645167831813481,9814514.120228834,4,Ethereum;BSC;Harmony;Polygon
-usdh-hermetica,USDH,Hermetica USDh,peggedUSD,fiat-backed,1.00030813,9456156.37242087,1,Stacks
-audd-novatti,AUDD,AUDD,peggedAUD,fiat-backed,0.714768,9388447.129724653,8,Stellar;Ethereum;Base;XDC;XRPL;Redbelly;Solana;Hedera
-usda-anzens,USDA,Anzens USDA,peggedUSD,fiat-backed,0.9960494544238336,9380614.921084123,1,Cardano
-usx-dforce,USX,dForce USD,peggedUSD,crypto-backed,0.4056657878017584,9180648.813951897,9,Arbitrum;OP Mainnet;Ethereum;Base;Polygon;BSC;Conflux;Avalanche;Kava
-mapollo-midas,mAPOLLO,Midas mAPOLLO,peggedUSD,crypto-backed,1.08784119,9102237.947422363,1,Ethereum
+honey-berachain,HONEY,Honey,peggedUSD,crypto-backed,0.998998265,16821402.982243974,1,Berachain
+aznd-mu-digital,AZND,Mu Digital AZND,peggedUSD,crypto-backed,0.93982362085,16325754.446467578,1,Monad
+cusd-celo,USDm,Mento Dollar,peggedUSD,algorithmic,0.9998764123254225,16218900.279505458,5,Celo;Monad;Ethereum;Solana;Kaia
+brla-brla-digital,BRLA,BRLA Digital,peggedREAL,fiat-backed,0.19117397255694252,14893316.892384954,4,Celo;Polygon;Gnosis;Moonbeam
+wemix-dollar-wemix,WEMIX$,WEMIX Dollar,peggedUSD,rwa-backed,1.005,14611485.509545587,0,
+usdm-moneta,USDM,Moneta,peggedUSD,fiat-backed,1.003,14544600.029383503,1,Cardano
+stkgho-umbrella-aave,stkGHO.v1,Aave Umbrella stkGHO,peggedUSD,crypto-backed,0.9986252708500001,14414103.810627988,1,Ethereum
+suiusde-sui,suiUSDe,eSui Dollar,peggedUSD,crypto-backed,1,13468929.504958987,1,Sui
+syusd-aegis,sYUSD,Aegis Staked YUSD,peggedUSD,crypto-backed,1.04187698006568,12804776.390649104,2,Ethereum;BSC
+gldy-streamex,GLDY,Streamex Gold Yield,peggedGOLD,rwa-backed,4133.047500000001,12720386.66027591,1,Base
+411,USDSM,Stable Mint USD,peggedUSD,fiat-backed,0.999673,12614613.332248738,4,Etherlink;Ethereum;Base;Arbitrum
+usdb-blast,USDB,USDB Blast,peggedUSD,crypto-backed,1.002,12605481.013092007,1,Blast
+vcred-vcred,vCRED,vCred,peggedUSD,crypto-backed,,12563743.230438828,1,Hemi
+wusd-worldwide,WUSD,Worldwide USD,peggedUSD,fiat-backed,0.9958844242073643,12544579.34357582,3,Ethereum;Polygon;Viction
+usdcv-societe-generale-forge,USDCV,USD CoinVertible,peggedUSD,fiat-backed,0.999417,12395301.874495657,2,Ethereum;Solana
+iauon-ondo,IAUon,iShares Gold Trust (Ondo Tokenized),peggedUSD,rwa-backed,77.72200249084591,12330618.04216345,4,Ethereum;BSC;Solana;HyperEVM
+hyusd-hylo,HYUSD,Hylo HYUSD,peggedUSD,crypto-backed,0.9990458279424765,12007478.820236,1,Solana
+mai-qidao,MAI,MAI,peggedUSD,crypto-backed,0.993727,11948694.502789302,15,Polygon;Ethereum;Arbitrum;Optimism;Base;Avalanche;Fantom;Gnosis;Metis;Moonbeam;Kava;Polygon zkEVM;Fraxtal;BSC;Linea
+13,YUSD,YUSD Stablecoin,peggedUSD,crypto-backed,0.995798,11798388.953530904,1,Avalanche
+xsgd-straitsx,XSGD,XSGD,peggedSGD,fiat-backed,0.7738548844049203,11792624.089618063,7,Ethereum;Polygon;Avalanche;Zilliqa;Hedera;Arbitrum;XRPL
+uusd-youves,UUSD,Youves uUSD,peggedUSD,crypto-backed,0.962229,11721106.07572227,1,Tezos
+said-gaib,sAID,GAIB sAID,peggedUSD,rwa-backed,0.644672,11711385.329984883,1,Ethereum
+hollar-hydrated,HOLLAR,Hydrated Dollar,peggedUSD,crypto-backed,0.997728,11596659.345743656,1,Hydration
+yusd-yieldfi,YUSD,YieldFi yUSD,peggedUSD,crypto-backed,0.998454,10860297.880046327,10,Ethereum;Arbitrum;Base;Optimism;Sonic;Plume;Katana;BSC;Avalanche;Plasma
+115,R,R,peggedUSD,crypto-backed,0.9999269953734929,10721400.736311112,2,Ethereum;Base
+fusd-freedom-dollar,FUSD,Freedom Dollar,peggedUSD,crypto-backed,0.999311,10692629.40035482,0,
+232,PINTO,Pinto,peggedUSD,crypto-backed,,10644016.47789,1,Base
+yousd-yield-optimizer,yoUSD,Yield Optimizer USD,peggedUSD,crypto-backed,1.0549534999999999,10466453.890589511,3,Base;Ethereum;Arbitrum
+inalpha-nest,inALPHA,Nest Alpha Vault LP,peggedUSD,rwa-backed,0.9542,10442661.72701829,2,Ethereum;Plume
+308,D,Saga Dollar,peggedUSD,crypto-backed,0.9999269953734929,10387585.17947243,1,Saga
+alusd-alchemix,ALUSD,Alchemix USD,peggedUSD,algorithmic,0.9597183638169536,10286065.144468319,4,Ethereum;OP Mainnet;Arbitrum;Fantom
+416,eUSD,Telcoin eUSD,peggedUSD,fiat-backed,0.999714,10010636.738950802,4,Polygon;Solana;Ethereum;Base
+eusd-telcoin,eUSD,eUSD,peggedUSD,rwa-backed,0.9997143165319977,10009641.001324167,4,Ethereum;Base;Polygon;Solana
+money-defi-money,MONEY,defi.money,peggedUSD,crypto-backed,0.9958582242153404,9969356.363583282,3,Arbitrum;Optimism;Base
+bc3m-backed,bC3M,Backed GOVIES 0-6 months EURO investment grade,peggedEUR,rwa-backed,144.23500018857985,9869467.782982554,7,Ethereum;Gnosis;Base;Polygon;BSC;Arbitrum;Avalanche
+idrt-rupiah-token,IDRT,Rupiah Token,peggedIDR,rwa-backed,0.00005650399999999999,9747711.632710658,4,Ethereum;BSC;Harmony;Polygon
+audd-novatti,AUDD,AUDD,peggedAUD,fiat-backed,0.6920790209705299,9675533.79161174,8,Stellar;Ethereum;Base;XRPL;XDC;Redbelly;Solana;Hedera
+sbc-brale,SBC,Stable Coin,peggedUSD,fiat-backed,0.9998416730852571,9246433.118941003,11,Solana;Polygon;Ethereum;Base;Stellar;Celo;Avalanche;Arbitrum;OP Mainnet;Tempo;EthereumClassic
+mre7yield-midas,mRe7YIELD,Midas mRe7YIELD,peggedUSD,crypto-backed,1.06813781,9116357.12773026,3,Ethereum;Etherlink;Starknet
 244,USDL,Lift Dollar,peggedUSD,fiat-backed,,9003252.317569753,2,Arbitrum;Ethereum
-europ-schuman,EUROP,Schuman EUROP,peggedEUR,fiat-backed,1.16,8361263.993580075,4,Ethereum;Plasma;Avalanche;Polygon
-pathusd-bridge,pathUSD,PathUSD,peggedUSD,fiat-backed,0.9999348489548554,8330678.525744094,1,Tempo
-sbold-k3-capital,sBOLD,sBOLD by K3 Capital,peggedUSD,crypto-backed,,8307884.370568939,1,Ethereum
-eurs-stasis,EURS,Stasis Euro,peggedEUR,fiat-backed,1.2020021873036726,8236863.798271023,6,Ethereum;Polygon;Stellar;Algorand;Everscale;Gnosis
-cdp-enosys,CDP,Enosys Loans CDP,peggedUSD,crypto-backed,0.980971,7913209.333429622,1,Flare
-usdz-anzen,USDz,Anzen USDz,peggedUSD,fiat-backed,0.9788418847186416,7872715.172865036,4,Base;Ethereum;Manta;Blast
-gbpsafo-spiko,GBPSAFO,Spiko Amundi Overnight Swap Fund (GBP),peggedGBP,rwa-backed,1.3429369615286189,7804875.579345021,7,Arbitrum;Polygon;Base;Etherlink;Ethereum;Stellar;Starknet
-luausd-lumi-finance,LUAUSD,Lumi Finance LUAUSD,peggedUSD,crypto-backed,0.965959,7658485.126124178,1,Arbitrum
-btcusd-btcfi,BtcUSD,Bitcoin USD,peggedUSD,crypto-backed,0.987947,7604069.523863921,2,Base;Bifrost Network
-nxusd-nereus,NXUSD,NXUSD,peggedUSD,crypto-backed,0.974967,7601108.71358648,2,Avalanche;Polygon
-chfau-allunity,CHFAU,AllUnity CHF,peggedCHF,rwa-backed,1.27071262,7535353.99559166,1,Ethereum
-usbd-bima,USBD,USBD,peggedUSD,crypto-backed,1,7507140.416543117,7,Hemi;Ethereum;GOAT;CORE;Plume Mainnet;Sonic;BSC
-dgld-gold-token-sa,DGLD,DGLD Tokenized Gold,peggedGOLD,rwa-backed,4564.04,7319376.951208059,2,Ethereum;Base
-17,HUSD,HUSD,peggedUSD,fiat-backed,,7223123.468008304,5,Ethereum;Tron;Solana;Elastos;Heco
-usdnr-nerona,USDnr,Nerona USD,peggedUSD,fiat-backed,0.999856,7097410.11667037,2,Fluent;Ethereum
-usdr-stablr,USDR,StablR USD,peggedUSD,fiat-backed,1.0000217033363659,6967820.50167007,1,Ethereum
-aznd-mu-digital,AZND,Mu Digital AZND,peggedUSD,crypto-backed,0.999803472037061,6599578.733288072,1,Monad
-hbusdt-hyperbeat,hbUSDT,Hyperbeat USDT,peggedUSD,crypto-backed,1.11,6509412.9193813875,1,HyperEVM
-susd-hedgecore,SUSD,Staked USD Coin,peggedUSD,crypto-backed,1.001,6285431.980741291,1,BSC
-witry-brix,wiTRY,Wrapped iTRY,peggedTRY,rwa-backed,0.022850383182326663,6260297.430268051,2,Ethereum;MegaETH
-kgst-kyrgyz-som,KGST,Kyrgyz Som Stablecoin,peggedKGS,rwa-backed,0.01142662,6243407.208775327,1,BSC
-cdxusd-cod3x,cdxUSD,Cod3x USD,peggedUSD,crypto-backed,1.0030446778084143,6168496.011147239,1,Base
-susd-solayer,sUSD,Solayer USD,peggedUSD,fiat-backed,1.1112453628643921,6168434.133854138,1,Solana
-usdn-noble,USDN,Noble Dollar,peggedUSD,fiat-backed,1.00021939,6090937.989036,1,Noble
-home-homecoin,HOME,HomeCoin,peggedUSD,crypto-backed,0.9998795904917785,6066101.873659908,1,Ethereum
-usdx-kava,USDX,USDX,peggedUSD,crypto-backed,0.554761,6029329.323909579,1,Kava
-vnxau-vnx,VNXAU,VNX Gold,peggedGOLD,rwa-backed,145.34,5972797.333713645,7,Ethereum;Polygon;Base;Etherlink;Stellar;Solana;Tezos
-axcnh-anchorx,AxCNH,AxCNH,peggedCNH,rwa-backed,0.14680007743485904,5744058.873345683,2,Conflux;Ethereum
-cgo-comtech,CGO,Comtech Gold,peggedGOLD,rwa-backed,144.47,5633564.362045366,0,
-gyen-gyen,GYEN,GYEN,peggedJPY,fiat-backed,0.006299302687818942,5622319.3224934675,5,Ethereum;Stellar;Arbitrum;Solana;OP Mainnet
-eurq-quantoz,EURQ,Quantoz EURQ,peggedEUR,rwa-backed,1.17,5590447.629442023,4,Ethereum;Polygon;XRP Ledger;Algorand
-ybold-yearn,yBOLD,Yearn BOLD,peggedUSD,crypto-backed,,5552626.315255234,1,Ethereum
-ousd-origin-protocol,OUSD,Origin Dollar,peggedUSD,crypto-backed,0.9996826253691014,5458431.2867646925,1,Ethereum
-pusd-plume,pUSD,Plume USD,peggedUSD,crypto-backed,1.001,5150050.568763785,2,Plume Mainnet;Ethereum
-usdu-usdu-finance,USDU,USDU Finance,peggedUSD,crypto-backed,0.9990580171410454,5053196.61893402,1,Ethereum
-usd3-reserve-protocol,USD3,Web 3 Dollar,peggedUSD,crypto-backed,1.094007367869614,4882815.244194095,2,Ethereum;Base
-xai-silo-finance,XAI,XAI,peggedUSD,crypto-backed,0.9998795904917785,4857506.949826419,1,Ethereum
-doc-money-on-chain,DOC,Dollar on Chain,peggedUSD,crypto-backed,0.9998795904917785,4647179.875838024,3,Rootstock;Arbitrum;Ethereum
-usdsc-startale,USDSC,Startale USD,peggedUSD,rwa-backed,0.9997,4539016.200949179,1,Soneium
-asusdf-astherus,asUSDF,Aster Staked USDF,peggedUSD,crypto-backed,1.059,4461057.046887992,1,BSC
-zarp-zarp,ZARP,ZARP Stablecoin,peggedZAR,rwa-backed,0.05995576195545233,4413447.922794775,3,Ethereum;Base;Polygon
-hlscope-hamilton-lane,HLSCOPE,Hamilton Lane Senior Credit Opportunities Securitize Fund,peggedUSD,rwa-backed,1242.17,4410007.64298826,3,Polygon;Ethereum;Optimism
-iusd-initia,iUSD,Initia iUSD,peggedUSD,crytpo-backed,0.9997965,4332894.745418,1,Initia
-16,PAI,Parrot USD,peggedUSD,crypto-backed,,4223733.377229,1,Solana
-9,FEI,Fei USD,peggedUSD,algorithmic,0.9987582844714137,3770754.1292306483,1,Ethereum
-audm-macropod,AUDM,Macropod,peggedAUD,fiat-backed,0.708128395896447,3664073.52459109,3,Ethereum;Solana;Redbelly
-audf-forte,AUDF,Forte AUD,peggedAUD,rwa-backed,0.720533,3656771.787841578,4,Ethereum;Polygon;Avalanche;Base
-xagm-matrixdock,XAGm,Matrixdock Silver,peggedSILVER,rwa-backed,78.94,3629155.429354413,1,Ethereum
-pht-pht,PHT,PHT Stablecoin,peggedPHP,crypto-backed,0.016112421450387247,3625486.5603063777,3,Ethereum;Tron;Polygon
-djed-coti,DJED,Djed StableCoin,peggedUSD,algorithmic,1.000644796829843,3275233.6412712513,1,Cardano
-veur-vnx,VEUR,VNX EURO,peggedEUR,fiat-backed,1.1647049902974498,3217235.5974140423,13,Solana;Avalanche;Base;Stellar;Ethereum;Celo;Fraxtal;Polygon;Arbitrum;Tezos;Q Protocol;XRP Ledger;Internet Computer
-26,MUSD,mStable USD,peggedUSD,crypto-backed,1.0000989616443103,3207542.9631165024,3,Ethereum;Polygon;Gnosis
-usdxl-last,USDXL,Last USD,peggedUSD,crypto-backed,0.998216,3192171.138127118,2,Hyperliquid L1;HyperEVM
-usr-resolv,USR,Resolv USD,peggedUSD,crypto-backed,,3123169.3274418106,6,Ethereum;Base;BSC;Soneium;Hyperliquid L1;Berachain
-usdv-solomon,USDV,Solomon USDv,peggedUSD,crypto-backed,1.0008896245714654,3021210.0477971355,1,Solana
-314,PUSD,Palm USD,peggedUSD,fiat-backed,0.9998795904917785,2975746.440455589,4,Solana;Ethereum;BSC;Tron
-dusd-fluid,DUSD,DigitalDollar,peggedUSD,fiat-backed,0.9998795904917785,2951968.4045520034,1,Arbitrum
-nwisdom-nest,nWISDOM,Nest Wisdom Vault,peggedUSD,rwa-backed,0.969026,2857579.340549685,2,Ethereum;Plume
-55,EURA,EURA,peggedEUR,crypto-backed,1.162890472633744,2839833.6259451653,9,Ethereum;Arbitrum;Polygon;Fantom;OP Mainnet;Solana;Fuse;Aurora;ZKsync Lite
-usdp-parallel,USDp,Parallel USDp,peggedUSD,crypto-backed,0.9998795904917785,2836902.88331775,24,Avalanche;Hyperliquid L1;Sonic;Base;Ethereum;OP Mainnet;Arbitrum;Sei;BSC;Polygon;Berachain;TAC;Scroll;Gnosis;Unichain;Ink;Plasma;Linea;Hemi;Fraxtal;Plume Mainnet;World Chain;X Layer;Katana
-vchf-vnx,VCHF,VNX Swiss Franc,peggedCHF,fiat-backed,1.267477469576016,2760447.507186206,11,Solana;Avalanche;Base;Stellar;Ethereum;Celo;Polygon;Fraxtal;Arbitrum;Tezos;Q Protocol
-xo-exodus,XO,XO Cash,peggedUSD,rwa-backed,0.999856,2705415.951673,1,Solana
-nusd-nexus,NUSD,Nexus USD,peggedUSD,crypto-backed,0.9998795904917785,2663671.1478684978,13,Ethereum;BSC;Avalanche;Aurora;Boba;Arbitrum;Polygon;OP Mainnet;Cronos;Metis;Fantom;Harmony;DFK
-audx-aussie-dollar-token,AUDX,Aussie Dollar Token,peggedAUD,rwa-backed,0.72345,2639113.7682,3,Ethereum;Polygon;Conflux
-33,USDP,USDP Stablecoin,peggedUSD,crypto-backed,0.9998795904917785,2638193.6921688383,4,Ethereum;Gnosis;BSC;Fantom
-ceur-celo,EURm,Mento Euro,peggedEUR,algorithmic,1.1602938322545562,2549003.7911404343,4,Celo;Solana;Polygon;Ethereum
-aeur-anchored-coins,AEUR,Anchored Coins AEUR,peggedEUR,fiat-backed,1.15,2520453.6249006614,2,Ethereum;BSC
-isc-international-stable-currency,ISC,International Stable Currency,peggedVAR,fiat-backed,2.2018237947972983,2458243.1059759757,1,Solana
-28,VAI,Vai,peggedUSD,crypto-backed,0.9991276107747145,2404490.9968183823,1,BSC
-usdcx-movement,USDCx,Movement USDCx,peggedUSD,crypto-backed,0.999811,2352439.501482917,1,Movement
-ussd-sonic-labs,USSD,US Sonic Dollar,peggedUSD,rwa-backed,1.001,2339765.829011501,6,Sonic;Ethereum;Base;Arbitrum;Optimism;Scroll
-356,USSD,US Sonic Dollar,peggedUSD,crypto-backed,1.001,2337064.1000927608,1,Sonic
-iusd-indigo-protocol,IUSD,iUSD,peggedUSD,crypto-backed,1.0081596484012068,2219408.8662829446,1,Cardano
-xnk-kinka,XNK,Kinka,peggedGOLD,rwa-backed,4537.401287089747,2187027.420377258,2,Ethereum;Cardano
+415,RUSD,Royal Dollar,peggedUSD,fiat-backed,,9000015,3,BSC;Ethereum;Tron
+usp-pikudao,USP,USP,peggedUSD,crypto-backed,1.11,8624695.271606153,1,Ethereum
+dgld-gold-token-sa,DGLD,DGLD Tokenized Gold,peggedGOLD,rwa-backed,4164.77,8349720.676503369,2,Ethereum;Base
+eurs-stasis,EURS,Stasis Euro,peggedEUR,fiat-backed,1.2084479847544018,8167385.960052663,6,Ethereum;Polygon;Stellar;Algorand;Everscale;Gnosis
+usdq-quantoz,USDQ,Quantoz USDQ,peggedUSD,fiat-backed,0.9998308526668735,8089808.000384,4,Ethereum;XRPL;Algorand;Polygon
+usdz-anzen,USDz,Anzen USDz,peggedUSD,fiat-backed,0.978713,7857390.9145277655,4,Base;Ethereum;Manta;Blast
+europ-schuman,EUROP,Schuman EUROP,peggedEUR,fiat-backed,1.1404234474232815,7774088.348621292,4,Ethereum;Avalanche;Polygon;Plasma
+mapollo-midas,mAPOLLO,Midas mAPOLLO,peggedUSD,crypto-backed,1.10086085,7728778.352150891,1,Ethereum
+susd-hedgecore,sUSD,Staked USD Coin,peggedUSD,crypto-backed,0.995706,7667402.396978648,1,BSC
+nxusd-nereus,NXUSD,NXUSD,peggedUSD,crypto-backed,0.9930810805760613,7622223.9794321535,2,Avalanche;Polygon
+usbd-bima,USBD,USBD,peggedUSD,crypto-backed,1,7507153.527626624,7,Hemi;Ethereum;GOAT;CORE;Plume Mainnet;Sonic;BSC
+ousd-origin-protocol,OUSD,Origin Dollar,peggedUSD,crypto-backed,0.999963310948738,7480294.745763546,1,Ethereum
+autousd-auto-finance,autoUSD,Auto Finance autoUSD,peggedUSD,crypto-backed,1.091641009045,7464168.019352029,1,Ethereum
+sbold-k3-capital,sBOLD,sBOLD by K3 Capital,peggedUSD,crypto-backed,1.0709651725184075,7342490.900616494,1,Ethereum
+witry-brix,wiTRY,Wrapped iTRY,peggedTRY,rwa-backed,0.02337231069669271,7145561.146855768,2,Ethereum;MegaETH
+eurr-stablr,EURR,StablR Euro,peggedEUR,fiat-backed,,7118101.18830167,2,Ethereum;Solana
+gyen-gyen,GYEN,GYEN,peggedJPY,fiat-backed,0.006191995673555816,6286348.61747232,5,Ethereum;Stellar;Arbitrum;Solana;OP Mainnet
+btcusd-btcfi,BtcUSD,Bitcoin USD,peggedUSD,crypto-backed,1.0002332195174004,6162335.782298802,2,Base;Bifrost Network
+cdxusd-cod3x,cdxUSD,Cod3x USD,peggedUSD,crypto-backed,0.996452686074228,6127424.177721791,1,Base
+home-homecoin,HOME,HomeCoin,peggedUSD,crypto-backed,0.8498605858,6066389.4711311655,1,Ethereum
+spkcc-spiko,SPKCC,Spiko Digital Assets Cash & Carry Fund,peggedUSD,rwa-backed,1.018,6028964.706656015,6,Ethereum;Polygon;Arbitrum;Base;Starknet;Stellar
+vnxau-vnx,VNXAU,VNX Gold,peggedGOLD,rwa-backed,134.04006162707373,5916873.973543295,7,Ethereum;Polygon;Base;Etherlink;Stellar;Solana;Tezos
+axcnh-anchorx,AxCNH,AxCNH,peggedCNH,rwa-backed,0.14578734354999998,5755559.616426327,2,Conflux;Ethereum
+luausd-lumi-finance,LUAUSD,Lumi Finance LUAUSD,peggedUSD,crypto-backed,0.7256906543071733,5662486.107320542,1,Arbitrum
+214,USDX,USDX Money USDX,peggedUSD,crypto-backed,,5576591.6172716655,3,BSC;Arbitrum;Ethereum
+kgst-kyrgyz-som,KGST,Kyrgyz Som Stablecoin,peggedKGS,rwa-backed,0.01143005,5518824.150954112,1,BSC
+391,USDST,USDST,peggedUSD,fiat-backed,0.99934862,5310285.36576392,1,Strato
+cgo-comtech,CGO,Comtech Gold,peggedGOLD,rwa-backed,132.36,5161958.756087094,1,XDC Network
+wars-argentine-peso,WARS,Argentine Peso,peggedARS,fiat-backed,0.0006404716481666845,5085802.325179448,6,Ethereum;Base;World Chain;BSC;Polygon;Gnosis
+vchf-vnx,VCHF,VNX Swiss Franc,peggedCHF,fiat-backed,1.2297185675706197,5022589.212839201,13,Solana;Base;Avalanche;Ethereum;Celo;Stellar;Polygon;Fraxtal;Arbitrum;Tezos;Q Protocol;XRP Ledger;Internet Computer
+xai-silo-finance,XAI,XAI,peggedUSD,crypto-backed,0.9999269953734929,4857440.206726228,1,Ethereum
+usdsc-startale,USDSC,Startale USD,peggedUSD,rwa-backed,0.999167,4759277.067526264,1,Soneium
+ybold-yearn,yBOLD,Yearn BOLD,peggedUSD,crypto-backed,1.0001159953,4717039.339327575,1,Ethereum
+hbusdt-hyperbeat,hbUSDT,Hyperbeat USDT,peggedUSD,crypto-backed,1.12,4648818.080939454,1,HyperEVM
+pusd-plume,pUSD,Plume USD,peggedUSD,crypto-backed,0.996867046543753,4593341.300875527,2,Plume Mainnet;Ethereum
+zarp-zarp,ZARP,ZARP Stablecoin,peggedZAR,rwa-backed,0.061128684734532555,4515301.250159779,4,Ethereum;Base;Polygon;Solana
+hlscope-hamilton-lane,HLSCOPE,Hamilton Lane Senior Credit Opportunities Securitize Fund,peggedUSD,rwa-backed,1256.3292052535996,4314178.546501349,5,Polygon;Ethereum;Optimism;Plume;Tron
+tryb-bilira,TRYB,Bilira,peggedTRY,fiat-backed,0.02140555,4299835.27,9,BSC;Ethereum;Polygon;Avalanche;Solana;Plasma;Base;Codex;World Chain
+usda-anzens,USDA,Anzens USDA,peggedUSD,fiat-backed,1.001,4235915.335082179,1,Cardano
+16,PAI,Parrot USD,peggedUSD,crypto-backed,,4223733.318508,1,Solana
+xagm-matrixdock,XAGm,Matrixdock Silver,peggedSILVER,rwa-backed,62.75812871955793,4141585.7437619483,2,Ethereum;Sui
+usdnr-nerona,USDnr,Nerona USD,peggedUSD,fiat-backed,0.9999269953734929,4141224.6497921655,2,Fluent;Ethereum
+usd3-reserve-protocol,USD3,Web 3 Dollar,peggedUSD,crypto-backed,0.684140951,4137240.9470938533,2,Ethereum;Base
+iusd-initia,iUSD,Initia iUSD,peggedUSD,crytpo-backed,0.99976835,4100118.780187,1,Initia
+sdola-inverse-finance,sDOLA,Inverse Staked DOLA,peggedUSD,crypto-backed,1.3966287716015604,3999912.622462719,5,Ethereum;Base;Optimism;Arbitrum;Berachain
+ftusd-flying-tulip,ftUSD,Flying Tulip USD,peggedUSD,crypto-backed,0.9926323955,3977424.7330154805,2,Ethereum;Sonic
+9,FEI,Fei USD,peggedUSD,algorithmic,0.999156,3815661.5030310755,1,Ethereum
+usdn-noble,USDN,Noble Dollar,peggedUSD,fiat-backed,1.00080237,3637985.217392,1,Noble
+pht-pht,PHT,PHT Stablecoin,peggedPHP,crypto-backed,0.01611552802984966,3626218.505209771,3,Ethereum;Tron;Polygon
+mim-abracadabra,MIM,Magic Internet Money,peggedUSD,crypto-backed,0.15945788147666556,3620785.7472272525,14,Ethereum;Arbitrum;Avalanche;Kava;Fantom;Blast;Moonriver;BSC;OP Mainnet;Polygon;Nibiru;Berachain;Base;Linea
+audf-forte,AUDF,Forte AUD,peggedAUD,rwa-backed,0.69383,3520493.8709342806,5,Ethereum;Polygon;Avalanche;Base;Redbelly Network
+asusdf-astherus,asUSDF,Aster Staked USDF,peggedUSD,crypto-backed,1.061,3503153.8505110326,1,BSC
+314,PUSD,Palm USD,peggedUSD,fiat-backed,0.9999269953734929,3475851.020037959,4,Solana;Ethereum;BSC;Tron
+mmev-midas,mMEV,Midas mMEV,peggedUSD,crypto-backed,1.1329134,3355562.127506062,3,Ethereum;Plume;Etherlink
+26,MUSD,mStable USD,peggedUSD,crypto-backed,0.997131,3192165.6082770135,3,Ethereum;Polygon;Gnosis
+eearn-ember,eEARN,Ember Earn,peggedUSD,crypto-backed,,3180735.359027,1,Ethereum
+usdxl-last,USDXL,Last USD,peggedUSD,crypto-backed,0.989119195,3160945.6721786717,2,Hyperliquid L1;HyperEVM
+280,CNHT,Tether CNH,peggedCNY,fiat-backed,0.14718652,3017834.2500378797,2,Tron;Ethereum
+doc-money-on-chain,DOC,Dollar on Chain,peggedUSD,crypto-backed,1.00387329086786,2993728.4959031716,3,Rootstock;Arbitrum;Ethereum
+dusd-fluid,DUSD,DigitalDollar,peggedUSD,fiat-backed,0.9999269953734929,2952108.359116906,1,Arbitrum
+nwisdom-nest,nWISDOM,Nest Wisdom Vault,peggedUSD,rwa-backed,0.965674,2854154.2289906377,2,Ethereum;Plume
+usg-tangent,USG,Tangent USD,peggedUSD,crypto-backed,0.9983833603427799,2823207.1473632134,1,Ethereum
+xo-exodus,XO,XO Cash,peggedUSD,rwa-backed,0.999876,2822867.856172,1,Solana
+brl1-brl1,BRL1,BRL1,peggedBRL,rwa-backed,0.193413,2745507.3916507065,1,Polygon
+djed-coti,DJED,Djed StableCoin,peggedUSD,algorithmic,0.984181,2721224.135767531,1,Cardano
+cdp-enosys,CDP,Enosys Loans CDP,peggedUSD,crypto-backed,1.001,2687360.3726399736,1,Flare
+33,USDP,USDP Stablecoin,peggedUSD,crypto-backed,0.9999269953734929,2638318.7704893746,4,Ethereum;Gnosis;BSC;Fantom
+404,USDM,Monetrix USDM,peggedUSD,crypto-backed,0.998672,2597814.74519,1,Hyperliquid L1
+audm-macropod,AUDM,Macropod,peggedAUD,fiat-backed,0.6939418457470271,2524128.690268774,5,Ethereum;Solana;Redbelly;Redbelly Network;Base
+usdh-hermetica,USDH,Hermetica USDh,peggedUSD,fiat-backed,0.998402,2427082.76538673,1,Stacks
+isc-international-stable-currency,ISC,International Stable Currency,peggedVAR,fiat-backed,2.15,2403874.4303972363,1,Solana
+usdrif-rif,USDRIF,RIF US Dollar,peggedUSD,crypto-backed,1.0018589558315132,2388943.1581213055,1,Rootstock
+nusd-nexus,NUSD,Nexus USD,peggedUSD,crypto-backed,0.9999269953734929,2385159.2306802156,13,Ethereum;Aurora;Avalanche;Boba;BSC;Arbitrum;OP Mainnet;Polygon;Cronos;Fantom;Metis;Harmony;DFK
+28,VAI,Vai,peggedUSD,crypto-backed,0.997658,2382344.2468413697,1,BSC
+usdcx-movement,USDCx,Movement USDCx,peggedUSD,rwa-backed,0.999815,2292223.483427776,1,Movement
+ussd-sonic-labs,USSD,US Sonic Dollar,peggedUSD,crypto-backed,1,2205233.726678332,1,Sonic
+397,beatUSD,Hyperbeat USD,peggedUSD,fiat-backed,,2193161.18043,1,Hyperliquid L1
 236,syUSD,Synnax Stablecoin,peggedUSD,crypto-backed,,2150642.2905625096,1,Sei
-deuro-deuro,DEURO,Decentralized Euro,peggedEUR,crypto-backed,1.16,2137812.5075047733,5,Ethereum;Polygon;Arbitrum;Optimism;Base
-wars-argentine-peso,WARS,Argentine Peso,peggedARS,fiat-backed,0.0006813329537164514,2135031.1634569834,6,Ethereum;World Chain;Base;BSC;Polygon;Gnosis
-usdglo-glo,USDGLO,Glo Dollar,peggedUSD,fiat-backed,0.99959,2099203.7097662035,8,Celo;Ethereum;Stellar;OP Mainnet;Base;Arbitrum;Polygon;VeChain
-xusd-babelfish,XUSD,XUSD,peggedUSD,crypto-backed,0.9895,1980306.1793912475,1,Rootstock
-stusd-stoneyield,stUSD,StoneYield USD,peggedUSD,crypto-backed,0.997622,1961053.7229261114,1,BSC
-scusd-rings,SCUSD,Rings scUSD,peggedUSD,crypto-backed,0.9991934059026321,1915125.515726255,2,Sonic;Ethereum
-152,USDL,Liquid Loans USDL,peggedUSD,crypto-backed,1.0023902179338096,1845277.3472214604,1,PulseChain
-usdrif-rif,USDRIF,RIF US Dollar,peggedUSD,crypto-backed,0.9978540458798503,1833996.6742896275,1,Rootstock
-dllr-sovryn,DLLR,Sovryn Dollar,peggedUSD,crypto-backed,0.986780902907445,1732835.9634398737,1,Rootstock
-40,RAI,Rai Reflex Index,peggedVAR,crypto-backed,3.07,1716826.9922439763,7,Ethereum;OP Mainnet;Polygon;Gnosis;Arbitrum;Avalanche;Loopring
-cadc-cad-coin,CADC,CAD Coin,peggedCAD,fiat-backed,0.727777,1638217.1170194922,4,Base;Ethereum;Polygon;Arbitrum
-cngn-compliant-naira,cNGN,Compliant Naira,peggedNGN,rwa-backed,0.00071956,1611352.1169132846,6,Base;Ethereum;BSC;Polygon;Monad;Solana
-usg-tangent,USG,Tangent USD,peggedUSD,crypto-backed,1.00096,1609146.5276921259,1,Ethereum
-silk-shade-protocol,SILK,SILK,peggedVAR,crypto-backed,1.42,1593180.744025075,1,Secret
-386,USDPT,Western Union USDPT,peggedUSD,fiat-backed,,1500146.15,1,Solana
-eurau-allunity,EURAU,AllUnity EUR,peggedEUR,fiat-backed,1.162553024662462,1495469.3953472725,9,Ethereum;Base;Tempo;OP Mainnet;Polygon;Arbitrum;Optimism;Solana;Stellar
-mxnb-juno,MXNB,MXNB,peggedMXN,rwa-backed,0.05737823383296813,1462931.521446816,4,Ethereum;Polygon;Arbitrum;Avalanche
-brl1-brl1,BRL1,BRL1,peggedBRL,rwa-backed,0.1967881835732302,1452884.283086856,1,Polygon
-83,USDW,USDW,peggedUSD,crypto-backed,0.9998795904917785,1444677.7651353343,1,EthereumPoW
-224,dUSD,dTRINITY USD,peggedUSD,crypto-backed,0.9954019433074229,1437193.0409363653,5,Ethereum;Sonic;Fraxtal;Katana;Ronin
-54,USN,USN,peggedUSD,algorithmic,0.9998795904917785,1418929.0117585456,2,Near;Aurora
-132,USDM,USDM,peggedUSD,fiat-backed,1.003,1402858.3144985328,6,Ethereum;ZKsync Era;Arbitrum;Base;OP Mainnet;Polygon
-vusd-virtue,VUSD,Virtue USD,peggedUSD,crypto-backed,0.990786,1346581.8228971816,0,
-myrc-blox,MYRC,MYRC,peggedMYR,rwa-backed,0.252722,1343267.8857884624,4,Ethereum;Arbitrum;Base;Solana
-krwq-iq,KRWQ,KRWQ,peggedKRW,rwa-backed,0.00068616,1337120.7027114243,6,Ethereum;Base;Polygon;Fraxtal;Codex;Morph
-lvusd-leverup,lvUSD,LeverUp USD,peggedUSD,crypto-backed,0.990234,1324848.399355867,1,Monad
-usdn-smardex,USDN,SMARDEX USDN,peggedUSD,crypto-backed,,1258639.3364031473,1,Ethereum
-usdh-hubble,USDH,USDH,peggedUSD,crypto-backed,0.9963222890133198,1228879.480649754,1,Solana
-dusd-dtrinity,dUSD,dTRINITY dUSD,peggedUSD,crypto-backed,0.995366,1226481.7933108977,4,Ethereum;Fraxtal;Katana;Sonic
-192,USDA,USDA,peggedUSD,crypto-backed,,1222300.0205288734,1,Ethereum
-56,PAR,Parallel,peggedEUR,crypto-backed,1.16257,1221895.7379678327,3,Ethereum;Polygon;Fantom
-fxd-fathom,FXD,Fathom Dollar,peggedUSD,crypto-backed,1.0044441759892997,1206402.187838466,1,XDC
-78,NOTE,Note,peggedUSD,crypto-backed,0.9998795904917785,1194485.053110844,1,Canto
-zkusd-goal3,zkUSD,zkUSD Dollar,peggedUSD,crypto-backed,0.9998795904917785,1178957.5079661373,1,ZKsync Era
-idrx-idrx,IDRX,IDRX,peggedIDR,rwa-backed,0.00005729,1061906.4192743406,8,Polygon;Base;BSC;Klaytn;Gnosis;Etherlink;World Chain;Solana
-167,fETH,Fractional ETH,peggedVAR,crypto-backed,0.9998795904917785,1002765.1979140642,1,Ethereum
-bnusd-balanced,BNUSD,Balanced Dollars,peggedUSD,crypto-backed,0.999537,973623.1156424113,9,Icon;Archway;Base;Avalanche;Arbitrum;Injective;BSC;OP Mainnet;Havah
-390,FUSD,FinChain Dollar,peggedUSD,fiat-backed,0.9998795904917785,934573.5864735169,5,Avalanche;Monad;Sonic;Ethereum;exSat
-srusd-reservoir,srUSD,Savings rUSD,peggedUSD,rwa-backed,1.14,918849.2764467461,2,Ethereum;Berachain
-92,PINA,Meme Dollar,peggedUSD,algorithmic,0.9998795904917785,913360.904443994,1,Ethereum
-107,CZUSD,Czodiac USD,peggedUSD,crypto-backed,0.9998795904917785,906476.3158216582,1,BSC
-ftusd-flying-tulip,ftUSD,Flying Tulip USD,peggedUSD,crypto-backed,0.999988,868459.9588768134,2,Ethereum;Sonic
-xmd-metal-dollar,XMD,Metal Dollar,peggedUSD,crypto-backed,1.009,846035.2311692478,0,
-usp-pareto-credit,USP,Pareto USP,peggedUSD,crypto-backed,0.998253,815058.5698157966,1,Ethereum
-gbpe-monerium,GBPe,Monerium GBP emoney,peggedGBP,rwa-backed,1.35,783651.2623904493,5,Ethereum;Gnosis;Linea;Arbitrum;Base
-ntbill-nest,nTBILL,Nest Treasury Vault,peggedUSD,rwa-backed,1.045094,765639.2648672869,2,Ethereum;Plume
-usdaf-asymmetry,USDaf,Asymmetry USDaf V2,peggedUSD,crypto-backed,0.9891108333451187,736039.3019058653,1,Ethereum
-43,ZUSD,ZUSD,peggedUSD,fiat-backed,0.9998795904917785,726761.0658882842,5,Stellar;Ethereum;Solana;OP Mainnet;Arbitrum
-100,DSU,Digital Standard Unit,peggedUSD,crypto-backed,0.9998795904917785,713438.2681236154,3,Arbitrum;Ethereum;OP Mainnet
-175,PXDC,PXDC Stablecoin,peggedUSD,crypto-backed,0.994666,705379.2656843815,1,PulseChain
-81,USK,USK,peggedUSD,crypto-backed,,678201.627218,2,Kujira;Osmosis
-41,FLOAT,Float Protocol Float,peggedVAR,algorithmic,0.9998795904917785,654029.2347591771,1,Ethereum
+audx-aussie-dollar-token,AUDX,Aussie Dollar Token,peggedAUD,rwa-backed,0.6934777196443758,2051380.4821597016,4,Ethereum;Polygon;Conflux;XDC Network
+mxnb-juno,MXNB,MXNB,peggedMXN,rwa-backed,0.05723367041616664,2034546.8432629616,5,Ethereum;Polygon;Arbitrum;Avalanche;Base
+usdp-parallel,USDp,Parallel USDp,peggedUSD,crypto-backed,0.9995890333407363,1999721.3742664682,24,Hyperliquid L1;Avalanche;Base;Ethereum;Sonic;Ink;OP Mainnet;Arbitrum;Sei;BSC;Polygon;Berachain;TAC;Scroll;Gnosis;Unichain;Plasma;Linea;Hemi;Fraxtal;Plume Mainnet;World Chain;X Layer;Katana
+xnk-kinka,XNK,Kinka,peggedGOLD,rwa-backed,4113.920585797288,1982924.5049192235,2,Ethereum;Cardano
+xusd-babelfish,XUSD,XUSD,peggedUSD,crypto-backed,0.992244,1973495.725549085,1,Rootstock
+stusd-stoneyield,stUSD,StoneYield USD,peggedUSD,crypto-backed,0.999803,1965346.1913513169,1,BSC
+ceur-celo,EURm,Mento Euro,peggedEUR,algorithmic,1.14,1942023.550176522,5,Celo;Monad;Solana;Polygon;Ethereum
+scusd-rings,SCUSD,Rings scUSD,peggedUSD,crypto-backed,1.0001378980537696,1916150.735551949,2,Sonic;Ethereum
+55,EURA,EURA,peggedEUR,crypto-backed,1.14,1836845.2887640113,9,Ethereum;Arbitrum;Polygon;Fantom;OP Mainnet;Solana;Fuse;Aurora;ZKsync Lite
+deuro-deuro,DEURO,Decentralized Euro,peggedEUR,crypto-backed,1.14,1835149.8615814627,5,Ethereum;Polygon;Arbitrum;Optimism;Base
+dllr-sovryn,DLLR,Sovryn Dollar,peggedUSD,crypto-backed,0.998818,1818694.3420265908,1,Rootstock
+cadc-cad-coin,CADC,CAD Coin,peggedCAD,fiat-backed,0.7046724379899063,1722963.8158853394,4,Base;Ethereum;Polygon;Arbitrum
+cngn-compliant-naira,cNGN,Compliant Naira,peggedNGN,rwa-backed,0.0007179734236193746,1669296.5337297295,5,Base;Ethereum;BSC;Polygon;Solana
+iusd-indigo-protocol,IUSD,iUSD,peggedUSD,crypto-backed,1.002,1584228.9667578978,1,Cardano
+usdv-solomon,USDV,Solomon USDv,peggedUSD,crypto-backed,0.999691,1512342.48842448,1,Solana
+224,dUSD,dTRINITY USD,peggedUSD,crypto-backed,0.996862,1449560.1216496387,5,Ethereum;Fraxtal;Sonic;Katana;Ronin
+83,USDW,USDW,peggedUSD,crypto-backed,0.9999269953734929,1444746.2581611176,1,EthereumPoW
+268,YU,YU,peggedUSD,crypto-backed,,1439824.1770721364,4,Ethereum;Solana;Base;BSC
+54,USN,USN,peggedUSD,algorithmic,0.9999269953734929,1418996.2840207291,2,Near;Aurora
+76,USDI,Interest Protocol,peggedUSD,crypto-backed,0.9999269953734929,1414394.527283626,1,Ethereum
+silk-shade-protocol,SILK,SILK,peggedVAR,crypto-backed,1.23,1391650.4883705368,1,Secret
+lvusd-leverup,lvUSD,LeverUp USD,peggedUSD,crypto-backed,0.993016,1379246.455910864,1,Monad
+378,USDso,USD Somnia,peggedUSD,fiat-backed,0.9997402152164465,1351263.4227912428,1,Somnia
+152,USDL,Liquid Loans USDL,peggedUSD,crypto-backed,1.001,1339542.071620589,1,PulseChain
+132,USDM,USDM,peggedUSD,fiat-backed,0.997592,1337165.032496776,6,Ethereum;Arbitrum;Base;OP Mainnet;Polygon;ZKsync Era
+ntbill-nest,nTBILL,Nest Treasury Vault,peggedUSD,rwa-backed,1.050315,1319817.1546710818,3,Ethereum;Plume;Arbitrum
+myrc-blox,MYRC,MYRC,peggedMYR,rwa-backed,0.24420807397053565,1296902.0434621854,4,Ethereum;Arbitrum;Base;Solana
+56,PAR,Parallel,peggedEUR,crypto-backed,1.21,1268300.4070487744,3,Ethereum;Polygon;Fantom
+dusd-dtrinity,dUSD,dTRINITY dUSD,peggedUSD,crypto-backed,0.9968615049753287,1238541.1559301796,4,Ethereum;Fraxtal;Katana;Sonic
+krwq-iq,KRWQ,KRWQ,peggedKRW,rwa-backed,0.00067452,1235309.725172029,6,Ethereum;Base;Polygon;Fraxtal;Codex;Morph
+eurau-allunity,EURAU,AllUnity EUR,peggedEUR,fiat-backed,1.1420858359175072,1195832.2401821208,10,Ethereum;Base;Tempo;OP Mainnet;Polygon;Arbitrum;Optimism;Solana;Stellar;BSC
+78,NOTE,Note,peggedUSD,crypto-backed,0.9999269953734929,1193173.5388388152,1,Canto
+zkusd-goal3,zkUSD,zkUSD Dollar,peggedUSD,crypto-backed,0.9999269953734929,1179013.4030376468,1,ZKsync Era
+53,SEUR,sEUR,peggedEUR,crypto-backed,1.140576,1137903.986611771,2,Ethereum;OP Mainnet
+usdglo-glo,USDGLO,Glo Dollar,peggedUSD,fiat-backed,0.9999325240104295,1132945.4589096115,8,Ethereum;Stellar;Celo;OP Mainnet;Base;Arbitrum;Polygon;VeChain
+usdh-hubble,USDH,USDH,peggedUSD,crypto-backed,0.992704,1126345.2672342595,1,Solana
+aeur-anchored-coins,AEUR,Anchored Coins AEUR,peggedEUR,fiat-backed,1.117990454919679,1117775.589919203,2,BSC;Ethereum
+40,RAI,Rai Reflex Index,peggedVAR,crypto-backed,1.99,1082748.4647394284,7,Ethereum;OP Mainnet;Polygon;Arbitrum;Gnosis;Avalanche;Loopring
+veur-vnx,VEUR,VNX EURO,peggedEUR,fiat-backed,,1065870.44,13,Tezos;Base;Fraxtal;Q Protocol;Ethereum;Stellar;Avalanche;Polygon;Solana;Celo;Arbitrum;XRP Ledger;Internet Computer
+idrx-idrx,IDRX,IDRX,peggedIDR,rwa-backed,0.000056279999999999996,1034928.4441140427,8,Polygon;Base;BSC;Klaytn;Gnosis;Etherlink;World Chain;Solana
+qcad-stablecorp,QCAD,Stablecorp QCAD,peggedCAD,rwa-backed,0.7045,1022229.5,2,Ethereum;Base
+susd-solayer,sUSD,Solayer USD,peggedUSD,fiat-backed,1.11,984712.5678529951,1,Solana
+usdpt-western-union,USDPT,Western Union USDPT,peggedUSD,fiat-backed,0.999424,971591.15,1,Solana
+fusd-finchain,FUSD,FinChain Dollar,peggedUSD,fiat-backed,0.9999269953734929,939270.5546932099,5,Avalanche;Monad;Sonic;Ethereum;exSat
+bnusd-balanced,BNUSD,Balanced Dollars,peggedUSD,crypto-backed,0.999124,937633.3431536349,9,Icon;Archway;Base;Avalanche;Arbitrum;Injective;BSC;OP Mainnet;Havah
+usr-resolv,USR,Resolv USD,peggedUSD,crypto-backed,,924550.0257590824,6,Ethereum;Base;BSC;Hyperliquid L1;Berachain;Soneium
+107,CZUSD,Czodiac USD,peggedUSD,crypto-backed,0.9999269953734929,919956.9935811625,1,BSC
+92,PINA,Meme Dollar,peggedUSD,algorithmic,0.9999269953734929,913404.2074237223,1,Ethereum
+srusd-reservoir,srUSD,Savings rUSD,peggedUSD,rwa-backed,1.1500061570912523,911758.2890519244,2,Ethereum;Berachain
+192,USDA,USDA,peggedUSD,crypto-backed,,902663.3647466673,1,Ethereum
+xmd-metal-dollar,XMD,Metal Dollar,peggedUSD,crypto-backed,0.989776,828007.5752932911,0,
+cadd-cad-digital,CADD,CAD Digital,peggedCAD,fiat-backed,0.703334,822509.3463877891,2,Base;Ethereum
+usp-pareto-credit,USP,Pareto USP,peggedUSD,crypto-backed,1,758368.5225979175,1,Ethereum
+43,ZUSD,ZUSD,peggedUSD,fiat-backed,0.9999269953734929,726795.5220594979,5,Stellar;Ethereum;Solana;OP Mainnet;Arbitrum
+dusd-alto,DUSD,Alto DUSD,peggedUSD,crypto-backed,0.9987026628458069,711522.5414572137,1,Ethereum
+fxd-fathom,FXD,Fathom Dollar,peggedUSD,crypto-backed,0.898929,707442.9828096376,1,XDC
+81,USK,USK,peggedUSD,crypto-backed,,675791.023143,2,Kujira;Osmosis
+usdn-smardex,USDN,SMARDEX USDN,peggedUSD,crypto-backed,1.00707186519671,656491.4544708403,1,Ethereum
+vusd-virtue,VUSD,Virtue USD,peggedUSD,crypto-backed,1.006,656453.2595846896,2,IOTA;IOTA EVM
+41,FLOAT,Float Protocol Float,peggedVAR,algorithmic,0.9999269953734929,654060.242671336,1,Ethereum
+167,fETH,Fractional ETH,peggedVAR,crypto-backed,0.9999269953734929,653925.9300230087,1,Ethereum
+125,eUSD(v2),eUSD (V2),peggedUSD,crypto-backed,1.0693898112101046,645487.7346966598,1,Ethereum
 341,PUSD,Pleasing USD,peggedUSD,crypto-backed,,644376.430278012,1,Arbitrum
-366,DUSD,Alto DUSD,peggedUSD,crypto-backed,1.0000015009428607,641659.1439615823,1,Ethereum
-dusd-alto,DUSD,Alto DUSD,peggedUSD,crypto-backed,0.999911,641601.0687017419,1,Ethereum
-hlusd-hela,HLUSD,HeLa USD,peggedUSD,rwa-backed,0.999829,631823.1155660886,0,
-32,USDS,Sperax USD,peggedUSD,crypto-backed,0.99948,619477.4716351783,1,Arbitrum
-46,USD+,USD+,peggedUSD,crypto-backed,,605586.809375,9,Base;Arbitrum;Avalanche;BSC;OP Mainnet;ZKsync Era;Linea;Polygon;Blast
-125,eUSD(v2),eUSD (V2),peggedUSD,crypto-backed,,603603.7822038309,1,Ethereum
-293,BNBUSD,Sigma Money bnbUSD,peggedUSD,crypto-backed,0.9993676874707331,600630.278601432,1,BSC
-211,THUSD,Threshold USD,peggedUSD,crypto-backed,,595272.173279345,1,Ethereum
-171,HAI,Lets Get HAI,peggedUSD,crypto-backed,1.2832259022801304,592964.5034509252,1,OP Mainnet
-285,GGUSD,Good Game US Dollar,peggedUSD,crypto-backed,0.9995006052986156,548073.5406187134,3,Polygon;Solana;BSC
-198,aUSD,Stable Jack aUSD,peggedUSD,crypto-backed,0.9998795904917785,537547.0641595407,1,Avalanche
-cetes-etherfuse,CETES,Etherfuse CETES,peggedMXN,rwa-backed,0.067351,536788.8933388299,4,Solana;Base;Polygon;Stellar
-229,LVLUSD,Level USD,peggedUSD,crypto-backed,0.9984835333572495,534990.4956891178,1,Ethereum
-nect-beraborrow,NECT,Nectar,peggedUSD,crypto-backed,0.948139,512239.2808936434,1,Berachain
-weusd-picwe,WEUSD,WEUSD,peggedUSD,crypto-backed,0.98981289,504233.678564,4,Movement;BSC;Arbitrum;Base
-378,USDso,USD Somnia,peggedUSD,fiat-backed,,501047.263056,1,Somnia
-27,USDK,USDK,peggedUSD,fiat-backed,0.9998795904917785,488652.1545488276,4,Ethereum;OKTChain;Polygon;Solana
-qcad-stablecorp,QCAD,Stablecorp QCAD,peggedCAD,rwa-backed,0.7276,473667.6,2,Ethereum;Base
-143,USDV,Verified USD,peggedUSD,fiat-backed,,470400.68634699995,7,Ethereum;BSC;Arbitrum;Avalanche;Polygon;OP Mainnet;Viction
-333,mantraUSD,mantraUSD,peggedUSD,crypto-backed,0.9998795904917785,456407.22939996514,1,MANTRA
-cjpy-yamato,CJPY,CJPY,peggedJPY,crypto-backed,0.00476055,453795.60731531796,1,Ethereum
-58,3USD,3USD,peggedUSD,crypto-backed,0.9998795904917785,452806.40906498797,1,Karura
-72,KUSD,Kolibri USD,peggedUSD,crypto-backed,0.942611,446138.49352147116,1,Tezos
-gbpm-mento,GBPm,Mento British Pound,peggedGBP,crypto-backed,1.3446829006168945,424310.4633570663,2,Monad;Celo
-180,BREAD,Bread,peggedUSD,crypto-backed,0.9991462123736943,411678.3675939134,1,Gnosis
-usdr-ring,USDR,Ring USD,peggedUSD,crypto-backed,0.999552,402183.21598897123,1,Ethereum
-188,USC,Orby USC,peggedUSD,crypto-backed,1.002,393151.7800214502,1,Cronos
-zsd-zephyr-protocol,ZSD,Zephyr Stable Dollar,peggedUSD,crypto-backed,0.9954222047780339,380691.07236910745,0,
-jusd-juicedollar,JUSD,Juice Dollar,peggedUSD,crypto-backed,0.999537,375786.7612731935,1,Citrea Mainnet
-116,GRAI,GRAI,peggedUSD,crypto-backed,0.885104,372738.5239670415,7,Ethereum;ZKsync Era;Arbitrum;Linea;Mantle;OP Mainnet;Polygon zkEVM
-49,EURT,Euro Tether,peggedEUR,fiat-backed,,330573.5160144564,2,Ethereum;Polygon
-217,rUSD,Reservoir Stablecoin,peggedUSD,fiat-backed,0.997461,323384.2652762419,17,Ethereum;Berachain;Base;Katana;World Chain;BSC;Avalanche;Arbitrum;Unichain;Linea;Plume Mainnet;Monad;Solana;Hyperliquid L1;Sonic;Sei;Tempo
-206,CASH,Opus CASH,peggedUSD,crypto-backed,1.0000931440619028,311330.7155437605,1,Starknet
-227,BOLD,Legacy BOLD,peggedUSD,crypto-backed,0.9998795904917785,308088.93968965823,6,Ethereum;OP Mainnet;Base;Arbitrum;Avalanche;Scroll
-181,zunUSD,Zunami USD,peggedUSD,crypto-backed,0.9998795904917785,303323.31186646875,1,Ethereum
-64,UXD,UXD Stablecoin,peggedUSD,algorithmic,1.00406334952287,298728.6063935448,1,Solana
-174,rUSD,rUSD,peggedUSD,crypto-backed,0.9949106655440603,298460.94458557566,1,Ethereum
-zys-zephyr-protocol,ZYS,Zephyr Yield Share,peggedUSD,crypto-backed,1.9091,289223.1962064408,0,
-191,bitUSD,bitSmiley USD,peggedUSD,crypto-backed,0.9998795904917785,253472.41438155517,1,Bitlayer
-126,mkUSD,mkUSD,peggedUSD,crypto-backed,1.003,244406.36152603742,1,Ethereum
-brlm-mento,BRLm,Mento Real,peggedREAL,crypto-backed,0.196391,240008.32838698608,1,Celo
-112,USDT+,USDT+,peggedUSD,crypto-backed,1.004,239255.74398741187,3,Arbitrum;BSC;Linea
-164,USDCB,USDCB,peggedUSD,fiat-backed,0.9998795904917785,225172.88377874854,1,Rootstock
-73,USDTZ,USDtez,peggedUSD,fiat-backed,0.909279,223638.47587347362,1,Tezos
-48,BAI,BAI Stablecoin,peggedUSD,crypto-backed,0.9694415755225833,222675.4504877442,1,Astar
-eur0-usual,EUR0,Usual EUR,peggedEUR,rwa-backed,1.162362763968466,221997.45878599244,1,Ethereum
-ist-agoric,IST,Inter Stable Token,peggedUSD,crypto-backed,1.003,221473.1366450998,2,Agoric;Osmosis
-59,SIGUSD,SigmaUSD,peggedUSD,algorithmic,0.9998795904917785,207393.29486811315,1,Ergo
-25,RSV,Reserve,peggedUSD,crypto-backed,0.9998795904917785,206077.8604141264,2,Ethereum;Gnosis
-45,aSEED,aUSD Seed,peggedUSD,crypto-backed,,201397.02674493135,2,Karura;Acala
-38,STBL,STBL,peggedUSD,crypto-backed,0.847535,199915.893803,1,Algorand
-wbrl-ripio,WBRL,Brazilian Real,peggedREAL,fiat-backed,0.1984829845745418,189763.59554860395,6,World Chain;Ethereum;Base;BSC;Polygon;Gnosis
-311,IAUSD,iAUSD,peggedUSD,crypto-backed,0.9998795904917785,187988.01629554332,1,Solana
-hchf-hedera-swiss-franc,HCHF,Hedera Swiss Franc,peggedCHF,crypto-backed,1.27,176300.04694444017,1,Hedera
-emxn-telcoin,eMXN,Telcoin MXN,peggedMXN,rwa-backed,0.06272734480302075,175667.13623721295,1,Polygon
-68,USDL,USDLemma,peggedUSD,algorithmic,0.9998795904917785,175094.73537201734,2,Arbitrum;OP Mainnet
-130,SVUSD,Savvy USD,peggedUSD,fiat-backed,0.9998795904917785,173751.37715886143,1,Arbitrum
-vgbp-vnx,VGBP,VNX British Pound,peggedGBP,fiat-backed,1.365293087847489,172840.07689651268,4,Solana;Base;Celo;Ethereum
-34,USDB,USD Balance,peggedUSD,algorithmic,0.9998795904917785,147511.64901098545,1,Fantom
-248,USDFC,USDFC,peggedUSD,crypto-backed,0.9863450572225458,146846.7993854805,1,Filecoin
-337,USE,USE,peggedUSD,algorithmic,0.9998795904917785,146587.22237909838,1,Ergo
-kesm-mento,KESm,Mento Kenyan Shilling,peggedKES,crypto-backed,0.007717396605407418,145097.02745182946,1,Celo
-usdq-quill,USDQ,Quill USD,peggedUSD,crypto-backed,1,132307.89839452127,1,Scroll
-104,DUSD,Davos Protocol,peggedUSD,crypto-backed,,130269.1749371778,5,Polygon;Ethereum;BSC;Arbitrum;OP Mainnet
-ebusd-ebisu,EBUSD,EBUSD,peggedUSD,crypto-backed,0.9979367137474362,128099.55349524422,2,Ethereum;Plasma
-euroe-membrane,EUROe,EUROe Stablecoin,peggedEUR,fiat-backed,0.9998795904917785,122645.09253134471,7,Solana;Polygon;Ethereum;Arbitrum;Avalanche;OP Mainnet;Concordium
-144,HYUSD,High Yield USD,peggedUSD,algorithmic,0.9998795904917785,116561.39496311198,2,Base;Ethereum
-phpm-mento,PHPm,Mento Philippine Peso,peggedPHP,crypto-backed,0.01620920543419551,112412.60426892951,1,Celo
-124,peUSD,peg-eUSD,peggedUSD,crypto-backed,0.9998795904917785,108913.81764012504,2,Ethereum;Arbitrum
-jpym-mento,JPYm,Mento Japanese Yen,peggedJPY,crypto-backed,0.00630791,104059.8621313449,1,Celo
-233,USDS,TheStandard USD,peggedUSD,crypto-backed,1,100771.7492615901,1,Arbitrum
-37,USDJ,USDJ,peggedUSD,crypto-backed,,100712.78215106155,1,Tron
-audm-mento,AUDm,Mento Australian Dollar,peggedAUD,crypto-backed,0.7157218336823479,99340.40196771939,1,Celo
-usnd-nerite,USND,Nerite USND,peggedUSD,crypto-backed,0.997658,97667.46896062489,1,Arbitrum
-149,USDS,Sable Coin,peggedUSD,crypto-backed,0.9998795904917785,97248.82143922988,2,BSC;Base
-109,EUSD,eUSD,peggedUSD,crypto-backed,0.99792906,96871.09861304623,1,Ethereum
-260,VUSD,VDollar Finance,peggedUSD,crypto-backed,0.9998795904917785,96001.42056641667,3,Ethereum;Hemi;Base
-chfm-mento,CHFm,Mento Swiss Franc,peggedCHF,crypto-backed,1.2721618054041786,89505.3084886189,1,Celo
-eurot-token-teknoloji,EUROT,Euro Token,peggedEUR,rwa-backed,1.16,87272.26015784805,2,Avalanche;Polygon
-201,HEXDC,HEX Dollar Coin,peggedUSD,crypto-backed,1.0424288148527665,86215.12201778374,1,PulseChain
-123,STAR,STAR,peggedUSD,crypto-backed,,85444.44496330942,3,Base;Polygon;Arbitrum
-71,VST,Vesta Stable,peggedUSD,crypto-backed,0.9998795904917785,84370.26062784162,1,Arbitrum
-142,HYDT,HYDT,peggedUSD,algorithmic,0.932687,83321.21980669528,1,BSC
-184,WEN,Magma Wen,peggedUSD,crypto-backed,0.9998795904917785,83248.54902294926,1,IoTeX
-mxne-real-mxn,MXNe,Real MXN,peggedMXN,rwa-backed,0.057937,82791.748466427,3,Base;Solana;Stellar
-82,ARUSD,arUSD,peggedUSD,crypto-backed,0.9998795904917785,78362.4246153628,1,Avalanche
-jpyt-dephaser,JPYT,Dephaser JPY,peggedJPY,crypto-backed,0.00622854,77757.69511322904,2,Optimism;Base
-39,VOLT,VOLT Protocol,peggedVAR,algorithmic,0.9998795904917785,76842.95052659229,2,Arbitrum;Ethereum
-cadm-mento,CADm,Mento Canadian Dollar,peggedCAD,crypto-backed,0.726488,71045.50464905688,1,Celo
-148,MyUSD,Mynth MyUSD,peggedUSD,algorithmic,0.9998795904917785,68563.06243119268,1,Cardano
-copm-mento,COPm,Mento Colombian Peso,peggedCOP,crypto-backed,0.00026242,66858.42495040114,1,Celo
-99,CASH,Stabl.fi Cash,peggedUSD,crypto-backed,0.8721952345450175,61509.032059371726,1,Polygon
-wclp-ripio,WCLP,Chilean Peso,peggedCLP,fiat-backed,0.0011674518492049975,59300.71668036785,6,World Chain;Base;Ethereum;Polygon;BSC;Gnosis
-243,csUSDL,Coinshift,peggedUSD,crypto-backed,1.056146890652412,58583.85561983676,1,Ethereum
-369,NGNm,Mento Nigerian Naira,peggedNGN,crypto-backed,0.0007311576066816307,56621.78386252078,1,Celo
-wmxn-ripio,WMXN,Mexican Peso,peggedMXN,fiat-backed,0.05827577199196907,56111.43321013542,6,World Chain;BSC;Gnosis;Polygon;Ethereum;Base
-wcop-ripio,WCOP,Colombian Peso,peggedCOP,fiat-backed,0.00027570838101935235,54148.75487272317,6,World Chain;Ethereum;Base;Polygon;BSC;Gnosis
-357,BYC,Bytecash,peggedUSD,crypto-backed,0.9998795904917785,53983.13113496182,1,Chia
-105,DCHF,DeFi Franc,peggedVAR,crypto-backed,0.9998795904917785,52575.68925588804,1,Ethereum
-117,ERN,Ethos Reserve Note,peggedUSD,crypto-backed,0.8992145905617606,51182.790348775,1,OP Mainnet
-294,USDA+,NonDollar,peggedUSD,crypto-backed,0.9998795904917785,49891.24128873911,2,Base;OP Mainnet
+gldt-gold-dao,GLDT,Gold Token,peggedGOLD,rwa-backed,1.079970988189591,642227.2085714098,4,Ethereum;Base;Arbitrum;Internet Computer
+175,PXDC,PXDC Stablecoin,peggedUSD,crypto-backed,1.008,632127.0269739389,1,PulseChain
+392,EURW,Newrails Euro,peggedEUR,fiat-backed,1.14,591296.0699521337,1,Monad
+wbrl-ripio,WBRL,Brazilian Real,peggedREAL,fiat-backed,0.19220152187059483,564392.5802662593,6,Ethereum;World Chain;Base;BSC;Polygon;Gnosis
+hlusd-hela,HLUSD,HeLa USD,peggedUSD,rwa-backed,0.999397,563620.2323981702,0,
+46,USD+,USD+,peggedUSD,crypto-backed,,561378.591998,9,Base;Arbitrum;Avalanche;OP Mainnet;BSC;ZKsync Era;Linea;Polygon;Blast
+285,GGUSD,Good Game US Dollar,peggedUSD,crypto-backed,0.999108,542673.263594375,3,Polygon;Solana;BSC
+211,THUSD,Threshold USD,peggedUSD,crypto-backed,,539902.4956891537,1,Ethereum
+72,KUSD,Kolibri USD,peggedUSD,crypto-backed,1.15,533370.2238862236,1,Tezos
+32,USDS,Sperax USD,peggedUSD,crypto-backed,0.9991685,517682.0285281368,1,Arbitrum
+229,LVLUSD,Level USD,peggedUSD,crypto-backed,0.9991718406390698,515065.3561373104,1,Ethereum
+weusd-picwe,WEUSD,WEUSD,peggedUSD,crypto-backed,0.98981685,502401.397399,4,Movement;BSC;Arbitrum;Base
+27,USDK,USDK,peggedUSD,fiat-backed,0.9999269953734929,488675.32183597516,4,Ethereum;OKTChain;Polygon;Solana
+gbpe-monerium,GBPe,Monerium GBP emoney,peggedGBP,rwa-backed,1.34,483516.783383184,6,Ethereum;Gnosis;Linea;Arbitrum;Base;Polygon
+171,HAI,Lets Get HAI,peggedUSD,crypto-backed,,477487.828357411,1,OP Mainnet
+198,aUSD,Stable Jack aUSD,peggedUSD,crypto-backed,0.9999269953734929,472987.60827946634,1,Avalanche
+143,USDV,Verified USD,peggedUSD,fiat-backed,,470400.686347,7,Ethereum;BSC;Arbitrum;Avalanche;Polygon;OP Mainnet;Viction
+58,3USD,3USD,peggedUSD,crypto-backed,0.9999269953734929,452872.93044187553,1,Karura
+333,mantraUSD,mantraUSD,peggedUSD,crypto-backed,0.999476,434672.11030310387,1,MANTRA
+sdusd-dtrinity,sdUSD,dTRINITY Staked dUSD,peggedUSD,crypto-backed,1.0095931441743076,419570.84867773234,2,Ethereum;Fraxtal
+293,BNBUSD,Sigma Money bnbUSD,peggedUSD,crypto-backed,0.9997570520225313,413934.17788555595,1,BSC
+180,BREAD,Bread,peggedUSD,crypto-backed,0.999444,410928.76765023964,1,Gnosis
+usdr-ring,USDR,Ring USD,peggedUSD,crypto-backed,0.9993474002230696,403217.3382465329,1,Ethereum
+cjpy-yamato,CJPY,CJPY,peggedJPY,crypto-backed,0.0043635366371138785,389491.1644562266,1,Ethereum
+jusd-juicedollar,JUSD,Juice Dollar,peggedUSD,crypto-backed,,375577.89730096125,1,Citrea Mainnet
+zsd-zephyr-protocol,ZSD,Zephyr Stable Dollar,peggedUSD,crypto-backed,0.982944,366464.4691841679,0,
+gbpm-mento,GBPm,Mento British Pound,peggedGBP,crypto-backed,1.3358165710197676,349834.36555856006,2,Monad;Celo
+usdr-stablr,USDR,StablR USD,peggedUSD,fiat-backed,,321867.43152460037,1,Ethereum
+206,CASH,Opus CASH,peggedUSD,crypto-backed,0.998292,321815.9904276603,1,Starknet
+nect-beraborrow,NECT,Nectar,peggedUSD,crypto-backed,0.9998430646,311162.98377330904,1,Berachain
+rusd-reservoir,rUSD,Reservoir Stablecoin,peggedUSD,fiat-backed,1.0006402626010618,308219.75945883343,17,Berachain;Ethereum;Base;Katana;World Chain;BSC;Avalanche;Arbitrum;Unichain;Linea;Plume Mainnet;Monad;Solana;Hyperliquid L1;Sonic;Sei;Tempo
+usdaf-asymmetry,USDaf,Asymmetry USDaf V2,peggedUSD,crypto-backed,0.9897468381148784,305426.70594891295,1,Ethereum
+181,zunUSD,Zunami USD,peggedUSD,crypto-backed,0.9999269953734929,303337.6926037665,1,Ethereum
+zys-zephyr-protocol,ZYS,Zephyr Yield Share,peggedUSD,crypto-backed,1.9353,301814.64945471595,0,
+64,UXD,UXD Stablecoin,peggedUSD,algorithmic,1.003,298195.27309052215,1,Solana
+174,rUSD,rUSD,peggedUSD,crypto-backed,0.997492134548053,258931.64879986303,1,Ethereum
+191,bitUSD,bitSmiley USD,peggedUSD,crypto-backed,0.9999269953734929,253484.43165837118,1,Bitlayer
+126,mkUSD,mkUSD,peggedUSD,crypto-backed,0.998187,244835.1548132662,1,Ethereum
+112,USDT+,USDT+,peggedUSD,crypto-backed,1.009,236992.33420527328,3,Arbitrum;BSC;Linea
+48,BAI,BAI Stablecoin,peggedUSD,crypto-backed,1.006,231039.62146923898,1,Astar
+227,BOLD,Legacy BOLD,peggedUSD,crypto-backed,0.9999269953734929,228790.80252725945,6,Ethereum;OP Mainnet;Base;Arbitrum;Avalanche;Scroll
+164,USDCB,USDCB,peggedUSD,fiat-backed,0.9999269953734929,225183.55935811062,1,Rootstock
+eur0-usual,EUR0,Usual EUR,peggedEUR,rwa-backed,1.141211130673858,218448.60314528056,1,Ethereum
+73,USDTZ,USDtez,peggedUSD,fiat-backed,0.958304,217842.25011626756,1,Tezos
+brlm-mento,BRLm,Mento Real,peggedREAL,crypto-backed,0.193691,216204.17239744012,1,Celo
+ist-agoric,IST,Inter Stable Token,peggedUSD,crypto-backed,0.937728,208189.986939077,2,Agoric;Osmosis
+25,RSV,Reserve,peggedUSD,crypto-backed,0.9999269953734929,206087.63068715704,2,Ethereum;Gnosis
+38,STBL,STBL,peggedUSD,crypto-backed,0.780351,199915.893803,1,Algorand
+59,SIGUSD,SigmaUSD,peggedUSD,algorithmic,0.9999269953734929,192435.9702581686,1,Ergo
+eurot-token-teknoloji,EUROT,Euro Token,peggedEUR,rwa-backed,1.141862522485782,182989.38973680144,2,Avalanche;Polygon
+68,USDL,USDLemma,peggedUSD,algorithmic,0.9999269953734929,175103.0367167973,2,Arbitrum;OP Mainnet
+130,SVUSD,Savvy USD,peggedUSD,fiat-backed,0.9999269953734929,173759.6148142354,1,Arbitrum
+emxn-telcoin,eMXN,Telcoin MXN,peggedMXN,rwa-backed,0.057135,171201.81540431964,1,Polygon
+311,IAUSD,iAUSD,peggedUSD,crypto-backed,0.9999269953734929,169892.6167914262,1,Solana
+vgbp-vnx,VGBP,VNX British Pound,peggedGBP,fiat-backed,1.3379086258324349,169142.2636534634,4,Solana;Celo;Base;Ethereum
+kesm-mento,KESm,Mento Kenyan Shilling,peggedKES,crypto-backed,0.00769449,163819.4123779004,1,Celo
+116,GRAI,GRAI,peggedUSD,crypto-backed,,162196.0518820491,7,Ethereum;Arbitrum;Linea;Mantle;OP Mainnet;Polygon zkEVM;ZKsync Era
+248,USDFC,USDFC,peggedUSD,crypto-backed,1.008,150319.7208150277,1,Filecoin
+34,USDB,USD Balance,peggedUSD,algorithmic,0.9999269953734929,147518.64262535598,1,Fantom
+usdq-quill,USDQ,Quill USD,peggedUSD,crypto-backed,1,132089.68713056666,1,Scroll
+104,DUSD,Davos Protocol,peggedUSD,crypto-backed,,130308.7434005128,5,Polygon;Ethereum;BSC;Arbitrum;OP Mainnet
+337,USE,USE,peggedUSD,algorithmic,0.9999269953734929,128661.10645820502,1,Ergo
+45,aSEED,aUSD Seed,peggedUSD,crypto-backed,,125743.75444329553,2,Karura;Acala
+euroe-membrane,EUROe,EUROe Stablecoin,peggedEUR,fiat-backed,0.9999269953734929,122649.52311464386,7,Solana;Polygon;Ethereum;Arbitrum;Avalanche;OP Mainnet;Concordium
+chfm-mento,CHFm,Mento Swiss Franc,peggedCHF,crypto-backed,1.24,116541.86292976886,2,Celo;Monad
+144,HYUSD,High Yield USD,peggedUSD,algorithmic,0.9999269953734929,115069.56144747332,2,Base;Ethereum
+phpm-mento,PHPm,Mento Philippine Peso,peggedPHP,crypto-backed,0.01626442352666332,107688.43334482524,1,Celo
+124,peUSD,peg-eUSD,peggedUSD,crypto-backed,0.9999269953734929,107209.14985356871,2,Ethereum;Arbitrum
+188,USC,Orby USC,peggedUSD,crypto-backed,1.011,105900.75493152131,1,Cronos
+233,USDS,TheStandard USD,peggedUSD,crypto-backed,0.99944,100771.7492615901,1,Arbitrum
+149,USDS,Sable Coin,peggedUSD,crypto-backed,0.99944,97253.43206327005,2,BSC;Base
+109,EUSD,eUSD,peggedUSD,crypto-backed,,94047.29563720053,1,Ethereum
+394,invUSD,invUSD Stablecoin,peggedUSD,crypto-backed,0.9997969624940851,91506.56707417795,1,Ethereum
+184,WEN,Magma Wen,peggedUSD,crypto-backed,0.9999269953734929,83252.4958858084,1,IoTeX
+mxne-real-mxn,MXNe,Real MXN,peggedMXN,rwa-backed,0.049099917378182416,82245.6160558739,3,Base;Solana;Stellar
+37,USDJ,USDJ,peggedUSD,crypto-backed,,81205.74180416689,1,Tron
+142,HYDT,HYDT,peggedUSD,algorithmic,0.878346,78630.75473299416,1,BSC
+82,ARUSD,arUSD,peggedUSD,crypto-backed,0.9999269953734929,78366.13982417902,1,Avalanche
+wclp-ripio,WCLP,Chilean Peso,peggedCLP,fiat-backed,0.001203563332647,77448.28408152655,6,World Chain;Gnosis;Polygon;BSC;Base;Ethereum
+39,VOLT,VOLT Protocol,peggedVAR,algorithmic,0.9999269953734929,76846.59369624486,2,Arbitrum;Ethereum
+71,VST,Vesta Stable,peggedUSD,crypto-backed,0.9999269953734929,74747.25531212152,1,Arbitrum
+99,CASH,Stabl.fi Cash,peggedUSD,crypto-backed,,70301.65550154046,1,Polygon
+148,MyUSD,Mynth MyUSD,peggedUSD,algorithmic,0.9999269953734929,68566.3130464622,1,Cardano
+123,STAR,STAR,peggedUSD,crypto-backed,0.959534,67263.10448228956,3,Polygon;Base;Arbitrum
+audm-mento,AUDm,Mento Australian Dollar,peggedAUD,crypto-backed,0.693386,63756.03237837563,1,Celo
+374,phUSD,Phoenix USD,peggedUSD,crypto-backed,,62923.1013638517,1,Ethereum
+wcop-ripio,WCOP,Colombian Peso,peggedCOP,fiat-backed,0.00030294658964973,59261.6877921423,6,World Chain;Ethereum;BSC;Gnosis;Base;Polygon
+usdu-usdu-finance,USDU,USDU Finance,peggedUSD,crypto-backed,0.998443,57617.507652559856,1,Ethereum
+wmxn-ripio,WMXN,Mexican Peso,peggedMXN,fiat-backed,0.058022571464961994,55879.626983152666,6,World Chain;Base;BSC;Polygon;Gnosis;Ethereum
+jpyt-dephaser,JPYT,Dephaser JPY,peggedJPY,crypto-backed,0.006123036233891199,53498.95604681678,2,Optimism;Base
+243,csUSDL,Coinshift,peggedUSD,crypto-backed,1.0560882861512348,53211.19302039237,1,Ethereum
+357,BYC,Bytecash,peggedUSD,crypto-backed,0.9999269953734929,52690.12909596295,1,Chia
+260,VUSD,VDollar Finance,peggedUSD,crypto-backed,0.9999269953734929,52633.66769794821,3,Ethereum;Hemi;Base
+105,DCHF,DeFi Franc,peggedVAR,crypto-backed,0.9999269953734929,52578.181900356365,1,Ethereum
+usnd-nerite,USND,Nerite USND,peggedUSD,crypto-backed,0.994208,51385.04743116278,1,Arbitrum
+201,HEXDC,HEX Dollar Coin,peggedUSD,crypto-backed,1.044,50823.37171948567,1,PulseChain
+117,ERN,Ethos Reserve Note,peggedUSD,crypto-backed,0.959142,50810.2973998903,1,OP Mainnet
 264,USDE,XBANKING USDE,peggedUSD,crypto-backed,,49147.574013545,1,Solana
-zarm-mento,ZARm,Mento South African Rand,peggedZAR,crypto-backed,0.059938,49095.78950555634,1,Celo
-91,IBEUR,Iron Bank EURO,peggedEUR,crypto-backed,,39399.92981845051,1,Ethereum
-90,RUSD,Redeemable USD,peggedUSD,fiat-backed,0.9998795904917785,38697.05944498768,1,Cardano
-212,MOD,Move Dollar,peggedUSD,crypto-backed,,38473.47164390667,1,Aptos
-57,USH,Hedge USD,peggedUSD,crypto-backed,,38371.392895529,1,Solana
-96,CUSD,Coin98 Dollar,peggedUSD,crypto-backed,,37511.37696435151,3,BSC;Solana;Ethereum
-wpen-ripio,WPEN,Peruvian Sol,peggedPEN,fiat-backed,0.304023,37272.61268308233,6,World Chain;Polygon;BSC;Ethereum;Gnosis;Base
-xofm-mento,XOFm,Mento West African CFA Franc,peggedXOF,crypto-backed,0.0017732719321318568,34022.9293237915,1,Celo
-364,WAD,Whale Asset Dollar,peggedUSD,crypto-backed,0.9998795904917785,33785.95329482604,2,Voi Network;Algorand
-276,USH,Hyperstable USD,peggedUSD,crypto-backed,1.088,32607.247632544822,1,Hyperliquid L1
-323,KEI,KEI Stablecoin,peggedUSD,crypto-backed,1.0082270679910759,31897.46026777246,1,Hyperliquid L1
-74,MONEY,Moremoney USD,peggedUSD,crypto-backed,0.8561529418210354,29583.669392424385,1,Avalanche
-222,PAUSD,Parallel USD,peggedUSD,crypto-backed,0.9998795904917785,29319.431377872723,2,Ethereum;Polygon
-374,phUSD,Phoenix USD,peggedUSD,crypto-backed,,28736.652442395145,1,Ethereum
-114,clevUSD,CLever USD,peggedUSD,crypto-backed,0.9998795904917785,27113.97795111967,1,Ethereum
+294,USDA+,NonDollar,peggedUSD,crypto-backed,0.9999269953734929,48507.26056001311,2,Base;OP Mainnet
+90,RUSD,Redeemable USD,peggedUSD,fiat-backed,0.9999269953734929,38698.89409542272,1,Cardano
+57,USH,Hedge USD,peggedUSD,crypto-backed,,38249.478197099,1,Solana
+wpen-ripio,WPEN,Peruvian Sol,peggedPEN,fiat-backed,0.31004052073175997,38089.70143743614,6,World Chain;Polygon;BSC;Gnosis;Base;Ethereum
+212,MOD,Move Dollar,peggedUSD,crypto-backed,0.993866,38037.97331318187,1,Aptos
+96,CUSD,Coin98 Dollar,peggedUSD,crypto-backed,,37511.37695935151,3,BSC;Solana;Ethereum
+364,WAD,Whale Asset Dollar,peggedUSD,crypto-backed,0.9999269953734929,32807.22305156977,2,Voi Network;Algorand
+ebusd-ebisu,EBUSD,EBUSD,peggedUSD,crypto-backed,0.9862629219788309,32386.622746450816,2,Ethereum;Plasma
+copm-mento,COPm,Mento Colombian Peso,peggedCOP,crypto-backed,0.0002968661359022742,31814.341953081963,1,Celo
+207,DYAD,Dyad,peggedUSD,crypto-backed,,31440.986565503423,1,Ethereum
+323,KEI,KEI Stablecoin,peggedUSD,crypto-backed,0.952613,27955.851312771865,1,Hyperliquid L1
+276,USH,Hyperstable USD,peggedUSD,crypto-backed,0.9994148502748701,27213.125176500504,1,Hyperliquid L1
+114,clevUSD,CLever USD,peggedUSD,crypto-backed,0.9999269953734929,27115.263440822433,1,Ethereum
 138,eUSD,ARYZE eUSD,peggedUSD,fiat-backed,,26708.003122110596,3,Polygon;BSC;Ethereum
-94,BAOUSD,BaoUSD,peggedUSD,crypto-backed,0.9998795904917785,25182.343666908633,1,Ethereum
-ghsm-mento,GHSm,Mento Ghanaian Cedi,peggedGHS,crypto-backed,0.087635,24331.751941627554,1,Celo
-euro3-3a-dao,EURO3,EURO3,peggedEUR,crypto-backed,0.9998795904917785,22863.467806443183,2,Linea;Polygon
-193,USC,Chi USC,peggedUSD,crypto-backed,0.9998795904917785,22671.843020041157,1,Ethereum
-84,BOB,BOB,peggedUSD,crypto-backed,0.999576,21343.998580228992,5,Polygon;Ethereum;Arbitrum;BSC;OP Mainnet
-53,SEUR,sEUR,peggedEUR,crypto-backed,,19845.484129759127,2,Ethereum;OP Mainnet
-196,USC,Classic USD,peggedUSD,fiat-backed,0.9864267561923009,18619.703283062405,2,EthereumClassic;Polygon
-111,DAI+,DAI+,peggedUSD,crypto-backed,,18052.798686721188,3,Base;Arbitrum;OP Mainnet
-177,UNO,UNO,peggedUSD,fiat-backed,0.9750484794017914,17784.316039749363,1,Starknet
-207,DYAD,Dyad,peggedUSD,crypto-backed,,16644.631395030392,1,Ethereum
-189,btcUSD,btcUSD,peggedUSD,crypto-backed,0.9998795904917785,14681.024176925615,1,Ethereum
-169,GAI,GAI Stablecoin,peggedUSD,crypto-backed,0.9998795904917785,14297.328062721686,1,Manta
-krwo-gimswap,KRWO,KRWO,peggedKRW,rwa-backed,0.00067296,13661.168273100917,2,Klaytn;BSC
-338,FUSD,Fuse Dollar V3,peggedUSD,crypto-backed,0.991174,13386.963845328357,1,Fuse
-137,CDT,Collateralized Debt Token,peggedVAR,crypto-backed,1.002,12937.120031891554,1,Osmosis
-163,ULTRA,PrismaLRT Ultra,peggedUSD,crypto-backed,0.9998795904917785,12912.979418560457,1,Ethereum
+94,BAOUSD,BaoUSD,peggedUSD,crypto-backed,0.9999269953734929,25183.537576689545,1,Ethereum
+ghsm-mento,GHSm,Mento Ghanaian Cedi,peggedGHS,crypto-backed,0.08805,24050.109704834085,1,Celo
+euro3-3a-dao,EURO3,EURO3,peggedEUR,crypto-backed,0.9999269953734929,22864.551776950484,2,Linea;Polygon
+193,USC,Chi USC,peggedUSD,crypto-backed,0.9999269953734929,22672.9179055042,1,Ethereum
+100,DSU,Digital Standard Unit,peggedUSD,crypto-backed,0.9999269953734929,21969.889661442263,3,Ethereum;Arbitrum;OP Mainnet
+84,BOB,BOB,peggedUSD,crypto-backed,1.001,21150.00409305511,5,Polygon;Ethereum;Arbitrum;BSC;OP Mainnet
+222,PAUSD,Parallel USD,peggedUSD,crypto-backed,0.9999269953734929,20201.39381043316,2,Ethereum;Polygon
+111,DAI+,DAI+,peggedUSD,crypto-backed,,18146.78158889107,3,Base;Arbitrum;OP Mainnet
+74,MONEY,Moremoney USD,peggedUSD,crypto-backed,0.71352,16581.992973365803,1,Avalanche
+169,GAI,GAI Stablecoin,peggedUSD,crypto-backed,0.9999269953734929,14298.005907486287,1,Manta
+177,UNO,UNO,peggedUSD,fiat-backed,0.740399366255494,13716.310311697687,1,Starknet
+krwo-gimswap,KRWO,KRWO,peggedKRW,rwa-backed,0.00065585,13313.7225536928,2,Klaytn;BSC
+189,btcUSD,btcUSD,peggedUSD,crypto-backed,0.9999269953734929,13191.356930908778,1,Ethereum
+163,ULTRA,PrismaLRT Ultra,peggedUSD,crypto-backed,0.9999269953734929,12913.591630538516,1,Ethereum
 267,MEAD,Mead,peggedUSD,crypto-backed,,12874.368771265652,1,Berachain
-208,DCKUSD,Dackie USD,peggedUSD,algorithmic,0.9998795904917785,11157.46816196015,1,Base
-190,rgUSD,Revenue Generating USD,peggedUSD,crypto-backed,0.9998795904917785,11119.850768833534,3,Base;Ethereum;Arbitrum
-259,MSD,Arche Protocol MSD,peggedUSD,crypto-backed,0.9998795904917785,10819.753785879018,1,Movement
-102,ANONUSD,Offshift anonUSD,peggedUSD,algorithmic,0.9998795904917785,10801.54596508222,1,Ethereum
-108,d2O,Deuterium,peggedUSD,crypto-backed,0.9998795904917785,10206.328238154543,2,Moonbeam;Ethereum
-61,FIAT,Fixed Income Asset Token,peggedUSD,crypto-backed,0.9998795904917785,7605.871219579745,1,Ethereum
-76,USDI,Interest Protocol,peggedUSD,crypto-backed,0.9998795904917785,6911.514277097619,1,Ethereum
-62,PUSD,PUSd,peggedUSD,crypto-backed,0.9998795904917785,6645.289173748125,1,Ethereum
+338,FUSD,Fuse Dollar V3,peggedUSD,crypto-backed,,11234.869518377292,1,Fuse
+208,DCKUSD,Dackie USD,peggedUSD,algorithmic,0.9999269953734929,11157.99714411308,1,Base
+190,rgUSD,Revenue Generating USD,peggedUSD,crypto-backed,0.9999269953734929,10890.094223195334,3,Base;Ethereum;Arbitrum
+259,MSD,Arche Protocol MSD,peggedUSD,crypto-backed,0.9999269953734929,10820.266756793992,1,Movement
+102,ANONUSD,Offshift anonUSD,peggedUSD,algorithmic,0.9999269953734929,10802.05807275366,1,Ethereum
+108,d2O,Deuterium,peggedUSD,crypto-backed,0.9999269953734929,10206.812126202132,2,Moonbeam;Ethereum
+137,CDT,Collateralized Debt Token,peggedVAR,crypto-backed,0.999743,8837.410016434358,1,Osmosis
+61,FIAT,Fixed Income Asset Token,peggedUSD,crypto-backed,0.9999269953734929,7606.231818424774,1,Ethereum
+zarm-mento,ZARm,Mento South African Rand,peggedZAR,crypto-backed,0.061585,7542.788490592557,1,Celo
+62,PUSD,PUSd,peggedUSD,crypto-backed,0.9999269953734929,6645.604230831233,1,Ethereum
 301,JUSD,Jigsaw USD,peggedUSD,crypto-backed,,6428.882148465599,1,Ethereum
-128,NEX,Nexus,peggedUSD,algorithmic,0.9998795904917785,5183.475340122012,2,Ethereum;Arbitrum
-187,KNOX,KNOX Dollar,peggedUSD,crypto-backed,,4976.7891805084855,1,Arbitrum
-buck-buck-assets,BUCK,Buck,peggedUSD,rwa-backed,0.9997242778344444,4601.009169430773,1,Ethereum
-223,XY,TREN Debt Token,peggedUSD,crypto-backed,0.9998795904917785,4578.621073443569,1,Arbitrum
-usdk-orki,USDK,Orki USD,peggedUSD,crypto-backed,0.9998795904917785,4344.630640563993,1,Swellchain
-330,xpUSD,Gaming XP USD,peggedUSD,fiat-backed,0.9998795904917785,3996.598713562878,2,Ethereum;Avalanche
-87,USDI,USDi,peggedUSD,crypto-backed,0.9998795904917785,3742.656315522147,1,Ethereum
-273,USDaf,Asymmetry USDaf,peggedUSD,crypto-backed,,2821.5506235105213,1,Ethereum
+393,haEUR,Harbor haEUR,peggedEUR,crypto-backed,0.9999269953734929,6125.755467659416,1,Ethereum
+128,NEX,Nexus,peggedUSD,algorithmic,0.9999269953734929,5183.7210917482125,2,Ethereum;Arbitrum
+buck-buck-assets,BUCK,Buck,peggedUSD,rwa-backed,,4601.009169430773,1,Ethereum
+223,XY,TREN Debt Token,peggedUSD,crypto-backed,0.9999269953734929,4578.83814857188,1,Arbitrum
+87,USDI,USDi,peggedUSD,crypto-backed,0.9999269953734929,3742.8337570677313,1,Ethereum
+187,KNOX,KNOX Dollar,peggedUSD,crypto-backed,,3474.7325438196176,1,Arbitrum
+273,USDaf,Asymmetry USDaf,peggedUSD,crypto-backed,,2796.023262859187,1,Ethereum
+396,USDeAD,Deaderal Reserve Note,peggedUSD,crypto-backed,,2246.1923395602357,11,Base;Ethereum;MegaETH;Scroll;Solana;Arbitrum;Tron;Hyperliquid L1;OP Mainnet;Monad;BSC
+usdk-orki,USDK,Orki USD,peggedUSD,crypto-backed,0.9999269953734929,2180.7954936602523,1,Swellchain
 279,paraUSD,Parabol USD,peggedUSD,fiat-backed,,2032.2702654027976,1,Base
-345,USDU,Uncap USD,peggedUSD,crypto-backed,1.0013783123990525,916.2681165923301,1,Starknet
-150,SCB,USD Stable Colb,peggedUSD,fiat-backed,0.9998795904917785,821.1390258217938,1,Polygon
-318,litUSD,litUSD,peggedUSD,fiat-backed,0.9998795904917785,506.8789596039022,1,Ethereum
-121,sLSD,PSY,peggedUSD,crypto-backed,0.9998795904917785,403.95135455867853,1,Arbitrum
-182,zunETH,Zunami ETH,peggedVAR,crypto-backed,0.9998795904917785,71.09716631182492,1,Ethereum
+330,xpUSD,Gaming XP USD,peggedUSD,fiat-backed,0.9999269953734929,1477.8021057324388,2,Ethereum;Avalanche
+kusd-kerne,kUSD,Kerne USD,peggedUSD,crypto-backed,,1114.737154,1,Base
+345,USDU,Uncap USD,peggedUSD,crypto-backed,,915.0069511663183,1,Starknet
+150,SCB,USD Stable Colb,peggedUSD,fiat-backed,0.9999269953734929,821.1779565078087,1,Polygon
+318,litUSD,litUSD,peggedUSD,fiat-backed,0.9999269953734929,506.9029910346385,1,Ethereum
+121,sLSD,PSY,peggedUSD,crypto-backed,0.9999269953734929,403.9705061308911,1,Arbitrum
+182,zunETH,Zunami ETH,peggedVAR,crypto-backed,0.9999269953734929,71.10053707045556,1,Ethereum
 134,CASH,Phase Dollar,peggedUSD,fiat-backed,,70.61930702095457,1,Base
-203,cUSD,Chad USD,peggedUSD,crypto-backed,0.9998795904917785,50.02086329842001,1,Scroll
-320,USDR,Rocky USDr,peggedUSD,crypto-backed,0.9998795904917785,1.5298905262161595,1,Sei
-375,USDMO,Monet USDmo,peggedUSD,crypto-backed,0.9998795904917785,1.0177763748892636,1,Eden
+203,cUSD,Chad USD,peggedUSD,crypto-backed,0.9999269953734929,50.02323481708132,1,Scroll
+395,FUSD,fUSD,peggedUSD,fiat-backed,,8.3,2,Ethereum;BSC
+320,USDR,Rocky USDr,peggedUSD,crypto-backed,0.9999269953734929,1.4179294730307523,1,Sei
+375,USDMO,Monet USDmo,peggedUSD,crypto-backed,0.9999269953734929,1.0178246282680925,1,Eden
+210,DEUSD,Elixir deUSD,peggedUSD,crypto-backed,,0.921532113337797,4,Ethereum;Avalanche;Sei;Polygon
+196,USC,Classic USD,peggedUSD,fiat-backed,,0.5,2,Polygon;EthereumClassic
 ust-terra,USTC,TerraClassicUSD,peggedUSD,algorithmic,,0,17,OP Mainnet;Metis;Terra Classic;DFK;Moonbeam;Osmosis;BSC;Ethereum;Aurora;Oasis Emerald;Polygon;Solana;Celo;Arbitrum;Fuse;Fantom;Avalanche
+49,EURT,Euro Tether,peggedEUR,fiat-backed,,0,2,Ethereum;Polygon
+91,IBEUR,Iron Bank EURO,peggedEUR,crypto-backed,,0,1,Ethereum
 127,LCNY,Alternity CNY,peggedCNY,crypto-backed,,0,1,Ethereum
 131,UAHT,UAHT,peggedUAH,fiat-backed,,0,1,Polygon
 133,NARS,NARS,peggedARS,fiat-backed,,0,1,Polygon
 139,eEUR,ARYZE eEUR,peggedEUR,fiat-backed,,0,3,BSC;Ethereum;Polygon
 140,eGBP,ARYZE eGBP,peggedGBP,fiat-backed,,0,3,BSC;Ethereum;Polygon
 161,EURD,Quantoz EURD,peggedEUR,fiat-backed,,0,1,Algorand
-200,HCHF,Hedera Swiss Franc,peggedCHF,crypto-backed,1.27,0,1,Hedera
-274,EURQ,Quantoz EURQ,peggedEUR,fiat-backed,1.17,0,4,Ethereum;Algorand;Polygon;XRPL
-280,CNHT,Tether CNH,peggedCNY,fiat-backed,,0,2,Ethereum;Tron
+hchf-hedera-swiss-franc,HCHF,Hedera Swiss Franc,peggedCHF,crypto-backed,1.26,0,1,Hedera
+eurq-quantoz,EURQ,Quantoz EURQ,peggedEUR,fiat-backed,1.1314073193,0,4,Ethereum;Algorand;Polygon;XRPL
 281,MXNT,Mexican Peso Tether,peggedMXN,fiat-backed,,0,1,Ethereum
 351,RUBT,Tetris Money,peggedRUB,fiat-backed,,0,3,Hyperliquid L1;Ethereum;Tron
 352,BRTH,BRTH,peggedREAL,fiat-backed,,0,1,Polygon
-cadd-cad-digital,CADD,CAD Digital,peggedCAD,fiat-backed,,0,2,Ethereum;Base
-gramg-token-teknoloji,GRAMG,Gram Gold,peggedGOLD,rwa-backed,146.35,0,2,Avalanche;Polygon
-grams-token-teknoloji,GRAMS,Gram Silver,peggedSILVER,rwa-backed,2.4521123599913572,0,2,Avalanche;Polygon
+cadm-mento,CADm,Mento Canadian Dollar,peggedCAD,crypto-backed,,0,1,Celo
+jpym-mento,JPYm,Mento Japanese Yen,peggedJPY,crypto-backed,0.006168,0,2,Celo;Monad
+369,NGNm,Mento Nigerian Naira,peggedNGN,crypto-backed,,0,1,Celo
+xofm-mento,XOFm,Mento West African CFA Franc,peggedXOF,crypto-backed,0.00174,0,1,Celo
+399,GBPA,Agant GBP,peggedGBP,fiat-backed,,0,4,Ethereum;Solana;Tempo;Base
+412,MYRT,MYR Stablecoin,peggedMYR,fiat-backed,,0,1,Ethereum
+414,REUR,Royal Euro,peggedEUR,fiat-backed,,0,3,BSC;Ethereum;Tron
+gramg-token-teknoloji,GRAMG,Gram Gold,peggedGOLD,rwa-backed,133.00183780874767,0,2,Avalanche;Polygon
+grams-token-teknoloji,GRAMS,Gram Silver,peggedSILVER,rwa-backed,1.9494555344170719,0,2,Avalanche;Polygon

@@ -1,112 +1,135 @@
-# Pharos pharos.watch | Endpoint: peg-mechanism-distribution | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/sheets/peg-mechanism-distribution.csv | Methodology: safety-score v7.25
+# Pharos pharos.watch | Endpoint: peg-mechanism-distribution | As of: 2026-07-08T08:00:33.000Z | URL: https://pharos.watch/sheets/peg-mechanism-distribution.csv | Methodology: safety-score v8.13 | Freshness: point-in-time sample; not guaranteed to track production freshness
 mechanismArchetype,mechanismLabel,pegReferenceId,jurisdiction,coinCount
-cdp,CDP,unknown,unknown,71
-unknown,Unknown,unknown,unknown,53
-fiat-cash,Fiat-Backed,unknown,United States,27
-fiat-cash,Fiat-Backed,unknown,unknown,16
-tbill,Tokenized Treasury,unknown,United States,12
-synthetic-delta-neutral,Delta-Neutral,unknown,unknown,10
-tbill,Tokenized Treasury,unknown,British Virgin Islands,8
-tbill,Tokenized Treasury,unknown,France,8
-unknown,Unknown,unknown,British Virgin Islands,6
-synthetic-delta-neutral,Delta-Neutral,unknown,British Virgin Islands,5
-fiat-cash,Fiat-Backed,unknown,Singapore,5
-fiat-cash,Fiat-Backed,unknown,British Virgin Islands,5
-fiat-cash,Fiat-Backed,unknown,Brazil,5
-fiat-cash,Fiat-Backed,unknown,Hong Kong,5
-tbill,Tokenized Treasury,unknown,unknown,5
-fiat-cash,Fiat-Backed,usdc-circle,unknown,4
-fiat-cash,Fiat-Backed,unknown,France,4
-fiat-cash,Fiat-Backed,unknown,Switzerland,4
-fiat-cash,Fiat-Backed,unknown,Australia,4
-fiat-cash,Fiat-Backed,unknown,South Korea,4
-unknown,Unknown,usdc-circle,unknown,3
-tbill,Tokenized Treasury,unknown,Switzerland,3
-fiat-cash,Fiat-Backed,unknown,Netherlands,3
-fiat-cash,Fiat-Backed,unknown,Malta,3
+cdp,Crypto-Collateralized (CDP),unknown,unknown,76
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,United States,30
+unknown,Unknown,unknown,unknown,21
+tbill,Tokenized Treasury,unknown,United States,13
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,unknown,13
+unknown,Unknown,usdc-circle,unknown,8
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,unknown,8
+tbill,Tokenized Treasury,unknown,British Virgin Islands,7
+rwa-credit-fund,Tokenized Credit Fund,unknown,United States,7
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Hong Kong,7
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,British Virgin Islands,6
+rwa-credit-fund,Tokenized Credit Fund,unknown,British Virgin Islands,6
+rwa-credit-fund,Tokenized Credit Fund,unknown,unknown,6
+algorithmic,Reflexive / Unbacked,unknown,unknown,6
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Singapore,5
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,British Virgin Islands,5
+tbill,Tokenized Treasury,unknown,France,5
+unknown,Unknown,unknown,British Virgin Islands,5
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,South Korea,5
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,France,4
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Australia,4
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Japan,4
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Brazil,4
+unknown,Unknown,usdt-tether,unknown,3
+tbill,Tokenized Treasury,unknown,Bermuda,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Switzerland,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Netherlands,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Malta,3
+unknown,Unknown,unknown,Germany,3
 unknown,Unknown,unknown,Singapore,3
-fiat-cash,Fiat-Backed,unknown,Japan,3
-unknown,Unknown,unknown,Cayman Islands,3
-fiat-cash,Fiat-Backed,unknown,Liechtenstein,3
-fiat-cash,Fiat-Backed,unknown,Canada,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Liechtenstein,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,United Kingdom,3
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Canada,3
 unknown,Unknown,unknown,Brazil,3
-fiat-cash,Fiat-Backed,unknown,El Salvador,2
-fiat-cash,Fiat-Backed,usdt-tether,unknown,2
-synthetic-delta-neutral,Delta-Neutral,usde-ethena,unknown,2
-cdp,CDP,unknown,Cayman Islands,2
-cdp,CDP,usds-sky,unknown,2
-tbill,Tokenized Treasury,unknown,Bermuda,2
-unknown,Unknown,unknown,United States,2
-cdp,CDP,gho-aave,unknown,2
-fiat-cash,Fiat-Backed,unknown,Kyrgyzstan,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,El Salvador,2
+fiat-cash,Custodial Cash and Cash-Equivalents,usdc-circle,unknown,2
+synthetic-delta-neutral,Hedged Synthetic Dollar,usde-ethena,unknown,2
+cdp,Crypto-Collateralized (CDP),usds-sky,unknown,2
+tbill,Tokenized Treasury,unknown,Switzerland,2
+cdp,Crypto-Collateralized (CDP),gho-aave,unknown,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Kyrgyzstan,2
 unknown,Unknown,unknown,Switzerland,2
-algorithmic,Algorithmic,unknown,unknown,2
-cdp,CDP,bold-liquity,unknown,2
-fiat-cash,Fiat-Backed,unknown,Iceland,2
-unknown,Unknown,unknown,Germany,2
-fiat-cash,Fiat-Backed,unknown,Indonesia,2
-fiat-cash,Fiat-Backed,unknown,Turkey,2
+cdp,Crypto-Collateralized (CDP),bold-liquity,unknown,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Iceland,2
+tbill,Tokenized Treasury,unknown,unknown,2
+rwa-credit-fund,Tokenized Credit Fund,unknown,France,2
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,France,2
+tbill,Tokenized Treasury,unknown,Jersey,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Indonesia,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Turkey,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Panama,2
 unknown,Unknown,unknown,Turkey,2
-fiat-cash,Fiat-Backed,unknown,Germany,2
-fiat-cash,Fiat-Backed,unknown,United Kingdom,2
-fiat-cash,Fiat-Backed,unknown,Mexico,2
-unknown,Unknown,usdt-tether,unknown,1
-synthetic-delta-neutral,Delta-Neutral,usd1-world-liberty-financial,unknown,1
-cdp,CDP,unknown,Denmark,1
-cdp,CDP,dai-makerdao,unknown,1
-algorithmic,Algorithmic,unknown,Dominica,1
-algorithmic,Algorithmic,usdd-tron-dao-reserve,unknown,1
-unknown,Unknown,usdai-usd-ai,United States,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,United Arab Emirates,2
+unknown,Unknown,unknown,United States,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Germany,2
+rwa-credit-fund,Tokenized Credit Fund,unknown,Marshall Islands,2
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Mexico,2
+fiat-cash,Custodial Cash and Cash-Equivalents,usdt-tether,Panama,1
+cdp,Crypto-Collateralized (CDP),usdc-circle,unknown,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,usd1-world-liberty-financial,unknown,1
+cdp,Crypto-Collateralized (CDP),dai-makerdao,unknown,1
+rwa-credit-fund,Tokenized Credit Fund,usdc-circle,unknown,1
+cdp,Crypto-Collateralized (CDP),unknown,Dominica,1
+cdp,Crypto-Collateralized (CDP),usdd-tron-dao-reserve,unknown,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Cayman Islands,1
+rwa-credit-fund,Tokenized Credit Fund,usdai-usd-ai,Cayman Islands,1
 tbill,Tokenized Treasury,usd0-usual,unknown,1
-fiat-cash,Fiat-Backed,unknown,Dominica,1
-fiat-cash,Fiat-Backed,cusd-cap,unknown,1
-cdp,CDP,unknown,Switzerland,1
-cdp,CDP,crvusd-curve,unknown,1
-fiat-cash,Fiat-Backed,unknown,Bermuda,1
-synthetic-delta-neutral,Delta-Neutral,usdf-astherus,unknown,1
-fiat-cash,Fiat-Backed,unknown,Cayman Islands,1
+rwa-credit-fund,Tokenized Credit Fund,cusd-cap,unknown,1
+cdp,Crypto-Collateralized (CDP),crvusd-curve,unknown,1
+cdp,Crypto-Collateralized (CDP),dola-inverse-finance,unknown,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Bermuda,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,usdf-astherus,unknown,1
+tbill,Tokenized Treasury,unknown,Cayman Islands,1
 tbill,Tokenized Treasury,frxusd-frax,unknown,1
-tbill,Tokenized Treasury,unknown,UAE,1
-synthetic-delta-neutral,Delta-Neutral,avusd-avant,unknown,1
-unknown,Unknown,unknown,Kyrgyz Republic,1
-fiat-cash,Fiat-Backed,unknown,Antigua and Barbuda,1
-algorithmic,Algorithmic,unknown,United States,1
-synthetic-delta-neutral,Delta-Neutral,unknown,Singapore,1
-tbill,Tokenized Treasury,usdo-openeden,unknown,1
-fiat-cash,Fiat-Backed,unknown,Luxembourg,1
-cdp,CDP,unknown,El Salvador,1
-synthetic-delta-neutral,Delta-Neutral,yusd-aegis,unknown,1
-cdp,CDP,unknown,Australia,1
-cdp,CDP,fxusd-f-x-protocol,unknown,1
-synthetic-delta-neutral,Delta-Neutral,usn-noon,unknown,1
-cdp,CDP,unknown,Croatia,1
-unknown,Unknown,yzusd-yuzu,unknown,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,UAE,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,avusd-avant,British Virgin Islands,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Cayman Islands,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Kyrgyz Republic,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Antigua and Barbuda,1
+algorithmic,Reflexive / Unbacked,unknown,United States,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Singapore,1
+tbill,Tokenized Treasury,usdo-openeden,Bermuda,1
+tbill,Tokenized Treasury,unknown,Hong Kong,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Luxembourg,1
+tbill,Tokenized Treasury,unknown,Brazil,1
+cdp,Crypto-Collateralized (CDP),unknown,El Salvador,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,yusd-aegis,British Virgin Islands,1
+cdp,Crypto-Collateralized (CDP),fxusd-f-x-protocol,unknown,1
+cdp,Crypto-Collateralized (CDP),unknown,Switzerland,1
+cdp,Crypto-Collateralized (CDP),unknown,Cayman Islands,1
+rwa-credit-fund,Tokenized Credit Fund,usn-noon,unknown,1
+cdp,Crypto-Collateralized (CDP),unknown,Croatia,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Panama,1
+cdp,Crypto-Collateralized (CDP),yzusd-yuzu,Georgia,1
+tbill,Tokenized Treasury,unknown,Singapore,1
 tbill,Tokenized Treasury,unknown,Union of Comoros,1
-cdp,CDP,unknown,Germany,1
-unknown,Unknown,msusd-main-street,unknown,1
-fiat-cash,Fiat-Backed,unknown,Norway,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Norway,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Singapore,1
+unknown,Unknown,unknown,Marshall Islands,1
+unknown,Unknown,dusd-dtrinity,unknown,1
 tbill,Tokenized Treasury,unknown,Germany,1
-synthetic-delta-neutral,Delta-Neutral,unknown,France,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Germany,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Luxembourg,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Germany,1
 unknown,Unknown,unknown,France,1
 tbill,Tokenized Treasury,unknown,Panama,1
-fiat-cash,Fiat-Backed,unknown,Kazakhstan,1
+rwa-credit-fund,Tokenized Credit Fund,rusd-reservoir,unknown,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Kazakhstan,1
 unknown,Unknown,unknown,El Salvador,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Cayman Islands,1
 unknown,Unknown,unknown,Liechtenstein,1
-unknown,Unknown,unknown,United Arab Emirates,1
-fiat-cash,Fiat-Backed,unknown,Finland,1
-fiat-cash,Fiat-Backed,unknown,South Africa,1
-cdp,CDP,unknown,Singapore,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Finland,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,South Africa,1
+cdp,Crypto-Collateralized (CDP),unknown,Singapore,1
 tbill,Tokenized Treasury,unknown,Mexico,1
-algorithmic,Algorithmic,zsd-zephyr-protocol,unknown,1
-unknown,Unknown,aid-gaib,unknown,1
-unknown,Unknown,apxusd-apyx,unknown,1
-fiat-cash,Fiat-Backed,unknown,Sweden,1
-fiat-cash,Fiat-Backed,unknown,Nigeria,1
-fiat-cash,Fiat-Backed,unknown,Argentina,1
-fiat-cash,Fiat-Backed,unknown,Chile,1
-fiat-cash,Fiat-Backed,unknown,Colombia,1
-fiat-cash,Fiat-Backed,unknown,Peru,1
-fiat-cash,Fiat-Backed,unknown,Malaysia,1
-fiat-cash,Fiat-Backed,unknown,Vietnam,1
-fiat-cash,Fiat-Backed,unknown,India,1
-fiat-cash,Fiat-Backed,unknown,Cyprus / Lithuania,1
+tbill,Tokenized Treasury,unknown,Marshall Islands,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,unknown,Marshall Islands,1
+cdp,Crypto-Collateralized (CDP),zsd-zephyr-protocol,unknown,1
+synthetic-delta-neutral,Hedged Synthetic Dollar,usdc-circle,British Virgin Islands,1
+rwa-credit-fund,Tokenized Credit Fund,aid-gaib,Singapore,1
+rwa-credit-fund,Tokenized Credit Fund,apxusd-apyx,British Virgin Islands,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Seychelles,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Nigeria,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Argentina,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Chile,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Colombia,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Peru,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Malaysia,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,India,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Cyprus / Lithuania,1
+rwa-credit-fund,Tokenized Credit Fund,unknown,Bermuda,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Georgia,1
+fiat-cash,Custodial Cash and Cash-Equivalents,unknown,Israel,1
