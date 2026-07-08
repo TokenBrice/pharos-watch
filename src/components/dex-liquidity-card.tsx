@@ -3,6 +3,12 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
@@ -10,10 +16,7 @@ import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreTier, TIER_TEXT, ratioQualityColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
-import {
-  getConcentrationLabel,
-  getLiquidityEvidenceLabel,
-} from "@/components/dex-liquidity-card-model";
+import { getConcentrationLabel, getLiquidityEvidenceLabel } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
@@ -27,6 +30,7 @@ import {
   TvlTrendChart,
 } from "@/components/dex-liquidity-card-parts";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+import { cn } from "@/lib/utils";
 
 /**
  * A coin has "meaningful" DEX data only when at least one observed pool or
@@ -43,11 +47,11 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
-        <CardHeader className="pb-2">
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
           <Skeleton className="h-3 w-36" />
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
             <Skeleton className="col-span-2 h-16" />
             <Skeleton className="h-12" />
@@ -74,11 +78,11 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const hasTvlChange7d = liq.tvlChange7d != null && Math.abs(liq.tvlChange7d) >= 0.05;
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
+    <Card className={cn(DETAIL_MODULE_SHELL_CLASS, "animate-in fade-in duration-300")}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <DetailSectionTitle>
+            <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
               <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
             </DetailSectionTitle>
             <Badge
@@ -91,17 +95,17 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
           {isRated ? (
             <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
-              <span className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
+              <span className={cn("pharos-numeric text-sm font-semibold", TIER_TEXT[tier])}>
                 {score}
-                <span className="text-sm text-muted-foreground">/100</span>
+                <span className="text-muted-foreground">/100</span>
               </span>
             </ScoreBadgeWrapper>
           ) : (
-            <div className="text-xl font-semibold text-muted-foreground">NR</div>
+            <div className="pharos-numeric text-sm font-semibold text-muted-foreground">NR</div>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-6")}>
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             <p>No observed direct DEX market for this token in the current pipeline.</p>
@@ -116,7 +120,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               <p className="text-xs font-medium text-muted-foreground">
                 <MethodologyLabel topic="effectiveTvl">Effective Liquidity</MethodologyLabel>
               </p>
-              <p className="text-xl font-extrabold font-mono tabular-nums sm:text-2xl">{formatCurrency(liq.effectiveTvlUsd)}</p>
+              <p className="text-xl font-extrabold font-mono tabular-nums sm:text-2xl">
+                {formatCurrency(liq.effectiveTvlUsd)}
+              </p>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                 <span>
                   <span className="sm:hidden">AMM TVL</span>
@@ -139,9 +145,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   </span>
                 )}
               </div>
-              {evidenceLabel && (
-                <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>
-              )}
+              {evidenceLabel && <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">24h Volume</p>
@@ -162,8 +166,11 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
 
           {/* Health indicators — grouped into a cohesive block */}
-          {(liq.concentrationHhi != null || liq.depthStability != null ||
-            liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
+          {(liq.concentrationHhi != null ||
+            liq.depthStability != null ||
+            liq.durabilityScore != null ||
+            liq.weightedBalanceRatio != null ||
+            liq.organicFraction != null) && (
             <div className="rounded-lg bg-muted/20 px-3 py-2.5 space-y-1.5">
               {(liq.concentrationHhi != null || liq.depthStability != null) && (
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -173,13 +180,16 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                       return (
                         <span className="text-muted-foreground">
                           Concentration: <span className={`font-medium ${color}`}>{label}</span>
-                          <span className="text-xs ml-1 font-mono">({formatPercentFromRatio(liq.concentrationHhi, 0)})</span>
+                          <span className="text-xs ml-1 font-mono">
+                            ({formatPercentFromRatio(liq.concentrationHhi, 0)})
+                          </span>
                         </span>
                       );
                     })()}
                   {liq.depthStability != null && (
                     <span className="text-muted-foreground">
-                      Depth Stability: <span className="font-medium font-mono">{formatPercentFromRatio(liq.depthStability, 0)}</span>
+                      Depth Stability:{" "}
+                      <span className="font-medium font-mono">{formatPercentFromRatio(liq.depthStability, 0)}</span>
                     </span>
                   )}
                 </div>
@@ -201,9 +211,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   {liq.organicFraction != null && (
                     <div>
                       <span className="text-muted-foreground">Organic: </span>
-                      <span
-                        className={`font-mono tabular-nums ${ratioQualityColor(liq.organicFraction)}`}
-                      >
+                      <span className={`font-mono tabular-nums ${ratioQualityColor(liq.organicFraction)}`}>
                         {formatPercentFromRatio(liq.organicFraction, 0)}
                       </span>
                     </div>
@@ -222,7 +230,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 {liq.dexDeviationBps != null && (
                   <span
                     className={`text-sm font-mono ${
-                      Math.abs(liq.dexDeviationBps) >= 50 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
+                      Math.abs(liq.dexDeviationBps) >= 50
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-muted-foreground"
                     }`}
                   >
                     {liq.dexDeviationBps >= 0 ? "+" : ""}
@@ -255,11 +265,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         </div>
 
         {liq.scoreComponents ? (
-          <ShowYourWorkPanel
-            kind="liquidity"
-            scoreComponents={liq.scoreComponents}
-            stablecoinId={stablecoinId}
-          />
+          <ShowYourWorkPanel kind="liquidity" scoreComponents={liq.scoreComponents} stablecoinId={stablecoinId} />
         ) : null}
 
         <MethodologyCardActions topic="liquidityScore" showWorkToggle />

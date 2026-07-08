@@ -5,6 +5,12 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { TableSourceLink } from "@/components/table/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,10 +25,7 @@ import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
-import {
-  YIELD_DECISION_REASON_LABELS,
-  YIELD_DECISION_REJECTION_REASON_LABELS,
-} from "@/lib/yield-presentation";
+import { YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
@@ -42,18 +45,18 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
   return (
     <TooltipProvider>
       <section id="yield" aria-labelledby="yield-intelligence-heading">
-        <Card className="rounded-xl">
-          <CardHeader className="pb-2">
+        <Card className={DETAIL_MODULE_SHELL_CLASS}>
+          <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <DetailSectionTitle id="yield-intelligence-heading">
+                <DetailSectionTitle id="yield-intelligence-heading" className={DETAIL_MODULE_TITLE_CLASS}>
                   <MethodologyLabel topic="pys">Yield Intelligence</MethodologyLabel>
                 </DetailSectionTitle>
               </div>
               {headerEnd}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">{children}</CardContent>
+          <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>{children}</CardContent>
         </Card>
       </section>
     </TooltipProvider>
@@ -69,8 +72,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       rankingForAttribution
         ? classifyApyChange({
             history: historyQuery.data?.history ?? [],
-            decisionLedger:
-              rankingForAttribution.decisionLedger ?? null,
+            decisionLedger: rankingForAttribution.decisionLedger ?? null,
             yieldStability: rankingForAttribution.yieldStability ?? null,
           })
         : null,
@@ -121,19 +123,12 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const { ranking } = view;
   const totalSourceCount = 1 + ranking.altSources.length;
   const headerEnd = (
-    <span
-      className={cn(
-        "rounded-full border px-2 py-0.5 text-xs font-medium",
-        view.yieldTypeBadge,
-      )}
-    >
+    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", view.yieldTypeBadge)}>
       {view.yieldTypeLabel}
     </span>
   );
   const sourceAgeMinutes =
-    ranking.provenance?.sourceAgeSeconds != null
-      ? Math.round(ranking.provenance.sourceAgeSeconds / 60)
-      : null;
+    ranking.provenance?.sourceAgeSeconds != null ? Math.round(ranking.provenance.sourceAgeSeconds / 60) : null;
   const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
   const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
   const excessYield = ranking.excessYield;
@@ -142,12 +137,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     : null;
   const legacySelectionReason = ranking.provenance?.selectionReason ?? null;
   const selectionReason = selectedDecisionReason ?? legacySelectionReason;
-  const rejectedAlternatives = ranking.decisionLedger?.alternatives
-    .map((alternative) => {
-      const reason = YIELD_DECISION_REJECTION_REASON_LABELS[alternative.rejectionReasonCode];
-      return reason ? `${alternative.yieldSource}: ${reason}` : null;
-    })
-    .filter((label): label is string => Boolean(label)) ?? [];
+  const rejectedAlternatives =
+    ranking.decisionLedger?.alternatives
+      .map((alternative) => {
+        const reason = YIELD_DECISION_REJECTION_REASON_LABELS[alternative.rejectionReasonCode];
+        return reason ? `${alternative.yieldSource}: ${reason}` : null;
+      })
+      .filter((label): label is string => Boolean(label)) ?? [];
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
@@ -284,38 +280,36 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               {view.sourceExplorer.sourceIdentity.displayLabel}
             </TableSourceLink>
           </span>
-          <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-          <span
-            className={cn(
-              "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-              view.dataSourceMeta.badge,
-            )}
-          >
+          <span aria-hidden="true" className="text-muted-foreground/40">
+            ·
+          </span>
+          <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", view.dataSourceMeta.badge)}>
             {view.dataSourceMeta.label}
           </span>
           {sourceAgeMinutes !== null ? (
             <>
-              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+              <span aria-hidden="true" className="text-muted-foreground/40">
+                ·
+              </span>
               <span className="text-muted-foreground">age {sourceAgeMinutes}m</span>
             </>
           ) : null}
           {sourceTvl !== null ? (
             <>
-              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-              <span className="font-mono tabular-nums text-muted-foreground">
-                TVL {formatCurrency(sourceTvl)}
+              <span aria-hidden="true" className="text-muted-foreground/40">
+                ·
               </span>
-              <span
-                className="text-muted-foreground/70"
-                title={sourceDepthMeta.description}
-              >
+              <span className="font-mono tabular-nums text-muted-foreground">TVL {formatCurrency(sourceTvl)}</span>
+              <span className="text-muted-foreground/70" title={sourceDepthMeta.description}>
                 ({sourceDepthMeta.label.toLowerCase()} depth)
               </span>
             </>
           ) : null}
           {view.sourceExplorer.sourceSwitch.changed ? (
             <>
-              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+              <span aria-hidden="true" className="text-muted-foreground/40">
+                ·
+              </span>
               <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
                 source changed
                 {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel
@@ -325,15 +319,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </>
           ) : null}
         </div>
-        {selectionReason ? (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {selectionReason}
-          </p>
-        ) : null}
+        {selectionReason ? <p className="mt-2 text-[11px] text-muted-foreground">{selectionReason}</p> : null}
         {rejectedAlternatives.length > 0 ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Alternates: {rejectedAlternatives.join("; ")}.
-          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Alternates: {rejectedAlternatives.join("; ")}.</p>
         ) : null}
       </div>
 
@@ -356,10 +344,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Retained alternates</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {view.sourceExplorer.retainedAlternates.map((source) => (
-              <div
-                key={source.sourceKey}
-                className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
-              >
+              <div key={source.sourceKey} className="rounded-lg border border-border/60 bg-background/55 px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
                   <TableSourceLink href={source.url} className="max-w-full text-sm text-foreground">
                     {source.displayLabel}
@@ -375,9 +360,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                   <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
                     {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
                   </span>
-                  <span className="font-mono tabular-nums">
-                    Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
-                  </span>
+                  <span className="font-mono tabular-nums">Risk {formatYieldSourceRiskCompact(source.sourceRisk)}</span>
                   {source.rejectionHint ? (
                     <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
                   ) : null}
@@ -392,24 +375,28 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         aria-label="More yield analysis"
         className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
       >
-        <span className="font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
-          More on yield
+        <span className="font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">More on yield</span>
+        <span aria-hidden="true" className="text-muted-foreground/40">
+          ·
         </span>
-        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
         <Link
           href={`${buildStablecoinUrl(stablecoinId)}yield/#warning-signals`}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Warning timeline
         </Link>
-        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <span aria-hidden="true" className="text-muted-foreground/40">
+          ·
+        </span>
         <Link
           href={`${buildStablecoinUrl(stablecoinId)}yield/#source-switches`}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Source switches
         </Link>
-        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <span aria-hidden="true" className="text-muted-foreground/40">
+          ·
+        </span>
         <Link
           href={`${buildStablecoinUrl(stablecoinId)}yield/#source-comparison`}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
@@ -432,10 +419,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   );
 }
 
-const ATTRIBUTION_TONE: Record<
-  YieldChangeAttributionResult["attribution"],
-  { wrapper: string; kicker: string }
-> = {
+const ATTRIBUTION_TONE: Record<YieldChangeAttributionResult["attribution"], { wrapper: string; kicker: string }> = {
   organic: {
     wrapper: "border-emerald-500/25 bg-emerald-500/5",
     kicker: "text-emerald-700 dark:text-emerald-400",
@@ -454,27 +438,16 @@ const ATTRIBUTION_TONE: Record<
   },
 };
 
-export function YieldChangeAttributionCard({
-  attribution,
-}: {
-  attribution: YieldChangeAttributionResult;
-}) {
+export function YieldChangeAttributionCard({ attribution }: { attribution: YieldChangeAttributionResult }) {
   const tone = ATTRIBUTION_TONE[attribution.attribution];
-  const hasEvidence =
-    attribution.largestDelta !== null ||
-    attribution.sourceSwitchDetail !== undefined;
+  const hasEvidence = attribution.largestDelta !== null || attribution.sourceSwitchDetail !== undefined;
   return (
     <div className={cn("rounded-xl border px-4 py-3", tone.wrapper)}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p
-          className={cn(
-            "text-xs font-semibold uppercase tracking-[0.12em]",
-            tone.kicker,
-          )}
-        >
-          Why this APY changed
-        </p>
-        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <p className={cn("text-xs font-semibold uppercase tracking-[0.12em]", tone.kicker)}>Why this APY changed</p>
+        <span aria-hidden="true" className="text-muted-foreground/40">
+          ·
+        </span>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
           {attribution.confidence} confidence
         </span>
@@ -541,11 +514,7 @@ const DRIVER_CONTRIBUTION_TO_DRIVER_KEY: Record<
   tvlDepth: "tvl-depth",
 };
 
-export function YieldRankMovementCard({
-  attribution,
-}: {
-  attribution: YieldRankChangeAttribution | null | undefined;
-}) {
+export function YieldRankMovementCard({ attribution }: { attribution: YieldRankChangeAttribution | null | undefined }) {
   const rankDelta = attribution?.rankDelta ?? null;
   const pysDelta = attribution?.pysDelta ?? null;
   const previousRank = attribution?.previousRank ?? null;
@@ -553,18 +522,14 @@ export function YieldRankMovementCard({
   const driverContributions = attribution?.driverContributions ?? null;
 
   // Stable state: render explicit "no movement" card so users see continuity.
-  const allZero =
-    (rankDelta === null || rankDelta === 0) &&
-    (pysDelta === null || Math.abs(pysDelta) < 0.005);
+  const allZero = (rankDelta === null || rankDelta === 0) && (pysDelta === null || Math.abs(pysDelta) < 0.005);
   if (!attribution || allZero) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Movement vs last publication
         </p>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Stable — no movement since last publication.
-        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground">Stable — no movement since last publication.</p>
       </div>
     );
   }
@@ -574,18 +539,18 @@ export function YieldRankMovementCard({
     rankDelta != null && rankDelta > 0
       ? "text-emerald-700 dark:text-emerald-400"
       : rankDelta != null && rankDelta < 0
-      ? "text-red-700 dark:text-red-400"
-      : "text-muted-foreground";
+        ? "text-red-700 dark:text-red-400"
+        : "text-muted-foreground";
 
-  const driverLabel =
-    primaryDriver != null ? YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver]?.short ?? null : null;
+  const driverLabel = primaryDriver != null ? (YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver]?.short ?? null) : null;
 
   // Top two driver contributions for the hover/disclosure.
   const topDrivers = driverContributions
-    ? (Object.entries(driverContributions) as Array<[
-        keyof NonNullable<YieldRankChangeAttribution["driverContributions"]>,
-        number | null | undefined,
-      ]>)
+    ? (
+        Object.entries(driverContributions) as Array<
+          [keyof NonNullable<YieldRankChangeAttribution["driverContributions"]>, number | null | undefined]
+        >
+      )
         .filter(([, value]) => value != null && Math.abs(value) >= 0.01)
         .sort(([, a], [, b]) => Math.abs(b ?? 0) - Math.abs(a ?? 0))
         .slice(0, 2)
@@ -604,8 +569,8 @@ export function YieldRankMovementCard({
               ? rankDelta > 0
                 ? `Rank improved by ${Math.abs(rankDelta)}`
                 : rankDelta < 0
-                ? `Rank fell by ${Math.abs(rankDelta)}`
-                : "Rank unchanged"
+                  ? `Rank fell by ${Math.abs(rankDelta)}`
+                  : "Rank unchanged"
               : "Rank delta unavailable"
           }
         >
@@ -620,15 +585,11 @@ export function YieldRankMovementCard({
       </div>
       {previousRank != null ? (
         <p className="mt-1 text-xs text-muted-foreground">
-          Previous rank{" "}
-          <span className="font-mono tabular-nums text-foreground">#{previousRank}</span>
+          Previous rank <span className="font-mono tabular-nums text-foreground">#{previousRank}</span>
           {rankDelta != null ? (
             <>
               {" "}
-              → current rank{" "}
-              <span className="font-mono tabular-nums text-foreground">
-                #{previousRank - rankDelta}
-              </span>
+              → current rank <span className="font-mono tabular-nums text-foreground">#{previousRank - rankDelta}</span>
             </>
           ) : null}
           .
@@ -647,9 +608,7 @@ export function YieldRankMovementCard({
               return (
                 <li key={key}>
                   <span className="text-foreground">{label.short}</span>:{" "}
-                  <span className="font-mono tabular-nums text-foreground">
-                    {formatSignedPercent(value, 2)} PYS
-                  </span>{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatSignedPercent(value, 2)} PYS</span>{" "}
                   <span className="text-muted-foreground/80">— {label.long}</span>
                 </li>
               );

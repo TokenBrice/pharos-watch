@@ -222,8 +222,8 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pools.slice(0, 5).map((pool) => (
-            <TableRow key={`${pool.chain}-${pool.symbol}-${pool.project}`} className="border-t">
+          {pools.slice(0, 5).map((pool, index) => (
+            <TableRow key={`${pool.chain}-${pool.symbol}-${pool.project}-${index}`} className="border-t">
               <TableCell className="px-3 py-1.5">
                 <div className="flex items-center gap-1.5">
                   <StressDot stress={pool.extra?.stressIndex} />

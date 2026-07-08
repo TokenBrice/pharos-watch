@@ -1,9 +1,15 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { BlacklistDetailStats } from "./blacklist-detail-stats";
 import { BlacklistDetailChart } from "./blacklist-detail-chart";
@@ -36,30 +42,29 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
   const { summary, isLoading } = state;
 
   return (
-    <section
-      id="blacklist"
-      className={SECTION_SCROLL_MT}
-    >
-      <Card className="pharos-card-shell p-4">
-        <div className="mb-3">
-          <DetailSectionTitle>
+    <section id="blacklist" className={SECTION_SCROLL_MT}>
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
           </DetailSectionTitle>
+        </CardHeader>
+        <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
           <p className="mt-1 text-sm text-muted-foreground">
             Addresses the issuer has frozen, released, or destroyed on this asset.
           </p>
-        </div>
-        {isLoading || !summary ? (
-          <div className="space-y-4">
-            <BlacklistDetailStats symbol={symbol} stats={undefined} isLoading />
-            <Skeleton className="h-[220px] w-full rounded-xl sm:h-[260px]" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <BlacklistDetailStats symbol={symbol} stats={summary.stats} isLoading={false} />
-            <BlacklistDetailChart data={summary.stats.perCoinQuarterlyEventTypes[symbol]} isLoading={false} />
-          </div>
-        )}
+          {isLoading || !summary ? (
+            <>
+              <BlacklistDetailStats symbol={symbol} stats={undefined} isLoading />
+              <Skeleton className="h-[220px] w-full rounded-xl sm:h-[260px]" />
+            </>
+          ) : (
+            <>
+              <BlacklistDetailStats symbol={symbol} stats={summary.stats} isLoading={false} />
+              <BlacklistDetailChart data={summary.stats.perCoinQuarterlyEventTypes[symbol]} isLoading={false} />
+            </>
+          )}
+        </CardContent>
       </Card>
     </section>
   );
@@ -71,16 +76,18 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
 
   return (
     <section id="blacklist-history">
-      <Card className="pharos-card-shell p-4">
-        <div className="mb-3">
-          <DetailSectionTitle>
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="blacklistTracker">Recent Blacklist Events</MethodologyLabel>
           </DetailSectionTitle>
+        </CardHeader>
+        <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
           <p className="mt-1 text-sm text-muted-foreground">
             Latest 10 freeze-ledger actions on this asset across all supported chains.
           </p>
-        </div>
-        <BlacklistDetailEventFeed symbol={symbol} limit={10} />
+          <BlacklistDetailEventFeed symbol={symbol} limit={10} />
+        </CardContent>
       </Card>
     </section>
   );

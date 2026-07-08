@@ -27,9 +27,9 @@ Newsreader serif is reserved for authored editorial/tombstone surfaces: the `/di
 
 The `HomeAltHero` tagline reads `Backing, freeze risk, liquidity, and peg stress — all in one place.` It sits under the `Market Pulse` page heading and ships as the homepage's single raw `h1` surface across breakpoints.
 
-### Hero signals rail (stablecoin detail)
+### Compact hero (stablecoin detail)
 
-On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` (Safety / Peg / Liquidity / DEWS) that quick-jumps to `#report-card` and `#liquidity`. It replaces the duplicated `SafetyGradeHero` block that used to sit opposite the Safety Score card. Mobile (`<lg`) continues to render `SafetyGradeHero` because the Safety Score card is far down scroll on narrow screens.
+On `lg+`, the detail hero starts with a desktop identity/action strip (coin logo, name, one-line description, source links, report/compare/share controls), followed by a compact dossier card: top taxonomy/archetype chips plus launch date, a divider-based metric grid for Price / Market Cap / Supply / 30d Excess, and the verification passport row. Safety / Peg / Liquidity / DEWS move to the `xl+` summary rail instead of rendering as an inline hero rail. Mobile (`<lg`) continues to render the visible identity block, actions, and `SafetyGradeHero` because the Safety Score card is far down scroll on narrow screens.
 
 ### Breadcrumbs
 
@@ -193,12 +193,13 @@ Active detail pages keep one server-rendered semantic `h1` for crawlers and assi
 
 - Server `h1`: `sr-only`
 - Client HeroCard mobile `h2`: `text-2xl font-black tracking-tighter`
-- Client HeroCard desktop `h2`: `text-3xl font-black tracking-tighter`
+- Client HeroCard desktop `h2`: `text-2xl font-extrabold` in the identity strip above the compact metric card, while the server `sr-only` `h1` remains the semantic page title
 - Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
 - Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
 - The `Contract Deployments` block shows a one-row, six-item icon preview on mobile with a `Show all` toggle; `sm+` renders labeled rows (chain logo + name link + truncated address + copy + explorer) in a 1/2/3-column grid with a nine-row preview and its own `Show all` toggle — the bare icon wall was retired in the June 2026 mythos pass (recognition fails past the top-10 chain logos)
-- A "verification passport" strip docks at the bottom of the hero card behind a hairline `border-t`: identity-document fields in two scan clusters — how the token works (Mechanism, Redeemability, Minting, Freeze, Record, Chains), then who stands behind it (Jurisdiction, MiCA, GENIUS, Attestor, Issued) — with the field name in small muted letters above a mono all-caps value, each linking to the section that proves the fact. Flat document fields, not pills; data-driven text tones only (attestor tier ladder via `POR_TIER_STYLES.textCls`, freeze amber/emerald); snap-scroll carousel below `lg`, edge-to-edge distributed wrap (`justify-between` at ≥6 facts) on `lg+`. See `docs/stablecoin-detail-page.md` `### Hero passport strip` for the field/anchor contract.
+- A "verification passport" strip docks at the bottom of the hero card behind a hairline `border-t`: identity-document fields in two scan clusters — how the token works (Mechanism, Redeemability, Minting, Freeze, Record, Chains), then who stands behind it (Jurisdiction, MiCA, GENIUS, Attestor, Issued) — with the field name in small muted letters above a mono all-caps value, each linking to the section that proves the fact. Flat document fields, not pills; data-driven text tones only (attestor tier ladder via `POR_TIER_STYLES.textCls`, freeze amber/emerald); snap-scroll carousel below `lg`, compact divider grid on `lg+` with `Mechanism` omitted because the desktop chip rail carries that role. See `docs/stablecoin-detail-page.md` `### Hero passport strip` for the field/anchor contract.
 - `LongformScrollspyNav` renders once as a sticky horizontal pill banner: a single inline row of section pills with no caption label. The active pill reuses the core-rail frost recipe (`.pharos-rail-tab` / `.pharos-rail-tab-active` + `.pharos-nav-beam` activation sweep + lit `text-frost-blue` icon), so the lit section reads strongly and stays theme-stable; active detection is scroll-position based (the last heading above the line just under the sticky nav) so the lit pill tracks the section being read without lag, and the active pill auto-scrolls into view in the overflow row on narrow viewports. On `lg+` the banner stays full-width with the pill row centered above the full-width dossier stream instead of reserving a side rail column
+- Stablecoin detail summary-rail cards use owned compact shells rather than generic wrappers: `Contracts · count` has a four-row row preview with square copy/explorer actions and an icon-only expand control, while `Price Transparency` is a three-section rail card (`Price Transparency`, `DEX Check`, `Sources`) with large mono prices, compact freshness, source-depth text, and source status dots.
 - A single `Explore Next` hub at the end of the page, replacing the older stack of repeated research/compare/related link grids with one consolidated crawlable route cluster
 
 This is intentionally denser than standard feature pages.

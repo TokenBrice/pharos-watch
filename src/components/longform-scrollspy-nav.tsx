@@ -187,8 +187,7 @@ export function LongformScrollspyNav({
       // frame without a re-render.
       if (emphasis === "watch-rail") {
         const firstTop = sectionNodes[0].getBoundingClientRect().top + window.scrollY;
-        const lastBottom =
-          sectionNodes[sectionNodes.length - 1].getBoundingClientRect().bottom + window.scrollY;
+        const lastBottom = sectionNodes[sectionNodes.length - 1].getBoundingClientRect().bottom + window.scrollY;
         const start = firstTop - getScrollOffset(railNode);
         const end = lastBottom - window.innerHeight;
         const span = end - start;
@@ -252,10 +251,7 @@ export function LongformScrollspyNav({
     return (
       <div
         ref={railRef}
-        className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start",
-          className,
-        )}
+        className={cn("sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start", className)}
       >
         <p className="px-2 pb-3 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {railLabel}
@@ -299,74 +295,87 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 bg-background px-3 py-2 md:mx-0 md:px-4 md:py-2.5 lg:top-[calc(env(safe-area-inset-top)+3px)]",
-          isPillTabs ? "border-transparent" : "rounded-xl border border-border/60",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 md:mx-0 lg:top-[calc(env(safe-area-inset-top)+3px)]",
+          isPillTabs
+            ? "mx-0 bg-transparent px-0 py-0"
+            : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",
           emphasis === "watch-rail" && "pharos-watch-rail overflow-hidden",
           className,
         )}
       >
-        <div className="relative flex items-center gap-3">
+        <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-3")}>
           {/* Fade mask hints at off-screen pills on narrow viewports */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+            aria-hidden="true"
+          />
           {isPillTabs ? (
-            <span aria-hidden="true" className="relative hidden h-px flex-1 bg-border lg:block">
-              <span className="absolute -left-px -top-[1.5px] size-1 bg-border" />
-            </span>
+            <span
+              aria-hidden="true"
+              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-left hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
+            />
           ) : null}
-        <nav
-          aria-label={navAriaLabel}
-          className={cn(
-            "min-w-0 flex-1 overflow-x-auto scrollbar-none",
-            isPillTabs ? "pharos-pill-tabs-group px-1.5 py-1" : "-mx-1 px-1 pb-0.5",
-          )}
-        >
-          <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const isActive = effectiveActiveId === section.id;
-              return (
-                <a
-                  key={section.id}
-                  ref={isActive ? activeAnchorRef : undefined}
-                  href={`#${section.id}`}
-                  aria-current={isActive ? "true" : undefined}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
-                    setActiveId(section.id);
-                  }}
-                  className={cn(
-                    "group pharos-focus-ring relative isolate inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
-                    isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
-                    isPillTabs && isActive && "pharos-pill-tab-active font-semibold",
-                    !isPillTabs && isActive && "pharos-rail-tab-active",
-                    emphasis === "watch-rail" && isActive && "font-semibold",
-                  )}
-                >
-                  {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
-                  {Icon ? (
-                    <Icon
-                      aria-hidden
-                      className={cn(
-                        "h-3.5 w-3.5 shrink-0",
-                        isActive
-                          ? isPillTabs
-                            ? "text-foreground"
-                            : "text-frost-blue"
-                          : "text-muted-foreground/80 group-hover:text-foreground",
-                      )}
-                    />
-                  ) : null}
-                  <span>{section.label}</span>
-                </a>
-              );
-            })}
-          </div>
-        </nav>
+          <nav
+            aria-label={navAriaLabel}
+            className={cn(
+              "scrollbar-none overflow-x-auto",
+              isPillTabs ? "pharos-pill-tabs-group max-w-full px-0.5 py-px" : "min-w-0 flex-1 -mx-1 px-1 pb-0.5",
+            )}
+          >
+            <div
+              className={cn("flex min-w-max snap-x snap-mandatory items-center", isPillTabs ? "gap-0.5" : "gap-1.5")}
+            >
+              {sections.map((section) => {
+                const Icon = section.icon;
+                const isActive = effectiveActiveId === section.id;
+                return (
+                  <a
+                    key={section.id}
+                    ref={isActive ? activeAnchorRef : undefined}
+                    href={`#${section.id}`}
+                    aria-current={isActive ? "true" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                      setActiveId(section.id);
+                    }}
+                    className={cn(
+                      "group pharos-focus-ring relative isolate inline-flex shrink-0 snap-start items-center overflow-hidden whitespace-nowrap font-medium transition-colors",
+                      isPillTabs
+                        ? "h-7 min-h-0 gap-1.5 rounded-[7px] px-3.5 py-1 text-sm leading-none"
+                        : "min-h-11 gap-1.5 rounded-full px-3 py-1.5 text-xs md:min-h-8 md:text-sm",
+                      isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
+                      isPillTabs && isActive && "pharos-pill-tab-active",
+                      !isPillTabs && isActive && "pharos-rail-tab-active",
+                      emphasis === "watch-rail" && isActive && "font-semibold",
+                    )}
+                  >
+                    {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+                    {Icon ? (
+                      <Icon
+                        aria-hidden
+                        className={cn(
+                          "shrink-0",
+                          isPillTabs
+                            ? "h-4 w-4 text-current"
+                            : cn(
+                                "h-3.5 w-3.5",
+                                isActive ? "text-frost-blue" : "text-muted-foreground/80 group-hover:text-foreground",
+                              ),
+                        )}
+                      />
+                    ) : null}
+                    <span>{section.label}</span>
+                  </a>
+                );
+              })}
+            </div>
+          </nav>
           {isPillTabs ? (
-            <span aria-hidden="true" className="relative hidden h-px flex-1 bg-border lg:block">
-              <span className="absolute -right-px -top-[1.5px] size-1 bg-border" />
-            </span>
+            <span
+              aria-hidden="true"
+              className="pharos-pill-tabs-rule pharos-pill-tabs-rule-right hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
+            />
           ) : null}
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Check, Download, ImageIcon, Link, Loader2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ type Status = "idle" | "loading" | "copied" | "error";
 interface ShareButtonProps {
   ogPath: string;
   label?: string;
+  iconOnly?: boolean;
 }
 
 async function fetchOgBlob(ogPath: string): Promise<Blob> {
@@ -24,7 +26,7 @@ async function fetchOgBlob(ogPath: string): Promise<Blob> {
   return res.blob();
 }
 
-export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
+export function ShareButton({ ogPath, label = "Share", iconOnly = false }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [canCopyImage] = useState(() =>
     typeof window !== "undefined" &&
@@ -103,10 +105,14 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
           variant="outline"
           size="sm"
           disabled={status === "loading"}
-          className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md"
+          aria-label={triggerLabel}
+          className={cn(
+            "min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md",
+            iconOnly && "size-8 min-h-0 rounded-md px-0 lg:min-h-0",
+          )}
         >
           {triggerIcon}
-          <span>{triggerLabel}</span>
+          {iconOnly ? <span className="sr-only">{triggerLabel}</span> : <span>{triggerLabel}</span>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

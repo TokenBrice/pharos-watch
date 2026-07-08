@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AreaChart, Area, ReferenceLine } from "recharts";
+import { Table2 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -14,14 +15,21 @@ const DEWS_CHART_HEX = CHART_PALETTE[0];
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
+import {
+  ChartAreaGradient,
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+  useSvgId,
+} from "@/components/chart-primitives/axes";
 import { formatChartDate } from "@shared/lib/format";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { cn } from "@/lib/utils";
 import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
-import { DewsBandStrip } from "@/components/dews-badge";
+import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
@@ -52,9 +60,9 @@ function signalBarHex(value: number): string {
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-2 w-full rounded-full bg-muted/70">
+    <div className="h-3 w-full rounded-[3px] border border-border/50 bg-muted/45">
       <div
-        className="h-full rounded-full transition-all"
+        className="h-full rounded-[3px] transition-all"
         style={{ width: `${Math.min(value, 100)}%`, backgroundColor: signalBarHex(value) }}
       />
     </div>
@@ -92,22 +100,14 @@ export function DEWSFiringList({ signals }: { signals: Record<string, DEWSFiring
 
   return (
     <div className="space-y-1">
-      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">
-        Signals firing
-      </h4>
+      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">Signals firing</h4>
       {firing.length === 0 ? (
         <p className="text-xs text-muted-foreground">No stress signals firing</p>
       ) : (
         firing.map(([key, s]) => (
-          <div
-            key={key}
-            data-testid="dews-firing-signal"
-            className="flex items-center justify-between text-xs"
-          >
+          <div key={key} data-testid="dews-firing-signal" className="flex items-center justify-between text-xs">
             <span className="text-foreground">{getDewsSignalLabel(key)}</span>
-            <span className="font-mono tabular-nums text-muted-foreground">
-              {Math.round(s.value)}
-            </span>
+            <span className="font-mono tabular-nums text-muted-foreground">{Math.round(s.value)}</span>
           </div>
         ))
       )}
@@ -204,11 +204,6 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const bandColor = THREAT_BAND_COLORS[typedBand] ?? "";
   const availableCount = Object.values(signals).filter((s) => s.available).length;
   const amplifiers = getDewsAmplifiers(data.current);
-  // 24h-ago score for the ghost notch on the band strip. `history` is
-  // chronological (oldest first), so the entry preceding the latest is the
-  // closest daily comparison point.
-  const prevScore = history && history.length >= 2 ? history[history.length - 2].score : undefined;
-
   const sortedSignals = Object.entries(SIGNAL_META)
     .flatMap(([key, meta]) => {
       const signal = signals[key];
@@ -222,57 +217,69 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     .map(([, meta]) => meta.name);
 
   return (
-    <Card className="animate-in fade-in duration-300">
+    <Card className="pharos-card-shell animate-in gap-0 overflow-hidden py-0 fade-in duration-300">
       {/* Figma coin template: title row with the Composite/Signal-Breakdown
           segmented toggle at the right; the big composite score + band chip
           lead beneath the title. */}
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
-        <div className="min-w-0">
-          <DetailSectionTitle>
-            <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
+        <div className="min-w-0 space-y-4">
+          <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+            Depeg Early Warning
           </DetailSectionTitle>
           <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
-            <span className="mt-2.5 flex items-center gap-2.5">
+            <span className="flex items-center gap-2.5">
               <span className="pharos-numeric text-3xl font-extrabold leading-none tabular-nums">{score}</span>
               <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
                 {THREAT_BAND_LABELS[typedBand]}
               </span>
-              <DewsBandStrip score={score} prevScore={prevScore} className="hidden sm:block" />
             </span>
           </ScoreBadgeWrapper>
         </div>
-        {chartData.length > 1 ? (
-          <div
-            className="inline-flex shrink-0 items-center rounded-lg border border-border/50 bg-background/40 p-0.5"
-            role="group"
-            aria-label="DEWS chart mode"
-          >
-            <button
-              type="button"
-              aria-pressed={!showBreakdown}
-              onClick={() => setShowBreakdown(false)}
-              className={cn(
-                "pharos-focus-ring rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-                !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
+        <div className="flex shrink-0 items-center gap-2">
+          {chartData.length > 1 ? (
+            <div
+              className="inline-flex items-center rounded-md border border-border/50 bg-muted/35 p-0.5"
+              role="group"
+              aria-label="DEWS chart mode"
             >
-              Composite
-            </button>
-            <button
-              type="button"
-              aria-pressed={showBreakdown}
-              onClick={() => setShowBreakdown(true)}
-              className={cn(
-                "pharos-focus-ring rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-                showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Signal Breakdown
-            </button>
-          </div>
-        ) : null}
+              <button
+                type="button"
+                aria-pressed={!showBreakdown}
+                onClick={() => setShowBreakdown(false)}
+                className={cn(
+                  "pharos-focus-ring rounded-[4px] px-2 py-1 text-[11px] font-medium leading-none transition-colors",
+                  !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Composite
+              </button>
+              <button
+                type="button"
+                aria-pressed={showBreakdown}
+                onClick={() => setShowBreakdown(true)}
+                className={cn(
+                  "pharos-focus-ring rounded-[4px] px-2 py-1 text-[11px] font-medium leading-none transition-colors",
+                  showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Signal Breakdown
+              </button>
+            </div>
+          ) : null}
+          <span className="text-muted-foreground/50" aria-hidden="true">
+            ·
+          </span>
+          <MethodologyHint
+            topic="dews"
+            buttonClassName="!h-5 !min-h-0 !w-5 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
+          />
+          <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-5 w-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground">
+            <Table2 className="h-3 w-3" aria-hidden="true" />
+            <span className="sr-only">Show inputs</span>
+          </ShowYourWorkToggle>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 px-4 py-5 sm:px-5">
         {availableCount < 4 && (
           <p className="text-xs text-muted-foreground">
             Limited data: only {availableCount} of 8 signals available. Score may be less reliable.
@@ -300,14 +307,15 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             const metricVal = signal[meta.metricKey];
             const isInactive = Math.round(signal.value) === 0;
             return (
-              <div key={key} className={cn("space-y-1.5", isInactive && "opacity-60")}>
+              <div key={key} className={cn("space-y-2", isInactive && "opacity-60")}>
                 <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
                   <span className="min-w-0 truncate" title={meta.name}>
                     <span className="text-foreground">{meta.name}</span>
                     <span className="text-muted-foreground"> · {Math.round(signal.value)} / 100</span>
                   </span>
                   <span className="shrink-0 whitespace-nowrap text-muted-foreground" title={meta.metricLabel}>
-                    {meta.metricLabel} · <span className="text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
+                    {meta.metricLabel} ·{" "}
+                    <span className="text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
                   </span>
                 </div>
                 <ProgressBar value={signal.value} />
@@ -319,41 +327,36 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           const rightSignals = sortedSignals.slice(half);
           return (
             <>
-              <div className="space-y-3.5 lg:hidden">{sortedSignals.map(renderRow)}</div>
+              <div className="space-y-4 lg:hidden">{sortedSignals.map(renderRow)}</div>
               <div className="hidden lg:grid lg:grid-cols-2 lg:gap-x-8">
-                <div className="space-y-3.5">{leftSignals.map(renderRow)}</div>
-                <div className="space-y-3.5">{rightSignals.map(renderRow)}</div>
+                <div className="space-y-4">{leftSignals.map(renderRow)}</div>
+                <div className="space-y-4">{rightSignals.map(renderRow)}</div>
               </div>
             </>
           );
         })()}
 
-        {unavailableSignalNames.length > 0 && (
-          <p className="text-[11px] text-muted-foreground">
-            {unavailableSignalNames.join(", ")} — not applicable
-          </p>
+        {unavailableSignalNames.length > 0 && showBreakdown && (
+          <p className="text-[11px] text-muted-foreground">{unavailableSignalNames.join(", ")} — not applicable</p>
         )}
 
         {/* History chart */}
         {chartData.length > 1 && (
           <>
-            <div ref={chartContainerRef} className="h-[140px]" role="figure" aria-label="DEWS score history">
+            <div ref={chartContainerRef} className="h-[240px]" role="figure" aria-label="DEWS score history">
               {isChartReady ? (
                 <AreaChart
                   width={width}
                   height={height}
                   data={chartData}
-                  margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                  margin={{ top: 8, right: 12, bottom: 6, left: 0 }}
                 >
                   <defs>
                     <ChartAreaGradient id={dewsGradientId} color={DEWS_CHART_HEX} />
                   </defs>
                   <TimeGrid />
-                  <TimeXAxis
-                    dataKey="ts"
-                    tickFormatter={(ts: number) => formatChartDate(ts, "short")}
-                  />
-                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} width={30} />
+                  <TimeXAxis dataKey="ts" tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
+                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} width={40} />
                   {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
                     <ReferenceLine y={25} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
                   )}
@@ -411,8 +414,6 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         )}
 
         <ShowYourWorkPanel kind="dews" current={data.current} stablecoinId={stablecoinId} />
-
-        <MethodologyCardActions topic="dews" showWorkToggle />
       </CardContent>
     </Card>
   );

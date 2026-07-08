@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import {
   SECTION_DIVIDER_CLASS,
   SECTION_SCROLL_MT,
@@ -60,7 +60,7 @@ export function ContractDeployments({
   // Desktop shows labeled rows (chain name + address + actions), not an
   // icon-only wall -- recognition fails past the top-10 chain logos. Preview 9
   // keeps the card compact for coins with dozens of deployments.
-  const desktopContractsPreview = contracts.slice(0, compact ? 5 : 9);
+  const desktopContractsPreview = contracts.slice(0, compact ? 4 : 9);
   const visibleDesktopContracts = showAllContractsDesktop ? contracts : desktopContractsPreview;
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
@@ -73,6 +73,48 @@ export function ContractDeployments({
     setCopiedContract(`${chain}:${address}`);
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
     copyResetTimer.current = setTimeout(() => setCopiedContract(null), 2000);
+  }
+
+  if (compact) {
+    const ToggleIcon = showAllContractsDesktop ? Minimize2 : Maximize2;
+    return (
+      <section className="pharos-card-shell overflow-hidden" aria-label={`Contracts, ${contracts.length} deployments`}>
+        <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Contracts</h2>
+            <span className="text-muted-foreground/50" aria-hidden="true">
+              ·
+            </span>
+            <span className="font-mono text-xs text-muted-foreground">{contracts.length}</span>
+          </div>
+          {hiddenDesktopContractCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllContractsDesktop((current) => !current)}
+              className="pharos-focus-ring inline-flex size-6 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
+              aria-label={
+                showAllContractsDesktop
+                  ? "Collapse contract deployments"
+                  : `Show all ${contracts.length} contract deployments`
+              }
+              title={showAllContractsDesktop ? "Collapse contracts" : `Show all ${contracts.length} contracts`}
+            >
+              <ToggleIcon className="h-3 w-3" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        <div className="space-y-1.5 px-4 py-3">
+          {visibleDesktopContracts.map((contract) => (
+            <CompactContractRow
+              key={`${contract.chain}-${contract.address}`}
+              contract={contract}
+              copied={copiedContract === `${contract.chain}:${contract.address}`}
+              onCopy={copyContractAddress}
+            />
+          ))}
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -150,6 +192,66 @@ export function ContractDeployments({
         >
           {showAllContractsMobile ? "Show less" : `Show all ${contracts.length} chains`}
         </button>
+      ) : null}
+    </div>
+  );
+}
+
+function CompactContractRow({
+  contract,
+  copied,
+  onCopy,
+}: {
+  contract: ContractDeployment;
+  copied: boolean;
+  onCopy: (chain: string, address: string) => void;
+}) {
+  const { chain, chainName, explorerUrl } = deriveContractInfo(contract);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/45 px-2 py-1.5">
+      {chain?.logoPath ? (
+        <Image
+          src={chain.logoPath}
+          alt=""
+          width={20}
+          height={20}
+          className={`h-5 w-5 shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
+        />
+      ) : (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+          {chainName.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <Link
+        href={`/chains/${contract.chain}/`}
+        className="pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium text-foreground hover:underline"
+      >
+        <span className="block max-w-[7rem] truncate">{chainName}</span>
+      </Link>
+      <span className="ml-auto min-w-0 truncate font-mono text-xs text-muted-foreground" title={contract.address}>
+        {formatAddress(contract.address)}
+      </span>
+      <button
+        type="button"
+        onClick={() => onCopy(contract.chain, contract.address)}
+        className="pharos-focus-ring relative inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        title="Copy address"
+        aria-label={`Copy ${chainName} contract address`}
+      >
+        <ContractCopyIcons copied={copied} iconClass="h-3 w-3" />
+      </button>
+      {explorerUrl ? (
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title={`View on ${chainName} explorer`}
+          aria-label={`View ${chainName} contract on explorer`}
+        >
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </a>
       ) : null}
     </div>
   );

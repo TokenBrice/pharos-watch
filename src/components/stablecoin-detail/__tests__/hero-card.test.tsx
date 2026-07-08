@@ -55,10 +55,15 @@ const coin: StablecoinMeta = {
   id: "usdc-circle",
   symbol: "USDC",
   name: "USD Coin",
+  oneLiner: "Circle-issued dollar stablecoin backed by cash and short-duration reserves.",
   canBeBlacklisted: true,
   status: "active",
   infrastructures: ["liquity-v2"],
   tags: ["major", "fiat-backed"],
+  links: [
+    { label: "Website", url: "https://www.circle.com/usdc" },
+    { label: "Twitter", url: "https://x.com/circle" },
+  ],
   flags: {
     backing: "rwa-backed",
     governance: "centralized",
@@ -302,6 +307,11 @@ describe("HeroCard", () => {
     );
 
     expect(html).toContain("USD Coin");
+    expect(html).toContain("Circle-issued dollar stablecoin backed by cash and short-duration reserves.");
+    expect(html).toContain('href="https://www.circle.com/usdc"');
+    expect(html).toContain('aria-label="Website"');
+    expect(html).toContain('href="https://x.com/circle"');
+    expect(html).toContain('aria-label="Twitter"');
     expect(html).toContain("major");
     expect(html).toContain("fiat-backed");
     expect(html).toContain("Infrastructure");
@@ -310,7 +320,10 @@ describe("HeroCard", () => {
     expect(html).toContain("peg-gauge:2");
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
-    expect(html).toContain("Liquidity");
+    expect(html).toContain("USD-Pegged");
+    expect(html).toContain("RWA-Backed");
+    expect(html).toContain("Centralized");
+    expect(html).toContain("Liq");
     // Passport strip: the five verification facts as anchor-jump chips.
     expect(html).toContain('aria-label="Verification passport"');
     expect(html).toContain("Mechanism");
@@ -322,7 +335,7 @@ describe("HeroCard", () => {
     expect(html).not.toContain(">Blacklistable<");
     expect(html).toContain("30d Excess");
     expect(html).toContain("+0.85%");
-    expect(html).toContain("30d vs USD 3M T-Bill");
+    expect(html).toContain("30D VS USD 3M T-BILL");
     expect(html).not.toContain("1Y vs USD");
     expect(html).toContain("DEWS");
     expect(html).toContain("Watch");
@@ -407,7 +420,7 @@ describe("HeroCard", () => {
       />,
     );
 
-    expect(html).toContain("No 30d benchmark gap");
+    expect(html).toContain("NO 30D BENCHMARK GAP");
   });
 
   it("renders the tracked parent chip for variant detail pages", () => {

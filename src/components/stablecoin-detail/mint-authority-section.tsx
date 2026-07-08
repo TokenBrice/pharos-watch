@@ -8,6 +8,13 @@ import { MethodologyCardActions, MethodologyLabel } from "@/components/methodolo
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityDetailScoreViewModel,
@@ -16,7 +23,6 @@ import type {
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { MintAuthorityDecentralizationDragViewModel } from "@/lib/stablecoin-detail-view-model";
 import { cn } from "@/lib/utils";
-import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
   minimized: "bg-[var(--severity-healthy)]",
@@ -182,20 +188,17 @@ export function MintAuthoritySection({
   const hasVerificationGaps = !!profile.sourceFreeRationale || unresolvedQuestions.length > 0;
 
   return (
-    <Card
-      id="mint-authority"
-      className={cn("pharos-card-shell", SECTION_SCROLL_MT)}
-    >
-      <CardHeader className="pb-2">
+    <Card id="mint-authority" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <DetailSectionTitle>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="mintAuthorityScore">Mint Authority</MethodologyLabel>
           </DetailSectionTitle>
           {score ? (
             <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
               <Badge
                 variant="outline"
-                className={cn("px-2.5 py-1 pharos-numeric text-lg", score.badgeClassName)}
+                className={cn("px-2 py-0.5 pharos-numeric text-sm", score.badgeClassName)}
                 title={score.detail}
               >
                 {score.scoreLabel}
@@ -204,7 +207,7 @@ export function MintAuthoritySection({
           ) : (
             <Badge
               variant="outline"
-              className="border-border/60 bg-muted/30 px-2.5 py-1 pharos-numeric text-lg text-muted-foreground"
+              className="border-border/60 bg-muted/30 px-2 py-0.5 pharos-numeric text-sm text-muted-foreground"
               title="Mint Authority Score is not rated."
             >
               NR
@@ -212,7 +215,7 @@ export function MintAuthoritySection({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         {!isReviewed ? (
           <>
             <div className="flex flex-wrap gap-1.5">

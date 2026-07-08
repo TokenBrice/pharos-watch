@@ -6,6 +6,12 @@ import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -16,13 +22,8 @@ import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
-import {
-  CHAIN_HEX,
-  PROTOCOL_HEX,
-  normalizeChain,
-  prettifyProtocol,
-  protocolLogo,
-} from "@/lib/dex-display-constants";
+import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
+import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -84,12 +85,8 @@ function buildDonutData(
 function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        {subtitle}
-      </span>
-      <span className="text-base font-semibold font-mono tabular-nums text-foreground">
-        {formatCurrency(total)}
-      </span>
+      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
+      <span className="text-base font-semibold font-mono tabular-nums text-foreground">{formatCurrency(total)}</span>
     </div>
   );
 }
@@ -129,17 +126,12 @@ function DonutCard({
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
-    <Card className="pharos-card-shell">
-      <CardHeader className="pb-2">
-        <DetailSectionTitle>{title}</DetailSectionTitle>
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div
-          ref={ref}
-          className="relative h-[200px] sm:h-[250px]"
-          role="figure"
-          aria-label={ariaLabel}
-        >
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
+        <div ref={ref} className="relative h-[200px] sm:h-[250px]" role="figure" aria-label={ariaLabel}>
           {ready ? (
             <>
               <PieChart width={width} height={height} className="cursor-pointer">
@@ -232,13 +224,13 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="pharos-card-shell">
-        <CardHeader className="pb-2">
-          <DetailSectionTitle>
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>
           </DetailSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
         </CardContent>
       </Card>
@@ -276,11 +268,11 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="pharos-card-shell">
-        <CardHeader className="pb-2">
-          <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
         </CardContent>
       </Card>
@@ -291,11 +283,11 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (data.length === 0) {
     return (
-      <Card className="pharos-card-shell">
-        <CardHeader className="pb-2">
-          <DetailSectionTitle>Liquidity by Protocol</DetailSectionTitle>
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</DetailSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
           <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">
             No observed DEX liquidity pools for this stablecoin
           </div>

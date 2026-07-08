@@ -7,14 +7,8 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
 import { isThreeStepArchetype } from "@/components/stablecoin-detail/mechanism-diagrams/three-step-archetype-diagram";
 import { VerticalThreeStepDiagram } from "@/components/stablecoin-detail/mechanism-diagrams/vertical-three-step-diagram";
-import {
-  PegStabilityBody,
-  type PegStabilityBodyProps,
-} from "@/components/key-info-card/sections";
-import {
-  getMechanismArchetypeCtaNoun,
-  getMechanismExplainerPath,
-} from "@shared/lib/classification";
+import { PegStabilityBody, type PegStabilityBodyProps } from "@/components/key-info-card/sections";
+import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
 
 /**
  * Standalone Peg Stability card for the Risk zone's split first row (Figma
@@ -32,15 +26,16 @@ export function PegStabilityCard(props: PegStabilityBodyProps) {
   const effectiveArchetype =
     resolvedMechanismArchetype !== undefined ? resolvedMechanismArchetype : (meta.mechanismArchetype ?? null);
   const override = getCoinOverride(meta.id);
-  const useVerticalFlow =
-    effectiveArchetype != null && !isWrapper && isThreeStepArchetype(effectiveArchetype);
+  const useVerticalFlow = effectiveArchetype != null && !isWrapper && isThreeStepArchetype(effectiveArchetype);
 
   return (
-    <Card id="mechanism" className="h-full gap-0 rounded-xl scroll-mt-24">
-      <CardHeader className="pb-2">
-        <DetailSectionTitle>Peg Stability</DetailSectionTitle>
+    <Card id="mechanism" className="pharos-card-shell h-full gap-0 overflow-hidden py-0 scroll-mt-24">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
+        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+          Peg Stability
+        </DetailSectionTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col">
+      <CardContent className="flex flex-1 flex-col px-4 py-5 sm:px-5">
         {useVerticalFlow ? (
           <>
             <div className="flex flex-1 flex-col items-center justify-center py-3">
@@ -48,9 +43,7 @@ export function PegStabilityCard(props: PegStabilityBodyProps) {
                 archetype={effectiveArchetype}
                 symbol={meta.symbol}
                 steps={override?.steps}
-                {...(override?.stressFootnote !== undefined
-                  ? { stressFootnote: override.stressFootnote }
-                  : {})}
+                {...(override?.stressFootnote !== undefined ? { stressFootnote: override.stressFootnote } : {})}
               />
               <Link
                 href={getMechanismExplainerPath(effectiveArchetype)}

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { AreaChart, Area, ReferenceDot } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
@@ -12,7 +13,14 @@ import { CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
+import {
+  ChartAreaGradient,
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+  useSvgId,
+} from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { ChartFigure } from "@/components/chart-primitives/figure";
@@ -143,13 +151,15 @@ export function McapChart({
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <DetailSectionTitle>Market Cap</DetailSectionTitle>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Cap</DetailSectionTitle>
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
             <span className="text-foreground/85">{formatCurrency(readout.mcap)}</span>
             {readout.deltaPct != null ? (
               <>
-                <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                <span aria-hidden="true" className="text-muted-foreground/60">
+                  ·
+                </span>
                 <span style={{ color: deltaColor }}>
                   {readout.deltaPct > 0 ? "+" : ""}
                   {readout.deltaPct.toFixed(2)}% 24h

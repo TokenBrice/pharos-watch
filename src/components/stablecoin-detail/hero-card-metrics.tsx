@@ -50,6 +50,173 @@ export interface HeroSignalRailItem {
   colorClass: string;
 }
 
+function CompactMetricCell({
+  label,
+  children,
+  subline,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  subline?: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-[8.25rem] border-b border-border/40 px-5 py-5 last:border-b-0 sm:px-6 lg:border-b-0 lg:border-r lg:last:border-r-0">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="mt-3">{children}</div>
+      {subline ? <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">{subline}</div> : null}
+    </div>
+  );
+}
+
+export function HeroCompactPriceCell({
+  coin,
+  coinData,
+  price: {
+    pegRef,
+    deviationBps,
+    pegReferenceUnavailable,
+    isNavToken,
+    limitedDepegCoverageNote,
+  },
+}: HeroPriceCardProps) {
+  const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
+  const deviationLabel = pegReferenceUnavailable
+    ? "Peg reference unavailable"
+    : formatPegDeviation(coinData.price, pegRef).toUpperCase();
+  return (
+    <CompactMetricCell
+      label={`Price${coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}`}
+      subline={
+        <span
+          className={
+            pegReferenceUnavailable
+              ? "text-muted-foreground"
+              : isNavToken
+                ? "text-green-700 dark:text-green-400"
+                : deviationColorClass(Math.abs(deviationBps))
+          }
+        >
+          {deviationLabel}
+        </span>
+      }
+    >
+      <p className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(coinData.priceConfidence)}`}>
+        {price}
+      </p>
+      {limitedDepegCoverageNote ? (
+        <p className="mt-2 max-w-[24ch] text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+          {limitedDepegCoverageNote}
+        </p>
+      ) : null}
+    </CompactMetricCell>
+  );
+}
+
+export function HeroCompactMarketCapCell({
+  coin,
+  coinData,
+  mcap,
+  safePrevDay,
+  prevDayTrendClass,
+}: {
+  coin: StablecoinMeta;
+  coinData?: StablecoinData;
+  mcap: number;
+  safePrevDay: number | null;
+  prevDayTrendClass: string;
+}) {
+  const supplyRestoredAsOf =
+    coinData?.supplyRestored === true && coinData.supplyObservedAt != null
+      ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : null;
+  return (
+    <CompactMetricCell
+      label="Market Cap"
+      subline={
+        <span className={`pharos-numeric ${prevDayTrendClass}`}>
+          {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}
+          <span className="text-muted-foreground">24H</span>
+        </span>
+      }
+    >
+      <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">{formatCurrency(mcap)}</p>
+      {coin.flags.pegCurrency !== "USD" ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">USD-normalized</p>
+      ) : null}
+      {coinData?.supplyRestored === true ? (
+        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+          Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}
+        </p>
+      ) : null}
+    </CompactMetricCell>
+  );
+}
+
+export function HeroCompactSupplyCell({
+  supply,
+  coinSymbol,
+  mcap,
+  safePrevWeek,
+  prevWeekTrendClass,
+  hasPrevMonth,
+  safePrevMonth,
+  prevMonthTrendClass,
+}: {
+  supply: number | null;
+  coinSymbol: string;
+  mcap: number;
+  safePrevWeek: number | null;
+  prevWeekTrendClass: string;
+  hasPrevMonth: boolean;
+  safePrevMonth: number | null;
+  prevMonthTrendClass: string;
+}) {
+  return (
+    <CompactMetricCell
+      label="Supply"
+      subline={
+        <span className="pharos-numeric">
+          <span className={prevWeekTrendClass}>
+            {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}
+          </span>
+          <span className="text-muted-foreground"> 7D</span>
+          {hasPrevMonth ? (
+            <>
+              <span className="text-muted-foreground"> · </span>
+              <span className={prevMonthTrendClass}>
+                {safePrevMonth == null ? "—" : formatPercentChange(mcap, safePrevMonth)}
+              </span>
+              <span className="text-muted-foreground"> 30D</span>
+            </>
+          ) : null}
+        </span>
+      }
+    >
+      <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">
+        {supply != null ? formatSupply(supply) : "—"}{" "}
+        <span className="text-sm text-muted-foreground">{coinSymbol}</span>
+      </p>
+    </CompactMetricCell>
+  );
+}
+
+export function HeroCompactTertiaryCell({ metric }: { metric: HeroTertiaryMetricConfig }) {
+  return (
+    <CompactMetricCell
+      label={metric.label}
+      subline={metric.subValue ? <span>{metric.subValue.toUpperCase()}</span> : null}
+    >
+      <p className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${metric.colorClass ?? "text-foreground"}`}>
+        {metric.value}
+      </p>
+    </CompactMetricCell>
+  );
+}
+
 function MetricChip({
   metricKey,
   label,

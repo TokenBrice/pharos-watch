@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { LineChart, Line, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
@@ -395,11 +396,13 @@ export function PegDeviationChart({
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <DetailSectionTitle>Peg Deviation</DetailSectionTitle>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Peg Deviation</DetailSectionTitle>
         {readout ? (
           <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
             <span className="text-foreground/85">${readout.price.toFixed(4)}</span>
-            <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+            <span aria-hidden="true" className="text-muted-foreground/60">
+              ·
+            </span>
             <span style={{ color: readout.bandCssColor }}>
               {readout.sign}
               {readout.bps} bps

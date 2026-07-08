@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 import { KeyInfoCard } from "@/components/key-info-card";
+import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import type { StablecoinMeta } from "@shared/types";
 
 vi.mock("next/image", () => ({
@@ -162,6 +163,21 @@ describe("KeyInfoCard contract interactions", () => {
     // 7 contracts fit the 9-row desktop preview: only the mobile Show-all
     // (6-item preview) renders, not a second desktop toggle.
     expect(screen.getAllByRole("button", { name: "Show all 7 chains" }).length).toBe(1);
+  });
+
+  it("renders compact contract rail rows with a header count and icon-only expander", () => {
+    render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} compact />);
+
+    expect(screen.getByRole("heading", { name: "Contracts" })).toBeTruthy();
+    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByText("Ethereum")).toBeTruthy();
+    expect(screen.getByText("0x1111...1111")).toBeTruthy();
+    expect(screen.queryByText("BSC")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all 7 contract deployments" }));
+
+    expect(screen.getByText("BSC")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Collapse contract deployments" })).toBeTruthy();
   });
 
   it("links MiCA badges to the tracker and marks frozen statuses as historical", () => {

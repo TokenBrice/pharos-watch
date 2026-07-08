@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  BookOpen,
+  ExternalLink,
+  FileText,
+  Flag,
+  Globe,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { ShareButton } from "@/components/share-button";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type {
   HeroCardViewModel,
@@ -68,6 +79,79 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
   };
 }
 
+function linkIconFor(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("website")) return Globe;
+  if (normalized.includes("twitter") || normalized === "x") return X;
+  if (normalized.includes("doc")) return FileText;
+  return ExternalLink;
+}
+
+function HeroDesktopIdentityToolbar({
+  model,
+  onOpenFeedback,
+}: {
+  model: HeroCardViewModel;
+  onOpenFeedback: () => void;
+}) {
+  const { coin, logoSrc, header } = model;
+  const links = (coin.links ?? []).slice(0, 3);
+  const actionClass =
+    "pharos-focus-ring inline-flex size-8 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground";
+
+  return (
+    <div className="hidden items-start justify-between gap-5 lg:flex">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <StablecoinLogo src={logoSrc} name={coin.name} size={34} />
+          <div className="min-w-0 flex-1">
+            <h2 className="pharos-page-title text-2xl leading-none tracking-normal">{coin.name}</h2>
+            {coin.oneLiner ? (
+              <p className="mt-2 max-w-none text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5 pt-1">
+        {links.map((link) => {
+          const Icon = linkIconFor(link.label);
+          return (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={actionClass}
+              aria-label={link.label}
+              title={link.label}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onOpenFeedback}
+          className={actionClass}
+          aria-label="Report issue"
+          title="Report issue"
+        >
+          <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        <Link
+          href={header.compareHref}
+          className={actionClass}
+          aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+          title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+        <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
+      </div>
+    </div>
+  );
+}
+
 export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   const {
     coin,
@@ -101,44 +185,49 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   };
 
   return (
-    <Card className="pharos-card-shell gap-0">
-      <HeroCardHeader
-        coinId={header.coinId}
-        compareHref={header.compareHref}
-        benchmarkSymbol={header.benchmarkSymbol}
-        onOpenFeedback={onOpenFeedback}
-      />
-      <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
-      <HeroCardDesktopSection
-        {...sectionBaseProps}
-        signalRailItems={signalRailItems}
-        tertiaryMetrics={desktopTertiaryMetrics}
-      />
-      <HeroPassportStrip items={model.passportItems} />
-      {model.caseStudyCallout ? (
-        <Link
-          href={model.caseStudyCallout.href}
-          aria-label={`Read the case study: ${model.caseStudyCallout.title} (outcome: ${model.caseStudyCallout.outcomeLabel})`}
-          className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-border/60 bg-muted/30 px-4 py-2.5 transition-colors hover:bg-muted/50 sm:gap-3 sm:px-5"
-        >
-          <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="pharos-kicker shrink-0">Case study</span>
-          <span aria-hidden="true" className="h-3 w-px shrink-0 bg-border" />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-            {model.caseStudyCallout.title}
-          </span>
-          <Badge
-            variant="outline"
-            className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${model.caseStudyCallout.outcomeChipClass}`}
-          >
-            {model.caseStudyCallout.outcomeLabel}
-          </Badge>
-          <ArrowRight
-            aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+    <>
+      <HeroDesktopIdentityToolbar model={model} onOpenFeedback={onOpenFeedback} />
+      <Card className="pharos-card-shell gap-0 py-0">
+        <div className="lg:hidden">
+          <HeroCardHeader
+            coinId={header.coinId}
+            compareHref={header.compareHref}
+            benchmarkSymbol={header.benchmarkSymbol}
+            onOpenFeedback={onOpenFeedback}
           />
-        </Link>
-      ) : null}
-    </Card>
+        </div>
+        <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
+        <HeroCardDesktopSection
+          {...sectionBaseProps}
+          signalRailItems={signalRailItems}
+          tertiaryMetrics={desktopTertiaryMetrics}
+        />
+        <HeroPassportStrip items={model.passportItems} compactDesktop />
+        {model.caseStudyCallout ? (
+          <Link
+            href={model.caseStudyCallout.href}
+            aria-label={`Read the case study: ${model.caseStudyCallout.title} (outcome: ${model.caseStudyCallout.outcomeLabel})`}
+            className="pharos-focus-ring group -mb-4 flex items-center gap-2.5 rounded-b-xl border-t border-border/60 bg-muted/30 px-4 py-2.5 transition-colors hover:bg-muted/50 sm:gap-3 sm:px-5"
+          >
+            <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="pharos-kicker shrink-0">Case study</span>
+            <span aria-hidden="true" className="h-3 w-px shrink-0 bg-border" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {model.caseStudyCallout.title}
+            </span>
+            <Badge
+              variant="outline"
+              className={`shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${model.caseStudyCallout.outcomeChipClass}`}
+            >
+              {model.caseStudyCallout.outcomeLabel}
+            </Badge>
+            <ArrowRight
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+            />
+          </Link>
+        ) : null}
+      </Card>
+    </>
   );
 }

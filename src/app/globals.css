@@ -836,13 +836,51 @@
      raised fill with primary ink — per the design's tab bar; frost stays
      reserved for live data. */
   .pharos-pill-tabs-group {
-    @apply rounded-full border;
+    @apply rounded-[8px] border;
     background: var(--control-pill-bg);
     border-color: var(--control-pill-border);
   }
 
+  .dark .pharos-pill-tabs-group {
+    background: #1e1d1f;
+    border-color: #2a292b;
+  }
+
+  .pharos-pill-tabs-rule {
+    position: relative;
+    background: color-mix(in oklab, var(--control-pill-border) 78%, transparent);
+  }
+
+  .dark .pharos-pill-tabs-rule {
+    background: #2a292b;
+  }
+
+  .pharos-pill-tabs-rule-left::before,
+  .pharos-pill-tabs-rule-right::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    height: 3px;
+    width: 3px;
+    border-radius: 9999px;
+    background: inherit;
+    transform: translateY(-50%);
+  }
+
+  .pharos-pill-tabs-rule-left::before {
+    left: 0;
+  }
+
+  .pharos-pill-tabs-rule-right::after {
+    right: 0;
+  }
+
   .pharos-pill-tab {
     color: var(--muted-foreground);
+  }
+
+  .dark .pharos-pill-tab {
+    color: #6b6a6c;
   }
 
   .pharos-pill-tab:hover {
@@ -850,11 +888,23 @@
     background-color: var(--interactive-hover);
   }
 
+  .dark .pharos-pill-tab:hover {
+    color: #d6d5d7;
+    background-color: #262527;
+  }
+
   .pharos-pill-tab-active,
   .pharos-pill-tab-active:hover {
     color: var(--text-primary);
     background-color: var(--interactive-active);
     box-shadow: inset 0 0 0 1px var(--control-pill-border);
+  }
+
+  .dark .pharos-pill-tab-active,
+  .dark .pharos-pill-tab-active:hover {
+    color: #e4e4e6;
+    background-color: #2f2e30;
+    box-shadow: inset 0 0 0 1px #3a393b;
   }
 
   /* Faint frost-tinted ground that distinguishes "your navigation" from
@@ -1268,7 +1318,6 @@
     text-decoration-thickness: 1px;
     font-style: italic;
   }
-
 }
 
 @media (max-width: 767px) {

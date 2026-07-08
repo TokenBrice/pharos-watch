@@ -46,15 +46,17 @@ export function KeyInfoCard({
   const { governanceFullLabel, backingFullLabel, pegFullLabel } = getKeyInfoSentenceLabels(meta);
 
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <DetailSectionTitle>Key Information</DetailSectionTitle>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+    <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
+        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+          Key Information
+        </DetailSectionTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 py-5 sm:space-y-4 sm:px-5">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           {meta.name} ({meta.symbol}) is a {governanceFullLabel}, {backingFullLabel} stablecoin pegged to {pegFullLabel}
           .
         </p>
-      </CardHeader>
-      <CardContent className="space-y-3 sm:space-y-4">
         <ClassificationAndLinks meta={meta} />
         {splitMechanism ? (
           <CollateralSection meta={meta} />

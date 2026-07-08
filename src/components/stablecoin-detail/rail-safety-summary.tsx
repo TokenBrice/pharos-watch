@@ -25,7 +25,7 @@ export function RailSafetySummary({ items }: { items: HeroSignalRailItem[] }) {
   return (
     <div className="pharos-card-shell p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="pharos-kicker">Safety</p>
+        <h2 className="text-sm font-medium text-muted-foreground">Safety</h2>
         <Link
           href="#report-card"
           className="pharos-focus-ring inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"

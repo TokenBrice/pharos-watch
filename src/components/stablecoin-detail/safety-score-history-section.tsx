@@ -4,24 +4,21 @@ import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
-import {
-  formatChartDate,
-  formatDuration,
-  formatTrackingSpanDays,
-} from "@shared/lib/format";
+import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared/lib/format";
 import { getReportCardGradeRank } from "@shared/lib/report-cards";
 import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 
@@ -42,18 +39,10 @@ function gradeRank(grade: ReportCardGrade): number {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatBox({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function StatBox({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border/60 bg-background/45 px-3 py-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="mt-0.5">{children}</div>
     </div>
   );
@@ -100,9 +89,7 @@ interface SafetyScoreHistorySectionProps {
   stablecoinId: string;
 }
 
-export function SafetyScoreHistorySection({
-  stablecoinId,
-}: SafetyScoreHistorySectionProps) {
+export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySectionProps) {
   const { data, meta, isLoading, error } = useSafetyScoreHistory(stablecoinId, 3650);
   const [expanded, setExpanded] = useState(false);
 
@@ -148,9 +135,7 @@ export function SafetyScoreHistorySection({
   }, [history, nowSec]);
 
   const reversed = useMemo(() => [...history].reverse(), [history]);
-  const visibleEntries = expanded
-    ? reversed
-    : reversed.slice(0, VISIBLE_CAP);
+  const visibleEntries = expanded ? reversed : reversed.slice(0, VISIBLE_CAP);
   const hiddenCount = reversed.length - VISIBLE_CAP;
 
   // --- early returns -------------------------------------------------------
@@ -162,18 +147,19 @@ export function SafetyScoreHistorySection({
   // --- render --------------------------------------------------------------
 
   return (
-    <Card className="pharos-card-shell">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-1">
-        <DetailSectionTitle>Grade History</DetailSectionTitle>
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Grade History</DetailSectionTitle>
         {meta?.updatedAt != null && meta.updatedAt > 0 ? (
           <FreshnessIndicator
+            compact
             updatedAtMs={meta.updatedAt * 1000}
             staleAfterMs={CRON_24H}
             labelPrefix="Updated"
           />
         ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -197,9 +183,7 @@ export function SafetyScoreHistorySection({
             </StatBox>
             <StatBox label="Current Streak">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold tabular-nums">
-                  {formatTrackingSpanDays(stats.streakDays)}
-                </span>
+                <span className="text-xs font-semibold tabular-nums">{formatTrackingSpanDays(stats.streakDays)}</span>
                 <span className="text-xs text-muted-foreground">at</span>
                 <SafetyGradeBadge
                   grade={stats.lastEntry.grade}
@@ -240,13 +224,9 @@ export function SafetyScoreHistorySection({
                     <p>
                       {formatChartDate(seg.start * 1000, "long")}
                       {" — "}
-                      {seg.isLast
-                        ? "Now"
-                        : formatChartDate(seg.end * 1000, "long")}
+                      {seg.isLast ? "Now" : formatChartDate(seg.end * 1000, "long")}
                     </p>
-                    <p className="text-muted-foreground">
-                      {formatDuration(seg.start, seg.end)}
-                    </p>
+                    <p className="text-muted-foreground">{formatDuration(seg.start, seg.end)}</p>
                   </TooltipContent>
                 </Tooltip>
               ))}
@@ -262,9 +242,7 @@ export function SafetyScoreHistorySection({
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-1.5"
             >
               <div className="flex min-w-0 items-center gap-2">
-                <span className="text-xs font-medium tabular-nums">
-                  {formatChartDate(point.date * 1000, "long")}
-                </span>
+                <span className="text-xs font-medium tabular-nums">{formatChartDate(point.date * 1000, "long")}</span>
                 <SafetyGradeBadge
                   grade={point.grade}
                   score={point.score}
@@ -281,15 +259,8 @@ export function SafetyScoreHistorySection({
         {/* Show more / show less */}
         {hiddenCount > 0 && (
           <div className="pt-1 text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setExpanded((v) => !v)}
-              className="h-7 text-xs"
-            >
-              {expanded
-                ? "Show less"
-                : `Show ${hiddenCount} more`}
+            <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} className="h-7 text-xs">
+              {expanded ? "Show less" : `Show ${hiddenCount} more`}
             </Button>
           </div>
         )}

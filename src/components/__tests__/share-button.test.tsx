@@ -76,4 +76,12 @@ describe("ShareButton", () => {
 
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-png");
   });
+
+  it("can render as an icon-only trigger", () => {
+    render(<ShareButton ogPath="/api/og/stablecoin/usdc" iconOnly />);
+
+    const trigger = screen.getByRole("button", { name: "Share" });
+    expect(trigger.className).toContain("size-8");
+    expect(trigger.querySelector(".sr-only")?.textContent).toBe("Share");
+  });
 });

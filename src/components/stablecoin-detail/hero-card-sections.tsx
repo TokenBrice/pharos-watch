@@ -1,7 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, Flag } from "lucide-react";
+import { ArrowLeftRight, BadgeCheck, Flag, Rocket } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
 import type {
   Infrastructure,
@@ -12,17 +13,25 @@ import type {
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
+import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
-  HeroDesktopIdentity,
+  buildBackingTaxonomyUrl,
+  buildGovernanceTaxonomyUrl,
+} from "@/lib/stablecoin-taxonomy-urls";
+import { isHeroVerdictEnabled } from "@/lib/feature-flags";
+import {
   HeroMobileIdentityDetails,
   HeroMobileIdentity,
   HeroVerdict,
   SafetyGradeHero,
 } from "./hero-card-identity";
 import {
+  HeroCompactMarketCapCell,
+  HeroCompactPriceCell,
+  HeroCompactSupplyCell,
+  HeroCompactTertiaryCell,
   HeroMarketCapCard,
   HeroPriceCard,
-  HeroSignalsRail,
   HeroSupplyCard,
   HeroTertiaryMetrics,
 } from "./hero-card-metrics";
@@ -32,6 +41,107 @@ export type {
   HeroSignalRailItem,
   HeroTertiaryMetricConfig,
 } from "./hero-card-metrics";
+
+function pegChipLabel(peg: StablecoinMeta["flags"]["pegCurrency"]): string {
+  return `${peg}-Pegged`;
+}
+
+function backingChipLabel(backing: StablecoinMeta["flags"]["backing"]): string {
+  switch (backing) {
+    case "rwa-backed":
+      return "RWA-Backed";
+    case "crypto-backed":
+      return "Crypto-Backed";
+    case "algorithmic":
+      return "Algorithmic";
+  }
+}
+
+function governanceChipLabel(governance: StablecoinMeta["flags"]["governance"]): string {
+  switch (governance) {
+    case "centralized":
+      return "Centralized";
+    case "centralized-dependent":
+      return "Dependent";
+    case "decentralized":
+      return "Decentralized";
+  }
+}
+
+function formatLaunchDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function HeroCompactChip({
+  href,
+  children,
+}: {
+  href?: string | null;
+  children: ReactNode;
+}) {
+  const className =
+    "pharos-focus-ring inline-flex h-5 items-center rounded-full bg-muted/70 px-2.5 text-xs font-medium leading-none text-foreground/80 transition-colors hover:bg-muted";
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
+function HeroDesktopChipRail({
+  coin,
+  verdict,
+}: {
+  coin: StablecoinMeta;
+  verdict: StablecoinVerdict;
+}) {
+  const showVerdict = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
+  const launchDate = formatLaunchDate(coin.launchDate);
+  const pegLabel = pegChipLabel(coin.flags.pegCurrency);
+  const backingLabel = backingChipLabel(coin.flags.backing);
+  const governanceLabel = governanceChipLabel(coin.flags.governance);
+
+  return (
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/40 px-5 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {showVerdict ? (
+          <span
+            id={`hero-verdict-${coin.id}`}
+            data-archetype={verdict.archetype}
+            className="inline-flex h-5 items-center gap-1 rounded-full bg-sky-500/15 px-2.5 text-xs font-medium leading-none text-sky-700 dark:text-sky-300"
+          >
+            <BadgeCheck aria-hidden="true" className="h-3 w-3" />
+            {verdict.label}
+          </span>
+        ) : null}
+        <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>
+          {pegLabel}
+        </HeroCompactChip>
+        <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>
+          {backingLabel}
+        </HeroCompactChip>
+        <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>
+          {governanceLabel}
+        </HeroCompactChip>
+      </div>
+      {launchDate ? (
+        <span className="-my-2 -mr-5 inline-flex h-10 items-center gap-1.5 border-l border-border/40 px-4 text-xs font-medium text-muted-foreground">
+          <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
+          {launchDate}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export function HeroCardHeader({
   coinId,
@@ -165,97 +275,45 @@ export function HeroCardMobileSection({
 export function HeroCardDesktopSection({
   coin,
   coinData,
-  logoSrc,
   verdict,
-  variantParent,
-  variantChipClass,
-  infrastructures,
   price,
   market,
-  peg,
-  signalRailItems,
   tertiaryMetrics,
 }: HeroSectionBaseProps & {
   signalRailItems: HeroSignalRailItem[];
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
-  // At xl+ the 30d-excess metric graduates from a tertiary chip to the
-  // fourth KPI tile (the Figma coin template's fourth column); below xl it
-  // stays a chip so the 3-col band + signals rail keep their layout.
+  // The fourth slot preserves the live 30d excess-vs-T-bill metric even though
+  // the visual chrome now matches the compact reference dossier.
   const excessMetric = tertiaryMetrics.find((metric) => metric.key === "excess-yield");
-  const inlineTertiaryMetrics = tertiaryMetrics.map((metric) =>
-    metric.key === "excess-yield" ? { ...metric, className: "xl:hidden" } : metric,
-  );
 
   return (
-    <div className="hidden px-5 pb-3.5 pt-5 lg:block">
-      <div className="flex gap-6">
-        <div className="min-w-0 flex-1">
-          <HeroDesktopIdentity
-            coin={coin}
-            logoSrc={logoSrc}
-            variantParent={variantParent}
-            variantChipClass={variantChipClass}
-            infrastructures={infrastructures}
-            verdict={verdict}
-          />
-
-          <div className={`mt-5 grid grid-cols-3 gap-4 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
-            <HeroPriceCard
-              coin={coin}
-              coinData={coinData}
-              price={price}
-            />
-            <HeroMarketCapCard
-              coin={coin}
-              coinData={coinData}
-              mcap={market.mcap}
-              safePrevDay={market.safePrevDay}
-              prevDayTrendClass={market.prevDayTrendClass}
-            />
-            <HeroSupplyCard
-              supply={market.supply}
-              coinSymbol={coin.symbol}
-              mcap={market.mcap}
-              safePrevWeek={market.safePrevWeek}
-              prevWeekTrendClass={market.prevWeekTrendClass}
-              hasPrevMonth={market.hasPrevMonth}
-              safePrevMonth={market.safePrevMonth}
-              prevMonthTrendClass={market.prevMonthTrendClass}
-            />
-            {excessMetric ? (
-              <div className="hidden rounded-xl bg-background/30 px-4 py-3 xl:block">
-                <p className="pharos-kicker">{excessMetric.label}</p>
-                <p
-                  className={`mt-0.5 text-2xl font-extrabold pharos-numeric tracking-tight xl:text-3xl ${
-                    excessMetric.colorClass ?? "text-foreground"
-                  }`}
-                >
-                  {excessMetric.value}
-                </p>
-                {excessMetric.subValue ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{excessMetric.subValue}</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-3">
-            <HeroTertiaryMetrics
-              metrics={inlineTertiaryMetrics}
-              earlyPegScore={peg.earlyPegScore}
-              trackingSpanDays={peg.trackingSpanDays}
-              activeDepeg={peg.activeDepeg}
-              trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
-            />
-          </div>
-        </div>
-
-        {/* At xl+ the detail right rail renders the safety summary card
-            (Figma coin template), so the inline copy CSS-hides there. */}
-        <div className="w-56 shrink-0 xl:hidden">
-          <HeroSignalsRail items={signalRailItems} />
-        </div>
+    <div className="hidden lg:block">
+      <HeroDesktopChipRail coin={coin} verdict={verdict} />
+      <div className={`grid lg:grid-cols-3 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
+        <HeroCompactPriceCell
+          coin={coin}
+          coinData={coinData}
+          price={price}
+        />
+        <HeroCompactMarketCapCell
+          coin={coin}
+          coinData={coinData}
+          mcap={market.mcap}
+          safePrevDay={market.safePrevDay}
+          prevDayTrendClass={market.prevDayTrendClass}
+        />
+        <HeroCompactSupplyCell
+          supply={market.supply}
+          coinSymbol={coin.symbol}
+          mcap={market.mcap}
+          safePrevWeek={market.safePrevWeek}
+          prevWeekTrendClass={market.prevWeekTrendClass}
+          hasPrevMonth={market.hasPrevMonth}
+          safePrevMonth={market.safePrevMonth}
+          prevMonthTrendClass={market.prevMonthTrendClass}
+        />
+        {excessMetric ? <HeroCompactTertiaryCell metric={excessMetric} /> : null}
       </div>
     </div>
   );

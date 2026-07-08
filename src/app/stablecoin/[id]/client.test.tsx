@@ -406,7 +406,7 @@ describe("StablecoinDetailClient", () => {
     expect(longformScrollspyNavMock).not.toHaveBeenCalledWith(expect.objectContaining({ variant: "rail" }));
   });
 
-  it("renders the xl summary rail with in-flow copies owning the deep-link anchors", () => {
+  it("renders the xl summary rail as normal-flow content with in-flow copies owning the deep-link anchors", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -414,6 +414,11 @@ describe("StablecoinDetailClient", () => {
 
     const rail = container.querySelector('aside[aria-label="Coin summary rail"]');
     expect(rail).toBeTruthy();
+    const railStack = rail?.firstElementChild;
+    expect(railStack?.className).not.toContain("sticky");
+    expect(railStack?.className).not.toContain("top-[");
+    expect(railStack?.className).not.toContain("overflow-y-auto");
+    expect(railStack?.className).not.toContain("max-h-");
     // Dual-rendered rail modules must never duplicate anchor ids: the in-flow
     // (below-xl) instance owns #price / #coin-timeline / #contracts.
     expect(container.querySelectorAll("#price").length).toBeLessThanOrEqual(1);

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useShowWorkMode } from "@/hooks/use-show-work-mode";
 
 /**
@@ -7,7 +8,7 @@ import { useShowWorkMode } from "@/hooks/use-show-work-mode";
  * <ShowYourWorkPanel> instances on score cards: the toggle and the panel
  * swap visibility on the same `useShowWorkMode().enabled` flag.
  */
-export function ShowYourWorkToggle({ className }: { className?: string }) {
+export function ShowYourWorkToggle({ className, children }: { className?: string; children?: ReactNode }) {
   const { enabled, toggle } = useShowWorkMode();
   return (
     <button
@@ -19,7 +20,7 @@ export function ShowYourWorkToggle({ className }: { className?: string }) {
         "pharos-focus-ring min-h-11 rounded-sm py-2 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
       }
     >
-      {enabled ? "Hide inputs" : "Show inputs"}
+      {children ?? (enabled ? "Hide inputs" : "Show inputs")}
     </button>
   );
 }

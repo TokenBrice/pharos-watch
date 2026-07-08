@@ -24,12 +24,9 @@ const RISK_LABELS: Record<ReserveRisk, string> = {
 };
 
 const RESERVE_BADGE_CLASSNAMES: Record<ReserveDisplayBadgeView["kind"], string> = {
-  live:
-    "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
-  "curated-validated":
-    "bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-500/20",
-  proof:
-    "bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-500/20",
+  live: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
+  "curated-validated": "bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-500/20",
+  proof: "bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-500/20",
 };
 
 /* Break a cell label on word boundaries instead of mid-word ("Deposits at
@@ -69,16 +66,7 @@ interface TreemapCellProps {
   depth?: number;
 }
 
-function TreemapCell({
-  x,
-  y,
-  width,
-  height,
-  name,
-  risk,
-  pct,
-  depth,
-}: TreemapCellProps) {
+function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
@@ -94,16 +82,7 @@ function TreemapCell({
 
   return (
     <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={4}
-        fill={fill}
-        stroke="var(--color-card)"
-        strokeWidth={2}
-      />
+      <rect x={x} y={y} width={width} height={height} rx={4} fill={fill} stroke="var(--color-card)" strokeWidth={2} />
       {showLabel && (
         <text
           textAnchor="middle"
@@ -158,10 +137,7 @@ function ReserveTooltip({
 
 export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   const data = useMemo(
-    () =>
-      reserves
-        .filter((r) => Number.isFinite(r.pct) && r.pct > 0)
-        .map((r) => ({ ...r, size: r.pct })),
+    () => reserves.filter((r) => Number.isFinite(r.pct) && r.pct > 0).map((r) => ({ ...r, size: r.pct })),
     [reserves],
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
@@ -169,29 +145,28 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   // Rendered flat (no Card chrome): the treemap lives inside the report-card
   // panel's right column, and a nested card would violate Flat-By-Default.
   return (
-    <div className="min-w-0 overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="min-w-0">
-        <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2">
+        <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold tracking-normal text-muted-foreground">
           Reserve Composition
           {badge && (
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}
+            >
               {badge.label}
             </span>
           )}
         </DetailSectionTitle>
       </div>
-      <div className="mt-3 min-w-0 overflow-hidden">
+      <div className="mt-3 min-h-[200px] min-w-0 flex-1 overflow-hidden">
         <div
           ref={chartContainerRef}
-          className="h-64 min-w-0 overflow-hidden xl:h-80"
+          className="h-full min-w-0 overflow-hidden"
           role="figure"
           aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
         >
           {isChartReady ? (
-            <SectionErrorBoundary
-              name="reserve-treemap"
-              supportingText="Reserve composition chart unavailable"
-            >
+            <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">
               <Treemap
                 width={width}
                 height={height}
@@ -214,7 +189,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
       <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1">
         {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
           <div key={risk} className="flex min-w-0 items-center gap-1.5">
-            <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
+            <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
             <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               {label}
             </span>

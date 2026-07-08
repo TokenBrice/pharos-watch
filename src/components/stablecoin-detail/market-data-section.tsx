@@ -3,12 +3,14 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ChartAnnotationLegend } from "@/components/chart-primitives/annotations";
-import {
-  ChartBrush,
-  MarketDataChartSyncProvider,
-  useMarketDataChartSync,
-} from "@/components/chart-primitives/sync";
+import { ChartBrush, MarketDataChartSyncProvider, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";
 import { McapChart } from "@/components/mcap-chart";
@@ -16,6 +18,7 @@ import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { cn } from "@/lib/utils";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 
@@ -42,12 +45,7 @@ interface MarketDataSectionProps {
  * the range changes (reference-line markers inside each chart stay gated to
  * the visible window via `ifOverflow="hidden"`).
  */
-export function MarketDataSection({
-  stablecoinId,
-  supplyHistory,
-  pegCurrency,
-  frozenNote,
-}: MarketDataSectionProps) {
+export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, frozenNote }: MarketDataSectionProps) {
   const [range, setRange] = useState<TimeRangeOption>("all");
 
   return (
@@ -111,74 +109,64 @@ function MarketDataSectionBody({
   const { data: annotations } = useChartAnnotations(stablecoinId, annotationFromMs, annotationToMs);
 
   return (
-    <section id="chart" aria-label="Market data charts" className="space-y-4">
-      <div className="flex flex-row items-center justify-between gap-3">
-        <DetailSectionTitle>Market Data</DetailSectionTitle>
-        <TimeRangeButtons
-          options={TIME_RANGE_OPTIONS}
-          value={range}
-          onChange={setRange}
-        />
+    <section id="chart" aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
+      <div className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Data</DetailSectionTitle>
+        <TimeRangeButtons options={TIME_RANGE_OPTIONS} value={range} onChange={setRange} />
       </div>
-      {frozenNote}
-      <div className="overflow-hidden rounded-xl border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-        <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-          <LazySection className="min-h-[340px] sm:min-h-[420px]">
-            <McapChart
-              data={supplyHistory}
-              stablecoinId={stablecoinId}
-              hideAnnotationLegend
-              controlledRange={range}
-              embedded
-            />
-          </LazySection>
-          <LazySection className="min-h-[340px] sm:min-h-[420px]">
-            <PegDeviationChart
-              data={supplyHistory}
-              pegCurrency={pegCurrency}
-              stablecoinId={stablecoinId}
-              hideAnnotationLegend
-              controlledRange={range}
-              embedded
-            />
-          </LazySection>
-        </div>
-        {brushDomain && sync ? (
-          <div className="border-t border-border/50 px-4 py-2 sm:px-6">
-            <div className="mb-1 flex items-center justify-between gap-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                Brush
-              </p>
-              {sync.brushedRange ? (
-                <button
-                  type="button"
-                  onClick={() => sync.setBrushedRange(null)}
-                  className="pharos-focus-ring text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                >
-                  Clear
-                </button>
-              ) : (
-                <span className="text-[10px] text-muted-foreground/70">
-                  Drag to focus a window
-                </span>
-              )}
+      <div className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
+        {frozenNote}
+        <div className="overflow-hidden rounded-lg border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
+          <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+            <LazySection className="min-h-[340px] sm:min-h-[420px]">
+              <McapChart
+                data={supplyHistory}
+                stablecoinId={stablecoinId}
+                hideAnnotationLegend
+                controlledRange={range}
+                embedded
+              />
+            </LazySection>
+            <LazySection className="min-h-[340px] sm:min-h-[420px]">
+              <PegDeviationChart
+                data={supplyHistory}
+                pegCurrency={pegCurrency}
+                stablecoinId={stablecoinId}
+                hideAnnotationLegend
+                controlledRange={range}
+                embedded
+              />
+            </LazySection>
+          </div>
+          {brushDomain && sync ? (
+            <div className="border-t border-border/50 px-4 py-2 sm:px-6">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Brush</p>
+                {sync.brushedRange ? (
+                  <button
+                    type="button"
+                    onClick={() => sync.setBrushedRange(null)}
+                    className="pharos-focus-ring text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/70">Drag to focus a window</span>
+                )}
+              </div>
+              <ChartBrush domain={brushDomain} value={sync.brushedRange} onChange={sync.setBrushedRange} />
             </div>
-            <ChartBrush
-              domain={brushDomain}
-              value={sync.brushedRange}
-              onChange={sync.setBrushedRange}
-            />
-          </div>
-        ) : null}
-        {annotations.length > 0 ? (
-          <div className="border-t border-border/50 px-4 py-3 sm:px-6">
-            <ChartAnnotationLegend
-              annotations={annotations}
-              numbered
-              className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
-            />
-          </div>
-        ) : null}
+          ) : null}
+          {annotations.length > 0 ? (
+            <div className="border-t border-border/50 px-4 py-3 sm:px-6">
+              <ChartAnnotationLegend
+                annotations={annotations}
+                numbered
+                className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   );

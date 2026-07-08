@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, Compass, Droplets, History as HistoryIcon, Network, Sparkles } from "lucide-react";
+import { ArrowLeft, ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { BackToSource } from "@/components/back-to-source";
@@ -170,11 +170,11 @@ const StablecoinDepegResolverCard = dynamic(
 );
 
 const DETAIL_SECTION_DEFS = {
-  overview: { id: "overview", label: "Risk", icon: Compass },
-  context: { id: "context", label: "Context", icon: Network },
-  liquidity: { id: "liquidity", label: "Liquidity", icon: Droplets },
-  activity: { id: "activity", label: "Activity", icon: Activity },
-  history: { id: "history", label: "History", icon: HistoryIcon },
+  overview: { id: "overview", label: "Risk", icon: Scale },
+  context: { id: "context", label: "Context", icon: ChartPie },
+  liquidity: { id: "liquidity", label: "Liquidity", icon: Droplet },
+  activity: { id: "activity", label: "Activity", icon: HeartPulse },
+  history: { id: "history", label: "History", icon: Hourglass },
   explore: { id: "explore", label: "Explore", icon: Sparkles },
 } as const;
 
@@ -429,275 +429,279 @@ export default function StablecoinDetailClient({
         dossier while the relocated in-flow copies CSS-hide. The in-flow
         instance always owns the deep-link anchor id. */}
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
-      <div className="min-w-0">
-      {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+        <div className="min-w-0">
+          {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
 
-      {/* ── Navigation zone ──
+          {/* ── Navigation zone ──
         The scrollspy stays in the normal vertical flow so the dossier sections
         can use the full content width on desktop. */}
-      <LongformScrollspyNav
-        sections={detailSections}
-        railLabel="Jump to"
-        navAriaLabel="Stablecoin detail section navigation"
-        emphasis="pill-tabs"
-        onActiveChange={setActiveBannerId}
-        className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
-        rightSlot={
-          <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
-            <Link
-              href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
-              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
-            </Link>
-            <span className="text-border">|</span>
-            <Link
-              href={
-                getPrimaryStaticComparisonLinkForCoin(viewModel.coin.id)?.href ??
-                buildLiveCompareUrl([viewModel.coin.id])
-              }
-              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Compare
-            </Link>
-          </div>
-        }
-        showDepthHint
-      />
+          <LongformScrollspyNav
+            sections={detailSections}
+            railLabel="Jump to"
+            navAriaLabel="Stablecoin detail section navigation"
+            emphasis="pill-tabs"
+            onActiveChange={setActiveBannerId}
+            className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+            rightSlot={
+              <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
+                <Link
+                  href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
+                  className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
+                </Link>
+                <span className="text-border">|</span>
+                <Link
+                  href={
+                    getPrimaryStaticComparisonLinkForCoin(viewModel.coin.id)?.href ??
+                    buildLiveCompareUrl([viewModel.coin.id])
+                  }
+                  className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Compare
+                </Link>
+              </div>
+            }
+          />
 
-      <div className="mt-6">
-        <div className="min-w-0">
-          {/* ── Overview (the "Risk" tab) ──
+          <div className="mt-4">
+            <div className="min-w-0">
+              {/* ── Overview (the "Risk" tab) ──
             Per the Figma coin template the Risk zone opens with Key Info and
             closes with Mint & Burn Flows (FlowHistorySection stays in History). */}
-          <div ref={overviewGateRef} className="space-y-6">
-            <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
-            <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
-              {/* Figma coin-template split first row: Key Information beside
+              <div id="overview" ref={overviewGateRef} className="space-y-6 scroll-mt-32">
+                <section
+                  id="info"
+                  className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+                >
+                  {/* Figma coin-template split first row: Key Information beside
                   the Peg Stability diagram card when a peg mechanism exists. */}
-              <div className={viewModel.coin.pegMechanism ? "grid gap-6 lg:grid-cols-2" : undefined}>
-                <KeyInfoCard
-                  meta={viewModel.coin}
-                  resolvedMechanismArchetype={resolvedMechanismArchetype}
-                  isWrapper={isWrapperVariant}
-                  parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
-                  parentArchetype={parentArchetype}
-                  variantKind={viewModel.coin.variantKind ?? null}
-                  contractsBelowXlOnly
-                  splitMechanism={Boolean(viewModel.coin.pegMechanism)}
-                />
-                {viewModel.coin.pegMechanism ? (
-                  <PegStabilityCard
-                    meta={viewModel.coin}
-                    resolvedMechanismArchetype={resolvedMechanismArchetype}
-                    isWrapper={isWrapperVariant}
-                    parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
-                    parentArchetype={parentArchetype}
-                    variantKind={viewModel.coin.variantKind ?? null}
-                  />
+                  <div className={viewModel.coin.pegMechanism ? "grid gap-6 lg:grid-cols-2" : undefined}>
+                    <KeyInfoCard
+                      meta={viewModel.coin}
+                      resolvedMechanismArchetype={resolvedMechanismArchetype}
+                      isWrapper={isWrapperVariant}
+                      parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+                      parentArchetype={parentArchetype}
+                      variantKind={viewModel.coin.variantKind ?? null}
+                      contractsBelowXlOnly
+                      splitMechanism={Boolean(viewModel.coin.pegMechanism)}
+                    />
+                    {viewModel.coin.pegMechanism ? (
+                      <PegStabilityCard
+                        meta={viewModel.coin}
+                        resolvedMechanismArchetype={resolvedMechanismArchetype}
+                        isWrapper={isWrapperVariant}
+                        parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+                        parentArchetype={parentArchetype}
+                        variantKind={viewModel.coin.variantKind ?? null}
+                      />
+                    ) : null}
+                  </div>
+                </section>
+                <section id="report-card">
+                  {viewModel.reportCard && (
+                    <ReportCardDetail
+                      card={viewModel.reportCard}
+                      liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
+                      updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
+                      rightColumn={reservesPanel}
+                    />
+                  )}
+                </section>
+                {!viewModel.reportCard ? reservesPanel : null}
+                {showDepegResolver ? (
+                  <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
+                ) : null}
+                {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+                {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
+                {viewModel.hasFlows ? (
+                  <>
+                    {frozenNote}
+                    <LazySection minHeight={320}>
+                      <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+                    </LazySection>
+                  </>
                 ) : null}
               </div>
-            </section>
-            <section id="report-card">
-              {viewModel.reportCard && (
-                <ReportCardDetail
-                  card={viewModel.reportCard}
-                  liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
-                  updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
-                  rightColumn={reservesPanel}
+
+              {/* ── Context ── */}
+              <div className="space-y-6">
+                <SectionBanner id="context" label="Context" icon={ChartPie} active={activeBannerId === "context"} />
+                <ContagionSnapshot
+                  stablecoinId={viewModel.id}
+                  variantRelationshipCard={variantRelationshipCard}
+                  hasCollateralUsage={hasCollateralUsage}
+                  collateralUsageEntries={collateralUsageEntries}
                 />
-              )}
-            </section>
-            {!viewModel.reportCard ? reservesPanel : null}
-            {showDepegResolver ? (
-              <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
-            ) : null}
-            {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
-            {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
-            {viewModel.hasFlows ? (
-              <>
-                {frozenNote}
-                <LazySection minHeight={320}>
-                  <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
-                </LazySection>
-              </>
-            ) : null}
-          </div>
+                <MintAuthoritySection
+                  profile={viewModel.mintAuthority}
+                  decentralizationDrag={viewModel.mintAuthorityDecentralizationDrag}
+                />
+                {showPegChart ? (
+                  <MarketDataSection
+                    stablecoinId={viewModel.id}
+                    supplyHistory={viewModel.supplyHistory}
+                    pegCurrency={viewModel.coin.flags.pegCurrency}
+                    frozenNote={frozenNote}
+                  />
+                ) : (
+                  <section id="chart">
+                    {frozenNote}
+                    <LazySection minHeight={420}>
+                      <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+                    </LazySection>
+                  </section>
+                )}
+                <section id="distribution">
+                  {frozenNote}
+                  <SectionErrorBoundary name="distribution">
+                    <DistributionSection stablecoinId={viewModel.id} />
+                  </SectionErrorBoundary>
+                </section>
+              </div>
 
-          {/* ── Context ── */}
-          <div className="space-y-6">
-            <SectionBanner id="context" label="Context" icon={Network} active={activeBannerId === "context"} />
-            <ContagionSnapshot
-              stablecoinId={viewModel.id}
-              variantRelationshipCard={variantRelationshipCard}
-              hasCollateralUsage={hasCollateralUsage}
-              collateralUsageEntries={collateralUsageEntries}
-            />
-            <MintAuthoritySection
-              profile={viewModel.mintAuthority}
-              decentralizationDrag={viewModel.mintAuthorityDecentralizationDrag}
-            />
-            {showPegChart ? (
-              <MarketDataSection
-                stablecoinId={viewModel.id}
-                supplyHistory={viewModel.supplyHistory}
-                pegCurrency={viewModel.coin.flags.pegCurrency}
-                frozenNote={frozenNote}
-              />
-            ) : (
-              <section id="chart">
-                {frozenNote}
-                <LazySection minHeight={420}>
-                  <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
-                </LazySection>
-              </section>
-            )}
-            <section id="distribution">
-              {frozenNote}
-              <SectionErrorBoundary name="distribution">
-                <DistributionSection stablecoinId={viewModel.id} />
-              </SectionErrorBoundary>
-            </section>
-          </div>
+              {/* ── Liquidity ── */}
+              <div className="space-y-6">
+                <SectionBanner
+                  id="liquidity"
+                  label="Liquidity"
+                  icon={Droplet}
+                  active={activeBannerId === "liquidity"}
+                />
+                <section id="dex-liquidity">
+                  {frozenNote}
+                  <SectionErrorBoundary name="liquidity">
+                    <LazySection minHeight={360}>
+                      <DexLiquidityCard stablecoinId={viewModel.id} />
+                    </LazySection>
+                  </SectionErrorBoundary>
+                </section>
 
-          {/* ── Liquidity ── */}
-          <div className="space-y-6">
-            <SectionBanner id="liquidity" label="Liquidity" icon={Droplets} active={activeBannerId === "liquidity"} />
-            <section id="dex-liquidity">
-              {frozenNote}
-              <SectionErrorBoundary name="liquidity">
-                <LazySection minHeight={360}>
-                  <DexLiquidityCard stablecoinId={viewModel.id} />
-                </LazySection>
-              </SectionErrorBoundary>
-            </section>
-
-            {(hasPriceTransparency || hasRedemptionBackstop) && (
-              // Price Transparency and Redemption Backstop each render full-width and stacked;
-              // their internal layouts use the horizontal space instead of a cramped 2-column split.
-              <div className="grid grid-cols-1 gap-6">
-                {hasRedemptionBackstop && viewModel.redemptionBackstop ? (
-                  <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
-                ) : null}
-                {hasPriceTransparency ? (
-                  /* Relocates to the right rail at xl+; this in-flow copy
+                {(hasPriceTransparency || hasRedemptionBackstop) && (
+                  // Price Transparency and Redemption Backstop each render full-width and stacked;
+                  // their internal layouts use the horizontal space instead of a cramped 2-column split.
+                  <div className="grid grid-cols-1 gap-6">
+                    {hasRedemptionBackstop && viewModel.redemptionBackstop ? (
+                      <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
+                    ) : null}
+                    {hasPriceTransparency ? (
+                      /* Relocates to the right rail at xl+; this in-flow copy
                      keeps the #price deep-link anchor below that. */
-                  <section id="price" aria-label="Price transparency" className="xl:hidden">
-                    <PriceTransparencyCard
-                      coinData={viewModel.coinData}
-                      consensusSources={viewModel.consensusSources ?? []}
-                      agreeSources={viewModel.agreeSources ?? []}
-                      dexPriceCheck={viewModel.dexPriceCheck}
-                    />
+                      <section id="price" aria-label="Price transparency" className="xl:hidden">
+                        <PriceTransparencyCard
+                          coinData={viewModel.coinData}
+                          consensusSources={viewModel.consensusSources ?? []}
+                          agreeSources={viewModel.agreeSources ?? []}
+                          dexPriceCheck={viewModel.dexPriceCheck}
+                        />
+                      </section>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Activity ── */}
+              <div ref={activityGateRef} className="space-y-6">
+                <SectionBanner
+                  id="activity"
+                  label="Activity"
+                  icon={HeartPulse}
+                  active={activeBannerId === "activity"}
+                />
+                {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
+
+                {viewModel.hasBlacklist && (
+                  <div>
+                    {frozenNote}
+                    <SectionErrorBoundary name="blacklist">
+                      <LazySection minHeight={320}>
+                        <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                      </LazySection>
+                    </SectionErrorBoundary>
+                  </div>
+                )}
+              </div>
+
+              {/* ── History ── */}
+              <div ref={historyGateRef} className="space-y-6">
+                <SectionBanner id="history" label="History" icon={Hourglass} active={activeBannerId === "history"} />
+                {frozenNote}
+                {/* Relocates to the right rail at xl+; this in-flow copy keeps
+                the #coin-timeline deep-link anchor below that. */}
+                <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
+                  <TapeForCoinTeaser coinId={viewModel.id} />
+                </section>
+                <LazySection minHeight={220}>
+                  <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+                </LazySection>
+                {!viewModel.isNavToken ? (
+                  /* The hero passport "Record" field jumps here; the anchor wraps
+                 the lazy gate so it exists before the section mounts. */
+                  <section
+                    id="depeg-history"
+                    className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+                  >
+                    <LazySection minHeight={360}>
+                      <DepegHistory
+                        stablecoinId={viewModel.id}
+                        earliestTrackingDate={viewModel.earliestTrackingDate}
+                        hasPriceData={viewModel.coinData.price != null}
+                        depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+                      />
+                    </LazySection>
                   </section>
                 ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* ── Activity ── */}
-          <div ref={activityGateRef} className="space-y-6">
-            <SectionBanner id="activity" label="Activity" icon={Activity} active={activeBannerId === "activity"} />
-            {viewModel.hasYieldSection ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
-
-            {viewModel.hasBlacklist && (
-              <div>
-                {frozenNote}
-                <SectionErrorBoundary name="blacklist">
+                {viewModel.hasFlows ? (
                   <LazySection minHeight={320}>
-                    <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                    <FlowHistorySection stablecoinId={viewModel.id} />
                   </LazySection>
-                </SectionErrorBoundary>
+                ) : null}
+                {viewModel.hasBlacklist ? (
+                  <SectionErrorBoundary name="blacklist-history">
+                    <LazySection minHeight={320}>
+                      <BlacklistHistorySection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
+                    </LazySection>
+                  </SectionErrorBoundary>
+                ) : null}
               </div>
-            )}
-          </div>
 
-          {/* ── History ── */}
-          <div ref={historyGateRef} className="space-y-6">
-            <SectionBanner id="history" label="History" icon={HistoryIcon} active={activeBannerId === "history"} />
-            {frozenNote}
-            {/* Relocates to the right rail at xl+; this in-flow copy keeps
-                the #coin-timeline deep-link anchor below that. */}
-            <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
-              <TapeForCoinTeaser coinId={viewModel.id} />
-            </section>
-            <LazySection minHeight={220}>
-              <SafetyScoreHistorySection stablecoinId={viewModel.id} />
-            </LazySection>
-            {!viewModel.isNavToken ? (
-              /* The hero passport "Record" field jumps here; the anchor wraps
-                 the lazy gate so it exists before the section mounts. */
-              <section
-                id="depeg-history"
-                className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
-              >
-                <LazySection minHeight={360}>
-                  <DepegHistory
-                    stablecoinId={viewModel.id}
-                    earliestTrackingDate={viewModel.earliestTrackingDate}
-                    hasPriceData={viewModel.coinData.price != null}
-                    depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
-                  />
-                </LazySection>
-              </section>
-            ) : null}
-            {viewModel.hasFlows ? (
-              <LazySection minHeight={320}>
-                <FlowHistorySection stablecoinId={viewModel.id} />
-              </LazySection>
-            ) : null}
-            {viewModel.hasBlacklist ? (
-              <SectionErrorBoundary name="blacklist-history">
-                <LazySection minHeight={320}>
-                  <BlacklistHistorySection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
-                </LazySection>
-              </SectionErrorBoundary>
-            ) : null}
-          </div>
+              {/* ── Explore ── */}
+              {exploreNextContent ? (
+                <div className="space-y-6">
+                  <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
+                  {exploreNextContent}
+                </div>
+              ) : null}
 
-          {/* ── Explore ── */}
-          {exploreNextContent ? (
-            <div className="space-y-6">
-              <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
-              {exploreNextContent}
+              {faqContent}
             </div>
-          ) : null}
-
-          {faqContent}
+            {/* /min-w-0 content column */}
+          </div>
+          {/* /content wrapper */}
         </div>
-        {/* /min-w-0 content column */}
-      </div>
-      {/* /content wrapper */}
-      </div>
-      {/* /main column */}
+        {/* /main column */}
 
-      <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
-        {/* Pins below the top-nav + tape stack (same offset as the pill nav)
-            and scrolls internally when taller than the viewport, so the
-            summary stays alongside every dossier zone. */}
-        <div className="sticky top-[calc(env(safe-area-inset-top)+3px+3.5rem+46px)] max-h-[calc(100vh-env(safe-area-inset-top)-3.5rem-46px-1.5rem)] space-y-4 overflow-y-auto pb-4 pr-0.5">
-          <RailSafetySummary items={heroModel.signalRailItems} />
-          <TapeForCoinTeaser coinId={viewModel.id} />
-          {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
-            <div className="pharos-card-shell p-4">
-              <ContractDeployments
-                coinId={viewModel.coin.id}
-                contracts={viewModel.coin.contracts ?? []}
+        <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
+          {/* Normal-flow rail content: it scrolls with the page instead of
+            pinning independently or opening a nested scroll container. */}
+          <div className="space-y-4 pb-4">
+            <RailSafetySummary items={heroModel.signalRailItems} />
+            <TapeForCoinTeaser coinId={viewModel.id} />
+            {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
+              <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
+            ) : null}
+            {hasPriceTransparency ? (
+              <PriceTransparencyCard
+                coinData={viewModel.coinData}
+                consensusSources={viewModel.consensusSources ?? []}
+                agreeSources={viewModel.agreeSources ?? []}
+                dexPriceCheck={viewModel.dexPriceCheck}
                 compact
               />
-            </div>
-          ) : null}
-          {hasPriceTransparency ? (
-            <PriceTransparencyCard
-              coinData={viewModel.coinData}
-              consensusSources={viewModel.consensusSources ?? []}
-              agreeSources={viewModel.agreeSources ?? []}
-              dexPriceCheck={viewModel.dexPriceCheck}
-              compact
-            />
-          ) : null}
-        </div>
-      </aside>
+            ) : null}
+          </div>
+        </aside>
       </div>
       {/* /content grid */}
 

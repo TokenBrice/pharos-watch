@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 
@@ -20,7 +21,13 @@ function alignSection(sectionId: string) {
  * desktop most targets are already on the visible page).
  * Values come from a bounded authored vocabulary — never CSS-truncated.
  */
-export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[] }) {
+export function HeroPassportStrip({
+  items,
+  compactDesktop = false,
+}: {
+  items: HeroPassportItemViewModel[];
+  compactDesktop?: boolean;
+}) {
   const pendingScrollSyncRef = useRef<number[]>([]);
 
   useEffect(
@@ -55,10 +62,20 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
   // edge-to-edge across the available width. Sparse strips (<6 facts) keep the
   // start-aligned gap so three fields don't float disconnected across the card.
   const distributionClass = items.length >= 6 ? "lg:justify-between" : "";
+  const desktopItems = compactDesktop
+    ? items.filter((item) => item.category !== "Mechanism")
+    : items;
+  const desktopGridStyle = {
+    "--passport-cols": String(Math.max(desktopItems.length, 1)),
+  } as CSSProperties;
 
   return (
     <div
-      className="relative border-t border-border/30 px-4 py-2.5 sm:px-5"
+      className={
+        compactDesktop
+          ? "relative border-t border-border/40 px-4 py-2.5 sm:px-5 lg:px-0 lg:py-0"
+          : "relative border-t border-border/30 px-4 py-2.5 sm:px-5"
+      }
       role="group"
       aria-label="Verification passport"
     >
@@ -67,7 +84,9 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden"
       />
       <div
-        className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto lg:flex-wrap lg:gap-x-4 lg:overflow-visible ${distributionClass}`}
+        className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto ${
+          compactDesktop ? "lg:hidden" : "lg:flex-wrap lg:gap-x-4 lg:overflow-visible"
+        } ${compactDesktop ? "" : distributionClass}`}
       >
         {items.map((item) => {
           const isHashJump = item.href.startsWith("#");
@@ -100,6 +119,43 @@ export function HeroPassportStrip({ items }: { items: HeroPassportItemViewModel[
           );
         })}
       </div>
+      {compactDesktop ? (
+        <div
+          className="hidden lg:grid lg:grid-cols-[repeat(var(--passport-cols),minmax(0,1fr))]"
+          style={desktopGridStyle}
+        >
+          {desktopItems.map((item) => {
+            const isHashJump = item.href.startsWith("#");
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                aria-label={item.ariaLabel}
+                onClick={
+                  isHashJump
+                    ? (event) => {
+                        event.preventDefault();
+                        jumpToSection(item.href.slice(1));
+                      }
+                    : undefined
+                }
+                className="pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 px-4 py-3 last:border-r-0"
+              >
+                <span className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
+                  {item.category}
+                </span>
+                <span
+                  className={`mt-0.5 whitespace-nowrap font-mono text-[11px] font-semibold uppercase leading-snug tracking-wide underline-offset-2 group-hover:underline ${
+                    item.valueClass ?? "text-foreground"
+                  }`}
+                >
+                  {item.value}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

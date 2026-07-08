@@ -1,47 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ArrowRight, Flame } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  MintingPressureArcGauge,
-  getLiteralMintingPressureUi,
-} from "@/components/minting-pressure-gauge";
-import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
-import {
-  useMintBurnFlows,
-  useMintBurnFlowsCoin,
-} from "@/hooks/use-mint-burn-flows";
-import {
-  formatSignedCurrency,
-  getNetColor,
-  getNetPrefix,
-} from "@shared/lib/format";
+import { MintingPressureArcGauge } from "@/components/minting-pressure-gauge";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
-import {
-  getMintBurnSummaryTimeframe,
-  resolveFlowWindow,
-} from "@/lib/mint-burn-timeframes";
-import { THIRTY_DAYS_HOURS, NINETY_DAYS_HOURS } from "@/lib/constants";
-import {
-  buildFlowSummaryNarrative,
-  getFlowDirectionUi,
-  getFlowPressureUi,
-} from "@/lib/flow-signal-ui";
+import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
-import {
-  resolveNetDirection,
-  resolvePressureScore,
-  resolvePressureState,
-} from "@/lib/mint-burn-coin-helpers";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { resolveNetDirection, resolvePressureScore, resolvePressureState } from "@/lib/mint-burn-coin-helpers";
+import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowSummaryCardProps {
   stablecoinId: string;
@@ -78,27 +49,9 @@ function SummarySkeleton() {
 }
 
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
-  const timeframe = getMintBurnSummaryTimeframe(stablecoinId);
-  const needsCustomShortWindow = timeframe.shortHours !== 24;
-  const needsCustomLongWindow = timeframe.longHours !== 7 * 24;
-  const shouldFetchLongWindow =
-    needsCustomLongWindow && timeframe.longHours !== timeframe.shortHours;
-
   const { data, isLoading } = useMintBurnFlows();
-  const { data: shortWindowData, isLoading: isShortWindowLoading } =
-    useMintBurnFlowsCoin(stablecoinId, timeframe.shortHours, {
-      enabled: needsCustomShortWindow,
-    });
-  const { data: longWindowData, isLoading: isLongWindowLoading } =
-    useMintBurnFlowsCoin(stablecoinId, timeframe.longHours, {
-      enabled: shouldFetchLongWindow,
-    });
 
-  if (
-    isLoading
-    || (needsCustomShortWindow && isShortWindowLoading)
-    || (shouldFetchLongWindow && isLongWindowLoading)
-  ) {
+  if (isLoading) {
     return <SummarySkeleton />;
   }
 
@@ -107,27 +60,12 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const coin = data.coins.find((entry) => entry.stablecoinId === stablecoinId);
   if (!coin) return null;
 
-  const { shortNetFlow, longNetFlow } = resolveFlowWindow(
-    coin,
-    timeframe,
-    shortWindowData?.netFlowUsd,
-    longWindowData?.netFlowUsd,
-  );
-
   const netDirection = resolveNetDirection(coin);
   const pressureScore = resolvePressureScore(coin);
   const pressureState = resolvePressureState(coin);
-  const pressureDisplay = pressureScore != null
-    ? getPressureShiftDisplay(pressureScore)
-    : null;
+  const pressureDisplay = pressureScore != null ? getPressureShiftDisplay(pressureScore) : null;
   const netSignal = getFlowDirectionUi(netDirection, "summary");
   const pressureSignal = getFlowPressureUi(pressureState, "summary");
-  const gaugeUi = getLiteralMintingPressureUi(
-    getLiteralMintingPressureScore({
-      mintVolume24hUsd: coin.mintVolume24hUsd,
-      burnVolume24hUsd: coin.burnVolume24hUsd,
-    }),
-  );
 
   // Figma coin template: quadrant layout with hairline-divided regions —
   // [Minting Pressure gauge | Net window grid] over [Pressure Shift | Avg
@@ -135,22 +73,22 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // Cell labels are the bare windows ("24H", "7D", …) — the quadrant header
   // already says "Net" (Figma coin template).
   const netCells: { label: string; value: number }[] = [
-    { label: timeframe.shortLabel, value: shortNetFlow },
-    { label: timeframe.longLabel, value: longNetFlow },
+    { label: "24h", value: coin.netFlow24hUsd },
+    { label: "7d", value: coin.netFlow7dUsd },
+    { label: "30d", value: coin.netFlow30dUsd },
+    { label: "90d", value: coin.netFlow90dUsd },
   ];
-  if (timeframe.shortHours !== THIRTY_DAYS_HOURS && timeframe.longHours !== THIRTY_DAYS_HOURS) {
-    netCells.push({ label: "30d", value: coin.netFlow30dUsd });
-  }
-  if (timeframe.shortHours !== NINETY_DAYS_HOURS && timeframe.longHours !== NINETY_DAYS_HOURS) {
-    netCells.push({ label: "90d", value: coin.netFlow90dUsd });
-  }
 
   return (
     <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
-      <div className="border-b border-border/40 px-4 py-3 sm:px-5">
-        <DetailSectionTitle as="h3">
-          <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flows</MethodologyLabel>
+      <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-5">
+        <DetailSectionTitle as="h3" className="text-sm font-semibold tracking-normal text-muted-foreground">
+          Mint &amp; Burn Flows
         </DetailSectionTitle>
+        <MethodologyHint
+          topic="mintBurnFlows"
+          buttonClassName="!h-5 !min-h-0 !w-5 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
+        />
       </div>
 
       <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">
@@ -162,11 +100,12 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </p>
             <span
               className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                gaugeUi.badgeClass,
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                netSignal.badgeClass,
               )}
             >
-              {gaugeUi.label}
+              {netDirection === "burning" ? <Flame className="h-3 w-3" aria-hidden="true" /> : null}
+              {netSignal.label}
             </span>
           </div>
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-5">
@@ -200,12 +139,10 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                 className={cn(
                   "px-4 py-4 sm:px-5",
                   index % 2 === 0 && "border-r border-border/40",
-                  index < netCells.length - 2 && "border-b border-border/40",
+                  index < 2 && "border-b border-border/40",
                 )}
               >
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  {cell.label}
-                </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{cell.label}</p>
                 <p
                   className={cn(
                     "mt-1.5 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
@@ -270,7 +207,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 px-4 py-2 sm:px-5">
-        <MethodologyCardActions topic="mintBurnFlows" className="mt-0" />
+        <MethodologyCardActions topic="mintBurnFlows" className="mt-0 border-t-0 pt-0" />
         <Link
           href="/flows/"
           className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"

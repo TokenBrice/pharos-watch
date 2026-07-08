@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CircleHelp, History, Table2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type {
   BridgeRouteRiskConfidence,
@@ -9,13 +9,18 @@ import type {
   OracleRiskConfidence,
   ReportCard as ReportCardType,
 } from "@shared/types";
-import { BREAKDOWN_DIMENSIONS, DIMENSION_LABELS, DIMENSION_ORDER, DRILLDOWN_DIMENSIONS } from "@shared/lib/report-cards";
+import {
+  BREAKDOWN_DIMENSIONS,
+  DIMENSION_LABELS,
+  DIMENSION_ORDER,
+  DRILLDOWN_DIMENSIONS,
+} from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { getSafetyGradeMetadata, gradeBandLabel } from "@/lib/report-card-ui";
@@ -24,6 +29,8 @@ import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
+import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 
 // ---------------------------------------------------------------------------
 // Dimension Row Component
@@ -38,8 +45,7 @@ function dimensionHintTopic(dimKey: DimensionKey): "resilience" | "dependencyRis
 type OracleRiskDisplay = NonNullable<ReportCardType["oracleRisk"]>;
 type BridgeRouteRiskDisplay = NonNullable<ReportCardType["bridgeRouteRisk"]>;
 type RiskSourceLink =
-  | NonNullable<OracleRiskDisplay["sources"]>[number]
-  | NonNullable<BridgeRouteRiskDisplay["sources"]>[number];
+  NonNullable<OracleRiskDisplay["sources"]>[number] | NonNullable<BridgeRouteRiskDisplay["sources"]>[number];
 
 const ORACLE_RISK_CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
   verified: "Verified",
@@ -84,6 +90,59 @@ function ScoreWithBand({ score, label, children }: { score: number; label: strin
   );
 }
 
+const HEADER_ICON_BUTTON_CLASS =
+  "pharos-focus-ring inline-flex !h-5 !min-h-0 !w-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
+const SAFETY_INLINE_HINT_BUTTON_CLASS =
+  "pharos-focus-ring inline-flex h-4 min-h-0 w-4 shrink-0 items-center justify-center rounded-full border border-transparent bg-muted/70 p-0 text-muted-foreground/80 transition-colors hover:bg-muted hover:text-foreground";
+
+function ReportCardHeaderActions({ updatedAtMs }: { updatedAtMs?: number | null }) {
+  const methodology = METHODOLOGY_CONTEXT.safetyScore;
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {updatedAtMs != null ? (
+        <FreshnessIndicator
+          compact
+          updatedAtMs={updatedAtMs}
+          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000}
+          labelPrefix="Updated"
+        />
+      ) : null}
+      {updatedAtMs != null ? (
+        <span className="text-muted-foreground/50" aria-hidden="true">
+          ·
+        </span>
+      ) : null}
+      <MethodologyHint topic="safetyScore" buttonClassName={HEADER_ICON_BUTTON_CLASS} />
+      {methodology.changelogPath ? (
+        <Link
+          href={methodology.changelogPath}
+          aria-label="Safety Score version history"
+          className={HEADER_ICON_BUTTON_CLASS}
+        >
+          <History className="h-3 w-3" aria-hidden="true" />
+        </Link>
+      ) : null}
+      <ShowYourWorkToggle className={HEADER_ICON_BUTTON_CLASS}>
+        <Table2 className="h-3 w-3" aria-hidden="true" />
+        <span className="sr-only">Show inputs</span>
+      </ShowYourWorkToggle>
+    </div>
+  );
+}
+
+function SafetyInlineHint({ topic }: { topic: MethodologyContextKey }) {
+  const item = METHODOLOGY_CONTEXT[topic];
+
+  return (
+    <MethodologyHint topic={topic} asChild className="pointer-events-auto">
+      <button type="button" aria-label={`Explain ${item.title}`} className={SAFETY_INLINE_HINT_BUTTON_CLASS}>
+        <CircleHelp className="h-2.5 w-2.5" aria-hidden="true" />
+      </button>
+    </MethodologyHint>
+  );
+}
+
 /** Shared wrapper for OracleRiskPanel and BridgeRouteRiskPanel.
  * Renders the border-left container, title/score header, a meta row
  * whose content is passed as `metaRow`, a summary paragraph, optional
@@ -109,9 +168,7 @@ function RiskSubPanel({
         <span className="font-medium text-foreground">{title}</span>
         <span className="font-mono tabular-nums text-foreground/80">{score}/100</span>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        {metaRow}
-      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">{metaRow}</div>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{summary}</p>
       {children}
       <RiskSourceLinks links={sourceLinks} />
@@ -159,7 +216,13 @@ function OracleRiskPanel({ risk }: { risk: OracleRiskDisplay }) {
   );
 
   return (
-    <RiskSubPanel title="Oracle setup" score={risk.score} metaRow={metaRow} summary={risk.summary} sourceLinks={sourceLinks}>
+    <RiskSubPanel
+      title="Oracle setup"
+      score={risk.score}
+      metaRow={metaRow}
+      summary={risk.summary}
+      sourceLinks={sourceLinks}
+    >
       {risk.selectedBranch ? (
         <p className="mt-1 text-xs text-muted-foreground">
           Binding branch: <span className="text-foreground/80">{risk.selectedBranch.label}</span>
@@ -200,7 +263,13 @@ function BridgeRouteRiskPanel({ risk }: { risk: BridgeRouteRiskDisplay }) {
   );
 
   return (
-    <RiskSubPanel title="Bridge route" score={risk.score} metaRow={metaRow} summary={risk.summary} sourceLinks={sourceLinks}>
+    <RiskSubPanel
+      title="Bridge route"
+      score={risk.score}
+      metaRow={metaRow}
+      summary={risk.summary}
+      sourceLinks={sourceLinks}
+    >
       {protocols.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1 text-xs">
           {protocols.map((protocol) => (
@@ -261,7 +330,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             <span className={cn("truncate text-sm font-medium", expanded && "font-semibold")}>
               {DIMENSION_LABELS[dimKey]}
             </span>
-            {hintTopic && <MethodologyHint topic={hintTopic} className="pointer-events-auto" />}
+            {hintTopic && <SafetyInlineHint topic={hintTopic} />}
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             {dim.score !== null ? (
@@ -339,9 +408,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                   <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
                     <span className="text-muted-foreground">DEX Liquidity</span>
                     <ScoreWithBand score={card.rawInputs.liquidityScore} label="DEX liquidity">
-                      <span className="tabular-nums text-foreground">
-                        {card.rawInputs.liquidityScore} / 100
-                      </span>
+                      <span className="tabular-nums text-foreground">{card.rawInputs.liquidityScore} / 100</span>
                     </ScoreWithBand>
                   </div>
                 ) : (
@@ -352,9 +419,10 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 )}
                 {card.rawInputs.redemptionBackstopScore != null && (
                   <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
-                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                       Redemption Backstop
-                    </MethodologyLabel>
+                      <SafetyInlineHint topic="redemptionBackstop" />
+                    </span>
                     <ScoreWithBand score={card.rawInputs.redemptionBackstopScore} label="Redemption backstop">
                       <span className="tabular-nums text-foreground">
                         {card.rawInputs.redemptionBackstopScore} / 100
@@ -365,13 +433,12 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 )}
                 {card.rawInputs.effectiveExitScore != null && (
                   <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
-                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                       Effective Exit
-                    </MethodologyLabel>
+                      <SafetyInlineHint topic="effectiveExit" />
+                    </span>
                     <ScoreWithBand score={card.rawInputs.effectiveExitScore} label="Effective exit">
-                      <span className="tabular-nums text-foreground">
-                        {card.rawInputs.effectiveExitScore} / 100
-                      </span>
+                      <span className="tabular-nums text-foreground">{card.rawInputs.effectiveExitScore} / 100</span>
                     </ScoreWithBand>
                   </div>
                 )}
@@ -379,7 +446,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
               {/* Liquidity components */}
               {liquidityComponents && (
-                <div className="pt-2 border-t border-border/30 space-y-2">
+                <div className="space-y-2.5 pt-1.5">
                   {LIQUIDITY_SCORE_WEIGHTS.map((w) => {
                     const value = liquidityComponents[w.key];
                     return value != null ? (
@@ -387,9 +454,9 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                         <span className="w-28 shrink-0 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
                           {w.label}
                         </span>
-                        <div className="h-1.5 flex-1 rounded-full bg-muted">
+                        <div className="h-3 flex-1 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]">
                           <div
-                            className="h-full rounded-full bg-foreground/40"
+                            className="h-full rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
                             style={{ width: `${Math.min(100, value)}%` }}
                           />
                         </div>
@@ -452,7 +519,6 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
     );
   }
 
-  const topBorderColor = getSafetyGradeMetadata(card.overallGrade).borderColor;
   const pegDrag =
     card.baseScore != null && card.uncappedOverallScore != null
       ? Math.max(0, card.baseScore - card.uncappedOverallScore)
@@ -541,34 +607,28 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
 
   return (
     <TooltipProvider>
-      <Card className="overflow-hidden" style={{ borderTopWidth: "3px", borderTopColor: topBorderColor }}>
-        <CardHeader>
-          <DetailSectionTitle>
-            <span className="flex items-center justify-between gap-2">
-              <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-              {updatedAtMs != null ? (
-                <FreshnessIndicator
-                  updatedAtMs={updatedAtMs}
-                  staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000}
-                  labelPrefix="Updated"
-                />
-              ) : null}
-            </span>
+      <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
+          <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+            Safety Score
           </DetailSectionTitle>
+          <ReportCardHeaderActions updatedAtMs={updatedAtMs} />
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="px-0 py-0">
           {hasRightColumn ? (
-            <div className="grid gap-6 lg:grid-cols-2">
-              {safetyColumn}
-              {rightColumn}
+            <div className="grid min-h-[560px] lg:grid-cols-2">
+              <div className="min-w-0 px-4 py-5 sm:px-5">{safetyColumn}</div>
+              <div className="min-w-0 border-t border-border/40 px-4 py-5 sm:px-5 lg:border-l lg:border-t-0">
+                {rightColumn}
+              </div>
             </div>
           ) : (
-            <div className="mx-auto max-w-2xl">{safetyColumn}</div>
+            <div className="mx-auto max-w-2xl px-4 py-5 sm:px-5">{safetyColumn}</div>
           )}
 
           {/* Dependency callout */}
           {card.rawInputs.dependencies.length > 0 && (
-            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+            <div className="mx-4 mb-5 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 sm:mx-5">
               <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">Dependencies</p>
               <p className="text-sm text-muted-foreground">
                 This stablecoin has exposure to{" "}
@@ -601,8 +661,6 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
             stablecoinId={card.id}
             stablecoinName={card.name}
           />
-
-          <MethodologyCardActions topic="safetyScore" showWorkToggle className="font-medium" />
         </CardContent>
       </Card>
     </TooltipProvider>

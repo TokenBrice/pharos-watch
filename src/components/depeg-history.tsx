@@ -1,26 +1,30 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
-import {
-  TableCell,
-  TableRow,
-} from "@/components/table";
+import { TableCell, TableRow } from "@/components/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { computePegStability } from "@/lib/peg-stability";
+import { cn } from "@/lib/utils";
 import type { DepegEvent } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
@@ -47,14 +51,17 @@ const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
   { id: "recoveryPrice", label: "Recovery Price", className: "hidden lg:table-cell text-right" },
 ] as const;
 
-function DepegHistoryIntro() {
+function DepegHistoryShell({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-3">
-      <DetailSectionTitle>Depeg History</DetailSectionTitle>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {DEPEG_HISTORY_DESCRIPTION}
-      </p>
-    </div>
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Depeg History</DetailSectionTitle>
+      </CardHeader>
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
+        <p className="text-sm text-muted-foreground">{DEPEG_HISTORY_DESCRIPTION}</p>
+        {children}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -69,62 +76,44 @@ export function DepegHistory({
   hasPriceData?: boolean;
   depegEventCoverageLimited?: boolean;
 }) {
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-    isFetchingNextPage,
-    loadedCount,
-    isFullyLoaded,
-  } = useInfiniteDepegEvents({ stablecoinId });
+  const { data, isLoading, error, refetch, isFetchingNextPage, loadedCount, isFullyLoaded } = useInfiniteDepegEvents({
+    stablecoinId,
+  });
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
   const totalEvents = data?.total ?? events.length;
   const sorted = useMemo(() => sortEvents(events), [events]);
-  const metrics = isFullyLoaded
-    ? computePegStability(sorted, earliestTrackingDate ?? null)
-    : null;
+  const metrics = isFullyLoaded ? computePegStability(sorted, earliestTrackingDate ?? null) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;
-  const {
-    effectivePage,
-    totalPages,
-    paginatedRows,
-    rangeStart,
-    rangeEnd,
-    onPreviousPage,
-    onNextPage,
-  } = useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
+  const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
+    useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
   const isHydratingFullHistory = totalEvents > loadedCount;
 
   if (isLoading) {
     return (
-      <Card className="p-4">
-        <DepegHistoryIntro />
+      <DepegHistoryShell>
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
         </div>
-      </Card>
+      </DepegHistoryShell>
     );
   }
 
-  if (error && !(data?.events?.length)) {
+  if (error && !data?.events?.length) {
     return (
-      <Card className="p-4">
-        <DepegHistoryIntro />
+      <DepegHistoryShell>
         <QueryErrorNotice error={error} onRetry={() => void refetch()} />
-      </Card>
+      </DepegHistoryShell>
     );
   }
 
   if (!error && events.length === 0) {
     const noData = !hasPriceData;
     return (
-      <Card className="p-4">
-        <DepegHistoryIntro />
+      <DepegHistoryShell>
         {noData ? (
           <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">
@@ -134,7 +123,9 @@ export function DepegHistory({
         ) : depegEventCoverageLimited ? (
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              No depeg events recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live depeg-event floor, so Pharos shows the price deviation but does not open live depeg events at this size.
+              No depeg events recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)}{" "}
+              live depeg-event floor, so Pharos shows the price deviation but does not open live depeg events at this
+              size.
             </p>
           </div>
         ) : (
@@ -144,19 +135,18 @@ export function DepegHistory({
             </p>
           </div>
         )}
-      </Card>
+      </DepegHistoryShell>
     );
   }
 
   return (
-    <Card className="p-4">
-      <DepegHistoryIntro />
+    <DepegHistoryShell>
       {error ? (
-        <div className="mb-4">
+        <div>
           <QueryErrorNotice error={error} hasData onRetry={() => void refetch()} />
         </div>
       ) : null}
-      <div className="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
           <span className="text-muted-foreground">Events </span>
           <span className="font-mono font-semibold">{totalEvents.toLocaleString()}</span>
@@ -181,7 +171,9 @@ export function DepegHistory({
                 Depegged now
               </span>
             ) : metrics.currentStreakDays !== null ? (
-              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{metrics.currentStreakDays}d at peg</span>
+              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+                {metrics.currentStreakDays}d at peg
+              </span>
             ) : (
               <span className="font-mono font-semibold text-muted-foreground">—</span>
             )}
@@ -218,27 +210,27 @@ export function DepegHistory({
         columns={DEPEG_HISTORY_COLUMNS}
         containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"
-        pagination={isFullyLoaded && totalEvents > 0 ? {
-          page: effectivePage,
-          totalPages,
-          rangeStart,
-          rangeEnd,
-          total: totalEvents,
-          onPrevious: onPreviousPage,
-          onNext: onNextPage,
-          noun: "events",
-        } : undefined}
+        pagination={
+          isFullyLoaded && totalEvents > 0
+            ? {
+                page: effectivePage,
+                totalPages,
+                rangeStart,
+                rangeEnd,
+                total: totalEvents,
+                onPrevious: onPreviousPage,
+                onNext: onNextPage,
+                noun: "events",
+              }
+            : undefined
+        }
       >
         {paginatedRows.map((event) => (
           <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
         ))}
       </DataTableShell>
-      <RelatedIncidentsRail
-        pegCurrency={pegCurrency}
-        riskArchetype={meta?.mechanismArchetype}
-        className="mt-5"
-      />
-    </Card>
+      <RelatedIncidentsRail pegCurrency={pegCurrency} riskArchetype={meta?.mechanismArchetype} className="mt-5" />
+    </DepegHistoryShell>
   );
 }
 
@@ -292,7 +284,9 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
         <div>
           <dt className="text-muted-foreground">Recovery</dt>
           <dd className="mt-0.5 font-mono tabular-nums">
-            {event.recoveryPrice != null ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference) : "—"}
+            {event.recoveryPrice != null
+              ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference)
+              : "—"}
           </dd>
         </div>
       </dl>

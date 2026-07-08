@@ -7,6 +7,13 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CollateralUsageSection } from "./collateral-usage-section";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { ReportCard, ReportCardsResponse, StablecoinData } from "@shared/types";
 
@@ -54,13 +61,10 @@ export function ContagionSnapshot({
     () =>
       Boolean(
         focus &&
-          hasStablecoinsPayload &&
-          edges.some(
-            (e) =>
-              liveCardIds.has(e.from) &&
-              liveCardIds.has(e.to) &&
-              (e.from === stablecoinId || e.to === stablecoinId),
-          ),
+        hasStablecoinsPayload &&
+        edges.some(
+          (e) => liveCardIds.has(e.from) && liveCardIds.has(e.to) && (e.from === stablecoinId || e.to === stablecoinId),
+        ),
       ),
     [edges, focus, hasStablecoinsPayload, liveCardIds, stablecoinId],
   );
@@ -88,21 +92,25 @@ export function ContagionSnapshot({
   const layoutClass = isSplit ? "grid gap-6 lg:grid-cols-2" : hasContagion ? undefined : "mx-auto max-w-2xl";
 
   return (
-    <section className="pharos-card-shell px-4 py-4 sm:px-5 sm:py-5">
-      <h2 className="pharos-section-title mb-4">Dependency Context</h2>
-      <div className={layoutClass}>
-        {hasContagion ? (
-          <ContagionGraph
-            cards={cards}
-            dependencyEdges={edges}
-            mcapMap={mcapMap}
-            logos={logos}
-            focusCoinId={stablecoinId}
-            minimalChrome
-            maxNodes={DETAIL_NODE_LIMIT}
-          />
-        ) : null}
-        {hasRightColumn ? rightColumn : null}
+    <section className={DETAIL_MODULE_SHELL_CLASS}>
+      <div className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</DetailSectionTitle>
+      </div>
+      <div className={DETAIL_MODULE_BODY_CLASS}>
+        <div className={layoutClass}>
+          {hasContagion ? (
+            <ContagionGraph
+              cards={cards}
+              dependencyEdges={edges}
+              mcapMap={mcapMap}
+              logos={logos}
+              focusCoinId={stablecoinId}
+              minimalChrome
+              maxNodes={DETAIL_NODE_LIMIT}
+            />
+          ) : null}
+          {hasRightColumn ? rightColumn : null}
+        </div>
       </div>
     </section>
   );
