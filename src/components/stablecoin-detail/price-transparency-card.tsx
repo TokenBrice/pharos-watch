@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Coins, Maximize2, RefreshCw, XIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -94,6 +95,111 @@ function SourceChip({
         {style.text}
       </Badge>
     </div>
+  );
+}
+
+/**
+ * Full source registry modal (Figma coin template `dark-modal`/`light-modal`
+ * frames): "Sources" header with the freshness pill, a two-column list of
+ * every source with a status square (used / available / unused), and the
+ * three-state legend in the footer. Opened from the rail Sources header.
+ */
+function SourcesModal({
+  sources,
+  includeProtocolRedeem,
+  updatedAtLabel,
+}: {
+  sources: SourceInfo[];
+  includeProtocolRedeem: boolean;
+  updatedAtLabel: string | null;
+}) {
+  const ordered: { key: string; label: string; status: RenderedSourceStatus }[] = [
+    ...(includeProtocolRedeem
+      ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
+      : []),
+    ...sources
+      .filter((source): source is SourceInfo & { status: RenderedSourceStatus } => source.status !== "not-applicable")
+      .sort((a, b) => {
+        const rank: Record<RenderedSourceStatus, number> = { used: 0, available: 1, "no-data": 2 };
+        return rank[a.status] - rank[b.status];
+      }),
+  ];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          aria-label="Show all price sources"
+          className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Maximize2 className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="gap-0 p-0 sm:max-w-2xl" showCloseButton={false}>
+        <div className="flex items-center justify-between gap-3 border-b border-border/40 py-3 pl-5 pr-4">
+          <DialogTitle className="text-sm font-medium text-foreground">Sources</DialogTitle>
+          <div className="flex items-center gap-2">
+            {updatedAtLabel ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                {updatedAtLabel}
+              </span>
+            ) : null}
+            <DialogClose asChild>
+              <button
+                type="button"
+                aria-label="Close"
+                className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <XIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </DialogClose>
+          </div>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto px-5 py-3">
+          <div className="grid gap-x-8 sm:grid-cols-2">
+            {ordered.map((source) => (
+              <div key={source.key} className="flex items-center justify-between gap-3 py-2">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/50 bg-muted/50">
+                    <Coins className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                  </span>
+                  <span
+                    className={cn(
+                      "truncate text-sm",
+                      source.status === "no-data" ? "text-muted-foreground/70" : "text-foreground",
+                    )}
+                    title={source.label}
+                  >
+                    {source.label}
+                  </span>
+                </span>
+                <span
+                  className={cn("h-2 w-2 shrink-0 rounded-[2px]", SOURCE_DOT_CLASSES[source.status])}
+                  role="img"
+                  aria-label={source.status === "no-data" ? "Unused" : SOURCE_CHIP_STYLES[source.status].text}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-3 border-t border-border/40 px-5 py-3">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="h-2 w-2 rounded-[2px] bg-emerald-500" aria-hidden="true" />
+            Used
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="h-2 w-2 rounded-[2px] bg-sky-400" aria-hidden="true" />
+            Available
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="h-2 w-2 rounded-[2px] bg-muted-foreground/40" aria-hidden="true" />
+            Unused
+          </span>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -226,7 +332,18 @@ export function PriceTransparencyCard({
 
         {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
         <div className="space-y-2">
-          {compact ? <p className="pharos-kicker">Sources</p> : null}
+          {compact ? (
+            /* Rail header (Figma coin template): "Sources" kicker with the
+               expand trigger opening the full Sources modal. */
+            <div className="flex items-center justify-between gap-3">
+              <p className="pharos-kicker">Sources</p>
+              <SourcesModal
+                sources={sources}
+                includeProtocolRedeem={isProtocolRedeem}
+                updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
+              />
+            </div>
+          ) : null}
           <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3")}>
             {isProtocolRedeem ? <SourceChip label="Protocol Redemption" status="used" compact={compact} /> : null}
 
@@ -240,8 +357,10 @@ export function PriceTransparencyCard({
               <SourceChip key={source.key} label={source.label} status={source.status} compact={compact} />
             ))}
 
-            {/* Expandable No-Data Sources */}
-            {showAll &&
+            {/* Expandable No-Data Sources (full card only; the rail exposes
+                them through the Sources modal instead) */}
+            {!compact &&
+              showAll &&
               noDataSources.map((source) => (
                 <SourceChip key={source.key} label={source.label} status={source.status} compact={compact} />
               ))}
@@ -259,7 +378,7 @@ export function PriceTransparencyCard({
             </div>
           ) : null}
 
-          {noDataSources.length > 0 && (
+          {!compact && noDataSources.length > 0 && (
             <button type="button"
               onClick={() => setShowAll(!showAll)}
               className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
