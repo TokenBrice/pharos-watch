@@ -1,26 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowLeftRight,
-  ArrowRight,
-  BookOpen,
-  ExternalLink,
-  FileText,
-  Flag,
-  Globe,
-  X,
-} from "lucide-react";
+import { ArrowLeftRight, ArrowRight, BookOpen, ExternalLink, FileText, Flag, Globe, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
-import type {
-  HeroCardViewModel,
-  HeroTertiaryMetricViewModel,
-} from "@/lib/stablecoin-detail-view-model";
+import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
 import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
 import {
   HeroCardDesktopSection,
@@ -99,18 +87,21 @@ function HeroDesktopIdentityToolbar({
   const actionClass =
     "pharos-focus-ring inline-flex size-8 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground";
 
+  // Figma coin template: avatar + mono ticker eyebrow above the H1, and the
+  // action cluster grouped as [resource links] · divider · [compare/flag/share].
   return (
     <div className="hidden items-start justify-between gap-5 lg:flex">
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-3">
-          <StablecoinLogo src={logoSrc} name={coin.name} size={34} />
-          <div className="min-w-0 flex-1">
-            <h2 className="pharos-page-title text-2xl leading-none tracking-normal">{coin.name}</h2>
-            {coin.oneLiner ? (
-              <p className="mt-2 max-w-none text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
-            ) : null}
-          </div>
+        <div className="flex items-center gap-2">
+          <StablecoinLogo src={logoSrc} name={coin.name} size={20} />
+          <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {coin.symbol}
+          </span>
         </div>
+        <h2 className="pharos-page-title mt-2 text-2xl leading-none tracking-normal">{coin.name}</h2>
+        {coin.oneLiner ? (
+          <p className="mt-2 max-w-none text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+        ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1.5 pt-1">
         {links.map((link) => {
@@ -129,6 +120,15 @@ function HeroDesktopIdentityToolbar({
             </a>
           );
         })}
+        {links.length > 0 ? <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/60" /> : null}
+        <Link
+          href={header.compareHref}
+          className={actionClass}
+          aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+          title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
         <button
           type="button"
           onClick={onOpenFeedback}
@@ -138,14 +138,6 @@ function HeroDesktopIdentityToolbar({
         >
           <Flag className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
-        <Link
-          href={header.compareHref}
-          className={actionClass}
-          aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
-          title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
         <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
       </div>
     </div>
@@ -163,9 +155,7 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
         <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="pharos-kicker shrink-0">Case study</span>
         <span aria-hidden="true" className="hidden h-3 w-px shrink-0 bg-border sm:block" />
-        <span className="min-w-0 text-sm font-medium leading-snug text-foreground sm:truncate">
-          {callout.title}
-        </span>
+        <span className="min-w-0 text-sm font-medium leading-snug text-foreground sm:truncate">{callout.title}</span>
       </span>
       <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
         <Badge

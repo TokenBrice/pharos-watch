@@ -10,10 +10,7 @@ import {
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { GENIUS_STATUS_SHORT_LABELS, GENIUS_STATUS_TEXT_CLS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
-import {
-  REDEMPTION_ACCESS_LABELS,
-  REDEMPTION_ACCESS_PASSPORT_LABELS,
-} from "@shared/lib/redemption-backstop-scoring";
+import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { HERO_MUTED_CLASS } from "@/lib/stablecoin-detail-hero-metrics";
 
@@ -48,6 +45,10 @@ export interface HeroPassportItemViewModel {
   /** Text tone on the value for data-driven states (freeze, attestor tier). */
   valueClass?: string;
   ariaLabel: string;
+  /** Hover detail lines (Figma coin template: jurisdiction authority stack). */
+  tooltipLines?: string[];
+  /** Render the value inside a pill chip (Figma coin template: chain count). */
+  chip?: boolean;
 }
 
 /** Structural slice of MintAuthorityDetailViewModel the passport needs. */
@@ -91,6 +92,26 @@ const FREEZE_TONE_CLEAR = "text-emerald-700 dark:text-emerald-400";
 // A clean peg record earns the same emerald as a reviewed clear freeze status;
 // a non-zero count stays default foreground — it is history, not an alarm.
 const PEG_RECORD_TONE_CLEAN = "text-emerald-700 dark:text-emerald-400";
+
+// Passport-short country forms (Figma coin template shows "USA" + tooltip).
+// Only unambiguous common abbreviations — everything else keeps the curated
+// country name; the authority stack lives in the tooltip and aria-label.
+const COUNTRY_PASSPORT_CODES: Record<string, string> = {
+  "United States": "USA",
+  "United Kingdom": "UK",
+  "United Arab Emirates": "UAE",
+  "British Virgin Islands": "BVI",
+};
+
+// Passport-short attestor tiers (Figma: "NICHE"); full labels stay in the
+// aria-label and the Key Information card.
+const ATTESTOR_PASSPORT_LABELS: Record<keyof typeof POR_TIER_STYLES, string> = {
+  big4: "Big-4",
+  regional: "Regional CPA",
+  niche: "Niche",
+  self: "Self-attested",
+  none: "None",
+};
 
 function buildFreezePassportItem(
   coin: StablecoinMeta,
@@ -237,8 +258,7 @@ export function buildHeroPassportItems({
             value: "Clean",
             href: "#depeg-history",
             valueClass: PEG_RECORD_TONE_CLEAN,
-            ariaLabel:
-              "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
+            ariaLabel: "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
           }
         : {
             key: "record",
@@ -255,19 +275,26 @@ export function buildHeroPassportItems({
     category: "Chains",
     value: String(chainCount),
     href: (coin.contracts?.length ?? 0) > 0 ? "#contracts" : "#info",
+    chip: true,
     ariaLabel: `Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"} — jump to contract deployments`,
   });
 
   // Cluster 2 — who stands behind it: jurisdiction, its regulatory visas,
   // reserve attestor, date of issue.
+  const jurisdictionTooltipLines = jurisdictionCountry
+    ? [jurisdictionCountry, coin.jurisdiction?.regulator, coin.jurisdiction?.license].filter((line): line is string =>
+        Boolean(line),
+      )
+    : [];
   items.push({
     key: "jurisdiction",
     category: "Jurisdiction",
-    value: jurisdictionCountry ?? "Not disclosed",
+    value: jurisdictionCountry ? (COUNTRY_PASSPORT_CODES[jurisdictionCountry] ?? jurisdictionCountry) : "Not disclosed",
     href: isDecentralized ? "#info" : "#jurisdiction",
     valueClass: jurisdictionCountry ? undefined : HERO_MUTED_CLASS,
+    tooltipLines: jurisdictionTooltipLines.length > 1 ? jurisdictionTooltipLines : undefined,
     ariaLabel: jurisdictionCountry
-      ? `Jurisdiction: ${jurisdictionCountry} — jump to jurisdiction details`
+      ? `Jurisdiction: ${jurisdictionTooltipLines.join(", ")} — jump to jurisdiction details`
       : "Jurisdiction not disclosed — jump to Key Information",
   });
 
@@ -304,14 +331,13 @@ export function buildHeroPassportItems({
   }
 
   if (!isDecentralized && coin.proofOfReserves) {
-    const tierStyle = coin.proofOfReserves.attestorTier
-      ? POR_TIER_STYLES[coin.proofOfReserves.attestorTier]
-      : null;
+    const attestorTier = coin.proofOfReserves.attestorTier ?? null;
+    const tierStyle = attestorTier ? POR_TIER_STYLES[attestorTier] : null;
     const attestorLabel = tierStyle?.label ?? POR_BADGE_STYLES[coin.proofOfReserves.type].label;
     items.push({
       key: "attestor",
       category: "Attestor",
-      value: attestorLabel,
+      value: attestorTier ? ATTESTOR_PASSPORT_LABELS[attestorTier] : attestorLabel,
       href: "#attestation",
       valueClass: tierStyle?.textCls,
       ariaLabel: `Reserve attestation: ${attestorLabel} — jump to Proof of Reserves`,

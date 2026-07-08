@@ -1509,9 +1509,10 @@ describe("stablecoin detail hero view-model builder", () => {
       href: "#redemption",
     });
     expect(byKey.get("minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
-    expect(byKey.get("attestor")).toMatchObject({ value: "Big-4 attestor", href: "#attestation" });
+    // Passport-short attestor tier (Figma coin template); the aria-label keeps the full label.
+    expect(byKey.get("attestor")).toMatchObject({ value: "Big-4", href: "#attestation" });
     expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#jurisdiction" });
-    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts" });
+    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts", chip: true });
 
     // A decentralized coin omits the attestor chip and routes jurisdiction
     // to the info card, mirroring the Key Information card's skip logic.

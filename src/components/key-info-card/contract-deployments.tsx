@@ -75,7 +75,13 @@ export function ContractDeployments({
   if (compact) {
     const ToggleIcon = showAllContractsDesktop ? Minimize2 : Maximize2;
     return (
-      <section className="pharos-card-shell overflow-hidden" aria-label={`Contracts, ${contracts.length} deployments`}>
+      <section
+        // The in-flow Key Info instance owns `#contracts` but is xl:hidden;
+        // the passport strip's hash jump falls back to this visible twin.
+        data-anchor-twin="contracts"
+        className={cn("pharos-card-shell overflow-hidden", SECTION_SCROLL_MT)}
+        aria-label={`Contracts, ${contracts.length} deployments`}
+      >
         <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-medium text-muted-foreground">Contracts</h2>
