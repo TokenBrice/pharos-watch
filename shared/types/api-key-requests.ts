@@ -1,3 +1,4 @@
+import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { z } from "zod";
 
 export const ApiKeySelfServeStatusSchema = z.enum([
@@ -37,7 +38,7 @@ export interface ApiKeySelfServeRequest {
 
 export interface ApiKeySelfServePendingResponse {
   status: "pending_verification";
-  message: string;
+  message?: string;
 }
 
 export interface ApiKeySelfServeVerifyRequest {
@@ -56,12 +57,31 @@ export interface ApiKeySelfServeIssueResponse {
     expiresAt: number | null;
   };
   token: string;
-  usage: {
+  usage?: {
     baseUrl: string;
     headerName: string;
     retryGuidance: string;
   };
 }
+
+const ApiKeySelfServeNonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0);
+
+export const ApiKeySelfServePendingResponseSchema: z.ZodType<ApiKeySelfServePendingResponse> = z.object({
+  status: z.literal("pending_verification"),
+}).passthrough();
+
+export const ApiKeySelfServeIssueResponseSchema: z.ZodType<ApiKeySelfServeIssueResponse> = z.object({
+  status: z.literal("issued"),
+  key: z.object({
+    keyPrefix: ApiKeySelfServeNonEmptyStringSchema,
+    maskedToken: ApiKeySelfServeNonEmptyStringSchema,
+    tier: z.literal("self-serve"),
+    trafficClass: z.literal("external"),
+    rateLimitPerMinute: z.literal(SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE),
+    expiresAt: z.number().nullable(),
+  }).passthrough(),
+  token: ApiKeySelfServeNonEmptyStringSchema,
+}).passthrough();
 
 export interface ApiKeySelfServeRequestAdminSummary {
   requestId: string;

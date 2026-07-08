@@ -1,14 +1,14 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import {
-  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
-} from "@shared/lib/ops-limits";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import type {
-  ApiKeySelfServeIssueResponse,
-  ApiKeySelfServePendingResponse,
-  ApiKeySelfServeRequest,
+import {
+  ApiKeySelfServeIssueResponseSchema,
+  ApiKeySelfServePendingResponseSchema,
+  type ApiKeySelfServeIssueResponse,
+  type ApiKeySelfServePendingResponse,
+  type ApiKeySelfServeRequest,
 } from "@shared/types";
-import { buildApiUrl } from "@/lib/api";
+import { ApiFetchError, apiFetch } from "@/lib/api";
+import type { SchemaLike } from "@/lib/schema-like";
 
 const VERIFICATION_TOKEN_PREFIX = "akv_";
 const VERIFICATION_TOKEN_SESSION_STORAGE_KEY = "pharos:api-key-verify-token";
@@ -18,30 +18,17 @@ interface ApiErrorPayload {
   message?: string;
 }
 
-function isApiKeySelfServeIssueResponse(payload: unknown): payload is ApiKeySelfServeIssueResponse {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<ApiKeySelfServeIssueResponse>;
-  const key = candidate.key;
-  return candidate.status === "issued"
-    && typeof candidate.token === "string"
-    && candidate.token.trim().length > 0
-    && !!key
-    && typeof key === "object"
-    && typeof key.keyPrefix === "string"
-    && key.keyPrefix.trim().length > 0
-    && typeof key.maskedToken === "string"
-    && key.maskedToken.trim().length > 0
-    && key.tier === "self-serve"
-    && key.trafficClass === "external"
-    && key.rateLimitPerMinute === SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
-    && (typeof key.expiresAt === "number" || key.expiresAt === null);
-}
-
-async function readJson<T>(response: Response): Promise<T | null> {
-  const text = await response.text();
-  if (!text) return null;
+function parseApiErrorPayload(bodyText: string | null): ApiErrorPayload | null {
+  if (!bodyText) return null;
   try {
-    return JSON.parse(text) as T;
+    const payload = JSON.parse(bodyText) as unknown;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+    if ("status" in payload) {
+      return null;
+    }
+    return payload as ApiErrorPayload;
   } catch {
     return null;
   }
@@ -51,44 +38,36 @@ function resolveErrorMessage(status: number, payload: ApiErrorPayload | null): s
   return payload?.error ?? payload?.message ?? `Request failed with status ${status}`;
 }
 
+async function postSelfServeJson<T>(path: string, body: unknown, schema: SchemaLike<T>): Promise<T> {
+  try {
+    return await apiFetch<T>(path, schema, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error instanceof ApiFetchError) {
+      throw new Error(resolveErrorMessage(error.status, parseApiErrorPayload(error.bodyText)));
+    }
+    throw error;
+  }
+}
+
 export async function submitApiKeyRequest(
   body: ApiKeySelfServeRequest,
 ): Promise<ApiKeySelfServePendingResponse> {
-  const response = await fetch(buildApiUrl(API_PATHS.apiKeyRequests()), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const payload = await readJson<ApiKeySelfServePendingResponse | ApiErrorPayload>(response);
-  if (!response.ok || !payload || !("status" in payload) || payload.status !== "pending_verification") {
-    throw new Error(resolveErrorMessage(response.status, payload && !("status" in payload) ? payload : null));
-  }
-  return payload;
+  return postSelfServeJson(API_PATHS.apiKeyRequests(), body, ApiKeySelfServePendingResponseSchema);
 }
 
 export async function verifyApiKeyRequestToken(token: string): Promise<ApiKeySelfServeIssueResponse> {
-  const response = await fetch(buildApiUrl(API_PATHS.apiKeyRequestVerify()), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
-    },
-    body: JSON.stringify({ token }),
-  });
-  const payload = await readJson<unknown>(response);
-  if (!response.ok) {
-    const errorPayload = payload && typeof payload === "object" && !("status" in payload)
-      ? payload as ApiErrorPayload
-      : null;
-    throw new Error(resolveErrorMessage(response.status, errorPayload));
-  }
-  if (!isApiKeySelfServeIssueResponse(payload)) {
-    throw new Error("Verification succeeded, but the API key was not returned. Please contact support via the link on the API page before leaving this page.");
-  }
-  return payload;
+  return postSelfServeJson(
+    API_PATHS.apiKeyRequestVerify(),
+    { token },
+    ApiKeySelfServeIssueResponseSchema,
+  );
 }
 
 function parseHashVerificationToken(hash: string): string | null {
