@@ -119,18 +119,11 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           </div>
         </div>
 
-        {/* Net window quadrant */}
+        {/* Net window quadrant — no direction chip here: the Minting Pressure
+            header already carries it (Figma coin template). */}
         <div className="flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 sm:px-5">
             <p className="text-sm font-medium text-foreground">Net</p>
-            <span
-              className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                netSignal.badgeClass,
-              )}
-            >
-              {netSignal.label}
-            </span>
           </div>
           <div className="grid flex-1 grid-cols-2">
             {netCells.map((cell, index) => (

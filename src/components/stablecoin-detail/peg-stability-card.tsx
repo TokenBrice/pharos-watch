@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Info } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
@@ -34,6 +34,16 @@ export function PegStabilityCard(props: PegStabilityBodyProps) {
         <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
           Peg Stability
         </DetailSectionTitle>
+        {/* Header info affordance (Figma coin template) → mechanism explainer. */}
+        {effectiveArchetype != null ? (
+          <Link
+            href={getMechanismExplainerPath(effectiveArchetype)}
+            aria-label={`Learn how ${getMechanismArchetypeCtaNoun(effectiveArchetype)} stablecoins work`}
+            className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Info className="h-3 w-3" aria-hidden="true" />
+          </Link>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col px-4 py-5 sm:px-5">
         {useVerticalFlow ? (

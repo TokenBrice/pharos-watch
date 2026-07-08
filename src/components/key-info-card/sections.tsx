@@ -280,19 +280,22 @@ export function ProofAndJurisdictionSection({ meta }: { meta: StablecoinMeta }) 
       <div id="attestation" className={SECTION_SCROLL_MT}>
         <p className="pharos-kicker mb-1.5">Proof of Reserves</p>
         {meta.proofOfReserves ? (
-          <p className="text-sm leading-relaxed">
-            {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-            {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}{" "}
+          <>
+            <p className="text-sm leading-relaxed">
+              {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
+              {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
+            </p>
+            {/* Bordered button per the Figma coin template, not an inline text link. */}
             <a
               href={meta.proofOfReserves.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-frost-blue hover:underline sm:min-h-0 sm:py-0"
+              className="pharos-focus-ring mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground sm:min-h-0"
             >
               View reserves
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
-          </p>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">No proof of reserves published</p>
         )}

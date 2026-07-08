@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { ReportCardGrade } from "@shared/types";
@@ -28,10 +28,10 @@ export function RailSafetySummary({ items }: { items: HeroSignalRailItem[] }) {
         <h2 className="text-sm font-medium text-muted-foreground">Safety</h2>
         <Link
           href="#report-card"
-          className="pharos-focus-ring inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          aria-label="Jump to the full safety report card"
+          className="pharos-focus-ring flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
         >
-          Details
-          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
         </Link>
       </div>
       <Link
@@ -60,7 +60,7 @@ export function RailSafetySummary({ items }: { items: HeroSignalRailItem[] }) {
                 {item.primary}
               </span>
               {item.secondary ? (
-                <span className="font-mono text-[10px] text-muted-foreground">· {item.secondary}</span>
+                <span className="font-mono text-[10px] uppercase text-muted-foreground">· {item.secondary}</span>
               ) : null}
             </span>
           </Link>
