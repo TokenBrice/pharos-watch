@@ -1,14 +1,21 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
-  ApiKeySelfServeIssueResponseSchema,
   ApiKeySelfServePendingResponseSchema,
-  type ApiKeySelfServeIssueResponse,
-  type ApiKeySelfServePendingResponse,
-  type ApiKeySelfServeRequest,
+  buildApiKeySelfServeIssueResponseSchema,
+} from "@shared/types/api-key-requests";
+import type {
+  ApiKeySelfServeIssueResponse,
+  ApiKeySelfServePendingResponse,
+  ApiKeySelfServeRequest,
 } from "@shared/types";
 import { ApiFetchError, apiFetch } from "@/lib/api";
 import type { SchemaLike } from "@/lib/schema-like";
+
+const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
+  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+);
 
 const VERIFICATION_TOKEN_PREFIX = "akv_";
 const VERIFICATION_TOKEN_SESSION_STORAGE_KEY = "pharos:api-key-verify-token";

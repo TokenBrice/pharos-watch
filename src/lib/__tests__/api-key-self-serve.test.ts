@@ -2,13 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
-  ApiKeySelfServeIssueResponseSchema,
   ApiKeySelfServePendingResponseSchema,
-  type ApiKeySelfServeRequest,
-  type ApiKeySelfServeIssueResponse,
-} from "@shared/types";
+  buildApiKeySelfServeIssueResponseSchema,
+} from "@shared/types/api-key-requests";
+import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
 import { DEFAULT_API_REQUEST_TIMEOUT_MS, SchemaValidationError } from "../api";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
+
+const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
+  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+);
 
 const ORIGINAL_FORCE_SITE_DATA_PROXY = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
 

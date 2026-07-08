@@ -1,4 +1,3 @@
-import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { z } from "zod";
 
 export const ApiKeySelfServeStatusSchema = z.enum([
@@ -70,18 +69,25 @@ export const ApiKeySelfServePendingResponseSchema: z.ZodType<ApiKeySelfServePend
   status: z.literal("pending_verification"),
 }).passthrough();
 
-export const ApiKeySelfServeIssueResponseSchema: z.ZodType<ApiKeySelfServeIssueResponse> = z.object({
-  status: z.literal("issued"),
-  key: z.object({
-    keyPrefix: ApiKeySelfServeNonEmptyStringSchema,
-    maskedToken: ApiKeySelfServeNonEmptyStringSchema,
-    tier: z.literal("self-serve"),
-    trafficClass: z.literal("external"),
-    rateLimitPerMinute: z.literal(SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE),
-    expiresAt: z.number().nullable(),
-  }).passthrough(),
-  token: ApiKeySelfServeNonEmptyStringSchema,
-}).passthrough();
+// shared/types must not import shared/lib, so the expected self-serve rate
+// limit is supplied by the caller (see SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
+// in @shared/lib/ops-limits) instead of being imported here.
+export function buildApiKeySelfServeIssueResponseSchema(
+  expectedRateLimitPerMinute: number,
+): z.ZodType<ApiKeySelfServeIssueResponse> {
+  return z.object({
+    status: z.literal("issued"),
+    key: z.object({
+      keyPrefix: ApiKeySelfServeNonEmptyStringSchema,
+      maskedToken: ApiKeySelfServeNonEmptyStringSchema,
+      tier: z.literal("self-serve"),
+      trafficClass: z.literal("external"),
+      rateLimitPerMinute: z.literal(expectedRateLimitPerMinute),
+      expiresAt: z.number().nullable(),
+    }).passthrough(),
+    token: ApiKeySelfServeNonEmptyStringSchema,
+  }).passthrough();
+}
 
 export interface ApiKeySelfServeRequestAdminSummary {
   requestId: string;
