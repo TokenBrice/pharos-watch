@@ -229,6 +229,7 @@ describe("validate-ci parity", () => {
       "npm run check:client-registry-imports",
       "npm run check:cron-abort-contract",
       "npm run check:cron-console-usage",
+      "npm run check:json-parse-ratchet",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
       "npm run check:dependency-coverage",

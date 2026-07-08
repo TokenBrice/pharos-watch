@@ -126,6 +126,24 @@
       ]
     },
     {
+      "file": "scripts/__tests__/check-json-parse-ratchet.test.ts",
+      "code": "TS2322",
+      "message": "Type '{ write: () => true; }' is not assignable to type 'WriteStream & { fd: 1; }'.",
+      "count": 1,
+      "examples": [
+        "84:7"
+      ]
+    },
+    {
+      "file": "scripts/__tests__/check-json-parse-ratchet.test.ts",
+      "code": "TS2322",
+      "message": "Type '{ write: (chunk: string) => true; }' is not assignable to type 'WriteStream & { fd: 2; }'.",
+      "count": 1,
+      "examples": [
+        "85:7"
+      ]
+    },
+    {
       "file": "scripts/__tests__/classify-deploy-changes.test.ts",
       "code": "TS2322",
       "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n-    \\\"zod\\\": \\\"^4.3.5\\\",\\n+    \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",

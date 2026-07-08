@@ -97,6 +97,12 @@ export const VALIDATION_COMMAND_DESCRIPTORS = [
     paths: ["scripts/ci/check-cron-console-usage.mjs", "scripts/lib/cron-console-usage-baseline.json"],
   },
   {
+    command: "npm run check:json-parse-ratchet",
+    tier: "surface",
+    deployImpact: "worker",
+    paths: ["scripts/ci/check-json-parse-ratchet.mjs", "scripts/lib/json-parse-ratchet-baseline.json"],
+  },
+  {
     command: "npm run check:cron-connections",
     tier: "blocking",
     deployImpact: "full",

@@ -77,6 +77,8 @@
     "check:cron-abort-contract": "node scripts/ci/check-cron-abort-contract.mjs",
     "check:cron-console-usage": "node scripts/ci/check-cron-console-usage.mjs",
     "check:cron-console-usage:update-baseline": "node scripts/ci/check-cron-console-usage.mjs --update-baseline",
+    "check:json-parse-ratchet": "node scripts/ci/check-json-parse-ratchet.mjs",
+    "check:json-parse-ratchet:update-baseline": "node scripts/ci/check-json-parse-ratchet.mjs --update-baseline",
     "check:cemetery-dataset": "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     "check:openapi": "tsx scripts/maintenance/generate-openapi-spec.ts --check",
     "check:postman": "tsx scripts/maintenance/generate-postman-collection.ts --check",
