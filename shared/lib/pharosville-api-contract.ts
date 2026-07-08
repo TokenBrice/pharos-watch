@@ -2,6 +2,7 @@ import type { ZodType } from "zod";
 import { API_PATHS } from "./api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "./api-freshness";
 import { CRON_INTERVALS } from "./cron-jobs";
+import { DATA_SURFACE_DESCRIPTORS } from "./data-surface-descriptors";
 import {
   PHAROSVILLE_API_ENDPOINT_KEYS,
   type PharosVilleApiEndpointKey,
@@ -27,10 +28,10 @@ export interface PharosVilleApiEndpoint<K extends PharosVilleApiEndpointKey = Ph
 export const PHAROSVILLE_API_CONTRACT = {
   stablecoins: {
     key: "stablecoins",
-    path: API_PATHS.stablecoins(),
+    path: DATA_SURFACE_DESCRIPTORS.stablecoins.apiPath,
     schema: StablecoinListResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
-    producerIntervalSec: CRON_INTERVALS["sync-stablecoins"],
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
+    producerIntervalSec: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec,
   },
   chains: {
     key: "chains",
@@ -55,17 +56,17 @@ export const PHAROSVILLE_API_CONTRACT = {
   },
   stress: {
     key: "stress",
-    path: API_PATHS.stressSignals(),
+    path: DATA_SURFACE_DESCRIPTORS.stressSignals.apiPath,
     schema: StressSignalsAllResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-    producerIntervalSec: CRON_INTERVALS["compute-dews"],
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
+    producerIntervalSec: DATA_SURFACE_DESCRIPTORS.stressSignals.producerIntervalSec,
   },
   reportCards: {
     key: "reportCards",
-    path: API_PATHS.reportCards(),
+    path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
     schema: ReportCardsResponseSchema,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-    producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
+    producerIntervalSec: DATA_SURFACE_DESCRIPTORS.reportCards.producerIntervalSec,
   },
 } satisfies {
   [K in PharosVilleApiEndpointKey]: PharosVilleApiEndpoint<K>;
