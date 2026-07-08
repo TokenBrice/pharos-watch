@@ -275,7 +275,11 @@ describe("data surface descriptors", () => {
 
   it("derives endpoint freshness budgets from descriptors", () => {
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      if (!surface.apiFreshnessKey) continue;
+      const surfaceKey: string = surface.key;
+      if (!("apiFreshnessKey" in surface) || !surface.apiFreshnessKey) continue;
+      if (!("endpointMaxAgeSec" in surface)) {
+        throw new Error(`descriptor ${surfaceKey} has apiFreshnessKey but no endpointMaxAgeSec`);
+      }
       const endpointMaxAgeSec = requireDescriptorField(surface, "endpointMaxAgeSec", surface.endpointMaxAgeSec);
 
       expect(API_FRESHNESS_BY_KEY[surface.apiFreshnessKey]).toBe(endpointMaxAgeSec);
@@ -317,7 +321,7 @@ describe("data surface descriptors", () => {
     expect(FRESHNESS_SENTINEL_CACHE_KEYS).toEqual(["dex-liquidity", "yield-data", "dews"]);
 
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      if (!surface.cacheFreshnessLaneKey) continue;
+      if (!("cacheFreshnessLaneKey" in surface) || !surface.cacheFreshnessLaneKey) continue;
 
       const lane = CACHE_FRESHNESS_LANES_BY_KEY[surface.cacheFreshnessLaneKey];
       expect(lane).toBeDefined();
@@ -325,10 +329,10 @@ describe("data surface descriptors", () => {
       expect(surface.cacheKey).toBe(lane.cacheKey);
       expect(surface.producerJob).toBe(lane.producerJob);
       expect(surface.producerIntervalSec).toBe(lane.producerIntervalSec);
-      expect(surface.endpointMaxAgeSec).toBe(lane.endpointMaxAgeSec);
-      expect(surface.availabilityMaxAgeSec).toBe(lane.availabilityMaxAgeSec);
-      expect(surface.availabilityMaxAgeSec).toBe(CACHE_AVAILABILITY_MAX_AGE_SEC[lane.cacheKey]);
-      expect(surface.freshnessSentinelKey).toBe(lane.freshnessSentinelKey);
+      expect("endpointMaxAgeSec" in surface ? surface.endpointMaxAgeSec : undefined).toBe(lane.endpointMaxAgeSec);
+      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(lane.availabilityMaxAgeSec);
+      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(CACHE_AVAILABILITY_MAX_AGE_SEC[lane.cacheKey]);
+      expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(lane.freshnessSentinelKey);
     }
   });
 
