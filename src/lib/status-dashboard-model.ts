@@ -239,6 +239,9 @@ function buildDashboardNotices({
   healthData,
   status,
   timestamp,
+  publicationHealth,
+  scheduledSlotRunningQueryFailed,
+  scheduledSlotEventMarkerQueryFailed,
 }: {
   clientDataStale: boolean;
   staleQuerySyncs: readonly DashboardQuerySync[];
@@ -251,6 +254,9 @@ function buildDashboardNotices({
   healthData: HealthResponse | null | undefined;
   status: StatusResponse["overallStatus"];
   timestamp: number;
+  publicationHealth: StatusResponse["publicationHealth"];
+  scheduledSlotRunningQueryFailed: boolean | undefined;
+  scheduledSlotEventMarkerQueryFailed: boolean | undefined;
 }): DashboardNotice[] {
   const notices: DashboardNotice[] = [];
   if (clientDataStale) {
@@ -311,6 +317,32 @@ function buildDashboardNotices({
       title: `Public /api/health reports ${healthData.status}`,
       detail: `${divergence}${mintBurnWarning}${mintBurnSyncAge}${impactedMajors}Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`,
       tone: healthData.status === "stale" ? "critical" : healthData.status === "degraded" ? "warning" : "neutral",
+    });
+  }
+  publicationHealth?.failedSurfaces?.forEach((failure, index) => {
+    const label = publicationHealth.surfaces[failure.surface]?.label;
+    const surfaceLabel = label && label !== failure.surface ? `${label} (${failure.surface})` : failure.surface;
+    notices.push({
+      id: `publication-failed-${failure.surface}-${failure.code}-${index}`,
+      title: `Publication surface failed: ${surfaceLabel}`,
+      detail: `${failure.surface} reported ${failure.code}: ${failure.message}`,
+      tone: "neutral",
+    });
+  });
+  if (scheduledSlotRunningQueryFailed === true) {
+    notices.push({
+      id: "scheduled-slot-running-query-failed",
+      title: "Scheduled-slot running query failed",
+      detail: "Status could not inspect running scheduled slots; stale-slot detection may be incomplete.",
+      tone: "neutral",
+    });
+  }
+  if (scheduledSlotEventMarkerQueryFailed === true) {
+    notices.push({
+      id: "scheduled-slot-event-marker-query-failed",
+      title: "Scheduled-slot event-marker query failed",
+      detail: "Status could not inspect scheduled-slot event markers; slot-abandonment diagnostics may be incomplete.",
+      tone: "neutral",
     });
   }
   return notices;
@@ -587,6 +619,9 @@ export function buildStatusDashboardData({
     healthData,
     status: data.overallStatus,
     timestamp: data.timestamp,
+    publicationHealth: data.publicationHealth,
+    scheduledSlotRunningQueryFailed: data.summary.scheduledSlotRunningQueryFailed,
+    scheduledSlotEventMarkerQueryFailed: data.summary.scheduledSlotEventMarkerQueryFailed,
   });
   const sectionPriority = buildSectionPriority({
     data,

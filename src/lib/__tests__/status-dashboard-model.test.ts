@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult } from "@shared/types";
-import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import {
+  makeHealthyHealthResponse,
+  makeHealthyStatusResponse,
+  makePublicationFailureStatusResponse,
+  makeScheduledSlotEventMarkerQueryFailedStatusResponse,
+  makeScheduledSlotRunningQueryFailedStatusResponse,
+} from "@/test-utils/status-fixtures";
 import { buildBrowserProbeSummary, buildStatusDashboardData } from "../status-dashboard-model";
 
 const BASE_STATUS = makeHealthyStatusResponse();
@@ -12,6 +18,21 @@ const BASE_QUERY_SYNCS = {
   historyUpdatedAt: 1_000_000,
   requestSourceUpdatedAt: 1_000_000,
 };
+
+function buildModel(data = makeHealthyStatusResponse()) {
+  return buildStatusDashboardData({
+    data,
+    healthData: BASE_HEALTH,
+    probes: [],
+    querySyncs: BASE_QUERY_SYNCS,
+    nowMs: 1_000_000,
+    healthError: null,
+    probesError: null,
+    historyError: null,
+    requestSourceError: null,
+    historyTransitions: undefined,
+  });
+}
 
 describe("status dashboard model", () => {
   it("treats semantic degradation as an unhealthy browser probe", () => {
@@ -139,6 +160,61 @@ describe("status dashboard model", () => {
     expect(model.notices.find((notice) => notice.id === "public-health")?.detail).toContain(
       "Impacted majors: USDC, USDT.",
     );
+  });
+
+  it("keeps healthy dashboard output byte-identical when failure metadata is absent or empty", () => {
+    const healthy = makeHealthyStatusResponse();
+    const healthyWithEmptyFailureMetadata = {
+      ...healthy,
+      publicationHealth: {
+        checkedAt: healthy.timestamp,
+        surfaces: {},
+        failedSurfaces: [],
+      },
+      summary: {
+        ...healthy.summary,
+        scheduledSlotRunningQueryFailed: false,
+        scheduledSlotEventMarkerQueryFailed: false,
+      },
+    };
+
+    expect(JSON.stringify(buildModel(healthyWithEmptyFailureMetadata))).toBe(JSON.stringify(buildModel(healthy)));
+  });
+
+  it("surfaces publication surface failures as watch-level operator notices", () => {
+    const model = buildModel(makePublicationFailureStatusResponse());
+
+    expect(model.notices).toContainEqual({
+      id: "publication-failed-dex-liquidity-publication_query_failed-0",
+      title: "Publication surface failed: DEX Liquidity (dex-liquidity)",
+      detail: "dex-liquidity reported publication_query_failed: Publication ledger latest-generation query failed.",
+      tone: "neutral",
+    });
+    expect(model.attentionSections).toEqual([]);
+  });
+
+  it("surfaces scheduled-slot running query failures as watch-level operator notices", () => {
+    const model = buildModel(makeScheduledSlotRunningQueryFailedStatusResponse());
+
+    expect(model.notices).toContainEqual({
+      id: "scheduled-slot-running-query-failed",
+      title: "Scheduled-slot running query failed",
+      detail: "Status could not inspect running scheduled slots; stale-slot detection may be incomplete.",
+      tone: "neutral",
+    });
+    expect(model.attentionSections).toEqual([]);
+  });
+
+  it("surfaces scheduled-slot event-marker query failures as watch-level operator notices", () => {
+    const model = buildModel(makeScheduledSlotEventMarkerQueryFailedStatusResponse());
+
+    expect(model.notices).toContainEqual({
+      id: "scheduled-slot-event-marker-query-failed",
+      title: "Scheduled-slot event-marker query failed",
+      detail: "Status could not inspect scheduled-slot event markers; slot-abandonment diagnostics may be incomplete.",
+      tone: "neutral",
+    });
+    expect(model.attentionSections).toEqual([]);
   });
 
   it("orders attention sections by operational priority", () => {

@@ -226,6 +226,51 @@ export function degraded(base: StatusResponse, mutations: Partial<StatusResponse
   return { ...base, ...mutations };
 }
 
+export function makePublicationFailureStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+  return degraded(base, {
+    publicationHealth: {
+      checkedAt: base.timestamp,
+      surfaces: {
+        "dex-liquidity": {
+          surface: "dex-liquidity",
+          label: "DEX Liquidity",
+          sourceOfTruth: "dex_liquidity_publications",
+          lastPublishedGeneration: null,
+          lastAttemptedGeneration: null,
+          lastFailureReason: "publication_query_failed",
+          candidateAgeSec: null,
+          dependencyWatermarks: null,
+        },
+      },
+      failedSurfaces: [
+        {
+          surface: "dex-liquidity",
+          code: "publication_query_failed",
+          message: "Publication ledger latest-generation query failed.",
+        },
+      ],
+    },
+  });
+}
+
+export function makeScheduledSlotRunningQueryFailedStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+  return degraded(base, {
+    summary: {
+      ...base.summary,
+      scheduledSlotRunningQueryFailed: true,
+    },
+  });
+}
+
+export function makeScheduledSlotEventMarkerQueryFailedStatusResponse(base = makeHealthyStatusResponse()): StatusResponse {
+  return degraded(base, {
+    summary: {
+      ...base.summary,
+      scheduledSlotEventMarkerQueryFailed: true,
+    },
+  });
+}
+
 export function makeHealthyHealthResponse(): HealthResponse {
   return {
     status: "healthy",
