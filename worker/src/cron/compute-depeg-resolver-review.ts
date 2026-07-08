@@ -12,7 +12,6 @@ import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import {
   DdrrAssessmentSchema,
-  type DdrrActualEvent,
   type DdrrAssessment,
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
