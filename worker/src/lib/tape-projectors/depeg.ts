@@ -22,7 +22,13 @@ import {
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { DEFAULT_BATCH_LIMIT, resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  DEFAULT_BATCH_LIMIT,
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
 import type { DepegEventCloseReason } from "@shared/types/market";
 
@@ -65,30 +71,43 @@ async function fetchDepegRows(
   until: number | null,
   limit: number,
 ): Promise<DepegSourceRow[]> {
-  const baseSql = variant === "opened"
+  const timeColumn = variant === "opened" ? "started_at" : "ended_at";
+  const selectSql = variant === "opened"
     ? `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, start_price, peg_reference, source, methodology_version
-         FROM depeg_events
-         WHERE source = 'live' AND started_at > ?`
+              started_at, ended_at, start_price, peg_reference, source, methodology_version`
     : `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason, methodology_version
-         FROM depeg_events
-         WHERE source = 'live' AND ended_at IS NOT NULL AND ended_at > ?`;
-  const orderCol = variant === "opened" ? "started_at" : "ended_at";
-  const untilClause = until != null ? ` AND ${orderCol} <= ?` : "";
-  const sql = `${baseSql}${untilClause} ORDER BY ${orderCol} ASC, id ASC LIMIT ?`;
-  const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
+              started_at, ended_at, start_price, recovery_price, peg_reference, source, close_reason, methodology_version`;
+  const trailingWhereSql = variant === "opened"
+    ? " AND source = 'live'"
+    : " AND source = 'live' AND ended_at IS NOT NULL";
 
   try {
-    const result = await db.prepare(sql).bind(...binds).all<DepegSourceRow>();
-    return result.results ?? [];
+    return await fetchRowsWithTieExpansion<DepegSourceRow>(db, {
+      selectSql,
+      fromSql: "depeg_events",
+      timeColumn,
+      trailingWhereSql,
+      orderBySql: `${timeColumn} ASC, id ASC`,
+      since,
+      until,
+      limit,
+      getTime: (row) => variant === "opened" ? row.started_at : row.ended_at,
+    });
   } catch (err) {
     // The depeg_events.methodology_version column was added later; tolerate
     // its absence on older databases the same way other readers do.
     if (!isMissingColumnError(err)) throw err;
-    const fallbackSql = sql.replace(", close_reason", "").replace(", methodology_version", "");
-    const result = await db.prepare(fallbackSql).bind(...binds).all<DepegSourceRow>();
-    return result.results ?? [];
+    return await fetchRowsWithTieExpansion<DepegSourceRow>(db, {
+      selectSql: selectSql.replace(", close_reason", "").replace(", methodology_version", ""),
+      fromSql: "depeg_events",
+      timeColumn,
+      trailingWhereSql,
+      orderBySql: `${timeColumn} ASC, id ASC`,
+      since,
+      until,
+      limit,
+      getTime: (row) => variant === "opened" ? row.started_at : row.ended_at,
+    });
   }
 }
 

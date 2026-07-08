@@ -16,7 +16,12 @@ import {
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import { resolveProjectorOptions, type ProjectorOptions, type ProjectorResult } from "./types";
+import {
+  fetchRowsWithTieExpansion,
+  resolveProjectorOptions,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 interface BlacklistSourceRow {
   id: string;
@@ -46,19 +51,19 @@ async function projectFreezeVariant(
   const cursorKey = spec.slug;
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
-  const untilClause = until != null ? " AND timestamp <= ?" : "";
-  const sql = `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
-                      timestamp, methodology_version, rowid as rowid
-                 FROM blacklist_events
-                 WHERE event_type = ? AND suppression_reason IS NULL AND timestamp > ?${untilClause}
-                 ORDER BY timestamp ASC, rowid ASC
-                 LIMIT ?`;
-  const binds: unknown[] = until != null
-    ? [spec.eventType, since, until, limit]
-    : [spec.eventType, since, limit];
-
-  const rowsResult = await db.prepare(sql).bind(...binds).all<BlacklistSourceRow>();
-  const rows = rowsResult.results ?? [];
+  const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
+    selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
+                      timestamp, methodology_version, rowid as rowid`,
+    fromSql: "blacklist_events",
+    timeColumn: "timestamp",
+    trailingWhereSql: " AND event_type = ? AND suppression_reason IS NULL",
+    trailingBinds: [spec.eventType],
+    orderBySql: "timestamp ASC, rowid ASC",
+    since,
+    until,
+    limit,
+    getTime: (row) => row.timestamp,
+  });
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];
