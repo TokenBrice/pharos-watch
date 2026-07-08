@@ -268,9 +268,10 @@ describe("fetchFluidPools", () => {
     expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
     expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
     expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(true);
-    expect(pools.errors[0]).toContain(malformedPoolAddress);
-    expect(pools.errors[0]).toContain("invalid EVM address");
+    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
+    expect(pools.degraded).toBe(false);
+    expect(pools.warnings?.[0]).toContain(malformedPoolAddress);
+    expect(pools.warnings?.[0]).toContain("invalid EVM address");
     expect(mockFetch.mock.calls.filter(([input]) => String(input) === "https://rpc.example")).toHaveLength(3);
   });
 
@@ -688,10 +689,11 @@ describe("fetchBalancerPools", () => {
     const pools = await fetchBalancerPools();
 
     expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(true);
+    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
+    expect(pools.degraded).toBe(false);
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("0xvalid");
-    expect(pools.errors).toContain("page 1 skipped 1 malformed pool rows");
+    expect(pools.warnings).toContain("page 1 skipped 1 malformed pool rows");
   });
 
   it("maps Balancer chain enums to internal chain names", async () => {
@@ -1023,10 +1025,11 @@ describe("fetchOrcaPools", () => {
     const pools = await fetchOrcaPools();
 
     expect(pools.ok).toBe(true);
-    expect(pools.degraded).toBe(true);
+    // Cosmetic row-skip notes are warnings, not fetch-level degradation (w-dex:2).
+    expect(pools.degraded).toBe(false);
     expect(pools.pools).toHaveLength(1);
     expect(pools.pools[0].poolAddress).toBe("validPool");
-    expect(pools.errors).toContain("page 1 skipped 2 malformed pool rows");
+    expect(pools.warnings).toContain("page 1 skipped 2 malformed pool rows");
   });
 
   it("handles 429 rate limit gracefully", async () => {

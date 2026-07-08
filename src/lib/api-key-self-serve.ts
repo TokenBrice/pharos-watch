@@ -10,7 +10,7 @@ import type {
   ApiKeySelfServePendingResponse,
   ApiKeySelfServeRequest,
 } from "@shared/types";
-import { ApiFetchError, apiFetch } from "@/lib/api";
+import { ApiFetchError, SchemaValidationError, apiFetch } from "@/lib/api";
 import type { SchemaLike } from "@/lib/schema-like";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
@@ -70,11 +70,20 @@ export async function submitApiKeyRequest(
 }
 
 export async function verifyApiKeyRequestToken(token: string): Promise<ApiKeySelfServeIssueResponse> {
-  return postSelfServeJson(
-    API_PATHS.apiKeyRequestVerify(),
-    { token },
-    ApiKeySelfServeIssueResponseSchema,
-  );
+  try {
+    return await postSelfServeJson(
+      API_PATHS.apiKeyRequestVerify(),
+      { token },
+      ApiKeySelfServeIssueResponseSchema,
+    );
+  } catch (error) {
+    if (error instanceof SchemaValidationError) {
+      throw new Error(
+        "Verification succeeded, but the API key was not returned. Please contact support via the link on the API page before leaving this page.",
+      );
+    }
+    throw error;
+  }
 }
 
 function parseHashVerificationToken(hash: string): string | null {

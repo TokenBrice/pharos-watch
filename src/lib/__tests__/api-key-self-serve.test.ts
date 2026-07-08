@@ -6,7 +6,7 @@ import {
   buildApiKeySelfServeIssueResponseSchema,
 } from "@shared/types/api-key-requests";
 import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
-import { DEFAULT_API_REQUEST_TIMEOUT_MS, SchemaValidationError } from "../api";
+import { DEFAULT_API_REQUEST_TIMEOUT_MS } from "../api";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
@@ -191,12 +191,14 @@ describe("api key self-serve requests", () => {
     await expect(submitApiKeyRequest(requestBody())).rejects.toThrow("Request failed with status 403");
   });
 
-  it("rejects malformed success bodies through schema validation", async () => {
+  it("rejects malformed success bodies with the operator-facing message", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse(issuePayloadWithKey({ rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE + 1 })),
     );
 
-    await expect(verifyApiKeyRequestToken("akv_token")).rejects.toBeInstanceOf(SchemaValidationError);
+    // Schema validation rejects the payload; the verify path maps it to the
+    // legacy support-facing copy so the form never shows raw schema errors.
+    await expect(verifyApiKeyRequestToken("akv_token")).rejects.toThrow("API key was not returned");
   });
 
   it("uses the shared request timeout and aborts the POST", async () => {
