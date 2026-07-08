@@ -79,7 +79,7 @@ export const COMPARISON_PRESETS: readonly ComparePreset[] = [
   {
     title: "Non-USD Majors",
     description: "Stablecoins pegged to developed-market non-USD currencies",
-    coins: ["xsgd-straitsx", "gyen-gyen", "zchf-frankencoin"],
+    coins: ["xsgd-straitsx", "jpyc-jpyc", "zchf-frankencoin"],
   },
 ] as const;
 
