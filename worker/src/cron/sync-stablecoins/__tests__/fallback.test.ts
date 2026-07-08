@@ -34,6 +34,8 @@ const subPhaseMocks = vi.hoisted(() => ({
   runFallbackStalenessGate: vi.fn(async () => ({
     stalenessWarning: false,
     stalenessSummary: null,
+    stalenessCheckFailed: false,
+    stalenessCheckFailureReason: undefined as string | undefined,
   })),
   hydrateFallbackFxPhase: vi.fn(async () => ({
     fxFallbackRates: undefined,
@@ -87,8 +89,10 @@ vi.mock("../runtime", () => ({
   abortResult: () => ({ metadata: "{}" }),
   reportStablecoinsStage: vi.fn(),
   checkStablecoinsPriceStaleness: vi.fn(async () => ({
+    state: "missing-previous-cache",
     stalenessWarning: false,
     stalenessSummary: null,
+    stalenessCheckFailed: false,
   })),
 }));
 
@@ -312,5 +316,37 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(result.status).toBe("degraded");
     const meta = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(meta.depegPipelineSucceeded).toBe(false);
+  });
+
+  it("(h) degrades published fallback metadata when the staleness check fails", async () => {
+    subPhaseMocks.runFallbackStalenessGate.mockResolvedValueOnce({
+      stalenessWarning: false,
+      stalenessSummary: null,
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "malformed-previous-cache",
+    });
+
+    const cgData = buildRealCgData(200);
+    const db = mockD1([]);
+
+    const result = await syncViaCoingeckoFallback(
+      db,
+      cgData,
+      undefined,
+      NOW_SEC,
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBeGreaterThan(0);
+    const meta = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(meta).toMatchObject({
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "malformed-previous-cache",
+      cacheWriteSucceeded: true,
+      downstreamSafe: true,
+      capabilities: {
+        stablecoinsCache: true,
+      },
+    });
   });
 });

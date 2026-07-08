@@ -56,6 +56,8 @@ export async function runFallbackStalenessGate(
   const {
     stalenessWarning,
     stalenessSummary,
+    stalenessCheckFailed,
+    stalenessCheckFailureReason,
     blockedResult,
   } = await checkStablecoinsPriceStaleness({
     db: input.db,
@@ -98,5 +100,7 @@ export async function runFallbackStalenessGate(
   return {
     stalenessWarning,
     stalenessSummary,
+    stalenessCheckFailed,
+    stalenessCheckFailureReason,
   };
 }

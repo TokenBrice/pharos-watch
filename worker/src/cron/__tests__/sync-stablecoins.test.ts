@@ -1684,6 +1684,7 @@ describe("syncStablecoins", () => {
       { match: "circuit", rows: [] },
       { match: "cache", rows: [] },
     ]);
+    const cacheWrites = trackCacheWrites(db);
 
     mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
@@ -1694,24 +1695,54 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
-    expect(result.status ?? "ok").toBe("ok");
+    expect(result.status).toBe("degraded");
+    expect(cacheWrites.map((write) => write.key)).toContain("stablecoins");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "malformed-previous-cache",
+      cacheWriteSucceeded: true,
+      downstreamSafe: true,
+      capabilities: {
+        stablecoinsCache: true,
+      },
+    });
   });
 
-  it("ignores a malformed previous stablecoins cache during the staleness check", async () => {
+  it("degrades and publishes when the staleness cache read fails", async () => {
     const dlData = makeDlResponse(60);
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [{ value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) }],
-        first: { value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) },
-      },
       { match: "supply_history", rows: [] },
       { match: "price_cache", rows: [] },
       { match: "circuit", rows: [] },
       { match: "cache", rows: [] },
     ]);
+    let stablecoinsCacheReads = 0;
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      const statement = originalPrepare(sql);
+      if (!sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+        return statement;
+      }
+      return {
+        ...statement,
+        bind: (...args: unknown[]) => {
+          const bound = statement.bind(...args);
+          if (args[0] !== "stablecoins") return bound;
+          return {
+            ...bound,
+            first: async <T>() => {
+              stablecoinsCacheReads++;
+              if (stablecoinsCacheReads >= 2) {
+                throw new Error("cache read failed");
+              }
+              return bound.first<T>();
+            },
+          };
+        },
+      } as typeof statement;
+    }) as typeof db.prepare;
     const cacheWrites = trackCacheWrites(db);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
@@ -1721,10 +1752,19 @@ describe("syncStablecoins", () => {
 
     const result = await syncStablecoins(db);
 
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(60);
     expect(cacheWrites.map((write) => write.key)).toContain("stablecoins");
-    expect(warnSpy).toHaveBeenCalledWith("[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "cache read failed",
+      cacheWriteSucceeded: true,
+      downstreamSafe: true,
+      capabilities: {
+        stablecoinsCache: true,
+      },
+    });
   });
 
   it("fills missing circulatingPrev buckets from supply_history snapshots", async () => {

@@ -4,6 +4,7 @@ import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CronResult } from "./shared";
+import type { StablecoinsStalenessSummary } from "./runtime";
 import type { PeggedAsset, EnrichmentStats } from "./enrich-prices";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type {
@@ -102,11 +103,9 @@ export interface FallbackStalenessInput extends FallbackPhaseContext {
 
 export interface FallbackStalenessOutput {
   stalenessWarning: boolean;
-  stalenessSummary: {
-    compared: number;
-    identical: number;
-    identicalRatio: number;
-  } | null;
+  stalenessSummary: StablecoinsStalenessSummary | null;
+  stalenessCheckFailed: boolean;
+  stalenessCheckFailureReason?: string;
 }
 
 export interface FallbackCachePublicationInput extends FallbackPhaseContext, FallbackAbortHandlers {

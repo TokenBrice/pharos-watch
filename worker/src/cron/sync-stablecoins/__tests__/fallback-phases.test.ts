@@ -211,6 +211,92 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
+  it("marks malformed previous cache as check-failed in the fallback staleness gate", async () => {
+    const assets = [makeAsset()];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: "{not-json",
+          updated_at: NOW_SEC - 60,
+        },
+      },
+    ]);
+
+    const result = await runFallbackStalenessGate({
+      db,
+      assets,
+      syncStartSec: NOW_SEC,
+    });
+
+    expect("metadata" in result).toBe(false);
+    expect(result).toMatchObject({
+      stalenessWarning: false,
+      stalenessSummary: null,
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "malformed-previous-cache",
+    });
+  });
+
+  it("marks D1 read failures as check-failed in the fallback staleness gate", async () => {
+    const assets = [makeAsset()];
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        throwError: new Error("cache read failed"),
+      },
+    ]);
+
+    const result = await runFallbackStalenessGate({
+      db,
+      assets,
+      syncStartSec: NOW_SEC,
+    });
+
+    expect("metadata" in result).toBe(false);
+    expect(result).toMatchObject({
+      stalenessWarning: false,
+      stalenessSummary: null,
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: "cache read failed",
+    });
+  });
+
+  it("keeps fallback staleness abort handling unchanged", async () => {
+    const controller = new AbortController();
+    controller.abort("fallback abort");
+
+    const result = await runFallbackStalenessGate({
+      db: mockD1([]),
+      assets: [makeAsset()],
+      syncStartSec: NOW_SEC,
+      signal: controller.signal,
+    });
+
+    expect("metadata" in result).toBe(true);
+    expect(result).toMatchObject({
+      aborted: true,
+      status: "degraded",
+      itemCount: 0,
+    });
+    const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      reason: "aborted",
+      stage: "fallback-detect-price-staleness",
+      detail: "fallback abort",
+      cacheWriteMode: "no-write",
+      downstreamSafe: false,
+      capabilities: {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      },
+    });
+  });
+
   it("queues tracked-additions notice before fallback depeg follow-through", async () => {
     const db = mockD1([]);
     const assets = [

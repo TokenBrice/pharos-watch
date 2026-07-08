@@ -27,6 +27,11 @@ export interface PriceStalenessSummary {
   stale: boolean;
 }
 
+export type PriceStalenessCheckResult =
+  | { state: "ok"; summary: PriceStalenessSummary }
+  | { state: "missing-previous-cache" }
+  | { state: "check-failed"; reason: string };
+
 function countFiniteBuckets(buckets: Record<string, number> | undefined): number {
   if (!buckets) return 0;
   return Object.values(buckets).filter((value) => typeof value === "number" && Number.isFinite(value)).length;
@@ -273,16 +278,19 @@ export async function detectPriceStaleness(
   db: D1Database,
   currentAssets: PeggedAsset[],
   signal?: AbortSignal,
-): Promise<PriceStalenessSummary | null> {
+): Promise<PriceStalenessCheckResult> {
   throwIfAborted(signal);
   const previousCache = await getCache(db, "stablecoins");
-  if (!previousCache) return null;
+  if (!previousCache) return { state: "missing-previous-cache" };
 
   const previousData = parseStablecoinsCachePayload(previousCache.value);
   if (!previousData) {
     console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
-    return null;
+    return { state: "check-failed", reason: "malformed-previous-cache" };
   }
 
-  return computePriceStalenessSummary(previousData.peggedAssets, currentAssets);
+  return {
+    state: "ok",
+    summary: computePriceStalenessSummary(previousData.peggedAssets, currentAssets),
+  };
 }

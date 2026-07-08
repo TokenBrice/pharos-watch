@@ -3,6 +3,7 @@ import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers"
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { reportCronProgress } from "../../lib/cron-progress";
+import { toErrorMessage } from "../../lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
 import {
@@ -22,12 +23,46 @@ export interface StablecoinsStalenessSummary {
 
 type StablecoinsStalenessBlockedReason = "abort" | "severe-staleness";
 
-interface StablecoinsStalenessCheckResult {
+interface StablecoinsStalenessCheckBase {
   stalenessWarning: boolean;
-  stalenessSummary: StablecoinsStalenessSummary | null;
+  stalenessCheckFailed: boolean;
+  stalenessCheckFailureReason?: string;
   blockedResult?: CronResult;
   blockedReason?: StablecoinsStalenessBlockedReason;
 }
+
+export type StablecoinsStalenessCheckResult = StablecoinsStalenessCheckBase & (
+  | {
+      state: "ok";
+      stalenessSummary: StablecoinsStalenessSummary;
+      stalenessCheckFailed: false;
+    }
+  | {
+      state: "missing-previous-cache";
+      stalenessSummary: null;
+      stalenessCheckFailed: false;
+    }
+  | {
+      state: "check-failed";
+      stalenessSummary: null;
+      stalenessCheckFailed: true;
+      stalenessCheckFailureReason: string;
+    }
+  | {
+      state: "blocked-severe-staleness";
+      stalenessSummary: StablecoinsStalenessSummary;
+      stalenessCheckFailed: false;
+      blockedResult: CronResult;
+      blockedReason: "severe-staleness";
+    }
+  | {
+      state: "abort";
+      stalenessSummary: StablecoinsStalenessSummary | null;
+      stalenessCheckFailed: false;
+      blockedResult: CronResult;
+      blockedReason: "abort";
+    }
+);
 
 export async function reportStablecoinsStage(
   reportProgress: CronProgressReporter | undefined,
@@ -119,52 +154,83 @@ export async function checkStablecoinsPriceStaleness(params: {
     const stalenessAbort = returnIfAborted(params.signal, params.abortStage);
     if (stalenessAbort) {
       return {
+        state: "abort",
         stalenessWarning,
         stalenessSummary,
+        stalenessCheckFailed: false,
         blockedResult: stalenessAbort,
         blockedReason: "abort",
       };
     }
     const staleness = await detectPriceStaleness(params.db, params.assets, params.signal);
-    if (!staleness) {
-      return { stalenessWarning, stalenessSummary };
+    if (staleness.state === "missing-previous-cache") {
+      return {
+        state: "missing-previous-cache",
+        stalenessWarning,
+        stalenessSummary,
+        stalenessCheckFailed: false,
+      };
+    }
+    if (staleness.state === "check-failed") {
+      return {
+        state: "check-failed",
+        stalenessWarning,
+        stalenessSummary,
+        stalenessCheckFailed: true,
+        stalenessCheckFailureReason: staleness.reason,
+      };
     }
 
-    stalenessSummary = buildStalenessSummaryMetadata(staleness);
-    if (staleness.stale) {
+    stalenessSummary = buildStalenessSummaryMetadata(staleness.summary);
+    if (staleness.summary.stale) {
       stalenessWarning = true;
       const label = params.warningLabel ? ` ${params.warningLabel}` : "";
       console.warn(
-        `[sync-stablecoins] STALENESS WARNING${label}: ${staleness.identical}/${staleness.compared} prices ` +
-        `(${(staleness.identical / staleness.compared * 100).toFixed(1)}%) are identical to previous cache`,
+        `[sync-stablecoins] STALENESS WARNING${label}: ${staleness.summary.identical}/${staleness.summary.compared} prices ` +
+        `(${(staleness.summary.identical / staleness.summary.compared * 100).toFixed(1)}%) are identical to previous cache`,
       );
     }
 
     if (
-      staleness.compared >= 50 &&
+      staleness.summary.compared >= 50 &&
       stalenessSummary.identicalRatio >= SEVERE_PRICE_STALENESS_RATIO
     ) {
       return {
+        state: "blocked-severe-staleness",
         stalenessWarning,
         stalenessSummary,
+        stalenessCheckFailed: false,
         blockedResult: params.blockedResultFactory(stalenessSummary),
         blockedReason: "severe-staleness",
       };
     }
+    return {
+      state: "ok",
+      stalenessWarning,
+      stalenessSummary,
+      stalenessCheckFailed: false,
+    };
   } catch (error) {
     if (params.signal?.aborted) {
       return {
+        state: "abort",
         stalenessWarning,
         stalenessSummary,
+        stalenessCheckFailed: false,
         blockedResult: abortResult(params.signal, params.abortStage),
         blockedReason: "abort",
       };
     }
     const prefix = params.failureLabel ?? "Staleness check";
     console.warn(`[sync-stablecoins] ${prefix} failed:`, error);
+    return {
+      state: "check-failed",
+      stalenessWarning,
+      stalenessSummary: null,
+      stalenessCheckFailed: true,
+      stalenessCheckFailureReason: toErrorMessage(error),
+    };
   }
-
-  return { stalenessWarning, stalenessSummary };
 }
 
 export async function recordStablecoinsStalenessBlockOutcome(

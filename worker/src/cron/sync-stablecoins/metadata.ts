@@ -154,6 +154,8 @@ export function buildStablecoinsSyncResult(input: {
   nativePegFillCount?: number;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
+  stalenessCheckFailed: boolean;
+  stalenessCheckFailureReason?: string;
   supplyGapReconciliation?: SupplyGapReconciliationResult | null;
   trackedCoverage?: TrackedCoverageRestoreResult | null;
   gtProbe: { updatedCount: number; stats: GtProbeStats };
@@ -170,7 +172,7 @@ export function buildStablecoinsSyncResult(input: {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
   const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);
-  const status: CronResult["status"] = input.depegErrorCount > 0 ? "degraded" : "ok";
+  const status: CronResult["status"] = input.depegErrorCount > 0 || input.stalenessCheckFailed ? "degraded" : "ok";
 
   const metadata: Record<string, unknown> = {
     rowsRead: input.rawAssetCount,
@@ -202,8 +204,12 @@ export function buildStablecoinsSyncResult(input: {
     cacheKey: input.cacheKey ?? "stablecoins",
     syncStartSec: input.syncStartSec,
     depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
+    stalenessCheckFailed: input.stalenessCheckFailed,
   };
   if (input.stalenessWarning) metadata.stalenessWarning = true;
+  if (input.stalenessCheckFailureReason) {
+    metadata.stalenessCheckFailureReason = input.stalenessCheckFailureReason;
+  }
   if (input.responseReadyCacheError) {
     metadata.responseReadyCacheError = input.responseReadyCacheError;
   }

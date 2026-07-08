@@ -135,7 +135,12 @@ export async function syncStablecoins(
     await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl);
     return stalenessCheck.blockedResult;
   }
-  const { stalenessWarning, stalenessSummary } = stalenessCheck;
+  const {
+    stalenessWarning,
+    stalenessSummary,
+    stalenessCheckFailed,
+    stalenessCheckFailureReason,
+  } = stalenessCheck;
   const publication = await publishMainStablecoinsAndRunFollowThrough({
     assets,
     fxFallbackRates: intake.fxFallbackRates,
@@ -169,6 +174,8 @@ export async function syncStablecoins(
     nativePegFillCount,
     stalenessWarning,
     stalenessSummary,
+    stalenessCheckFailed,
+    stalenessCheckFailureReason,
     supplyGapReconciliation,
     trackedCoverage,
     gtProbe,

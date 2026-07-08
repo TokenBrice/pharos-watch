@@ -104,7 +104,12 @@ export async function syncViaCoingeckoFallback(
     reportProgress,
   });
   if (isFallbackCronResult(staleness)) return staleness;
-  const { stalenessWarning, stalenessSummary } = staleness;
+  const {
+    stalenessWarning,
+    stalenessSummary,
+    stalenessCheckFailed,
+    stalenessCheckFailureReason,
+  } = staleness;
 
   const cacheResult = await publishFallbackStablecoinsCache({
     db,
@@ -136,7 +141,7 @@ export async function syncViaCoingeckoFallback(
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
 
   const result: CronResult = {
-    status: depegErrorCount > 0 ? "degraded" : "ok",
+    status: depegErrorCount > 0 || stalenessCheckFailed ? "degraded" : "ok",
     itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: assets.length,
@@ -155,6 +160,8 @@ export async function syncViaCoingeckoFallback(
       authoritativeOverrideStats,
       stalenessWarning,
       priceStaleness: stalenessSummary,
+      stalenessCheckFailed,
+      stalenessCheckFailureReason,
       upstreamFetchOk: false,
       payloadAccepted: true,
       cacheWriteSucceeded: true,
