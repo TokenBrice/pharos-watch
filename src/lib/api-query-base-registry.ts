@@ -1,8 +1,11 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
+  DATA_SURFACE_DESCRIPTORS,
+  type YieldHistoryMode,
+} from "@shared/lib/data-surface-descriptors";
+import {
   CRON_1H,
-  CRON_1MIN,
   CRON_15MIN,
   CRON_24H,
   CRON_30MIN,
@@ -34,7 +37,6 @@ export interface NonUsdSharePoint {
   total: number;
 }
 
-type YieldHistoryMode = "best" | "source";
 type BlacklistEventsDescriptorInput = Pick<FrontendApiQueryBaseDescriptor, "queryKey" | "path">;
 
 export interface MintBurnEventsDescriptorOptions {
@@ -46,13 +48,22 @@ export interface MintBurnEventsDescriptorOptions {
 }
 
 const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
+const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
+  stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
+  dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerIntervalSec * 1000,
+  yieldRankings: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerIntervalSec * 1000,
+  yieldHistory: DATA_SURFACE_DESCRIPTORS.yieldHistory.producerIntervalSec * 1000,
+  stressSignals: DATA_SURFACE_DESCRIPTORS.stressSignals.producerIntervalSec * 1000,
+  reportCards: DATA_SURFACE_DESCRIPTORS.reportCards.producerIntervalSec * 1000,
+  publicHealth: DATA_SURFACE_DESCRIPTORS.publicHealth.producerIntervalSec * 1000,
+} as const;
 
 export const FRONTEND_API_QUERY_BASE_REGISTRY = {
   stablecoins: {
-    queryKey: ["stablecoins"],
-    path: API_PATHS.stablecoins(),
-    producerIntervalMs: CRON_15MIN,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+    queryKey: DATA_SURFACE_DESCRIPTORS.stablecoins.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.stablecoins.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stablecoins,
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
   },
   chains: {
     queryKey: ["chains"],
@@ -72,10 +83,10 @@ export const FRONTEND_API_QUERY_BASE_REGISTRY = {
     producerIntervalMs: CRON_24H,
   },
   dexLiquidity: {
-    queryKey: ["dex-liquidity"],
-    path: API_PATHS.dexLiquidity(),
-    producerIntervalMs: CRON_30MIN,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+    queryKey: DATA_SURFACE_DESCRIPTORS.dexLiquidity.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.dexLiquidity.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
   },
   dexLiquidityHistory: (stablecoinId: string, days = 90) =>
     ({
@@ -95,9 +106,9 @@ export const FRONTEND_API_QUERY_BASE_REGISTRY = {
       path: API_PATHS.digestSnapshot(date),
     }),
   health: {
-    queryKey: ["health"],
-    path: API_PATHS.health(),
-    producerIntervalMs: CRON_1MIN,
+    queryKey: DATA_SURFACE_DESCRIPTORS.publicHealth.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.publicHealth.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.publicHealth,
   },
   blacklistSummary: {
     queryKey: ["blacklist-summary"],
@@ -156,10 +167,10 @@ export const FRONTEND_API_QUERY_BASE_REGISTRY = {
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
   },
   reportCards: {
-    queryKey: ["report-cards"],
-    path: API_PATHS.reportCards(),
-    producerIntervalMs: CRON_15MIN,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+    queryKey: DATA_SURFACE_DESCRIPTORS.reportCards.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
   },
   depegResolver: {
     queryKey: ["depeg-resolver"],
@@ -220,16 +231,16 @@ export const FRONTEND_API_QUERY_BASE_REGISTRY = {
   },
   yieldHistory: (stablecoinId: string, days: number, mode: YieldHistoryMode, sourceKey?: string | null) =>
     ({
-      queryKey: ["yield-history", stablecoinId, days, mode, sourceKey ?? null],
-      path: API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
-      producerIntervalMs: CRON_YIELD,
-      metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
+      queryKey: DATA_SURFACE_DESCRIPTORS.yieldHistory.buildQueryKey(stablecoinId, days, mode, sourceKey),
+      path: DATA_SURFACE_DESCRIPTORS.yieldHistory.buildApiPath(stablecoinId, days, mode, sourceKey),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldHistory,
+      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldHistory.endpointMaxAgeSec,
     }),
   yieldRankings: {
-    queryKey: ["yield-rankings"],
-    path: API_PATHS.yieldRankings(),
-    producerIntervalMs: CRON_YIELD,
-    metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
+    queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.yieldRankings.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldRankings,
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
   },
   yieldAdapterManifest: {
     queryKey: ["yield-adapter-manifest"],
@@ -238,10 +249,10 @@ export const FRONTEND_API_QUERY_BASE_REGISTRY = {
     metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
   },
   stressSignals: {
-    queryKey: ["stress-signals"],
-    path: API_PATHS.stressSignals(),
-    producerIntervalMs: CRON_30MIN,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+    queryKey: DATA_SURFACE_DESCRIPTORS.stressSignals.queryKey,
+    path: DATA_SURFACE_DESCRIPTORS.stressSignals.apiPath,
+    producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stressSignals,
+    metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
   },
   stressSignalDetail: (stablecoinId: string, days = 30) =>
     ({
