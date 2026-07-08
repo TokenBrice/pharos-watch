@@ -4,10 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import {
-  SECTION_DIVIDER_CLASS,
-  SECTION_SCROLL_MT,
-} from "@/components/stablecoin-detail/section-title-class";
+import { SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -118,16 +115,9 @@ export function ContractDeployments({
   }
 
   return (
-    <div
-      id={compact ? undefined : "contracts"}
-      className={compact ? undefined : cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}
-    >
-      <p className="pharos-kicker mb-1.5">
-        Contract Deployments{compact ? ` · ${contracts.length}` : ""}
-      </p>
-      {!compact && contractSummary && (
-        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>
-      )}
+    <div id="contracts" className={cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}>
+      <p className="pharos-kicker mb-1.5">Contract Deployments</p>
+      {contractSummary && <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>}
       {quickCopyContract ? (
         <ContractDetailRow
           contract={quickCopyContract}
@@ -152,9 +142,9 @@ export function ContractDeployments({
       </div>
       <div className="hidden sm:block">
         <div
-          className={`grid gap-1.5 ${
-            compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 2xl:grid-cols-3"
-          } ${showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""}`}
+          className={`grid gap-1.5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 ${
+            showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""
+          }`}
         >
           {visibleDesktopContracts.map((c) => (
             <ContractLabeledRow
@@ -267,9 +257,7 @@ function ContractCopyIcons({ copied, iconClass }: { copied: boolean; iconClass: 
         aria-hidden="true"
       />
       <Check
-        className={`pharos-copy-icon absolute ${iconClass} text-emerald-500 ${
-          copied ? "opacity-100" : "opacity-0"
-        }`}
+        className={`pharos-copy-icon absolute ${iconClass} text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
         aria-hidden="true"
       />
       {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}

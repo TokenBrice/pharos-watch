@@ -198,6 +198,19 @@ function DonutCard({
   );
 }
 
+function DonutCardSkeleton({ title }: { title: ReactNode }) {
+  return (
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+      </CardHeader>
+      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+        <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Main section ── */
 
 function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
@@ -224,16 +237,9 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className={DETAIL_MODULE_SHELL_CLASS}>
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>
-          </DetailSectionTitle>
-        </CardHeader>
-        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
-          <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
-        </CardContent>
-      </Card>
+      <DonutCardSkeleton
+        title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+      />
     );
   }
 
@@ -267,16 +273,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   }, [liq]);
 
   if (isLoading) {
-    return (
-      <Card className={DETAIL_MODULE_SHELL_CLASS}>
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Liquidity by Protocol</DetailSectionTitle>
-        </CardHeader>
-        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
-          <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
-        </CardContent>
-      </Card>
-    );
+    return <DonutCardSkeleton title="Liquidity by Protocol" />;
   }
 
   if (isEmpty) return null;

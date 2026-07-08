@@ -474,7 +474,7 @@ export function PriceTransparencyCard({
   }
 
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS} id={compact ? undefined : "price-transparency"}>
+    <Card className={DETAIL_MODULE_SHELL_CLASS} id="price-transparency">
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
           <MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>
@@ -561,73 +561,30 @@ export function PriceTransparencyCard({
 
         {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
         <div className="space-y-2">
-          {compact ? (
-            /* Rail header (Figma coin template): "Sources" kicker with the
-               expand trigger opening the full Sources modal. */
-            <div className="flex items-center justify-between gap-3">
-              <p className="pharos-kicker">Sources</p>
-              <SourcesModal
-                sources={sources}
-                includeProtocolRedeem={isProtocolRedeem}
-                updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
-              />
-            </div>
-          ) : null}
-          <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3")}>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {isProtocolRedeem ? (
-              <SourceChip sourceKey="protocol-redeem" label="Protocol Redemption" status="used" compact={compact} />
+              <SourceChip sourceKey="protocol-redeem" label="Protocol Redemption" status="used" />
             ) : null}
 
             {/* Used Sources */}
             {usedSources.map((source) => (
-              <SourceChip
-                key={source.key}
-                sourceKey={source.key}
-                label={source.label}
-                status={source.status}
-                compact={compact}
-              />
+              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
             ))}
 
             {/* Available Sources */}
             {availableSources.map((source) => (
-              <SourceChip
-                key={source.key}
-                sourceKey={source.key}
-                label={source.label}
-                status={source.status}
-                compact={compact}
-              />
+              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
             ))}
 
             {/* Expandable No-Data Sources (full card only; the rail exposes
                 them through the Sources modal instead) */}
-            {!compact &&
-              showAll &&
+            {showAll &&
               noDataSources.map((source) => (
-                <SourceChip
-                  key={source.key}
-                  sourceKey={source.key}
-                  label={source.label}
-                  status={source.status}
-                  compact={compact}
-                />
+                <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
               ))}
           </div>
-          {compact ? (
-            <div className="flex items-center justify-center gap-3 pt-1">
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                <span className="h-2 w-2 rounded-[2px] bg-emerald-500" aria-hidden="true" />
-                Used
-              </span>
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                <span className="h-2 w-2 rounded-[2px] bg-sky-400" aria-hidden="true" />
-                Available
-              </span>
-            </div>
-          ) : null}
 
-          {!compact && noDataSources.length > 0 && (
+          {noDataSources.length > 0 && (
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}

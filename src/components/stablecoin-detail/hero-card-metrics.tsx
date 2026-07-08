@@ -49,6 +49,26 @@ export interface HeroSignalRailItem {
   colorClass: string;
 }
 
+function formatTrendPercent(current: number, previous: number | null): string {
+  return previous == null ? "—" : formatPercentChange(current, previous);
+}
+
+function formatSupplyRestoredAsOf(coinData?: StablecoinData): string | null {
+  return coinData?.supplyRestored === true && coinData.supplyObservedAt != null
+    ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      })
+    : null;
+}
+
+function SupplyRestoredNotice({ coinData, className }: { coinData?: StablecoinData; className: string }) {
+  if (coinData?.supplyRestored !== true) return null;
+  const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
+  return <p className={className}>Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}</p>;
+}
+
 function CompactMetricCell({
   label,
   children,
@@ -70,13 +90,7 @@ function CompactMetricCell({
 export function HeroCompactPriceCell({
   coin,
   coinData,
-  price: {
-    pegRef,
-    deviationBps,
-    pegReferenceUnavailable,
-    isNavToken,
-    limitedDepegCoverageNote,
-  },
+  price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceCardProps) {
   const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
   const deviationLabel = pegReferenceUnavailable
@@ -99,7 +113,9 @@ export function HeroCompactPriceCell({
         </span>
       }
     >
-      <p className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(coinData.priceConfidence)}`}>
+      <p
+        className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(coinData.priceConfidence)}`}
+      >
         {price}
       </p>
       {limitedDepegCoverageNote ? (
@@ -124,21 +140,12 @@ export function HeroCompactMarketCapCell({
   safePrevDay: number | null;
   prevDayTrendClass: string;
 }) {
-  const supplyRestoredAsOf =
-    coinData?.supplyRestored === true && coinData.supplyObservedAt != null
-      ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          timeZone: "UTC",
-        })
-      : null;
   return (
     <CompactMetricCell
       label="Market Cap"
       subline={
         <span className={`pharos-numeric ${prevDayTrendClass}`}>
-          {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}
-          <span className="text-muted-foreground">24H</span>
+          {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24H</span>
         </span>
       }
     >
@@ -146,11 +153,7 @@ export function HeroCompactMarketCapCell({
       {coin.flags.pegCurrency !== "USD" ? (
         <p className="mt-2 text-[11px] text-muted-foreground">USD-normalized</p>
       ) : null}
-      {coinData?.supplyRestored === true ? (
-        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
-          Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}
-        </p>
-      ) : null}
+      <SupplyRestoredNotice coinData={coinData} className="mt-2 text-[11px] text-amber-700 dark:text-amber-400" />
     </CompactMetricCell>
   );
 }
@@ -179,16 +182,12 @@ export function HeroCompactSupplyCell({
       label="Supply"
       subline={
         <span className="pharos-numeric">
-          <span className={prevWeekTrendClass}>
-            {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}
-          </span>
+          <span className={prevWeekTrendClass}>{formatTrendPercent(mcap, safePrevWeek)}</span>
           <span className="text-muted-foreground"> 7D</span>
           {hasPrevMonth ? (
             <>
               <span className="text-muted-foreground"> · </span>
-              <span className={prevMonthTrendClass}>
-                {safePrevMonth == null ? "—" : formatPercentChange(mcap, safePrevMonth)}
-              </span>
+              <span className={prevMonthTrendClass}>{formatTrendPercent(mcap, safePrevMonth)}</span>
               <span className="text-muted-foreground"> 30D</span>
             </>
           ) : null}
@@ -209,7 +208,9 @@ export function HeroCompactTertiaryCell({ metric }: { metric: HeroTertiaryMetric
       label={metric.label}
       subline={metric.subValue ? <span>{metric.subValue.toUpperCase()}</span> : null}
     >
-      <p className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${metric.colorClass ?? "text-foreground"}`}>
+      <p
+        className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${metric.colorClass ?? "text-foreground"}`}
+      >
         {metric.value}
       </p>
     </CompactMetricCell>
@@ -248,11 +249,15 @@ function MetricChip({
     // severity border (allowed carve-out).
     <div
       className={`rounded-lg border border-border/60 bg-background/45 ${
-        mobile ? `flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${mobileFull ? "col-span-2" : ""}` : "flex items-center gap-2 px-3 py-2"
+        mobile
+          ? `flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${mobileFull ? "col-span-2" : ""}`
+          : "flex items-center gap-2 px-3 py-2"
       } ${accentClass ?? ""} ${className ?? ""}`}
     >
       {label ? (
-        <span className={`${mobile ? "text-[10px]" : "text-[11px]"} font-medium uppercase tracking-wider text-muted-foreground`}>
+        <span
+          className={`${mobile ? "text-[10px]" : "text-[11px]"} font-medium uppercase tracking-wider text-muted-foreground`}
+        >
           {label}
         </span>
       ) : null}
@@ -376,14 +381,7 @@ interface HeroPriceCardProps {
 export function HeroPriceCard({
   coin,
   coinData,
-  price: {
-    pegRef,
-    gaugeDeviationBps,
-    deviationBps,
-    pegReferenceUnavailable,
-    isNavToken,
-    limitedDepegCoverageNote,
-  },
+  price: { pegRef, gaugeDeviationBps, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
   mobile = false,
 }: HeroPriceCardProps) {
   const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable;
@@ -400,13 +398,9 @@ export function HeroPriceCard({
       }
     >
       <div className={`flex items-center ${mobile ? "gap-2" : "gap-3"}`}>
-        {showGauge && (
-          <PegGauge deviationBps={gaugeDeviationBps} className={mobile ? "w-12" : "w-16 xl:w-20"} />
-        )}
+        {showGauge && <PegGauge deviationBps={gaugeDeviationBps} className={mobile ? "w-12" : "w-16 xl:w-20"} />}
         <div>
-          <p className="pharos-kicker">
-            Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
-          </p>
+          <p className="pharos-kicker">Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}</p>
           <p
             className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} ${
               mobile ? "text-xl" : "text-2xl xl:text-3xl"
@@ -426,9 +420,7 @@ export function HeroPriceCard({
             {pegReferenceUnavailable ? "Peg reference unavailable" : formatPegDeviation(coinData.price, pegRef)}
           </p>
           {limitedDepegCoverageNote ? (
-            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
-              {limitedDepegCoverageNote}
-            </p>
+            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
           ) : null}
         </div>
       </div>
@@ -451,14 +443,6 @@ export function HeroMarketCapCard({
   prevDayTrendClass: string;
   mobile?: boolean;
 }) {
-  const supplyRestoredAsOf =
-    coinData?.supplyRestored === true && coinData.supplyObservedAt != null
-      ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          timeZone: "UTC",
-        })
-      : null;
   return (
     <div
       className={
@@ -467,23 +451,14 @@ export function HeroMarketCapCard({
           : "rounded-xl bg-background/30 px-4 py-3"
       }
     >
-      <p className="pharos-kicker">
-        Market Cap
-      </p>
+      <p className="pharos-kicker">Market Cap</p>
       <p className={`font-bold pharos-numeric tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
         {formatCurrency(mcap)}
       </p>
-      {coin.flags.pegCurrency !== "USD" && (
-        <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>
-      )}
-      {coinData?.supplyRestored === true && (
-        <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
-          Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}
-        </p>
-      )}
+      {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>}
+      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
-        {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}
-        <span className="text-muted-foreground">24h</span>
+        {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24h</span>
       </p>
     </div>
   );
@@ -515,9 +490,7 @@ export function HeroSupplyCard({
       <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="pharos-kicker">
-              Supply
-            </p>
+            <p className="pharos-kicker">Supply</p>
             <p className="text-base font-bold pharos-numeric">
               {supply != null ? formatSupply(supply) : "—"}{" "}
               <span className="text-xs text-muted-foreground">{coinSymbol}</span>
@@ -525,13 +498,11 @@ export function HeroSupplyCard({
           </div>
           <div className="text-right">
             <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-              {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}{" "}
-              <span className="text-muted-foreground">7d</span>
+              {formatTrendPercent(mcap, safePrevWeek)} <span className="text-muted-foreground">7d</span>
             </p>
             {hasPrevMonth && (
               <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-                {safePrevMonth == null ? "—" : formatPercentChange(mcap, safePrevMonth)}{" "}
-                <span className="text-muted-foreground">30d</span>
+                {formatTrendPercent(mcap, safePrevMonth)} <span className="text-muted-foreground">30d</span>
               </p>
             )}
           </div>
@@ -542,24 +513,18 @@ export function HeroSupplyCard({
 
   return (
     <div className="rounded-xl bg-background/30 px-4 py-3">
-      <p className="pharos-kicker">
-        Supply
-      </p>
+      <p className="pharos-kicker">Supply</p>
       <p className="text-2xl font-bold pharos-numeric tracking-tight">
         {supply != null ? formatSupply(supply) : "—"}{" "}
         <span className="text-sm text-muted-foreground">{coinSymbol}</span>
       </p>
       <p className="mt-1 whitespace-nowrap text-xs pharos-numeric">
-        <span className={prevWeekTrendClass}>
-          {safePrevWeek == null ? "—" : formatPercentChange(mcap, safePrevWeek)}
-        </span>
+        <span className={prevWeekTrendClass}>{formatTrendPercent(mcap, safePrevWeek)}</span>
         <span className="text-muted-foreground"> 7d</span>
         {hasPrevMonth && (
           <>
             <span className="text-muted-foreground"> · </span>
-            <span className={prevMonthTrendClass}>
-              {safePrevMonth == null ? "—" : formatPercentChange(mcap, safePrevMonth)}
-            </span>
+            <span className={prevMonthTrendClass}>{formatTrendPercent(mcap, safePrevMonth)}</span>
             <span className="text-muted-foreground"> 30d</span>
           </>
         )}

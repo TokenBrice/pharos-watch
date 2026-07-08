@@ -4,27 +4,19 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeftRight, BadgeCheck, Flag, Rocket } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
-import type {
-  Infrastructure,
-  ReportCard,
-  StablecoinData,
-  StablecoinMeta,
-} from "@shared/types";
+import type { Infrastructure, ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
-import {
-  buildBackingTaxonomyUrl,
-  buildGovernanceTaxonomyUrl,
-} from "@/lib/stablecoin-taxonomy-urls";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
+import { HeroMobileIdentityDetails, HeroMobileIdentity, HeroVerdict, SafetyGradeHero } from "./hero-card-identity";
 import {
-  HeroMobileIdentityDetails,
-  HeroMobileIdentity,
-  HeroVerdict,
-  SafetyGradeHero,
-} from "./hero-card-identity";
+  HERO_CHIP_BACKING_LABELS,
+  HERO_CHIP_GOVERNANCE_LABELS,
+  HERO_CHIP_PEG_LABELS,
+} from "@shared/lib/classification";
 import {
   HeroCompactMarketCapCell,
   HeroCompactPriceCell,
@@ -37,40 +29,11 @@ import {
 } from "./hero-card-metrics";
 import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 import { RecentBlacklistBanner } from "./recent-blacklist-banner";
-export type {
-  HeroSignalRailItem,
-  HeroTertiaryMetricConfig,
-} from "./hero-card-metrics";
+export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 
-function pegChipLabel(peg: StablecoinMeta["flags"]["pegCurrency"]): string {
-  return `${peg}-Pegged`;
-}
-
-function backingChipLabel(backing: StablecoinMeta["flags"]["backing"]): string {
-  switch (backing) {
-    case "rwa-backed":
-      return "RWA-Backed";
-    case "crypto-backed":
-      return "Crypto-Backed";
-    case "algorithmic":
-      return "Algorithmic";
-  }
-}
-
-function governanceChipLabel(governance: StablecoinMeta["flags"]["governance"]): string {
-  switch (governance) {
-    case "centralized":
-      return "Centralized";
-    case "centralized-dependent":
-      return "Dependent";
-    case "decentralized":
-      return "Decentralized";
-  }
-}
-
-function formatLaunchDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
+function formatChipLaunchDate(value: string | undefined): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -80,13 +43,7 @@ function formatLaunchDate(value: string | undefined): string | null {
   });
 }
 
-function HeroCompactChip({
-  href,
-  children,
-}: {
-  href?: string | null;
-  children: ReactNode;
-}) {
+function HeroCompactChip({ href, children }: { href?: string | null; children: ReactNode }) {
   const className =
     "pharos-focus-ring inline-flex h-5 items-center rounded-full bg-muted/70 px-2.5 text-xs font-medium leading-none text-foreground/80 transition-colors hover:bg-muted";
   if (!href) return <span className={className}>{children}</span>;
@@ -97,18 +54,12 @@ function HeroCompactChip({
   );
 }
 
-function HeroDesktopChipRail({
-  coin,
-  verdict,
-}: {
-  coin: StablecoinMeta;
-  verdict: StablecoinVerdict;
-}) {
+function HeroDesktopChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
   const showVerdict = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
-  const launchDate = formatLaunchDate(coin.launchDate);
-  const pegLabel = pegChipLabel(coin.flags.pegCurrency);
-  const backingLabel = backingChipLabel(coin.flags.backing);
-  const governanceLabel = governanceChipLabel(coin.flags.governance);
+  const launchDate = formatChipLaunchDate(coin.launchDate);
+  const pegLabel = HERO_CHIP_PEG_LABELS[coin.flags.pegCurrency];
+  const backingLabel = HERO_CHIP_BACKING_LABELS[coin.flags.backing];
+  const governanceLabel = HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance];
 
   return (
     <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/40 px-5 py-2">
@@ -123,15 +74,9 @@ function HeroDesktopChipRail({
             {verdict.label}
           </span>
         ) : null}
-        <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>
-          {pegLabel}
-        </HeroCompactChip>
-        <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>
-          {backingLabel}
-        </HeroCompactChip>
-        <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>
-          {governanceLabel}
-        </HeroCompactChip>
+        <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
+        <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
+        <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
       </div>
       {launchDate ? (
         <span className="-my-2 -mr-5 inline-flex h-10 items-center gap-1.5 border-l border-border/40 px-4 text-xs font-medium text-muted-foreground">
@@ -157,7 +102,8 @@ export function HeroCardHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 px-4 pb-2.5 pt-3 sm:px-5">
       <div className="flex items-center gap-1.5">
-        <button type="button"
+        <button
+          type="button"
           onClick={onOpenFeedback}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
         >
@@ -223,21 +169,12 @@ export function HeroCardMobileSection({
           <SafetyGradeHero reportCard={reportCard} mobile />
         </div>
       </div>
-      <HeroMobileIdentityDetails
-        coin={coin}
-        infrastructures={infrastructures}
-        includeClassification={false}
-      />
+      <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} includeClassification={false} />
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <HeroPriceCard
-          coin={coin}
-          coinData={coinData}
-          price={price}
-          mobile
-        />
+        <HeroPriceCard coin={coin} coinData={coinData} price={price} mobile />
         <HeroMarketCapCard
           coin={coin}
           coinData={coinData}
@@ -291,11 +228,7 @@ export function HeroCardDesktopSection({
     <div className="hidden lg:block">
       <HeroDesktopChipRail coin={coin} verdict={verdict} />
       <div className={`grid lg:grid-cols-3 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
-        <HeroCompactPriceCell
-          coin={coin}
-          coinData={coinData}
-          price={price}
-        />
+        <HeroCompactPriceCell coin={coin} coinData={coinData} price={price} />
         <HeroCompactMarketCapCell
           coin={coin}
           coinData={coinData}
