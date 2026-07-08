@@ -24,7 +24,7 @@ function extractInsertBindsForType(db: MockD1Database, type: string): unknown[][
 // Match substrings deliberately tolerate the SQL's line-wrapped formatting.
 const MATCH_DEPEG_OPEN_PEAK = "ended_at IS NULL";
 const MATCH_DEPEG_OPENED = "started_at > ?";
-const MATCH_DEPEG_RESOLVED = "ended_at IS NOT NULL AND ended_at > ?";
+const MATCH_DEPEG_RESOLVED = "AND source = 'live' AND ended_at IS NOT NULL";
 const MATCH_BLACKLIST = "FROM blacklist_events";
 const MATCH_SAFETY = "FROM safety_grade_history";
 
@@ -237,8 +237,8 @@ describe("projectTape", () => {
 
   it("projects freeze.destroyed with severity scaled by USD amount", async () => {
     const db = dbWithOverride({
-      match: "WHERE event_type = ?",
-      matchBinds: ["destroy", 0, 500],
+      match: "AND event_type = ?",
+      matchBinds: [0, "destroy", 500],
       rows: [
         {
           id: "be-1",
@@ -261,8 +261,8 @@ describe("projectTape", () => {
 
   it("projects freeze.unblocked as severity=info", async () => {
     const db = dbWithOverride({
-      match: "WHERE event_type = ?",
-      matchBinds: ["unblacklist", 0, 500],
+      match: "AND event_type = ?",
+      matchBinds: [0, "unblacklist", 500],
       rows: [
         {
           id: "be-2",

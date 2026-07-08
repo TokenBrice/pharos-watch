@@ -264,7 +264,7 @@ describe("generate-public-datasets", () => {
   });
 
   it("rejects empty live-backed dataset rows and checked artifacts", async () => {
-    expect(() => testExports.validateTopicRowFloor("top-stablecoins", [])).toThrow("expected at least 1");
+    expect(() => testExports.validateTopicRowFloor("top-stablecoins", [])).toThrow("expected at least 493");
 
     const root = await makeRoot();
     const datasetsDir = path.join(root, "datasets");
