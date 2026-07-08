@@ -42,7 +42,7 @@ export async function verifyDataCorrection(
     const block = [
       "**--- Auto-Verification Snapshot (at time of submission) ---**",
       price != null ? `**Cached price:** $${price.toFixed(6)}` : "**Cached price:** N/A",
-      totalUsd > 0 ? `**Circulating supply:** ${formatCurrency(totalUsd)}` : "",
+      totalUsd > 0 ? `**USD circulating market cap:** ${formatCurrency(totalUsd)}` : "",
       `**Peg deviation:** ${deviationStr}`,
       `**Cache age:** ${cacheAgeSec}s`,
       `**Verification result:** ${verificationSummary}`,

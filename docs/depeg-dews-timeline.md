@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.094` (2026-02-18 -> 2026-06-23).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.095` (2026-02-18 -> 2026-07-08).
+
+---
+
+## v6.095 — Native-fiat quotes can initiate live non-USD depegs (Jul 8, 2026)
+
+Supported non-USD fiat assets can now open live depeg state from a fresh direct native-fiat quote when the USD price against a peer-median peg reference remains inside threshold.
+
+- Direct native CoinGecko quotes remain able to veto, sustain, and resolve non-USD depeg rows; they can now also initiate the row when they are the clearest fresh signal
+- Small and mid-cap native-quote events open immediately with the native quote stored against a `1.0` peg reference, matching the historical native-fiat replay model
+- Large-cap or extreme native-quote triggers still route through `depeg_pending` before public event creation
+- This prevents BRL peer medians from masking true BRLA/BRL discounts while preserving the existing 150 bps non-USD threshold
 
 ---
 

@@ -1259,6 +1259,16 @@
     "reviewedAt": "2026-06-03",
     "factsAsOf": "2026-06-03"
   },
+  "usdm-monetrix": {
+    "title": "HyperEVM's USDC Wrapper",
+    "text": "Monetrix USDM is the base dollar token in a small HyperEVM yield stack: USDC backs liquid USDM, while sUSDM is the separate staking wrapper where the strategy exposure lives. That split matters because Pharos can admit USDM through DefiLlama supply plus CoinGecko pricing, but sUSDM still lacks a maintained market-cap and price source in the runtime pipeline. The reserve story is therefore straightforward but narrow: USDM inherits USDC issuer risk and Monetrix smart-contract/operations risk, while the dashboard transparency is self-reported rather than an independent attestation. It is useful coverage for HyperEVM dollar liquidity, not yet a fully modeled yield product.",
+    "updatedAt": "2026-07-08",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex issue #454 review",
+    "reviewedAt": "2026-07-08",
+    "factsAsOf": "2026-07-08"
+  },
   "usat-tether": {
     "title": "Tether Goes Domestic",
     "text": "Tether's USA-T is a GENIUS-era U.S. dollar issued 1:1 by Anchorage Digital Bank under an OCC federal charter, backed roughly 80% by {{term:treasury}}Treasury{{/term}}-collateralized reverse repos and 20% cash, with Cantor Fitzgerald {{term:custody}}custody{{/term}} and monthly Deloitte {{term:attestation}}attestation{{/term}} disclosures — the cleanest regulatory setup Tether has ever assembled. The B- report card reflects a product that holds its peg cleanly and rarely strays from the calm end of the stress scale, with no depeg events on record, but hasn't had time to build a track record either way. The real drag is liquidity, which sits at a D grade: the Ethereum-only deployment and thin DEX presence mean USA-T is still distribution-light, and the peg's pristine reads owe as much to youth as to depth. The strategic logic is transparent: USA-T is Tether's answer to USDC on US soil, separating the domestic compliance story from USDT's offshore empire, with a 1:1 {{term:redemption}}redemption{{/term}} promise through Anchorage. Whether American institutions will trust a Tether-branded dollar after a decade of skepticism is the open question — and until liquidity catches up to the compliance story, the answer stays unproven.",

@@ -25,7 +25,7 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
 3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 366 entries: 364 active tracked + 2 shadow)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 367 entries: 365 active tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(

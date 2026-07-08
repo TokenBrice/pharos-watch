@@ -75,6 +75,7 @@ interface DecisionContext {
   requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
   nativeSignal: DepegSignal | null;
+  nativePegPrice: number | null;
   nativePegCurrency: string | undefined;
 }
 
@@ -450,6 +451,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       requiresConfirmation,
       pendingReason,
       nativeSignal,
+      nativePegPrice: input.nativePegQuote?.price ?? null,
       nativePegCurrency: input.nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency,
     },
   };
@@ -513,6 +515,61 @@ function applyNativeQuoteVeto(
   }
 
   return null;
+}
+
+/**
+ * Allows fresh direct native-fiat quotes to initiate supported non-USD live
+ * depeg state when the USD-vs-reference primary path is still inside threshold.
+ */
+function decideNewNativePegDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "trackedCoinId"> | null {
+  if (
+    ctx.nativeSignal == null ||
+    ctx.nativePegPrice == null ||
+    !signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) ||
+    ctx.absBps >= ctx.threshold
+  ) {
+    return null;
+  }
+
+  const commands: DepegPersistenceCommand[] = [];
+  const diagnostics: DepegDiagnostic[] = [];
+  const reasonFlags: PendingDepegReasonFlag[] = [];
+  if (ctx.supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) reasonFlags.push("large-cap");
+  if (ctx.nativeSignal.absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
+
+  if (reasonFlags.length > 0) {
+    const pendingReason = buildPendingReason(reasonFlags);
+    commands.push(buildPendingCommand(
+      ctx.asset,
+      ctx.now,
+      ctx.nativeSignal.direction,
+      ctx.nativeSignal.bps,
+      ctx.nativePegPrice,
+      1,
+      pendingReason,
+    ));
+    diagnostics.push(withDiagnostic(
+      "log",
+      `[depeg] Pending native-peg confirmation for ${ctx.asset.symbol}: ` +
+      `${ctx.nativeSignal.bps}bps against direct ${ctx.nativePegCurrency ?? "native"} quote`,
+    ));
+    return { seenEventIds: [], commands, diagnostics };
+  }
+
+  commands.push(buildLiveEventCommand(
+    ctx.asset,
+    ctx.now,
+    ctx.nativeSignal.direction,
+    ctx.nativeSignal.bps,
+    ctx.nativePegPrice,
+    1,
+  ));
+  diagnostics.push(withDiagnostic(
+    "log",
+    `[depeg] Opened native-peg depeg for ${ctx.asset.symbol}: ` +
+    `primary=${ctx.bps}bps, direct ${ctx.nativePegCurrency ?? "native"} quote=${ctx.nativeSignal.bps}bps`,
+  ));
+  return { seenEventIds: [], commands, diagnostics };
 }
 
 /**
@@ -751,10 +808,13 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   const nativeVeto = applyNativeQuoteVeto(ctx, input.existing);
   if (nativeVeto) return nativeVeto;
 
+  const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
   const decision = input.existing
     ? ctx.absBps >= ctx.threshold
       ? decideExistingEvent(ctx, input.existing)
       : decideRecovery(ctx, input.existing)
+    : nativeOpening
+      ? nativeOpening
     : ctx.absBps >= ctx.threshold
       ? decideNewDepeg(ctx)
       : emptyDecision();

@@ -8,6 +8,7 @@ import nonUsdAsset from "../../data/stablecoins/non-usd.json";
 import preLaunchAsset from "../../data/stablecoins/pre-launch.json";
 import usdMajorAsset from "../../data/stablecoins/usd-major.json";
 import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
+import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS } from "../live-reserve-adapters-schemas";
@@ -15,6 +16,7 @@ import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_META_BY_ID,
   ACTIVE_STABLECOINS,
+  FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
@@ -40,6 +42,8 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   activeStablecoins: ACTIVE_STABLECOINS,
   hasTrackedVariantMeta,
 });
+
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 410;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -73,12 +77,16 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(409);
-    expect(canonicalOrder).toHaveLength(409);
+    expect(perCoinGenerated).toHaveLength(TRACKED_META_BY_ID.size);
+    expect(canonicalOrder).toHaveLength(TRACKED_META_BY_ID.size);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
-    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(88);
+    // Raw JSON length vs. the production DEAD_STABLECOINS export: catches the schema
+    // parser silently dropping or duplicating rows (DEAD_STABLECOINS.length alone would
+    // be a tautology, since it's built from the same parse call on the same asset).
+    expect(deadStablecoinAsset).toHaveLength(DEAD_STABLECOINS.length);
+    expect(new Set(DEAD_STABLECOINS.map((coin) => coin.id)).size).toBe(DEAD_STABLECOINS.length);
   });
 
   it("keeps canonical order references limited to known tracked IDs", () => {
@@ -101,13 +109,21 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(34);
+    expect(preLaunchCoins).toHaveLength(PRE_LAUNCH_STABLECOINS.length);
+    expect(preLaunchCoins.map((coin) => coin.id).sort()).toEqual(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id).sort());
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(409);
-    expect(ACTIVE_STABLECOINS).toHaveLength(364);
+    const inactiveStablecoinCount = PRE_LAUNCH_STABLECOINS.length + FROZEN_STABLECOINS.length;
+    const partitionIds = [...ACTIVE_STABLECOINS, ...PRE_LAUNCH_STABLECOINS, ...FROZEN_STABLECOINS]
+      .map((coin) => coin.id);
+
+    // Deliberate addition tripwire: bump this expected total when adding a tracked coin.
+    expect(TRACKED_STABLECOINS).toHaveLength(EXPECTED_TRACKED_STABLECOIN_COUNT);
+    expect(ACTIVE_STABLECOINS).toHaveLength(TRACKED_STABLECOINS.length - inactiveStablecoinCount);
+    expect(ACTIVE_STABLECOINS.length + inactiveStablecoinCount).toBe(TRACKED_STABLECOINS.length);
+    expect(new Set(partitionIds).size).toBe(TRACKED_STABLECOINS.length);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",

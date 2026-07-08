@@ -156,7 +156,7 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians and empty live peer sets fail closed for that cycle
-- Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
+- Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle, while a threshold-crossing native quote can initiate a live event when the primary USD-vs-reference path is still inside threshold
 
 Primary-price trust gates:
 
@@ -188,6 +188,7 @@ direction = bps >= 0 ? "above" : "below"
 
 - If the peg reference is a thin non-USD fiat peer median without FX fallback: skip live-state mutation for this cycle
 - If a supported direct native-peg quote is back inside threshold or shows the opposite side of the peg: suppress the new event for this cycle
+- If the primary USD-vs-reference deviation is still inside threshold but a fresh supported direct native-peg quote crosses threshold, use that native quote against a `1.0` peg reference to open or queue the new event
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific). The same large-cap confirmation lane also catches near-large-cap cases: >= $750M when source depth is below 2 or severity is >= 2x the peg threshold, and >= $500M only when both source depth is below 2 and severity is >= 2x threshold.
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
 - If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement, or a fresh primary cluster spanning at least two independent depeg source families, may still promote the move immediately for non-large-cap coins

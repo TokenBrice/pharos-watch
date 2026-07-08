@@ -286,6 +286,51 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
+  it("opens a supported native-peg depeg when primary peer reference is inside threshold", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.191187,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedREAL",
+        circulating: { gnosis: 22_000_000 },
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.9758,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.trackedCoinId).toBe("brz-transfero");
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "insert-live",
+      event: {
+        stablecoinId: "brz-transfero",
+        direction: "below",
+        peakDeviationBps: -242,
+        startPrice: 0.9758,
+        pegReference: 1,
+      },
+    });
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Opened native-peg depeg for BRZ: primary=-37bps, direct BRL quote=-242bps",
+      },
+    ]);
+  });
+
   it("keeps an existing event open when the native quote still supports it", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,

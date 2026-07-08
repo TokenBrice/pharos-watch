@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 364 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 365 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -507,6 +507,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [SoFiUSD (SOFID)](https://pharos.watch/stablecoin/sofid-sofi/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Onchain Yield Coin (ONyc)](https://pharos.watch/stablecoin/onyc-onre/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Hyperbeat USDT (hbUSDT)](https://pharos.watch/stablecoin/hbusdt-hyperbeat/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Monetrix USD (USDM)](https://pharos.watch/stablecoin/usdm-monetrix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Wrapped iTRY (wiTRY)](https://pharos.watch/stablecoin/witry-brix/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Rings scUSD (scUSD)](https://pharos.watch/stablecoin/scusd-rings/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [WEUSD (WEUSD)](https://pharos.watch/stablecoin/weusd-picwe/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

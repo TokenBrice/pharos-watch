@@ -399,6 +399,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["sofid-sofi", "SoFiUSD", "SOFID"],
   ["onyc-onre", "Onchain Yield Coin", "ONyc"],
   ["hbusdt-hyperbeat", "Hyperbeat USDT", "hbUSDT"],
+  ["usdm-monetrix", "Monetrix USD", "USDM"],
   ["witry-brix", "Wrapped iTRY", "wiTRY"],
   ["scusd-rings", "Rings scUSD", "scUSD"],
   ["weusd-picwe", "WEUSD", "WEUSD"],

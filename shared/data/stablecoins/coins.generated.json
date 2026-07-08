@@ -3893,7 +3893,7 @@
       "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
       "redemptionPolicyPresent": true,
       "monthlyAttestationPresent": true,
-      "latestReportDate": "2026-04-30",
+      "latestReportDate": "2026-05-31",
       "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted — GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved).",
       "references": [
         {
@@ -69842,6 +69842,92 @@
         "name": "Money market funds (Fidelity / Amundi)",
         "pct": 60,
         "risk": "very-low"
+      }
+    ]
+  },
+  {
+    "id": "usdm-monetrix",
+    "llamaId": "404",
+    "detailProvider": "defillama",
+    "name": "Monetrix USD",
+    "symbol": "USDM",
+    "oneLiner": "USDM is Monetrix's USDC-backed dollar token on HyperEVM; sUSDM staking adds yield through a separate wrapper.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDC backing on HyperEVM; holders can stake USDM into the separate sUSDM wrapper for Monetrix strategy yield, but liquid USDM itself is the base dollar token.",
+    "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
+    "geckoId": "monetrix-usd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.monetrix.xyz/app/transparency",
+      "provider": "Monetrix transparency dashboard",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.monetrix.xyz/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://doc.monetrix.xyz/"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://www.monetrix.xyz/app/transparency"
+      },
+      {
+        "label": "Audits & Contracts",
+        "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "hyperevm",
+        "address": "0xe2d2959f89b6389deb624bf076fe7d9e5401f377",
+        "decimals": 6
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "USDM is backed by USDC, so blacklistability resolves through the upstream Circle collateral dependency rather than a separate Pharos override.",
+      "evidence": "USDM's declared reserve dependency is USDC. Pharos therefore treats the asset as inheriting upstream freeze and blacklist exposure from Circle's USDC collateral.",
+      "reviewer": "Codex issue #454 review",
+      "reviewedAt": "2026-07-08"
+    },
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "native",
+    "custodyModel": "onchain",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "USDC reserves",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "sUSDM watchlisted",
+        "message": "Monetrix's sUSDM wrapper has an official contract, but it currently lacks a DefiLlama stablecoin row, CoinGecko ID, or Pharos ERC-4626 NAV runtime adapter. Pharos tracks base USDM until sUSDM has a maintained price and market-cap source."
       }
     ]
   },

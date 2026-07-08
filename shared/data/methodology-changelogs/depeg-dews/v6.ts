@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.095",
+    title: "Native-fiat quotes can initiate live non-USD depegs",
+    date: "2026-07-08",
+    effectiveAt: 1783468800,
+    summary:
+      "Supported non-USD fiat assets can now open live depeg state from a fresh direct native-fiat quote when the USD price against a peer-median peg reference remains inside threshold.",
+    impact: [
+      "Direct native CoinGecko quotes remain able to veto, sustain, and resolve non-USD depeg rows; they can now also initiate the row when they are the clearest fresh signal",
+      "Small and mid-cap native-quote events open immediately with the native quote stored against a `1.0` peg reference, matching the historical native-fiat replay model",
+      "Large-cap or extreme native-quote triggers still route through `depeg_pending` before public event creation",
+      "This prevents BRL peer medians from masking true BRLA/BRL discounts while preserving the existing 150 bps non-USD threshold",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.094",
     title: "Mint/burn flow freshness fails closed",
     date: "2026-06-23",

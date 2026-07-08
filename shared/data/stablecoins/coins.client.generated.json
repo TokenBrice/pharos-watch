@@ -19034,6 +19034,32 @@
     }
   },
   {
+    "id": "usdm-monetrix",
+    "name": "Monetrix USD",
+    "symbol": "USDM",
+    "oneLiner": "USDM is Monetrix's USDC-backed dollar token on HyperEVM; sUSDM staking adds yield through a separate wrapper.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "geckoId": "monetrix-usd",
+    "reserves": [
+      {
+        "name": "USDC reserves",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "collateralQuality": "native",
+    "blacklistStatus": "inherited"
+  },
+  {
     "id": "usdn-noble",
     "name": "Noble Dollar",
     "symbol": "USDN",

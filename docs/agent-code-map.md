@@ -354,7 +354,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chains/l2beat-interop.ts` - L2BEAT_INTEROP_PROTOCOLS, L2BEAT_INTEROP_SNAPSHOT_META, L2BeatInteropBridgeType, L2BeatInteropProtocolId, L2BeatInteropProtocolSnapshot, L2BeatInteropProtocolType
 - `shared/lib/chains/l2beat-risk.ts` - L2BEAT_CHAIN_ALIASES, L2BEAT_CHAIN_RISK_FIELDS, L2BEAT_CHAIN_RISK_FIELD_LABELS, L2BEAT_CHAIN_RISK_SNAPSHOT, L2BEAT_CHAIN_RISK_SNAPSHOT_META, L2BEAT_RISK_SENTIMENT_SCORES
 - `shared/lib/citation/urn.ts` - PharosUrn, PharosUrnEntityClass, formatPharosUrn, parsePharosUrn
-- `shared/lib/classification.ts`
+- `shared/lib/classification.ts` - HERO_CHIP_BACKING_LABELS, HERO_CHIP_GOVERNANCE_LABELS, HERO_CHIP_PEG_LABELS
 - `shared/lib/classification/badges.ts` - BACKING_BADGE_STYLES, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES, PEG_BADGE_STYLES
 - `shared/lib/classification/common.ts`
 - `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, BACKING_PROSE_LABELS, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT
@@ -381,10 +381,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 409 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 409 entries
+- `shared/data/stablecoins/canonical-order.json` - 410 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 410 entries
 - `shared/data/stablecoins/coins.compliance.generated.json` - 106 entries
-- `shared/data/stablecoins/coins.generated.json` - 409 entries
+- `shared/data/stablecoins/coins.generated.json` - 410 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 25 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 26 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 28 keys
@@ -421,7 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
-- ... 385 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 386 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
