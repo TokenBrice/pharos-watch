@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { PegSummaryCoin } from "@shared/types";
 import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   buildMintAuthorityDetailViewModel,
@@ -30,6 +31,29 @@ type BuildStablecoinDetailViewModelOverrides = {
     nowMs?: number;
   };
 };
+
+function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
+  return {
+    id: "usdc-circle",
+    symbol: "USDC",
+    name: "USD Coin",
+    pegType: "peggedUSD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    currentDeviationBps: 0,
+    pegScore: 95,
+    pegPct: 99.9,
+    severityScore: 0,
+    spreadPenalty: 0,
+    eventCount: 0,
+    worstDeviationBps: null,
+    activeDepeg: false,
+    lastEventAt: null,
+    trackingSpanDays: 365,
+    methodologyVersion: "test",
+    ...overrides,
+  };
+}
 
 function makeBuildStablecoinDetailViewModelParams(
   overrides: BuildStablecoinDetailViewModelOverrides,
@@ -176,7 +200,7 @@ describe("stablecoin detail view-model builder", () => {
               updatedAt: 1_700_000_000,
             } as never,
             dataUpdatedAt: 1_800_000_000_000,
-            meta: { source: "test", updatedAt: 1_700_000_123 },
+            meta: { updatedAt: 1_700_000_123, ageSeconds: 0, status: "fresh" },
           },
         },
       }),
@@ -739,7 +763,7 @@ describe("stablecoin detail view-model builder", () => {
               updatedAt: 1_700_000_000,
             } as never,
             dataUpdatedAt: 12_345,
-            meta: { source: "test" },
+            meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "fresh" },
           },
         },
       }),
@@ -753,7 +777,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
       dataUpdatedAt: 12_345,
       hasData: true,
-      meta: { source: "test" },
+      meta: { updatedAt: 1_700_000_000, status: "fresh" },
     });
   });
 
@@ -1287,17 +1311,17 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: -300,
       gaugeDeviationBps: -300,
-      pegScoreResult: {
+      pegReferenceUnavailable: false,
+      pegScoreResult: makePegSummaryCoin({
         id: "usdc-circle",
         symbol: "USDC",
         pegScore: 45,
         pegPct: 99.4,
         eventCount: 2,
-        currentBand: "CALM",
         trackingSpanDays: 365,
         activeDepeg: true,
         depegEventCoverageLimited: true,
-      },
+      }),
       liquidityData: {
         liquidityScore: 28,
         poolCount: 4,
@@ -1425,16 +1449,17 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: 0,
       gaugeDeviationBps: 0,
-      pegScoreResult: {
+      pegReferenceUnavailable: false,
+      pegScoreResult: makePegSummaryCoin({
         id: "dai-makerdao",
         symbol: "DAI",
+        name: "Dai",
         pegScore: null,
         pegPct: 0,
         eventCount: 0,
-        currentBand: "CALM",
         trackingSpanDays: 3,
         activeDepeg: false,
-      },
+      }),
       liquidityData: undefined,
       yieldRanking: null,
       stressSignal: null,
@@ -1501,6 +1526,7 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: 0,
       gaugeDeviationBps: 0,
+      pegReferenceUnavailable: false,
       pegScoreResult: null,
       liquidityData: undefined,
       yieldRanking: null,
@@ -1566,6 +1592,7 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: 0,
       gaugeDeviationBps: 0,
+      pegReferenceUnavailable: false,
       pegScoreResult: null,
       liquidityData: undefined,
       yieldRanking: null,
@@ -1619,6 +1646,7 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: 0,
       gaugeDeviationBps: 0,
+      pegReferenceUnavailable: false,
       pegScoreResult: null,
       liquidityData: undefined,
       yieldRanking: null,
@@ -1695,6 +1723,7 @@ describe("stablecoin detail hero view-model builder", () => {
       pegRef: 1,
       deviationBps: 0,
       gaugeDeviationBps: 0,
+      pegReferenceUnavailable: false,
       pegScoreResult: pegRecord ? ({ ...basePegScoreResult, ...pegRecord } as never) : null,
       liquidityData: undefined,
       yieldRanking: null,

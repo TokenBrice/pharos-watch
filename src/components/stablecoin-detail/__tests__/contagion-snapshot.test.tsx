@@ -86,6 +86,7 @@ const RAW_INPUTS_STUB: ReportCard["rawInputs"] = {
   dependencies: [],
   navToken: false,
   collateralFromLive: false,
+  dependencyFromLive: false,
 };
 
 function makeCard(id: string, symbol: string): ReportCard {

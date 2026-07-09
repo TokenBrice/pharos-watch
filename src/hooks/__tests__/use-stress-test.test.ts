@@ -50,7 +50,6 @@ function makeCard(
       dependencies,
       custodyModel: "institutional-regulated",
     }),
-    dependencies,
     isDefunct: false,
   };
 }
