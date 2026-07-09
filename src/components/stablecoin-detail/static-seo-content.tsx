@@ -256,8 +256,14 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
       : `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`,
   ].join(" ");
 
+  const identityQuestion =
+    coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase()
+      ? `What is ${coin.symbol}?`
+      : `What is ${coin.name} (${coin.symbol})?`;
+
   return [
-    { question: `What is ${coin.name} (${coin.symbol})?`, answer: identityAnswer },
+    { question: identityQuestion, answer: identityAnswer },
+    { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin) },
     { question: `What backs ${coin.symbol}?`, answer: backingAnswer },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
   ];

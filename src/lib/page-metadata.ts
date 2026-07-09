@@ -163,10 +163,23 @@ function buildStablecoinTitle(options: readonly string[]): string {
   return options.find((option) => option.length <= maxCoreLength) ?? options[options.length - 1] ?? "";
 }
 
+/**
+ * Coins like pmUSD carry the same string as both name and symbol; the
+ * `${symbol} (${name})` template would render a redundant "pmUSD (pmUSD)".
+ */
+function hasRedundantName(coin: StablecoinMeta): boolean {
+  return coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
+}
+
+/** Distinct deployment chains, for "on N chains" description enrichment. */
+function deploymentChainCount(coin: StablecoinMeta): number {
+  return new Set((coin.contracts ?? []).map((contract) => contract.chain)).size;
+}
+
 function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   if (coin.status === "frozen") {
     return buildStablecoinTitle([
-      `${coin.symbol} (${coin.name}) Failed Stablecoin Archive`,
+      ...(hasRedundantName(coin) ? [] : [`${coin.symbol} (${coin.name}) Failed Stablecoin Archive`]),
       `${coin.symbol} Failed Stablecoin Archive & Timeline`,
       `${coin.symbol} Failed Stablecoin Archive`,
     ]);
@@ -174,14 +187,25 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 
   if (coin.status === "pre-launch") {
     return buildStablecoinTitle([
-      `${coin.symbol} (${coin.name}) Stablecoin Launch Tracker`,
+      ...(hasRedundantName(coin) ? [] : [`${coin.symbol} (${coin.name}) Stablecoin Launch Tracker`]),
       `${coin.symbol} Stablecoin Launch Tracker & Profile`,
       `${coin.symbol} Launch Tracker & Profile`,
       `${coin.symbol} Launch Tracker`,
     ]);
   }
 
+  if (hasRedundantName(coin)) {
+    return buildStablecoinTitle([
+      `${coin.symbol} Stablecoin Safety Score & Risk Profile`,
+      `${coin.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
+      `${coin.symbol} Risk Profile: Peg, Liquidity & Safety`,
+      `${coin.symbol} Stablecoin Risk: Peg & Liquidity`,
+      `${coin.symbol} Risk Profile`,
+    ]);
+  }
+
   return buildStablecoinTitle([
+    `${coin.symbol} (${coin.name}) Stablecoin Safety Score & Risk Profile`,
     `${coin.symbol} (${coin.name}) Stablecoin Risk Profile`,
     `${coin.symbol} (${coin.name}) Risk Profile`,
     `${coin.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
@@ -215,11 +239,16 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     coin.flags.backing === "algorithmic"
       ? `${governancePhrase} ${backingPhrase} pegged to ${pegLabel}`
       : `${governancePhrase} stablecoin ${backingPhrase} and pegged to ${pegLabel}`;
+  const chainCount = deploymentChainCount(coin);
+  const chainPhrase = chainCount >= 2 ? ` on ${chainCount} chains` : "";
+  const opener = hasRedundantName(coin)
+    ? `${coin.symbol} risk profile: ${structure}${chainPhrase}.`
+    : `${coin.symbol} risk profile for ${coin.name}: ${structure}${chainPhrase}.`;
   const differentiator = getMetadataDifferentiator(coin);
   const description = [
-    `${coin.symbol} risk profile for ${coin.name}: ${structure}.`,
+    opener,
     differentiator,
-    "Live peg score, liquidity, supply, freeze controls, reserves, and report-card signals.",
+    "Live peg score, liquidity, reserves & Safety Score.",
   ]
     .filter(Boolean)
     .join(" ");

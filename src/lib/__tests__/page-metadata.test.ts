@@ -148,14 +148,36 @@ describe("buildStablecoinDetailMetadata", () => {
     const frozenCoin = frozen as Parameters<typeof buildStablecoinDetailMetadata>[0];
 
     expect(buildStablecoinDetailMetadata(activeCoin).title).toBe(
-      `${active.symbol} (${active.name}) Stablecoin Risk Profile`,
+      `${active.symbol} (${active.name}) Stablecoin Safety Score & Risk Profile`,
     );
+    // FIUSD carries the same name and symbol — the parenthetical is dropped
+    // instead of rendering a redundant "FIUSD (FIUSD)".
     expect(buildStablecoinDetailMetadata(preLaunchCoin).title).toBe(
-      `${preLaunch.symbol} (${preLaunch.name}) Stablecoin Launch Tracker`,
+      `${preLaunch.symbol} Stablecoin Launch Tracker & Profile`,
     );
     expect(buildStablecoinDetailMetadata(frozenCoin).title).toBe(
       `${frozen.symbol} (${frozen.name}) Failed Stablecoin Archive`,
     );
+  });
+
+  it("drops the redundant parenthetical and counts chains in active descriptions", () => {
+    const coin = {
+      ...fixtures.active,
+      name: "pmUSD",
+      symbol: "pmUSD",
+      contracts: [
+        { chain: "ethereum", address: "0x1", decimals: 18 },
+        { chain: "base", address: "0x2", decimals: 18 },
+        { chain: "base", address: "0x3", decimals: 6 },
+      ],
+    } as Parameters<typeof buildStablecoinDetailMetadata>[0];
+
+    const metadata = buildStablecoinDetailMetadata(coin);
+    expect(metadata.title).toBe("pmUSD Stablecoin Safety Score & Risk Profile");
+    expect(metadata.description).not.toContain("pmUSD (pmUSD)");
+    expect(metadata.description).not.toContain("for pmUSD");
+    // Two distinct chains — the duplicate base deployment counts once.
+    expect(metadata.description).toContain("on 2 chains");
   });
 
   it("gives pre-launch coins the static og card; live and frozen keep the worker card", () => {

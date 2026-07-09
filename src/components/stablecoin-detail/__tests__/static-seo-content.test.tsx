@@ -165,19 +165,22 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getAllByRole("link", { name: /View related .* variant/ })).toHaveLength(2);
   });
 
-  it("derives the 3-question FAQ from static profile fields and renders FAQPage JSON-LD", () => {
+  it("derives the 4-question FAQ from static profile fields and renders FAQPage JSON-LD", () => {
     const items = buildStablecoinFaqItems(coin);
 
     expect(items.map((item) => item.question)).toEqual([
       "What is Test Dollar (TSTD)?",
+      "Is TSTD safe?",
       "What backs TSTD?",
       "Can TSTD be frozen or blacklisted?",
     ]);
     expect(items[0].answer).toContain("Primary market mint and redeem arbitrage");
-    expect(items[1].answer).toContain("Real-World Asset Backed");
-    expect(items[1].answer).toContain("Cash, Treasury bills, and overnight repos");
-    expect(items[1].answer).toContain("Example Auditor");
-    expect(items[2].answer).toContain("freeze");
+    // The safety answer must stay honest — no absolute-safety claims.
+    expect(items[1].answer).toContain("Pharos does not mark TSTD as absolutely safe");
+    expect(items[2].answer).toContain("Real-World Asset Backed");
+    expect(items[2].answer).toContain("Cash, Treasury bills, and overnight repos");
+    expect(items[2].answer).toContain("Example Auditor");
+    expect(items[3].answer).toContain("freeze");
 
     // Same composition the detail page mounts in both render states.
     const { container } = render(<FaqSection items={items} title="TSTD quick answers" includeJsonLd />);
