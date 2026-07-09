@@ -115,6 +115,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0169     | `0169_lusd_ddr_event_90410_split.sql`                    | Ledger LUSD event 90410 as a fresh DDR incident and close the resolved repair-debt task                                                           |
 | 0170     | `0170_dex_liquidity_history_unique_snapshot.sql`         | Deduplicate DEX liquidity daily history rows and enforce one row per stablecoin/day so repair writes replace stale snapshots                       |
 | 0171     | `0171_tape_methodology_source_url_repair.sql`            | Repair persisted Tape methodology source URLs for the Liquidity Score and PSI changelog route renames                                             |
+| 0172     | `0172_worker_effect_fencing.sql`                         | Add Worker effect fencing, retry-safe cron telemetry, and public blacklist pagination indexes                                                       |
 
 ## Retired Individual Migrations
 
@@ -168,6 +169,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0166_worker_repair_tasks.sql`: disable the repair-task producer/runner for rollback. Queued rows are diagnostic debt and can remain for later inspection; do not delete them as part of Worker rollback.
 - `0167_worker_canary_runs.sql`: roll back canary writes with `WORKER_CANARY_MODE=off`. The table is append/upsert telemetry only, pruned by `prune-cron-history`, and does not need schema rollback for Worker-code rollback.
 - `0168_surface_publication_generations.sql`: roll back migrated publication writers or status readers to their previous surface-specific sources. Keep the additive generic table/indexes in place unless a coordinated D1 restore is required.
+- `0172_worker_effect_fencing.sql`: roll back runtime fencing by restoring the prior Worker version. Keep the additive columns/indexes; uncertain admin/Telegram effects require operator reconciliation before manual retry.
 
 ## Rollback Procedure
 
