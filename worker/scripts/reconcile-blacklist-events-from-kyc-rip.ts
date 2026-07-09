@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { createPublicClient, http, toHex } from "viem";
 import { mainnet } from "viem/chains";
+import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseEvmLogs } from "../src/cron/blacklist/evm-source";
 import type { BlacklistRow } from "../src/cron/blacklist/shared";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../src/lib/blacklist-contracts";
 import {
   fetchKycRipRows,
+  formatKycRipCliUsage,
   parseKycRipCliArgs,
   type KycRipCliOptions,
   type KycRipEventRow,
@@ -53,6 +55,13 @@ type ReceiptClient = {
 
 export type EventCliOptions = KycRipCliOptions;
 
+const EVENT_CLI_HELP = {
+  scriptName: "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts",
+  applyDescription: "Execute remote D1 reads and inserts",
+  minRowsDescription: "Minimum accepted rows before reconciliation",
+} as const;
+const EVENT_CLI_USAGE = formatKycRipCliUsage(EVENT_CLI_HELP);
+
 export type EventReconcileDependencies = {
   fetchImpl?: typeof fetch;
   d1?: RemoteD1Client;
@@ -61,11 +70,7 @@ export type EventReconcileDependencies = {
 };
 
 export function parseEventArgs(argv: string[]): EventCliOptions {
-  return parseKycRipCliArgs(argv, {
-    scriptName: "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts",
-    applyDescription: "Execute remote D1 reads and inserts",
-    minRowsDescription: "Minimum accepted rows before reconciliation",
-  });
+  return parseKycRipCliArgs(argv, EVENT_CLI_HELP);
 }
 
 function buildAddressKey(stablecoin: "USDT" | "USDC", address: string): string {
@@ -227,12 +232,13 @@ export async function runEventReconciliation(
 
 async function main(): Promise<void> {
   const options = parseEventArgs(process.argv.slice(2));
+  if (writeCliHelpIfRequested(options, EVENT_CLI_USAGE)) return;
   await runEventReconciliation(options, { log: console.log });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error);
-    process.exit(1);
+  void runCliEntrypoint(() => main(), {
+    label: "reconcile-blacklist-events-from-kyc-rip",
+    usage: EVENT_CLI_USAGE,
   });
 }

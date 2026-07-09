@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
@@ -10,7 +11,7 @@ import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
-import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
+import { describeDestructiveOperationMode, parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { parsePositiveInteger } from "./lib/kyc-rip";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
@@ -39,6 +40,7 @@ type BlacklistEventRow = {
 };
 
 export type ScriptOptions = {
+  help: boolean;
   remote: boolean;
   dryRun: boolean;
   concurrency: number;
@@ -46,6 +48,23 @@ export type ScriptOptions = {
   chainId: string;
   stablecoin: string;
 };
+
+const SCRIPT_NAME = "rebuild-blacklist-current-balances";
+const SCRIPT_USAGE = `Usage: tsx worker/scripts/rebuild-blacklist-current-balances.ts [options]
+
+Default mode is a local D1 dry-run. Live mutation requires --execute --confirm ${SCRIPT_NAME}.
+
+Options:
+  --execute                    Rebuild current balances
+  --confirm <script>           Required for live mutation; value must be ${SCRIPT_NAME}
+  --dry-run                    Force dry-run mode
+  --local                      Target local D1 (default)
+  --remote                     Target remote D1
+  --concurrency <count>        Concurrent EVM balance workers (default: 20)
+  --requests-per-second <n>    Provider request rate (default: 8)
+  --chain <id>                 Chain id (default: tron)
+  --stablecoin <symbol>        Stablecoin symbol (default: USDT)
+  -h, --help                   Show this help`;
 
 type CurrentBalanceWriteRow = {
   id: string;
@@ -62,13 +81,6 @@ type CurrentBalanceWriteRow = {
   lastErrorClass: string | null;
 };
 
-function parsePositiveIntegerFlag(args: Map<string, string | boolean>, flag: string, fallback: number): number {
-  const value = args.get(flag);
-  if (value == null) return fallback;
-  if (typeof value === "boolean") throw new Error(`--${flag} requires a value`);
-  return parsePositiveInteger(value, `--${flag}`);
-}
-
 function buildCurrentBalanceId(stablecoin: string, chainId: string, address: string): string {
   return buildBlacklistAddressCountKey(
     stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0],
@@ -78,36 +90,30 @@ function buildCurrentBalanceId(stablecoin: string, chainId: string, address: str
 }
 
 export function parseArgs(argv: string[]): ScriptOptions {
-  const args = new Map<string, string | boolean>();
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
-    const inlineValueIndex = arg.indexOf("=");
-    if (inlineValueIndex > 2) {
-      args.set(arg.slice(2, inlineValueIndex), arg.slice(inlineValueIndex + 1));
-      continue;
-    }
-    const key = arg.slice(2);
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
-      args.set(key, true);
-      continue;
-    }
-    args.set(key, next);
-    index++;
-  }
-  const operationMode = parseDestructiveOperationMode({
+  const { mode: operationMode, values } = parseDestructiveOperationArgs({
     argv,
-    scriptName: "rebuild-blacklist-current-balances",
+    cliOptions: {
+      concurrency: { type: "string" },
+      "requests-per-second": { type: "string" },
+      chain: { type: "string" },
+      stablecoin: { type: "string" },
+    },
+    scriptName: SCRIPT_NAME,
   });
+  const help = values.help === true;
 
   return {
+    help,
     remote: operationMode.remote,
     dryRun: operationMode.dryRun,
-    concurrency: parsePositiveIntegerFlag(args, "concurrency", 20),
-    requestsPerSecond: parsePositiveIntegerFlag(args, "requests-per-second", 8),
-    chainId: String(args.get("chain") ?? "tron").toLowerCase(),
-    stablecoin: String(args.get("stablecoin") ?? "USDT").toUpperCase(),
+    concurrency: help || typeof values.concurrency !== "string"
+      ? 20
+      : parsePositiveInteger(values.concurrency, "--concurrency"),
+    requestsPerSecond: help || typeof values["requests-per-second"] !== "string"
+      ? 8
+      : parsePositiveInteger(values["requests-per-second"], "--requests-per-second"),
+    chainId: String(values.chain ?? "tron").toLowerCase(),
+    stablecoin: String(values.stablecoin ?? "USDT").toUpperCase(),
   };
 }
 
@@ -220,8 +226,9 @@ async function fetchTronCurrentBalanceRowsInBatches(
   return rowsToWrite;
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
+async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
+  if (writeCliHelpIfRequested(options, SCRIPT_USAGE)) return;
   console.log(
     `Mode: ${describeDestructiveOperationMode({
       dryRun: options.dryRun,
@@ -412,8 +419,8 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error);
-    process.exit(1);
+  void runCliEntrypoint(() => main(), {
+    label: SCRIPT_NAME,
+    usage: SCRIPT_USAGE,
   });
 }

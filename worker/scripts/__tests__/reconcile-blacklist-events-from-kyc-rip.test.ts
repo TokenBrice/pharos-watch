@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
@@ -21,6 +23,7 @@ describe("event kyc.rip reconciliation", () => {
   it("defaults to dry-run and rejects invalid flags", () => {
     expect(parseEventArgs([])).toEqual({
       apply: false,
+      help: false,
       remote: true,
       database: "stablecoin-db",
       timeoutMs: 15_000,
@@ -30,6 +33,36 @@ describe("event kyc.rip reconciliation", () => {
     expect(parseEventArgs(["--apply", "--confirm", SCRIPT_NAME]).apply).toBe(true);
     expect(() => parseEventArgs(["--apply"])).toThrow(/live mutation requires/);
     expect(parseEventArgs(["--remote"]).remote).toBe(true);
+  });
+
+  it("rejects malformed operator arguments and supports short help", () => {
+    expect(parseEventArgs(["-h"])).toMatchObject({ apply: false, help: true, remote: true });
+    expect(() => parseEventArgs(["--bogus"])).toThrow(/Unknown option/);
+    expect(() =>
+      parseEventArgs([
+        "--provider-url",
+        "https://example.com/one",
+        "--provider-url",
+        "https://example.com/two",
+      ]),
+    ).toThrow(/may only be specified once/);
+    expect(() => parseEventArgs(["--execute", "--apply", "--confirm", SCRIPT_NAME])).toThrow(
+      /mutually exclusive/,
+    );
+    expect(() => parseEventArgs(["--local"])).toThrow(/not supported/);
+    expect(() => parseEventArgs(["unexpected"])).toThrow(/Unexpected argument/);
+  });
+
+  it("prints direct-run help with exit 0", () => {
+    const tsx = join(process.cwd(), "node_modules/.bin/tsx");
+    const result = spawnSync(tsx, [SCRIPT_NAME, "--help"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Usage: tsx ${SCRIPT_NAME}`);
+    expect(result.stderr).toBe("");
   });
 
   it("does not query or execute D1 in dry-run mode", async () => {
