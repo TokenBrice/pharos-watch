@@ -169,7 +169,7 @@ function StackBar({
           const triggerClassName = cn(
             "block h-full",
             isInteractive
-              ? "pharos-focus-ring cursor-pointer border-0 p-0"
+              ? "pharos-focus-ring min-w-6 cursor-pointer border-0 p-0 sm:min-w-0"
               : isTooNarrowForFocus
                 ? "pointer-events-none"
                 : "pharos-focus-ring cursor-help",
