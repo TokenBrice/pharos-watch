@@ -63,6 +63,7 @@ describe("validate:prebuild surface filtering", () => {
       "npm run typecheck",
       "npm run typecheck:tests",
       "npm run check:client-registry-imports",
+      "npm run check:cli-args-policy",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
       "npm run check:env-contract",
