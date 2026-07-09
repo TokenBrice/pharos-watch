@@ -199,5 +199,28 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "spiko-api",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "gbpsafo-spiko",
+    "display": {
+      "url": "https://www.spiko.io/spiko-pound",
+      "label": "Spiko public share-class API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
+      }
+    },
+    "params": {
+      "shareClassSymbol": "gbpSAFO",
+      "slice": {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "risk": "medium"
+      }
+    }
+  },
   "launchDate": "2026-03-19"
 }

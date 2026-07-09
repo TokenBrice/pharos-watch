@@ -73,6 +73,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "single-asset": { status: "active", rationale: ACTIVE_RATIONALE },
   "sky-makercore": { status: "active", rationale: ACTIVE_RATIONALE },
   "solstice-attestation": { status: "active", rationale: ACTIVE_RATIONALE },
+  "spiko-api": { status: "active", rationale: ACTIVE_RATIONALE },
   "superstate-liquidity": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdgo-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdh-native-markets": { status: "active", rationale: ACTIVE_RATIONALE },

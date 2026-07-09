@@ -216,6 +216,29 @@
     "yieldSource": "Spiko UK T-Bills MMF NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "spiko-api",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "uktbl-spiko",
+    "display": {
+      "url": "https://www.spiko.io/spiko-treasury-bills-pound",
+      "label": "Spiko public share-class API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://public-api.spiko.io/share-classes/UKTBL/totals"
+      }
+    },
+    "params": {
+      "shareClassSymbol": "UKTBL",
+      "slice": {
+        "name": "UK Treasury Bills and cash",
+        "risk": "very-low"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",

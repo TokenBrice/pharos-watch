@@ -46,6 +46,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "solstice-attestation",
   "single-asset",
   "sky-makercore",
+  "spiko-api",
   "superstate-liquidity",
   "river-protocol-info",
   "usdgo-transparency",

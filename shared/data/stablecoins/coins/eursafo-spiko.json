@@ -236,5 +236,28 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "spiko-api",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eursafo-spiko",
+    "display": {
+      "url": "https://www.spiko.io/spiko-euro",
+      "label": "Spiko public share-class API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
+      }
+    },
+    "params": {
+      "shareClassSymbol": "eurSAFO",
+      "slice": {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "risk": "medium"
+      }
+    }
+  },
   "launchDate": "2026-03-19"
 }

@@ -20955,6 +20955,29 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eursafo-spiko",
+      "display": {
+        "url": "https://www.spiko.io/spiko-euro",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "eurSAFO",
+        "slice": {
+          "name": "Fully collateralized overnight total-return swap exposure",
+          "risk": "medium"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
       "yieldType": "nav-appreciation"
@@ -21177,6 +21200,29 @@
         "risk": "very-low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eurspkcc-spiko",
+      "display": {
+        "url": "https://www.spiko.io/spiko-cash-and-carry",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/eurSPKCC/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "eurSPKCC",
+        "slice": {
+          "name": "Digital-asset cash-and-carry strategy",
+          "risk": "high"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
@@ -25978,6 +26024,29 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "gbpsafo-spiko",
+      "display": {
+        "url": "https://www.spiko.io/spiko-pound",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/gbpSAFO/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "gbpSAFO",
+        "slice": {
+          "name": "Fully collateralized overnight total-return swap exposure",
+          "risk": "medium"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
       "yieldType": "nav-appreciation"
@@ -51012,6 +51081,29 @@
         "risk": "medium"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "safo-spiko-usd",
+      "display": {
+        "url": "https://www.spiko.io/spiko-dollar",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "SAFO",
+        "slice": {
+          "name": "Fully collateralized overnight total-return swap exposure",
+          "risk": "medium"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
       "yieldType": "nav-appreciation"
@@ -52177,6 +52269,9 @@
           "coinId": "bold-liquity",
           "depType": "wrapper",
           "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
+        },
+        "redemptionLiquidity": {
+          "source": "atomic-full-backing"
         }
       }
     },
@@ -52941,6 +53036,9 @@
           "coinId": "dola-inverse-finance",
           "depType": "wrapper",
           "expectedAssetAddress": "0x865377367054516e17014ccded1e7d814edc9ce4"
+        },
+        "redemptionLiquidity": {
+          "source": "atomic-full-backing"
         }
       }
     },
@@ -54472,6 +54570,29 @@
         "risk": "very-low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "spkcc-spiko",
+      "display": {
+        "url": "https://www.spiko.io/spiko-cash-and-carry",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/SPKCC/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "SPKCC",
+        "slice": {
+          "name": "Digital-asset cash-and-carry strategy",
+          "risk": "high"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",
@@ -57618,6 +57739,9 @@
           "coinId": "usdd-tron-dao-reserve",
           "depType": "wrapper",
           "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+        },
+        "redemptionLiquidity": {
+          "source": "atomic-full-backing"
         }
       }
     },
@@ -61631,6 +61755,29 @@
         "risk": "very-low"
       }
     ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "uktbl-spiko",
+      "display": {
+        "url": "https://www.spiko.io/spiko-treasury-bills-pound",
+        "label": "Spiko public share-class API"
+      },
+      "adapter": "spiko-api",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://public-api.spiko.io/share-classes/UKTBL/totals"
+        }
+      },
+      "params": {
+        "shareClassSymbol": "UKTBL",
+        "slice": {
+          "name": "UK Treasury Bills and cash",
+          "risk": "very-low"
+        }
+      }
+    },
     "notices": [
       {
         "type": "warning",

@@ -121,6 +121,29 @@
     "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "spiko-api",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "safo-spiko-usd",
+    "display": {
+      "url": "https://www.spiko.io/spiko-dollar",
+      "label": "Spiko public share-class API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
+      }
+    },
+    "params": {
+      "shareClassSymbol": "SAFO",
+      "slice": {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "risk": "medium"
+      }
+    }
+  },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

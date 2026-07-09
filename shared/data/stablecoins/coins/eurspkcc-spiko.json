@@ -218,6 +218,29 @@
     "yieldSource": "Spiko Cash and Carry EUR NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "spiko-api",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "eurspkcc-spiko",
+    "display": {
+      "url": "https://www.spiko.io/spiko-cash-and-carry",
+      "label": "Spiko public share-class API"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://public-api.spiko.io/share-classes/eurSPKCC/totals"
+      }
+    },
+    "params": {
+      "shareClassSymbol": "eurSPKCC",
+      "slice": {
+        "name": "Digital-asset cash-and-carry strategy",
+        "risk": "high"
+      }
+    }
+  },
   "notices": [
     {
       "type": "warning",

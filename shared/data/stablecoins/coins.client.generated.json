@@ -5819,7 +5819,8 @@
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "eurspkcc-spiko",
@@ -5874,7 +5875,8 @@
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "eusd-electronic-usd",
@@ -7051,7 +7053,8 @@
           "modulesOrGuardsStatus": "unknown"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "gelt-tether",
@@ -14152,7 +14155,8 @@
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "said-gaib",
@@ -15064,7 +15068,8 @@
           "modulesOrGuardsStatus": "unknown"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "spusd-soulpeg",
@@ -17048,7 +17053,8 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    }
+    },
+    "liveReserveAdapter": "spiko-api"
   },
   {
     "id": "usat-tether",

@@ -560,6 +560,13 @@ const sgForgeCoinvertibleParamsSchema = z
   })
   .strict();
 
+const spikoApiParamsSchema = z
+  .object({
+    shareClassSymbol: z.string(),
+    slice: reserveSliceDescriptorSchema,
+  })
+  .strict();
+
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
@@ -662,6 +669,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "solstice-attestation": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "single-asset": { primaryInputKinds: ["http-json", "onchain-evm"], params: singleAssetParamsSchema },
   "sky-makercore": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "spiko-api": { primaryInputKinds: ["http-json"], params: spikoApiParamsSchema },
   "superstate-liquidity": { primaryInputKinds: ["onchain-evm"], params: superstateLiquidityParamsSchema },
   "river-protocol-info": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usdgo-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
@@ -720,6 +728,10 @@ export const MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 33 * DAY_SECONDS;
 // Late monthly disclosure feeds get a wider reviewed window for issuers whose
 // attestations routinely arrive after the next calendar month has started.
 export const LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 4_000_000;
+// Business-day NAV feeds (e.g. Spiko's public share-class API) publish on
+// trading days only; give those feeds a 5-day window so a holiday-extended
+// weekend doesn't trip staleness before the next NAV update lands.
+export const BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC = 5 * DAY_SECONDS;
 
 export type LiveReserveSingleAssetProbe = z.infer<typeof singleAssetProbeSchema>;
 export type LiveReserveRedemptionRateProbe = z.infer<typeof redemptionRateProbeSchema>;

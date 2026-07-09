@@ -47,6 +47,7 @@ import { fetchSghoWrapperReserves } from "./sgho-wrapper";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
+import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
 import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
@@ -108,6 +109,7 @@ const ADAPTER_FNS = {
   "solstice-attestation": fetchSolsticeAttestationReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
+  "spiko-api": fetchSpikoApiReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
   "usdh-native-markets": fetchUsdhNativeMarketsReserves,

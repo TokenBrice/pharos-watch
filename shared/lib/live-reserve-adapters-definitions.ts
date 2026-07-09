@@ -7,6 +7,7 @@ import type {
   LiveReserveSourceSharingMode,
 } from "../types/live-reserves";
 import {
+  BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
   DASHBOARD_SOURCE_MAX_AGE_SEC,
   DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -574,6 +575,17 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "spiko-api": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
   "superstate-liquidity": {

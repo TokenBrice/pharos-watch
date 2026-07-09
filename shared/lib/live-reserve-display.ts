@@ -53,6 +53,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "solstice-attestation": "proof",
   "single-asset": "proof",
   "sky-makercore": "live",
+  "spiko-api": "live",
   "superstate-liquidity": "live",
   "river-protocol-info": "proof",
   "usdgo-transparency": "proof",
