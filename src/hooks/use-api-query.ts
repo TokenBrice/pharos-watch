@@ -12,6 +12,7 @@ import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
+type PollingQueryFunction<T> = (context: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 
 export interface PollingQueryControlOptions {
   enabled?: boolean;
@@ -76,7 +77,10 @@ function mergeAbortSignals(signals: readonly AbortSignal[]): AbortSignal {
   return controller.signal;
 }
 
-function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortSignal | undefined): RequestInit | undefined {
+function mergeFetchInitSignal(
+  fetchInit: RequestInit | undefined,
+  signal: AbortSignal | undefined,
+): RequestInit | undefined {
   if (!signal) return fetchInit;
   if (!fetchInit) return { signal };
   if (!fetchInit.signal || fetchInit.signal === signal) return { ...fetchInit, signal };
@@ -119,7 +123,7 @@ async function resolveSchema<T>(schema: SchemaLikeSource<T> | undefined): Promis
 
 export function createPollingQueryOptions<T>(
   key: readonly unknown[],
-  queryFn: () => Promise<T>,
+  queryFn: PollingQueryFunction<T>,
   cronInterval: number,
   opts?: PollingQueryControlOptions,
 ): UseQueryOptions<T, Error, T, readonly unknown[]> {
@@ -174,16 +178,11 @@ export function createApiPollingQueryOptionsWithMeta<T>(
 
 export function usePollingQuery<T>(
   key: readonly unknown[],
-  queryFn: () => Promise<T>,
+  queryFn: PollingQueryFunction<T>,
   cronInterval: number,
   opts?: PollingQueryControlOptions,
 ): UseQueryResult<T, Error> {
-  return useQuery<T, Error>(createPollingQueryOptions(
-    key,
-    queryFn,
-    cronInterval,
-    opts,
-  ));
+  return useQuery<T, Error>(createPollingQueryOptions(key, queryFn, cronInterval, opts));
 }
 
 export function createStaticQueryOptions<T>(
@@ -221,8 +220,10 @@ export function useApiQuery<T>(
   return useQuery<T, Error>(createApiPollingQueryOptions(key, path, cronInterval, opts));
 }
 
-export interface ApiQueryWithMetaResult<T>
-  extends Omit<UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>, "data"> {
+export interface ApiQueryWithMetaResult<T> extends Omit<
+  UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
+  "data"
+> {
   data: T | undefined;
   meta: ApiMeta | null;
 }

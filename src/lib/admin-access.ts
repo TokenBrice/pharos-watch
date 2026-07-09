@@ -1,5 +1,6 @@
 import { OPS_UI_HOSTNAME } from "@shared/lib/runtime-origins";
 import { buildRequestUrl } from "@/lib/api";
+import { RequestFailure, requestTextWithResponse } from "@/lib/request";
 
 export function isOpsUiHost(
   hostname: string | null = typeof window !== "undefined" ? window.location.hostname : null,
@@ -19,6 +20,8 @@ export interface AdminMutationOptions {
   body?: unknown;
   idempotencyKey?: string;
   headers?: HeadersInit;
+  signal?: AbortSignal;
+  timeoutMs?: number | null;
 }
 
 export interface AdminMutationResult<T> {
@@ -44,11 +47,11 @@ function formatResponseBody(parsed: unknown, text: string): string {
   return text;
 }
 
-function getErrorMessage(response: Response, parsed: unknown, text: string): string {
+function getErrorMessage(status: number, parsed: unknown, text: string): string {
   if (parsed && typeof parsed === "object" && "error" in parsed && typeof parsed.error === "string") {
     return parsed.error;
   }
-  return `${response.status}: ${text}`;
+  return `${status}: ${text}`;
 }
 
 export async function adminMutation<T = unknown>(
@@ -64,17 +67,26 @@ export async function adminMutation<T = unknown>(
     headers.set("Idempotency-Key", options.idempotencyKey);
   }
 
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
-    method: options.method ?? "POST",
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
-  const text = await response.text();
-  const parsed = parseResponseText(text);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(response, parsed, text));
+  let result;
+  try {
+    result = await requestTextWithResponse(buildRequestUrl(buildAdminApiPath(path)), {
+      signal: options.signal,
+      timeoutMs: options.timeoutMs,
+      init: {
+        method: options.method ?? "POST",
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      },
+    });
+  } catch (error) {
+    if (error instanceof RequestFailure && error.kind === "http" && error.status != null) {
+      const text = error.bodyText ?? "";
+      throw new Error(getErrorMessage(error.status, parseResponseText(text), text), { cause: error });
+    }
+    throw error;
   }
+  const { response, data: text } = result;
+  const parsed = parseResponseText(text);
 
   return {
     data: parsed as T,

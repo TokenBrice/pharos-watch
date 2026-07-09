@@ -3,6 +3,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
+import { RequestFailure, requestResponse } from "@/lib/request";
 import {
   getEndpointProbeDescriptors,
   getProbePaths,
@@ -23,10 +24,7 @@ export const ENDPOINT_GROUPS = {
 
 /** Only public + admin endpoints are probed. manual endpoints are
  *  action paths and must NOT be auto-probed from the dashboard loop. */
-const ALL_ENDPOINTS = [
-  ...ENDPOINT_GROUPS.public,
-  ...ENDPOINT_GROUPS.admin,
-];
+const ALL_ENDPOINTS = [...ENDPOINT_GROUPS.public, ...ENDPOINT_GROUPS.admin];
 const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
@@ -52,17 +50,9 @@ function buildProbeRequest(path: string): {
   };
 }
 
-function getProbeErrorMessage(err: unknown, signal: AbortSignal): string {
-  if (signal.aborted) {
-    const reason = signal.reason;
-    if (reason instanceof DOMException && reason.name === "TimeoutError") {
-      return reason.message;
-    }
-    if (typeof reason === "string" && reason.length > 0) {
-      return reason;
-    }
-    return "Browser probe timed out";
-  }
+function getProbeErrorMessage(err: unknown): string {
+  if (err instanceof RequestFailure && err.kind === "timeout") return "Browser probe timed out";
+  if (err instanceof RequestFailure) return err.message;
   return err instanceof Error ? err.message : "Unknown error";
 }
 
@@ -77,13 +67,9 @@ const SEMANTIC_STATUS_RANK: Record<NonNullable<EndpointProbeResult["semanticStat
 };
 
 function extractFreshnessWarningSemantics(response: Response): Partial<EndpointProbeResult> | null {
-  const warning = typeof response.headers?.get === "function"
-    ? response.headers.get("Warning")
-    : null;
+  const warning = typeof response.headers?.get === "function" ? response.headers.get("Warning") : null;
   if (!warning) return null;
-  const isFreshnessWarning =
-    /(?:^|,\s*)110\b/.test(warning) ||
-    /Response is (?:degraded|stale)/i.test(warning);
+  const isFreshnessWarning = /(?:^|,\s*)110\b/.test(warning) || /Response is (?:degraded|stale)/i.test(warning);
   if (!isFreshnessWarning) return null;
 
   const explicitStatus = /Response is stale/i.test(warning)
@@ -131,23 +117,18 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
   const status = "status" in body ? body.status : null;
   if (!isSemanticStatus(status)) return null;
 
-  const warnings = "warnings" in body && Array.isArray(body.warnings)
-    ? body.warnings.filter((warning): warning is string => typeof warning === "string")
-    : [];
-  const blacklist = "blacklist" in body && body.blacklist && typeof body.blacklist === "object"
-    ? body.blacklist
-    : null;
-  const mintBurn = "mintBurn" in body && body.mintBurn && typeof body.mintBurn === "object"
-    ? body.mintBurn
-    : null;
+  const warnings =
+    "warnings" in body && Array.isArray(body.warnings)
+      ? body.warnings.filter((warning): warning is string => typeof warning === "string")
+      : [];
+  const blacklist = "blacklist" in body && body.blacklist && typeof body.blacklist === "object" ? body.blacklist : null;
+  const mintBurn = "mintBurn" in body && body.mintBurn && typeof body.mintBurn === "object" ? body.mintBurn : null;
   const missingAmounts =
     blacklist && "missingAmounts" in blacklist && typeof blacklist.missingAmounts === "number"
       ? blacklist.missingAmounts
       : 0;
   const missingRatio =
-    blacklist && "missingRatio" in blacklist && typeof blacklist.missingRatio === "number"
-      ? blacklist.missingRatio
-      : 0;
+    blacklist && "missingRatio" in blacklist && typeof blacklist.missingRatio === "number" ? blacklist.missingRatio : 0;
   const recentMissingAmounts =
     blacklist && "recentMissingAmounts" in blacklist && typeof blacklist.recentMissingAmounts === "number"
       ? blacklist.recentMissingAmounts
@@ -187,8 +168,7 @@ function extractStatusProbeSemantics(body: unknown): Partial<EndpointProbeResult
     "overall" in body.causes &&
     Array.isArray(body.causes.overall)
       ? body.causes.overall.find(
-          (cause): cause is { message?: string } =>
-            !!cause && typeof cause === "object" && ("message" in cause),
+          (cause): cause is { message?: string } => !!cause && typeof cause === "object" && "message" in cause,
         )
       : null;
   const message = firstCause?.message;
@@ -200,10 +180,7 @@ function extractStatusProbeSemantics(body: unknown): Partial<EndpointProbeResult
   };
 }
 
-const SEMANTIC_PROBE_PARSERS = new Map<
-  ProbeSemanticKind,
-  (body: unknown) => Partial<EndpointProbeResult> | null
->([
+const SEMANTIC_PROBE_PARSERS = new Map<ProbeSemanticKind, (body: unknown) => Partial<EndpointProbeResult> | null>([
   ["health", extractHealthProbeSemantics],
   ["status", extractStatusProbeSemantics],
 ]);
@@ -222,63 +199,66 @@ for (const group of PROBE_DESCRIPTOR_GROUPS) {
 async function runProbeFetch(
   path: string,
   handleResponse: (response: Response, latencyMs: number) => Promise<EndpointProbeResult>,
+  signal?: AbortSignal,
 ): Promise<EndpointProbeResult> {
-  const controller = new AbortController();
   const timeoutMs = getProbeTimeoutMs(path);
-  const timeout = setTimeout(
-    () => controller.abort(new DOMException("Browser probe timed out", "TimeoutError")),
-    timeoutMs,
-  );
   const start = performance.now();
 
   try {
     const request = buildProbeRequest(path);
-    const res = await fetch(buildRequestUrl(request.path), {
-      signal: controller.signal,
-      headers: request.headers,
-    });
-    const latencyMs = Math.round(performance.now() - start);
-    return await handleResponse(res, latencyMs);
+    const result = await requestResponse(
+      buildRequestUrl(request.path),
+      {
+        signal,
+        timeoutMs,
+        allowHttpError: true,
+        init: { headers: request.headers },
+      },
+      (response) => handleResponse(response, Math.round(performance.now() - start)),
+    );
+    return result.data;
   } catch (err) {
+    if (signal?.aborted && err instanceof RequestFailure && err.kind === "aborted") throw err;
     const latencyMs = Math.round(performance.now() - start);
     return {
       path,
       status: null,
       latencyMs,
-      error: getProbeErrorMessage(err, controller.signal),
+      error: getProbeErrorMessage(err),
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
-async function probeEndpoint(
-  path: string,
-): Promise<EndpointProbeResult> {
-  return runProbeFetch(path, async (res, latencyMs) => {
-    const semanticKind = PROBE_SEMANTIC_KIND_BY_PATH.get(path);
-    const parser = semanticKind ? SEMANTIC_PROBE_PARSERS.get(semanticKind) : undefined;
-    let semanticFields: Partial<EndpointProbeResult> | undefined;
+async function probeEndpoint(path: string, signal?: AbortSignal): Promise<EndpointProbeResult> {
+  return runProbeFetch(
+    path,
+    async (res, latencyMs) => {
+      const semanticKind = PROBE_SEMANTIC_KIND_BY_PATH.get(path);
+      const parser = semanticKind ? SEMANTIC_PROBE_PARSERS.get(semanticKind) : undefined;
+      let semanticFields: Partial<EndpointProbeResult> | undefined;
 
-    if (parser && res.ok && typeof res.json === "function") {
-      try {
-        semanticFields = parser(await res.json()) ?? undefined;
-      } catch {
-        semanticFields = undefined;
+      if (parser && res.ok && typeof res.json === "function") {
+        try {
+          semanticFields = parser(await res.json()) ?? undefined;
+        } catch {
+          semanticFields = undefined;
+        }
+      } else {
+        // This fan-out probe loop only needs transport reachability for non-semantic routes.
+        // Cancel unread bodies so one browser session does not strand slots across repeated runs.
+        await discardResponseBody(res);
       }
-    } else {
-      // This fan-out probe loop only needs transport reachability for non-semantic routes.
-      // Cancel unread bodies so one browser session does not strand slots across repeated runs.
-      await discardResponseBody(res);
-    }
-    semanticFields = mergeSemanticFields(semanticFields, extractFreshnessWarningSemantics(res));
+      semanticFields = mergeSemanticFields(semanticFields, extractFreshnessWarningSemantics(res));
 
-    return { path, status: res.status, latencyMs, ...semanticFields };
-  });
+      return { path, status: res.status, latencyMs, ...semanticFields };
+    },
+    signal,
+  );
 }
 
 export async function collectEndpointProbes(
   paths: readonly string[],
+  signal?: AbortSignal,
 ): Promise<EndpointProbeResult[]> {
   if (paths.length === 0) return [];
 
@@ -289,9 +269,10 @@ export async function collectEndpointProbes(
   await Promise.all(
     Array.from({ length: workerCount }, async () => {
       while (nextIndex < paths.length) {
+        signal?.throwIfAborted();
         const currentIndex = nextIndex;
         nextIndex += 1;
-        results[currentIndex] = await probeEndpoint(paths[currentIndex]!);
+        results[currentIndex] = await probeEndpoint(paths[currentIndex]!, signal);
       }
     }),
   );
@@ -306,7 +287,7 @@ export async function collectEndpointProbes(
 export function useEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", "ops-proxy"],
-    () => collectEndpointProbes(ALL_ENDPOINTS),
+    ({ signal }) => collectEndpointProbes(ALL_ENDPOINTS, signal),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );
@@ -315,7 +296,7 @@ export function useEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error
 export function usePublicEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", "public"],
-    () => collectEndpointProbes(PUBLIC_ENDPOINTS),
+    ({ signal }) => collectEndpointProbes(PUBLIC_ENDPOINTS, signal),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );
