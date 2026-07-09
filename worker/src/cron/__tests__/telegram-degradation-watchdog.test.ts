@@ -46,9 +46,30 @@ function installCacheStore(): CacheStore {
 interface FakeDbConfig {
   pendingCount?: number;
   oldestPendingAgeSec?: number | null;
-  estimatedDrainTimeSec?: number | null;
   nearTtl?: number;
   dispatchMetadata?: Record<string, unknown> | null;
+}
+
+const PENDING_CAPACITY_TOTAL_SQL =
+  "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total";
+
+function isPendingCapacityQuery(sql: string): boolean {
+  return sql.includes("FROM telegram_pending_alerts") && sql.includes(PENDING_CAPACITY_TOTAL_SQL);
+}
+
+function makePendingCapacityRow(config: FakeDbConfig = {}) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const pendingCount = config.pendingCount ?? 0;
+  const oldestPendingAgeSec = config.oldestPendingAgeSec ?? (pendingCount > 0 ? 60 : null);
+  return {
+    total: pendingCount,
+    expired: 0,
+    due: pendingCount,
+    deferred: 0,
+    near_ttl: config.nearTtl ?? 0,
+    oldest_pending_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
+    oldest_due_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
+  };
 }
 
 function makeDispatchMetadataRow(meta: Record<string, unknown> | null) {
@@ -60,23 +81,8 @@ function makeDb(config: FakeDbConfig = {}): D1Database {
   const prepare = vi.fn((sql: string) => {
     const bind = vi.fn(() => statement);
     const first = vi.fn(async () => {
-      if (sql.includes("COUNT(*) AS total")) {
-        const nowSec = Math.floor(Date.now() / 1000);
-        const pendingCount = config.pendingCount ?? 0;
-        const oldestPendingAgeSec = config.oldestPendingAgeSec ?? (pendingCount > 0 ? 60 : null);
-        const estimatedDrainTimeSec = config.estimatedDrainTimeSec ?? (pendingCount > 0 ? 300 : 0);
-        return {
-          total: pendingCount,
-          expired: 0,
-          due: pendingCount,
-          deferred: 0,
-          near_ttl: config.nearTtl ?? 0,
-          oldest_pending_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
-          oldest_due_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
-          // The production helper recomputes estimatedDrainTimeSec from total,
-          // but callers can set pendingCount to match the desired estimate.
-          estimated_drain_time_sec: estimatedDrainTimeSec,
-        };
+      if (isPendingCapacityQuery(sql)) {
+        return makePendingCapacityRow(config);
       }
       if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
         const row = makeDispatchMetadataRow(config.dispatchMetadata ?? null);
@@ -121,7 +127,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     const store = installCacheStore();
     const prepare = vi.fn((sql: string) => {
       const first = vi.fn(async () => {
-        if (sql.includes("COUNT(*) AS total")) {
+        if (isPendingCapacityQuery(sql)) {
           throw new Error("pending capacity should have been reused");
         }
         if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
@@ -165,7 +171,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.pendingBacklog.count).toBe(PENDING_BACKLOG_THRESHOLD + 5);
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
-    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("COUNT(*) AS total"))).toBe(false);
+    expect(prepare.mock.calls.some(([sql]) => isPendingCapacityQuery(String(sql)))).toBe(false);
   });
 
   it("does not alert on first observation above threshold", async () => {
@@ -623,17 +629,8 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
     const prepare = vi.fn((sql: string) => {
       const bind = vi.fn(() => statement);
       const first = vi.fn(async () => {
-        if (sql.includes("COUNT(*) AS total")) {
-          return {
-            total: 0,
-            expired: 0,
-            due: 0,
-            deferred: 0,
-            near_ttl: 0,
-            oldest_pending_created_at: null,
-            oldest_due_created_at: null,
-            estimated_drain_time_sec: 0,
-          };
+        if (isPendingCapacityQuery(sql)) {
+          return makePendingCapacityRow();
         }
         if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
           const inMatch = sql.match(/status IN \(([^)]+)\)/);

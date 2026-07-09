@@ -45,7 +45,7 @@ function auditRow() {
 
 function pendingCapacityRow(active: number) {
   return {
-    match: "COUNT(*) AS total",
+    match: "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
     first: {
       total: active,
       expired: 0,
