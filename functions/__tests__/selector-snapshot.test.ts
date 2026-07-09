@@ -985,7 +985,7 @@ describe("selector-snapshot Pages Function", () => {
       });
       const { sid } = (await post.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      kv.__getStore().set(`s:${sid}`, JSON.stringify(buildSelectorSnapshotOutput({ datasetHash: "b".repeat(64) })));
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })));
 
       const response = await onRequest({
         request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {

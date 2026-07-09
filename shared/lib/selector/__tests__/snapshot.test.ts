@@ -3,6 +3,7 @@ import {
   computeSelectorSnapshotSid,
   createVerifiedSelectorSnapshot,
   validateSelectorSnapshot,
+  validateSelectorSnapshotInput,
   validateSelectorSnapshotResponse,
   validateVerifiedSelectorSnapshot,
 } from "../snapshot";
@@ -58,6 +59,20 @@ describe("selector snapshot contract", () => {
     expect(legacyProjection.snapshot.provenance).toBe("client-unverified");
     expect(legacyProjection.snapshot.verification).toBeUndefined();
     expect(computeSelectorSnapshotSid(verified)).not.toBe(computeSelectorSnapshotSid(legacyProjection.snapshot));
+  });
+
+  it("rejects invalid verification inputs and preserves legacy response validation", () => {
+    expect(validateSelectorSnapshotInput(null)).toEqual({ ok: false, error: "shape" });
+    expect(validateSelectorSnapshot(null)).toEqual({ ok: false, error: "shape" });
+    expect(() => createVerifiedSelectorSnapshot({} as never)).toThrow(
+      "Server-recomputed selector output failed snapshot validation",
+    );
+    expect(validateVerifiedSelectorSnapshot(null)).toEqual({ ok: false, error: "unsafe" });
+
+    const legacy = validateSelectorSnapshotResponse(buildSelectorSnapshotOutput());
+    expect(legacy.ok).toBe(true);
+    if (!legacy.ok) throw new Error(`Expected legacy snapshot, got ${legacy.error}`);
+    expect(legacy.snapshot.provenance).toBe("client-unverified");
   });
 
   it("rejects verified-looking payloads with tampered bindings or caller scores", () => {

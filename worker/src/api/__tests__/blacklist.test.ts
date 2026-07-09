@@ -357,4 +357,30 @@ describe("handleBlacklist", () => {
     expect(query?.sql).toContain("stablecoin = ? AND timestamp < ?");
     expect(query?.binds.slice(0, 6)).toEqual(["USDT", "USDT", 200, "USDT", 200, "b"]);
   });
+
+  it("uses timestamp and id keyset bindings for the default date sort", async () => {
+    const firstDb = mockD1([
+      { match: "blacklist_events", rows: [
+        makeBlacklistRow({ id: "newer", timestamp: 200 }),
+        makeBlacklistRow({ id: "older", timestamp: 100 }),
+      ] },
+    ]);
+    const first = await handleBlacklist(
+      firstDb,
+      new URL("https://x/api/blacklist?limit=1"),
+    );
+    const firstBody = await first.json() as { nextCursor: string | null };
+    expect(firstBody.nextCursor).toBeTruthy();
+
+    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
+    const next = await handleBlacklist(
+      nextDb,
+      new URL(`https://x/api/blacklist?limit=1&cursor=${firstBody.nextCursor}`),
+    );
+    expect(next.status).toBe(200);
+    const query = nextDb.getHistory().find((entry) => entry.sql.includes("pharos:blacklist-events:page"));
+    expect(query?.sql).toContain("timestamp < ?");
+    expect(query?.sql).toContain("timestamp = ? AND id < ?");
+    expect(query?.binds.slice(0, 3)).toEqual([200, 200, "newer"]);
+  });
 });
