@@ -9,6 +9,7 @@ import { parseSourceFile } from "./ts-ast.mjs";
 export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
   "shared/lib/format.ts",
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http/request-dispatch.ts",
@@ -34,12 +35,14 @@ export const TARGET_FILES = [
   "worker/src/api/api-key-requests.ts",
   "worker/src/api/api-key-requests/admin.ts",
   "worker/src/api/reclassify-atomic-roundtrips.ts",
+  "worker/src/api/telegram-webhook-parsing.ts",
   "worker/src/cron/daily-digest/collectors.ts",
   "worker/src/cron/daily-digest.ts",
   "worker/src/cron/dispatch-telegram-alerts.ts",
   "worker/src/cron/dex-liquidity/scoring.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts",
+  "worker/src/cron/dex-liquidity/staging-merge.ts",
   "worker/src/cron/sync-mint-burn.ts",
   "worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts",
   "worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts",
@@ -48,11 +51,15 @@ export const TARGET_FILES = [
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
+  "worker/src/cron/sync-fx-rates-helpers.ts",
+  "worker/src/cron/sync-yield-data.ts",
   "worker/src/cron/yield-config.ts",
   "worker/src/cron/yield-sync/sources.ts",
   "worker/src/lib/live-reserves-store.ts",
+  "worker/src/lib/scheduled-slot-fence.ts",
   "worker/src/lib/status-evaluation.ts",
   "worker/src/lib/status-reliability.ts",
+  "worker/src/lib/telegram-usage-analytics.ts",
 ];
 
 export const BASELINE_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-baseline.json");

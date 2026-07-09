@@ -23,6 +23,18 @@
     },
     "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
   },
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
+    "fileLines": 859,
+    "maxFunctionLines": 44,
+    "branchCount": 5,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 700,
+      "maxFunctionLines": 44,
+      "branchCount": 5
+    },
+    "notes": "Queue-redeem configuration is predominantly declarative, but its top-12 file size now has an explicit shrink-only budget. Split protocol families into focused config modules before adding another queue integration."
+  },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 152,
     "maxFunctionLines": 42,
@@ -323,6 +335,18 @@
     },
     "notes": "Admin mint/burn reclassification now scopes updates by chain and rejects malformed non-negative query params. Keep future repair policy changes covered by focused endpoint tests."
   },
+  "worker/src/api/telegram-webhook-parsing.ts": {
+    "fileLines": 434,
+    "maxFunctionLines": 95,
+    "branchCount": 78,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 380,
+      "maxFunctionLines": 80,
+      "branchCount": 65
+    },
+    "notes": "Webhook parsing surfaced after larger Worker files were split. Separate update-shape parsing from command/callback normalization and keep transport validation out of the parser family."
+  },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 26,
     "maxFunctionLines": 0,
@@ -394,6 +418,18 @@
       "branchCount": 40
     },
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
+  },
+  "worker/src/cron/dex-liquidity/staging-merge.ts": {
+    "fileLines": 607,
+    "maxFunctionLines": 368,
+    "branchCount": 65,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 500,
+      "maxFunctionLines": 280,
+      "branchCount": 50
+    },
+    "notes": "Staged-pool merge surfaced as a long-function hotspot after orchestration splits. Extract source-priority selection and candidate dedupe from D1 staging reads before extending merge policy."
   },
   "worker/src/cron/sync-mint-burn.ts": {
     "fileLines": 344,
@@ -491,6 +527,30 @@
     },
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
+    "fileLines": 898,
+    "maxFunctionLines": 78,
+    "branchCount": 74,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 650,
+      "maxFunctionLines": 70,
+      "branchCount": 55
+    },
+    "notes": "Replace the release waiver with an explicit shrink-only baseline. Provider fetch/parse adapters should move out of this shared normalization and run-state module before new FX sources are added."
+  },
+  "worker/src/cron/sync-yield-data.ts": {
+    "fileLines": 47,
+    "maxFunctionLines": 39,
+    "branchCount": 2,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 60,
+      "maxFunctionLines": 45,
+      "branchCount": 3
+    },
+    "notes": "Fetch, normalization, health/telemetry, and persistence now live in typed coordinator stage modules under yield-sync. Keep this public cron entrypoint as a thin stage sequencer."
+  },
   "worker/src/cron/yield-config.ts": {
     "fileLines": 65,
     "maxFunctionLines": 1,
@@ -527,6 +587,18 @@
     },
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
+  "worker/src/lib/scheduled-slot-fence.ts": {
+    "fileLines": 662,
+    "maxFunctionLines": 146,
+    "branchCount": 41,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 675,
+      "maxFunctionLines": 150,
+      "branchCount": 42
+    },
+    "notes": "Stale child-artifact reconciliation and event persistence now live behind scheduled-slot-reconciliation.ts. Keep claim, heartbeat, takeover, and finalization ownership in this fence without pulling D1 cleanup logic back in."
+  },
   "worker/src/lib/status-evaluation.ts": {
     "fileLines": 261,
     "maxFunctionLines": 133,
@@ -550,5 +622,17 @@
       "branchCount": 0
     },
     "notes": "This is now a facade over the split status-reliability helper modules. Preserve it as the import surface and keep implementation detail in the dedicated stores/views."
+  },
+  "worker/src/lib/telegram-usage-analytics.ts": {
+    "fileLines": 866,
+    "maxFunctionLines": 138,
+    "branchCount": 55,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 700,
+      "maxFunctionLines": 120,
+      "branchCount": 45
+    },
+    "notes": "Telegram usage analytics surfaced in the file-length set after the slot/yield shrink. Split SQL row loading, lifecycle aggregation, and operator projection before adding new analytics dimensions."
   }
 }

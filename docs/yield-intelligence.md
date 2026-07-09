@@ -719,7 +719,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 ### `sync-yield-data`
 
 **Schedule:** `20 * * * *` (every hour on a dedicated post-DEX trigger)
-**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + helper modules under `worker/src/cron/yield-sync/`
+**Files:** `worker/src/cron/sync-yield-data.ts` thin stage sequencer; `worker/src/cron/yield-sync/coordinator-{fetch,normalize,health-telemetry,persist}-stage.ts` orchestration stages; domain helpers under `worker/src/cron/yield-sync/`
 
 **Execution flow:**
 
@@ -749,7 +749,11 @@ Implementation stages:
 - `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-change tracking
 - `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes
 - `yield-sync/history.ts`: batched history preloads plus stale/orphan cleanup
-- `sync-yield-data.ts`: safety snapshot handling, orchestration glue, and degraded-mode policy
+- `yield-sync/coordinator-fetch-stage.ts`: preflight, writer-pause enforcement, published-generation repair, source-state loading, and safety-input progress
+- `yield-sync/coordinator-normalize-stage.ts`: source resolution, history loading/normalization, and cooperative evaluation progress
+- `yield-sync/coordinator-health-telemetry-stage.ts`: deterministic-source health, coverage guards, preview artifacts, degradation policy, and publication-readiness telemetry
+- `yield-sync/coordinator-persist-stage.ts`: generation publication, completion telemetry, and final cron metadata
+- `sync-yield-data.ts`: public cron entrypoint that sequences the four stages and preserves early degraded returns
 
 ### `sync-yield-supplemental`
 
@@ -1172,7 +1176,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 - `findBestLendingPool` — allowlist filtering, symbol match, address fallback, quality gates
 - `computeTvlWeightedMedianApy` — empty input, null/zero TVL, single row, TVL-weighted vs simple median, zero APY filtering
 
-**Integration tests:** `worker/src/cron/__tests__/sync-yield-data.test.ts`
+**Integration tests:** `worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts`, `worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts`, `worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts`, and `worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts`
 
 - Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage, and mixed benchmark publication
 - Deterministic/native coexistence: verifies on-chain rows can coexist with curated native rows without source-key collision
@@ -1253,7 +1257,10 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/components/yield-history-chart.tsx`                              | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                                                                                                    |
 | `src/components/yield-scatter-plot.tsx`                               | Risk-adjusted scatter visualization                                                                                                                                                                                           |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`                     | Unit tests for all pure yield functions                                                                                                                                                                                       |
-| `worker/src/cron/__tests__/sync-yield-data.test.ts`                   | Integration tests for sync-yield-data orchestration (on-chain, rate-derived, DL, supplemental-cache, cooldown, auto-discovery)                                                                                                |
+| `worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts` | Integration tests for yield discovery, tracked coverage guards, and source-envelope behavior                                                                                                                                |
+| `worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts` | Integration tests for lending opportunities, safety degradation, and deterministic-source cooldown behavior                                                                                                                 |
+| `worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts` | Integration tests for publication generations, cache guards, provenance, and writer-pause behavior                                                                                                                           |
+| `worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts`     | Integration tests for rate-derived sources, benchmarks, source-aware history, and cleanup behavior                                                                                                                           |
 | `worker/src/cron/__tests__/pool-filter.test.ts`                       | Tests wrapper-preserving pre-filter behavior for cached/direct DeFiLlama pool ingestion                                                                                                                                       |
 | `worker/src/cron/__tests__/yield-resolve.test.ts`                     | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                                                                                                      |
 | `worker/src/cron/__tests__/yield-cache.test.ts`                       | Cache parsing tests for DL pools and benchmark caches                                                                                                                                                                         |

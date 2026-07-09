@@ -103,22 +103,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
   },
-  "worker/src/cron/sync-fx-rates-helpers.ts": {
-    "disposition": "queued-p4",
-    "notes": "FX-rate helper module crossed the file-length candidate threshold after the multi-currency benchmark and provider-fallback work. Behavior is heavily tested; waive for this gate and split provider adapters from normalization in a dedicated FX cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-08",
-    "reviewAfter": "2026-10-08",
-    "nextAction": "Extract per-provider fetch/parse adapters from the shared normalization and benchmark-selection helpers."
-  },
-  "worker/src/cron/sync-yield-data.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield sync now exceeds the hotspot candidate threshold after progress/reporting and source-resolution changes in the current infrastructure branch. Keep it explicitly waived for this release gate; a focused follow-up should split orchestration, progress telemetry, and source-family handling.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-12",
-    "reviewAfter": "2026-09-12",
-    "nextAction": "Extract progress telemetry and source-family orchestration from the main sync-yield-data runner."
-  },
   "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts": {
     "disposition": "queued-p4",
     "notes": "The supplemental optional-protocol yield source crossed the branch-count candidate threshold after the Beefy chain-nested TVL fix and abort-awareness work. Waive for this gate; split per-protocol payload parsing from the shared supplemental family pipeline in a focused yield-source cleanup pass.",
