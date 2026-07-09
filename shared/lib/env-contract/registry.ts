@@ -692,10 +692,20 @@ export const ENV_BINDINGS = [
   {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
-    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations.",
+    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores client-unverified content-addressed `s:{sid}` entries. HMAC-IP write-quota counters live in D1 for atomic reservations.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },
+    },
+  },
+  {
+    key: "SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+    valueType: "string",
+    description: "Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored.",
+    docs: { includeInOperatorOriginAccess: true },
+    example: { section: "pagesSiteDataRequired", value: "" },
+    runtimes: {
+      pagesSiteData: { order: 4, status: "required" },
     },
   },
 ] satisfies readonly EnvBindingDefinition[];

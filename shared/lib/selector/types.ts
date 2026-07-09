@@ -489,6 +489,10 @@ export interface SelectorOutput {
   methodologyVersions: MethodologyVersions;
   /** Stable content hash over content-only fields of the merged universe. */
   datasetHash: string;
+  /** Added by the snapshot boundary; live engine output is not server-attested. */
+  provenance?: "client-unverified";
+  /** Exact persisted projection version added by the snapshot boundary. */
+  snapshotSchemaVersion?: 2;
   /**
    * Debug-only: full ranked survivor list, gated by `SELECTOR_DEBUG=true` at
    * build time. Tests read this; production output omits the field.

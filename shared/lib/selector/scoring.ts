@@ -117,7 +117,7 @@ function rawValueFor(
   return null;
 }
 
-function normalizeFor(
+export function normalizeSelectorComponentValue(
   key: WeightKey,
   raw: number | null,
 ): number | null {
@@ -163,7 +163,7 @@ function normalizeRow(
     if (k === "__profile") continue;
     const key = k as WeightKey;
     const raw = rawValueFor(key, row);
-    const normalized = normalizeFor(key, raw);
+    const normalized = normalizeSelectorComponentValue(key, raw);
     slots.push({ key, rawValue: raw, normalizedValue: normalized, baseWeight: w });
   }
   return slots;
