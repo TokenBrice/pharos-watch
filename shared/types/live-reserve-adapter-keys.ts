@@ -50,6 +50,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "spiko-api",
   "superstate-liquidity",
   "river-protocol-info",
+  "united-por",
   "usdgo-transparency",
   "usdh-native-markets",
   "usdai-proof-of-reserves",

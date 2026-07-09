@@ -375,6 +375,17 @@ const erc4626SingleAssetParamsSchema = z
 
 const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
 
+// Same wrapper + M token contract addresses as the primary chain, deployed on
+// another EVM network (M0's native-multichain model reuses addresses across
+// chains). Used to aggregate total supply / underlying M balance across all
+// deployments instead of reading only the primary chain.
+const m0WrapperAdditionalDeploymentSchema = z
+  .object({
+    chain: z.string(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const m0WrapperUnderlyingParamsSchema = z
   .object({
     mode: z.enum(["wrapped-m-token", "m-extension"]),
@@ -390,6 +401,7 @@ const m0WrapperUnderlyingParamsSchema = z
     sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    additionalDeployments: z.array(m0WrapperAdditionalDeploymentSchema).min(1).optional(),
   })
   .strict();
 
@@ -585,6 +597,12 @@ const spikoApiParamsSchema = z
   })
   .strict();
 
+const unitedPorParamsSchema = z
+  .object({
+    slice: reserveSliceDescriptorSchema,
+  })
+  .strict();
+
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
@@ -691,6 +709,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "spiko-api": { primaryInputKinds: ["http-json"], params: spikoApiParamsSchema },
   "superstate-liquidity": { primaryInputKinds: ["onchain-evm"], params: superstateLiquidityParamsSchema },
   "river-protocol-info": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "united-por": { primaryInputKinds: ["http-json"], params: unitedPorParamsSchema },
   "usdgo-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usdh-native-markets": { primaryInputKinds: ["http-html"], params: noParamsSchema },
   "usdai-proof-of-reserves": { primaryInputKinds: ["http-json"], params: noParamsSchema },

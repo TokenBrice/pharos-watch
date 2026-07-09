@@ -69,6 +69,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   reservoir: { status: "active", rationale: ACTIVE_RATIONALE },
   "ripple-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "river-protocol-info": { status: "active", rationale: ACTIVE_RATIONALE },
+  "united-por": { status: "active", rationale: ACTIVE_RATIONALE },
   "sgforge-coinvertible": { status: "active", rationale: ACTIVE_RATIONALE },
   "sgho-wrapper": { status: "active", rationale: ACTIVE_RATIONALE },
   "single-asset": { status: "active", rationale: ACTIVE_RATIONALE },

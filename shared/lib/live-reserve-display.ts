@@ -57,6 +57,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "spiko-api": "live",
   "superstate-liquidity": "live",
   "river-protocol-info": "proof",
+  "united-por": "live",
   "usdgo-transparency": "proof",
   "usdh-native-markets": "proof",
   "usdai-proof-of-reserves": "live",

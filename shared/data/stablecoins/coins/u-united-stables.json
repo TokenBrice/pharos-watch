@@ -189,19 +189,24 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "united-por",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "u-united-stables",
     "display": {
       "url": "https://u.tech/",
-      "label": "United Stables"
+      "label": "United Stables PoR"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://u.tech/u-client-api/v1/public/u/por"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+        "risk": "low"
       }
     }
   },

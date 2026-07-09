@@ -617,6 +617,17 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "united-por": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   "usdgo-transparency": {
     sourceModel: "dynamic-mix",
     evidenceClass: "weak-live-probe",
