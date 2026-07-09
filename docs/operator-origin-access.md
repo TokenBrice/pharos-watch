@@ -75,11 +75,12 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
 
-For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; production Pages hosts also require `SITE_API_ORIGIN=https://site-api.pharos.watch`. Bind `DB` to the shared D1 database for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.
+For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; every Pages host requires the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. Arbitrary, non-HTTPS, credentialed, port-bearing, and path-bearing origins fail closed before secrets are attached. Bind `DB` for attribution and selector quota writes, and configure the dedicated `SELECTOR_SNAPSHOT_IP_HASH_SECRET` HMAC pepper.
 
 ---
 
@@ -104,7 +105,7 @@ The current proxy now fails closed on its own trust boundary:
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
-- The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`, plus `Retry-After` when present so upstream backoff semantics survive the proxy layer.
+- The proxy reflects only a narrow response-header set back to the browser, then a final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
@@ -127,6 +128,7 @@ For the site-data proxy:
 
 - `SITE_API_SHARED_SECRET`
 - `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
+- `SELECTOR_SNAPSHOT_IP_HASH_SECRET`
 - `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
 
 Optional active overrides (the proxy has production defaults for these already):

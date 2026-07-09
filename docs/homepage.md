@@ -60,6 +60,8 @@ Derived helpers:
 - `bucketByDeviationBps(...)` mini-card aggregate helper in `src/lib/home-alt-aggregates.ts`
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
 
+Live homepage modules resolve query state through the shared `loading`, `ready`, `empty`, `unavailable`, and `stale-with-data` contract. A failed source without retained data renders an explicit unavailable state and retry action rather than a healthy or empty message. Retained data stays visible with its age and a stale notice, while a successful zero-row response can use the module's normal empty copy. The rankings workbench identifies failed source families instead of replacing them with the generic empty table.
+
 Starred stablecoin state is local to the browser:
 
 - localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` and `pharos:yield-watchlist:v1` keys are read once, merged into the canonical key, then deleted)
