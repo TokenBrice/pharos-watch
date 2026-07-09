@@ -29,7 +29,7 @@ If the ID is not tracked, the server shell returns a not-found-style fallback in
 
 If the ID is tracked but `coin.status === "pre-launch"`, the server route returns `PreLaunchDetail` instead of mounting the normal detail client.
 
-The `/stablecoin/[id]/yield/` subroute is generated for every non-pre-launch tracked coin because lending-opportunity rows can appear for any tracked stablecoin. Unknown IDs return `notFound()`. Tracked IDs get `noindex,follow` metadata, and the client renders an empty-state card when no live yield row exists; see [yield-intelligence.md](./yield-intelligence.md) for the per-source APY history contract.
+The `/stablecoin/[id]/yield/` subroute is statically generated for non-pre-launch coins that are intrinsically yield-bearing or have a curated deterministic auto-lending override. Those durable workbench routes use `noindex,follow` metadata. A lending opportunity can still appear dynamically for another tracked coin; when no static workbench exists, the Pages stablecoin function redirects that known coin to `/yield/?compare=<id>&from=detail-fallback` instead of serving a dead link. Unknown IDs retain normal static 404 handling. This policy removes low-value empty workbench pages from the Cloudflare export while preserving a useful handoff for runtime discoveries; see [yield-intelligence.md](./yield-intelligence.md) for the per-source APY history contract.
 
 ### Pre-launch detail variant
 

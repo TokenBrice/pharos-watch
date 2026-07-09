@@ -1245,7 +1245,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/app/yield/client.tsx`                                            | Interactive page: hero scatter, risk budget, filters, leaderboard, selector handoff strip, source board, and reference-rate surfaces                                                                                          |
 | `src/app/yield/source-board-model.ts`                                 | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks                                                 |
 | `src/app/yield/source-board.tsx`                                      | Compact `/yield` source-provenance board with clickable posture/confidence/depth segments                                                                                                                                     |
-| `src/app/stablecoin/[id]/yield/page.tsx`                              | SSG per-coin yield-analysis wrapper for every non-pre-launch tracked stablecoin; the client renders an empty state when no live yield row exists                                                                              |
+| `src/app/stablecoin/[id]/yield/page.tsx`                              | SSG per-coin yield-analysis wrapper for intrinsic yield coins and curated auto-lending overrides; other known coins fall back to filtered `/yield/` through the Pages stablecoin function                                    |
 | `src/app/stablecoin/[id]/yield/client.tsx`                            | Interactive per-coin yield-analysis surface with peer rail, APY history, warning timeline, and source-switch history                                                                                                          |
 | `src/components/yield-decision-ledger-card.tsx`                       | Shared compact "Why this source won" card for expanded rows, sheets, and detail yield sections                                                                                                                                |
 | `src/components/yield-detail-section.tsx`                             | Stablecoin detail-page yield section with warnings, decision-ledger card, source metadata, metric cards, and shared history chart                                                                                             |
@@ -1295,6 +1295,10 @@ deep-link reveals. Both surfaces must avoid duplicating panels.
 Deep-link yield pages are `noindex` and omitted from `sitemap.xml`; the indexable
 SEO surface remains `/yield/` plus each stablecoin detail page because the
 deep-link pages are runtime-data workbenches rather than static crawl targets.
+The static export materializes workbenches only for intrinsic yield coins and
+curated deterministic auto-lending overrides. A missing workbench for any other
+known coin redirects to the comparison-filtered `/yield/` surface, so dynamic
+lending discovery remains reachable without reserving ten export files per coin.
 
 ### Cross-surface handoffs
 
