@@ -61,6 +61,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "usdai-proof-of-reserves": "live",
   "usd1-bundle-oracle": "live",
   "usdd-data-platform": "live",
+  "usdtb-transparency": "live",
   yamato: "live",
   "zephyr-scanner": "proof",
 };

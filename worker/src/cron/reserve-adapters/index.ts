@@ -54,6 +54,7 @@ import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
+import { fetchUsdtbTransparencyReserves } from "./usdtb-transparency";
 import { fetchYamatoReserves } from "./yamato";
 import { fetchZephyrScannerReserves } from "./zephyr-scanner";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -116,6 +117,7 @@ const ADAPTER_FNS = {
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
+  "usdtb-transparency": fetchUsdtbTransparencyReserves,
   yamato: fetchYamatoReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
 } satisfies Record<LiveReserveAdapterKey, AdapterFn>;

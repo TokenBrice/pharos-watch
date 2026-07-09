@@ -20349,7 +20349,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "usdtb-transparency"
   },
   {
     "id": "usdu-unitas",

@@ -677,6 +677,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "usdai-proof-of-reserves": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usd1-bundle-oracle": { primaryInputKinds: ["onchain-evm"], params: usd1BundleOracleParamsSchema },
   "usdd-data-platform": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "usdtb-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   yamato: { primaryInputKinds: ["onchain-evm"], params: yamatoParamsSchema },
   "zephyr-scanner": { primaryInputKinds: ["http-json"], params: noParamsSchema },
 });

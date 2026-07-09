@@ -54,6 +54,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "usdai-proof-of-reserves",
   "usd1-bundle-oracle",
   "usdd-data-platform",
+  "usdtb-transparency",
   "yamato",
   "zephyr-scanner",
 ] as const;

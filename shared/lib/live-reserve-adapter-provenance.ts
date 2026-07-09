@@ -80,6 +80,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
   "usdai-proof-of-reserves": { status: "active", rationale: ACTIVE_RATIONALE },
   "usd1-bundle-oracle": { status: "active", rationale: ACTIVE_RATIONALE },
   "usdd-data-platform": { status: "active", rationale: ACTIVE_RATIONALE },
+  "usdtb-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   yamato: { status: "active", rationale: ACTIVE_RATIONALE },
   "zephyr-scanner": { status: "active", rationale: ACTIVE_RATIONALE },
 } as const satisfies Record<LiveReserveAdapterKey, LiveReserveAdapterProvenance>;

@@ -236,19 +236,18 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "usdtb-transparency",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdtb-ethena",
     "display": {
-      "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-      "label": "Anchorage Attestations"
+      "url": "https://usdtb.money/transparency",
+      "label": "USDtb Transparency"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
       }
     }
   },
