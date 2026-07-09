@@ -28,7 +28,7 @@
       "message": "Type '() => Promise<{ meta?: { changes?: number; }; }>' is not assignable to type '<T = Record<string, unknown>>() => Promise<D1Result<T>>'.",
       "count": 1,
       "examples": [
-        "86:9"
+        "104:9"
       ]
     },
     {
@@ -753,35 +753,6 @@
       ]
     },
     {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ [k: string]: never[]; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", { ...; }[]>': USDC, USDT, PAXG, XAUT, and 31 more.",
-      "count": 1,
-      "examples": [
-        "54:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ [k: string]: number; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", number>': USDC, USDT, PAXG, XAUT, and 31 more.",
-      "count": 4,
-      "examples": [
-        "50:5",
-        "51:5",
-        "52:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ USDT: number; USDC: number; USDO: number; PAXG: number; USDG: number; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", number>': XAUT, PYUSD, USD1, RLUSD, and 26 more.",
-      "count": 1,
-      "examples": [
-        "42:5"
-      ]
-    },
-    {
       "file": "src/components/__tests__/changelog-entry-card.test.tsx",
       "code": "TS2741",
       "message": "Property 'tag' is missing in type '{ label: string; description: string; }' but required in type 'SummaryItem'.",
@@ -1150,25 +1121,6 @@
       "count": 1,
       "examples": [
         "489:90"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/blacklist-api.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ [k: string]: never[]; }' to type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", { ...; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 2,
-      "examples": [
-        "47:26",
-        "194:37"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/blacklist-api.test.ts",
-      "code": "TS2741",
-      "message": "Property 'perCoinRecentEventTypes' is missing in type '{ usdcBlacklisted: number; usdtBlacklisted: number; goldBlacklisted: number; frozenAddresses: number; destroyedTotal: number; activeAddressCount: number; activeFrozenTotal: number; activeAmountGapCount: number; ... 11 more ...; perCoinQuarterlyEventTypes: Record<...>; }' but required in type '{ usdcBlacklisted: number; usdtBlacklisted: number; goldBlacklisted: number; frozenAddresses: number; destroyedTotal: number; activeAddressCount: number; activeFrozenTotal: number; activeAmountGapCount: number; ... 12 more ...; perCoinRecentEventTypes: Record<...>; }'.",
-      "count": 1,
-      "examples": [
-        "53:5"
       ]
     },
     {

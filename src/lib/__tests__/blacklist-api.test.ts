@@ -3,6 +3,19 @@ import { fetchBlacklistEvents, fetchBlacklistSummary } from "../blacklist-api";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { BlacklistEvent, BlacklistResponse, BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 
+type QuarterlyEventPoint =
+  BlacklistSummaryResponse["stats"]["perCoinQuarterlyEventTypes"][BlacklistStablecoin][number];
+type RecentEventCounts = NonNullable<
+  BlacklistSummaryResponse["stats"]["perCoinRecentEventTypes"]
+>[BlacklistStablecoin];
+
+function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
+  return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, createValue(symbol)])) as Record<
+    BlacklistStablecoin,
+    T
+  >;
+}
+
 function makeEvent(id: number): BlacklistEvent {
   const hex = id.toString(16).padStart(64, "0");
   const addressHex = id.toString(16).padStart(40, "0");
@@ -40,14 +53,8 @@ function jsonResponse(body: BlacklistResponse | BlacklistSummaryResponse): Respo
 }
 
 function makeLegacySummaryWithoutCurrentFreshness(): BlacklistSummaryResponse {
-  const zeroByCoin = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-    BlacklistStablecoin,
-    number
-  >;
-  const emptyQuarterly = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, []])) as Record<
-    BlacklistStablecoin,
-    Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
-  >;
+  const zeroByCoin = makePerCoinRecord(() => 0);
+  const emptyQuarterly = makePerCoinRecord<QuarterlyEventPoint[]>(() => []);
 
   return {
     stats: {
@@ -71,6 +78,11 @@ function makeLegacySummaryWithoutCurrentFreshness(): BlacklistSummaryResponse {
       perCoinFrozenTotal: zeroByCoin,
       perCoinDestroyedTotal: zeroByCoin,
       perCoinQuarterlyEventTypes: emptyQuarterly,
+      perCoinRecentEventTypes: makePerCoinRecord<RecentEventCounts>(() => ({
+        freezes: 0,
+        destroys: 0,
+        releases: 0,
+      })),
     },
     chart: [],
     chains: [{ id: "ethereum", name: "Ethereum" }],
@@ -171,33 +183,17 @@ describe("blacklist-api", () => {
         recentCount: 4,
         recentCount24h: 1,
         recoverableGapCount: 0,
-        perCoinBlacklistCounts: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-          BlacklistStablecoin,
-          number
-        >,
-        perCoinTotalEvents: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-          BlacklistStablecoin,
-          number
-        >,
-        perCoinFrozenAddressCount: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-          BlacklistStablecoin,
-          number
-        >,
-        perCoinFrozenTotal: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-          BlacklistStablecoin,
-          number
-        >,
-        perCoinDestroyedTotal: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
-          BlacklistStablecoin,
-          number
-        >,
-        perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, []])) as Record<
-          BlacklistStablecoin,
-          Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
-        >,
-        perCoinRecentEventTypes: Object.fromEntries(
-          BLACKLIST_STABLECOINS.map((s) => [s, { freezes: 0, destroys: 0, releases: 0 }]),
-        ) as Record<BlacklistStablecoin, { freezes: number; destroys: number; releases: number }>,
+        perCoinBlacklistCounts: makePerCoinRecord(() => 0),
+        perCoinTotalEvents: makePerCoinRecord(() => 0),
+        perCoinFrozenAddressCount: makePerCoinRecord(() => 0),
+        perCoinFrozenTotal: makePerCoinRecord(() => 0),
+        perCoinDestroyedTotal: makePerCoinRecord(() => 0),
+        perCoinQuarterlyEventTypes: makePerCoinRecord<QuarterlyEventPoint[]>(() => []),
+        perCoinRecentEventTypes: makePerCoinRecord<RecentEventCounts>(() => ({
+          freezes: 0,
+          destroys: 0,
+          releases: 0,
+        })),
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],
