@@ -35,6 +35,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
+import type { YieldRankingsResponse } from "@shared/types";
 
 interface YieldFreshnessBannerProps {
   dataUpdatedAt: number;
@@ -99,6 +100,79 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }
         <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{unit}</span>
       </span>
     </button>
+  );
+}
+
+function YieldApiWarnings({ warnings }: { warnings: YieldRankingsResponse["warnings"] }) {
+  if (!warnings || warnings.length === 0) return null;
+
+  return (
+    <section aria-label="Yield API warnings" className="space-y-2">
+      {warnings.map((warning) => (
+        <div
+          key={`${warning.code}:${warning.message}`}
+          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+        >
+          <p className="font-medium">{warning.message}</p>
+          {warning.reasons && warning.reasons.length > 0 ? (
+            <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">{warning.reasons.join(", ")}</p>
+          ) : null}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function SelectorHandoffNotice({ visible }: { visible: boolean }) {
+  if (!visible) return null;
+
+  return (
+    <section
+      aria-label="Stablecoin Picker handoff"
+      className="rounded-xl border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p>Opened from the Yield profile in Stablecoin Picker.</p>
+        <Link
+          href="/screener/picker/?p=yield"
+          className="pharos-focus-ring w-fit rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
+        >
+          Adjust picker answers
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function YieldEmptyStateNotice({
+  emptyState,
+  onFilterChange,
+}: {
+  emptyState: YieldViewModel["emptyState"];
+  onFilterChange: (key: string, value: string) => void;
+}) {
+  if (!emptyState.isEmpty) return null;
+
+  return (
+    <div className="pharos-empty-note px-4 py-6 text-center">
+      <p className="font-medium text-foreground">{emptyState.title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{emptyState.description}</p>
+      {emptyState.suggestions.length > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {emptyState.suggestions.map((suggestion) => (
+            <button
+              key={suggestion.filterKey}
+              type="button"
+              onClick={() => onFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")}
+              className="pharos-focus-ring pharos-control-pill gap-1.5"
+            >
+              <span>{suggestion.label}</span>
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">+{suggestion.gain}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,37 +387,8 @@ export function YieldClient() {
   return (
     <div className="space-y-6">
       <YieldFreshnessBanner dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
-      {data.warnings && data.warnings.length > 0 ? (
-        <section aria-label="Yield API warnings" className="space-y-2">
-          {data.warnings.map((warning) => (
-            <div
-              key={`${warning.code}:${warning.message}`}
-              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
-            >
-              <p className="font-medium">{warning.message}</p>
-              {warning.reasons && warning.reasons.length > 0 ? (
-                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">{warning.reasons.join(", ")}</p>
-              ) : null}
-            </div>
-          ))}
-        </section>
-      ) : null}
-      {arrivedFromSelector ? (
-        <section
-          aria-label="Stablecoin Picker handoff"
-          className="rounded-xl border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground"
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p>Opened from the Yield profile in Stablecoin Picker.</p>
-            <Link
-              href="/screener/picker/?p=yield"
-              className="pharos-focus-ring w-fit rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
-            >
-              Adjust picker answers
-            </Link>
-          </div>
-        </section>
-      ) : null}
+      <YieldApiWarnings warnings={data.warnings} />
+      <SelectorHandoffNotice visible={arrivedFromSelector} />
 
       <div className="flex flex-col gap-6">
         <FeatureHeroSplit
@@ -460,29 +505,7 @@ export function YieldClient() {
         </section>
 
         <section className="order-5 space-y-6" aria-label="Yield reference rates and sources">
-          {viewModel.emptyState.isEmpty ? (
-            <div className="pharos-empty-note px-4 py-6 text-center">
-              <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{viewModel.emptyState.description}</p>
-              {viewModel.emptyState.suggestions.length > 0 ? (
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  {viewModel.emptyState.suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.filterKey}
-                      type="button"
-                      onClick={() => handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")}
-                      className="pharos-focus-ring pharos-control-pill gap-1.5"
-                    >
-                      <span>{suggestion.label}</span>
-                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                        +{suggestion.gain}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          <YieldEmptyStateNotice emptyState={viewModel.emptyState} onFilterChange={handleFilterChange} />
           {visibleRows.length > 0 || sourceBoardModel.selectedCount > 0 ? (
             <>
               <ReferenceRatesStrip
