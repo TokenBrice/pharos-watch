@@ -47,6 +47,7 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
+import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import {
   buildMintAuthorityDetailViewModel,
@@ -72,17 +73,16 @@ import {
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
 import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import { resolveQueryViewState, type QueryViewState } from "@/lib/query-view-state";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
-import {
-  CASE_STUDY_OUTCOME_CHIPS,
-  CASE_STUDY_OUTCOME_LABELS,
-} from "@/app/learn/case-studies/case-study-outcomes";
+import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/app/learn/case-studies/case-study-outcomes";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
 
 export interface DetailQueryResource<TData> {
   data?: TData;
+  isLoading?: boolean;
   dataUpdatedAt: number;
   error: unknown | null;
   meta: ApiMeta | null;
@@ -97,6 +97,7 @@ export interface DetailSupplyHistoryInput {
   data?: SupplyHistoryPoint[];
   isLoading: boolean;
   error: unknown | null;
+  dataUpdatedAt: number;
 }
 
 export interface DetailStablecoinListInput extends DetailQueryResource<StablecoinListResponse> {
@@ -116,21 +117,32 @@ export interface StablecoinDetailViewModelQueryInputs {
 export interface DetailFlowsInput {
   data?: MintBurnFlowsResponse;
   isLoading: boolean;
+  error: unknown | null;
+  dataUpdatedAt: number;
+  meta: ApiMeta | null;
+  enabled: boolean;
 }
 
 export interface DetailBlacklistInput {
   summary?: BlacklistSummaryResponse;
   isLoading: boolean;
+  error: unknown | null;
+  dataUpdatedAt: number;
+  meta: ApiMeta | null;
+  enabled: boolean;
 }
 
 export interface DetailReservesInput {
   live?: ReserveResult | null;
   error?: unknown | null;
+  dataUpdatedAt: number;
+  isLoading: boolean;
+  enabled: boolean;
 }
 
 export interface StablecoinDetailViewModelSupplementalInputs {
-  yieldRankingsData?: YieldRankingsResponse;
-  stressSignalsData?: StressSignalsAllResponse;
+  yieldRankings: DetailQueryResource<YieldRankingsResponse> & { isLoading: boolean };
+  stressSignals: DetailQueryResource<StressSignalsAllResponse> & { isLoading: boolean };
   flows: DetailFlowsInput;
   blacklist: DetailBlacklistInput;
   reserves: DetailReservesInput;
@@ -138,12 +150,40 @@ export interface StablecoinDetailViewModelSupplementalInputs {
 }
 
 export type StablecoinDetailStaleQuery = {
-  preset: "stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards" | "redemptionBackstops";
+  preset?:
+    | "stablecoins"
+    | "pegSummary"
+    | "dexLiquidity"
+    | "reportCards"
+    | "redemptionBackstops"
+    | "yieldRankings"
+    | "stressSignals"
+    | "mintBurnFlows"
+    | "blacklist";
+  label?: string;
+  staleTime?: number;
   dataUpdatedAt: number;
   error: unknown | null;
   hasData: boolean;
   meta: ApiMeta | null;
 };
+
+export type StablecoinDetailFeatureStatus = QueryViewState | "unsupported" | "deferred";
+
+export interface StablecoinDetailFeatureState {
+  status: StablecoinDetailFeatureStatus;
+  dataUpdatedAt: number;
+  error: unknown | null;
+}
+
+export interface StablecoinDetailFeatureStates {
+  liquidity: StablecoinDetailFeatureState;
+  yield: StablecoinDetailFeatureState;
+  stress: StablecoinDetailFeatureState;
+  flows: StablecoinDetailFeatureState;
+  blacklist: StablecoinDetailFeatureState;
+  reserves: StablecoinDetailFeatureState;
+}
 
 type MarketSnapshot = {
   mcap: number;
@@ -276,15 +316,20 @@ function buildFeatureAvailability(
   coin: StablecoinMeta,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
 ): FeatureAvailabilitySnapshot {
-  const yieldRanking = supplemental.yieldRankingsData?.rankings.find((candidate) => candidate.id === id) ?? null;
+  const yieldRanking = supplemental.yieldRankings.data?.rankings.find((candidate) => candidate.id === id) ?? null;
   const hasYieldSection = (coin.flags.yieldBearing ?? false) || yieldRanking !== null;
-  const stressSignal = supplemental.stressSignalsData?.signals[id] ?? null;
+  const stressSignal = supplemental.stressSignals.data?.signals[id] ?? null;
   const hasFlows =
-    supplemental.flows.isLoading || !!supplemental.flows.data?.coins.find((entry) => entry.stablecoinId === id);
+    supplemental.flows.enabled &&
+    (supplemental.flows.isLoading ||
+      supplemental.flows.error != null ||
+      !!supplemental.flows.data?.coins.find((entry) => entry.stablecoinId === id));
   const isBlacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
   const hasBlacklist =
     isBlacklistSupported &&
+    supplemental.blacklist.enabled &&
     (supplemental.blacklist.isLoading ||
+      supplemental.blacklist.error != null ||
       (!!supplemental.blacklist.summary &&
         (supplemental.blacklist.summary.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0) > 0));
   const blacklistSymbol = isBlacklistSupported ? (coin.symbol as BlacklistStablecoin) : null;
@@ -300,7 +345,7 @@ function buildFeatureAvailability(
 }
 
 function staleQueryFrom<T>(
-  preset: StablecoinDetailStaleQuery["preset"],
+  preset: NonNullable<StablecoinDetailStaleQuery["preset"]>,
   query: DetailQueryResource<T>,
   hasData: (data: T | undefined) => boolean,
 ): StablecoinDetailStaleQuery {
@@ -313,14 +358,157 @@ function staleQueryFrom<T>(
   };
 }
 
-function buildStaleQueryInputs(queries: StablecoinDetailViewModelQueryInputs): StablecoinDetailStaleQuery[] {
-  return [
+function buildStaleQueryInputs(
+  queries: StablecoinDetailViewModelQueryInputs,
+  supplemental: StablecoinDetailViewModelSupplementalInputs,
+): StablecoinDetailStaleQuery[] {
+  const result: StablecoinDetailStaleQuery[] = [
     staleQueryFrom("stablecoins", queries.stablecoinList, (data) => !!data?.peggedAssets?.length),
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => !!data?.coins?.length),
     staleQueryFrom("dexLiquidity", queries.dexLiquidity, (data) => !!data),
     staleQueryFrom("reportCards", queries.reportCards, (data) => !!data?.cards?.length),
     staleQueryFrom("redemptionBackstops", queries.redemptionBackstops, (data) => !!data?.coins),
+    staleQueryFrom("yieldRankings", supplemental.yieldRankings, (data) => !!data),
+    staleQueryFrom("stressSignals", supplemental.stressSignals, (data) => !!data),
+    {
+      label: "Supply History",
+      staleTime: CRON_24H,
+      dataUpdatedAt: queries.supplyHistory.dataUpdatedAt,
+      error: queries.supplyHistory.error,
+      hasData: queries.supplyHistory.dataUpdatedAt > 0 || (queries.supplyHistory.data?.length ?? 0) > 0,
+      meta: null,
+    },
   ];
+
+  if (supplemental.flows.enabled) {
+    result.push({
+      preset: "mintBurnFlows",
+      dataUpdatedAt: supplemental.flows.dataUpdatedAt,
+      error: supplemental.flows.error,
+      hasData: supplemental.flows.data !== undefined,
+      meta: supplemental.flows.meta,
+    });
+  }
+  if (supplemental.blacklist.enabled) {
+    result.push({
+      preset: "blacklist",
+      dataUpdatedAt: supplemental.blacklist.dataUpdatedAt,
+      error: supplemental.blacklist.error,
+      hasData: supplemental.blacklist.summary !== undefined,
+      meta: supplemental.blacklist.meta,
+    });
+  }
+  if (supplemental.reserves.enabled) {
+    result.push({
+      label: "Live Reserves",
+      staleTime: CRON_RESERVE_SYNC,
+      dataUpdatedAt: supplemental.reserves.dataUpdatedAt,
+      error: supplemental.reserves.error,
+      hasData: supplemental.reserves.live != null,
+      meta: null,
+    });
+  }
+
+  return result;
+}
+
+function featureState(
+  status: StablecoinDetailFeatureStatus,
+  dataUpdatedAt: number,
+  error: unknown | null | undefined,
+): StablecoinDetailFeatureState {
+  return { status, dataUpdatedAt, error: error ?? null };
+}
+
+function buildFeatureStates(
+  id: string,
+  coin: StablecoinMeta,
+  queries: StablecoinDetailViewModelQueryInputs,
+  supplemental: StablecoinDetailViewModelSupplementalInputs,
+): StablecoinDetailFeatureStates {
+  const liquidityEntry = queries.dexLiquidity.data?.[id];
+  const yieldRanking = supplemental.yieldRankings.data?.rankings.find((entry) => entry.id === id);
+  const flowEntry = supplemental.flows.data?.coins.find((entry) => entry.stablecoinId === id);
+  const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
+  const blacklistEventCount = blacklistSupported
+    ? (supplemental.blacklist.summary?.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0)
+    : 0;
+
+  const yieldStatus =
+    supplemental.yieldRankings.error && supplemental.yieldRankings.data === undefined
+      ? "unavailable"
+      : supplemental.yieldRankings.error
+        ? "stale-with-data"
+        : supplemental.yieldRankings.isLoading
+          ? "loading"
+          : yieldRanking
+            ? "ready"
+            : coin.flags.yieldBearing
+              ? "empty"
+              : "unsupported";
+  const stressStatus = coin.flags.navToken
+    ? "unsupported"
+    : resolveQueryViewState({
+        hasData: supplemental.stressSignals.data !== undefined,
+        isLoading: supplemental.stressSignals.isLoading,
+        error: supplemental.stressSignals.error,
+        isEmpty: supplemental.stressSignals.data?.signals[id] == null,
+      });
+  const flowsStatus = !supplemental.flows.enabled
+    ? "deferred"
+    : supplemental.flows.error && supplemental.flows.data === undefined
+      ? "unavailable"
+      : supplemental.flows.error
+        ? "stale-with-data"
+        : supplemental.flows.isLoading
+          ? "loading"
+          : flowEntry
+            ? "ready"
+            : "unsupported";
+  const blacklistStatus = !blacklistSupported
+    ? "unsupported"
+    : !supplemental.blacklist.enabled
+      ? "deferred"
+      : supplemental.blacklist.error && supplemental.blacklist.summary === undefined
+        ? "unavailable"
+        : supplemental.blacklist.error
+          ? "stale-with-data"
+          : supplemental.blacklist.isLoading
+            ? "loading"
+            : blacklistEventCount > 0
+              ? "ready"
+              : "empty";
+  const reservesStatus = !coin.liveReservesConfig
+    ? "unsupported"
+    : !supplemental.reserves.enabled
+      ? "deferred"
+      : supplemental.reserves.error && supplemental.reserves.live == null
+        ? "unavailable"
+        : supplemental.reserves.error
+          ? "stale-with-data"
+          : supplemental.reserves.isLoading
+            ? "loading"
+            : supplemental.reserves.live
+              ? "ready"
+              : "empty";
+
+  return {
+    liquidity: featureState(
+      resolveQueryViewState({
+        hasData: queries.dexLiquidity.data !== undefined,
+        isLoading: queries.dexLiquidity.isLoading ?? false,
+        error: queries.dexLiquidity.error,
+        isEmpty: liquidityEntry == null,
+      }),
+      queries.dexLiquidity.dataUpdatedAt,
+      queries.dexLiquidity.error,
+    ),
+    yield: featureState(yieldStatus, supplemental.yieldRankings.dataUpdatedAt, supplemental.yieldRankings.error),
+    stress: featureState(stressStatus, supplemental.stressSignals.dataUpdatedAt, supplemental.stressSignals.error),
+    flows: featureState(flowsStatus, supplemental.flows.dataUpdatedAt, supplemental.flows.error),
+    blacklist: featureState(blacklistStatus, supplemental.blacklist.dataUpdatedAt, supplemental.blacklist.error),
+    reserves: featureState(reservesStatus, supplemental.reserves.dataUpdatedAt, supplemental.reserves.error),
+  };
 }
 
 export type StablecoinDetailSummary = StablecoinAiSummary;
@@ -385,6 +573,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   reserveFetchError: unknown | null;
   supplyError: unknown | null;
   staleQueries: StablecoinDetailStaleQuery[];
+  featureStates: StablecoinDetailFeatureStates;
   verdict: StablecoinVerdict;
   mintAuthority: MintAuthorityDetailViewModel;
   mintAuthorityDecentralizationDrag: MintAuthorityDecentralizationDragViewModel | null;
@@ -472,10 +661,7 @@ export interface HeroCardViewModel {
 }
 
 export type StablecoinDetailViewModel =
-  | LoadingViewModel
-  | ListErrorViewModel
-  | NotFoundViewModel
-  | StablecoinDetailReadyViewModel;
+  LoadingViewModel | ListErrorViewModel | NotFoundViewModel | StablecoinDetailReadyViewModel;
 
 interface StablecoinDetailViewModelCoreInputs {
   id: string;
@@ -714,8 +900,7 @@ export function buildStablecoinDetailHeroViewModel({
 
   const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
 
-  const earlyPegScore =
-    effectivePegScore !== null && pegScoreResult !== null && pegScoreResult.trackingSpanDays < 30;
+  const earlyPegScore = effectivePegScore !== null && pegScoreResult !== null && pegScoreResult.trackingSpanDays < 30;
 
   const pegScoreDisplay = buildPegScoreDisplay(isNavToken, pegScoreResult, recordedDepegEventCount);
   const liqDisplay = buildLiquidityDisplay(liquidityData);
@@ -843,6 +1028,7 @@ export function buildStablecoinDetailViewModel({
   const redemptionBackstop = redemptionBackstops.data?.coins?.[id];
   const reportCard = reportCards.data?.cards.find((candidate) => candidate.id === id);
   const featureAvailability = buildFeatureAvailability(id, coin, supplemental);
+  const featureStates = buildFeatureStates(id, coin, queries, supplemental);
   const variantRelationship = getClientVariantRelationship(id);
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);
@@ -856,7 +1042,7 @@ export function buildStablecoinDetailViewModel({
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
     reportCardGrade: reportCard?.overallGrade ?? null,
-    pegScore: isNavToken ? null : pegPrice.pegScoreResult?.pegScore ?? null,
+    pegScore: isNavToken ? null : (pegPrice.pegScoreResult?.pegScore ?? null),
     dewsBand: stressBand,
     mechanismArchetype: resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID) ?? undefined,
     governance: coin.flags.governance,
@@ -908,7 +1094,8 @@ export function buildStablecoinDetailViewModel({
     reserves,
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,
-    staleQueries: buildStaleQueryInputs(queries),
+    staleQueries: buildStaleQueryInputs(queries, supplemental),
+    featureStates,
     verdict,
     mintAuthority,
     mintAuthorityDecentralizationDrag,

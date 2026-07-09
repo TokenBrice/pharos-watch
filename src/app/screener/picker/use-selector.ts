@@ -1,10 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  runSelector,
-  validateSelectorSnapshot,
-  type SelectorInput,
-  type SelectorOutput,
-} from "@shared/lib/selector";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { runSelector, validateSelectorSnapshot, type SelectorInput, type SelectorOutput } from "@shared/lib/selector";
 import {
   useBluechipRatings,
   useDexLiquidity,
@@ -17,6 +12,7 @@ import {
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildSelectorRows } from "./selector-data-adapter";
 import { isValidSelectorSnapshotId } from "./selector-state";
+import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
 export type UseSelectorResult =
   | { status: "loading" }
@@ -33,35 +29,36 @@ export type UseSelectorResult =
   | { status: "error"; reason: string };
 
 type SnapshotFetchResult =
-  | { kind: "found"; output: SelectorOutput }
-  | { kind: "missing" }
-  | { kind: "error"; reason: string };
+  { kind: "found"; output: SelectorOutput } | { kind: "missing" } | { kind: "error"; reason: string };
 
-type SelectorEngineResult =
-  | { status: "ready"; output: SelectorOutput }
-  | { status: "error"; reason: "engine-failed" };
+type SelectorEngineResult = { status: "ready"; output: SelectorOutput } | { status: "error"; reason: "engine-failed" };
 
-async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
+async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<SnapshotFetchResult> {
   if (!isValidSelectorSnapshotId(sid)) {
     return { kind: "error", reason: "invalid-snapshot-id" };
   }
   try {
-    const response = await fetch(`/selector-snapshot/${encodeURIComponent(sid)}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
+    const payload = await requestJson<unknown>(`/selector-snapshot/${encodeURIComponent(sid)}`, {
+      signal,
+      init: {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
     });
-    if (response.status === 404) return { kind: "missing" };
-    if (response.status === 502) return { kind: "error", reason: "snapshot-corrupt" };
-    if (response.status === 500 || response.status === 503) {
-      return { kind: "error", reason: "snapshot-store-unavailable" };
-    }
-    if (!response.ok) throw new Error(`Snapshot fetch failed: ${response.status}`);
-    const snapshot = validateSelectorSnapshot(await response.json());
+    const snapshot = validateSelectorSnapshot(payload);
     if (!snapshot.ok) {
       return { kind: "error", reason: "snapshot-corrupt" };
     }
     return { kind: "found", output: snapshot.snapshot };
   } catch (error) {
+    if (isRequestCancellation(error)) throw error;
+    if (error instanceof RequestFailure && error.kind === "http") {
+      if (error.status === 404) return { kind: "missing" };
+      if (error.status === 502) return { kind: "error", reason: "snapshot-corrupt" };
+      if (error.status === 500 || error.status === 503) {
+        return { kind: "error", reason: "snapshot-store-unavailable" };
+      }
+    }
     return {
       kind: "error",
       reason:
@@ -74,10 +71,7 @@ async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
   }
 }
 
-export function useSelector(
-  input: SelectorInput | null,
-  sid: string | null,
-): UseSelectorResult {
+export function useSelector(input: SelectorInput | null, sid: string | null): UseSelectorResult {
   const stablecoins = useStablecoins();
   const pegSummary = usePegSummary();
   const reportCards = useReportCards();
@@ -86,6 +80,7 @@ export function useSelector(
   const yieldRankings = useYieldRankings();
   const bluechipRatings = useBluechipRatings();
   const redemptionBackstops = useRedemptionBackstops();
+  const snapshotRequests = useRef(new RequestSequence());
 
   const [snapshotState, setSnapshotState] = useState<
     | { kind: "idle" }
@@ -96,29 +91,38 @@ export function useSelector(
   >(sid ? { kind: "loading", sid } : { kind: "idle" });
 
   useEffect(() => {
+    const requests = snapshotRequests.current;
     if (!sid) {
+      requests.cancel();
       setSnapshotState({ kind: "idle" });
       return;
     }
     setSnapshotState({ kind: "loading", sid });
-    let cancelled = false;
-    void defaultFetchSnapshot(sid).then((result) => {
-      if (cancelled) return;
-      if (result.kind === "found") {
-        setSnapshotState({ kind: "found", sid, output: result.output });
-      } else if (result.kind === "missing") {
-        setSnapshotState({ kind: "miss", sid });
-      } else {
-        setSnapshotState({ kind: "error", sid, reason: result.reason });
-      }
-    });
+    void requests
+      .run((signal) => defaultFetchSnapshot(sid, signal))
+      .then((result) => {
+        if (result.kind === "found") {
+          setSnapshotState({ kind: "found", sid, output: result.output });
+        } else if (result.kind === "missing") {
+          setSnapshotState({ kind: "miss", sid });
+        } else {
+          setSnapshotState({ kind: "error", sid, reason: result.reason });
+        }
+      })
+      .catch((error) => {
+        if (!isRequestCancellation(error)) {
+          setSnapshotState({ kind: "error", sid, reason: "snapshot-fetch-failed" });
+        }
+      });
     return () => {
-      cancelled = true;
+      requests.cancel();
     };
   }, [sid]);
 
-  const liveInput =
-    input ?? (snapshotState.kind === "found" ? snapshotState.output.input : null);
+  const liveInput = input ?? (snapshotState.kind === "found" ? snapshotState.output.input : null);
+  const criticalQueryFailed =
+    (stablecoins.error != null && stablecoins.data === undefined) ||
+    (reportCards.error != null && reportCards.data === undefined);
 
   const datasetReady =
     stablecoins.data?.peggedAssets != null &&
@@ -188,7 +192,13 @@ export function useSelector(
         output: snapshotState.output,
         isFrozen: true,
         liveOutput: engineResult?.status === "ready" ? engineResult.output : null,
-        liveStatus: !datasetReady ? "loading" : engineResult?.status === "ready" ? "ready" : "error",
+        liveStatus: criticalQueryFailed
+          ? "error"
+          : !datasetReady
+            ? "loading"
+            : engineResult?.status === "ready"
+              ? "ready"
+              : "error",
       };
     }
     if (snapshotState.kind === "error") {
@@ -196,6 +206,7 @@ export function useSelector(
     }
     if (snapshotState.kind === "miss") {
       if (!input) return { status: "error", reason: "snapshot-not-found" };
+      if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
       if (!engineResult) return { status: "snapshot-loading" };
       if (engineResult.status === "error") return engineResult;
       return { status: "snapshot-miss", output: engineResult.output, bannerKey: "snapshot-miss" };
@@ -203,6 +214,7 @@ export function useSelector(
   }
 
   if (!input) return { status: "loading" };
+  if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
   if (!datasetReady) return { status: "loading" };
   if (!engineResult) return { status: "error", reason: "engine-failed" };
   if (engineResult.status === "error") return engineResult;

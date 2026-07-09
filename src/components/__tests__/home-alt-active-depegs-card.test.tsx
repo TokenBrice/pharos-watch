@@ -28,9 +28,7 @@ vi.mock("@/lib/stablecoin-static-data", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img alt={alt} {...props} />
-  ),
+  default: ({ alt = "", ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
 }));
 
 afterEach(() => {
@@ -61,6 +59,30 @@ function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("ActiveDepegsCard", () => {
+  it("does not claim all coins are on peg when either signal request fails", () => {
+    useActiveDepegEventsMock.mockReturnValue({
+      data: { events: [] },
+      isLoading: false,
+      loadedCount: 0,
+      error: new Error("depeg feed unavailable"),
+      refetch: vi.fn(),
+      dataUpdatedAt: 0,
+    });
+    usePegSummaryMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("peg summary unavailable"),
+      refetch: vi.fn(),
+      dataUpdatedAt: 0,
+    });
+    useLogosMock.mockReturnValue({ data: {} });
+
+    render(<ActiveDepegsCard />);
+
+    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+    expect(screen.queryByText("All on peg")).toBeNull();
+  });
+
   it("filters frozen coins out of the active depeg count and list", () => {
     useActiveDepegEventsMock.mockReturnValue({
       data: {

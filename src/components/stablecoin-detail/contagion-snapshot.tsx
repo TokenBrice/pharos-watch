@@ -16,6 +16,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { ReportCard, ReportCardsResponse, StablecoinData } from "@shared/types";
+import { QueryStateNotice } from "@/components/query-state-notice";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
@@ -45,8 +46,10 @@ export function ContagionSnapshot({
   hasCollateralUsage,
   collateralUsageEntries = [],
 }: ContagionSnapshotProps) {
-  const { data: rc } = useReportCards();
-  const { data: list } = useStablecoins();
+  const reportCardsQuery = useReportCards();
+  const stablecoinsQuery = useStablecoins();
+  const { data: rc } = reportCardsQuery;
+  const { data: list } = stablecoinsQuery;
   const { data: logos } = useLogos();
   const hasVariantCard = Boolean(variantRelationshipCard);
   const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
@@ -72,8 +75,14 @@ export function ContagionSnapshot({
     if (!hasContagion) return EMPTY_MCAP_MAP;
     return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRaw(coin)]));
   }, [hasContagion, peggedAssets]);
+  const sourceError = reportCardsQuery.error ?? stablecoinsQuery.error;
+  const hasSourceData = rc !== undefined && list !== undefined;
+  const sourceUpdatedTimes = [reportCardsQuery.dataUpdatedAt, stablecoinsQuery.dataUpdatedAt].filter(
+    (value) => value > 0,
+  );
+  const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
 
-  if (!hasContagion && !hasRightColumn) {
+  if (!hasContagion && !hasRightColumn && !sourceError) {
     return null;
   }
 
@@ -97,6 +106,17 @@ export function ContagionSnapshot({
         <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</DetailSectionTitle>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
+        {sourceError ? (
+          <QueryStateNotice
+            state={hasSourceData ? "stale-with-data" : "unavailable"}
+            label="Dependency graph data"
+            dataUpdatedAt={sourceDataUpdatedAt}
+            onRetry={() => {
+              void reportCardsQuery.refetch();
+              void stablecoinsQuery.refetch();
+            }}
+          />
+        ) : null}
         <div className={layoutClass}>
           {hasContagion ? (
             <ContagionGraph

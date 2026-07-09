@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types";
 
@@ -51,7 +53,8 @@ function formatPct(pct: number): string {
 }
 
 export function SupplyMovesCard(): React.JSX.Element {
-  const { data, isLoading } = useStablecoins();
+  const query = useStablecoins();
+  const { data, isLoading } = query;
   const { data: logos } = useLogos();
   const logoMap = logos ?? {};
 
@@ -67,6 +70,12 @@ export function SupplyMovesCard(): React.JSX.Element {
   const peakInUps = peak !== null && peak.id === ups[0]?.id;
   const upsDisplay = peakInUps ? ups.slice(1, 4) : ups.slice(0, 3);
   const downsDisplay = !peakInUps && peak !== null ? downs.slice(1, 4) : downs.slice(0, 3);
+  const state = resolveQueryViewState({
+    hasData: data !== undefined,
+    isLoading,
+    error: query.error,
+    isEmpty: ups.length === 0 && downs.length === 0,
+  });
 
   return (
     <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
@@ -83,10 +92,30 @@ export function SupplyMovesCard(): React.JSX.Element {
         }
       />
 
-      {isLoading || ups.length === 0 ? (
+      {state === "loading" ? (
         <Skeleton className="h-32 w-full" />
+      ) : state === "unavailable" || (state === "stale-with-data" && !peak) ? (
+        <QueryStateNotice
+          state={state}
+          label="Supply move data"
+          dataUpdatedAt={query.dataUpdatedAt}
+          onRetry={() => void query.refetch()}
+        />
+      ) : state === "empty" ? (
+        <div className="flex flex-1 items-center justify-center text-center font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          No qualifying 7-day supply moves
+        </div>
       ) : (
         <>
+          {state === "stale-with-data" ? (
+            <QueryStateNotice
+              state={state}
+              label="Supply move data"
+              dataUpdatedAt={query.dataUpdatedAt}
+              onRetry={() => void query.refetch()}
+              compact
+            />
+          ) : null}
           {peak && (
             <Link
               prefetch={false}
@@ -111,9 +140,7 @@ export function SupplyMovesCard(): React.JSX.Element {
               </span>
               <span
                 className={`pharos-numeric text-3xl font-bold tracking-tight ${
-                  peak.pctChange >= 0
-                    ? "text-green-700 dark:text-green-400"
-                    : "text-red-700 dark:text-red-400"
+                  peak.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                 }`}
               >
                 {formatPct(peak.pctChange)}
@@ -145,9 +172,7 @@ function MoverList({
 }): React.JSX.Element {
   return (
     <div className="space-y-1.5">
-      <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <ul className="flex flex-col font-mono text-xs">
         {rows.map((row) => {
           const logoSrc = logoMap[row.id];
@@ -159,14 +184,10 @@ function MoverList({
                 className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
               >
                 <CoinCell logoSrc={logoSrc} />
-                <span className="truncate uppercase tracking-tight text-foreground">
-                  {row.symbol}
-                </span>
+                <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
                 <span
                   className={`font-semibold pharos-numeric ${
-                    row.pctChange >= 0
-                      ? "text-green-700 dark:text-green-400"
-                      : "text-red-700 dark:text-red-400"
+                    row.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                   }`}
                 >
                   {formatPct(row.pctChange)}

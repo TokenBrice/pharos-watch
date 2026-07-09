@@ -20,8 +20,10 @@ type BuildStablecoinDetailViewModelOverrides = {
     redemptionBackstops?: Partial<BuildStablecoinDetailViewModelParams["queries"]["redemptionBackstops"]>;
   };
   supplemental?: {
-    yieldRankingsData?: BuildStablecoinDetailViewModelParams["supplemental"]["yieldRankingsData"];
-    stressSignalsData?: BuildStablecoinDetailViewModelParams["supplemental"]["stressSignalsData"];
+    yieldRankingsData?: BuildStablecoinDetailViewModelParams["supplemental"]["yieldRankings"]["data"];
+    stressSignalsData?: BuildStablecoinDetailViewModelParams["supplemental"]["stressSignals"]["data"];
+    yieldRankings?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["yieldRankings"]>;
+    stressSignals?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["stressSignals"]>;
     flows?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["flows"]>;
     blacklist?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["blacklist"]>;
     reserves?: Partial<BuildStablecoinDetailViewModelParams["supplemental"]["reserves"]>;
@@ -48,6 +50,7 @@ function makeBuildStablecoinDetailViewModelParams(
         data: [],
         isLoading: false,
         error: null,
+        dataUpdatedAt: 0,
         ...overrides.queries?.supplyHistory,
       },
       stablecoinList: {
@@ -92,20 +95,45 @@ function makeBuildStablecoinDetailViewModelParams(
       flows: {
         data: undefined,
         isLoading: false,
+        error: null,
+        dataUpdatedAt: 0,
+        meta: null,
+        enabled: true,
         ...overrides.supplemental?.flows,
       },
       blacklist: {
         summary: undefined,
         isLoading: false,
+        error: null,
+        dataUpdatedAt: 0,
+        meta: null,
+        enabled: true,
         ...overrides.supplemental?.blacklist,
       },
       reserves: {
         live: null,
         error: null,
+        dataUpdatedAt: 0,
+        isLoading: false,
+        enabled: true,
         ...overrides.supplemental?.reserves,
       },
-      yieldRankingsData: overrides.supplemental?.yieldRankingsData,
-      stressSignalsData: overrides.supplemental?.stressSignalsData,
+      yieldRankings: {
+        data: overrides.supplemental?.yieldRankingsData,
+        isLoading: false,
+        error: null,
+        dataUpdatedAt: 0,
+        meta: null,
+        ...overrides.supplemental?.yieldRankings,
+      },
+      stressSignals: {
+        data: overrides.supplemental?.stressSignalsData,
+        isLoading: false,
+        error: null,
+        dataUpdatedAt: 0,
+        meta: null,
+        ...overrides.supplemental?.stressSignals,
+      },
       nowMs: overrides.supplemental?.nowMs,
     },
   };
@@ -775,6 +803,57 @@ describe("stablecoin detail view-model builder", () => {
       error,
       hasData: false,
     });
+  });
+
+  it("distinguishes optional-source failure from unsupported or valid empty coverage", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const error = new Error("optional feeds unavailable");
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: { id: coin.id, coin },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: coin.id,
+                  name: coin.name,
+                  symbol: coin.symbol,
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          dexLiquidity: { data: undefined, error, dataUpdatedAt: 0 },
+        },
+        supplemental: {
+          yieldRankings: { data: undefined, error, dataUpdatedAt: 0 },
+          stressSignals: { data: undefined, error, dataUpdatedAt: 0 },
+          flows: { data: undefined, error, dataUpdatedAt: 0, enabled: true },
+          blacklist: { summary: undefined, error, dataUpdatedAt: 0, enabled: true },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+    expect(viewModel.featureStates).toMatchObject({
+      liquidity: { status: "unavailable", error },
+      yield: { status: "unavailable", error },
+      stress: { status: "unavailable", error },
+      flows: { status: "unavailable", error },
+      blacklist: { status: "unavailable", error },
+    });
+    expect(viewModel.hasFlows).toBe(true);
+    expect(viewModel.hasBlacklist).toBe(true);
+    expect(viewModel.staleQueries.map((query) => query.preset)).toEqual(
+      expect.arrayContaining(["dexLiquidity", "yieldRankings", "stressSignals", "mintBurnFlows", "blacklist"]),
+    );
   });
 
   it("enables the yield section for non-yield-bearing coins when a live ranking exists", () => {

@@ -11,11 +11,12 @@ import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-
 vi.mock("next/link", async () => {
   const React = await import("react");
   return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(
-      function MockLink({ href, children, ...rest }, ref) {
-        return React.createElement("a", { ref, href, ...rest }, children);
-      },
-    ),
+    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(function MockLink(
+      { href, children, ...rest },
+      ref,
+    ) {
+      return React.createElement("a", { ref, href, ...rest }, children);
+    }),
   };
 });
 
@@ -147,6 +148,8 @@ describe("SelectorSnapshotBanner", () => {
     );
 
     expect(screen.getByText(/Rank order changed/i)).toBeTruthy();
+    expect(screen.getByText("Unverified client snapshot")).toBeTruthy();
+    expect(screen.getByText(/did not reproduce its scores from canonical source data/i)).toBeTruthy();
     expect(screen.getByText(/USDC rank/i)).toBeTruthy();
     expect(screen.getByText(/1 → 2/i)).toBeTruthy();
   });

@@ -95,6 +95,20 @@ describe("DexLiquidityCard", () => {
     useDexLiquidityHistoryMock.mockReset();
   });
 
+  it("renders unavailable instead of hiding the module when the query fails", () => {
+    useDexLiquidityMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("liquidity failed"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+
+    expect(screen.getByRole("alert").textContent).toContain("DEX liquidity data is temporarily unavailable");
+  });
+
   it("promotes effective liquidity above total AMM liquidity in the overview metrics", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {

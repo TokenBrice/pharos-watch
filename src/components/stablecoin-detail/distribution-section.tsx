@@ -24,6 +24,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
 import { cn } from "@/lib/utils";
+import { QueryStateNotice } from "@/components/query-state-notice";
 
 /* ── Types ── */
 
@@ -116,12 +117,14 @@ function DonutCard({
   ariaLabel,
   data,
   total,
+  notice,
 }: {
   title: ReactNode;
   subtitle: string;
   ariaLabel: string;
   data: DonutDatum[];
   total: number;
+  notice?: ReactNode;
 }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -131,6 +134,7 @@ function DonutCard({
         <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
+        {notice}
         <div ref={ref} className="relative h-[200px] sm:h-[250px]" role="figure" aria-label={ariaLabel}>
           {ready ? (
             <>
@@ -198,6 +202,27 @@ function DonutCard({
   );
 }
 
+function DistributionUnavailableCard({
+  title,
+  label,
+  onRetry,
+}: {
+  title: ReactNode;
+  label: string;
+  onRetry: () => void;
+}) {
+  return (
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+      </CardHeader>
+      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+        <QueryStateNotice state="unavailable" label={label} onRetry={onRetry} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function DonutCardSkeleton({ title }: { title: ReactNode }) {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
@@ -214,7 +239,8 @@ function DonutCardSkeleton({ title }: { title: ReactNode }) {
 /* ── Main section ── */
 
 function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
-  const { data: listData, isLoading } = useStablecoins();
+  const query = useStablecoins();
+  const { data: listData, isLoading } = query;
 
   const { data, total } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
@@ -235,10 +261,20 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     });
   }, [listData, stablecoinId]);
 
-  if (isLoading) {
+  if (isLoading && !listData) {
     return (
       <DonutCardSkeleton
         title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+      />
+    );
+  }
+
+  if (query.error && !listData) {
+    return (
+      <DistributionUnavailableCard
+        title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+        label="Chain distribution data"
+        onRetry={() => void query.refetch()}
       />
     );
   }
@@ -252,12 +288,24 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}
       total={total}
+      notice={
+        query.error ? (
+          <QueryStateNotice
+            state="stale-with-data"
+            label="Chain distribution data"
+            dataUpdatedAt={query.dataUpdatedAt}
+            onRetry={() => void query.refetch()}
+            compact
+          />
+        ) : null
+      }
     />
   );
 }
 
 function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
-  const { data: liquidityMap, isLoading } = useDexLiquidity();
+  const query = useDexLiquidity();
+  const { data: liquidityMap, isLoading } = query;
 
   const liq = liquidityMap?.[stablecoinId];
   const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
@@ -272,8 +320,18 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     });
   }, [liq]);
 
-  if (isLoading) {
+  if (isLoading && !liquidityMap) {
     return <DonutCardSkeleton title="Liquidity by Protocol" />;
+  }
+
+  if (query.error && !liquidityMap) {
+    return (
+      <DistributionUnavailableCard
+        title="Liquidity by Protocol"
+        label="DEX distribution data"
+        onRetry={() => void query.refetch()}
+      />
+    );
   }
 
   if (isEmpty) return null;
@@ -300,6 +358,17 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`DEX liquidity TVL distribution across ${data.length} protocols`}
       data={data}
       total={total}
+      notice={
+        query.error ? (
+          <QueryStateNotice
+            state="stale-with-data"
+            label="DEX distribution data"
+            dataUpdatedAt={query.dataUpdatedAt}
+            onRetry={() => void query.refetch()}
+            compact
+          />
+        ) : null
+      }
     />
   );
 }

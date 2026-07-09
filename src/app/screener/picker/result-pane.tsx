@@ -586,6 +586,7 @@ function buildWhyText(rec: SelectorRecommendation): string {
 function humanizeSelectorError(reason: string): string {
   const labels: Record<string, string> = {
     offline: "you appear to be offline",
+    "selector-data-unavailable": "required market data is temporarily unavailable",
     "snapshot-not-found": "snapshot not found",
     "snapshot-store-unavailable": "snapshot store unavailable",
     "snapshot-corrupt": "snapshot data is corrupt",

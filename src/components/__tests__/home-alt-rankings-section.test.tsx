@@ -141,4 +141,20 @@ describe("HomeAltRankingsSection", () => {
     );
     expect(stablecoinTablePropsMock.mock.calls[0]?.[0]).not.toHaveProperty("usePageVerticalScroll");
   });
+
+  it("does not render a generic empty table when the market query fails", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("market feed unavailable"),
+      refetch: vi.fn(),
+      dataUpdatedAt: 0,
+    });
+
+    render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
+
+    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+    expect(screen.getByText("Stablecoin rankings are temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByTestId("stablecoin-table")).toBeNull();
+  });
 });

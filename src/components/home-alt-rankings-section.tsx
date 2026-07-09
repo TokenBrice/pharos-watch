@@ -14,9 +14,11 @@ import {
   buildHomepageOptionalViewModel,
 } from "@/components/homepage-client-view-model";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import type { ColumnId } from "@/lib/column-visibility";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 
 const StablecoinTable = dynamic(() => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable), {
   loading: () => (
@@ -55,12 +57,17 @@ interface HomeAltRankingsSectionProps {
 export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps) {
   const filters = useHomeAltFilters();
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: stablecoinsData, isLoading } = useStablecoins();
+  const stablecoinsQuery = useStablecoins();
+  const pegSummaryQuery = usePegSummary();
+  const dexLiquidityQuery = useDexLiquidity();
+  const reportCardsQuery = useReportCards();
+  const stressSignalsQuery = useStressSignals();
+  const { data: stablecoinsData, isLoading } = stablecoinsQuery;
   const { data: logos } = useLogos();
-  const { data: pegSummaryData } = usePegSummary();
-  const { data: dexLiquidity } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCards();
-  const { data: stressData } = useStressSignals();
+  const { data: pegSummaryData } = pegSummaryQuery;
+  const { data: dexLiquidity } = dexLiquidityQuery;
+  const { data: reportCardsData } = reportCardsQuery;
+  const { data: stressData } = stressSignalsQuery;
   const pinned = usePinnedStablecoins();
 
   const { reportCardMap } = useMemo(
@@ -77,6 +84,27 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
       }),
     [stablecoinsData, pegSummaryData, reportCardMap, filters.activeFilters, searchQuery],
   );
+  const stablecoinsState = resolveQueryViewState({
+    hasData: stablecoinsData !== undefined,
+    isLoading,
+    error: stablecoinsQuery.error,
+    isEmpty: stablecoinsData?.peggedAssets.length === 0,
+  });
+  const failedQueries = [
+    { label: "market", query: stablecoinsQuery, hasData: stablecoinsData !== undefined },
+    { label: "peg", query: pegSummaryQuery, hasData: pegSummaryData !== undefined },
+    { label: "liquidity", query: dexLiquidityQuery, hasData: dexLiquidity !== undefined },
+    { label: "safety", query: reportCardsQuery, hasData: reportCardsData !== undefined },
+    { label: "stress", query: stressSignalsQuery, hasData: stressData !== undefined },
+  ].filter((entry) => entry.query.error != null);
+  const failureState = failedQueries.some((entry) => !entry.hasData) ? "unavailable" : "stale-with-data";
+  const failureLabel =
+    failedQueries.length > 0 ? `${failedQueries.map((entry) => entry.label).join(", ")} ranking data` : "ranking data";
+  const failedUpdatedTimes = failedQueries.map((entry) => entry.query.dataUpdatedAt).filter((value) => value > 0);
+  const failedDataUpdatedAt = failedUpdatedTimes.length > 0 ? Math.min(...failedUpdatedTimes) : 0;
+  const retryFailedQueries = () => {
+    for (const entry of failedQueries) void entry.query.refetch();
+  };
 
   return (
     <div className="space-y-5">
@@ -84,40 +112,53 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
         <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           Stablecoin Overview
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Showing{" "}
-          <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
-          active stablecoins with live market data — pre-launch and frozen excluded,{" "}
-          <Link
-            href="/screener/"
-            className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
-          >
-            see Screener
-          </Link>
-          .
-        </p>
+        {stablecoinsState === "unavailable" ? (
+          <p className="text-sm text-muted-foreground">Stablecoin rankings are temporarily unavailable.</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
+            active stablecoins with live market data — pre-launch and frozen excluded,{" "}
+            <Link
+              href="/screener/"
+              className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
+            >
+              see Screener
+            </Link>
+            .
+          </p>
+        )}
       </header>
-      <StablecoinTable
-        data={stablecoinsData?.peggedAssets}
-        isLoading={isLoading}
-        activeFilters={filters.activeFilters}
-        logos={logos}
-        pegRates={pegRates}
-        pegScores={pegScores}
-        dexLiquidity={dexLiquidity ?? undefined}
-        reportCards={reportCardMap}
-        initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
-        columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
-        showHeaderMethodologyHints={false}
-        pinnedStablecoinIds={pinned.pinnedIds}
-        onTogglePinnedStablecoin={pinned.togglePinned}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onClearSearch={() => setSearchQuery("")}
-        toolbarEyebrow=""
-        toolbarDescription={null}
-        toolbarVariant="figmaOverview"
-      />
+      {failedQueries.length > 0 ? (
+        <QueryStateNotice
+          state={failureState}
+          label={failureLabel}
+          dataUpdatedAt={failedDataUpdatedAt}
+          onRetry={retryFailedQueries}
+        />
+      ) : null}
+      {stablecoinsState !== "unavailable" ? (
+        <StablecoinTable
+          data={stablecoinsData?.peggedAssets}
+          isLoading={isLoading}
+          activeFilters={filters.activeFilters}
+          logos={logos}
+          pegRates={pegRates}
+          pegScores={pegScores}
+          dexLiquidity={dexLiquidity ?? undefined}
+          reportCards={reportCardMap}
+          initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
+          columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
+          showHeaderMethodologyHints={false}
+          pinnedStablecoinIds={pinned.pinnedIds}
+          onTogglePinnedStablecoin={pinned.togglePinned}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClearSearch={() => setSearchQuery("")}
+          toolbarEyebrow=""
+          toolbarDescription={null}
+          toolbarVariant="figmaOverview"
+        />
+      ) : null}
       <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
     </div>
   );
