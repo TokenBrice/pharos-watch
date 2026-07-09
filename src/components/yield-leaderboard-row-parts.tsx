@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
+import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
@@ -227,7 +228,11 @@ export function YieldSafetyBadge({
       </Badge>
     );
   }
-  return <span className="text-muted-foreground" aria-label={safetySrLabel}>{"—"}</span>;
+  return (
+    <span className="text-muted-foreground" aria-label={safetySrLabel}>
+      {"—"}
+    </span>
+  );
 }
 
 export function YieldSourceDetails({
@@ -436,53 +441,60 @@ export function YieldExpandedDetails({
             availableSources={availableSources}
           />
         </div>
-        <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source</p>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5">
-              <TableSourceLink href={row.yieldSourceUrl} className="text-sm font-medium text-foreground" stopPropagation>
-                {row.yieldSource}
-              </TableSourceLink>
-              {row.provenance?.sourceSwitch ? (
-                <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                  source changed
-                </span>
-              ) : null}
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source</p>
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                <TableSourceLink
+                  href={row.yieldSourceUrl}
+                  className="text-sm font-medium text-foreground"
+                  stopPropagation
+                >
+                  {row.yieldSource}
+                </TableSourceLink>
+                {row.provenance?.sourceSwitch ? (
+                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                    source changed
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
-          <ExpandedMetricSection title="Benchmark">
-            <p className="mt-0.5 text-xs text-foreground">{benchmarkReferenceText}</p>
-          </ExpandedMetricSection>
-          <ExpandedMetricSection title="Sources">
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {totalSourceCount} {totalSourceCount === 1 ? "source" : "sources"} tracked
-            </p>
-          </ExpandedMetricSection>
-          {row.warningSignals.length > 0 ? (
-            <ExpandedMetricSection title="Signals">
-              <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
-                {row.warningSignals.map((signal) => (
-                  <li key={signal}>
-                    <span>{formatYieldWarningSignal(signal)}</span>
-                    <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
-                  </li>
-                ))}
-              </ul>
+            <ExpandedMetricSection title="Benchmark">
+              <p className="mt-0.5 text-xs text-foreground">{benchmarkReferenceText}</p>
             </ExpandedMetricSection>
-          ) : null}
-          {altSourceCount > 0 ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenSourceSheet(row.id);
-              }}
-              className="pharos-focus-ring mt-auto inline-flex items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-mono text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={`${totalSourceCount} yield sources — open source explorer`}
-            >
-              +{altSourceCount} alt sources
-            </button>
-          ) : null}
+            <ExpandedMetricSection title="Sources">
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {totalSourceCount} {totalSourceCount === 1 ? "source" : "sources"} tracked
+              </p>
+            </ExpandedMetricSection>
+            {row.warningSignals.length > 0 ? (
+              <ExpandedMetricSection title="Signals">
+                <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
+                  {row.warningSignals.map((signal) => (
+                    <li key={signal}>
+                      <span>{formatYieldWarningSignal(signal)}</span>
+                      <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </ExpandedMetricSection>
+            ) : null}
+            {altSourceCount > 0 ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenSourceSheet(row.id);
+                }}
+                className="pharos-focus-ring mt-auto inline-flex items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-mono text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label={`${totalSourceCount} yield sources — open source explorer`}
+              >
+                +{altSourceCount} alt sources
+              </button>
+            ) : null}
+          </div>
+          <YieldDecisionLedgerCard ledger={row.decisionLedger} showAlternatives={false} />
         </div>
       </div>
     </div>

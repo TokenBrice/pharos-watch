@@ -10,7 +10,7 @@ import {
 import type { YieldRanking } from "@shared/types";
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? <div>{children}</div> : null,
+  Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
@@ -26,7 +26,9 @@ vi.mock("@/components/yield-history-chart", () => ({
 
 vi.mock("@/components/table/client", () => ({
   TableSourceLink: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
-    <a href={href} className={className}>{children}</a>
+    <a href={href} className={className}>
+      {children}
+    </a>
   ),
 }));
 
@@ -138,6 +140,21 @@ describe("YieldSourceSheet", () => {
             benchmarkFallbackMode: null,
             anomalies: [],
           },
+          decisionLedger: {
+            selectedReasonCode: "curated-over-discovered",
+            previousBestSourceKey: "alt-usdc",
+            sourceSwitch: true,
+            apy30dDeltaFromPrevious: 0.8,
+            rejectedCount: 1,
+            alternatives: [
+              {
+                sourceKey: "alt-usdc",
+                yieldSource: "usdc-alt",
+                apy30dDelta: -0.2,
+                rejectionReasonCode: "lower-confidence",
+              },
+            ],
+          },
         }}
         logo={undefined}
         riskFreeRate={0.02}
@@ -151,8 +168,11 @@ describe("YieldSourceSheet", () => {
     expect(screen.getAllByText("best-usdc").length).toBeGreaterThan(0);
     expect(screen.getByText("Previous source:")).toBeTruthy();
     expect(screen.getAllByText("usdc-alt").length).toBeGreaterThan(0);
-    expect(screen.getByText("alt-usdc")).toBeTruthy();
-    expect(screen.getByText("Higher confidence than retained alternates.")).toBeTruthy();
+    expect(screen.getAllByText("alt-usdc").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Why this source won")).toBeTruthy();
+    expect(screen.getByText("Curated source preferred")).toBeTruthy();
+    expect(screen.getByText("Source changed (+0.80% APY30d)")).toBeTruthy();
+    expect(screen.getByText("1 alternate rejected")).toBeTruthy();
   });
 
   it("renders the confidence-tier color pill with sentence-cased label", () => {
@@ -227,7 +247,9 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    expect(screen.getAllByTestId("yield-source-risk-bar").some((node) => node.textContent === "unavailable")).toBe(true);
+    expect(screen.getAllByTestId("yield-source-risk-bar").some((node) => node.textContent === "unavailable")).toBe(
+      true,
+    );
   });
 
   it("renders a freshness stamp when sourceAgeSeconds is provided", () => {
@@ -246,9 +268,9 @@ describe("YieldSourceSheet", () => {
       />,
     );
 
-    const stamp = screen.getAllByText("1h ago").find((node) =>
-      node.getAttribute("title") === "Source observed 1h ago (fresh)"
-    );
+    const stamp = screen
+      .getAllByText("1h ago")
+      .find((node) => node.getAttribute("title") === "Source observed 1h ago (fresh)");
     expect(stamp).toBeTruthy();
   });
 
@@ -371,25 +393,27 @@ describe("YieldSourceSheet", () => {
     const base = makeRanking("usdc", "best-usdc", "alt-usdc");
     render(
       <YieldSourceSheet
-        ranking={{
-          ...base,
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-          altSources: [
-            {
-              sourceKey: "alt-usdc",
-              yieldSource: "usdc-alt",
-              yieldSourceUrl: null,
-              yieldType: "lending-vault",
-              currentApy: 0.04,
-              apy30d: 0.04,
-              sourceTvlUsd: 10_000_000,
-              dataSource: "defillama",
-              sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
-            },
-          ],
-        } as unknown as YieldRanking}
+        ranking={
+          {
+            ...base,
+            dataSource: "defillama",
+            sourceTvlUsd: 10_000_000,
+            sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+            altSources: [
+              {
+                sourceKey: "alt-usdc",
+                yieldSource: "usdc-alt",
+                yieldSourceUrl: null,
+                yieldType: "lending-vault",
+                currentApy: 0.04,
+                apy30d: 0.04,
+                sourceTvlUsd: 10_000_000,
+                dataSource: "defillama",
+                sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
+              },
+            ],
+          } as unknown as YieldRanking
+        }
         logo={undefined}
         riskFreeRate={0.02}
         medianApy={0.03}
@@ -408,25 +432,27 @@ describe("YieldSourceSheet", () => {
     const base = makeRanking("usdc", "best-usdc", "alt-usdc");
     render(
       <YieldSourceSheet
-        ranking={{
-          ...base,
-          dataSource: "defillama",
-          sourceTvlUsd: 10_000_000,
-          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-          altSources: [
-            {
-              sourceKey: "alt-usdc",
-              yieldSource: "usdc-alt",
-              yieldSourceUrl: null,
-              yieldType: "lending-vault",
-              currentApy: 0.04,
-              apy30d: 0.04,
-              sourceTvlUsd: 10_000_000,
-              dataSource: "defillama",
-              sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
-            },
-          ],
-        } as unknown as YieldRanking}
+        ranking={
+          {
+            ...base,
+            dataSource: "defillama",
+            sourceTvlUsd: 10_000_000,
+            sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+            altSources: [
+              {
+                sourceKey: "alt-usdc",
+                yieldSource: "usdc-alt",
+                yieldSourceUrl: null,
+                yieldType: "lending-vault",
+                currentApy: 0.04,
+                apy30d: 0.04,
+                sourceTvlUsd: 10_000_000,
+                dataSource: "defillama",
+                sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+              },
+            ],
+          } as unknown as YieldRanking
+        }
         logo={undefined}
         riskFreeRate={0.02}
         medianApy={0.03}

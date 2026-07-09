@@ -8,8 +8,13 @@ import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } fr
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import {
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  YIELD_SOURCE_POSTURE_DEFINITIONS,
+  formatYieldSourceRiskSummary,
+} from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { formatYieldDecisionReasonLine } from "@/lib/yield-decision-ledger";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -30,6 +35,26 @@ interface CompareRowDescriptor {
   label: string;
   align: "left" | "right";
   render: (row: YieldViewModelRow) => string;
+}
+
+function formatSourcePosture(row: YieldViewModelRow): string {
+  return row.sourcePosture ? (YIELD_SOURCE_POSTURE_DEFINITIONS[row.sourcePosture]?.label ?? row.sourcePosture) : "—";
+}
+
+function formatMaterialSourceRisk(row: YieldViewModelRow): string {
+  const summary = formatYieldSourceRiskSummary(row.sourceRisk);
+  return summary ? summary.replace(/^Source risk\s+/u, "") : "—";
+}
+
+function formatVenueTier(row: YieldViewModelRow): string {
+  const tier = row.sourceRisk?.venueRiskTier ?? null;
+  if (!tier) return "—";
+  const label = tier.charAt(0).toUpperCase() + tier.slice(1);
+  const weighted = row.sourceRisk?.venueRiskWeighted;
+  const weightedLabel = typeof weighted === "number" && Number.isFinite(weighted) ? ` (${weighted.toFixed(1)}/5)` : "";
+  const confidence = row.sourceRisk?.venueRiskConfidence;
+  const confidenceLabel = confidence && confidence !== "verified" ? `, ${confidence} confidence` : "";
+  return `${label}${weightedLabel}${confidenceLabel}`;
 }
 
 const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
@@ -61,6 +86,30 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     label: "Source",
     align: "left",
     render: (row) => row.yieldSource,
+  },
+  {
+    key: "sourcePosture",
+    label: "Source posture",
+    align: "left",
+    render: formatSourcePosture,
+  },
+  {
+    key: "sourceRisk",
+    label: "Source risk",
+    align: "right",
+    render: formatMaterialSourceRisk,
+  },
+  {
+    key: "venueTier",
+    label: "Venue tier",
+    align: "left",
+    render: formatVenueTier,
+  },
+  {
+    key: "decisionReason",
+    label: "Decision reason",
+    align: "left",
+    render: (row) => formatYieldDecisionReasonLine(row.decisionLedger) ?? "—",
   },
   {
     key: "depth",

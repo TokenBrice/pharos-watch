@@ -291,6 +291,24 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
   });
 
+  it("renders the decision-ledger card in expanded row details", () => {
+    const row = {
+      ...baseRow,
+      decisionLedger: {
+        selectedReasonCode: "curated-over-discovered",
+        sourceSwitch: false,
+        rejectedCount: 1,
+        alternatives: [],
+      },
+    } as YieldViewModelRow;
+
+    renderBoard(row, true);
+
+    expect(screen.getByLabelText("Why this source won")).toBeTruthy();
+    expect(screen.getByText("Curated source preferred")).toBeTruthy();
+    expect(screen.getByText("1 alternate rejected")).toBeTruthy();
+  });
+
   it("does not render the strip when the row is collapsed", () => {
     renderBoard(baseRow, false);
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();

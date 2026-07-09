@@ -25,7 +25,6 @@ import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
-import { YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
@@ -35,6 +34,7 @@ import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { StatTile } from "@/components/stat-tile";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
+import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
 
 interface YieldDetailSectionProps {
@@ -132,18 +132,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
   const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
   const excessYield = ranking.excessYield;
-  const selectedDecisionReason = ranking.decisionLedger?.selectedReasonCode
-    ? YIELD_DECISION_REASON_LABELS[ranking.decisionLedger.selectedReasonCode]
-    : null;
-  const legacySelectionReason = ranking.provenance?.selectionReason ?? null;
-  const selectionReason = selectedDecisionReason ?? legacySelectionReason;
-  const rejectedAlternatives =
-    ranking.decisionLedger?.alternatives
-      .map((alternative) => {
-        const reason = YIELD_DECISION_REJECTION_REASON_LABELS[alternative.rejectionReasonCode];
-        return reason ? `${alternative.yieldSource}: ${reason}` : null;
-      })
-      .filter((label): label is string => Boolean(label)) ?? [];
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
@@ -273,6 +261,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         showVenueBreakdown={false}
       />
 
+      <YieldDecisionLedgerCard ledger={ranking.decisionLedger} />
+
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
           <span className="font-semibold text-foreground">
@@ -319,10 +309,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </>
           ) : null}
         </div>
-        {selectionReason ? <p className="mt-2 text-[11px] text-muted-foreground">{selectionReason}</p> : null}
-        {rejectedAlternatives.length > 0 ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">Alternates: {rejectedAlternatives.join("; ")}.</p>
-        ) : null}
       </div>
 
       {view.sourceExplorer.retainedAlternates.length >= 2 ? (

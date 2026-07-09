@@ -521,8 +521,12 @@ describe("YieldDetailSection", () => {
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
+    expect(screen.getByLabelText("Why this source won")).toBeTruthy();
     expect(screen.getByText("Curated source preferred")).toBeTruthy();
-    expect(screen.getByText("Alternates: Alt Source: lower confidence.")).toBeTruthy();
+    expect(screen.getByText("1 alternate rejected")).toBeTruthy();
+    expect(screen.getByText("Alt Source")).toBeTruthy();
+    expect(screen.getByText("lower confidence")).toBeTruthy();
+    expect(screen.getByText("+0.01% APY30d")).toBeTruthy();
     expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
   });
 

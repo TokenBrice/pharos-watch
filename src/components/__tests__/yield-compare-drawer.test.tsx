@@ -36,6 +36,7 @@ function makeRow(overrides: Partial<YieldViewModelRow>): YieldViewModelRow {
     yieldSource: "Aave",
     sourceTvlUsd: 10_000_000,
     sourceDepthLens: "moderate",
+    sourcePosture: "clean",
     yieldStability: 0.92,
     warningSignals: [],
     benchmarkLabel: "USD 3M T-Bill",
@@ -81,6 +82,44 @@ describe("YieldCompareDrawer", () => {
     const table = screen.getByRole("table", { name: "Yield source comparison" });
     expect(shell.getAttribute("data-table-id")).toBe("yield-compare-drawer");
     expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
+  });
+
+  it("renders source posture, material source risk, venue tier, and decision reason rows", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            sourcePosture: "speculative",
+            sourceRisk: {
+              sourceRiskScore: 42,
+              sourceRiskPenalty: 1.32,
+              venueRiskTier: "medium",
+              venueRiskWeighted: 3.1,
+              venueRiskConfidence: "partial",
+            },
+            decisionLedger: {
+              selectedReasonCode: "curated-over-discovered",
+              sourceSwitch: false,
+              rejectedCount: 1,
+              alternatives: [],
+            },
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getByText("Source posture")).toBeTruthy();
+    expect(screen.getByText("Speculative")).toBeTruthy();
+    expect(screen.getByText("Source risk")).toBeTruthy();
+    expect(screen.getByText("42/100 | 1.32x")).toBeTruthy();
+    expect(screen.getByText("Venue tier")).toBeTruthy();
+    expect(screen.getByText("Medium (3.1/5), partial confidence")).toBeTruthy();
+    expect(screen.getByText("Decision reason")).toBeTruthy();
+    expect(screen.getByText("Curated source preferred | 1 alternate rejected")).toBeTruthy();
   });
 
   it("renders 'Coin not in current view' placeholder when a selected id is filtered out", () => {
