@@ -97,7 +97,7 @@
     {
       "file": "scripts/__tests__/classify-deploy-changes.test.ts",
       "code": "TS2322",
-      "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n-    \\\"zod\\\": \\\"^4.3.5\\\",\\n+    \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
+      "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n- \\\"zod\\\": \\\"^4.3.5\\\",\\n+ \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 1,
       "examples": [
         "363:7"
@@ -552,7 +552,7 @@
     {
       "file": "src/app/about/page.test.tsx",
       "code": "TS7016",
-      "message": "Could not find a declaration file for module 'jsdom'. '/home/ahirice/Documents/git/pharos-watch/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.",
+      "message": "Could not find a declaration file for module 'jsdom'. '<repo>/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
         "4:23"
@@ -893,7 +893,7 @@
     {
       "file": "src/components/__tests__/stablecoin-table-logic.test.ts",
       "code": "TS2719",
-      "message": "Type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"/home/ahirice/Documents/git/pharos-watch/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }' is not assignable to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"/home/ahirice/Documents/git/pharos-watch/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }'. Two different types with this name exist, but they are unrelated.",
+      "message": "Type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }' is not assignable to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }'. Two different types with this name exist, but they are unrelated.",
       "count": 1,
       "examples": [
         "26:3"

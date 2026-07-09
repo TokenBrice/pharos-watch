@@ -114,7 +114,42 @@ describe("check-test-typecheck", () => {
 
     const result = runCheck(cwd, binDir);
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("No new test type diagnostics");
+  });
+
+  it("normalizes repository paths before comparing message identity", () => {
+    const cwd = makeWorkdir();
+    writeBaseline(cwd, [{
+      file: "scripts/__tests__/sample.test.ts",
+      code: "TS2719",
+      message: "Module at <repo>/shared/types/core is not assignable.",
+      count: 1,
+      examples: ["1:1"],
+    }]);
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo "scripts/__tests__/sample.test.ts(1,1): error TS2719: Module at ${cwd}/shared/types/core is not assignable." >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("No new test type diagnostics");
+  });
+
+  it("writes portable repository paths when updating the baseline", () => {
+    const cwd = makeWorkdir();
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo 'scripts/__tests__/sample.test.ts(1,1): error TS7016: Missing ${cwd}/node_modules/example/index.js.' >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir, ["--update-baseline"]);
+    const baseline = readFileSync(join(cwd, "scripts/lib/test-typecheck-baseline.json"), "utf8");
+
+    expect(result.status).toBe(0);
+    expect(baseline).toContain("<repo>/node_modules/example/index.js");
+    expect(baseline).not.toContain(cwd);
   });
 });
