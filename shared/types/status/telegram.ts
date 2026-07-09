@@ -190,13 +190,6 @@ export interface SafetyAlertFieldsNullable {
   safetyAlertSourceGeneration: string | null;
 }
 
-const SafetyAlertFieldsNullableSchemaShape = {
-  safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
-  safetyAlertSourceAgeSeconds: z.number().nullable(),
-  safetyAlertsSuppressed: z.boolean(),
-  safetyAlertSourceGeneration: z.string().nullable(),
-} as const;
-
 export interface TelegramDispatchCronResult {
   subscribersNotified: number;
   messagesSent: number;
