@@ -309,7 +309,8 @@ export async function fetchTronErc20TotalSupply(
     return BigInt(`0x${raw}`);
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn("[chainlink-por] fetchTronErc20TotalSupply failed:", error);
+    // Null feeds the caller's omittedReadFailureChains degraded warning, which
+    // already surfaces the failing chain on status surfaces.
     return null;
   }
 }
