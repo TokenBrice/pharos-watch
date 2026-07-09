@@ -298,10 +298,14 @@ function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-function finishAttempt(attempt: ProviderExecutionAttempt, error?: unknown): void {
+function finishAttempt(
+  attempt: ProviderExecutionAttempt,
+  monotonicStartedAtMs: number,
+  error?: unknown,
+): void {
   const finishedAt = nowSec();
   attempt.finishedAt = finishedAt;
-  attempt.durationMs = Math.max(0, finishedAt * 1000 - attempt.startedAt * 1000);
+  attempt.durationMs = Math.max(0, performance.now() - monotonicStartedAtMs);
   if (error != null) {
     attempt.error = errorMessage(error);
   }
@@ -376,6 +380,7 @@ export async function withProviderExecution<TResult>(
   operation: (operationContext: ProviderOperationContext) => Promise<TResult>,
 ): Promise<ProviderExecutionResult<TResult>> {
   const circuitKey = circuitKeyForPolicy(policy);
+  const monotonicStartedAtMs = performance.now();
   const attempt: ProviderExecutionAttempt = {
     providerId: policy.providerId,
     circuitKey,
@@ -400,7 +405,7 @@ export async function withProviderExecution<TResult>(
     }
     const allowed = await shouldAttemptFetch(context.db, circuitKey);
     if (!allowed) {
-      finishAttempt(attempt);
+      finishAttempt(attempt, monotonicStartedAtMs);
       throw new ProviderCircuitOpenError(policy.providerId, circuitKey);
     }
   }
@@ -439,7 +444,7 @@ export async function withProviderExecution<TResult>(
       : normalizeOutcome(policy.classifyOutcome?.(value) ?? "success");
     attempt.outcome = outcome;
     circuitOutcome = await recordProviderOutcome(context, policy, circuitKey, outcome);
-    finishAttempt(attempt);
+    finishAttempt(attempt, monotonicStartedAtMs);
     return { value, attempt, circuitOutcome };
   } catch (error) {
     attempt.timedOut = timeout?.isTimedOut() ?? false;
@@ -447,7 +452,7 @@ export async function withProviderExecution<TResult>(
     const outcome: CircuitOutcomeDecision = parentAborted ? "neutral" : "failure";
     attempt.outcome = outcome;
     circuitOutcome = await recordProviderOutcome(context, policy, circuitKey, outcome);
-    finishAttempt(attempt, error);
+    finishAttempt(attempt, monotonicStartedAtMs, error);
 
     if (parentAborted) {
       throw abortError(context.signal);
