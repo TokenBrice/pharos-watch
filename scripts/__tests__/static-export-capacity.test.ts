@@ -1,11 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyStaticRouteFile,
+  countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
 } from "../lib/static-export-capacity.mjs";
 
 describe("static export capacity attribution", () => {
+  it("counts each document once when it references a tracked chunk", () => {
+    expect(countDocumentsReferencingChunks(
+      [
+        '<script src="/_next/static/chunks/zod.js"></script>',
+        '<script src="zod.js"></script><script src="other.js"></script>',
+        '<script src="other.js"></script>',
+      ],
+      ["zod.js", "zod.js"],
+    )).toBe(2);
+    expect(countDocumentsReferencingChunks(["zod.js"], [])).toBe(0);
+  });
+
   it("classifies per-coin and per-event route files without counting route roots", () => {
     expect(classifyStaticRouteFile("out/stablecoin/usdc-circle/index.html")).toEqual({
       family: "stablecoin-detail",

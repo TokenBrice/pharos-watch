@@ -84,3 +84,14 @@ export function projectStaticRouteCapacity({
     routesUntilHeadroomFloor,
   };
 }
+
+export function countDocumentsReferencingChunks(documents, chunkNames) {
+  const names = [...new Set(chunkNames)].filter(Boolean);
+  if (names.length === 0) return 0;
+
+  let count = 0;
+  for (const document of documents) {
+    if (names.some((name) => document.includes(name))) count += 1;
+  }
+  return count;
+}

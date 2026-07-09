@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { formatBytes } from "../lib/format-bytes.mjs";
 import {
+  countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
 } from "../lib/static-export-capacity.mjs";
@@ -14,6 +15,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const args = new Set(process.argv.slice(2));
 const check = args.has("--check");
 const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
+const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
+const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
 
 const DEFAULT_BUDGETS = {
   // Cloudflare Pages direct uploads cap Wrangler deployments at 20,000 files.
@@ -215,6 +218,16 @@ const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
 const homepageHtmlPath = path.join(outDir, "index.html");
 const homepageHtmlSize = existsSync(homepageHtmlPath) ? statSync(homepageHtmlPath).size : 0;
 const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
+const classicZodChunkNames = jsFiles
+  .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
+  .map((file) => path.basename(file.path));
+const classicZodHtmlReferenceCount = countDocumentsReferencingChunks(
+  htmlFiles.map((file) => readFileSync(file.path, "utf8")),
+  classicZodChunkNames,
+);
+const classicZodHtmlReferenceRatio = htmlFiles.length > 0
+  ? classicZodHtmlReferenceCount / htmlFiles.length
+  : 0;
 
 console.log("# Pharos Build Size Report");
 console.log(`out total files: ${allOutFiles.length}`);
@@ -232,6 +245,10 @@ const overallCapacity = projectStaticRouteCapacity({
 });
 console.log(
   `direct-upload file headroom: ${overallCapacity.fileHeadroom} (${(overallCapacity.headroomRatio * 100).toFixed(1)}%)`,
+);
+console.log(
+  `classic Zod HTML references: ${classicZodHtmlReferenceCount}/${htmlFiles.length} `
+    + `(${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%) across ${classicZodChunkNames.length} chunk(s)`,
 );
 
 console.log("\nStatic route family capacity");
@@ -321,6 +338,21 @@ if (check) {
   } else {
     console.log(
       `ok direct-upload file headroom: ${(overallCapacity.headroomRatio * 100).toFixed(1)}% / ${(MINIMUM_FILE_HEADROOM_RATIO * 100).toFixed(1)}% minimum`,
+    );
+  }
+  if (classicZodHtmlReferenceRatio > MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO) {
+    failures.push(
+      `classic Zod HTML reference ratio is ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%; `
+        + `maximum is ${MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100}%`,
+    );
+    console.log(
+      `FAIL classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / `
+        + `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
+    );
+  } else {
+    console.log(
+      `ok classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / `
+        + `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
     );
   }
   checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
