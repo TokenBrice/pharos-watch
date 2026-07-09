@@ -7,6 +7,8 @@ import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
+import nusd from "@shared/data/stablecoins/coins/nusd-neutrl.json";
+import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -670,6 +672,170 @@ describe("adaptAccountableDashboard", () => {
       coinId: "pyusd-paypal",
       depType: "collateral",
     }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
+    }).valid).toBe(true);
+  });
+
+  it("maps the current Neutrl Accountable type_split buckets including JLP and Protocol Owned Liquidity without unknown exposure warnings", async () => {
+    const config = nusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Neutrl Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.02,
+              ts: "1781945117382",
+              reserves: {
+                type_split: {
+                  Stablecoin: 800,
+                  ETH: 50,
+                  "OTC Aggregate": 34,
+                  Other: 31,
+                  JLP: 60,
+                  "Protocol Owned Liquidity": 25,
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "type_split",
+      breakdownCount: 6,
+      mappedBucketCount: 6,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "JLP (Jupiter Perps LP token)",
+      risk: "high",
+    }));
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Protocol Owned Liquidity",
+      risk: "high",
+    }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
+    }).valid).toBe(true);
+  });
+
+  it("maps the new Yuzu Accountable [Agora]_PT_AUSD Pendle PT bucket into a mapped reserve slice", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Yuzu Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.101272,
+              ts: "1781945117382",
+              reserves: {
+                exposure_split: {
+                  "[Ethena]_USDe_Loop": { value: 80 },
+                  "[Agora]_PT_AUSD": { value: 20 },
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 2,
+      mappedBucketCount: 2,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Agora AUSD Pendle PT",
+      pct: 20,
+      risk: "high",
+      coinId: "ausd-agora",
+      depType: "collateral",
+    }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
+    }).valid).toBe(true);
+  });
+
+  it("maps XSY Accountable chain-name buckets including the new Bnb_smartchain/Hyperevm/Hyperliquid/Megaeth deployments without unknown exposure warnings", async () => {
+    const config = utyxsy.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected XSY Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.03,
+              ts: "1781945117382",
+              reserves: {
+                reserves_split: [
+                  { name: "Avalanche", value: 35_000_000 },
+                  { name: "Copper", value: 5_000_000 },
+                  { name: "Katana", value: 3_000_000 },
+                  { name: "Ethereum", value: 2_000_000 },
+                  { name: "Base", value: 1_500_000 },
+                  { name: "Plasma", value: 900_000 },
+                  { name: "Arbitrum", value: 800_000 },
+                  { name: "Monad", value: 700_000 },
+                  { name: "Bybit", value: 600_000 },
+                  { name: "Bnb_smartchain", value: 12.5 },
+                  { name: "Hyperevm", value: 8.2 },
+                  { name: "Hyperliquid", value: 4.1 },
+                  { name: "Megaeth", value: 1.9 },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "reserves_split",
+      breakdownCount: 13,
+      mappedBucketCount: 13,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 5, 20, 10) / 1000,
