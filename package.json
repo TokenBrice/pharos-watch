@@ -85,6 +85,7 @@
     "check:world-map": "tsx scripts/maintenance/build-world-map-svg.ts --check",
     "check:unused-code": "node scripts/ci/check-unused-code.mjs",
     "check:script-entrypoints": "node scripts/ci/check-script-entrypoints.mjs",
+    "check:cli-args-policy": "node scripts/ci/check-cli-args-policy.mjs",
     "check:shared-cycles": "node scripts/ci/check-shared-cycles.mjs",
     "check:shared-types-imports": "node scripts/ci/check-shared-types-imports.mjs",
     "check:client-registry-imports": "node scripts/ci/check-client-registry-imports.mjs",

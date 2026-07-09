@@ -22,7 +22,7 @@ npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
 
-Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
 
 Common targeted runners:
 
@@ -355,6 +355,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
+- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline.
 - Six content-coverage guardrails run during the deploy-impacting prebuild pass alongside the code checks: `check:glossary-coverage`, `check:one-liner-coverage`, `check:attestor-tier-coverage`, and `check:oracle-risk-coverage:enforce` run on every pass, while `check:mechanism-archetype-coverage` and `check:archetype-explainer-coverage` are Pages-impact checks that are skipped on worker-only surfaces. They gate editorial/data completeness (glossary wiring, coin one-liners, mechanism archetypes and their explainers, attestor tiers, oracle-risk coverage) rather than code correctness; each is a sub-second registry scan.
 - `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run check:redemption-coverage-audit` validates the Redemption Backstop backlog audit against `scripts/lib/redemption-coverage-audit-baseline.json`, so default-inferred active gaps, total active gaps, and heuristic route counts cannot grow while the backlog is being researched.
