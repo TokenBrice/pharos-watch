@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.17",
+    title: "Live-direct capacity tranche: Mento family, USTB, PUSD, cUSD fee, savings-vault cohort",
+    date: "2026-07-09",
+    effectiveAt: 1783555200,
+    summary:
+      "A verified batch of routes moves onto same-run live redemption telemetry: the 13-coin Mento family reads Broker/BiPoolManager pool depth and spread, the GBPm Liquity-v2-fork branch, or Mento-v3 FPMM pool depth on Celo; Superstate USTB capacity becomes the on-chain RedemptionIdle USDC buffer with a documented 0 bps fee; Polymarket PUSD scores its verified backing-vault unwrap capacity; Cap cUSD's flat redeem fee is read live from the vault's Minter; and the atomic-full-backing savings-vault cohort extends to sUSDD and sDOLA after per-vault redemption-simulation review.",
+    impact: [
+      "All 13 Mento stablecoins (cUSD, cEUR, and the FX m-stables) move from documented-bound full-supply heuristics to live-direct on-chain capacity: broker coins score counter-asset bucket depth with the pool's on-chain spread as a live formula fee, `gbpm-mento` scores its fork's ActivePool debt with the Liquity-style `getRedemptionRateWithDecay()` fee, and `jpym-mento`/`chfm-mento` score FPMM pool depth (capacity only; the FPMM fee getter is unverified)",
+      "`ustb-superstate` capacity of record is now the USDC balance of Superstate's RedemptionIdle contract read in the same run (the liquidity API remains context), and its fee model moves from undisclosed to the documented current 0 bps protocol redemption fee",
+      "`pusd-polymarket` moves from documented full-supply to reserve-sync live-direct capacity: unwrap pulls USDC from the verified immutable backing vault, so the vault balance (~101% of supply) is current executable capacity with a documented 0 bps fee",
+      "`cusd-cap` fee evidence moves from undisclosed to a live on-chain formula: the vault's inherited Minter exposes `getRedeemFee()` (currently 0 bps), emitted as current-fee telemetry each run",
+      "`usde-ethena` fee evidence moves to the documented fixed 10 bps from Ethena's public fees API and terms; capacity remains live-proxy because no public redeemable-buffer endpoint exists",
+      "`susdd-tron-dao-reserve` and `sdola-inverse-finance` join the atomic-full-backing cohort after contract-source review plus state-override redemption simulations (sUSDD is an sDAI-fork pot/join exit; sDOLA unstakes from a fully liquid DolaSavings module); `sbold-k3-capital` was reviewed and deliberately excluded because its collateral-health gate and BOLD-only withdrawal cap make exits constrainable, and `eearn-ember`'s operator-batched request/settle exits keep the near-zero idle probe honest",
+      "Scoring formulas, weights, and confidence gates are unchanged; this tranche changes capacity and fee evidence sources only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.16",
     title: "Yearn V3 strategy-queue capacity for verified vault exits",
     date: "2026-06-26",
