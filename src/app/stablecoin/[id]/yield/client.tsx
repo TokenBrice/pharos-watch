@@ -14,16 +14,27 @@ import { PysBreakdown } from "@/components/pys-breakdown";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
+import {
+  computePysBreakdown,
+  formatYieldWarningSignal,
+  formatYieldWarningSignalDescription,
+  getPysColor,
+} from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
 import { classifyApyChange } from "@/lib/yield-change-attribution";
+import {
+  buildYieldPeerRailModel,
+  type YieldPeerRailModel,
+  type YieldPeerRelation,
+  type YieldPeerSafetyBand,
+} from "@/lib/yield-peers";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { formatChartDate, formatPercent } from "@shared/lib/format";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
 
 // Keep chart-bearing pieces dynamic: a static import here re-attaches the
@@ -76,6 +87,135 @@ interface SourceSwitchEvent {
   fromSourceLabel: string | null;
 }
 
+const YIELD_PEER_RELATION_LABELS: Record<YieldPeerRelation, string> = {
+  above: "Above",
+  below: "Below",
+  top: "Top peer",
+};
+
+const YIELD_PEER_SAFETY_BAND_LABELS: Record<YieldPeerSafetyBand, string> = {
+  "80-plus": "80+ safety",
+  "70-79": "70-79 safety",
+  "60-69": "60-69 safety",
+  "50-59": "50-59 safety",
+  "under-50": "<50 safety",
+  unknown: "unrated safety",
+};
+
+const YIELD_COMPARE_LINK_LIMIT = 4;
+
+function buildYieldCompareHref(currentId: string, peerIds: readonly string[]): string {
+  const ids: string[] = [];
+  for (const id of [currentId, ...peerIds]) {
+    if (ids.includes(id)) continue;
+    ids.push(id);
+    if (ids.length >= YIELD_COMPARE_LINK_LIMIT) break;
+  }
+  return `/yield/?compare=${encodeURIComponent(ids.join(","))}`;
+}
+
+function formatPeerCohortLabel(model: YieldPeerRailModel): string {
+  const yieldTypeLabel = YIELD_TYPE_LABELS[model.currentYieldType] ?? model.currentYieldType;
+  if (model.cohortKind === "same-peg") {
+    const pegLabel = model.currentPeg ? (PEG_LABELS_SHORT[model.currentPeg] ?? model.currentPeg) : "same-peg";
+    return `${pegLabel} peg peers by PYS rank`;
+  }
+  if (model.cohortKind === "same-yield-type-safety") {
+    return `${yieldTypeLabel} · ${YIELD_PEER_SAFETY_BAND_LABELS[model.currentSafetyBand]}`;
+  }
+  if (model.cohortKind === "same-yield-type") {
+    return `${yieldTypeLabel} peers by PYS rank`;
+  }
+  return "Top yield rows by PYS rank";
+}
+
+function formatPeerSelectionNote(model: YieldPeerRailModel): string {
+  const windowLabel = model.selectionMode === "neighbors" ? "nearest peers" : "top peers";
+  return `${windowLabel} · ${model.cohortSize} row${model.cohortSize === 1 ? "" : "s"} in cohort`;
+}
+
+function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; currentId: string }) {
+  const compareSetHref = buildYieldCompareHref(
+    currentId,
+    model.items.map((item) => item.row.id),
+  );
+
+  return (
+    <section className="pharos-card-shell px-4 py-3 sm:px-5" aria-labelledby="yield-peer-rail-title">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Peer rail</p>
+          <h2 id="yield-peer-rail-title" className="text-base font-semibold tracking-tight text-foreground">
+            Nearby yield context
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {formatPeerCohortLabel(model)} · {formatPeerSelectionNote(model)}
+          </p>
+        </div>
+        <Link
+          href={compareSetHref}
+          className="pharos-control-pill inline-flex w-fit items-center gap-1.5 text-xs font-medium"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+          Compare set
+        </Link>
+      </div>
+
+      <div className="mt-3 overflow-x-auto pb-1">
+        <ul className="flex min-w-max gap-3">
+          {model.items.map((item) => {
+            const row = item.row;
+            const compareHref = buildYieldCompareHref(currentId, [row.id]);
+            return (
+              <li
+                key={`${row.id}-${item.relation}`}
+                className="min-w-[220px] border-r border-border/60 pr-3 last:border-r-0"
+              >
+                <Link
+                  href={compareHref}
+                  className="pharos-focus-ring group block rounded-md px-2 py-2 transition-colors hover:bg-muted/45"
+                  aria-label={`Compare ${row.symbol} with the current stablecoin on the yield leaderboard`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="pharos-numeric text-[11px] text-muted-foreground">#{item.rank}</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {YIELD_PEER_RELATION_LABELS[item.relation]}
+                    </span>
+                  </div>
+                  <div className="mt-1 min-w-0">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="truncate text-sm font-semibold text-foreground">{row.symbol}</span>
+                      <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="block text-[10px] uppercase tracking-[0.1em] text-muted-foreground">PYS</span>
+                      <span className="pharos-numeric text-sm font-semibold text-foreground">
+                        {row.pharosYieldScore != null ? formatScore(row.pharosYieldScore) : "—"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="block text-[10px] uppercase tracking-[0.1em] text-muted-foreground">APY</span>
+                      <span className="pharos-numeric text-sm font-semibold text-foreground">
+                        {formatPercent(row.apy30d)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                    Compare
+                    <ArrowLeftRight className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 function StablecoinYieldDetailHeader({
   staticCoin,
   logoSrc,
@@ -108,9 +248,7 @@ function StablecoinYieldDetailHeader({
             <StablecoinLogo src={logoSrc} name={staticCoin.name} size={56} />
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="pharos-page-title text-2xl sm:text-3xl">
-                  {staticCoin.name}
-                </h1>
+                <h1 className="pharos-page-title text-2xl sm:text-3xl">{staticCoin.name}</h1>
                 <span className="font-mono tabular-nums text-base text-muted-foreground">{staticCoin.symbol}</span>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -119,8 +257,7 @@ function StablecoinYieldDetailHeader({
                 {PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency}
               </p>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Source comparison, warning signals timeline, and source-switch history for{" "}
-                {staticCoin.symbol}.
+                Source comparison, warning signals timeline, and source-switch history for {staticCoin.symbol}.
               </p>
             </div>
           </div>
@@ -187,12 +324,7 @@ function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[]
   const groups: WarningSignalGroup[] = [];
   for (const event of events) {
     const last = groups[groups.length - 1];
-    if (
-      last &&
-      last.signal === event.signal &&
-      last.sourceLabel === event.sourceLabel &&
-      last.apy === event.apy
-    ) {
+    if (last && last.signal === event.signal && last.sourceLabel === event.sourceLabel && last.apy === event.apy) {
       last.count += 1;
       last.earliestTimestamp = event.timestamp;
     } else {
@@ -247,10 +379,19 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   const sourceExplorer = useMemo(() => (ranking ? buildYieldSourceExplorerModel(ranking) : null), [ranking]);
 
-  const warningEvents = useMemo(
-    () => deriveWarningEvents(historyQuery.data?.history ?? []),
-    [historyQuery.data],
+  const peerRailModel = useMemo(
+    () =>
+      ranking
+        ? buildYieldPeerRailModel({
+            rankings: rankingsQuery.data?.rankings ?? [],
+            currentId: id,
+            currentRow: ranking,
+          })
+        : null,
+    [id, ranking, rankingsQuery.data?.rankings],
   );
+
+  const warningEvents = useMemo(() => deriveWarningEvents(historyQuery.data?.history ?? []), [historyQuery.data]);
 
   const sourceSwitchEvents = useMemo(
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
@@ -262,8 +403,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
       ranking
         ? classifyApyChange({
             history: historyQuery.data?.history ?? [],
-            decisionLedger:
-              ranking.decisionLedger ?? null,
+            decisionLedger: ranking.decisionLedger ?? null,
             yieldStability: ranking.yieldStability ?? null,
           })
         : null,
@@ -308,7 +448,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
+        <StablecoinYieldDetailHeader
+          staticCoin={staticCoin}
+          logoSrc={logoSrc}
+          ranking={null}
+          sourceRiskDrivers={[]}
+          scalingFactor={null}
+        />
         <Skeleton className="h-[420px] w-full rounded-xl" />
         <Skeleton className="h-[260px] w-full rounded-xl" />
       </div>
@@ -319,11 +465,14 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
-        <QueryErrorNotice
-          error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null}
-          hasData={false}
+        <StablecoinYieldDetailHeader
+          staticCoin={staticCoin}
+          logoSrc={logoSrc}
+          ranking={null}
+          sourceRiskDrivers={[]}
+          scalingFactor={null}
         />
+        <QueryErrorNotice error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null} hasData={false} />
       </div>
     );
   }
@@ -332,7 +481,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
+        <StablecoinYieldDetailHeader
+          staticCoin={staticCoin}
+          logoSrc={logoSrc}
+          ranking={null}
+          sourceRiskDrivers={[]}
+          scalingFactor={null}
+        />
         <EmptyStateCard
           title="Pre-launch — no yield data yet"
           message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
@@ -345,19 +500,24 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     const reason = isFrozen
       ? "This stablecoin is frozen — historical yield data is no longer being refreshed."
       : shouldHaveYieldData
-      ? "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."
-      : "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.";
+        ? "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."
+        : "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.";
     return (
       <div className="space-y-6">
         {backLink}
-        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} scalingFactor={null} />
+        <StablecoinYieldDetailHeader
+          staticCoin={staticCoin}
+          logoSrc={logoSrc}
+          ranking={null}
+          sourceRiskDrivers={[]}
+          scalingFactor={null}
+        />
         <EmptyStateCard title="No yield data available" message={reason} />
       </div>
     );
   }
 
-  const benchmarkIsFallback =
-    ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback;
+  const benchmarkIsFallback = ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback;
   const benchmarkRate = ranking.benchmarkRate ?? rankingsQuery.data?.riskFreeRate ?? 0;
   const medianApy = rankingsQuery.data?.medianApy ?? 0;
   const historySources = sourceExplorer?.historySources ?? [];
@@ -376,6 +536,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         scalingFactor={rankingsQuery.data?.scalingFactor ?? null}
       />
 
+      {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
+
       {sourceExplorer ? (
         <YieldSourceRiskCard
           sourceLabel={sourceExplorer.selectedSource.displayLabel}
@@ -388,9 +550,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         />
       ) : null}
 
-      {apyChangeAttribution ? (
-        <YieldChangeAttributionCard attribution={apyChangeAttribution} />
-      ) : null}
+      {apyChangeAttribution ? <YieldChangeAttributionCard attribution={apyChangeAttribution} /> : null}
 
       <Card id="source-comparison" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
@@ -438,8 +598,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Historical signal occurrences are not exposed by the yield history API. Showing
-                  currently active signals only.
+                  Historical signal occurrences are not exposed by the yield history API. Showing currently active
+                  signals only.
                 </p>
                 <ul className="space-y-2">
                   {currentWarningSignals.map((signal) => (
@@ -502,9 +662,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>
                 No source switches recorded in the past 90 days.
-                {sourceSwitchCount30d != null
-                  ? ` (30-day switch count: ${sourceSwitchCount30d}.)`
-                  : ""}
+                {sourceSwitchCount30d != null ? ` (30-day switch count: ${sourceSwitchCount30d}.)` : ""}
               </p>
               {sourceExplorer?.sourceSwitch.changed ? (
                 <p>
@@ -517,8 +675,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             <>
               {sourceSwitchCount30d != null ? (
                 <p className="text-xs text-muted-foreground">
-                  {sourceSwitchCount30d} source switch{sourceSwitchCount30d === 1 ? "" : "es"} in the past 30
-                  days.
+                  {sourceSwitchCount30d} source switch{sourceSwitchCount30d === 1 ? "" : "es"} in the past 30 days.
                 </p>
               ) : null}
               <ul className="space-y-2">
