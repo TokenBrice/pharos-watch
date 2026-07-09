@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { checkCliArgsPolicy, evaluateCliArgsPolicy } from "../ci/check-cli-args-policy.mjs";
+import {
+  checkCliArgsPolicy,
+  evaluateCliArgsPolicy,
+  sourceUsesProcessArgv,
+} from "../ci/check-cli-args-policy.mjs";
 
 const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
 
@@ -13,6 +17,12 @@ function createSourceReader(sources: Record<string, string>) {
 }
 
 describe("check-cli-args-policy", () => {
+  it("discovers actual argv access without matching comments or strings", () => {
+    expect(sourceUsesProcessArgv('const label = "process.argv"; // process.argv\n')).toBe(false);
+    expect(sourceUsesProcessArgv("const args = process.argv.slice(2);\n")).toBe(true);
+    expect(sourceUsesProcessArgv('const args = process["argv"].slice(2);\n')).toBe(true);
+  });
+
   it("accepts the current committed process.argv inventory", () => {
     let stdout = "";
     let stderr = "";

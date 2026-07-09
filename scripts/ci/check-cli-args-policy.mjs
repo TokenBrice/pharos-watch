@@ -3,11 +3,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, extname, posix, resolve } from "node:path";
+import ts from "typescript";
 import { CLI_ARGV_EXEMPTION_CATEGORIES, CLI_ARGV_POLICY } from "../lib/cli-argv-policy.mjs";
 import { runAsCli } from "../lib/source-files.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-const PROCESS_ARGV_PATTERN = /\bprocess\s*\.\s*argv\b/;
 const STRICT_PARSER_CALL_PATTERN = /\bparseStrictCliArgs\s*\(/;
 const STRICT_WRAPPER_IMPORT_PATTERN = /\bfrom\s+["'][^"']*cli-args\.mjs["']/;
 const RELATIVE_IMPORT_PATTERNS = [
@@ -18,6 +18,52 @@ const RELATIVE_IMPORT_PATTERNS = [
 
 function normalizeRepoPath(path) {
   return path.replaceAll("\\", "/");
+}
+
+function scriptKindForPath(path) {
+  switch (extname(path)) {
+    case ".js":
+    case ".cjs":
+    case ".mjs":
+      return ts.ScriptKind.JS;
+    case ".jsx":
+      return ts.ScriptKind.JSX;
+    case ".tsx":
+      return ts.ScriptKind.TSX;
+    default:
+      return ts.ScriptKind.TS;
+  }
+}
+
+export function sourceUsesProcessArgv(source, path = "source.ts") {
+  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, scriptKindForPath(path));
+  let found = false;
+
+  function visit(node) {
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "process" &&
+      node.name.text === "argv"
+    ) {
+      found = true;
+      return;
+    }
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "process" &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      node.argumentExpression.text === "argv"
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return found;
 }
 
 function isCanonicalRepoPath(path) {
@@ -221,7 +267,7 @@ export function collectCommittedProcessArgvFiles(cwd = process.cwd()) {
     .filter((path) => SOURCE_EXTENSIONS.has(extname(path)))
     .filter((path) => {
       try {
-        return PROCESS_ARGV_PATTERN.test(readFileSync(resolve(cwd, path), "utf8"));
+        return sourceUsesProcessArgv(readFileSync(resolve(cwd, path), "utf8"), path);
       } catch {
         return false;
       }
