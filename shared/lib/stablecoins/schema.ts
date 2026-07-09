@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
+import { isCanonicalStablecoinId } from "../stablecoin-id";
 import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
@@ -95,33 +96,11 @@ export function findStablecoinCatalogInvariantIssues({
   };
 }
 
-function isSlugLikeId(value: string): boolean {
-  if (!value) return false;
-  if (value.startsWith("-") || value.endsWith("-")) return false;
-
-  let previousWasHyphen = false;
-  for (const char of value) {
-    const isLowerAlpha = char >= "a" && char <= "z";
-    const isDigit = char >= "0" && char <= "9";
-    const isHyphen = char === "-";
-
-    if (!isLowerAlpha && !isDigit && !isHyphen) {
-      return false;
-    }
-    if (isHyphen && previousWasHyphen) {
-      return false;
-    }
-    previousWasHyphen = isHyphen;
-  }
-
-  return true;
-}
-
-const DeadStablecoinIdSchema = z.string().refine(isSlugLikeId, {
+const DeadStablecoinIdSchema = z.string().refine(isCanonicalStablecoinId, {
   message: "Invalid dead stablecoin id",
 });
 
-const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
+const StablecoinIdSchema = z.string().refine(isCanonicalStablecoinId, {
   message: "Invalid stablecoin id",
 });
 

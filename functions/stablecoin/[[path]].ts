@@ -1,5 +1,6 @@
 import legacyLlamaRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 import canonicalOrder from "@shared/data/stablecoins/canonical-order.json";
+import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
 
 interface StablecoinRouteEnv {
   ASSETS: {
@@ -11,23 +12,6 @@ function isLegacyLlamaId(value: string): boolean {
   return value.length > 0 && Array.from(value).every((char) => char >= "0" && char <= "9");
 }
 
-function isStablecoinId(value: string): boolean {
-  if (value.length === 0 || value.startsWith("-") || value.endsWith("-")) return false;
-  let previousWasDash = false;
-  for (const char of value) {
-    const isLowerAlpha = char >= "a" && char <= "z";
-    const isDigit = char >= "0" && char <= "9";
-    if (char === "-") {
-      if (previousWasDash) return false;
-      previousWasDash = true;
-      continue;
-    }
-    if (!isLowerAlpha && !isDigit) return false;
-    previousWasDash = false;
-  }
-  return true;
-}
-
 function buildLegacyLlamaRedirects(raw: unknown): Readonly<Record<string, string>> {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
     console.warn("[stablecoin-redirect] Legacy redirect map is not an object");
@@ -36,7 +20,7 @@ function buildLegacyLlamaRedirects(raw: unknown): Readonly<Record<string, string
 
   const entries: Array<[string, string]> = [];
   for (const [legacyId, coinId] of Object.entries(raw)) {
-    if (!isLegacyLlamaId(legacyId) || typeof coinId !== "string" || !isStablecoinId(coinId)) {
+    if (!isLegacyLlamaId(legacyId) || typeof coinId !== "string" || !isCanonicalStablecoinId(coinId)) {
       console.warn(`[stablecoin-redirect] Ignoring invalid legacy redirect entry for ${legacyId}`);
       continue;
     }
@@ -58,7 +42,7 @@ export function resolveLegacyStablecoinRedirect(
 
   const coinId = redirects[parts[1]];
   if (!coinId) return null;
-  if (!isStablecoinId(coinId)) return null;
+  if (!isCanonicalStablecoinId(coinId)) return null;
 
   const target = new URL(`/stablecoin/${coinId}/`, url);
   target.search = url.search;
