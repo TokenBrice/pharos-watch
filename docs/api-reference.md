@@ -289,7 +289,9 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/api-key-requests-admin/:requestId/reject`
 - `POST /api/api-key-requests-admin/:requestId/release-claim`
 
-When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
+When an `Idempotency-Key` is supplied on one of those routes, the worker fingerprints the request and reserves the key with owner/generation fencing before execution. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`; a stored terminal response is replayed without rerunning the action, while reuse with a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
+
+Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 `POST /api/telegram-pending` is conditional: mutating clears use idempotency, but dry-run previews (`dry_run`, `dryRun`, or `dry-run`) bypass idempotency bookkeeping and return the current match count directly.
 
