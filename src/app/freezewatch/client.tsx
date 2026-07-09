@@ -129,7 +129,7 @@ export default function FreezeWatchClient() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       leadParagraphs={[
-        "Live issuer freeze, release, and wipe events — with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
+        "The stablecoin freeze and blacklist tracker: live issuer freeze, release, and wipe events — with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
       ]}
     >
       {focusedCoinId ? (

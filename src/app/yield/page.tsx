@@ -63,7 +63,7 @@ export default createClientFeaturePage({
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
-      "Yield ranked against safety and real-world benchmarks — not just raw APY.",
+      "Stablecoin yield rankings weighed against safety and real-world benchmarks — not just raw APY.",
     ],
   },
   afterClient: (
