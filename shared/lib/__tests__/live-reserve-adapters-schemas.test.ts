@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
+  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
+  LIVE_RESERVE_ADAPTER_PROVENANCE,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
+import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "../../types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapters-definitions";
 import {
@@ -129,18 +132,24 @@ describe("LiveReservesConfigSchema URL validation", () => {
   });
 
   it("rejects non-absolute URL params", () => {
-    expect(() => parseLiveReserveAdapterParams("btcfi", {
-      handlersUrl: "/api/reserve-handlers",
-    })).toThrow(/Invalid URL/);
+    expect(() =>
+      parseLiveReserveAdapterParams("btcfi", {
+        handlersUrl: "/api/reserve-handlers",
+      }),
+    ).toThrow(/Invalid URL/);
   });
 
   it("accepts deliberate Mento CDP stablecoin params without widening to arbitrary strings", () => {
-    expect(parseLiveReserveAdapterParams("mento", {
-      cdpStablecoin: "XOFm",
-    })).toEqual({ cdpStablecoin: "XOFm" });
-    expect(() => parseLiveReserveAdapterParams("mento", {
-      cdpStablecoin: "NOTm",
-    })).toThrow(/Invalid option/);
+    expect(
+      parseLiveReserveAdapterParams("mento", {
+        cdpStablecoin: "XOFm",
+      }),
+    ).toEqual({ cdpStablecoin: "XOFm" });
+    expect(() =>
+      parseLiveReserveAdapterParams("mento", {
+        cdpStablecoin: "NOTm",
+      }),
+    ).toThrow(/Invalid option/);
   });
 
   it("accepts m0-wrapper-underlying additionalDeployments and rejects malformed entries", () => {
@@ -178,7 +187,9 @@ describe("LiveReservesConfigSchema URL validation", () => {
       if (!coin.liveReservesConfig) continue;
       const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
       if (!parsed.success) {
-        failures.push(`${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`);
+        failures.push(
+          `${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`,
+        );
       }
     }
 
@@ -187,25 +198,26 @@ describe("LiveReservesConfigSchema URL validation", () => {
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
-  it("keeps adapter registry maps aligned", () => {
+  it("derives every compatibility projection from the descriptor registry", () => {
     const keys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
+    expect(Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS).sort()).toEqual(keys);
     expect(Object.keys(liveReserveAdapterSchemaMetadata).sort()).toEqual(keys);
     expect(Object.keys(adapterParamsSchemas).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS).toBe(LIVE_RESERVE_ADAPTER_DESCRIPTORS);
 
     for (const adapterKey of LIVE_RESERVE_ADAPTER_KEYS) {
-      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].key).toBe(adapterKey);
-      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params).toBe(
-        liveReserveAdapterSchemaMetadata[adapterKey].params,
-      );
-      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].primaryInputKinds).toBe(
-        liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
-      );
+      const descriptor = LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey];
+      expect(descriptor.key).toBe(adapterKey);
+      expect(descriptor.params).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
+      expect(descriptor.primaryInputKinds).toBe(liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds);
       expect(adapterParamsSchemas[adapterKey]).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
       expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(
         liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
       );
+      expect(LIVE_RESERVE_ADAPTER_PROVENANCE[adapterKey]).toBe(descriptor.provenance);
+      expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe(descriptor.displayBadgeKind);
     }
   });
 
@@ -256,9 +268,8 @@ describe("late-monthly disclosure source-age policy", () => {
           liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
         };
         const maxSourceAgeSec = source.liveReservesConfig?.scoring?.maxSourceAgeSec;
-        const isLateMonthlyRange = maxSourceAgeSec != null
-          && maxSourceAgeSec >= 3_900_000
-          && maxSourceAgeSec <= 4_100_000;
+        const isLateMonthlyRange =
+          maxSourceAgeSec != null && maxSourceAgeSec >= 3_900_000 && maxSourceAgeSec <= 4_100_000;
         return isLateMonthlyRange && maxSourceAgeSec !== LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
           ? [`${fileName}: ${maxSourceAgeSec}`]
           : [];

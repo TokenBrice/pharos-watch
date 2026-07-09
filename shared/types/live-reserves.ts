@@ -1,5 +1,20 @@
 import { z } from "zod";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
+import type {
+  LiveReserveEvidenceClass,
+  LiveReserveFreshnessMode,
+  LiveReserveInput,
+  LiveReserveSemantics,
+  LiveReserveSourceModel,
+  LiveReserveWarningEffect,
+  ReserveDisplayBadgeKind,
+} from "./live-reserve-core";
+import {
+  LIVE_RESERVE_EVIDENCE_CLASS_VALUES,
+  LIVE_RESERVE_FRESHNESS_MODE_VALUES,
+  LIVE_RESERVE_SOURCE_MODEL_VALUES,
+  RESERVE_DISPLAY_BADGE_KIND_VALUES,
+} from "./live-reserve-core";
 import { ReserveSliceSchema, type ReserveSlice } from "./reserves";
 import { HttpUrlSchema } from "./validators";
 import {
@@ -12,16 +27,7 @@ import {
 } from "./redemption";
 
 export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
-
-export const LIVE_RESERVE_SOURCE_MODEL_VALUES = ["dynamic-mix", "validated-static", "single-bucket"] as const;
-
-export const LIVE_RESERVE_EVIDENCE_CLASS_VALUES = ["independent", "static-validated", "weak-live-probe"] as const;
-
-export const LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES = ["none", "source-invariant"] as const;
-
-export const LIVE_RESERVE_WARNING_EFFECT_VALUES = ["info", "degraded", "fatal"] as const;
-
-export const LIVE_RESERVE_FRESHNESS_MODE_VALUES = ["verified", "unverified", "not-applicable"] as const;
+export * from "./live-reserve-core";
 
 export const LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES = [...RedemptionLiveCapacityKindValues] as const;
 
@@ -31,37 +37,11 @@ export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES = RedemptionRouteStatus
 
 export const LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES = RedemptionRouteStatusSourceSchema.options;
 
-export const RESERVE_DISPLAY_BADGE_KIND_VALUES = ["live", "curated-validated", "proof"] as const;
-
-export const LIVE_RESERVE_SEMANTICS_VALUES = [
-  "collateral-mix",
-  "protocol-reserve",
-  "attestation-mix",
-  "single-asset",
-] as const;
-
-export const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
-
-export type LiveReserveSourceModel = (typeof LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
-export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
-export type LiveReserveSourceSharingMode = (typeof LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
-export type LiveReserveWarningEffect = (typeof LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
-export type LiveReserveFreshnessMode = (typeof LIVE_RESERVE_FRESHNESS_MODE_VALUES)[number];
 export type LiveReserveRedemptionCapacityKind = (typeof LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES)[number];
 export type LiveReserveRedemptionFreshnessKind = (typeof LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES)[number];
 export type LiveReserveRedemptionRouteStatus = (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number];
 export type LiveReserveRedemptionRouteStatusSource =
   (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number];
-export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
-export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
-export type LiveReserveRpcMode = (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number];
-
-export type LiveReserveInput =
-  | { kind: "http-json"; url: string }
-  | { kind: "http-html"; url: string }
-  | { kind: "indexer"; url: string }
-  | { kind: "onchain-solana" }
-  | { kind: "onchain-evm"; chain: string; rpcMode: LiveReserveRpcMode };
 
 export interface LiveReserveWarning {
   code: string;
@@ -110,12 +90,6 @@ export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> 
   minRedeemUsd?: number;
   feeBps?: number;
   sourceUrls?: string[];
-}
-
-export interface LiveReserveAdapterValidationPolicy {
-  maxSourceAgeSec?: number;
-  maxUnknownExposurePct?: number;
-  allowedFreshnessModes?: LiveReserveFreshnessMode[];
 }
 
 export interface LiveReserveScoringPolicy {
@@ -223,10 +197,12 @@ export const ReserveCompositionOverviewSchema = z.object({
    * has been stuck in `degraded` or `error` with the last successful snapshot
    * older than the live-reserve persistent-stale threshold.
    */
-  persistentlyStaleIndependentCoins: z.array(z.object({
-    stablecoinId: z.string(),
-    ageSec: z.number(),
-  })),
+  persistentlyStaleIndependentCoins: z.array(
+    z.object({
+      stablecoinId: z.string(),
+      ageSec: z.number(),
+    }),
+  ),
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
 });

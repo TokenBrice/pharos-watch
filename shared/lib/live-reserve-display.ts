@@ -1,73 +1,6 @@
-import type {
-  LiveReserveAdapterKey,
-  LiveReserveEvidenceClass,
-  ReserveDisplayBadgeKind,
-  ReserveDisplayBadgeView,
-} from "../types/live-reserves";
-
-const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayBadgeKind> = {
-  abracadabra: "live",
-  accountable: "live",
-  "anzen-usdz": "live",
-  asymmetry: "live",
-  "attestation-pdf-index": "curated-validated",
-  "blast-usdb-yield-manager": "live",
-  btcfi: "live",
-  "cap-vault": "live",
-  "chainlink-nav": "live",
-  "chainlink-por": "live",
-  "circle-transparency": "live",
-  "collateral-positions-api": "live",
-  crvusd: "live",
-  "curated-validated": "curated-validated",
-  "dola-inverse": "live",
-  "erc4626-single-asset": "live",
-  ethena: "live",
-  "evm-branch-balances": "live",
-  falcon: "live",
-  "fdusd-transparency": "live",
-  "frax-balance-sheet": "live",
-  "frax-fpi-collateral": "live",
-  fx: "live",
-  gho: "live",
-  infinifi: "live",
-  jupusd: "live",
-  lista: "live",
-  "liquity-v1": "live",
-  "liquity-native-active-pool": "live",
-  "liquity-v2-branches": "live",
-  m0: "live",
-  "m0-wrapper-underlying": "live",
-  mento: "live",
-  "nest-vault-positions": "live",
-  "openeden-usdo": "live",
-  "origin-vault-balances": "live",
-  "pusd-vault": "live",
-  "quantoz-transparency": "live",
-  "re-metrics": "live",
-  "resupply-pairs": "live",
-  "reserve-protocol-dtf": "live",
-  reservoir: "live",
-  "ripple-transparency": "live",
-  "sgforge-coinvertible": "live",
-  "sgho-wrapper": "live",
-  "solstice-attestation": "proof",
-  "single-asset": "proof",
-  "sky-makercore": "live",
-  "spiko-api": "live",
-  "superstate-liquidity": "live",
-  "river-protocol-info": "proof",
-  "tether-transparency": "live",
-  "united-por": "live",
-  "usdgo-transparency": "proof",
-  "usdh-native-markets": "proof",
-  "usdai-proof-of-reserves": "live",
-  "usd1-bundle-oracle": "live",
-  "usdd-data-platform": "live",
-  "usdtb-transparency": "live",
-  yamato: "live",
-  "zephyr-scanner": "proof",
-};
+import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types/live-reserve-core";
+import type { ReserveDisplayBadgeView } from "../types/live-reserves";
+import { LIVE_RESERVE_ADAPTER_DESCRIPTORS, type LiveReserveAdapterKey } from "./live-reserve-adapter-descriptors";
 
 const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
   live: "Live",
@@ -76,7 +9,7 @@ const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
 };
 
 export function getReserveDisplayBadgeKindForAdapter(adapterKey: LiveReserveAdapterKey): ReserveDisplayBadgeKind {
-  return ADAPTER_DISPLAY_BADGE_KINDS[adapterKey];
+  return LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].displayBadgeKind;
 }
 
 function getReserveDisplayBadgeLabel(kind: ReserveDisplayBadgeKind): string {
@@ -106,5 +39,5 @@ export function inferReserveDisplayBadgeKindFromEvidenceClass(
 }
 
 export function hasReserveDisplayBadgeForAdapter(adapterKey: string): adapterKey is LiveReserveAdapterKey {
-  return Object.prototype.hasOwnProperty.call(ADAPTER_DISPLAY_BADGE_KINDS, adapterKey);
+  return Object.prototype.hasOwnProperty.call(LIVE_RESERVE_ADAPTER_DESCRIPTORS, adapterKey);
 }
