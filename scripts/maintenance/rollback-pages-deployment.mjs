@@ -1,10 +1,34 @@
 #!/usr/bin/env node
 
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
 import { isDirectRun, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 2_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
+const USAGE = `Usage: node scripts/maintenance/rollback-pages-deployment.mjs [options]
+
+Options:
+  --dry-run     Validate environment and print the rollback target without calling Cloudflare
+  -h, --help    Show this help
+
+Required environment:
+  CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CF_PAGES_PROJECT_NAME,
+  CF_PAGES_DEPLOYMENT_ID`;
+
+export function parsePagesRollbackArgs(argv) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      "dry-run": { type: "boolean" },
+    },
+  });
+  return { dryRun: values["dry-run"] === true, help: values.help === true };
+}
 
 async function singleAttempt({ url, apiToken, fetchImpl, timeoutMs }) {
   const response = await fetchImpl(url, {
@@ -46,6 +70,19 @@ async function singleAttempt({ url, apiToken, fetchImpl, timeoutMs }) {
   return parsed.result ?? null;
 }
 
+/**
+ * @param {{
+ *   accountId?: string,
+ *   apiToken?: string,
+ *   projectName?: string,
+ *   deploymentId?: string,
+ *   fetchImpl?: (input: string | URL, init?: RequestInit) => Promise<Response>,
+ *   maxAttempts?: number,
+ *   retryDelayMs?: number,
+ *   timeoutMs?: number,
+ *   onAttemptError?: (attempt: number, error: unknown) => void,
+ * }} [options]
+ */
 export async function rollbackPagesDeployment({
   accountId,
   apiToken,
@@ -79,12 +116,23 @@ export async function rollbackPagesDeployment({
   throw lastError;
 }
 
-async function runCli() {
-  const accountId = (process.env.CLOUDFLARE_ACCOUNT_ID ?? "").trim();
-  const apiToken = (process.env.CLOUDFLARE_API_TOKEN ?? "").trim();
-  const projectName = (process.env.CF_PAGES_PROJECT_NAME ?? "").trim();
-  const deploymentId = (process.env.CF_PAGES_DEPLOYMENT_ID ?? "").trim();
-  const brokenSha = (process.env.GITHUB_SHA ?? "").trim();
+export async function runPagesRollbackCli(argv = process.argv.slice(2), env = process.env) {
+  const options = parsePagesRollbackArgs(argv);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+
+  const accountId = (env.CLOUDFLARE_ACCOUNT_ID ?? "").trim();
+  const apiToken = (env.CLOUDFLARE_API_TOKEN ?? "").trim();
+  const projectName = (env.CF_PAGES_PROJECT_NAME ?? "").trim();
+  const deploymentId = (env.CF_PAGES_DEPLOYMENT_ID ?? "").trim();
+  const brokenSha = (env.GITHUB_SHA ?? "").trim();
+  assertCliUsage(Boolean(accountId), "CLOUDFLARE_ACCOUNT_ID is required");
+  assertCliUsage(Boolean(projectName), "CF_PAGES_PROJECT_NAME is required");
+  assertCliUsage(Boolean(deploymentId), "CF_PAGES_DEPLOYMENT_ID is required");
+  if (options.dryRun) {
+    console.log(`[rollback-pages] dry run: would roll back ${projectName} to ${deploymentId}`);
+    return;
+  }
+  assertCliUsage(Boolean(apiToken), "CLOUDFLARE_API_TOKEN is required");
 
   try {
     const result = await rollbackPagesDeployment({
@@ -108,10 +156,13 @@ async function runCli() {
     console.error(`[rollback-pages]   project:         ${projectName}`);
     console.error(`[rollback-pages]   target to restore: ${deploymentId}`);
     if (brokenSha) console.error(`[rollback-pages]   broken commit:   ${brokenSha}`);
-    process.exit(1);
+    throw err;
   }
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli();
+  void runCliEntrypoint(() => runPagesRollbackCli(), {
+    label: "rollback-pages",
+    usage: USAGE,
+  });
 }

@@ -9,11 +9,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { getArgValue, sleep } from "./smoke-runtime.mjs";
+import { sleep } from "./smoke-runtime.mjs";
 
 interface ResolveApiUrlOptions {
-  /** CLI flag that overrides everything else, e.g. `--api-url`. */
+  /** CLI flag label used in error messages, e.g. `--api-url`. */
   argName: string;
+  /** Already-parsed CLI override. */
+  explicitUrl?: string | null;
   /**
    * Ordered list of environment variables to consult after the CLI flag.
    * The first non-empty value wins.
@@ -33,10 +35,10 @@ interface ResolveApiUrlOptions {
  * `apiPath` unless it's already present. Throws when nothing is configured.
  */
 export function resolveApiUrl(options: ResolveApiUrlOptions): string {
-  const { argName, envNames, apiPath, scriptName } = options;
+  const { argName, explicitUrl, envNames, apiPath, scriptName } = options;
   const explicit =
-    getArgValue(process.argv, argName) ??
-    envNames.map((name) => process.env[name]).find((value) => value != null && value !== "") ??
+    explicitUrl?.trim() ||
+    envNames.map((name) => process.env[name]).find((value) => value != null && value !== "") ||
     null;
   if (!explicit) {
     throw new Error(
@@ -106,6 +108,8 @@ interface SyncJsonOptions<T> {
   writeTo: URL;
   /** Fetches the upstream payload and projects it to the final entries. */
   parse: () => Promise<readonly T[]>;
+  /** Set false for a fetch-and-validate dry run. */
+  write?: boolean;
 }
 
 /**
@@ -115,13 +119,15 @@ interface SyncJsonOptions<T> {
  */
 export async function syncJson<T>(
   options: SyncJsonOptions<T>,
-): Promise<{ entries: readonly T[]; outputFile: string }> {
-  const { writeTo, parse } = options;
+): Promise<{ entries: readonly T[]; outputFile: string; written: boolean }> {
+  const { writeTo, parse, write = true } = options;
   const entries = await parse();
   const outputFile = fileURLToPath(writeTo);
-  mkdirSync(new URL(".", writeTo), { recursive: true });
-  writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
-  return { entries, outputFile };
+  if (write) {
+    mkdirSync(new URL(".", writeTo), { recursive: true });
+    writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
+  }
+  return { entries, outputFile, written: write };
 }
 
 /**
