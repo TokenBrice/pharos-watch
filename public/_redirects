@@ -78,3 +78,19 @@
 /stablecoins/protocol/liquity-v2 /stablecoins/infrastructure/liquity-v2/ 301
 /stablecoins/protocol/liquity/* /stablecoins/infrastructure/liquity-v1/:splat 301
 /stablecoins/protocol/liquity /stablecoins/infrastructure/liquity-v1/ 301
+
+# About subpages folded into /about/ (route-tree simplification, 2026-06-09).
+# Google Search Console still records impressions for the old URLs.
+/about/principles/* /about/ 301
+/about/principles /about/ 301
+/about/editorial/* /about/ 301
+/about/editorial /about/ 301
+/about/style/* /about/ 301
+/about/style /about/ 301
+
+# Coins removed from the tracked catalog (bed599cc4); /coverage/ documents
+# what Pharos tracks and why. Old detail URLs still earn search impressions.
+/stablecoin/pusd-pleasing/* /coverage/ 301
+/stablecoin/pusd-pleasing /coverage/ 301
+/stablecoin/phpc-coins-ph/* /coverage/ 301
+/stablecoin/phpc-coins-ph /coverage/ 301
