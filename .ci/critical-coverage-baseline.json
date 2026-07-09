@@ -123,11 +123,16 @@
     "shared/lib/yield-scoring.ts": 89.2,
     "shared/lib/report-card-blacklist-matchers.ts": 97.9,
     "shared/lib/blacklist-active-records.ts": 98.4,
-    "functions/api/admin/[[path]].ts": 97.2,
-    "functions/_site-data/[[path]].ts": 94.8,
+    "shared/lib/selector/snapshot.ts": 97.4,
+    "shared/lib/selector/snapshot-normalize.ts": 88.6,
+    "functions/_middleware.ts": 98.5,
+    "functions/selector-snapshot/[[path]].ts": 97.7,
+    "functions/api/admin/[[path]].ts": 95.4,
+    "functions/_site-data/[[path]].ts": 91.1,
+    "functions/lib/csp-inject.ts": 100,
     "functions/lib/pages-proxy-harness.ts": 100,
     "functions/lib/proxy-paths.ts": 100,
     "functions/lib/proxy-utils.ts": 91.3,
-    "functions/lib/upstream-proxy.ts": 93.7
+    "functions/lib/upstream-proxy.ts": 98
   }
 }

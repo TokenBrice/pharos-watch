@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestD1Database } from "../../scripts/test-utils/d1";
 import { onRequest } from "../_site-data/[[path]].ts";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
+import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
 
 function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
   return {
@@ -607,6 +608,53 @@ describe("site-data proxy", () => {
     const response = await responsePromise;
     expect(response.status).toBe(504);
     await expect(response.json()).resolves.toEqual({ error: "Site API upstream timed out" });
+  });
+
+  it("rejects a response whose declared body exceeds the proxy limit", async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({ cancel }),
+      {
+        status: 200,
+        headers: { "Content-Length": String(MAX_PROXY_RESPONSE_BODY_BYTES + 1) },
+      },
+    )));
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a chunked response as soon as it crosses the proxy limit", async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(MAX_PROXY_RESPONSE_BODY_BYTES));
+          controller.enqueue(new Uint8Array(1));
+        },
+        cancel,
+      }),
+      { status: 200 },
+    )));
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it("returns 500 when the site-proxy secret is missing", async () => {

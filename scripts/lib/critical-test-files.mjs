@@ -71,6 +71,11 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/reserve-adapters/__tests__/cap-vault.test.ts",
   "worker/src/cron/__tests__/sync-yield-data.test.ts",
   "worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
+  "shared/lib/selector/__tests__/snapshot.test.ts",
+  "functions/__tests__/middleware.test.ts",
+  "functions/__tests__/selector-snapshot.test.ts",
+  "functions/__tests__/admin-host-gate.test.ts",
+  "functions/__tests__/admin-api-host-gate.test.ts",
   "functions/__tests__/ops-admin-proxy.test.ts",
   "functions/__tests__/site-data-proxy.test.ts",
 ];
