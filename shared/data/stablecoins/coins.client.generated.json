@@ -2449,8 +2449,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    },
-    "liveReserveAdapter": "chainlink-nav"
+    }
   },
   {
     "id": "busd0-usual",

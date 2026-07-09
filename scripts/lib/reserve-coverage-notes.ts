@@ -238,6 +238,15 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "An exchange-managed opaque reserve pool should remain curated-only until independently measured reserve data is available.",
   },
+  "buidl-blackrock": {
+    sourceUrl: "https://securitize.io/blackrock/buidl",
+    sourceQuality: "independent",
+    expectedAdapterFamily: "chainlink-nav (implemented; live config suspended after the BUIDL NAV feed was delisted)",
+    freshnessEvidence:
+      "The Chainlink BUIDL NAV feed (0x6B3A1CFFD3136cfF5C49F3379A4Da721Bc4f5d68) stopped updating 2026-06-23 and was removed from data.chain.link and the Chainlink reference-data directory; Securitize exposes no public NAV/AUM API as of 2026-07-09.",
+    scoreGradePlausible: true,
+    note: "Feed retired upstream, temporarily curated-only: the on-chain NAV oracle froze at 1.00 on 2026-06-23 and is delisted, so every sync degrades on oracle staleness with no recovery path. The chainlink-nav adapter is retained (18 other coins); restore liveReservesConfig if Chainlink relists a BUIDL NAVLink feed (sibling Securitize funds VBILL/ACRED still have live feeds) or Securitize publishes a machine-readable NAV source.",
+  },
   "usdo-openeden": {
     sourceUrl: "https://openeden.com/usdo/transparency",
     sourceQuality: "independent",

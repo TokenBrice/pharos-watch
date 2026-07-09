@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 271 active live-enabled stablecoins across 56 registered adapters; 274 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 55 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 270 active live-enabled stablecoins across 56 registered adapters; 273 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 55 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -412,7 +412,7 @@ This table reflects the shared adapter registry. `Configured coins` can be `0` f
 | `blast-usdb-yield-manager` | `onchain-evm`                                    | `single-asset`                                        | 1                |
 | `btcfi`                    | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `cap-vault`                | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 19               |
+| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 18               |
 | `chainlink-por`            | `onchain-evm`                                    | `attestation-mix`                                     | 5                |
 | `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
