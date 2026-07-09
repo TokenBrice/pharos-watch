@@ -21,6 +21,37 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 
 const mockUseTelegramPulse = vi.mocked(useTelegramPulse);
 
+function makeTelegramPulseQueryResult(data: TelegramPulse): ReturnType<typeof useTelegramPulse> {
+  return {
+    data,
+    dataUpdatedAt: data.updatedAt * 1000,
+    error: null,
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    errorUpdateCount: 0,
+    isError: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isFetching: false,
+    isLoading: false,
+    isPending: false,
+    isLoadingError: false,
+    isInitialLoading: false,
+    isPaused: false,
+    isPlaceholderData: false,
+    isRefetchError: false,
+    isRefetching: false,
+    isStale: false,
+    isSuccess: true,
+    isEnabled: true,
+    refetch: vi.fn<ReturnType<typeof useTelegramPulse>["refetch"]>(),
+    status: "success",
+    fetchStatus: "idle",
+    promise: Promise.resolve(data),
+  };
+}
+
 const pulse: TelegramPulse = {
   activeWatchers: 1842,
   coinSubscriptions: 5621,
@@ -126,7 +157,9 @@ describe("TelegramPulseBoard", () => {
     expect(details).toBeTruthy();
     expect(details?.open).toBe(false);
     expect(Boolean(capacity.compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(Boolean(lifecycle.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(lifecycle.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true,
+    );
 
     fireEvent.click(summary as HTMLElement);
 
@@ -190,15 +223,13 @@ describe("TelegramPulseBoard", () => {
   });
 
   it("keeps the lifecycle placeholder only when no history points are available", () => {
-    mockUseTelegramPulse.mockReturnValue({
-      data: {
+    mockUseTelegramPulse.mockReturnValue(
+      makeTelegramPulseQueryResult({
         ...pulse,
         watcherHistory: [],
         lifecycleHistoryUpdatedAt: null,
-      },
-      isLoading: false,
-      isError: false,
-    } as ReturnType<typeof useTelegramPulse>);
+      }),
+    );
 
     render(<TelegramPulseBoard />);
 
@@ -235,14 +266,12 @@ describe("TelegramPulseBoard", () => {
   });
 
   it("renders generic partial telemetry state without exposing operator errors", () => {
-    mockUseTelegramPulse.mockReturnValue({
-      data: {
+    mockUseTelegramPulse.mockReturnValue(
+      makeTelegramPulseQueryResult({
         ...pulse,
         quality: { status: "partial", unavailableFields: ["topCoins"], errors: { topCoins: "D1 unavailable" } },
-      },
-      isLoading: false,
-      isError: false,
-    } as ReturnType<typeof useTelegramPulse>);
+      }),
+    );
 
     render(<TelegramPulseBoard />);
 

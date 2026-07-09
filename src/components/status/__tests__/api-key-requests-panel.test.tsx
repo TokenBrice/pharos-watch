@@ -109,22 +109,35 @@ describe("ApiKeyRequestsPanel", () => {
     expect(within(summary).getByText("safe to release")).toBeTruthy();
     expect(screen.getByText(/Waiting on email verification/i)).toBeTruthy();
     expect(screen.getByText(/Release the stale claim to unblock a future self-serve request/i)).toBeTruthy();
-    expect((screen.getAllByRole("button", { name: "Release stale claim" })[0] as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getAllByRole("button", { name: "Release stale claim" })[1] as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[0] as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[1] as HTMLButtonElement).disabled).toBe(
+      false,
+    );
   });
 
   it("does not render durable request ids in the admin cards or notices", async () => {
     const request = makeRequest({ requestId: "akr_do_not_show" });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "rejected",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              requestId: request.requestId,
+              status: "rejected",
+              claimStatus: "released",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      ),
+    );
     renderPanel([request]);
 
     expect(screen.queryByText(request.requestId)).toBeNull();
@@ -141,15 +154,20 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("requires confirmation and sends reason plus idempotency header for mutations", async () => {
     const request = makeRequest({ requestId: "akr_mutation_target" });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "rejected",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          requestId: request.requestId,
+          status: "rejected",
+          claimStatus: "released",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
 
@@ -160,10 +178,10 @@ describe("ApiKeyRequestsPanel", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, init] = fetchMock.mock.calls[0] ?? [];
-    const headers = new Headers((init as RequestInit).headers);
+    const headers = new Headers(init?.headers);
     expect(headers.get("X-Pharos-Admin")).toBe("1");
     expect(headers.get("Idempotency-Key")).toBe("api-key-request:reject:akr_mutation_target:uuid-for-test");
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "manual abuse review" });
+    expect(JSON.parse(String(init?.body))).toEqual({ reason: "manual abuse review" });
   });
 
   it("labels issued-key rejection and stale claim release by their effect", async () => {
@@ -174,15 +192,20 @@ describe("ApiKeyRequestsPanel", () => {
       linkedKeyExpiresAt: GENERATED_AT + 3600,
       claimStatus: "issued",
     });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "issued",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          requestId: request.requestId,
+          status: "issued",
+          claimStatus: "released",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-release-test" });
 
@@ -215,10 +238,12 @@ describe("ApiKeyRequestsPanel", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    const headers = new Headers((init as RequestInit).headers);
+    const headers = new Headers(init?.headers);
     expect(String(url)).toContain("/api/admin/api-key-requests-admin/akr_release_target/release-claim");
-    expect(headers.get("Idempotency-Key")).toBe("api-key-request:release-claim:akr_release_target:uuid-for-release-test");
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "inactive key cleanup" });
+    expect(headers.get("Idempotency-Key")).toBe(
+      "api-key-request:release-claim:akr_release_target:uuid-for-release-test",
+    );
+    expect(JSON.parse(String(init?.body))).toEqual({ reason: "inactive key cleanup" });
   });
 
   it("announces admin list fetch failures as alerts", () => {

@@ -8,6 +8,7 @@ import {
   buildSourceRiskGoldenFixture,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+import { makeYieldProvenance } from "@/test/fixtures/yield";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
@@ -102,13 +103,10 @@ function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
     apyMax30d: 0.055,
     warningSignals: [],
     altSources: [],
-    provenance: {
+    provenance: makeYieldProvenance({
       sourceKey: "primary-source",
-      confidenceTier: "high",
-      method: "best-source",
-      upstreamIds: [],
-      selectedAt: null,
-    },
+      confidenceTier: "curated",
+    }),
     ...overrides,
   };
 }

@@ -16,7 +16,7 @@ const row: ScreenerRow = {
   lifecycle: "active",
   mechanism: null,
   type: "centralized",
-  peg: "peggedUSD",
+  peg: "USD",
   supplyUsd: 100_000_000,
   pegScore: 98,
   dewsScore: 12,
@@ -64,7 +64,9 @@ function installViewportMatchMedia(width: number) {
   });
 }
 
-function makeSort(overrides: Partial<DataTableSortControls<ScreenerSortKey>> = {}): DataTableSortControls<ScreenerSortKey> {
+function makeSort(
+  overrides: Partial<DataTableSortControls<ScreenerSortKey>> = {},
+): DataTableSortControls<ScreenerSortKey> {
   return {
     sortKey: "safetyScore",
     sortDirection: "desc",
@@ -81,12 +83,7 @@ afterEach(() => {
 describe("ScreenerTable mobile cards", () => {
   it("server-renders a cheap pending branch before viewport hydration", () => {
     const html = renderToStaticMarkup(
-      <ScreenerTable
-        rows={[rowWithSeries]}
-        isLoading={false}
-        hasActiveFilters={false}
-        sort={makeSort()}
-      />,
+      <ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />,
     );
 
     expect(html).toContain("stablecoin-screener-layout-pending");
@@ -98,14 +95,7 @@ describe("ScreenerTable mobile cards", () => {
     const toggleSort = vi.fn();
     installViewportMatchMedia(500);
 
-    render(
-      <ScreenerTable
-        rows={[row]}
-        isLoading={false}
-        hasActiveFilters={false}
-        sort={makeSort({ toggleSort })}
-      />,
-    );
+    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort({ toggleSort })} />);
 
     await waitFor(() => {
       expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
@@ -127,14 +117,7 @@ describe("ScreenerTable desktop table", () => {
   it("renders only the desktop table branch on desktop viewports", async () => {
     installViewportMatchMedia(1400);
 
-    render(
-      <ScreenerTable
-        rows={[row]}
-        isLoading={false}
-        hasActiveFilters={false}
-        sort={makeSort()}
-      />,
-    );
+    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
@@ -147,14 +130,7 @@ describe("ScreenerTable desktop table", () => {
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
     installViewportMatchMedia(900);
 
-    render(
-      <ScreenerTable
-        rows={[rowWithSeries]}
-        isLoading={false}
-        hasActiveFilters={false}
-        sort={makeSort()}
-      />,
-    );
+    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
@@ -166,14 +142,7 @@ describe("ScreenerTable desktop table", () => {
   it("renders sparkline SVGs on xl desktop viewports", async () => {
     installViewportMatchMedia(1400);
 
-    render(
-      <ScreenerTable
-        rows={[rowWithSeries]}
-        isLoading={false}
-        hasActiveFilters={false}
-        sort={makeSort()}
-      />,
-    );
+    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByRole("img", { name: /30-day peg deviation for USDT/i })).toBeTruthy();
