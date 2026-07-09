@@ -27,7 +27,10 @@ describe("compare page blacklist copy", () => {
 
 describe("STATIC_COMPARISON_PAGES", () => {
   it("keeps the static pair set capped", () => {
-    expect(STATIC_COMPARE_PAIRS.length).toBeLessThanOrEqual(30);
+    // The cap is a deliberate brake on programmatic expansion: pairs ship in
+    // reviewed, demand-led batches (SEO growth plan 2026-07-09, P1.3), never
+    // as blanket N×N generation. Raise it consciously with each batch.
+    expect(STATIC_COMPARE_PAIRS.length).toBeLessThanOrEqual(60);
   });
 
   it("includes bounded high-intent non-core comparisons without generating every pair", () => {

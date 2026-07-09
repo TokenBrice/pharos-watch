@@ -31,6 +31,26 @@ export const STATIC_COMPARE_PAIRS = [
   ["usdt-tether", "tusd-trueusd"],
   ["usdt-tether", "usdd-tron-dao-reserve"],
   ["usdc-circle", "usdg-paxos"],
+  // 2026-07 expansion, batch 1 — demand-led (Search Console) plus cohort
+  // completion. Eligibility gate: active coins only (no pre-launch, no
+  // frozen), full static profiles on both sides.
+  ["usdt-tether", "usdg-paxos"],
+  ["usdg-paxos", "pyusd-paypal"],
+  ["rlusd-ripple", "pyusd-paypal"],
+  ["rlusd-ripple", "usde-ethena"],
+  ["rlusd-ripple", "usdg-paxos"],
+  ["usdt-tether", "usdtb-ethena"],
+  ["usde-ethena", "usdtb-ethena"],
+  ["usdt-tether", "ausd-agora"],
+  ["usdc-circle", "musd-metamask"],
+  ["usde-ethena", "usdf-falcon"],
+  ["fxusd-f-x-protocol", "crvusd-curve"],
+  ["gho-aave", "usds-sky"],
+  ["usdy-ondo-finance", "buidl-blackrock"],
+  ["sdai-sky", "susde-ethena"],
+  ["eurc-circle", "eure-monerium"],
+  ["eurc-circle", "eur0-usual"],
+  ["brla-brla-digital", "brz-transfero"],
 ] as const;
 
 export function buildLiveCompareUrl(coinIds: readonly string[]): string {
