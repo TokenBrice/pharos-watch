@@ -26,7 +26,7 @@ Production Pages does not proxy public self-serve `/api/*` POST requests. The pu
 
 Self-serve API-key request honeypot submissions are intentionally no-op accepted: `POST /api/api-key-requests` returns `200 { "ok": true }` when the optional `website` field is non-empty, without creating an API-key request or sending email. Normal non-honeypot submissions return `202 Accepted` with `pending_verification`.
 
-The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`, without `Cache-Control: no-store`, and without freshness `Warning: 110`; it does not cache no-store admin and control routes.
+The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. Pages `/_site-data/*` forwards the upstream cache policy, `Age`, and `Date` without adding a second Cache API lifetime, so it cannot make a nearly expired Worker response fresh again.
 
 ## Public API Auth
 
@@ -3552,6 +3552,8 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 ```json
 {
   "profile": "treasury",
+  "provenance": "client-unverified",
+  "snapshotSchemaVersion": 2,
   "engineVersion": "selector-v1.91",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
@@ -3593,9 +3595,9 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, and coverage warning counts). Authored recommendation/lower-ranked prose fields are optional on input and are stripped before persistence/replay, so shared links derive visible copy from canonical keys instead of trusting caller-supplied free-form text. Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The write boundary stores an exact allowlisted projection, discards unknown/debug/authored-prose fields, derives tracked identities from the canonical registry, and recomputes score/rank/count relationships that can be proven from the submitted replay fields. Unsupported engine versions, non-SHA-256 dataset hashes, engine/methodology mismatches, untracked IDs, duplicates, and contradictory relationships are rejected. Every stored/read artifact carries `provenance: "client-unverified"` and `snapshotSchemaVersion: 2`; the sid proves storage integrity, not that Pharos reproduced or endorsed the submitted scores.
 
-On GET, the Pages Function parses the stored payload, strips legacy debug/prose fields, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
+On GET, the Pages Function parses the stored payload, applies the exact projection, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
@@ -3606,7 +3608,7 @@ On GET, the Pages Function parses the stored payload, strips legacy debug/prose 
 | 404    | Origin disallowed, sid not 32 hex chars, or KV miss.                                     |
 | 500    | `SELECTOR_SNAPSHOTS` KV binding missing on the Pages project.                            |
 | 502    | Stored KV value is corrupt, fails semantic validation, or recomputes to a different sid. |
-| 503    | KV read throws transiently (Cloudflare KV outage).                                       |
+| 503    | KV read throws transiently, or the first-read retention extension cannot be confirmed.    |
 
 ### `POST /selector-snapshot`
 
@@ -3614,11 +3616,11 @@ Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempote
 
 **Authentication:** exempt — same-origin gated.
 
-**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces and caller-supplied selector prose (`whyText`, `watchText`, `verdictText`, `teachingText`) are stripped before canonical sid computation and storage.
+**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap, enforced incrementally even when `Content-Length` is absent or false. Debug traces, unknown fields, and caller-supplied selector prose (`whyText`, `watchText`, `verdictText`, `teachingText`) are stripped before canonical sid computation and storage.
 
 **Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
 
-Share-link privacy property: the stored payload contains the Picker answers and output rows with free-form selector prose removed, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact. Unread KV entries expire after 90 days; the first successful read extends the entry to the full 5-year retention TTL.
+Share-link privacy property: the KV payload contains Picker answers and projected output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. Rate limits use a separate D1 daily quota keyed by a dedicated-pepper HMAC of `CF-Connecting-IP`; raw and unsalted IP hashes are never stored. The website UI must disclose that anyone with the link can view the client-unverified artifact. Unread KV entries expire after 90 days; the first read succeeds only when the full five-year extension is confirmed.
 
 **Validation matrix:**
 
@@ -3640,7 +3642,7 @@ Share-link privacy property: the stored payload contains the Picker answers and 
 | 405    | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment.                                                        |
 | 429    | Best-effort isolate-local write throttle exceeded (10 writes/minute/IP) or durable daily write quota exceeded (100 writes/day/IP).                      |
 | 413    | Payload exceeds 100 KB defensive cap.                                                                                                                   |
-| 500    | `SELECTOR_SNAPSHOTS` KV binding missing.                                                                                                                |
+| 500    | `SELECTOR_SNAPSHOTS` or `SELECTOR_SNAPSHOT_IP_HASH_SECRET` binding missing.                                                                              |
 | 503    | KV write throws transiently, or the D1-backed daily quota store is missing/unavailable.                                                                  |
 
 ---
@@ -3663,7 +3665,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
+**Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status/response.ts`, with `shared/types/status.ts` retained as its compatibility barrel. It currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```text
 {
@@ -4169,7 +4171,7 @@ Admin-only site-vs-external demand attribution summary. Aggregates minute-bucket
 
 The top-line `site` bucket combines:
 
-- same-origin `/_site-data/*` demand recorded by the Pages Function, including Pages cache hits and upstream proxy attempts
+- same-origin `/_site-data/*` upstream attempts recorded by the Pages Function; the retired outer Cache API path may still appear in historical windows
 - `api.pharos.watch` requests attributed to browser evidence (`Origin` / `Referer` / frontend `Accept` marker + same-site fetch metadata)
 - `api.pharos.watch` requests authenticated with API keys explicitly marked `trafficClass="site"`
 
@@ -4193,13 +4195,13 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `generatedAt` — Unix seconds when the response was generated
 - `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, `apiKeyLimit`, and current `retentionDays`
 - `totals` — aggregate `siteRequests`, `externalRequests`, `totalRequests`, `siteSharePct`, `externalSharePct`
-- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits`, `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, `pagesUpstreamErrors`) plus `publicApiSiteRequests`
+- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits` is historical-only; current traffic uses `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, or `pagesUpstreamErrors`) plus `publicApiSiteRequests`
 - `lanes[]` — worker-load split by `lane` (`public-api`, `site-api`) with the same site/external counters
 - `routes[]` — normalized per-route breakdown sorted by total demand volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
-- `scope` — explicit booleans describing that the response counts total site demand, worker load, and Pages proxy cache hits
+- `scope` — explicit booleans describing total site demand, worker load, and whether the selected historical window contains retired Pages cache-hit telemetry
 
 ### `GET /api/yield-source-decisions`
 

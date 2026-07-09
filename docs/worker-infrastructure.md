@@ -43,7 +43,7 @@ Cron observability has two paths. Terminal job outcomes continue through `logCro
 
 HTTP, API, status, and admin route logs use `logWorkerEvent()` from `worker/src/lib/structured-log.ts`. It emits one JSON console line with stable top-level fields (`scope`, `level`, `event`, `route`, `job`, `provider`, `source`, `runId`) and bounded `metadata` / error fields so Cloudflare Workers Logs stay queryable without turning high-cardinality values into top-level keys. `npm run check:cron-console-usage` keeps its historical name but now ratchets raw `console.*` calls across cron plus HTTP/status/admin roots; new route logs should use `logWorkerEvent()` instead of direct string console calls.
 
-Provider URLs that may embed credentials must pass through `redactProviderUrls()` / `safeErrorMessage()` before logging. The central redactor strips path/query details for Alchemy, dRPC, Etherscan, Telegram, Twitter/X, Anthropic-style hosts, and redacts generic secret query parameters on other URLs.
+Provider URLs that may embed credentials must pass through `redactProviderUrls()` / `safeErrorMessage()` before logging. The central redactor strips path/query details for Alchemy, dRPC, Etherscan, Telegram, Twitter/X, Anthropic-style hosts, and redacts generic secret query parameters on other URLs. Structured Worker and cron metadata applies the same redaction recursively to nested strings, arrays, objects, and `Error` message/stack fields before truncation or serialization.
 
 ---
 
@@ -144,7 +144,8 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
-| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations. |
+| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores client-unverified content-addressed `s:{sid}` entries. HMAC-IP write-quota counters live in D1 for atomic reservations. |
+| `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
@@ -347,7 +348,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev` proxy same-origin `/_site-data/*` requests to the explicit `SITE_API_ORIGIN` target on every host (production and preview); when that binding is missing the proxy returns `500`. The lane also gates on the caller's `Origin` header (or `Referer` as a fallback); only `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev` are accepted.
+- Pages Functions proxy same-origin `/_site-data/*` requests only to the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`; missing, malformed, non-HTTPS, or foreign origins return `500` before `SITE_API_SHARED_SECRET` is attached. The lane gates caller `Origin` / `Referer`, forwards upstream cache-age headers without a second Pages cache lifetime, and consumes bounded bodies inside the request deadline.
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
 - the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-lane.ts`
@@ -395,7 +396,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
 
-The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. When handler execution throws, the worker first tries to clear the pending reservation so the same key can be retried normally. If that cleanup cannot be confirmed, it stores a deterministic failure replay for that key and subsequent repeats return a replayed `500` response until the reservation expires.
+The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. Reservations have an owner/generation and a separate durable execution-start transition. A stale reservation may be taken over only while execution has not started. Once execution-start is durable, terminal writes are owner/generation compare-and-swap operations and automatic takeover is prohibited: a thrown handler or unconfirmed terminal response returns `503` with `error = "execution_unknown"`, and later requests with that key replay the same operator-reconciliation state without running the mutation again. This deliberately prefers at-most-once behavior for irreversible effects; operators must inspect the action's audit/downstream state before choosing a new key or manual repair.
 
 ### Backfill Query Helper
 
@@ -722,13 +723,14 @@ async function logCronRun(
 - Exposes a `reportProgress(...)` callback; leased jobs now emit wrapper-owned milestones (`started`, `lease-acquired`, `completed`, timeout/skip states when applicable) before any cron-specific progress stages
 - Executes the job function
 - On normal completion: inserts row into `cron_runs` with `status = resolvedResult.status ?? "ok"`, `item_count`, and `metadata`; returned statuses such as `degraded`, `skipped_locked`, `skipped_neutral`, or `error` are preserved
+- Assigns each append-only run insert an `idempotency_key`; the partial unique index makes an ambiguous committed D1 overload retry a no-op instead of duplicate telemetry
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
 - On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - Returns the job's `CronResult` when the handler provides one
 - History pruning is handled by the daily `prune-cron-history` job on `0 3 * * *`, not by `logCronRun()` inline. That job deletes `cron_runs` rows older than 7 days, terminal `worker_job_attempts` / `worker_repair_tasks` rows older than 7 days, `cron_slot_executions` and `block_timestamp_cache` rows older than 14 days, `worker_canary_runs` rows older than 90 days, and `selector_snapshot_daily_quota` rows older than 2 days.
 
-**Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error, slot_started_at)`
+**Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error, slot_started_at, idempotency_key)`
 
 ### In-flight Cron Progress
 
@@ -1006,7 +1008,7 @@ Scheduled execution is now wired in two layers:
 
 This means duplicate trigger deliveries for the same slot are skipped before shared-slot fan-out can reorder downstream jobs, while individual jobs inside the accepted slot still use their existing per-job leases.
 
-The dedicated quarter-hour `cron-slot-sweeper` reconciles stale `cron_slot_executions` rows whose heartbeat has not advanced within the 35-minute slot stale window. Scheduled slot admission now first pre-sweeps stale prior rows for the same schedule key before accepting the new slot, reducing duplicate-running ambiguity when the platform killed a previous invocation. Before closing the stale slot, the sweeper reconciles matching `cron_run_progress` and `cron_leases` ownership. If a progress row has a matching expired lease and no completed child cron row for that slot, the reconciler writes a synthetic terminal `cron_runs` row with `metadata.reason = "stale-slot-reconciled"`, then clears the progress/lease artifacts. The stale slot is marked `finished` / `error` with metadata explaining what was reconciled, and the reconciler writes a compact `cache["cron:event:<slot>:scheduled-slot-abandoned"]` marker containing the slot key, owner, and abandoned child progress stage. Accepted slots also count failed heartbeat writes in `slotHeartbeatFailures` metadata when finalizing. That keeps platform-killed scheduled events from remaining operationally `running` forever, gives interrupted child work an auditable terminal row, and lets `/api/status` surface the latest slot-abandoned event without scanning old slot rows.
+The dedicated quarter-hour `cron-slot-sweeper` reconciles stale `cron_slot_executions` rows whose heartbeat has not advanced within the 35-minute slot stale window. Scheduled slot admission first pre-sweeps stale prior rows for the same schedule key. Before touching child artifacts, the sweeper atomically transitions the exact stale owner/generation/heartbeat row from `running` to `reconciling`; a concurrent heartbeat makes that claim change zero rows and leaves all child state untouched. If the claiming process dies, a later sweep can reclaim the stale `reconciling` row with the same owner/generation/heartbeat compare-and-swap and a new generation, while a fresh reconciliation claim remains protected for the full stale window. Takeovers increment `execution_generation`, and heartbeat/finalization updates require the current owner, generation, and state. A zero-change heartbeat aborts controlled work, while a late original finalizer cannot overwrite the takeover or synthetic error. After the reconciliation claim, the sweeper reconciles matching `cron_run_progress` and `cron_leases` ownership, writes an idempotent synthetic child `cron_runs` error when needed, closes the claimed slot, and writes the compact abandonment event marker. This keeps platform-killed scheduled events from remaining operationally `running` or `reconciling` without letting a stale observer corrupt live artifacts.
 
 ### Block Tracking (Blacklist)
 
@@ -1131,7 +1133,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Registered adapters:**
 
-The authoritative adapter registry lives in `shared/lib/live-reserve-adapters-definitions.ts`, with worker implementations registered from `worker/src/cron/reserve-adapters/index.ts`. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/coins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
+The authoritative runtime-neutral adapter declaration lives in `shared/lib/live-reserve-adapter-declarations.ts` and is resolved with Zod schemas by `shared/lib/live-reserve-adapter-descriptors.ts`; `worker/src/cron/reserve-adapters/index.ts` separately owns the exhaustive Worker fetcher map. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/coins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
 
 This doc intentionally avoids a hand-maintained adapter-by-coin table because live reserve coverage changes frequently and stale enumerations have caused drift. For current coverage, use `docs/live-reserves.md`, the adapter registry files above, and the checked-in stablecoin metadata.
 
