@@ -181,24 +181,29 @@
     }
   ],
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "tether-transparency",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "xaut-tether",
     "display": {
-      "url": "https://gold.tether.to/",
-      "label": "Tether Gold"
+      "url": "https://tether.to/en/transparency",
+      "label": "Tether Gold Transparency"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://app.tether.to/transparency.json"
       }
     },
     "params": {
-      "label": "Physical gold bars (LBMA Good Delivery)",
-      "risk": "very-low"
+      "currencyIso": "xaut",
+      "slices": [
+        {
+          "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
+          "pct": 100,
+          "risk": "very-low"
+        }
+      ]
     }
   },
   "launchDate": "2020-01-23",

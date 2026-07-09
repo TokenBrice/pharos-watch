@@ -390,7 +390,7 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "tether-transparency",
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "usdt-tether",
@@ -400,10 +400,34 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://app.tether.to/transparency.json"
       }
+    },
+    "params": {
+      "currencyIso": "usdt",
+      "slices": [
+        {
+          "name": "Direct & indirect U.S. Treasury Bills",
+          "pct": 73.5,
+          "risk": "very-low"
+        },
+        {
+          "name": "Physical gold bars",
+          "pct": 10.4,
+          "risk": "very-low"
+        },
+        {
+          "name": "Bitcoin",
+          "pct": 3.7,
+          "risk": "medium"
+        },
+        {
+          "name": "Other reserves (cash & equivalents, secured loans, corporate bonds, other investments)",
+          "pct": 12.4,
+          "risk": "medium"
+        }
+      ]
     }
   },
   "launchDate": "2014-10-06",
