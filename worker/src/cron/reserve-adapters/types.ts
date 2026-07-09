@@ -17,6 +17,7 @@ export interface AdapterContext {
   db?: D1Database;
   etherscanApiKey?: string;
   alchemyApiKey?: string;
+  trongridApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
   requestCache?: Map<string, Promise<unknown>>;

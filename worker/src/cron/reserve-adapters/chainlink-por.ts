@@ -9,6 +9,7 @@ import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
+  fetchTronErc20TotalSupply,
   makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -58,6 +59,10 @@ export interface ChainlinkPorSupplyAggregate {
 
 function isEvmContract(contract: ContractDeployment): boolean {
   return contract.chain !== "tron" && contract.chain !== "solana";
+}
+
+function isTronContract(contract: ContractDeployment): boolean {
+  return contract.chain === "tron";
 }
 
 function parseReserveUnit(raw: unknown): ChainlinkPorReserveUnit | undefined {
@@ -146,7 +151,7 @@ export function adaptChainlinkPorResponse(
     warnings.push(
       reserveDegradedWarning(
         "partial-supply-read-failure",
-        `Supply aggregation omits EVM chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
+        `Supply aggregation omits chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
       ),
     );
   }
@@ -243,26 +248,32 @@ export async function fetchChainlinkPorReserves(
     return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, null);
   }
 
-  // 3. Aggregate totalSupply across all EVM chains in coin.contracts.
-  //    Non-EVM chains (tron, solana) are omitted and surfaced as an info warning.
+  // 3. Aggregate totalSupply across all EVM + Tron chains in coin.contracts.
+  //    Solana is the only chain still omitted, surfaced as an info warning.
   const allContracts = coin.contracts ?? [];
   const evmContracts = allContracts.filter(isEvmContract);
-  const omittedNonEvmChains = allContracts.filter((c) => !isEvmContract(c)).map((c) => c.chain);
+  const tronContracts = allContracts.filter(isTronContract);
+  const omittedNonEvmChains = allContracts
+    .filter((c) => !isEvmContract(c) && !isTronContract(c))
+    .map((c) => c.chain);
+  const readableContracts = [...evmContracts, ...tronContracts];
 
-  if (evmContracts.length === 0) {
-    throw new Error(`chainlink-por: no EVM contracts available for ${coin.id}`);
+  if (readableContracts.length === 0) {
+    throw new Error(`chainlink-por: no EVM or Tron contracts available for ${coin.id}`);
   }
 
   const supplyReads = await Promise.all(
-    evmContracts.map(async (contract) => {
-      const raw = await fetchErc20TotalSupply(
-        { ...input, chain: contract.chain },
-        contract.address,
-        signal,
-        ctx,
-        params.rpcUrl,
-        params.fallbackRpcUrl,
-      );
+    readableContracts.map(async (contract) => {
+      const raw = isTronContract(contract)
+        ? await fetchTronErc20TotalSupply(contract.address, signal, ctx)
+        : await fetchErc20TotalSupply(
+            { ...input, chain: contract.chain },
+            contract.address,
+            signal,
+            ctx,
+            params.rpcUrl,
+            params.fallbackRpcUrl,
+          );
       return { contract, raw };
     }),
   );
@@ -273,7 +284,7 @@ export async function fetchChainlinkPorReserves(
   const failed = supplyReads.filter((entry) => entry.raw == null || entry.raw <= 0n);
 
   if (successful.length === 0) {
-    throw new Error(`chainlink-por: totalSupply() calls failed on all EVM chains for ${coin.id}`);
+    throw new Error(`chainlink-por: totalSupply() calls failed on all EVM/Tron chains for ${coin.id}`);
   }
 
   const supplyAggregate: ChainlinkPorSupplyAggregate = {

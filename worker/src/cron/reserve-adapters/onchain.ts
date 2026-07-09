@@ -7,9 +7,12 @@ import {
   fetchEtherscanProxyHex,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
+import { tronBase58ToHex } from "../../lib/tron-address";
+import { rethrowIfAborted } from "../../lib/abort";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
+import { fetchJsonPostWithRetry } from "./request";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 type EvmCallInput = Pick<EvmInput, "chain"> & { rpcMode?: EvmInput["rpcMode"] };
@@ -254,4 +257,59 @@ export async function fetchErc20TotalSupply(
     rpcMode: input.rpcMode,
     chain: input.chain,
   });
+}
+
+const TRON_TOTAL_SUPPLY_FUNCTION_SELECTOR = "totalSupply()";
+// Tron's constant-contract call requires a well-formed owner_address even for
+// reads that never inspect msg.sender; the zero address is the standard filler.
+const TRON_ZERO_OWNER_ADDRESS_HEX41 = "410000000000000000000000000000000000000000";
+
+interface TronTriggerConstantContractResponse {
+  result?: { result?: boolean };
+  constant_result?: string[];
+}
+
+/**
+ * TRC-20 totalSupply() via TronGrid's wallet/triggerconstantcontract endpoint.
+ * Mirrors fetchErc20TotalSupply's fail-closed contract: any read failure
+ * (bad address, HTTP error, contract revert) resolves to null rather than
+ * throwing, so callers can fold it into the same success/failure aggregation.
+ */
+export async function fetchTronErc20TotalSupply(
+  contractAddress: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<bigint | null> {
+  const contractHex = await tronBase58ToHex(contractAddress);
+  if (!contractHex) return null;
+  const contractHex41 = `41${contractHex.slice(2)}`;
+
+  const headers: Record<string, string> = {};
+  if (ctx?.trongridApiKey) headers["TRON-PRO-API-KEY"] = ctx.trongridApiKey;
+
+  try {
+    const json = await fetchJsonPostWithRetry<TronTriggerConstantContractResponse>(
+      "https://api.trongrid.io/wallet/triggerconstantcontract",
+      {
+        owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
+        contract_address: contractHex41,
+        function_selector: TRON_TOTAL_SUPPLY_FUNCTION_SELECTOR,
+        parameter: "",
+        visible: false,
+      },
+      signal,
+      10_000,
+      ctx,
+      { headers },
+    );
+
+    if (json.result?.result !== true) return null;
+    const raw = json.constant_result?.[0];
+    if (!raw) return null;
+    return BigInt(`0x${raw}`);
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    console.warn("[chainlink-por] fetchTronErc20TotalSupply failed:", error);
+    return null;
+  }
 }

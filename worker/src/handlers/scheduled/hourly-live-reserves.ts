@@ -193,6 +193,7 @@ function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): Scheduled
               {
                 etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
                 alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+                trongridApiKey: runtime.env.TRONGRID_API_KEY,
                 chainRpcs: runtime.chainRpcs,
               },
               reportProgress,

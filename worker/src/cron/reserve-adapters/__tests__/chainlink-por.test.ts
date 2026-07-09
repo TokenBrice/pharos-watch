@@ -9,6 +9,7 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchErc20TotalSupply: vi.fn(),
+    fetchTronErc20TotalSupply: vi.fn(),
     fetchOnchainUint256,
     fetchOnchainRawCall,
     makeOnchainCallers: vi.fn((input, options) => ({
@@ -33,7 +34,12 @@ vi.mock("../helpers", async (importOriginal) => {
 });
 
 import { adaptChainlinkPorResponse, fetchChainlinkPorReserves, type ChainlinkPorParams } from "../chainlink-por";
-import { fetchErc20TotalSupply, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import {
+  fetchErc20TotalSupply,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
+  fetchTronErc20TotalSupply,
+} from "../helpers";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -269,8 +275,73 @@ describe("fetchChainlinkPorReserves", () => {
     return `0x${word(42n)}${word(answer)}${word(0n)}${word(BigInt(updatedAt))}${word(42n)}`;
   }
 
-  it("sums totalSupply across all configured EVM chains for the ratio denominator", async () => {
-    // TUSD-style: ethereum + tron + avalanche + bsc (EVM-only: ethereum + avalanche + bsc)
+  it("sums totalSupply across all configured EVM chains plus Tron for the ratio denominator", async () => {
+    // TUSD-style: ethereum + tron + avalanche + bsc + solana (solana is the only
+    // chain still unreadable and omitted; tron is now included in the aggregate).
+    const coin: StablecoinMeta = {
+      id: "tusd-test",
+      name: "TUSD Test",
+      symbol: "TUSDT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "tron", address: "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4", decimals: 18 },
+        { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+        { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
+        { chain: "solana", address: "5Wb2QwGNH5MQdBjrpqSCJk8QgKzhkjaEqE9BUmQqYuTM", decimals: 6 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+
+    // decimals() returns 8 for the PoR feed
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    // latestRoundData() returns reserves of 1010e8 ($1,010 worth) — this mirrors
+    // the production scope-mismatch bug: EVM-only supply (600) would read as
+    // 168% over-collateralized, while EVM+Tron supply (1000) reads as ~101%.
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(1010_00000000n, now - 60));
+
+    // EVM chains each return 200 tokens (18 decimals) — total 600 tokens supply
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(200_000000000000000000n) // ethereum
+      .mockResolvedValueOnce(200_000000000000000000n) // avalanche
+      .mockResolvedValueOnce(200_000000000000000000n); // bsc
+    // Tron contributes 400 tokens, bringing multichain supply to 1000
+    vi.mocked(fetchTronErc20TotalSupply).mockResolvedValueOnce(400_000000000000000000n);
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    // reserves = $1010, multichain supply (600 EVM + 400 tron) = 1000 -> ratio ~1.01 (healthy)
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.01, 5);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(1000, 5);
+    expect(result.metadata?.supplyReadComplete).toBe(true);
+
+    // No scope-mismatch warning now that Tron supply is included in the denominator
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+
+    // Tron shows up as a real supply contribution, not an omitted chain
+    const supplyContributions = result.metadata?.supplyContributions as Array<{ chain: string }> | undefined;
+    expect(supplyContributions?.some((c) => c.chain === "tron")).toBe(true);
+
+    // Solana remains the only chain omitted from the aggregate
+    const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
+    expect(omitted).toBeDefined();
+    expect(omitted?.message).toContain("solana");
+    expect(omitted?.message).not.toContain("tron");
+
+    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(3);
+    expect(fetchTronErc20TotalSupply).toHaveBeenCalledTimes(1);
+  });
+
+  it("degrades instead of silently reporting EVM-only coverage when the Tron totalSupply() read fails", async () => {
     const coin: StablecoinMeta = {
       id: "tusd-test",
       name: "TUSD Test",
@@ -292,32 +363,64 @@ describe("fetchChainlinkPorReserves", () => {
     };
 
     const now = 1_700_000_000;
-
-    // decimals() returns 8 for the PoR feed
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
-    // latestRoundData() returns reserves of 600e8 (600 tokens' worth)
-    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(600_00000000n, now - 60));
-
-    // EVM chains each return 200 tokens (18 decimals) — total 600 tokens supply
+    // Same $1010 reserves as the happy path above.
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(1010_00000000n, now - 60));
     vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(200_000000000000000000n) // ethereum
-      .mockResolvedValueOnce(200_000000000000000000n) // avalanche
-      .mockResolvedValueOnce(200_000000000000000000n); // bsc
+      .mockResolvedValueOnce(200_000000000000000000n)
+      .mockResolvedValueOnce(200_000000000000000000n)
+      .mockResolvedValueOnce(200_000000000000000000n);
+    // Tron read fails (matches fetchErc20TotalSupply's fail-closed null contract).
+    vi.mocked(fetchTronErc20TotalSupply).mockResolvedValueOnce(null);
 
     const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
 
-    // reserves = $600, multichain supply = 600 tokens -> ratio ~ 1.0
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.0, 5);
+    // Must NOT silently shrink the denominator back to EVM-only and report a
+    // healthy-looking ratio as ok — it has to surface as a degraded, incomplete read.
+    expect(result.metadata?.supplyReadComplete).toBe(false);
+    const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
+    expect(warning).toBeDefined();
+    expect(warning?.effect).toBe("degraded");
+    expect(warning?.message).toContain("tron");
+
+    // Ratio is still computed (over EVM-only supply while Tron is missing), but
+    // it rides alongside the degraded warning rather than reporting a clean "ok".
     expect(result.metadata?.supplyUsd).toBeCloseTo(600, 5);
-    expect(result.metadata?.supplyReadComplete).toBe(true);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1010 / 600, 5);
+  });
 
-    // Non-EVM chain (tron) should emit info warning
-    const omitted = result.warnings?.find((w) => w.code === "por-supply-chain-omitted");
-    expect(omitted).toBeDefined();
-    expect(omitted?.message).toContain("tron");
+  it("does not call the Tron reader or change behavior for coins without a tron contract", async () => {
+    const coin: StablecoinMeta = {
+      id: "bib01-test",
+      name: "BIB01 Test",
+      symbol: "BIB01T",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+        { chain: "base", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+      ],
+    };
 
-    // EVM chains called once each
-    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(3);
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(8n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeLatestRoundData(300_00000000n, now - 60));
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(150_000000000000000000n)
+      .mockResolvedValueOnce(150_000000000000000000n);
+
+    const result = await fetchChainlinkPorReserves(coin, config, signal, { nowSec: now });
+
+    expect(fetchTronErc20TotalSupply).not.toHaveBeenCalled();
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.0, 5);
+    expect(result.warnings?.some((w) => w.code === "por-supply-chain-omitted")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
   });
 
   it("throws when all EVM chain supply reads return null", async () => {

@@ -60,6 +60,7 @@ export {
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  fetchTronErc20TotalSupply,
   makeOnchainCallers,
   type OnchainCallers,
   type OnchainMulticall3Call,
