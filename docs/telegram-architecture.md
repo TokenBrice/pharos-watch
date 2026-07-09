@@ -44,7 +44,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the ingress flood cap, group-admin gate, and per-command cooldown. The pending gate lets read-only/helpful commands such as `/sample` pass through and lets same-initiator destructive commands such as `/forget` clear stale pending state before running. The flood cap covers commands, callback taps, and pending text replies; private chats use a 20-action / 60 s chat key, while group/supergroup chats use a 20-action / 60 s `(chat_id, actor_user_id)` key plus a higher best-effort chat-wide ceiling. The first-exceed notice is advisory because concurrent deliveries can drop or duplicate it. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Owner/generation-claim the `update_id`, persist its deterministic effect-start marker, and route the update. Only stale claims that never started effects are reclaimable. Once effect-start is durable, duplicates are acknowledged without replay; uncertain rows are exposed for operator reconciliation. Hold the dedupe, pending-disambiguation gate, ingress flood cap, group-admin gate, and per-command cooldown.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
@@ -197,7 +197,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 ## 6. Queue / rate-limit / retry
 
-**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). A chat-scoped 429 short-circuits later same-chat rows/chunks in the current run and stamps only row/chat backoff. Explicitly global/bot-wide Telegram responses, or ambiguous 429s across at least three distinct chats in one batch, stamp global backoff and stop broader sending. Enforce the 2-strike rule for blocked subscribers, including dead-lettering/deleting sibling pending rows once a chat is disabled. Provide a dedupe key so duplicate chunks never queue.
+**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, effect-state transition, drain, retry-with-backoff, dead-letter, expire. `pending -> sending` is durable before the Bot API call; retryable failures return to `pending`, confirmed successes become `sent`, and `sending` ambiguity is never auto-replayed. Terminal target state also excludes legacy sent rows from candidate selection. Hold per-chat/global backoff and the blocked-subscriber lifecycle.
 
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
