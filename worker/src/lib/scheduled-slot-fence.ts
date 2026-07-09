@@ -42,6 +42,7 @@ const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 type SlotExecutionRow = {
   state: string;
   execution_owner: string;
+  execution_generation: number;
   started_at: number;
   updated_at: number;
 };
@@ -49,7 +50,9 @@ type SlotExecutionRow = {
 type StaleSlotExecutionRow = {
   slot_key: string;
   slot_started_at: number;
+  state: "running" | "reconciling";
   execution_owner: string;
+  execution_generation: number;
   started_at: number;
   updated_at: number;
 };
@@ -92,8 +95,16 @@ interface StaleSlotTakeoverSummary {
 }
 
 type ScheduledSlotClaimResult =
-  | { status: "claimed"; staleSlotTakeover?: StaleSlotTakeoverSummary }
-  | { status: "duplicate" | "running" };
+  | { status: "claimed"; executionGeneration: number; staleSlotTakeover?: StaleSlotTakeoverSummary }
+  | { status: "duplicate" }
+  | { status: "running" };
+
+class ScheduledSlotOwnershipLostError extends Error {
+  constructor(slotKey: string, slotStartedAt: number) {
+    super(`scheduled slot ownership lost for ${slotKey}@${slotStartedAt}`);
+    this.name = "ScheduledSlotOwnershipLostError";
+  }
+}
 
 export interface ScheduledSlotSweepOptions {
   staleAfterSec?: number;
@@ -141,7 +152,7 @@ async function getScheduledSlotExecution(
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state, execution_owner, started_at, updated_at
+        `SELECT state, execution_owner, execution_generation, started_at, updated_at
            FROM cron_slot_executions
            WHERE slot_key = ? AND slot_started_at = ?`,
       )
@@ -167,12 +178,12 @@ async function listStaleScheduledSlotExecutions(
     predicates.push("slot_started_at != ?");
     bindArgs.push(excludeSlotStartedAt);
   }
-  predicates.push("state = 'running'", "updated_at < ?");
+  predicates.push("state IN ('running', 'reconciling')", "updated_at < ?");
   bindArgs.push(staleBefore, limit);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at
+        `SELECT slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at
            FROM cron_slot_executions
            WHERE ${predicates.join("\n             AND ")}
            ORDER BY updated_at ASC, slot_started_at ASC
@@ -253,15 +264,23 @@ async function insertSyntheticStaleCronRun(
     leaseUntil: lease.lease_until,
     reconciledAt: nowSec,
   });
+  const idempotencyKey = [
+    "scheduled-slot-stale",
+    slot.slot_key,
+    slot.slot_started_at,
+    progress.job,
+    startedAt,
+  ].join(":");
 
   await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at)
-         VALUES (?, ?, ?, 'error', ?, NULL, ?, ?)`,
+           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key)
+         VALUES (?, ?, ?, 'error', ?, NULL, ?, ?, ?)
+         ON CONFLICT DO NOTHING`,
       )
-      .bind(progress.job, startedAt, durationMs, error, metadata, slot.slot_started_at)
+      .bind(progress.job, startedAt, durationMs, error, metadata, slot.slot_started_at, idempotencyKey)
       .run(),
   );
 }
@@ -447,11 +466,12 @@ async function writeStaleSlotEventMarker(
 async function finishStaleScheduledSlotExecution(
   db: D1Database,
   slot: StaleSlotExecutionRow,
+  reconciliationOwner: string,
+  reconciliationGeneration: number,
   nowSec: number,
-  staleBefore: number,
   reconciliation: StaleSlotReconciliationSummary,
-): Promise<void> {
-  await runWithOverloadRetry(() =>
+): Promise<boolean> {
+  const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `UPDATE cron_slot_executions
@@ -462,8 +482,9 @@ async function finishStaleScheduledSlotExecution(
              metadata = ?
          WHERE slot_key = ?
            AND slot_started_at = ?
-           AND state = 'running'
-           AND updated_at < ?`,
+           AND state = 'reconciling'
+           AND execution_owner = ?
+           AND execution_generation = ?`,
       )
       .bind(
         nowSec,
@@ -474,10 +495,53 @@ async function finishStaleScheduledSlotExecution(
         }),
         slot.slot_key,
         slot.slot_started_at,
+        reconciliationOwner,
+        reconciliationGeneration,
+      )
+      .run(),
+  );
+  return (result.meta.changes ?? 0) === 1;
+}
+
+async function claimStaleScheduledSlotForReconciliation(
+  db: D1Database,
+  slot: StaleSlotExecutionRow,
+  reconciliationOwner: string,
+  nowSec: number,
+  staleBefore: number,
+): Promise<number | null> {
+  const nextGeneration = slot.execution_generation + 1;
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE cron_slot_executions
+            SET state = 'reconciling',
+                execution_owner = ?,
+                execution_generation = ?,
+                updated_at = ?
+          WHERE slot_key = ?
+            AND slot_started_at = ?
+            AND state = ?
+            AND execution_owner = ?
+            AND execution_generation = ?
+            AND updated_at = ?
+            AND updated_at < ?`,
+      )
+      .bind(
+        reconciliationOwner,
+        nextGeneration,
+        nowSec,
+        slot.slot_key,
+        slot.slot_started_at,
+        slot.state,
+        slot.execution_owner,
+        slot.execution_generation,
+        slot.updated_at,
         staleBefore,
       )
       .run(),
   );
+  return (result.meta.changes ?? 0) === 1 ? nextGeneration : null;
 }
 
 export async function sweepStaleScheduledSlotExecutions(
@@ -510,9 +574,30 @@ export async function sweepStaleScheduledSlotExecutions(
     if (options.signal?.aborted) {
       throw options.signal.reason instanceof Error ? options.signal.reason : new Error("scheduled slot sweep aborted");
     }
+    const reconciliationOwner = createLeaseOwner(`stale-slot:${staleSlot.slot_key}`);
+    const reconciliationGeneration = await claimStaleScheduledSlotForReconciliation(
+      db,
+      staleSlot,
+      reconciliationOwner,
+      nowSec,
+      staleBefore,
+    );
+    if (reconciliationGeneration == null) {
+      continue;
+    }
     const reconciliation = await reconcileStaleSlotArtifacts(db, staleSlot, nowSec);
     await writeStaleSlotEventMarker(db, staleSlot, nowSec, reconciliation);
-    await finishStaleScheduledSlotExecution(db, staleSlot, nowSec, staleBefore, reconciliation);
+    const finished = await finishStaleScheduledSlotExecution(
+      db,
+      staleSlot,
+      reconciliationOwner,
+      reconciliationGeneration,
+      nowSec,
+      reconciliation,
+    );
+    if (!finished) {
+      throw new ScheduledSlotOwnershipLostError(staleSlot.slot_key, staleSlot.slot_started_at);
+    }
     summary.slotsReconciled++;
     summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
     summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
@@ -543,14 +628,15 @@ async function claimScheduledSlotExecution(
     db
       .prepare(
         `INSERT OR IGNORE INTO cron_slot_executions
-           (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
-         VALUES (?, ?, 'running', NULL, ?, ?, NULL, ?, NULL)`,
+           (slot_key, slot_started_at, state, result_status, execution_owner, execution_generation,
+            started_at, finished_at, updated_at, metadata)
+         VALUES (?, ?, 'running', NULL, ?, 1, ?, NULL, ?, NULL)`,
       )
       .bind(slotKey, slotStartedAt, owner, nowSec, nowSec)
       .run(),
   );
   if ((inserted.meta.changes ?? 0) > 0) {
-    return { status: "claimed" };
+    return { status: "claimed", executionGeneration: 1 };
   }
 
   const existing = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
@@ -561,14 +647,16 @@ async function claimScheduledSlotExecution(
     return { status: "duplicate" };
   }
   if (existing.execution_owner === owner) {
-    return { status: "claimed" };
+    return { status: "claimed", executionGeneration: existing.execution_generation };
   }
 
   if (existing.updated_at < staleBefore) {
     const staleSlot: StaleSlotExecutionRow = {
       slot_key: slotKey,
       slot_started_at: slotStartedAt,
+      state: "running",
       execution_owner: existing.execution_owner,
+      execution_generation: existing.execution_generation,
       started_at: existing.started_at,
       updated_at: existing.updated_at,
     };
@@ -584,6 +672,7 @@ async function claimScheduledSlotExecution(
         .prepare(
           `UPDATE cron_slot_executions
            SET execution_owner = ?,
+               execution_generation = execution_generation + 1,
                started_at = ?,
                updated_at = ?,
                finished_at = NULL,
@@ -592,9 +681,23 @@ async function claimScheduledSlotExecution(
            WHERE slot_key = ?
              AND slot_started_at = ?
              AND state = 'running'
+             AND execution_owner = ?
+             AND execution_generation = ?
+             AND updated_at = ?
              AND updated_at < ?`,
         )
-        .bind(owner, nowSec, nowSec, JSON.stringify({ staleSlotTakeover }), slotKey, slotStartedAt, staleBefore)
+        .bind(
+          owner,
+          nowSec,
+          nowSec,
+          JSON.stringify({ staleSlotTakeover }),
+          slotKey,
+          slotStartedAt,
+          existing.execution_owner,
+          existing.execution_generation,
+          existing.updated_at,
+          staleBefore,
+        )
         .run(),
     );
     if ((takeover.meta.changes ?? 0) > 0) {
@@ -609,12 +712,23 @@ async function claimScheduledSlotExecution(
              WHERE slot_key = ?
                AND slot_started_at = ?
                AND execution_owner = ?
+               AND execution_generation = ?
                AND state = 'running'`,
           )
-          .bind(JSON.stringify({ staleSlotTakeover }), slotKey, slotStartedAt, owner)
+          .bind(
+            JSON.stringify({ staleSlotTakeover }),
+            slotKey,
+            slotStartedAt,
+            owner,
+            existing.execution_generation + 1,
+          )
           .run(),
       );
-      return { status: "claimed", staleSlotTakeover };
+      return {
+        status: "claimed",
+        executionGeneration: existing.execution_generation + 1,
+        staleSlotTakeover,
+      };
     }
   }
 
@@ -626,9 +740,10 @@ async function touchScheduledSlotExecution(
   slotKey: string,
   slotStartedAt: number,
   owner: string,
-): Promise<void> {
+  executionGeneration: number,
+): Promise<boolean> {
   const nowSec = Math.floor(Date.now() / 1000);
-  await runWithOverloadRetry(() =>
+  const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `UPDATE cron_slot_executions
@@ -636,11 +751,13 @@ async function touchScheduledSlotExecution(
          WHERE slot_key = ?
            AND slot_started_at = ?
            AND execution_owner = ?
+           AND execution_generation = ?
            AND state = 'running'`,
       )
-      .bind(nowSec, slotKey, slotStartedAt, owner)
+      .bind(nowSec, slotKey, slotStartedAt, owner, executionGeneration)
       .run(),
   );
+  return (result.meta.changes ?? 0) === 1;
 }
 
 async function finishScheduledSlotExecution(
@@ -648,11 +765,12 @@ async function finishScheduledSlotExecution(
   slotKey: string,
   slotStartedAt: number,
   owner: string,
+  executionGeneration: number,
   resultStatus: "ok" | "degraded" | "error",
   metadata: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const nowSec = Math.floor(Date.now() / 1000);
-  await runWithOverloadRetry(() =>
+  const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `UPDATE cron_slot_executions
@@ -663,11 +781,14 @@ async function finishScheduledSlotExecution(
              metadata = ?
          WHERE slot_key = ?
            AND slot_started_at = ?
-           AND execution_owner = ?`,
+           AND execution_owner = ?
+           AND execution_generation = ?
+           AND state = 'running'`,
       )
-      .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner)
+      .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner, executionGeneration)
       .run(),
   );
+  return (result.meta.changes ?? 0) === 1;
 }
 
 function attachSlotRuntimeMetadata<T>(
@@ -749,9 +870,11 @@ export async function runScheduledSlotWithFence(
     };
   }
   const staleSlotTakeover = "staleSlotTakeover" in claimResult ? claimResult.staleSlotTakeover : undefined;
+  const executionGeneration = claimResult.executionGeneration;
 
   const slotController = new AbortController();
   let heartbeatFailures = 0;
+  let heartbeatOwnershipLost = false;
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
   const abortForDeadline = () => {
     if (slotController.signal.aborted) return;
@@ -766,7 +889,17 @@ export async function runScheduledSlotWithFence(
     }
   }
   const timer = setInterval(() => {
-    void touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner).catch((err) => {
+    void touchScheduledSlotExecution(
+      db,
+      slotKey,
+      opts.slotStartedAt,
+      owner,
+      executionGeneration,
+    ).then((touched) => {
+      if (touched || heartbeatOwnershipLost) return;
+      heartbeatOwnershipLost = true;
+      slotController.abort(new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt));
+    }).catch((err) => {
       heartbeatFailures++;
       console.warn(`[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
     });
@@ -786,14 +919,21 @@ export async function runScheduledSlotWithFence(
         : metadata && (metadata.jobsDegraded > 0 || metadata.jobsSkipped > 0)
           ? "degraded"
           : "ok";
-    await finishScheduledSlotExecution(
+    if (heartbeatOwnershipLost) {
+      throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
+    }
+    const finished = await finishScheduledSlotExecution(
       db,
       slotKey,
       opts.slotStartedAt,
       owner,
+      executionGeneration,
       resultStatus,
       slotMetadata ? JSON.stringify(slotMetadata) : null,
     );
+    if (!finished) {
+      throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
+    }
     return {
       status: "ok",
       resultStatus,
@@ -808,6 +948,7 @@ export async function runScheduledSlotWithFence(
       slotKey,
       opts.slotStartedAt,
       owner,
+      executionGeneration,
       "error",
       JSON.stringify({
         error: toErrorMessage(err),
@@ -815,7 +956,11 @@ export async function runScheduledSlotWithFence(
         ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
         ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
       }),
-    ).catch((finishErr) => {
+    ).then((finished) => {
+      if (!finished) {
+        throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
+      }
+    }).catch((finishErr) => {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
     });
     throw err;
