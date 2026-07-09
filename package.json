@@ -37,7 +37,7 @@
     "test:profile": "node scripts/maintenance/profile-vitest.mjs",
     "test:critical-contracts": "node scripts/maintenance/run-critical-contracts.mjs",
     "audit:eurostablecoins-coverage": "node scripts/maintenance/audit-eurostablecoins-coverage.mjs",
-    "test:invariants": "vitest run src/lib/__tests__/critical-invariants.test.ts worker/src/lib/__tests__/api-utils.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data.test.ts",
+    "test:invariants": "vitest run src/lib/__tests__/critical-invariants.test.ts worker/src/lib/__tests__/api-utils.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts",
     "test:noncritical": "node scripts/maintenance/run-noncritical-tests.mjs",
     "coverage:critical": "node scripts/maintenance/run-critical-coverage.mjs",
     "coverage:critical:update-baseline": "node scripts/maintenance/update-critical-coverage-baseline.mjs",

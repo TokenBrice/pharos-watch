@@ -5,7 +5,7 @@
  *
  * 1. `buildPendingAlertRow()` — plain-object row builder for `mockD1` matches.
  *    Mirrors the inline literals scattered across
- *    `dispatch-telegram-alerts.test.ts` (e.g. the `SELECT p.id, p.chat_id, ...`
+ *    `dispatch-telegram-alerts-*.test.ts` (e.g. the `SELECT p.id, p.chat_id, ...`
  *    rows returned by the pending-queue drain phase).
  *
  * The overrides shape mirrors the pending queue schema so tests do not need

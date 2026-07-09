@@ -207,7 +207,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: ["worker/src/lib/telegram.ts", "worker/src/cron/dispatch-telegram-alerts.ts"],
     tests: [
       "worker/src/lib/__tests__/telegram.test.ts",
-      "worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts",
+      "worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
+      "worker/src/cron/__tests__/dispatch-telegram-alerts-routing-safety.test.ts",
+      "worker/src/cron/__tests__/dispatch-telegram-alerts-backoff-transitions.test.ts",
+      "worker/src/cron/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
       "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
     ],
     allowBareFetch: true,
@@ -319,7 +322,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     family: "status-supplements",
     description: "On-demand status supplement CoinGecko price fetch.",
     files: ["worker/src/api/status-supplements.ts"],
-    tests: ["worker/src/api/__tests__/status.test.ts"],
+    tests: [
+      "worker/src/api/__tests__/status-snapshots-core.test.ts",
+      "worker/src/api/__tests__/status-data-loaders.test.ts",
+      "worker/src/api/__tests__/status-cron-telegram.test.ts",
+      "worker/src/api/__tests__/status-data-quality-state.test.ts",
+    ],
     allowBareFetch: true,
     directFetchJustification:
       "Small admin/status supplement path with an explicit short timeout and fail-closed body cleanup.",
