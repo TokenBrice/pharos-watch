@@ -587,7 +587,8 @@ describe("chunkOverflowRoutes", () => {
 
 describe("verifyAnalyticsSnippet", () => {
   it("accepts runtime-loaded GA without a first-paint preload", async () => {
-    const fetchMock = async (url: string) => {
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
       if (url === "https://pharos.watch/") {
         return new Response("<html><body>Pharos</body></html>");
       }
@@ -598,7 +599,8 @@ describe("verifyAnalyticsSnippet", () => {
   });
 
   it("rejects GA script preloads in the HTML shell", async () => {
-    const fetchMock = async (url: string) => {
+    const fetchMock: typeof fetch = async (input) => {
+      const url = String(input);
       if (url === "https://pharos.watch/") {
         return new Response(
           '<link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04" as="script"/>',

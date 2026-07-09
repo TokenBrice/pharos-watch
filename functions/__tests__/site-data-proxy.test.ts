@@ -172,7 +172,7 @@ describe("site-data proxy", () => {
 
   it("proxies allowlisted requests to the site API with the shared secret and records an upstream fetch", async () => {
     const fetchSpy = vi.fn(
-      async () =>
+      async (..._args: Parameters<typeof fetch>) =>
         new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
@@ -203,7 +203,10 @@ describe("site-data proxy", () => {
       }),
     );
 
-    const fetchInit = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    const fetchInit = fetchSpy.mock.calls[0]?.[1];
+    if (!fetchInit) {
+      throw new Error("Expected the proxy fetch to include request options");
+    }
     const forwardedHeaders = fetchInit.headers as Headers;
     expect(forwardedHeaders.get("Accept")).toBe("application/json");
     expect(forwardedHeaders.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
@@ -229,7 +232,7 @@ describe("site-data proxy", () => {
 
   it("proxies the events endpoint through the site-data lane for public UI reads", async () => {
     const fetchSpy = vi.fn(
-      async () =>
+      async (..._args: Parameters<typeof fetch>) =>
         new Response(JSON.stringify({ events: [] }), {
           status: 200,
           headers: {
@@ -253,8 +256,11 @@ describe("site-data proxy", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [upstreamUrl, init] = fetchSpy.mock.calls[0] ?? [];
     expect(upstreamUrl).toBe("https://site-api.pharos.watch/api/events?limit=1");
-    expect((init as RequestInit).headers).toBeInstanceOf(Headers);
-    expect(((init as RequestInit).headers as Headers).get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    if (!init) {
+      throw new Error("Expected the proxy fetch to include request options");
+    }
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect((init.headers as Headers).get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
   });
 
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {

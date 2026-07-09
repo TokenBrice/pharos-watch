@@ -70,11 +70,11 @@ describe("analyzeOracleRiskCoverage", () => {
         makeCoin({
           id: "fiat",
           flags: {
-            backing: "fiat-backed",
+            backing: "rwa-backed",
             pegCurrency: "USD",
             governance: "centralized",
             yieldBearing: false,
-            rwa: false,
+            rwa: true,
             navToken: false,
           },
           mechanismArchetype: "fiat-cash",
