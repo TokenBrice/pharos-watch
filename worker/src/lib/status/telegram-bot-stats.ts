@@ -49,6 +49,8 @@ interface TelegramBotPendingDeliveryTelemetryRow {
   deferred_count: number | string | null;
   expired_count: number | string | null;
   near_ttl_count: number | string | null;
+  execution_unknown_count?: number | string | null;
+  completed_cleanup_count?: number | string | null;
 }
 
 interface TelegramBotRetryErrorClassRow {
@@ -213,48 +215,66 @@ LEFT JOIN (
 const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
 const TELEGRAM_PENDING_DELIVERIES_SQL =
-  "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts";
+  "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE delivery_state = 'pending'";
 const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
-  COUNT(*) AS pending_count,
+  SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS pending_count,
   MIN(
     CASE
-      WHEN COALESCE(expires_at, created_at + ?) > ?
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) > ?
       THEN created_at
     END
   ) AS oldest_created_at,
   MIN(
     CASE
-      WHEN COALESCE(expires_at, created_at + ?) > ?
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) > ?
        AND (not_before_at IS NULL OR not_before_at <= ?)
       THEN created_at
     END
   ) AS oldest_due_created_at,
-  SUM(CASE WHEN COALESCE(expires_at, created_at + ?) <= ? THEN 1 ELSE 0 END) AS expired_count,
   SUM(
     CASE
-      WHEN COALESCE(expires_at, created_at + ?) > ?
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) <= ?
+      THEN 1 ELSE 0
+    END
+  ) AS expired_count,
+  SUM(
+    CASE
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) > ?
        AND (not_before_at IS NULL OR not_before_at <= ?)
       THEN 1 ELSE 0
     END
   ) AS due_count,
   SUM(
     CASE
-      WHEN COALESCE(expires_at, created_at + ?) > ?
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) > ?
        AND not_before_at > ?
       THEN 1 ELSE 0
     END
   ) AS deferred_count,
   SUM(
     CASE
-      WHEN COALESCE(expires_at, created_at + ?) > ?
+      WHEN delivery_state = 'pending'
+       AND COALESCE(expires_at, created_at + ?) > ?
        AND COALESCE(expires_at, created_at + ?) <= ?
       THEN 1 ELSE 0
     END
   ) AS near_ttl_count
+  ,SUM(CASE WHEN delivery_state = 'sending' THEN 1 ELSE 0 END) AS execution_unknown_count
+  ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS completed_cleanup_count
  FROM telegram_pending_alerts`;
+const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL = `SELECT COUNT(*) AS pending_count
+  FROM telegram_processed_updates
+ WHERE effect_state = 'started'
+   AND status <> 'processed'`;
 const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class, COUNT(*) AS pending_count
   FROM telegram_pending_alerts
- WHERE last_error_class IS NOT NULL
+ WHERE delivery_state = 'pending'
+   AND last_error_class IS NOT NULL
    AND last_error_class <> ''
  GROUP BY last_error_class
  ORDER BY pending_count DESC, last_error_class ASC
@@ -278,23 +298,13 @@ const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
 ] as const;
 // These generic event types are also emitted by non-Mini-App bot flows, so
 // only count rows whose Mini App recorder populated a Mini App source category.
-const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES = [
-  "timezone_change",
-  "unsubscribe",
-] as const;
-const TELEGRAM_MINI_APP_SOURCE_CATEGORIES = [
-  "startapp",
-  "menu_or_main_app",
-] as const;
-const TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES
-  .map(() => "?")
-  .join(", ");
-const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES
-  .map(() => "?")
-  .join(", ");
-const TELEGRAM_MINI_APP_SOURCE_CATEGORY_PLACEHOLDERS = TELEGRAM_MINI_APP_SOURCE_CATEGORIES
-  .map(() => "?")
-  .join(", ");
+const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES = ["timezone_change", "unsubscribe"] as const;
+const TELEGRAM_MINI_APP_SOURCE_CATEGORIES = ["startapp", "menu_or_main_app"] as const;
+const TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES.map(() => "?").join(", ");
+const TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SHARED_SUCCESS_EVENT_TYPES.map(
+  () => "?",
+).join(", ");
+const TELEGRAM_MINI_APP_SOURCE_CATEGORY_PLACEHOLDERS = TELEGRAM_MINI_APP_SOURCE_CATEGORIES.map(() => "?").join(", ");
 const TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN event_type = 'mini_app_session_valid' AND outcome = 'success' THEN count ELSE 0 END) AS mini_app_sessions,
   SUM(
@@ -330,9 +340,7 @@ function formatTelemetryError(error: unknown): string {
   return toErrorMessage(error);
 }
 
-async function loadOptionalTelegramTelemetry<T>(
-  loader: Promise<T | null>,
-): Promise<OptionalTelegramTelemetry<T>> {
+async function loadOptionalTelegramTelemetry<T>(loader: Promise<T | null>): Promise<OptionalTelegramTelemetry<T>> {
   try {
     return { value: await loader };
   } catch (error) {
@@ -360,12 +368,23 @@ async function loadTelegramPendingDeliveryTelemetry(
   return db
     .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
     .bind(
-      PENDING_TTL_SEC, now,
-      PENDING_TTL_SEC, now, now,
-      PENDING_TTL_SEC, now,
-      PENDING_TTL_SEC, now, now,
-      PENDING_TTL_SEC, now, now,
-      PENDING_TTL_SEC, now, PENDING_TTL_SEC, now + PENDING_NEAR_TTL_WINDOW_SEC,
+      PENDING_TTL_SEC,
+      now,
+      PENDING_TTL_SEC,
+      now,
+      now,
+      PENDING_TTL_SEC,
+      now,
+      PENDING_TTL_SEC,
+      now,
+      now,
+      PENDING_TTL_SEC,
+      now,
+      now,
+      PENDING_TTL_SEC,
+      now,
+      PENDING_TTL_SEC,
+      now + PENDING_NEAR_TTL_WINDOW_SEC,
     )
     .first<TelegramBotPendingDeliveryTelemetryRow>();
 }
@@ -410,10 +429,7 @@ async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTo
   }));
 }
 
-async function loadInactiveSubscribersCleanedThisWeek(
-  db: D1Database,
-  now: number,
-): Promise<number | null> {
+async function loadInactiveSubscribersCleanedThisWeek(db: D1Database, now: number): Promise<number | null> {
   const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
   const row = await db
     .prepare(
@@ -442,6 +458,7 @@ export function mapTelegramBotStats(input: {
   pendingDisambiguations: TelegramBotPendingRow | null;
   pendingDeliveries: TelegramBotPendingRow | null;
   pendingDeliveryTelemetry?: TelegramBotPendingDeliveryTelemetryRow | null;
+  webhookEffectUnknown?: TelegramBotPendingRow | null;
   retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
@@ -455,6 +472,7 @@ export function mapTelegramBotStats(input: {
     pendingDisambiguations,
     pendingDeliveries,
     pendingDeliveryTelemetry,
+    webhookEffectUnknown,
     retryErrorClasses,
     topStablecoins,
     presetQueryFailures,
@@ -535,17 +553,21 @@ export function mapTelegramBotStats(input: {
   if (pendingDeliveryTelemetry) {
     stats.oldestPendingDeliveryAgeSec =
       pendingCount > 0 && oldestCreatedAt != null ? Math.max(0, now - oldestCreatedAt) : null;
-    stats.oldestDuePendingAgeSec =
-      oldestDueCreatedAt != null ? Math.max(0, now - oldestDueCreatedAt) : null;
+    stats.oldestDuePendingAgeSec = oldestDueCreatedAt != null ? Math.max(0, now - oldestDueCreatedAt) : null;
     stats.estimatedDrainTimeSec = estimateDrainTimeSec(
-      Math.max(0, pendingCount - coerceCount(pendingDeliveryTelemetry.expired_count)),
+      coerceCount(pendingDeliveryTelemetry.due_count) + coerceCount(pendingDeliveryTelemetry.deferred_count),
     );
     stats.pendingDeliveryBacklog = {
       due: coerceCount(pendingDeliveryTelemetry.due_count),
       deferred: coerceCount(pendingDeliveryTelemetry.deferred_count),
       expired: coerceCount(pendingDeliveryTelemetry.expired_count),
       nearTtl: coerceCount(pendingDeliveryTelemetry.near_ttl_count),
+      executionUnknown: coerceCount(pendingDeliveryTelemetry.execution_unknown_count),
+      completedPendingCleanup: coerceCount(pendingDeliveryTelemetry.completed_cleanup_count),
     };
+  }
+  if (webhookEffectUnknown) {
+    stats.webhookEffectUnknown = coerceCount(webhookEffectUnknown.pending_count);
   }
 
   if (retryErrorClassCounts) {
@@ -560,13 +582,14 @@ export function mapTelegramBotStats(input: {
     stats.inactiveSubscribersCleanedThisWeek = inactiveSubscribersCleanedThisWeek;
   }
 
-  stats.quality = unavailableFields.length > 0
-    ? {
-        status: "partial",
-        unavailableFields,
-        ...(Object.keys(telemetryErrors).length > 0 ? { errors: telemetryErrors } : {}),
-      }
-    : { status: "complete", unavailableFields: [] };
+  stats.quality =
+    unavailableFields.length > 0
+      ? {
+          status: "partial",
+          unavailableFields,
+          ...(Object.keys(telemetryErrors).length > 0 ? { errors: telemetryErrors } : {}),
+        }
+      : { status: "complete", unavailableFields: [] };
 
   return stats;
 }
@@ -577,6 +600,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDisambiguations,
     pendingDeliveries,
     pendingDeliveryTelemetryResult,
+    webhookEffectUnknownResult,
     retryErrorClassesResult,
     topStablecoins,
     presetQueryFailuresResult,
@@ -587,6 +611,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
     loadOptionalTelegramTelemetry(loadTelegramPendingDeliveryTelemetry(db, now)),
+    loadOptionalTelegramTelemetry(loadTelegramPendingCount(db, TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL)),
     loadOptionalTelegramTelemetry(loadTelegramRetryErrorClasses(db)),
     loadTelegramTopStablecoins(db),
     loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
@@ -595,6 +620,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
   ]);
   const optionalResults = {
     pendingDeliveryBacklog: pendingDeliveryTelemetryResult,
+    webhookEffectUnknown: webhookEffectUnknownResult,
     retryErrorClassCounts: retryErrorClassesResult,
     presetQueryFailures: presetQueryFailuresResult,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
@@ -615,6 +641,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDisambiguations,
     pendingDeliveries,
     pendingDeliveryTelemetry: pendingDeliveryTelemetryResult.value,
+    webhookEffectUnknown: webhookEffectUnknownResult.value,
     retryErrorClasses: retryErrorClassesResult.value,
     topStablecoins,
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
