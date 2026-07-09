@@ -62,7 +62,11 @@ function failTscExecution(message, output) {
 }
 
 function baselineKey(entry) {
-  return `${entry.file}\0${entry.code}`;
+  return `${entry.file}\0${entry.code}\0${normalizeDiagnosticMessage(entry.message)}`;
+}
+
+function normalizeDiagnosticMessage(message) {
+  return String(message).replace(/\s+/g, " ").trim();
 }
 
 function readBaseline() {
@@ -87,7 +91,7 @@ function aggregateDiagnostics(entries) {
     const aggregate = byKey.get(key) ?? {
       file: entry.file,
       code: entry.code,
-      message: `${entry.code} diagnostics`,
+      message: entry.message,
       count: 0,
       examples: [],
     };

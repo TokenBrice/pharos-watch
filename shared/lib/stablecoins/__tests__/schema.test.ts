@@ -253,6 +253,24 @@ describe("StablecoinMeta schema — blacklistability review", () => {
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
+  it.each(["2026-99-99", "2026-02-30", "2025-00-12"])(
+    "rejects impossible review date %s",
+    (reviewedAt) => {
+      expect(() => parseStablecoinMetaAssets([
+        makeCoin({
+          id: "fixture-blacklist-invalid-date",
+          blacklistabilityReview: {
+            reviewedStatus: "inherited",
+            sourceFreeRationale: "Resolved from Pharos stablecoin metadata.",
+            evidence: "Fixture evidence for inferred upstream exposure.",
+            reviewer: "Fixture",
+            reviewedAt,
+          },
+        }),
+      ], "fixture")).toThrow(/Expected YYYY-MM-DD/);
+    },
+  );
+
   it("requires review status to match the override and include a source or rationale", () => {
     const base = {
       id: "fixture-blacklist-review",
