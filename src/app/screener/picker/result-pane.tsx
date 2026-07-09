@@ -153,6 +153,7 @@ export function ResultPane({
     selectorResult.status === "snapshot-found" ? (
       <SelectorSnapshotBanner
         mode="frozen"
+        trust={output.provenance === "pharos-verified" ? "verified" : "unverified"}
         capturedAt={output.timestamp}
         onCompareToToday={() => setShowSnapshotComparison(true)}
       />

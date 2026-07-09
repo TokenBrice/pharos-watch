@@ -3527,7 +3527,7 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 
 These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
 
-Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are snapshot storage for the website UI, not a public integration API.
+Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are the website UI's server-recomputed snapshot surface, not a public integration API.
 
 Pages Function inventory:
 
@@ -3537,7 +3537,7 @@ Pages Function inventory:
 | `/api/admin/*` | `functions/api/admin/[[path]].ts` | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`. |
 | `GET /admin/*`, `GET /admin-api/*` | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces. |
 | `GET /stablecoin/:legacy-id` | `functions/stablecoin/[[path]].ts` | Redirect shim for legacy numeric stablecoin URLs. |
-| `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts` | Stablecoin Picker frozen snapshot read/write surface. |
+| `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts` | Stablecoin Picker frozen snapshot read and canonical server-recomputation surface. |
 
 ### `GET /selector-snapshot/:sid`
 
@@ -3545,18 +3545,23 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 
 **Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
 
-**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation. The server recomputes the identifier from the canonicalized selector output before storing or reading a snapshot.
+**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation. The server recomputes the identifier from the canonicalized selector output before storing or reading a snapshot. Schema-v3 verification fields contribute to the sid; verified artifacts therefore cannot collide with their legacy-unverified projection.
 
 **Response (200):**
 
 ```json
 {
   "profile": "treasury",
-  "provenance": "client-unverified",
-  "snapshotSchemaVersion": 2,
+  "provenance": "pharos-verified",
+  "snapshotSchemaVersion": 3,
   "engineVersion": "selector-v1.91",
-  "datasetHash": "<content hash>",
-  "timestamp": 1715000000,
+  "datasetHash": "<64-character canonical dataset hash>",
+  "verification": {
+    "kind": "pharos-server-recomputed-v1",
+    "datasetHash": "<same 64-character canonical dataset hash>",
+    "engineVersion": "selector-v1.91"
+  },
+  "timestamp": 1715000000000,
   "input": {
     "profile": "treasury",
     "pegCurrency": "EUR",
@@ -3595,9 +3600,9 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The write boundary stores an exact allowlisted projection, discards unknown/debug/authored-prose fields, derives tracked identities from the canonical registry, and recomputes score/rank/count relationships that can be proven from the submitted replay fields. Unsupported engine versions, non-SHA-256 dataset hashes, engine/methodology mismatches, untracked IDs, duplicates, and contradictory relationships are rejected. Every stored/read artifact carries `provenance: "client-unverified"` and `snapshotSchemaVersion: 2`; the sid proves storage integrity, not that Pharos reproduced or endorsed the submitted scores.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. For new writes, the Pages Function receives only allowlisted selector input, loads eight canonical sources through the authenticated site-data lane, validates every source with its shared response schema, builds the dataset with `shared/lib/selector/data-adapter.ts`, and runs the shared selector engine. Caller-authored scores, ranks, identities, prose, engine versions, and dataset hashes are not inputs to the persisted output. The eight requests run as two batches of four, and each bounded response body is fully consumed before the next batch starts.
 
-On GET, the Pages Function parses the stored payload, applies the exact projection, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
+New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 3` in the body and `pharos-server-recomputed-v1` trust metadata in KV. GET trusts only the KV metadata, validates the exact body binding, recomputes the canonical sid, and returns `502` on mismatch or tampering. A body that merely self-claims verified provenance without trusted KV metadata is normalized to the historical `client-unverified` schema-v2 projection and must use the unverified UI banner. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
@@ -3612,38 +3617,40 @@ On GET, the Pages Function parses the stored payload, applies the exact projecti
 
 ### `POST /selector-snapshot`
 
-Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Picker wizard at `https://pharos.watch/screener/picker/`).
+Recomputes a Stablecoin Picker output from canonical source data and stores it under a server-computed `sid`. Idempotent while canonical content and methodology are unchanged: re-POSTing the same input against the same canonical dataset returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Picker wizard at `https://pharos.watch/screener/picker/`).
 
 **Authentication:** exempt — same-origin gated.
 
-**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap, enforced incrementally even when `Content-Length` is absent or false. Debug traces, unknown fields, and caller-supplied selector prose (`whyText`, `watchText`, `verdictText`, `teachingText`) are stripped before canonical sid computation and storage.
+**Body:** `application/json`, `{ "input": <SelectorInput> }` (a bare `SelectorInput` is also accepted for compatibility). Max 100 KB defensive cap, enforced incrementally even when `Content-Length` is absent or false. Input is projected onto an exact allowlist. A legacy client may still send a complete `SelectorOutput`, but every field outside its nested `input` is ignored.
 
-**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+**Response (200):** `{ "sid": "<32 hex chars>", "ev": "pharos-server-recomputed-v1" }`. The sid is SHA-256 over canonicalized server output with debug/provenance/freshness-derived fields stripped (`timestamp`, `debug`, `provenance`, `snapshotSchemaVersion`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. The schema-v3 `verification` binding is retained, so it commits the sid to the canonical dataset hash and engine version. `coverageWarnings.newListingCount` is retained because the engine derives it from content-level recent-listing flags.
 
-Share-link privacy property: the KV payload contains Picker answers and projected output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. Rate limits use a separate D1 daily quota keyed by a dedicated-pepper HMAC of `CF-Connecting-IP`; raw and unsalted IP hashes are never stored. The website UI must disclose that anyone with the link can view the client-unverified artifact. Unread KV entries expire after 90 days; the first read succeeds only when the full five-year extension is confirmed.
+Share-link privacy property: the KV payload contains Picker answers and server-recomputed output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. Rate limits use a separate D1 daily quota keyed by a dedicated-pepper HMAC of `CF-Connecting-IP`; raw and unsalted IP hashes are never stored. The website UI must disclose that anyone with the link can view the artifact. Unread KV entries expire after 90 days; the first read succeeds only when the full five-year extension is confirmed.
 
 **Validation matrix:**
 
 | Case                                                             | Status / client contract                                                                                  |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Invalid `sid` path syntax                                        | `404`; clients should surface invalid-link/not-found state without replaying unrelated live output.       |
-| Missing required replay fields                                   | `400` on POST, `502` on GET.                                                                              |
-| Unknown enum, reason key, source shape, or impossible score/rank | `400` on POST, `502` on GET.                                                                              |
-| Stored payload canonical sid differs from requested `sid`        | `502`.                                                                                                    |
-| Clipboard denied after a successful POST                         | Endpoint still returns `200`; UI shows a selectable URL fallback.                                         |
-| Trading profile has stale share-blocking inputs                  | UI should not POST until refreshed; endpoint remains shape-focused and does not recompute live staleness. |
+| Missing required input answer or unknown input enum                    | `400` on POST.                                                                                       |
+| Caller supplies a forged identity, score, rank, or 64-hex dataset hash | Ignored; the server projects input and recomputes all output from canonical sources.                 |
+| Any canonical source is non-2xx, invalid JSON, or schema-invalid       | `503`; KV is not written.                                                                            |
+| Stored trusted payload canonical sid differs from requested `sid`      | `502`.                                                                                               |
+| Stored body claims verified provenance without trusted KV metadata     | Returned only as normalized `client-unverified` schema v2.                                           |
+| Clipboard denied after a successful POST                               | Endpoint still returns `200`; UI shows a selectable URL fallback.                                    |
+| Trading profile has stale share-blocking inputs                        | UI should not POST until refreshed; the server still recomputes against its current canonical data.  |
 
 **Failure modes:**
 
 | Status | When                                                                                                                                                    |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | Body parse error, unsupported JSON, missing required replay fields, malformed recommendation / coverage-warning basics, or semantic validation failure. |
+| 400    | Body parse error, unsupported JSON, missing required selector input, unknown input enum, or structurally unsafe input.                            |
 | 404    | Origin disallowed.                                                                                                                                      |
 | 405    | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment.                                                        |
 | 429    | Best-effort isolate-local write throttle exceeded (10 writes/minute/IP) or durable daily write quota exceeded (100 writes/day/IP).                      |
 | 413    | Payload exceeds 100 KB defensive cap.                                                                                                                   |
 | 500    | `SELECTOR_SNAPSHOTS` or `SELECTOR_SNAPSHOT_IP_HASH_SECRET` binding missing.                                                                              |
-| 503    | KV write throws transiently, or the D1-backed daily quota store is missing/unavailable.                                                                  |
+| 503    | Canonical source/configuration/contract failure, KV write failure, or missing/unavailable D1-backed daily quota store.                              |
 
 ---
 

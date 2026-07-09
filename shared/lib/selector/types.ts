@@ -464,6 +464,14 @@ export interface SelectorRelaxableConstraint {
   reason: ExclusionReason | "input-strictness";
 }
 
+export const SELECTOR_SNAPSHOT_VERIFICATION_KIND = "pharos-server-recomputed-v1" as const;
+
+export interface SelectorSnapshotVerification {
+  kind: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
+  datasetHash: string;
+  engineVersion: string;
+}
+
 // ---------------------------------------------------------------------------
 // Output
 // ---------------------------------------------------------------------------
@@ -489,10 +497,12 @@ export interface SelectorOutput {
   methodologyVersions: MethodologyVersions;
   /** Stable content hash over content-only fields of the merged universe. */
   datasetHash: string;
-  /** Added by the snapshot boundary; live engine output is not server-attested. */
-  provenance?: "client-unverified";
+  /** Added by the snapshot boundary; live engine output has no provenance marker. */
+  provenance?: "client-unverified" | "pharos-verified";
   /** Exact persisted projection version added by the snapshot boundary. */
-  snapshotSchemaVersion?: 2;
+  snapshotSchemaVersion?: 2 | 3;
+  /** Present only when the Pages Function recomputed the output from canonical sources. */
+  verification?: SelectorSnapshotVerification;
   /**
    * Debug-only: full ranked survivor list, gated by `SELECTOR_DEBUG=true` at
    * build time. Tests read this; production output omits the field.

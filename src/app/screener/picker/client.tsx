@@ -171,7 +171,7 @@ export function SelectorClient() {
           init: {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(output),
+            body: JSON.stringify({ input: output.input }),
           },
         }),
       );

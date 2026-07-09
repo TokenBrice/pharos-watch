@@ -66,7 +66,7 @@ function canonicalIdentity(id: string): { id: string; symbol: string; name: stri
   return meta ? { id: meta.id, symbol: meta.symbol, name: meta.name } : null;
 }
 
-function projectInput(input: SelectorInput): SelectorInput {
+export function normalizeSelectorInput(input: SelectorInput): SelectorInput {
   return {
     profile: input.profile,
     pegCurrency: input.pegCurrency,
@@ -404,7 +404,7 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
   if (!SUPPORTED_ENGINE_VERSIONS.has(snapshot.engineVersion) || !/^[0-9a-f]{64}$/.test(snapshot.datasetHash)) {
     return null;
   }
-  const input = projectInput(snapshot.input);
+  const input = normalizeSelectorInput(snapshot.input);
   const methodologyVersions = projectMethodologyVersions(snapshot.methodologyVersions, snapshot.engineVersion);
   const recommended = projectRecommendations(snapshot.recommended, input, snapshot.engineVersion);
   if (!methodologyVersions || !recommended) return null;

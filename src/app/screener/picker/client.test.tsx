@@ -113,6 +113,13 @@ function mockSelectorOutput(
   };
 }
 
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
   return {
@@ -130,7 +137,7 @@ vi.mock("@shared/lib/selector", async () => {
     })),
     selectorAnswersToScreenerFilters: vi.fn(() => ({ filters: {}, divergenceWarnings: [] })),
     computeSnapshotId: vi.fn(async () => "stub-sid"),
-    validateSelectorSnapshot: vi.fn((value: unknown) => {
+    validateSelectorSnapshotResponse: vi.fn((value: unknown) => {
       if (
         value != null &&
         typeof value === "object" &&
@@ -603,11 +610,7 @@ describe("SelectorClient — state machine", () => {
   });
 
   it("jumps directly to an answer step from result edit chips and clears snapshot state", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSelectorOutput(),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=00112233445566778899aabbccddeeff");
@@ -702,11 +705,7 @@ describe("selector-state input adapter", () => {
 
 describe("SelectorClient — snapshot recall", () => {
   it("renders sid-only share links from the frozen snapshot output", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSelectorOutput(),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
@@ -723,12 +722,33 @@ describe("SelectorClient — snapshot recall", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders server-recomputed replay output as Pharos-verified", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        ...mockSelectorOutput(),
+        provenance: "pharos-verified",
+        snapshotSchemaVersion: 3,
+        verification: {
+          kind: "pharos-server-recomputed-v1",
+          datasetHash: "abc123",
+          engineVersion: "selector-v1.2",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    expect(await screen.findByText("Pharos-verified snapshot")).toBeTruthy();
+    expect(screen.getByText(/recomputed this snapshot from canonical source data/i)).toBeTruthy();
+    expect(screen.queryByText("Unverified client snapshot")).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
   it("shows a snapshot-miss banner when GET 404s and falls back to live engine", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: async () => ({}),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 404));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=ffffffffffffffffffffffffffffffff");
@@ -746,11 +766,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("rejects structurally corrupt snapshot payloads returned with 200", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ input: { profile: "treasury" }, rows: "not-an-array" }),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ input: { profile: "treasury" }, rows: "not-an-array" }));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
@@ -779,11 +795,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("orchestrates compare-to-today for frozen snapshots", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSelectorOutput(),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
@@ -798,11 +810,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("clears the snapshot id when adjusting a frozen result", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSelectorOutput(),
-    } as Response);
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
     vi.stubGlobal("fetch", fetchMock);
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");

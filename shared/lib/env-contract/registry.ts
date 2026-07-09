@@ -692,7 +692,7 @@ export const ENV_BINDINGS = [
   {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
-    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores client-unverified content-addressed `s:{sid}` entries. HMAC-IP write-quota counters live in D1 for atomic reservations.",
+    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },

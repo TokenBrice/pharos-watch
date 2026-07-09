@@ -134,6 +134,14 @@ describe("SelectorResultSummary", () => {
 });
 
 describe("SelectorSnapshotBanner", () => {
+  it("labels server-recomputed snapshots as Pharos-verified", () => {
+    render(<SelectorSnapshotBanner mode="frozen" trust="verified" capturedAt={1_700_000_000_000} />);
+
+    expect(screen.getByText("Pharos-verified snapshot")).toBeTruthy();
+    expect(screen.getByText(/recomputed this snapshot from canonical source data/i)).toBeTruthy();
+    expect(screen.queryByText("Unverified client snapshot")).toBeNull();
+  });
+
   it("renders snapshot comparison deltas with aria-busy loading support", () => {
     render(
       <SelectorSnapshotBanner

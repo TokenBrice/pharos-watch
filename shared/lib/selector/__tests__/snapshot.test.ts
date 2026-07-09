@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   computeSelectorSnapshotSid,
+  createVerifiedSelectorSnapshot,
   validateSelectorSnapshot,
+  validateSelectorSnapshotResponse,
+  validateVerifiedSelectorSnapshot,
 } from "../snapshot";
 import { canonicalizeForSid } from "../canonicalize";
 import {
@@ -31,6 +34,51 @@ describe("selector snapshot contract", () => {
     expect(snapshot.provenance).toBe("client-unverified");
     expect(snapshot.snapshotSchemaVersion).toBe(2);
     expect(computeSelectorSnapshotSid(snapshot)).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it("preserves only exact server-recomputed verification bindings on replay", () => {
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    const validation = validateSelectorSnapshotResponse(verified);
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) throw new Error(`Expected verified snapshot, got ${validation.error}`);
+    expect(validation.snapshot).toMatchObject({
+      provenance: "pharos-verified",
+      snapshotSchemaVersion: 3,
+      verification: {
+        kind: "pharos-server-recomputed-v1",
+        datasetHash: verified.datasetHash,
+        engineVersion: verified.engineVersion,
+      },
+    });
+
+    const legacyProjection = validateSelectorSnapshot(verified);
+    expect(legacyProjection.ok).toBe(true);
+    if (!legacyProjection.ok) throw new Error(`Expected legacy projection, got ${legacyProjection.error}`);
+    expect(legacyProjection.snapshot.provenance).toBe("client-unverified");
+    expect(legacyProjection.snapshot.verification).toBeUndefined();
+    expect(computeSelectorSnapshotSid(verified)).not.toBe(computeSelectorSnapshotSid(legacyProjection.snapshot));
+  });
+
+  it("rejects verified-looking payloads with tampered bindings or caller scores", () => {
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    const mismatchedBinding = {
+      ...verified,
+      verification: {
+        ...verified.verification,
+        datasetHash: "f".repeat(64),
+      },
+    };
+    const tamperedScore = {
+      ...verified,
+      recommended: verified.recommended.map((recommendation, index) => (
+        index === 0 ? { ...recommendation, score: 100 } : recommendation
+      )),
+    };
+
+    expect(validateVerifiedSelectorSnapshot(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
+    expect(validateSelectorSnapshotResponse(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
+    expect(validateVerifiedSelectorSnapshot(tamperedScore)).toEqual({ ok: false, error: "shape" });
   });
 
   it("projects every level onto an exact allowlist", () => {

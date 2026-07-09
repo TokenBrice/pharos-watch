@@ -1,7 +1,7 @@
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
 import { isFiniteNumber, isRecord } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
-import { normalizeSelectorSnapshot } from "./snapshot-normalize";
+import { normalizeSelectorInput, normalizeSelectorSnapshot } from "./snapshot-normalize";
 import { sha256Hex } from "../sha256";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
@@ -16,11 +16,13 @@ import {
   LOWEST_SUB_DIMENSION_KEYS,
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   SELECTOR_PROFILES,
+  SELECTOR_SNAPSHOT_VERIFICATION_KIND,
   TRADING_VENUE_VALUES,
   TREASURY_VENUE_VALUES,
   WEIGHT_KEYS,
   WHY_KEYS,
   YIELD_VENUE_VALUES,
+  type SelectorInput,
   type SelectorOutput,
 } from "./types";
 
@@ -84,6 +86,10 @@ export type SelectorSnapshotValidationResult =
   | { ok: true; snapshot: SelectorOutput }
   | { ok: false; error: SelectorSnapshotValidationError };
 
+export type SelectorSnapshotInputValidationResult =
+  | { ok: true; input: SelectorInput }
+  | { ok: false; error: SelectorSnapshotValidationError };
+
 export function isSelectorSnapshotSid(value: string): boolean {
   return SELECTOR_SNAPSHOT_SID_PATTERN.test(value);
 }
@@ -110,6 +116,21 @@ export function stripDebugFromSelectorSnapshot(value: Record<string, unknown>): 
   return snapshot;
 }
 
+export function validateSelectorSnapshotInput(value: unknown): SelectorSnapshotInputValidationResult {
+  if (!isSelectorSnapshotStructurallySafe(value)) {
+    return { ok: false, error: "unsafe" };
+  }
+  if (!isRecord(value)) {
+    return { ok: false, error: "shape" };
+  }
+  const candidate = isRecord(value.input) ? value.input : value;
+  const profile = candidate.profile;
+  if (typeof profile !== "string" || !SELECTOR_PROFILE_SET.has(profile) || !isSelectorInputShape(candidate, profile)) {
+    return { ok: false, error: "shape" };
+  }
+  return { ok: true, input: normalizeSelectorInput(candidate as unknown as SelectorInput) };
+}
+
 export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
   if (!isSelectorSnapshotStructurallySafe(value)) {
     return { ok: false, error: "unsafe" };
@@ -125,6 +146,71 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
   return normalized
     ? { ok: true, snapshot: normalized }
     : { ok: false, error: "shape" };
+}
+
+function attachVerifiedSnapshotBinding(snapshot: SelectorOutput): SelectorOutput {
+  return {
+    ...snapshot,
+    provenance: "pharos-verified",
+    snapshotSchemaVersion: 3,
+    verification: {
+      kind: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+      datasetHash: snapshot.datasetHash,
+      engineVersion: snapshot.engineVersion,
+    },
+  };
+}
+
+export function createVerifiedSelectorSnapshot(output: SelectorOutput): SelectorOutput {
+  const validation = validateSelectorSnapshot(output);
+  if (!validation.ok) {
+    throw new Error("Server-recomputed selector output failed snapshot validation");
+  }
+  return attachVerifiedSnapshotBinding(validation.snapshot);
+}
+
+export function validateVerifiedSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
+  if (!isSelectorSnapshotStructurallySafe(value) || !isRecord(value) || "debug" in value) {
+    return { ok: false, error: "unsafe" };
+  }
+  if (!isSelectorOutputShape(value) || !isRecord(value.verification)) {
+    return { ok: false, error: "shape" };
+  }
+  if (
+    value.provenance !== "pharos-verified"
+    || value.snapshotSchemaVersion !== 3
+    || value.verification.kind !== SELECTOR_SNAPSHOT_VERIFICATION_KIND
+    || value.verification.datasetHash !== value.datasetHash
+    || value.verification.engineVersion !== value.engineVersion
+  ) {
+    return { ok: false, error: "shape" };
+  }
+
+  const normalized = normalizeSelectorSnapshot(value);
+  if (!normalized) return { ok: false, error: "shape" };
+  const verified = attachVerifiedSnapshotBinding(normalized);
+  return canonicalizeForSid(value) === canonicalizeForSid(verified)
+    ? { ok: true, snapshot: verified }
+    : { ok: false, error: "shape" };
+}
+
+/**
+ * Validates a snapshot returned by the trusted Pages Function boundary.
+ * Verified-looking payloads must satisfy the exact verified contract; they
+ * are never silently downgraded to the legacy client-unverified projection.
+ */
+export function validateSelectorSnapshotResponse(value: unknown): SelectorSnapshotValidationResult {
+  if (
+    isRecord(value)
+    && (
+      value.provenance === "pharos-verified"
+      || value.snapshotSchemaVersion === 3
+      || value.verification !== undefined
+    )
+  ) {
+    return validateVerifiedSelectorSnapshot(value);
+  }
+  return validateSelectorSnapshot(value);
 }
 
 export function computeSelectorSnapshotSid(snapshot: unknown): string {

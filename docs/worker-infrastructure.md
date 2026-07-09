@@ -144,7 +144,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
-| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores client-unverified content-addressed `s:{sid}` entries. HMAC-IP write-quota counters live in D1 for atomic reservations. |
+| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
@@ -348,7 +348,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions proxy same-origin `/_site-data/*` requests only to the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`; missing, malformed, non-HTTPS, or foreign origins return `500` before `SITE_API_SHARED_SECRET` is attached. The lane gates caller `Origin` / `Referer`, forwards upstream cache-age headers without a second Pages cache lifetime, and consumes bounded bodies inside the request deadline.
+- Pages Functions proxy same-origin `/_site-data/*` requests only to the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`; missing, malformed, non-HTTPS, or foreign origins return `500` before `SITE_API_SHARED_SECRET` is attached. The selector-snapshot Pages Function uses the same trusted origin and secret to recompute new share artifacts from canonical API responses. The lane gates caller `Origin` / `Referer`, forwards upstream cache-age headers without a second Pages cache lifetime, and consumes bounded bodies inside the request deadline.
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
 - the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` while both are configured
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-lane.ts`

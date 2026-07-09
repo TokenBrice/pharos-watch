@@ -6,15 +6,19 @@ import {
   computeSelectorSnapshotSid,
   isSelectorSnapshotSid,
   validateSelectorSnapshot,
+  validateSelectorSnapshotInput,
+  validateVerifiedSelectorSnapshot,
 } from "@shared/lib/selector/snapshot";
+import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
+import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 
 /**
  * Pages Function: `/selector-snapshot/*`
  *
- * - `POST /selector-snapshot` stores a SelectorOutput JSON under a content-addressed sid.
+ * - `POST /selector-snapshot` recomputes SelectorOutput from canonical sources.
  * - `GET /selector-snapshot/:sid` returns the frozen SelectorOutput or 404.
  *
  * The shared selector snapshot module owns the replay contract, validation,
@@ -151,7 +155,15 @@ interface SelectorSnapshotEnv {
   DB?: D1Database;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
+  SITE_API_ORIGIN?: string;
+  SITE_API_SHARED_SECRET?: string;
   SELECTOR_SNAPSHOT_IP_HASH_SECRET?: string;
+}
+
+interface SelectorSnapshotKvMetadata {
+  extended?: boolean;
+  legacySid?: string;
+  trust?: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
 }
 
 interface SelectorSnapshotContext {
@@ -224,7 +236,7 @@ function responseForValidationFailure(error: "unsafe" | "shape"): Response {
   if (error === "unsafe") {
     return jsonError(400, "Payload nesting or reserved keys not permitted");
   }
-  return jsonError(400, "Invalid selector output shape");
+  return jsonError(400, "Invalid selector input shape");
 }
 
 async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
@@ -252,38 +264,55 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(400, "Invalid JSON payload");
   }
 
-  const validation = validateSelectorSnapshot(parsed);
-  if (!validation.ok) {
-    return responseForValidationFailure(validation.error);
-  }
-
-  const sid = computeSelectorSnapshotSid(validation.snapshot);
-  const kvKey = `s:${sid}`;
-
-  try {
-    const existing = await env.SELECTOR_SNAPSHOTS.get(kvKey, "text");
-    if (existing !== null && existing !== "") {
-      return jsonOk({ sid });
-    }
-  } catch {
-    // Treat read failure as best-effort; proceed to write.
+  const inputValidation = validateSelectorSnapshotInput(parsed);
+  if (!inputValidation.ok) {
+    return responseForValidationFailure(inputValidation.error);
   }
 
   const quotaRejected = await consumeDailyPostQuota(env, request);
   if (quotaRejected) return quotaRejected;
 
+  let snapshot: Awaited<ReturnType<typeof recomputeVerifiedSelectorSnapshot>>;
+  try {
+    snapshot = await recomputeVerifiedSelectorSnapshot(inputValidation.input, request, env);
+  } catch (error) {
+    console.warn("[selector-snapshot] canonical recomputation failure", error);
+    return jsonError(503, "Canonical selector data temporarily unavailable");
+  }
+
+  const sid = computeSelectorSnapshotSid(snapshot);
+  const kvKey = `s:${sid}`;
+
+  try {
+    const existing = await env.SELECTOR_SNAPSHOTS.getWithMetadata<SelectorSnapshotKvMetadata>(kvKey, "text");
+    if (
+      existing.value !== null &&
+      existing.value !== "" &&
+      existing.metadata?.trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND
+    ) {
+      const validation = validateVerifiedSelectorSnapshot(JSON.parse(existing.value) as unknown);
+      if (validation.ok && computeSelectorSnapshotSid(validation.snapshot) === sid) {
+        return jsonOk({ sid, ev: SELECTOR_SNAPSHOT_VERIFICATION_KIND });
+      }
+    }
+  } catch {
+    // Treat malformed values or read failures as best-effort; overwrite with
+    // the freshly recomputed, trusted snapshot below.
+  }
+
   try {
     // Unread snapshots expire on the short TTL; the first successful read
     // extends them to the full retention TTL (see handleGet).
-    await env.SELECTOR_SNAPSHOTS.put(kvKey, JSON.stringify(validation.snapshot), {
+    await env.SELECTOR_SNAPSHOTS.put(kvKey, JSON.stringify(snapshot), {
       expirationTtl: SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
+      metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND },
     });
   } catch (error) {
     console.warn("[selector-snapshot] KV write failure", error);
     return jsonError(503, "Snapshot store temporarily unavailable");
   }
 
-  return jsonOk({ sid });
+  return jsonOk({ sid, ev: SELECTOR_SNAPSHOT_VERIFICATION_KIND });
 }
 
 async function handleGet(context: SelectorSnapshotContext, sid: string): Promise<Response> {
@@ -296,12 +325,14 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   let stored: string | null;
   let retentionExtended = false;
   let recordedLegacySid: string | undefined;
+  let trust: SelectorSnapshotKvMetadata["trust"];
   let normalizedSid = sid;
   try {
-    const result = await env.SELECTOR_SNAPSHOTS.getWithMetadata<{ extended?: boolean; legacySid?: string }>(kvKey, "text");
+    const result = await env.SELECTOR_SNAPSHOTS.getWithMetadata<SelectorSnapshotKvMetadata>(kvKey, "text");
     stored = result.value;
     retentionExtended = result.metadata?.extended === true;
     recordedLegacySid = result.metadata?.legacySid;
+    trust = result.metadata?.trust;
   } catch (error) {
     console.warn("[selector-snapshot] KV read failure", error);
     return jsonError(503, "Snapshot store temporarily unavailable");
@@ -314,7 +345,10 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   let normalizedStored = stored;
   try {
     const decoded = JSON.parse(stored) as unknown;
-    const validation = validateSelectorSnapshot(decoded);
+    const validation =
+      trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND
+        ? validateVerifiedSelectorSnapshot(decoded)
+        : validateSelectorSnapshot(decoded);
     if (!validation.ok) {
       console.warn("[selector-snapshot] stored payload failed shape check", { sid });
       return jsonError(502, "Snapshot value is malformed");
@@ -322,7 +356,7 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
 
     const storedSid = computeSelectorSnapshotSid(validation.snapshot);
     normalizedSid = storedSid;
-    const legacyStoredSid = computeSelectorSnapshotSid(decoded);
+    const legacyStoredSid = trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND ? null : computeSelectorSnapshotSid(decoded);
     const isRecognizedLegacySnapshot = recordedLegacySid === sid || legacyStoredSid === sid;
     if (storedSid !== sid && !isRecognizedLegacySnapshot) {
       console.warn("[selector-snapshot] stored payload sid mismatch", {
@@ -348,6 +382,7 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
         expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
         metadata: {
           extended: true,
+          ...(trust ? { trust } : {}),
           ...(normalizedSid === sid ? {} : { legacySid: sid }),
         },
       });

@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { runSelector, validateSelectorSnapshot, type SelectorInput, type SelectorOutput } from "@shared/lib/selector";
+import {
+  runSelector,
+  validateSelectorSnapshotResponse,
+  type SelectorInput,
+  type SelectorOutput,
+} from "@shared/lib/selector";
 import {
   useBluechipRatings,
   useDexLiquidity,
@@ -45,7 +50,7 @@ async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<S
         headers: { Accept: "application/json" },
       },
     });
-    const snapshot = validateSelectorSnapshot(payload);
+    const snapshot = validateSelectorSnapshotResponse(payload);
     if (!snapshot.ok) {
       return { kind: "error", reason: "snapshot-corrupt" };
     }
