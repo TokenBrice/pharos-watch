@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-derive.ts` - ComparisonCoinEntry, ComparisonMeta, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins
 - `src/lib/compare-links.ts` - STATIC_COMPARE_PAIRS, StaticComparisonLink, buildLiveCompareUrl, buildStaticComparisonSlug, getPrimaryStaticComparisonLinkForCoin
 - `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
-- ... 145 more files omitted; use `rg --files src/lib` for the full list.
+- ... 147 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 380 more files omitted; use `rg --files src/components` for the full list.
+- ... 381 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
