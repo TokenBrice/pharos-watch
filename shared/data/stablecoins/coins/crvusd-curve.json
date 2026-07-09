@@ -299,6 +299,11 @@
       },
       "fallbacks": [
         {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        },
+        {
           "kind": "http-json",
           "url": "https://prices.curve.finance/v1/crvusd/markets"
         }

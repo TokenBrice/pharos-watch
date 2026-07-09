@@ -103,13 +103,16 @@
         "Stablecoin": "low",
         "ETH": "very-low",
         "OTC Aggregate": "high",
-        "Other": "high"
+        "Other": "high",
+        "JLP": "high",
+        "Protocol Owned Liquidity": "high"
       },
       "renameMap": {
         "Stablecoin": "Stablecoin reserves",
         "ETH": "ETH collateral",
         "OTC Aggregate": "OTC aggregate positions",
-        "Other": "Other reserve assets"
+        "Other": "Other reserve assets",
+        "JLP": "JLP (Jupiter Perps LP token)"
       }
     }
   },

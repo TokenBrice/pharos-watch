@@ -146,7 +146,8 @@
         "[Paxos]_USDG": "low",
         "[Ethena]_sUSDe_Loop": "high",
         "[Yuzu]_yzPRIME": "medium",
-        "[Strata]_srUSDe_Pendle_PT_Loop": "high"
+        "[Strata]_srUSDe_Pendle_PT_Loop": "high",
+        "[Agora]_PT_AUSD": "high"
       },
       "coinIdMap": {
         "[Fluid]_fUSDT0": "usdt-tether",
@@ -176,7 +177,8 @@
         "[MegaEth]_USDm": "usdm-mega",
         "[Paxos]_USDG": "usdg-paxos",
         "[Ethena]_sUSDe_Loop": "susde-ethena",
-        "[Strata]_srUSDe_Pendle_PT_Loop": "srusde-strata"
+        "[Strata]_srUSDe_Pendle_PT_Loop": "srusde-strata",
+        "[Agora]_PT_AUSD": "ausd-agora"
       },
       "depTypeMap": {
         "[Fluid]_fUSDT0": "collateral",
@@ -206,7 +208,8 @@
         "[MegaEth]_USDm": "collateral",
         "[Paxos]_USDG": "collateral",
         "[Ethena]_sUSDe_Loop": "collateral",
-        "[Strata]_srUSDe_Pendle_PT_Loop": "collateral"
+        "[Strata]_srUSDe_Pendle_PT_Loop": "collateral",
+        "[Agora]_PT_AUSD": "collateral"
       },
       "renameMap": {
         "[Fluid]_fUSDT0": "Fluid fUSDT0",
@@ -241,7 +244,8 @@
         "[Paxos]_USDG": "Paxos USDG",
         "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
         "[Yuzu]_yzPRIME": "Yuzu yzPRIME",
-        "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop"
+        "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop",
+        "[Agora]_PT_AUSD": "Agora AUSD Pendle PT"
       },
       "allowNegativeBuckets": [
         "[Strata]_srUSDe_Pendle_PT_Loop"

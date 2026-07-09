@@ -73,6 +73,10 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   ETH: { label: "ETH", risk: getCanonicalReserveAssetRisk("ETH") ?? "very-low" },
   FPI: { label: "FPI", risk: "medium" },
   FRAX: { label: "FRAX", risk: getCanonicalReserveAssetRisk("FRAX") ?? "low", coinId: "frax-frax" },
+  // FPI collateral rows for this LP report no tokenSymbol, only a `name` (see
+  // the tokenSymbol-or-name lookup in adaptFraxFpiCollateral); FPIS is FPI's
+  // own governance token, so this is rated like FXS rather than a stable pair.
+  "Fraxswap V2 FRAX/FPIS": { label: "Fraxswap V2 FRAX/FPIS", risk: "high" },
   FXS: { label: "FXS", risk: "high" },
   LFRAX: { label: "LFRAX", risk: "medium" },
   MULTI: { label: "MULTI", risk: "very-high" },
@@ -104,6 +108,9 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   sfrxETH: { label: "sfrxETH", risk: getCanonicalReserveAssetRisk("SFRXETH") ?? "low" },
   sfrxUSD: { label: "sfrxUSD", risk: "low", coinId: "sfrxusd-frax" },
   stkAAVE: { label: "stkAAVE", risk: "very-high" },
+  // Staked Convex wrapper of the Curve FPI/FRAX LP; no governance-token leg,
+  // so it inherits FPI's own risk rating rather than FXS's.
+  stkcvxFPIFRAX: { label: "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)", risk: "medium" },
   wfrxETH: { label: "wfrxETH", risk: "medium" },
   ZZ: { label: "ZZ", risk: "very-high" },
 };
@@ -260,7 +267,9 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
       continue;
     }
 
-    const symbol = asset.tokenSymbol?.trim();
+    // Some collateral rows (e.g. LP positions) carry only a display `name`,
+    // no tokenSymbol, so fall back to matching TOKEN_DISPLAY by name.
+    const symbol = asset.tokenSymbol?.trim() || asset.name?.trim();
     const config = symbol ? TOKEN_DISPLAY[symbol] : undefined;
     if (symbol && config) {
       bySymbol.set(symbol, (bySymbol.get(symbol) ?? 0) + usd);

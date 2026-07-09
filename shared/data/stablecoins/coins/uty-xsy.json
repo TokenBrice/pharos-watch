@@ -168,7 +168,11 @@
         "Plasma": "medium",
         "Arbitrum": "medium",
         "Monad": "high",
-        "Bybit": "medium"
+        "Bybit": "medium",
+        "Bnb_smartchain": "medium",
+        "Hyperevm": "high",
+        "Hyperliquid": "high",
+        "Megaeth": "high"
       }
     }
   },

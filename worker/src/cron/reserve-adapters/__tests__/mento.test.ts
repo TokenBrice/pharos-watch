@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptMentoCdpComposition,
   adaptMentoReserveComposition,
@@ -12,9 +13,38 @@ import {
 } from "../mento";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
+
+const MENTO_RESERVE_URL = "https://example.com/mento/reserve";
+const MENTO_DASHBOARD_URL = "https://reserve.mento.org/";
+// Mirrors the adapter's browser-style headers, embedded in the shared JSON/text request cache key.
+const MENTO_BROWSER_HEADERS = buildBrowserHeaders("https://reserve.mento.org", "https://reserve.mento.org/");
+const mentoReserveBrowserCacheKey = `json-get:${MENTO_RESERVE_URL}:12000:${JSON.stringify(MENTO_BROWSER_HEADERS)}`;
+const mentoReserveNeutralCacheKey = `json-get:${MENTO_RESERVE_URL}:12000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
+const mentoDashboardBrowserCacheKey = `text-get:${MENTO_DASHBOARD_URL}:12000:${JSON.stringify(MENTO_BROWSER_HEADERS)}`;
+const mentoDashboardNeutralCacheKey = `text-get:${MENTO_DASHBOARD_URL}:12000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
+const MENTO_DASHBOARD_HTML_FIXTURE = String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
+
+function makeMentoConfig(): LiveReservesConfig {
+  return {
+    adapter: "mento",
+    version: 2,
+    semantics: "protocol-reserve",
+    display: {
+      url: MENTO_DASHBOARD_URL,
+      label: "Mento Reserves",
+    },
+    inputs: {
+      primary: {
+        kind: "http-json",
+        url: MENTO_RESERVE_URL,
+      },
+    },
+  };
+}
 
 const SAMPLE_PAYLOAD = {
   collateral: {
@@ -289,34 +319,12 @@ describe("mento adapter", () => {
   it("stamps reserve composition with verified dashboard freshness when available", async () => {
     const result = await fetchMentoReserves(
       { id: "cusd-celo" } as never,
-      {
-        adapter: "mento",
-        version: 2,
-        semantics: "protocol-reserve",
-        display: {
-          url: "https://reserve.mento.org/",
-          label: "Mento Reserves",
-        },
-        inputs: {
-          primary: {
-            kind: "http-json",
-            url: "https://example.com/mento/reserve",
-          },
-        },
-      },
+      makeMentoConfig(),
       new AbortController().signal,
       {
         requestCache: new Map<string, Promise<unknown>>([
-          [
-            "json-get:https://example.com/mento/reserve:12000:null",
-            Promise.resolve(SAMPLE_PAYLOAD),
-          ],
-          [
-            "text-get:https://reserve.mento.org/:12000:null",
-            Promise.resolve(
-              String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
-            ),
-          ],
+          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
+          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
         ]),
       } as never,
     );
@@ -325,6 +333,85 @@ describe("mento adapter", () => {
       freshnessMode: "verified",
       sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
     });
+  });
+
+  it("falls back to neutral headers for the reserve JSON fetch when browser-style headers fail", async () => {
+    // Mento's analytics API intermittently 404s Cloudflare Worker egress
+    // while serving 200 to browser-like clients; the neutral fetch identity
+    // is the recovery path when the browser-style headers are rejected.
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      makeMentoConfig(),
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [mentoReserveBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
+          [mentoReserveNeutralCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
+          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
+    });
+  });
+
+  it("throws a combined error when both header identities fail for the reserve JSON fetch", async () => {
+    await expect(fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      makeMentoConfig(),
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [mentoReserveBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
+          [mentoReserveNeutralCacheKey, Promise.reject(new Error("neutral headers rejected"))],
+          [mentoDashboardBrowserCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
+        ]),
+      } as never,
+    )).rejects.toThrow(
+      "browser fetch failed: browser headers rejected; neutral fetch failed: neutral headers rejected",
+    );
+  });
+
+  it("falls back to neutral headers for the dashboard timestamp fetch when browser-style headers fail", async () => {
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      makeMentoConfig(),
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
+          [mentoDashboardBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
+          [mentoDashboardNeutralCacheKey, Promise.resolve(MENTO_DASHBOARD_HTML_FIXTURE)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
+    });
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("degrades to unverified freshness with an info warning when both dashboard timestamp header identities fail", async () => {
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      makeMentoConfig(),
+      new AbortController().signal,
+      {
+        requestCache: new Map<string, Promise<unknown>>([
+          [mentoReserveBrowserCacheKey, Promise.resolve(SAMPLE_PAYLOAD)],
+          [mentoDashboardBrowserCacheKey, Promise.reject(new Error("browser headers rejected"))],
+          [mentoDashboardNeutralCacheKey, Promise.reject(new Error("neutral headers rejected"))],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings?.some((warning) => warning.code === "mento-dashboard-timestamp-failed")).toBe(true);
   });
 
   it("stamps CDP composition with verified dashboard freshness when available", () => {

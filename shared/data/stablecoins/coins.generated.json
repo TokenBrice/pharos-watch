@@ -13077,6 +13077,11 @@
         },
         "fallbacks": [
           {
+            "kind": "onchain-evm",
+            "chain": "ethereum",
+            "rpcMode": "etherscan-proxy"
+          },
+          {
             "kind": "http-json",
             "url": "https://prices.curve.finance/v1/crvusd/markets"
           }
@@ -44126,13 +44131,16 @@
           "Stablecoin": "low",
           "ETH": "very-low",
           "OTC Aggregate": "high",
-          "Other": "high"
+          "Other": "high",
+          "JLP": "high",
+          "Protocol Owned Liquidity": "high"
         },
         "renameMap": {
           "Stablecoin": "Stablecoin reserves",
           "ETH": "ETH collateral",
           "OTC Aggregate": "OTC aggregate positions",
-          "Other": "Other reserve assets"
+          "Other": "Other reserve assets",
+          "JLP": "JLP (Jupiter Perps LP token)"
         }
       }
     },
@@ -79652,7 +79660,11 @@
           "Plasma": "medium",
           "Arbitrum": "medium",
           "Monad": "high",
-          "Bybit": "medium"
+          "Bybit": "medium",
+          "Bnb_smartchain": "medium",
+          "Hyperevm": "high",
+          "Hyperliquid": "high",
+          "Megaeth": "high"
         }
       }
     },
@@ -89421,7 +89433,8 @@
           "[Paxos]_USDG": "low",
           "[Ethena]_sUSDe_Loop": "high",
           "[Yuzu]_yzPRIME": "medium",
-          "[Strata]_srUSDe_Pendle_PT_Loop": "high"
+          "[Strata]_srUSDe_Pendle_PT_Loop": "high",
+          "[Agora]_PT_AUSD": "high"
         },
         "renameMap": {
           "[Fluid]_fUSDT0": "Fluid fUSDT0",
@@ -89456,7 +89469,8 @@
           "[Paxos]_USDG": "Paxos USDG",
           "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
           "[Yuzu]_yzPRIME": "Yuzu yzPRIME",
-          "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop"
+          "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop",
+          "[Agora]_PT_AUSD": "Agora AUSD Pendle PT"
         },
         "coinIdMap": {
           "[Fluid]_fUSDT0": "usdt-tether",
@@ -89486,7 +89500,8 @@
           "[MegaEth]_USDm": "usdm-mega",
           "[Paxos]_USDG": "usdg-paxos",
           "[Ethena]_sUSDe_Loop": "susde-ethena",
-          "[Strata]_srUSDe_Pendle_PT_Loop": "srusde-strata"
+          "[Strata]_srUSDe_Pendle_PT_Loop": "srusde-strata",
+          "[Agora]_PT_AUSD": "ausd-agora"
         },
         "depTypeMap": {
           "[Fluid]_fUSDT0": "collateral",
@@ -89516,7 +89531,8 @@
           "[MegaEth]_USDm": "collateral",
           "[Paxos]_USDG": "collateral",
           "[Ethena]_sUSDe_Loop": "collateral",
-          "[Strata]_srUSDe_Pendle_PT_Loop": "collateral"
+          "[Strata]_srUSDe_Pendle_PT_Loop": "collateral",
+          "[Agora]_PT_AUSD": "collateral"
         },
         "allowNegativeBuckets": [
           "[Strata]_srUSDe_Pendle_PT_Loop"

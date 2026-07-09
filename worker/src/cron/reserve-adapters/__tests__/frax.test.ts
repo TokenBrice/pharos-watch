@@ -220,8 +220,8 @@ describe("adaptFraxFpiCollateral", () => {
       assets: [
         ...FPI_COLLATERAL_SAMPLE.assets!,
         {
-          key: "asset:fpi_comptroller:fraxswap_v2_frax_fpis",
-          name: "Fraxswap V2 FRAX/FPIS",
+          key: "asset:fpi_comptroller:some_other_lp",
+          name: "Some Other Unmapped LP",
           valueUsd: 500_000,
         },
       ],
@@ -231,7 +231,7 @@ describe("adaptFraxFpiCollateral", () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: "unknown-token",
-          message: expect.stringContaining("Fraxswap V2 FRAX/FPIS"),
+          message: expect.stringContaining("Some Other Unmapped LP"),
         }),
       ]),
     );
@@ -240,6 +240,55 @@ describe("adaptFraxFpiCollateral", () => {
         expect.objectContaining({
           name: "Unmapped Frax FPI collateral assets",
           risk: "high",
+        }),
+      ]),
+    );
+  });
+
+  it("maps the Fraxswap V2 FRAX/FPIS LP position by name (no tokenSymbol on the row)", () => {
+    const result = adaptFraxFpiCollateral({
+      ...FPI_COLLATERAL_SAMPLE,
+      assets: [
+        ...FPI_COLLATERAL_SAMPLE.assets!,
+        {
+          key: "asset:fpi_comptroller:fraxswap_v2_frax_fpis",
+          name: "Fraxswap V2 FRAX/FPIS",
+          valueUsd: 500_000,
+        },
+      ],
+    });
+
+    expect(result.warnings ?? []).toEqual(
+      expect.not.arrayContaining([expect.objectContaining({ code: "unknown-token" })]),
+    );
+    expect(result.slices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Fraxswap V2 FRAX/FPIS", risk: "high" }),
+      ]),
+    );
+  });
+
+  it("maps stkcvxFPIFRAX by tokenSymbol", () => {
+    const result = adaptFraxFpiCollateral({
+      ...FPI_COLLATERAL_SAMPLE,
+      assets: [
+        ...FPI_COLLATERAL_SAMPLE.assets!,
+        {
+          key: "asset:fpi_comptroller:stkcvxfpifrax_balance",
+          tokenSymbol: "stkcvxFPIFRAX",
+          valueUsd: 300_000,
+        },
+      ],
+    });
+
+    expect(result.warnings ?? []).toEqual(
+      expect.not.arrayContaining([expect.objectContaining({ code: "unknown-token" })]),
+    );
+    expect(result.slices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
+          risk: "medium",
         }),
       ]),
     );
