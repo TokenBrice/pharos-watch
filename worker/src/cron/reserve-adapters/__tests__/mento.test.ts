@@ -57,6 +57,7 @@ const USDC_ADDRESS = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
 const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
+const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const POOL_EXCHANGE_ABI_PARAMETERS = [
@@ -677,6 +678,74 @@ describe("mento redemption telemetry", () => {
     );
 
     expect(result.metadata?.redemptionFeeBps).toBe(5);
+  });
+
+  it("scans broker-pool exchange ids sequentially and stops after all configured pools are matched", async () => {
+    const requestedData: string[] = [];
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
+      requestedData.push(data);
+      if (data === GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
+      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
+        return encodePoolExchange({
+          asset0: USDM_ADDRESS,
+          asset1: USDC_ADDRESS,
+          bucket0: 0n,
+          bucket1: 10n ** 18n,
+          spread: 5n * 10n ** 20n,
+        });
+      }
+      throw new Error(`unexpected broker-pool fan-out: ${data}`);
+    });
+
+    const config = makeRedemptionConfig({
+      redemption: {
+        kind: "broker-pool",
+        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+      },
+    });
+
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      config,
+      new AbortController().signal,
+      { requestCache: makeRequestCache() } as never,
+    );
+
+    expect(result.metadata?.redemptionFeeBps).toBe(5);
+    expect(requestedData).toEqual([
+      GET_EXCHANGE_IDS_SELECTOR,
+      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+    ]);
+  });
+
+  it("fails broker-pool telemetry closed when the RPC returns too many exchange ids", async () => {
+    const oversizedExchangeIds = Array.from(
+      { length: 65 },
+      (_, index) => `0x${index.toString(16).padStart(64, "0")}`,
+    );
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
+      if (data === GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds(oversizedExchangeIds);
+      throw new Error(`unexpected capped broker-pool lookup: ${data}`);
+    });
+
+    const config = makeRedemptionConfig({
+      redemption: {
+        kind: "broker-pool",
+        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+      },
+    });
+
+    const result = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      config,
+      new AbortController().signal,
+      { requestCache: makeRequestCache() } as never,
+    );
+
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed when the broker-pool onchain read fails, leaving reserve slices unaffected", async () => {

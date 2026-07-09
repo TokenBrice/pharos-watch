@@ -543,6 +543,7 @@ const GET_EXCHANGE_IDS_SELECTOR = "0xdc162e36"; // getExchangeIds()
 const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
 // PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
 const POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
+const MENTO_BROKER_POOL_MAX_EXCHANGE_IDS = 64;
 
 // mento-protocol/bold (GBPm) is a Liquity v2 fork sharing the ActivePool debt
 // and redemption-rate selectors already verified in liquity-v2-branches.ts.
@@ -632,33 +633,43 @@ async function fetchMentoBrokerPoolRedemption(
     contract: MENTO_BIPOOL_MANAGER_ADDRESS,
     data: GET_EXCHANGE_IDS_SELECTOR,
   });
-  const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw);
+  const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, { maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS });
   if (!exchangeIds || exchangeIds.length === 0) {
     throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
   }
 
-  const poolExchanges = await Promise.all(
-    exchangeIds.map((exchangeId) => fetchOnchainRawCall({
+  const matchedPoolExchanges: Array<MentoPoolExchange | null> = Array.from({ length: params.pools.length }, () => null);
+  for (const exchangeId of exchangeIds) {
+    const poolExchange = decodePoolExchange(await fetchOnchainRawCall({
       ...callOptions,
       contract: MENTO_BIPOOL_MANAGER_ADDRESS,
       data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
-    }).then(decodePoolExchange)),
-  );
+    }));
+    if (!poolExchange) continue;
+
+    for (let index = 0; index < params.pools.length; index += 1) {
+      if (matchedPoolExchanges[index]) continue;
+      const poolConfig = params.pools[index];
+      const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
+      const counterAddress = poolConfig.counterAsset.address.toLowerCase();
+      const asset0 = poolExchange.asset0.toLowerCase();
+      const asset1 = poolExchange.asset1.toLowerCase();
+      if (
+        (asset0 === selfAddress && asset1 === counterAddress) ||
+        (asset0 === counterAddress && asset1 === selfAddress)
+      ) {
+        matchedPoolExchanges[index] = poolExchange;
+      }
+    }
+
+    if (matchedPoolExchanges.every((pool) => pool != null)) break;
+  }
 
   let capacityUsd = 0;
   let maxFeeBps: number | null = null;
-  for (const poolConfig of params.pools) {
-    const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
+  for (const [index, poolConfig] of params.pools.entries()) {
     const counterAddress = poolConfig.counterAsset.address.toLowerCase();
-    const match = poolExchanges.find((pool) => {
-      if (!pool) return false;
-      const asset0 = pool.asset0.toLowerCase();
-      const asset1 = pool.asset1.toLowerCase();
-      return (
-        (asset0 === selfAddress && asset1 === counterAddress) ||
-        (asset0 === counterAddress && asset1 === selfAddress)
-      );
-    });
+    const match = matchedPoolExchanges[index];
     if (!match) {
       throw new Error(
         `mento broker-pool: no matching BiPoolManager exchange for ${poolConfig.selfTokenAddress}/${poolConfig.counterAsset.address}`,
