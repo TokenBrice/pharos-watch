@@ -10,6 +10,7 @@ import {
   type ResolvedCronTimeoutBudget,
 } from "./cron-lease";
 import { setCache } from "./db-cache";
+import { stripSensitive } from "./safe-error-message";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -21,6 +22,12 @@ import { setCache } from "./db-cache";
 // the existing cache table without requiring a migration.
 
 const cronFailureCounts = new Map<string, number>();
+
+function createCronRunIdempotencyKey(job: string, startMs: number): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const suffix = cryptoObj?.randomUUID?.() ?? `${startMs}-${Math.random().toString(36).slice(2)}`;
+  return `cron-run:${job}:${suffix}`;
+}
 
 export interface CronFailureContext {
   /** Optional free-form metadata attached to the structured log. */
@@ -38,19 +45,19 @@ function classifyError(error: unknown): { name: string; message: string; stack?:
   if (error instanceof Error) {
     return {
       name: error.name || "Error",
-      message: error.message || String(error),
-      stack: error.stack,
+      message: stripSensitive(error.message || String(error)),
+      stack: error.stack ? stripSensitive(error.stack) : undefined,
     };
   }
-  return { name: "NonError", message: String(error) };
+  return { name: "NonError", message: stripSensitive(String(error)) };
 }
 
 function serializeTerminalCronMetadata(error: unknown): string | null {
   if (error instanceof CronJobAbandonedError) {
-    return JSON.stringify(error.metadata);
+    return JSON.stringify(boundCronEventMetadataValue(error.metadata, 0));
   }
   if (error instanceof CronTimeoutError && error.metadata) {
-    return JSON.stringify(error.metadata);
+    return JSON.stringify(boundCronEventMetadataValue(error.metadata, 0));
   }
   return null;
 }
@@ -83,7 +90,7 @@ export function recordCronFailure(
   };
   if (stack) payload.stack = stack.slice(0, 800);
   if (context?.metadata && Object.keys(context.metadata).length > 0) {
-    payload.metadata = context.metadata;
+    payload.metadata = boundCronEventMetadata(context.metadata);
   }
 
   console.error(`[cron-failure:${jobName}] ${name}: ${message.slice(0, 200)}`, JSON.stringify(payload));
@@ -128,14 +135,18 @@ function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
     return value;
   }
   if (typeof value === "string") {
-    return value.length <= MAX_CRON_EVENT_METADATA_STRING_CHARS
-      ? value
-      : `${value.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS)}...`;
+    const sanitized = stripSensitive(value);
+    return sanitized.length <= MAX_CRON_EVENT_METADATA_STRING_CHARS
+      ? sanitized
+      : `${sanitized.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS)}...`;
   }
   if (value instanceof Error) {
     return {
       name: value.name,
-      message: value.message.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS),
+      message: stripSensitive(value.message).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS),
+      ...(value.stack
+        ? { stack: stripSensitive(value.stack).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS) }
+        : {}),
     };
   }
   if (depth >= MAX_CRON_EVENT_METADATA_DEPTH) {
@@ -161,7 +172,7 @@ function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
     }
     return bounded;
   }
-  return String(value).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS);
+  return stripSensitive(String(value)).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS);
 }
 
 function boundCronEventMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
@@ -192,7 +203,7 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
     job: event.job,
     eventType: event.eventType,
     severity: event.severity ?? "info",
-    message: event.message.slice(0, MAX_CRON_EVENT_MESSAGE_CHARS),
+    message: stripSensitive(event.message).slice(0, MAX_CRON_EVENT_MESSAGE_CHARS),
     recordedAt: Math.floor(Date.now() / 1000),
     ...(event.metadata ? { metadata: boundCronEventMetadata(event.metadata) } : {}),
   };
@@ -309,6 +320,7 @@ export async function logCronRun(
 ): Promise<CronResult | void> {
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
+  const cronRunIdempotencyKey = createCronRunIdempotencyKey(job, startMs);
   const slotStartedAt = options?.slotStartedAt ?? null;
   const timeoutBudget = options?.timeoutBudget ?? resolveCronTimeoutBudget(job);
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
@@ -397,8 +409,9 @@ export async function logCronRun(
       db
         .prepare(
           `INSERT INTO cron_runs
-             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
         )
         .bind(
           job,
@@ -409,6 +422,7 @@ export async function logCronRun(
           resolvedResult?.metadata ?? null,
           slotStartedAt,
           resolvedResult?.error ?? null,
+          cronRunIdempotencyKey,
         )
         .run(),
     );
@@ -424,10 +438,20 @@ export async function logCronRun(
         db
           .prepare(
             `INSERT INTO cron_runs
-               (job, started_at, duration_ms, status, error, metadata, slot_started_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT DO NOTHING`,
           )
-          .bind(job, startSec, Date.now() - startMs, "error", String(e), terminalMetadata, slotStartedAt)
+          .bind(
+            job,
+            startSec,
+            Date.now() - startMs,
+            "error",
+            String(e),
+            terminalMetadata,
+            slotStartedAt,
+            cronRunIdempotencyKey,
+          )
           .run(),
       );
     } catch (logErr) {

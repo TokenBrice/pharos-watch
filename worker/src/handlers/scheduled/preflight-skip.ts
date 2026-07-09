@@ -15,6 +15,13 @@ export async function logSkippedCronRun(
 ): Promise<void> {
   const startedAt = Math.floor(Date.now() / 1000);
   const status = options.status ?? "degraded";
+  const idempotencyKey = [
+    "scheduled-preflight",
+    runtime.scheduleKey,
+    runtime.slotStartedAt,
+    options.job,
+    options.reason,
+  ].join(":");
   const metadata = JSON.stringify({
     ...options.metadata,
     skippedReason: options.reason,
@@ -28,10 +35,11 @@ export async function logSkippedCronRun(
       runtime.db
         .prepare(
           `INSERT INTO cron_runs
-             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, idempotency_key)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
         )
-        .bind(options.job, startedAt, 0, status, 0, metadata, runtime.slotStartedAt)
+        .bind(options.job, startedAt, 0, status, 0, metadata, runtime.slotStartedAt, idempotencyKey)
         .run(),
     );
   } catch (err) {

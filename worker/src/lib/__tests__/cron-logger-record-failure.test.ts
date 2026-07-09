@@ -81,6 +81,25 @@ describe("recordCronFailure", () => {
     expect(parsed.metadata).toEqual({ stage: "batchExecute", attempt: 3 });
   });
 
+  it("redacts nested credential metadata before writing cron logs", () => {
+    recordCronFailure("sync-live-reserves", new Error("provider failed"), {
+      metadata: {
+        provider: {
+          url: "https://example.com/rpc?apiKey=url-secret",
+          error: new Error("Authorization=header-secret Bearer bearer-secret"),
+        },
+        token: "token=metadata-secret",
+      },
+    });
+
+    const [, payload] = errorSpy.mock.calls[0] as [string, string];
+    expect(payload).not.toContain("url-secret");
+    expect(payload).not.toContain("header-secret");
+    expect(payload).not.toContain("bearer-secret");
+    expect(payload).not.toContain("metadata-secret");
+    expect(payload).toContain("[redacted]");
+  });
+
   it("persists non-terminal cron events as latest-event cache records", async () => {
     const db = mockD1();
 

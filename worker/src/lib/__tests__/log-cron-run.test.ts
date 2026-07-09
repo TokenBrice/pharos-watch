@@ -257,4 +257,40 @@ describe("logCronRun", () => {
     expect(deletes).toHaveLength(0);
     expect(inserts).toHaveLength(1);
   });
+
+  it("deduplicates an append-only cron row after an ambiguous committed retry", async () => {
+    const committedKeys = new Set<string>();
+    const attemptedKeys: string[] = [];
+    let firstInsert = true;
+    const ambiguousDb = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (!sql.includes("INSERT INTO cron_runs")) {
+              return { success: true, meta: { changes: 0 } };
+            }
+            const idempotencyKey = String(args[8]);
+            attemptedKeys.push(idempotencyKey);
+            if (!committedKeys.has(idempotencyKey)) committedKeys.add(idempotencyKey);
+            if (firstInsert) {
+              firstInsert = false;
+              throw new Error("D1 DB storage operation exceeded timeout");
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+          first: async () => null,
+          all: async () => ({ results: [], success: true, meta: {} }),
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await expect(logCronRun(ambiguousDb, "ambiguous-log", async () => ({ itemCount: 1 })))
+      .resolves.toMatchObject({ itemCount: 1 });
+    expect(attemptedKeys).toHaveLength(2);
+    expect(new Set(attemptedKeys).size).toBe(1);
+    expect(committedKeys.size).toBe(1);
+  });
 });

@@ -54,7 +54,8 @@ function normalizeOptionalString(value: string | number | null | undefined, maxL
   if (value == null) return undefined;
   const text = String(value).trim();
   if (!text) return undefined;
-  return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
+  const sanitized = stripSensitive(text);
+  return sanitized.length <= maxLength ? sanitized : `${sanitized.slice(0, maxLength)}...`;
 }
 
 function classifyError(error: unknown): ErrorLogFields | null {
@@ -77,12 +78,16 @@ function boundMetadataValue(value: unknown, depth: number): unknown {
     return value;
   }
   if (typeof value === "string") {
-    return value.length <= MAX_STRING_CHARS ? value : `${value.slice(0, MAX_STRING_CHARS)}...`;
+    const sanitized = stripSensitive(value);
+    return sanitized.length <= MAX_STRING_CHARS
+      ? sanitized
+      : `${sanitized.slice(0, MAX_STRING_CHARS)}...`;
   }
   if (value instanceof Error) {
     return {
       name: value.name || "Error",
-      message: value.message.slice(0, MAX_STRING_CHARS),
+      message: stripSensitive(value.message).slice(0, MAX_STRING_CHARS),
+      ...(value.stack ? { stack: stripSensitive(value.stack).slice(0, MAX_STACK_CHARS) } : {}),
     };
   }
   if (depth >= MAX_METADATA_DEPTH) {
@@ -106,7 +111,7 @@ function boundMetadataValue(value: unknown, depth: number): unknown {
     }
     return bounded;
   }
-  return String(value).slice(0, MAX_STRING_CHARS);
+  return stripSensitive(String(value)).slice(0, MAX_STRING_CHARS);
 }
 
 function boundMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
@@ -121,7 +126,7 @@ export function buildWorkerLogRecord(event: WorkerStructuredLogEvent): WorkerStr
     ts: new Date().toISOString(),
     scope: event.scope,
     level,
-    message: event.message.slice(0, MAX_STRING_CHARS),
+    message: stripSensitive(event.message).slice(0, MAX_STRING_CHARS),
     ...(normalizeOptionalString(event.event) ? { event: normalizeOptionalString(event.event) } : {}),
     ...(normalizeOptionalString(event.route) ? { route: normalizeOptionalString(event.route) } : {}),
     ...(normalizeOptionalString(event.job) ? { job: normalizeOptionalString(event.job) } : {}),

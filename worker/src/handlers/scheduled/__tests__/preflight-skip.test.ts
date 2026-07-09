@@ -50,6 +50,7 @@ describe("logSkippedCronRun", () => {
       0,
       expect.any(String),
       1_772_000_000,
+      "scheduled-preflight:halfHourlyOffset:1772000000:sync-dex-liquidity:circuit-open",
     );
     const metadata = JSON.parse(String(boundArgs[5])) as Record<string, unknown>;
     expect(metadata).toMatchObject({
