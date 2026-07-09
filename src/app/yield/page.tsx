@@ -36,6 +36,26 @@ const FAQ_ITEMS = [
     answer:
       "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
   },
+  {
+    question: "How do holder yield and lending opportunities differ?",
+    answer:
+      "Holder-yield rows describe yield attached to holding the stablecoin itself or a native yield-bearing wrapper. Lending opportunities describe external venues such as money markets, fixed-yield markets, or structured tranches where the underlying stablecoin is deposited into a separate venue. Both can appear in Yield Intelligence, but source posture, venue risk, depth, and warnings help separate durable holder yield from opportunity-specific risk.",
+  },
+  {
+    question: "How is source posture different from the Safety grade?",
+    answer:
+      "The Safety grade evaluates the stablecoin. Source posture evaluates the yield observation behind the row: source confidence, venue review status, depth, freshness, reward-heavy composition, and source switches. A high-grade stablecoin can still have a watch or speculative yield source if the venue or observation needs scrutiny.",
+  },
+  {
+    question: "Does source depth show executable capacity?",
+    answer:
+      "No. Depth is an explanatory lens for how much evidence backs the observed yield source, using venue size and related source-risk fields where available. It is not a fill-size estimate, execution quote, or guarantee that capital can enter or exit at the displayed APY.",
+  },
+  {
+    question: "Is PYS a guarantee or an additive score breakdown?",
+    answer:
+      "No. PYS is a comparative ranking score built from historical APY, benchmark context, source-risk penalties, stablecoin safety penalties, and yield stability. Component explanations show why a row moved, but they are not guarantees and should not be read as independently additive promises of future return.",
+  },
 ] as const satisfies readonly FaqItem[];
 
 const YIELD_PICKER_NOTE = (
@@ -62,9 +82,7 @@ export default createClientFeaturePage({
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
-    leadParagraphs: [
-      "Stablecoin yield rankings weighed against safety and real-world benchmarks — not just raw APY.",
-    ],
+    leadParagraphs: ["Stablecoin yield rankings weighed against safety and real-world benchmarks — not just raw APY."],
   },
   afterClient: (
     <>

@@ -18,8 +18,7 @@ const LEADERBOARD_SIZE = 5;
 // Shared 5-column grid so the (separate) header row and each leaderboard row
 // align: rank · coin · APY · PYS · grade. Fixed metric widths keep the columns
 // flush across the independent grid containers.
-const ROW_GRID =
-  "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center gap-x-2";
+const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center gap-x-2";
 
 function gradeChipClass(grade: ReportCardGrade): string {
   return REPORT_CARD_GRADE_COLORS[grade];
@@ -29,12 +28,16 @@ interface OverviewData {
   coveredCount: number;
   trackedCount: number;
   medianApy: number;
-  topYield: { symbol: string; apy: number } | null;
+  highestRawYield: { symbol: string; apy: number } | null;
+  bestRiskAdjusted: YieldRanking | null;
   leaders: YieldRanking[];
 }
 
-function buildOverview(rankings: readonly YieldRanking[], snapshot: { coveredCount: number; trackedCount: number } | null): OverviewData {
-  const topYield = rankings.reduce<{ symbol: string; apy: number } | null>((best, row) => {
+function buildOverview(
+  rankings: readonly YieldRanking[],
+  snapshot: { coveredCount: number; trackedCount: number } | null,
+): OverviewData {
+  const highestRawYield = rankings.reduce<{ symbol: string; apy: number } | null>((best, row) => {
     if (!Number.isFinite(row.apy30d)) return best;
     return best === null || row.apy30d > best.apy ? { symbol: row.symbol, apy: row.apy30d } : best;
   }, null);
@@ -48,7 +51,8 @@ function buildOverview(rankings: readonly YieldRanking[], snapshot: { coveredCou
     coveredCount: snapshot?.coveredCount ?? rankings.length,
     trackedCount: snapshot?.trackedCount ?? rankings.length,
     medianApy: 0,
-    topYield,
+    highestRawYield,
+    bestRiskAdjusted: leaders[0] ?? null,
     leaders,
   };
 }
@@ -93,12 +97,12 @@ function StatStrip({
   coveredCount,
   trackedCount,
   medianApy,
-  topYield,
+  bestRiskAdjusted,
 }: {
   coveredCount: number;
   trackedCount: number;
   medianApy: number;
-  topYield: OverviewData["topYield"];
+  bestRiskAdjusted: YieldRanking | null;
 }): React.JSX.Element {
   return (
     <div className="grid grid-cols-3 divide-x divide-border/50">
@@ -116,14 +120,17 @@ function StatStrip({
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Top Yield</span>
-        {topYield ? (
-          <span className="flex items-baseline gap-1.5 truncate">
+        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Best risk-adjusted</span>
+        {bestRiskAdjusted ? (
+          <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 truncate">
             <span className="truncate font-mono text-sm font-semibold uppercase tracking-tight text-foreground">
-              {topYield.symbol}
+              {bestRiskAdjusted.symbol}
             </span>
             <span className="pharos-numeric shrink-0 text-sm font-semibold text-frost-blue">
-              {formatPercent(topYield.apy)}
+              {formatPercent(bestRiskAdjusted.apy30d)}
+            </span>
+            <span className="pharos-numeric shrink-0 text-[11px] text-muted-foreground">
+              PYS {formatScore(bestRiskAdjusted.pharosYieldScore)}
             </span>
           </span>
         ) : (
@@ -134,7 +141,15 @@ function StatStrip({
   );
 }
 
-function LeaderRow({ row, rank, logoSrc }: { row: YieldRanking; rank: number; logoSrc: string | undefined }): React.JSX.Element {
+function LeaderRow({
+  row,
+  rank,
+  logoSrc,
+}: {
+  row: YieldRanking;
+  rank: number;
+  logoSrc: string | undefined;
+}): React.JSX.Element {
   const grade = row.safetyGrade;
   return (
     <li>
@@ -210,11 +225,22 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           coveredCount={overview.coveredCount}
           trackedCount={overview.trackedCount}
           medianApy={overview.medianApy}
-          topYield={overview.topYield}
+          bestRiskAdjusted={overview.bestRiskAdjusted}
         />
+        {overview.highestRawYield ? (
+          <p className="border-t border-border/50 px-1 py-2 text-[11px] text-muted-foreground">
+            Highest raw APY (unadjusted):{" "}
+            <span className="font-mono font-semibold uppercase text-foreground">{overview.highestRawYield.symbol}</span>{" "}
+            <span className="pharos-numeric font-semibold text-foreground">
+              {formatPercent(overview.highestRawYield.apy)}
+            </span>
+          </p>
+        ) : null}
 
         <div className="mt-3 border-t border-border/50 pt-3">
-          <div className={`${ROW_GRID} px-1 pb-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground`}>
+          <div
+            className={`${ROW_GRID} px-1 pb-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground`}
+          >
             <span aria-hidden="true" />
             <span>Top by PYS</span>
             <span className="justify-self-end">APY</span>

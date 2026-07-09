@@ -123,6 +123,8 @@ Under the fold (`HomeAltClient`):
 
 The directory table is the product's workbench, so it sits directly after shortcuts and the signal-card band; Horizon and the overview modules follow it.
 
+`HomeAltYieldOverview` keeps the homepage yield teaser risk-adjusted-first: the headline stat is the best Pharos Yield Score row with APY and PYS, while the raw APY maximum is demoted to a muted `Highest raw APY (unadjusted)` note.
+
 ### Key Stablecoin Data
 
 This section contains:

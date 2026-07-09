@@ -7,12 +7,7 @@ import {
 } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import type { SelectorResultSummaryProps } from "@/components/selector/selector-result-summary";
-import {
-  shouldSkipExitStep,
-  type SelectorStep,
-  type SelectorVenue,
-  type SelectorWizardState,
-} from "./selector-state";
+import { shouldSkipExitStep, type SelectorStep, type SelectorVenue, type SelectorWizardState } from "./selector-state";
 import {
   DEPEG_OPTIONS,
   EXIT_OPTIONS,
@@ -45,14 +40,8 @@ export function buildScreenerHandoff(output: SelectorOutput | null): ScreenerHan
   }
 }
 
-export function buildCompareWithWatchoutsHref(
-  output: SelectorOutput,
-  state: SelectorWizardState,
-): string {
-  const ids = [
-    ...output.recommended.map((rec) => rec.id),
-    ...output.lowerRanked.map((entry) => entry.id),
-  ];
+export function buildCompareWithWatchoutsHref(output: SelectorOutput, state: SelectorWizardState): string {
+  const ids = [...output.recommended.map((rec) => rec.id), ...output.lowerRanked.map((entry) => entry.id)];
   return buildCompareHref(output, state, ids);
 }
 
@@ -62,11 +51,23 @@ export function buildCompareShortlistHref(output: SelectorOutput): string {
   return `/compare/?${params.toString()}`;
 }
 
-function buildCompareHref(
-  output: SelectorOutput,
-  state: SelectorWizardState,
-  coinIds: readonly string[],
-): string {
+export function buildYieldInspectionHref(output: SelectorOutput): string | null {
+  if (output.profile !== "yield" || output.recommended.length === 0) return null;
+
+  const ids = output.recommended.map((rec) => rec.id).slice(0, 4);
+  const params = new URLSearchParams();
+  params.set("from", "selector");
+  if (ids.length > 1) {
+    params.set("compare", ids.join(","));
+  } else {
+    const [rec] = output.recommended;
+    params.set("q", rec.symbol);
+    params.set("compare", rec.id);
+  }
+  return `/yield/?${params.toString()}`;
+}
+
+function buildCompareHref(output: SelectorOutput, state: SelectorWizardState, coinIds: readonly string[]): string {
   const input = output.input;
   const params = new URLSearchParams();
   params.set("p", input.profile);
@@ -112,9 +113,7 @@ export function venueFromInput(input: SelectorInput): readonly SelectorVenue[] {
 
 function venuePreferencesFromInput(input: SelectorInput): readonly SelectorVenue[] {
   const allowed = new Set(VENUE_OPTIONS_BY_PROFILE[input.profile].map((option) => option.value));
-  return (input.venuePreferences ?? []).filter((value): value is SelectorVenue =>
-    allowed.has(value as SelectorVenue),
-  );
+  return (input.venuePreferences ?? []).filter((value): value is SelectorVenue => allowed.has(value as SelectorVenue));
 }
 
 export function buildResultSummaryCoordinationProps({
@@ -160,10 +159,7 @@ function answerChipsFor(
   return chips;
 }
 
-function labelForOption<T extends string>(
-  options: readonly SelectorOption<T>[],
-  value: T,
-): string {
+function labelForOption<T extends string>(options: readonly SelectorOption<T>[], value: T): string {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
@@ -171,9 +167,7 @@ function venueLabelFor(input: SelectorInput, state: SelectorWizardState): string
   const venue = venuePreferencesFromInput(input);
   const values = venue.length > 0 ? venue : compareVenueParam(input, state).split(",");
   const options = VENUE_OPTIONS_BY_PROFILE[input.profile];
-  return values
-    .map((value) => options.find((option) => option.value === value)?.label ?? value)
-    .join(", ");
+  return values.map((value) => options.find((option) => option.value === value)?.label ?? value).join(", ");
 }
 
 function priorityLabelsFor(input: SelectorInput): string[] {

@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getTemplate, type SelectorInput, type SelectorOutput, type SelectorRecommendation } from "@shared/lib/selector";
+import {
+  getTemplate,
+  type SelectorInput,
+  type SelectorOutput,
+  type SelectorRecommendation,
+} from "@shared/lib/selector";
 import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-labels";
 import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
 import { Bot, ExternalLink } from "lucide-react";
@@ -20,17 +25,14 @@ import {
 } from "@/components/selector/selector-empty-state";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
-import type {
-  SelectorProfile,
-  SelectorStep,
-  SelectorWizardState,
-} from "./selector-state";
+import type { SelectorProfile, SelectorStep, SelectorWizardState } from "./selector-state";
 import { PROFILE_LABEL } from "./picker-options";
 import {
   buildCompareShortlistHref,
   buildCompareWithWatchoutsHref,
   buildResultSummaryCoordinationProps,
   buildScreenerHandoff,
+  buildYieldInspectionHref,
   stepForAnswerKey,
 } from "./handoff";
 import type { UseSelectorResult } from "./use-selector";
@@ -93,9 +95,7 @@ export function ResultPane({
   useEffect(() => {
     if (!outputForFocus) return;
     const frame = requestAnimationFrame(() => {
-      const target = outputForFocus.recommended.length > 0
-        ? resultHeadingRef.current
-        : resultFocusRef.current;
+      const target = outputForFocus.recommended.length > 0 ? resultHeadingRef.current : resultFocusRef.current;
       target?.focus();
     });
     return () => cancelAnimationFrame(frame);
@@ -118,9 +118,7 @@ export function ResultPane({
         role="alert"
         className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/[0.08] px-4 py-3 text-sm text-destructive"
       >
-        <p>
-          Selector could not produce a result ({humanizeSelectorError(selectorResult.reason)}).
-        </p>
+        <p>Selector could not produce a result ({humanizeSelectorError(selectorResult.reason)}).</p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -148,9 +146,9 @@ export function ResultPane({
   const screenerHandoffHref = screenerHandoff.url;
   const compareShortlistHref = buildCompareShortlistHref(output);
   const compareWatchoutsHref = buildCompareWithWatchoutsHref(output, state);
+  const yieldInspectionHref = buildYieldInspectionHref(output);
   const telegramSubscribeCommand = buildTelegramSubscribeCommand(output.recommended);
-  const liveComparisonOutput =
-    selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
+  const liveComparisonOutput = selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
   const snapshotBanner =
     selectorResult.status === "snapshot-found" ? (
       <SelectorSnapshotBanner
@@ -211,12 +209,13 @@ export function ResultPane({
         lowConfidence={output.lowConfidence}
         coverageWarnings={output.coverageWarnings}
         compareActionsSlot={
-          showCompareShortlist || output.lowerRanked.length > 0 ? (
+          showCompareShortlist || output.lowerRanked.length > 0 || yieldInspectionHref ? (
             <>
-              {showCompareShortlist ? <CompareShortlistAction href={compareShortlistHref} /> : null}
-              {output.lowerRanked.length > 0 ? (
-                <CompareWatchoutsAction href={compareWatchoutsHref} />
+              {yieldInspectionHref ? (
+                <YieldInspectionAction href={yieldInspectionHref} primary={!showCompareShortlist} />
               ) : null}
+              {showCompareShortlist ? <CompareShortlistAction href={compareShortlistHref} /> : null}
+              {output.lowerRanked.length > 0 ? <CompareWatchoutsAction href={compareWatchoutsHref} /> : null}
             </>
           ) : undefined
         }
@@ -235,11 +234,7 @@ export function ResultPane({
         <SnapshotComparisonPanel
           frozen={output}
           live={liveComparisonOutput}
-          liveStatus={
-            selectorResult.status === "snapshot-found"
-              ? selectorResult.liveStatus
-              : "unavailable"
-          }
+          liveStatus={selectorResult.status === "snapshot-found" ? selectorResult.liveStatus : "unavailable"}
         />
       ) : null}
 
@@ -276,11 +271,9 @@ export function ResultPane({
                   }
                 : { ...rec, whyText: rec.whyText ?? buildWhyText(rec) }
             ) as SelectorRecommendation;
-            const sourceKey =
-              rec.profile === "yield" ? rec.recommendedSource?.sourceKey : null;
-            const yieldSourceUrl = sourceKey
-              ? yieldSourceUrls.get(`${rec.id}::${sourceKey}`) ?? null
-              : null;
+            const sourceKey = rec.profile === "yield" ? rec.recommendedSource?.sourceKey : null;
+            const yieldSourceUrl = sourceKey ? (yieldSourceUrls.get(`${rec.id}::${sourceKey}`) ?? null) : null;
+            const yieldInspectionHref = rec.profile === "yield" ? `/stablecoin/${rec.id}/yield/` : null;
             return (
               <SelectorShortlistCard
                 key={rec.id}
@@ -291,6 +284,7 @@ export function ResultPane({
                 logoUrl={logos[rec.id] ?? undefined}
                 prominentOpenDetail={singleResult}
                 yieldSourceUrl={yieldSourceUrl}
+                yieldInspectionHref={yieldInspectionHref}
               />
             );
           })}
@@ -307,11 +301,7 @@ export function ResultPane({
           </h2>
           <ol className="space-y-2">
             {output.lowerRanked.map((entry) => (
-              <SelectorLowerRankedRow
-                key={entry.id}
-                entry={entry}
-                pegCurrency={effectiveInput.pegCurrency}
-              />
+              <SelectorLowerRankedRow key={entry.id} entry={entry} pegCurrency={effectiveInput.pegCurrency} />
             ))}
           </ol>
         </section>
@@ -326,10 +316,10 @@ export function ResultPane({
 
       <footer className="space-y-2 border-t border-border/55 pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
-          Picker output uses {summarizeMethodologyVersions(output.methodologyVersions)} against
-          dataset snapshot <code>{output.datasetHash}</code>. Not personalized financial advice. Does
-          not account for jurisdiction, tax, counterparty agreements, or operational constraints not
-          captured by the form. <em>Historical readings; future behaviour may differ.</em>
+          Picker output uses {summarizeMethodologyVersions(output.methodologyVersions)} against dataset snapshot{" "}
+          <code>{output.datasetHash}</code>. Not personalized financial advice. Does not account for jurisdiction, tax,
+          counterparty agreements, or operational constraints not captured by the form.{" "}
+          <em>Historical readings; future behaviour may differ.</em>
         </p>
       </footer>
     </div>
@@ -338,7 +328,10 @@ export function ResultPane({
 
 export function SessionRecoveredBanner() {
   return (
-    <div role="status" className="rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground">
+    <div
+      role="status"
+      className="rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground"
+    >
       Restored from this tab&apos;s previous live Picker result.
     </div>
   );
@@ -355,12 +348,24 @@ function CompareShortlistAction({ href }: { href: string }) {
   );
 }
 
-function CompareWatchoutsAction({ href }: { href: string }) {
+function YieldInspectionAction({ href, primary }: { href: string; primary: boolean }) {
   return (
     <a
       href={href}
-      className="pharos-focus-ring pharos-control-pill min-h-10 px-3 text-sm"
+      className={
+        primary
+          ? "pharos-focus-ring inline-flex min-h-10 items-center justify-center rounded-full border border-foreground/60 bg-foreground px-3 text-sm font-medium text-background hover:bg-foreground/90"
+          : "pharos-focus-ring pharos-control-pill min-h-10 px-3 text-sm"
+      }
     >
+      Inspect on Yield Intelligence
+    </a>
+  );
+}
+
+function CompareWatchoutsAction({ href }: { href: string }) {
+  return (
+    <a href={href} className="pharos-focus-ring pharos-control-pill min-h-10 px-3 text-sm">
       Compare shortlist vs watch-outs
     </a>
   );
@@ -368,10 +373,7 @@ function CompareWatchoutsAction({ href }: { href: string }) {
 
 function TelegramSubscribeCommand({ command }: { command: string }) {
   return (
-    <section
-      aria-labelledby="selector-telegram-command-heading"
-      className="pharos-card-shell p-4 sm:p-5"
-    >
+    <section aria-labelledby="selector-telegram-command-heading" className="pharos-card-shell p-4 sm:p-5">
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -448,9 +450,7 @@ const TELEGRAM_RESERVED_COMMAND_TOKENS = new Set([
 ]);
 
 function buildTelegramSubscribeCommand(recommendations: readonly SelectorRecommendation[]): string {
-  const targets = Array.from(
-    new Set(recommendations.map((rec) => telegramTargetToken(rec)).filter(Boolean)),
-  );
+  const targets = Array.from(new Set(recommendations.map((rec) => telegramTargetToken(rec)).filter(Boolean)));
   return `/subscribe dews, depeg, safety ${targets.join(", ")}`.trim();
 }
 
@@ -465,29 +465,21 @@ function safeTelegramTargetToken(value: string): string | null {
   return token;
 }
 
-function NearMissesDisclosure({
-  survivors,
-}: {
-  survivors: readonly SelectorClosestSurvivor[];
-}) {
+function NearMissesDisclosure({ survivors }: { survivors: readonly SelectorClosestSurvivor[] }) {
   if (survivors.length === 0) return null;
   return (
     <details className="rounded-lg border border-border/55 bg-card/35 px-3 py-2 text-sm">
-      <summary className="cursor-pointer font-medium text-foreground">
-        Near misses / why not shown
-      </summary>
+      <summary className="cursor-pointer font-medium text-foreground">Near misses / why not shown</summary>
       <ul className="mt-2 space-y-1.5 leading-relaxed">
         {survivors.map((survivor) => (
           <li key={survivor.id} className="text-muted-foreground">
             <span className="font-semibold text-foreground">{survivor.symbol}</span>
             <span>
-              {" "}missed on {readableFailingDimension(survivor.failingDimension)}:{" "}
-              {survivor.liveReading}
+              {" "}
+              missed on {readableFailingDimension(survivor.failingDimension)}: {survivor.liveReading}
             </span>
             {survivor.hypotheticalScore != null ? (
-              <span className="text-foreground">
-                {" "}Hypothetical score {formatScore(survivor.hypotheticalScore)}.
-              </span>
+              <span className="text-foreground"> Hypothetical score {formatScore(survivor.hypotheticalScore)}.</span>
             ) : null}
           </li>
         ))}
@@ -507,29 +499,50 @@ function SnapshotComparisonPanel({
 }) {
   if (liveStatus === "loading") {
     return (
-      <div aria-busy="true" className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground">
+      <div
+        aria-busy="true"
+        className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground"
+      >
         Loading current data comparison.
       </div>
     );
   }
   if (!live || liveStatus !== "ready") {
     return (
-      <div role="status" className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground">
+      <div
+        role="status"
+        className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground"
+      >
         Current comparison is unavailable for this snapshot.
       </div>
     );
   }
   const delta = compareSelectorOutputs(frozen, live);
   return (
-    <section className="space-y-2 rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm" aria-label="Current shortlist comparison">
+    <section
+      className="space-y-2 rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm"
+      aria-label="Current shortlist comparison"
+    >
       <p className="font-semibold text-foreground">Current shortlist comparison</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <p className="text-muted-foreground">Added today: <span className="text-foreground">{delta.added || "none"}</span></p>
-        <p className="text-muted-foreground">Removed today: <span className="text-foreground">{delta.removed || "none"}</span></p>
-        <p className="text-muted-foreground">Rank/score movement: <span className="text-foreground">{delta.movements || "none"}</span></p>
-        <p className="text-muted-foreground">Dataset hash drift: <span className="text-foreground">{delta.datasetChanged ? "yes" : "no"}</span></p>
-        <p className="text-muted-foreground">Engine version drift: <span className="text-foreground">{delta.engineVersionChanged ? "yes" : "no"}</span></p>
-        <p className="text-muted-foreground">Methodology drift: <span className="text-foreground">{delta.methodologyChanged ? "yes" : "no"}</span></p>
+        <p className="text-muted-foreground">
+          Added today: <span className="text-foreground">{delta.added || "none"}</span>
+        </p>
+        <p className="text-muted-foreground">
+          Removed today: <span className="text-foreground">{delta.removed || "none"}</span>
+        </p>
+        <p className="text-muted-foreground">
+          Rank/score movement: <span className="text-foreground">{delta.movements || "none"}</span>
+        </p>
+        <p className="text-muted-foreground">
+          Dataset hash drift: <span className="text-foreground">{delta.datasetChanged ? "yes" : "no"}</span>
+        </p>
+        <p className="text-muted-foreground">
+          Engine version drift: <span className="text-foreground">{delta.engineVersionChanged ? "yes" : "no"}</span>
+        </p>
+        <p className="text-muted-foreground">
+          Methodology drift: <span className="text-foreground">{delta.methodologyChanged ? "yes" : "no"}</span>
+        </p>
       </div>
     </section>
   );
@@ -564,8 +577,7 @@ function buildWhyText(rec: SelectorRecommendation): string {
     .sort((a, b) => b.contribution - a.contribution)[0];
   if (strongest) {
     const componentLabel =
-      selectorComponentReadingLabel(strongest.key) ??
-      strongest.key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+      selectorComponentReadingLabel(strongest.key) ?? strongest.key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     return `${rec.symbol} ranked here because ${componentLabel} contributed ${strongest.contribution.toFixed(1)} points from a ${Math.round(strongest.rawValue ?? strongest.normalizedValue ?? 0)} reading.`;
   }
   return `${rec.symbol} passed the selected profile filters and ranked under the current ${PROFILE_LABEL[rec.profile]} weight set.`;
@@ -583,7 +595,10 @@ function humanizeSelectorError(reason: string): string {
   return labels[reason] ?? reason;
 }
 
-function compareSelectorOutputs(frozen: SelectorOutput, live: SelectorOutput): {
+function compareSelectorOutputs(
+  frozen: SelectorOutput,
+  live: SelectorOutput,
+): {
   added: string;
   removed: string;
   movements: string;
@@ -618,7 +633,6 @@ function compareSelectorOutputs(frozen: SelectorOutput, live: SelectorOutput): {
     movements,
     datasetChanged: frozen.datasetHash !== live.datasetHash,
     engineVersionChanged: frozen.engineVersion !== live.engineVersion,
-    methodologyChanged:
-      JSON.stringify(frozen.methodologyVersions) !== JSON.stringify(live.methodologyVersions),
+    methodologyChanged: JSON.stringify(frozen.methodologyVersions) !== JSON.stringify(live.methodologyVersions),
   };
 }

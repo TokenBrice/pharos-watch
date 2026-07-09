@@ -138,6 +138,17 @@ describe("YieldClient", () => {
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
   });
 
+  it("shows the selector return strip when opened from the Stablecoin Picker", () => {
+    searchParamsMock.set("from", "selector");
+
+    render(<YieldClient />);
+
+    expect(screen.getByText("Opened from the Yield profile in Stablecoin Picker.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Adjust picker answers" }).getAttribute("href")).toBe(
+      "/screener/picker?p=yield",
+    );
+  });
+
   it("risk budget changes preserve non-risk research filters", () => {
     searchParamsMock.set("peg", "USD");
     searchParamsMock.set("q", "coin");

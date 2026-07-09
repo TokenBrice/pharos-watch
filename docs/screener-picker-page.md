@@ -54,16 +54,16 @@ The pure engine still filters by `input.pegCurrency`, so tests can pass an all-p
 
 `SelectorOutput` is the replay contract, not just a UI view-model. In addition to `input`, `universe`, `recommended`, `lowerRanked`, `coverageWarnings`, `methodologyVersions`, `datasetHash`, and `engineVersion`, the current enhancement plan expects these fields or equivalent persisted semantics:
 
-| Field | Purpose |
-| --- | --- |
-| `recommended[].whyText` | Authored "why it ranked here" prose. Cards must not render raw `whyKey` values such as `top-*` / `strong-*`. |
-| `lowerRanked[].verdictText` / `teachingText` | Authored watch-out/profile-mismatch prose. Rows must not render raw `reasonKey` or `weak-*` strings. |
-| `lowConfidence` | Result-level quality flag shown prominently when normal confidence is not met. |
-| `usedRelaxedFallback` / `relaxedReasons` | Marks entries produced by relaxing constraints so users can distinguish clean fits from fallback fills. |
-| `exclusionSummary` | Aggregated counts/reasons for hard exclusions and coverage-thin rows. |
-| `closestSurvivors` | Engine-owned near-miss rows used by empty/thin states and the non-empty "Near misses / why not shown" disclosure; frontend placeholders are not authoritative. |
-| `relaxableConstraints` | Engine-owned relax actions that correspond to actual blockers. |
-| `rankRobustness` / tie metadata | Near-tie or concentration labels when score deltas are narrow or issuer/protocol concentration rules affect the shortlist. |
+| Field                                        | Purpose                                                                                                                                                        |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `recommended[].whyText`                      | Authored "why it ranked here" prose. Cards must not render raw `whyKey` values such as `top-*` / `strong-*`.                                                   |
+| `lowerRanked[].verdictText` / `teachingText` | Authored watch-out/profile-mismatch prose. Rows must not render raw `reasonKey` or `weak-*` strings.                                                           |
+| `lowConfidence`                              | Result-level quality flag shown prominently when normal confidence is not met.                                                                                 |
+| `usedRelaxedFallback` / `relaxedReasons`     | Marks entries produced by relaxing constraints so users can distinguish clean fits from fallback fills.                                                        |
+| `exclusionSummary`                           | Aggregated counts/reasons for hard exclusions and coverage-thin rows.                                                                                          |
+| `closestSurvivors`                           | Engine-owned near-miss rows used by empty/thin states and the non-empty "Near misses / why not shown" disclosure; frontend placeholders are not authoritative. |
+| `relaxableConstraints`                       | Engine-owned relax actions that correspond to actual blockers.                                                                                                 |
+| `rankRobustness` / tie metadata              | Near-tie or concentration labels when score deltas are narrow or issuer/protocol concentration rules affect the shortlist.                                     |
 
 ---
 
@@ -71,11 +71,11 @@ The pure engine still filters by `input.pegCurrency`, so tests can pass an all-p
 
 Browser-local state is intentionally split by lifetime. There is no long-lived local output history.
 
-| Key / surface | Type | Lifecycle |
-| --- | --- | --- |
-| `pharos.selector.callout.v1` | `localStorage` JSON | Callout dismissal state. Survives reloads; clears on site-data clear. |
-| `pharos.selector.sessionResult.v1` | `sessionStorage` JSON | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear. |
-| `s:{sid}` | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. Written with a 90-day unread TTL; the first successful read extends it to the full 5-year retention TTL (KV metadata `extended: true` marks already-extended rows). |
+| Key / surface                      | Type                            | Lifecycle                                                                                                                                                                                                             |
+| ---------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pharos.selector.callout.v1`       | `localStorage` JSON             | Callout dismissal state. Survives reloads; clears on site-data clear.                                                                                                                                                 |
+| `pharos.selector.sessionResult.v1` | `sessionStorage` JSON           | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear.                                                                                            |
+| `s:{sid}`                          | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. Written with a 90-day unread TTL; the first successful read extends it to the full 5-year retention TTL (KV metadata `extended: true` marks already-extended rows). |
 
 Storage layer is best-effort; quota errors are silently dropped. Session recovery, when present, must be visibly labeled as a restored session result and must not create localStorage output history.
 
@@ -93,10 +93,10 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 `functions/selector-snapshot/[[path]].ts` is the only HTTP surface that the Picker adds. It runs on Cloudflare Pages Functions and adds no Worker HTTP endpoint, but its `POST` write throttle binds D1 (`env.DB`) for a durable per-IP daily quota (`selector_snapshot_daily_quota`, migration 0163); the Worker's daily-0300 cron (`0 3 * * *`) prunes that table.
 
-| Surface | Method | Behavior |
-| --- | --- | --- |
-| `POST /selector-snapshot` | `POST` | Stores a normalized `SelectorOutput` JSON under a server-recomputed `sid`. Returns `{ sid }`. |
-| `GET /selector-snapshot/:sid` | `GET` | Returns the stored `SelectorOutput` or `404`. `private, no-store` so every read re-enters the same-origin gate. |
+| Surface                       | Method | Behavior                                                                                                        |
+| ----------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| `POST /selector-snapshot`     | `POST` | Stores a normalized `SelectorOutput` JSON under a server-recomputed `sid`. Returns `{ sid }`.                   |
+| `GET /selector-snapshot/:sid` | `GET`  | Returns the stored `SelectorOutput` or `404`. `private, no-store` so every read re-enters the same-origin gate. |
 
 **Auth:** same-origin only (mirrors `rejectIfNotSiteDataUiOrigin` from `functions/lib/site-data-origin.ts`). Browser CORS blocks cross-origin POST before it reaches the function; no write secret is required. Foreign origins receive `404`.
 
@@ -114,22 +114,22 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 **Validation matrix:**
 
-| Case | Expected result |
-| --- | --- |
-| Invalid `sid` syntax in URL or GET path | Do not fetch from KV, show typed invalid-link/not-found state, return `404` at the function. |
-| POST includes `debug` | Strip before canonical sid and storage. |
-| POST has unknown enum, impossible score, malformed source, or unknown reason key | `400`. |
-| GET stored payload fails semantic validation | `502`. |
-| GET stored payload canonical sid differs from requested `sid` | `502`. |
-| KV binding absent | `500`. |
-| KV read/write transient failure | `503`, typed client store-unavailable state. |
-| Clipboard write denied after successful POST | Show selectable share URL fallback and announce error through an alert/status region. |
+| Case                                                                             | Expected result                                                                              |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Invalid `sid` syntax in URL or GET path                                          | Do not fetch from KV, show typed invalid-link/not-found state, return `404` at the function. |
+| POST includes `debug`                                                            | Strip before canonical sid and storage.                                                      |
+| POST has unknown enum, impossible score, malformed source, or unknown reason key | `400`.                                                                                       |
+| GET stored payload fails semantic validation                                     | `502`.                                                                                       |
+| GET stored payload canonical sid differs from requested `sid`                    | `502`.                                                                                       |
+| KV binding absent                                                                | `500`.                                                                                       |
+| KV read/write transient failure                                                  | `503`, typed client store-unavailable state.                                                 |
+| Clipboard write denied after successful POST                                     | Show selectable share URL fallback and announce error through an alert/status region.        |
 
 ---
 
 ## UI Responsibilities
 
-The frontend agent owns `src/app/screener/picker/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
+The frontend agent owns `src/app/screener/picker/` and `src/components/selector/`. The integration owns only the callout _integration site_ (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
 
 - Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, rail/venue, and exit speed. Desktop single-select questions use a consistent select-then-Next rhythm; radio selection alone does not advance to result. Treasury Q5 labels are "Regulated custody", "Mixed rails", and "DeFi-native / on-chain"; regulated custody maps to `custodyOk="regulated-only"`, mixed rails leaves custody unconstrained, and DeFi-native maps to `custodyOk="onchain-only"` plus `decentralization="required"`.
 - Mobile branching is CSS-only except for the callout slim/full variant and the mobile single-form, both gated behind `useHydrated() && useIsMobile(640)`.
@@ -140,7 +140,7 @@ The frontend agent owns `src/app/screener/picker/` and `src/components/selector/
 - Empty states use engine-owned `exclusionSummary`, `closestSurvivors`, and `relaxableConstraints` to distinguish strict constraints, sparse coverage, missing Yield rails, and no-clean-fit relaxed fallback.
 - Result summary renders distinct banners for `lowConfidence`, sparse coverage, uneven coverage, `usedRelaxedFallback`, stale Trading share blockers, and methodology/version drift.
 - `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/picker/?sid={sid}` on `200`, leave the button disabled with a notice on failure. Active Trading share copy is blocked when relevant `perInputStaleness` exceeds the configured freshness ceiling; Treasury and Yield are not blocked by Trading-only staleness. Disabled/error reasons are associated with the button and announced through status/alert regions.
-- Result actions include Adjust answers, Verify in Screener, Copy share link, a Telegram follow-command card for the shortlist (`/subscribe dews, depeg, safety <symbols>`), a Compare these action for the top shortlist shown when 2 or more entries are recommended (`/compare/?coins=<ids>`), and optional Compare shortlist vs watch-outs. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
+- Result actions include Adjust answers, Verify in Screener, Copy share link, a Telegram follow-command card for the shortlist (`/subscribe dews, depeg, safety <symbols>`), a Compare these action for the top shortlist shown when 2 or more entries are recommended (`/compare/?coins=<ids>`), an Inspect on Yield Intelligence action for Yield-profile outputs (`/yield/?from=selector&compare=<ids>` or a single-result `q=<symbol>` variant), and optional Compare shortlist vs watch-outs. Yield shortlist cards also link to the per-coin yield workbench (`/stablecoin/<id>/yield/`) when a recommended yield source exists. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
 - Loading states set `aria-busy` and include screen-reader loading text. Result generation/snapshot load moves focus to the result summary heading, full-card option labels expose `focus-within` styling, skipped-coin disclosures are explicit controls, and mobile shortlist jumps move focus like skip links.
 - Mobile/narrow-width QA must cover long coin names, long hashes/version strings, multi-line relax buttons, and chip wrapping so text does not overlap at common mobile widths or 200 percent zoom.
 - `aria-live="polite"` announcements on step transitions; programmatic focus to the new `<legend>`.
@@ -183,18 +183,18 @@ The Picker engine is deterministic and client-only. It does not call the Worker.
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `src/app/screener/picker/page.tsx` | Static route shell (frontend agent) |
-| `src/app/screener/picker/client.tsx` | Interactive wizard + result render (frontend agent) |
-| `src/components/selector/*` | Wizard/result components (frontend agent) |
-| `shared/lib/selector/engine.ts` | `runSelector(input, data) → SelectorOutput` (engine agent) |
-| `shared/lib/selector/canonicalize.ts` | Snapshot canonicalization (engine + integration co-owned) |
-| `shared/lib/selector/snapshot.ts` | Snapshot replay contract, validation, and sid helpers (engine + integration co-owned) |
-| `functions/selector-snapshot/[[path]].ts` | POST + GET snapshot endpoint (integration) |
-| `functions/__tests__/selector-snapshot.test.ts` | Snapshot endpoint tests (integration) |
-| `scripts/ci/check-selector-banned-phrases.mjs` | Banned-phrase lint (integration) |
-| `public/og-selector-*.png` | Static 1200×630 OG cards per profile (integration) |
+| File                                            | Role                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/app/screener/picker/page.tsx`              | Static route shell (frontend agent)                                                   |
+| `src/app/screener/picker/client.tsx`            | Interactive wizard + result render (frontend agent)                                   |
+| `src/components/selector/*`                     | Wizard/result components (frontend agent)                                             |
+| `shared/lib/selector/engine.ts`                 | `runSelector(input, data) → SelectorOutput` (engine agent)                            |
+| `shared/lib/selector/canonicalize.ts`           | Snapshot canonicalization (engine + integration co-owned)                             |
+| `shared/lib/selector/snapshot.ts`               | Snapshot replay contract, validation, and sid helpers (engine + integration co-owned) |
+| `functions/selector-snapshot/[[path]].ts`       | POST + GET snapshot endpoint (integration)                                            |
+| `functions/__tests__/selector-snapshot.test.ts` | Snapshot endpoint tests (integration)                                                 |
+| `scripts/ci/check-selector-banned-phrases.mjs`  | Banned-phrase lint (integration)                                                      |
+| `public/og-selector-*.png`                      | Static 1200×630 OG cards per profile (integration)                                    |
 
 ---
 

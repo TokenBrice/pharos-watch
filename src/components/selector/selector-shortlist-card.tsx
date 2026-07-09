@@ -9,11 +9,7 @@ import { RowSparkline } from "@/components/row-sparkline";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
-import type {
-  SelectorComponent,
-  SelectorProfile,
-  SelectorRecommendation,
-} from "@shared/lib/selector";
+import type { SelectorComponent, SelectorProfile, SelectorRecommendation } from "@shared/lib/selector";
 import {
   selectorComponentLowestSubDimensionLabel,
   selectorComponentScoreLabel,
@@ -37,6 +33,8 @@ interface SelectorShortlistCardProps {
   prominentOpenDetail?: boolean;
   /** External URL for the recommended yield source, when available. */
   yieldSourceUrl?: string | null;
+  /** Internal Yield Intelligence detail URL for this recommendation. */
+  yieldInspectionHref?: string | null;
 }
 
 /** Discrete staleness label used on mobile (R2 Mobile concern #4). */
@@ -62,10 +60,7 @@ interface TextChip {
   tone?: "default" | "watch";
 }
 
-function buildEvidenceChips(
-  rec: SelectorRecommendation,
-  isMobile: boolean,
-): TextChip[] {
+function buildEvidenceChips(rec: SelectorRecommendation, isMobile: boolean): TextChip[] {
   const chips: TextChip[] = [];
 
   switch (rec.profile) {
@@ -170,6 +165,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     watchText,
     prominentOpenDetail = false,
     yieldSourceUrl,
+    yieldInspectionHref,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
   const resolvedWhyText = whyText ?? rec.whyText;
@@ -182,7 +178,10 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
   return (
     <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="pharos-numeric mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 text-xs font-semibold text-foreground">
+        <span
+          aria-hidden="true"
+          className="pharos-numeric mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 text-xs font-semibold text-foreground"
+        >
           {rank}
         </span>
         <span className="sr-only">{`Rank ${rank}, ${profileLabel} profile.`}</span>
@@ -195,7 +194,10 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             decoding="async"
           />
         ) : (
-          <span aria-hidden="true" className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/55 bg-background/60 text-xs font-bold text-foreground">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/55 bg-background/60 text-xs font-bold text-foreground"
+          >
             {rec.symbol.slice(0, 2)}
           </span>
         )}
@@ -213,9 +215,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       <CardTrendStrips coinId={rec.id} symbol={rec.symbol} safetyGrade={rec.safetyGrade} isMobile={isMobile} />
 
       <div className="mt-3 space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          Evidence checked
-        </p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Evidence checked</p>
         <ul className="flex flex-wrap gap-1.5" aria-label="Profile-conditioned evidence">
           {chips.map((chip) => (
             <li key={`${chip.label}:${chip.value}`}>
@@ -251,22 +251,19 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             <p className="break-words">{resolvedWhyText}</p>
           ) : (
             <p className="break-words">
-              This entry passed the selected profile filters and ranked highest under the current
-              evidence weights. Review the score details before acting.
+              This entry passed the selected profile filters and ranked highest under the current evidence weights.
+              Review the score details before acting.
             </p>
           )}
         </div>
         <div className="space-y-1 text-muted-foreground">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-            What to watch
-          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">What to watch</p>
           {resolvedWatchText && resolvedWatchText.length > 0 ? (
             <p className="break-words">{resolvedWatchText}</p>
           ) : (
             <p>
               {readableLowestSubDimension(rec.lowestSubDimension.key)} scores{" "}
-              <span className="pharos-numeric">{Math.round(rec.lowestSubDimension.score)}</span>{" "}
-              under this profile.
+              <span className="pharos-numeric">{Math.round(rec.lowestSubDimension.score)}</span> under this profile.
             </p>
           )}
         </div>
@@ -279,9 +276,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             <span className="break-words">
               {rec.recommendedSource.protocol} on {rec.recommendedSource.chain} at{" "}
               {rec.recommendedSource.apy30d.toFixed(1)}%
-              {rec.recommendedSource.pharosYieldScore != null
-                ? ` (PYS ${rec.recommendedSource.pharosYieldScore})`
-                : ""}
+              {rec.recommendedSource.pharosYieldScore != null ? ` (PYS ${rec.recommendedSource.pharosYieldScore})` : ""}
             </span>
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -291,14 +286,18 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
               {preciseStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
             </span>
           </p>
-          {yieldSourceUrl ? (
-            <p className="mt-1.5">
-              <TableSourceLink
-                href={yieldSourceUrl}
-                className="text-xs font-medium text-foreground"
-              >
-                Open yield source
-              </TableSourceLink>
+          {yieldSourceUrl || yieldInspectionHref ? (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {yieldInspectionHref ? (
+                <Link href={yieldInspectionHref} className="text-xs font-medium text-foreground">
+                  Inspect on Yield Intelligence
+                </Link>
+              ) : null}
+              {yieldSourceUrl ? (
+                <TableSourceLink href={yieldSourceUrl} className="text-xs font-medium text-foreground">
+                  Open yield source
+                </TableSourceLink>
+              ) : null}
             </p>
           ) : null}
         </div>
@@ -362,9 +361,7 @@ function CardTrendStrips({
     const recentSupply = sorted.slice(-30).map((p) => p.circulatingUsd);
     // Baseline = the most recent finite price; the strip renders price minus
     // baseline so the line diverges around a flat 0 reference.
-    const finitePrices = recent7d
-      .map((p) => p.price)
-      .filter((p): p is number => p != null && Number.isFinite(p));
+    const finitePrices = recent7d.map((p) => p.price).filter((p): p is number => p != null && Number.isFinite(p));
     const baseline = finitePrices.length > 0 ? finitePrices[finitePrices.length - 1] : null;
     return {
       pegSeries: recent7d.map((p) => (p.price == null || !Number.isFinite(p.price) ? null : p.price)),
@@ -391,9 +388,7 @@ function CardTrendStrips({
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
       {pegAvailable ? (
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-            7d peg
-          </p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">7d peg</p>
           <RowSparkline
             data={pegSeries}
             signed
@@ -409,9 +404,7 @@ function CardTrendStrips({
       ) : null}
       {!isMobile && supplyAvailable ? (
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-            30d supply
-          </p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">30d supply</p>
           <RowSparkline
             data={supplySeries}
             positiveColor={tint}
@@ -431,9 +424,7 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
   const sorted = [...components].sort((a, b) => b.contribution - a.contribution);
   return (
     <details className="mt-3 rounded-lg border border-border/50 bg-background/35 px-3 py-2 text-xs">
-      <summary className="cursor-pointer font-medium text-foreground">
-        Score breakdown
-      </summary>
+      <summary className="cursor-pointer font-medium text-foreground">Score breakdown</summary>
       <p className="mt-2 leading-relaxed text-muted-foreground">
         Weights shown are effective per-coin weights after missing-data redistribution.
       </p>
@@ -443,12 +434,15 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
             key={component.key}
             className="grid gap-1 rounded-md border border-border/45 bg-card/45 px-2.5 py-2 sm:grid-cols-[minmax(9rem,1fr)_auto]"
           >
-            <dt className="font-medium text-foreground">
-              {readableComponentKey(component.key)}
-            </dt>
+            <dt className="font-medium text-foreground">{readableComponentKey(component.key)}</dt>
             <dd className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground sm:justify-end">
-              <span>Weight <span className="pharos-numeric">{formatComponentNumber(component.weight)}</span>%</span>
-              <span>Normalized <span className="pharos-numeric">{formatNullableComponentNumber(component.normalizedValue)}</span></span>
+              <span>
+                Weight <span className="pharos-numeric">{formatComponentNumber(component.weight)}</span>%
+              </span>
+              <span>
+                Normalized{" "}
+                <span className="pharos-numeric">{formatNullableComponentNumber(component.normalizedValue)}</span>
+              </span>
               <span className="font-medium text-foreground">
                 <span className="pharos-numeric">{formatContribution(component.contribution)}</span> pts
               </span>

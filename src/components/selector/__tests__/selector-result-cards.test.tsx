@@ -71,14 +71,7 @@ const baseRecommendation: SelectorRecommendation = {
 
 describe("SelectorShortlistCard", () => {
   it("does not render raw why keys when prose is unavailable", () => {
-    render(
-      <SelectorShortlistCard
-        rank={1}
-        recommendation={baseRecommendation}
-        profile="treasury"
-        isMobile={false}
-      />,
-    );
+    render(<SelectorShortlistCard rank={1} recommendation={baseRecommendation} profile="treasury" isMobile={false} />);
 
     expect(screen.getByText(/passed the selected profile filters/i)).toBeTruthy();
     expect(screen.queryByText(/top-safety/i)).toBeNull();
@@ -153,11 +146,15 @@ describe("SelectorShortlistCard", () => {
         }}
         profile="yield"
         isMobile={false}
+        yieldInspectionHref="/stablecoin/usdc-usd-coin/yield/"
       />,
     );
 
     expect(screen.getByText(/Source risk: mid/i)).toBeTruthy();
     expect(screen.getByText(/Data freshness: 3m old/i)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Inspect on Yield Intelligence/i }).getAttribute("href")).toBe(
+      "/stablecoin/usdc-usd-coin/yield/",
+    );
   });
 });
 

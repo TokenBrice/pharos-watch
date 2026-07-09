@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -42,12 +43,7 @@ interface YieldFreshnessBannerProps {
   meta: StaleQuery["meta"];
 }
 
-function YieldFreshnessBanner({
-  dataUpdatedAt,
-  error,
-  hasData,
-  meta,
-}: YieldFreshnessBannerProps) {
+function YieldFreshnessBanner({ dataUpdatedAt, error, hasData, meta }: YieldFreshnessBannerProps) {
   const {
     data: adapterManifest,
     meta: adapterManifestMeta,
@@ -94,17 +90,13 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }
       <span className="flex min-w-0 items-center gap-2">
         <StablecoinLogo src={logoSrc} name={name} size={18} />
         <span className="min-w-0">
-          <span className="block truncate text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-            {label}
-          </span>
+          <span className="block truncate text-[11px] uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
           <span className="block truncate text-sm font-semibold text-foreground">{symbol}</span>
         </span>
       </span>
       <span className="shrink-0 text-right">
         <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
-        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          {unit}
-        </span>
+        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{unit}</span>
       </span>
     </button>
   );
@@ -115,6 +107,7 @@ export function YieldClient() {
   const { data: logos } = useLogos();
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const router = useRouter();
+  const arrivedFromSelector = searchParams.get("from") === "selector";
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
   const watchlist = useWatchlist();
@@ -171,16 +164,20 @@ export function YieldClient() {
 
   const sourceBoardViewModel = useMemo<YieldViewModel>(
     () =>
-      buildYieldViewModel(rankings, {
-        ...urlParams,
-        depth: null,
-        sourceConfidence: null,
-        sourcePosture: null,
-      }, {
-        benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
-        fallbackBenchmark: data?.provenance?.benchmark ?? null,
-        watchlistIds: watchlist.idSet,
-      }),
+      buildYieldViewModel(
+        rankings,
+        {
+          ...urlParams,
+          depth: null,
+          sourceConfidence: null,
+          sourcePosture: null,
+        },
+        {
+          benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+          fallbackBenchmark: data?.provenance?.benchmark ?? null,
+          watchlistIds: watchlist.idSet,
+        },
+      ),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
   );
 
@@ -331,6 +328,22 @@ export function YieldClient() {
           ))}
         </section>
       ) : null}
+      {arrivedFromSelector ? (
+        <section
+          aria-label="Stablecoin Picker handoff"
+          className="rounded-xl border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p>Opened from the Yield profile in Stablecoin Picker.</p>
+            <Link
+              href="/screener/picker/?p=yield"
+              className="pharos-focus-ring w-fit rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
+            >
+              Adjust picker answers
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <div className="flex flex-col gap-6">
         <FeatureHeroSplit
@@ -338,8 +351,7 @@ export function YieldClient() {
           beamLabel={
             topPysRow ? (
               <>
-                Top risk-adjusted yield{" "}
-                <span className="text-foreground/70">· {topPysRow.symbol}</span>
+                Top risk-adjusted yield <span className="text-foreground/70">· {topPysRow.symbol}</span>
               </>
             ) : (
               "Top risk-adjusted yield"
@@ -416,10 +428,7 @@ export function YieldClient() {
         </FeatureHeroSplit>
 
         <section aria-label="Risk tolerance" className="order-2">
-          <YieldRiskBudgetSlider
-            stops={viewModel.riskBudget.stops}
-            onSelect={handleApplyRiskBudget}
-          />
+          <YieldRiskBudgetSlider stops={viewModel.riskBudget.stops} onSelect={handleApplyRiskBudget} />
         </section>
 
         <section className="order-3" aria-label="Yield filters">

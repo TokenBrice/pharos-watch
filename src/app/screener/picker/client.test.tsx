@@ -3,7 +3,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { SelectorInput } from "@shared/lib/selector";
-import { cleanupFrontendTest, createNextLinkMock, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
+import {
+  cleanupFrontendTest,
+  createNextLinkMock,
+  installMatchMediaMock,
+  resetBrowserStorage,
+} from "@/test-utils/frontend";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
@@ -49,14 +54,16 @@ const baseRecommendation = {
   isBeta: true as const,
 };
 
-function mockSelectorOutput(overrides: {
-  profile?: "treasury" | "yield" | "trading";
-  pegCurrency?: "USD" | "EUR" | "CHF" | "GOLD";
-  input?: SelectorInput;
-  recommended?: unknown[];
-  lowerRanked?: unknown[];
-  closestSurvivors?: unknown[];
-} = {}) {
+function mockSelectorOutput(
+  overrides: {
+    profile?: "treasury" | "yield" | "trading";
+    pegCurrency?: "USD" | "EUR" | "CHF" | "GOLD";
+    input?: SelectorInput;
+    recommended?: unknown[];
+    lowerRanked?: unknown[];
+    closestSurvivors?: unknown[];
+  } = {},
+) {
   const profile = overrides.profile ?? "treasury";
   const pegCurrency = overrides.pegCurrency ?? "USD";
   const input = overrides.input ?? {
@@ -75,11 +82,9 @@ function mockSelectorOutput(overrides: {
     profile,
     input,
     universe: { active: 380, surviving: 12 },
-    recommended:
-      overrides.recommended
-      ?? [
-        { ...baseRecommendation, profile, recommendedSource: null, perInputStaleness: null },
-      ],
+    recommended: overrides.recommended ?? [
+      { ...baseRecommendation, profile, recommendedSource: null, perInputStaleness: null },
+    ],
     lowerRanked: overrides.lowerRanked ?? [],
     coverageWarnings: {
       skippedForCoverageCount: 0,
@@ -112,11 +117,13 @@ vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
   return {
     ...actual,
-    runSelector: vi.fn((input: SelectorInput) => mockSelectorOutput({
-      profile: input.profile,
-      pegCurrency: input.pegCurrency ?? "USD",
-      input,
-    })),
+    runSelector: vi.fn((input: SelectorInput) =>
+      mockSelectorOutput({
+        profile: input.profile,
+        pegCurrency: input.pegCurrency ?? "USD",
+        input,
+      }),
+    ),
     buildScreenerUrl: vi.fn((_input: unknown, baseUrl: string) => ({
       url: `${baseUrl}?dewsMax=60`,
       divergenceWarnings: [],
@@ -125,10 +132,10 @@ vi.mock("@shared/lib/selector", async () => {
     computeSnapshotId: vi.fn(async () => "stub-sid"),
     validateSelectorSnapshot: vi.fn((value: unknown) => {
       if (
-        value != null
-        && typeof value === "object"
-        && Array.isArray((value as { recommended?: unknown }).recommended)
-        && (value as { input?: unknown }).input != null
+        value != null &&
+        typeof value === "object" &&
+        Array.isArray((value as { recommended?: unknown }).recommended) &&
+        (value as { input?: unknown }).input != null
       ) {
         return { ok: true, snapshot: value };
       }
@@ -236,9 +243,7 @@ afterEach(() => {
 describe("SelectorClient — state machine", () => {
   it("renders Q1 on initial mount with no URL state", () => {
     render(<SelectorClient />);
-    expect(
-      screen.getAllByText(/What are you using this stablecoin for/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/What are you using this stablecoin for/i).length).toBeGreaterThan(0);
     // Q1's three option labels render.
     expect(screen.getByText(/Hold under Treasury constraints/i)).toBeTruthy();
     expect(screen.getByText(/Earn yield/i)).toBeTruthy();
@@ -249,9 +254,7 @@ describe("SelectorClient — state machine", () => {
     setUrlSearch("p=treasury&step=5");
     render(<SelectorClient />);
     // p=treasury only; USD peg is the default, so it lands on horizon post-rehydrate.
-    expect(
-      screen.getAllByText(/How long do you plan to hold this position/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/How long do you plan to hold this position/i).length).toBeGreaterThan(0);
   });
 
   it("records a selected peg in the URL before moving to horizon", async () => {
@@ -259,17 +262,13 @@ describe("SelectorClient — state machine", () => {
 
     fireEvent.click(screen.getByLabelText(/Hold under Treasury constraints/i));
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect(
-      (await screen.findAllByText(/Which peg currency should it target/i)).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Which peg currency should it target/i)).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByLabelText(/EUR/i));
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
 
     expect(window.location.search).toContain("peg=EUR");
-    expect(
-      screen.getAllByText(/How long do you plan to hold this position/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/How long do you plan to hold this position/i).length).toBeGreaterThan(0);
   });
 
   it("includes CHF and Gold in Yield peg choices while hiding unsupported pegs", async () => {
@@ -277,9 +276,7 @@ describe("SelectorClient — state machine", () => {
 
     fireEvent.click(screen.getByLabelText(/Earn yield/i));
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect(
-      (await screen.findAllByText(/Which peg currency should it target/i)).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Which peg currency should it target/i)).length).toBeGreaterThan(0);
 
     expect(screen.getByLabelText(/CHF/i)).toBeTruthy();
     expect(screen.getByLabelText(/Gold/i)).toBeTruthy();
@@ -355,7 +352,8 @@ describe("SelectorClient — state machine", () => {
             perInputStaleness: null,
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
@@ -400,7 +398,8 @@ describe("SelectorClient — state machine", () => {
             perInputStaleness: null,
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
@@ -426,7 +425,8 @@ describe("SelectorClient — state machine", () => {
             hypotheticalScore: 74.5,
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
@@ -480,15 +480,24 @@ describe("SelectorClient — state machine", () => {
             perInputStaleness: null,
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result");
     render(<SelectorClient />);
 
     expect(await screen.findByRole("heading", { name: "Shortlist" })).toBeTruthy();
-    expect(screen.queryByRole("link", {
-      name: /Compare the shortlisted stablecoins/i,
-    })).toBeNull();
+    const yieldInspectLinks = screen.getAllByRole("link", { name: /Inspect on Yield Intelligence/i });
+    expect(yieldInspectLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/yield/?from=selector&compare=xaut-tether%2Cpaxg-paxos",
+      "/stablecoin/xaut-tether/yield/",
+      "/stablecoin/paxg-paxos/yield/",
+    ]);
+    expect(
+      screen.queryByRole("link", {
+        name: /Compare the shortlisted stablecoins/i,
+      }),
+    ).toBeNull();
   });
 
   it("does not advance desktop depeg, venue, or exit choices until Next", async () => {
@@ -497,20 +506,17 @@ describe("SelectorClient — state machine", () => {
 
     fireEvent.click(await screen.findByLabelText(/Moderate/i));
     expect(window.location.search).toContain("step=4");
-    expect(screen.getAllByText(/How tight does the peg need to hold/i).length)
-      .toBeGreaterThan(0);
+    expect(screen.getAllByText(/How tight does the peg need to hold/i).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect((await screen.findAllByText(/What custody or rail setup do you prefer/i)).length)
-      .toBeGreaterThan(0);
+    expect((await screen.findAllByText(/What custody or rail setup do you prefer/i)).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByLabelText(/Regulated custody/i));
     expect(window.location.search).toContain("step=5");
     expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect((await screen.findAllByText(/how fast do you need to be out/i)).length)
-      .toBeGreaterThan(0);
+    expect((await screen.findAllByText(/how fast do you need to be out/i)).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByLabelText(/Same day/i));
     expect(window.location.search).toContain("step=6");
@@ -561,7 +567,8 @@ describe("SelectorClient — state machine", () => {
             perInputStaleness: { pegSummary: 500, dexTvl: 901, dews: 1_800 },
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=trading&h=1to7d&d=tight&v=cex&u=24h&step=result");
     render(<SelectorClient />);
@@ -585,7 +592,8 @@ describe("SelectorClient — state machine", () => {
             perInputStaleness: {},
           },
         ],
-      }));
+      }),
+    );
 
     setUrlSearch("p=trading&h=1to7d&d=tight&v=cex&u=24h&step=result");
     render(<SelectorClient />);
@@ -609,8 +617,7 @@ describe("SelectorClient — state machine", () => {
     fireEvent.click(pegEdit);
 
     expect(window.location.search).not.toContain("sid=");
-    expect(screen.getAllByText(/Which peg currency should it target/i).length)
-      .toBeGreaterThan(0);
+    expect(screen.getAllByText(/Which peg currency should it target/i).length).toBeGreaterThan(0);
 
     vi.unstubAllGlobals();
   });
@@ -639,28 +646,27 @@ describe("SelectorClient — empty state", () => {
   it("renders SelectorEmptyState when engine returns 0 recommended", async () => {
     // Re-mock for this test only:
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
-      mockSelectorOutput({ recommended: [] }));
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce(() => mockSelectorOutput({ recommended: [] }));
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
-    expect(
-      await screen.findByText(/No tracked USD stablecoin currently passes/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/No tracked USD stablecoin currently passes/i)).toBeTruthy();
   });
 });
 
 describe("selector-state input adapter", () => {
   it("persists exact venue preferences into SelectorInput", () => {
-    expect(toSelectorInput({
-      ...SELECTOR_STATE_DEFAULTS,
-      profile: "yield",
-      pegCurrency: "USD",
-      horizon: "1to4w",
-      depegTolerance: "tight",
-      venue: ["dex"],
-      exitSpeed: "24h",
-    })?.venuePreferences).toEqual(["dex"]);
+    expect(
+      toSelectorInput({
+        ...SELECTOR_STATE_DEFAULTS,
+        profile: "yield",
+        pegCurrency: "USD",
+        horizon: "1to4w",
+        depegTolerance: "tight",
+        venue: ["dex"],
+        exitSpeed: "24h",
+      })?.venuePreferences,
+    ).toEqual(["dex"]);
   });
 
   it("maps Treasury DeFi-native rail preference to stronger selector intent", () => {
@@ -734,9 +740,7 @@ describe("SelectorClient — snapshot recall", () => {
       await Promise.resolve();
     });
 
-    expect(
-      await screen.findByText(/Original snapshot no longer cached/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Original snapshot no longer cached/i)).toBeTruthy();
 
     vi.unstubAllGlobals();
   });
@@ -808,9 +812,7 @@ describe("SelectorClient — snapshot recall", () => {
     fireEvent.click(adjust);
 
     expect(window.location.search).not.toContain("sid=");
-    expect(
-      screen.getAllByText(/What are you using this stablecoin for/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/What are you using this stablecoin for/i).length).toBeGreaterThan(0);
 
     vi.unstubAllGlobals();
   });
@@ -823,9 +825,7 @@ describe("SelectorClient — adjust flow", () => {
 
     const adjust = await screen.findByText(/Adjust answers/i);
     fireEvent.click(adjust);
-    expect(
-      screen.getAllByText(/What are you using this stablecoin for/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/What are you using this stablecoin for/i).length).toBeGreaterThan(0);
     // Existing answers preserved in URL params.
     expect(window.location.search).toContain("p=treasury");
   });
@@ -841,8 +841,7 @@ describe("SelectorClient — Q4 multi-select", () => {
 
     // Venue prompt visible (text appears both in the legend and the aria-live
     // announcement region; either presence proves the step rendered).
-    expect((await screen.findAllByText(/Where will you put it to work/i)).length)
-      .toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Where will you put it to work/i)).length).toBeGreaterThan(0);
 
     // Tick a checkbox; the URL stays on step 5 and the exit prompt does NOT appear.
     const checkbox = screen.getByLabelText(/Lending and structured opportunities/i);
