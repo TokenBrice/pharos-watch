@@ -268,6 +268,41 @@ describe("adaptFraxFpiCollateral", () => {
     );
   });
 
+  it("does not treat arbitrary name-only rows as trusted token symbols", () => {
+    const result = adaptFraxFpiCollateral({
+      ...FPI_COLLATERAL_SAMPLE,
+      assets: [
+        ...FPI_COLLATERAL_SAMPLE.assets!,
+        {
+          key: "asset:fpi_comptroller:spoofed_frax_name",
+          name: "FRAX",
+          valueUsd: 500_000,
+        },
+      ],
+    });
+
+    expect(result.metadata).toMatchObject({
+      unknownCollateralUsd: 500_000,
+      immediateRedeemableUsd: 5_000_000,
+    });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-token",
+          message: expect.stringContaining("FRAX"),
+        }),
+      ]),
+    );
+    expect(result.slices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Unmapped Frax FPI collateral assets",
+          risk: "high",
+        }),
+      ]),
+    );
+  });
+
   it("maps stkcvxFPIFRAX by tokenSymbol", () => {
     const result = adaptFraxFpiCollateral({
       ...FPI_COLLATERAL_SAMPLE,
