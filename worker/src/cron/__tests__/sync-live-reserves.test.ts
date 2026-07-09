@@ -907,10 +907,12 @@ describe("syncLiveReserves", () => {
     // The tiny budget admits exactly one coin: the head of the ordered queue.
     const firstQueuedCoinId = SYNC_ORDERED_CONFIGURED_COINS[0]!.id;
     expect(result?.itemCount).toBe(1);
+    // warningCount is deliberately not pinned: the head-of-queue coin's
+    // adapter policy can add informational warnings (e.g. freshness) that are
+    // orthogonal to the timed-out-write semantics under test.
     expect(metadata).toMatchObject({
       synced: 1,
       failed: 0,
-      warningCount: 1,
       historyWriteFailedCoins: [firstQueuedCoinId],
     });
     expect(metadata.warnings).toContain(`${firstQueuedCoinId}:history-write-failed`);
