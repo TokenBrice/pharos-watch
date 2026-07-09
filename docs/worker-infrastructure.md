@@ -1133,7 +1133,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Registered adapters:**
 
-The authoritative runtime-neutral adapter declaration lives in `shared/lib/live-reserve-adapter-declarations.ts` and is resolved with Zod schemas by `shared/lib/live-reserve-adapter-descriptors.ts`; `worker/src/cron/reserve-adapters/index.ts` separately owns the exhaustive Worker fetcher map. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/coins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
+The authoritative runtime-neutral adapter declaration lives in `shared/types/live-reserve-adapter-declarations.ts` and is resolved with Zod schemas by `shared/lib/live-reserve-adapter-descriptors.ts`; `worker/src/cron/reserve-adapters/index.ts` separately owns the exhaustive Worker fetcher map. Coin-to-adapter assignment is source metadata: inspect `liveReservesConfig.adapter` in `shared/data/stablecoins/coins/*.json`, or run `npm run check:doc-counts` to verify the registered-adapter count that primary docs expose.
 
 This doc intentionally avoids a hand-maintained adapter-by-coin table because live reserve coverage changes frequently and stale enumerations have caused drift. For current coverage, use `docs/live-reserves.md`, the adapter registry files above, and the checked-in stablecoin metadata.
 

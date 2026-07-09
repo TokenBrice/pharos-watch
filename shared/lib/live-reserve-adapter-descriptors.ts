@@ -4,15 +4,15 @@ import {
   LIVE_RESERVE_ADAPTER_KEYS,
   type LiveReserveAdapterKey,
   type LiveReserveAdapterProvenance,
-} from "./live-reserve-adapter-declarations";
+} from "../types/live-reserve-adapter-declarations";
 import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-schema-primitives";
 
-export { LIVE_RESERVE_ADAPTER_KEYS, LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "./live-reserve-adapter-declarations";
+export { LIVE_RESERVE_ADAPTER_KEYS, LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
 export type {
   LiveReserveAdapterKey,
   LiveReserveAdapterProvenance,
   LiveReserveAdapterStatus,
-} from "./live-reserve-adapter-declarations";
+} from "../types/live-reserve-adapter-declarations";
 
 const ACTIVE_PROVENANCE = {
   status: "active",

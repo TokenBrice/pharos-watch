@@ -6,8 +6,7 @@ import type {
   LiveReserveSourceModel,
   LiveReserveSourceSharingMode,
   ReserveDisplayBadgeKind,
-} from "../types/live-reserve-core";
-import type { LiveReserveParamSchemaKey } from "./live-reserve-adapter-schema-primitives";
+} from "./live-reserve-core";
 import {
   BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
   DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -108,7 +107,7 @@ export interface LiveReserveAdapterProvenance {
 
 type LiveReserveAdapterDescriptorDeclaration = {
   primaryInputKinds: readonly LiveReserveInput["kind"][];
-  paramsSchema: LiveReserveParamSchemaKey;
+  paramsSchema: string;
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
