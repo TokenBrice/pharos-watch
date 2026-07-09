@@ -5,10 +5,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { formatBytes } from "../lib/format-bytes.mjs";
+import {
+  projectStaticRouteCapacity,
+  summarizeStaticRouteFamilies,
+} from "../lib/static-export-capacity.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const args = new Set(process.argv.slice(2));
 const check = args.has("--check");
+const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
 
 const DEFAULT_BUDGETS = {
   // Cloudflare Pages direct uploads cap Wrangler deployments at 20,000 files.
@@ -209,6 +214,7 @@ const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
 const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
 const homepageHtmlPath = path.join(outDir, "index.html");
 const homepageHtmlSize = existsSync(homepageHtmlPath) ? statSync(homepageHtmlPath).size : 0;
+const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
 
 console.log("# Pharos Build Size Report");
 console.log(`out total files: ${allOutFiles.length}`);
@@ -218,6 +224,30 @@ console.log(`CSS chunks: ${formatBytes(sum(cssFiles))} across ${cssFiles.length}
 console.log(`static media: ${formatBytes(sum(mediaFiles))} across ${mediaFiles.length} files`);
 console.log(`HTML: ${formatBytes(sum(htmlFiles))} across ${htmlFiles.length} files`);
 console.log(`TXT/RSC helpers: ${formatBytes(sum(txtFiles))} across ${txtFiles.length} files`);
+const overallCapacity = projectStaticRouteCapacity({
+  totalFiles: allOutFiles.length,
+  fileLimit: budgets.totalOutFiles,
+  minimumHeadroomRatio: MINIMUM_FILE_HEADROOM_RATIO,
+  averageFilesPerRoute: 1,
+});
+console.log(
+  `direct-upload file headroom: ${overallCapacity.fileHeadroom} (${(overallCapacity.headroomRatio * 100).toFixed(1)}%)`,
+);
+
+console.log("\nStatic route family capacity");
+for (const family of routeFamilySummaries) {
+  const projection = projectStaticRouteCapacity({
+    totalFiles: allOutFiles.length,
+    fileLimit: budgets.totalOutFiles,
+    minimumHeadroomRatio: MINIMUM_FILE_HEADROOM_RATIO,
+    averageFilesPerRoute: family.averageFilesPerRoute,
+  });
+  console.log(
+    `  ${family.family}: ${family.routeCount} routes, ${family.fileCount} files, ${formatBytes(family.totalBytes)}; `
+      + `${family.averageFilesPerRoute.toFixed(1)} files/route, ${formatBytes(Math.round(family.averageBytesPerRoute))}/route; `
+      + `${projection.routesUntilHeadroomFloor} routes to 25% floor, ${projection.routesUntilHardLimit} to hard limit`,
+  );
+}
 
 printTop("Top out files", allOutFiles, 50);
 printTop("Top JS chunks", jsFiles, 30);
@@ -281,6 +311,18 @@ if (check) {
   const failures = [];
   console.log("\nBudget checks");
   checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
+  if (overallCapacity.headroomRatio < MINIMUM_FILE_HEADROOM_RATIO) {
+    failures.push(
+      `direct-upload file headroom is ${(overallCapacity.headroomRatio * 100).toFixed(1)}%; minimum is ${MINIMUM_FILE_HEADROOM_RATIO * 100}%`,
+    );
+    console.log(
+      `FAIL direct-upload file headroom: ${(overallCapacity.headroomRatio * 100).toFixed(1)}% / ${(MINIMUM_FILE_HEADROOM_RATIO * 100).toFixed(1)}% minimum`,
+    );
+  } else {
+    console.log(
+      `ok direct-upload file headroom: ${(overallCapacity.headroomRatio * 100).toFixed(1)}% / ${(MINIMUM_FILE_HEADROOM_RATIO * 100).toFixed(1)}% minimum`,
+    );
+  }
   checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
   checkBudget("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes, failures);
   checkBudget("total CSS chunks", sum(cssFiles), budgets.totalCssBytes, failures);

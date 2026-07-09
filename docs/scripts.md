@@ -175,7 +175,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-seo-static.mjs` via `npm run seo:check`
 - `check-phishing-signatures.mjs` via `npm run check:phishing-signatures` after Pages builds
 - `check-classifier-sensitive-copy.mjs` via `npm run check:classifier-sensitive-copy` after Pages builds
-- `report-build-size.mjs --check` via `npm run check:build-size` after Pages builds; this includes the Cloudflare Pages 20,000-file direct-upload cap so oversized exports fail before the Pages publish step
+- `report-build-size.mjs --check` via `npm run check:build-size` after Pages builds; this includes the Cloudflare Pages 20,000-file direct-upload cap, a 25% minimum file-headroom gate, and per-route-family file/byte growth projections for stablecoin, yield, depeg, and digest routes
 - `check-safe-browsing.mjs` via the daily/manual `Safe Browsing Monitor` workflow
 - `coverage:critical` via the weekly/manual Critical Coverage Ratchet workflow
 - `screenshot-og.mjs` via `npm run og:capture` in the weekly/manual OG refresh workflow
