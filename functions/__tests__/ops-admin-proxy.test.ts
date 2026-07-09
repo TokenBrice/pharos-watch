@@ -105,7 +105,7 @@ describe("ops admin proxy", () => {
   it("accepts a bootstrapped Access session cookie when the assertion header is absent", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Cache-Control": "public, max-age=300", "Content-Type": "application/json" },
     }));
     vi.stubGlobal("fetch", fetchSpy);
 
@@ -116,6 +116,10 @@ describe("ops admin proxy", () => {
     });
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(verifyAccessJwt).toHaveBeenCalledWith({
       token: "valid-ui-jwt",
@@ -303,6 +307,21 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Ops API proxy is not configured" });
   });
 
+  it("does not send service credentials to a non-canonical configured origin", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: { ...BASE_ENV, OPS_API_ORIGIN: "https://attacker.example" },
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when UI Access validation bindings are missing", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
@@ -428,6 +447,30 @@ describe("ops admin proxy", () => {
     const response = await responsePromise;
     expect(response.status).toBe(504);
     expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
+  });
+
+  it("keeps the timeout active while the upstream response body is read", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"partial":'));
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    )));
+
+    const responsePromise = onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toEqual({ error: "Operator API upstream timed out" });
   });
 
   it("declares ops proxy timeout budgets in endpoint metadata", () => {

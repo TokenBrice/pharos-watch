@@ -19,6 +19,10 @@ describe("site-data env contract", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBeNull();
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "" })).toBeNull();
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "not a url" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "http://site-api.pharos.watch" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "ftp://site-api.pharos.watch" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://attacker.example" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://site-api.pharos.watch/path" })).toBeNull();
   });
 
   it("normalizes a configured SITE_API_ORIGIN", () => {
@@ -59,5 +63,18 @@ describe("site-data env contract", () => {
         DB: {} as never,
       }),
     ).toEqual([]);
+  });
+
+  it("flags non-canonical credential-bearing origins", () => {
+    expect(
+      validatePagesSiteDataProxyEnv({
+        SITE_API_ORIGIN: "https://attacker.example",
+        SITE_API_SHARED_SECRET: "shared-secret",
+        DB: {} as never,
+      }),
+    ).toContainEqual({
+      code: "site-api-origin-invalid",
+      message: "SITE_API_ORIGIN must be the canonical HTTPS origin https://site-api.pharos.watch.",
+    });
   });
 });

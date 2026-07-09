@@ -2,7 +2,7 @@ import { getEndpointOpsProxyTimeoutMs, isAdminPath, validateEndpointMethod } fro
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
-import { withNoindex } from "../../lib/noindex";
+import { NOINDEX_HEADER_VALUE } from "../../lib/noindex";
 import {
   resolvePagesOpsUiAccessConfig,
   resolveOpsApiOrigin,
@@ -77,6 +77,21 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
   });
 }
 
+function applyAdminResponsePolicy(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "private, no-store");
+  headers.set("CDN-Cache-Control", "no-store");
+  headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Robots-Tag", NOINDEX_HEADER_VALUE);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) {
     return null;
@@ -139,25 +154,33 @@ function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProx
 
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => runPagesProxy(context, {
   logPrefix: "ops-proxy",
+  finalizeResponse: (_proxyContext, response) => applyAdminResponsePolicy(response),
   rejectRequest: ({ request, env }) => {
     const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
-    return rejected ? withNoindex(rejected) : null;
+    return rejected;
   },
   validateEnv: ({ env }) => {
-    for (const issue of validatePagesOpsProxyEnv(env)) {
+    const issues = validatePagesOpsProxyEnv(env);
+    for (const issue of issues) {
       console.warn(`[ops-proxy] ${issue.message}`);
     }
-    return null;
+    return issues.some((issue) => issue.code === "ops-api-origin-invalid")
+      ? jsonError(500, "Ops API proxy is not configured")
+      : null;
   },
   resolveUpstreamPath: ({ params }) => resolveOpsAdminUpstreamPath(params),
   rejectUpstreamPath: (_context, upstreamPath) => (
     upstreamPath && isAdminPath(upstreamPath)
       ? null
-      : withNoindex(jsonError(404, "Not found"))
+      : jsonError(404, "Not found")
   ),
   rejectMethod: ({ request, env }, upstreamPath) => {
+    const upstreamOrigin = resolveOpsApiOrigin(env);
+    if (!upstreamOrigin) {
+      return jsonError(500, "Ops API proxy is not configured");
+    }
     const requestUrl = new URL(request.url);
-    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
+    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
     const methodValidation = validateEndpointMethod(upstreamUrl, request.method);
     if (!methodValidation) {
       return null;
@@ -165,25 +188,29 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
 
     const response = jsonError(405, methodValidation.message);
     response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
-    return withNoindex(response);
+    return response;
   },
   beforeFetch: async ({ request, env }) => {
     const authError = await requireValidOpsUiJwt(request, env);
     if (authError) {
-      return withNoindex(authError);
+      return authError;
     }
 
     const originError = requireSameOriginForMutatingRequest(request, env);
-    return originError ? withNoindex(originError) : null;
+    return originError;
   },
   buildUpstreamRequest: ({ request, env }, upstreamPath) => {
     const upstreamHeaders = buildUpstreamHeaders(request, env);
     if (upstreamHeaders instanceof Response) {
-      return withNoindex(upstreamHeaders);
+      return upstreamHeaders;
     }
 
+    const upstreamOrigin = resolveOpsApiOrigin(env);
+    if (!upstreamOrigin) {
+      return jsonError(500, "Ops API proxy is not configured");
+    }
     const requestUrl = new URL(request.url);
-    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
+    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
     return {
       upstreamUrl: upstreamUrl.toString(),
       method: request.method,
@@ -195,7 +222,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       fetchFailedMessage: "Operator API upstream fetch failed",
     };
   },
-  onFetchError: (_context, _upstreamPath, _errorKind, response) => withNoindex(response),
+  onFetchError: (_context, _upstreamPath, _errorKind, response) => response,
   buildResponse: ({ request }, _upstreamPath, upstreamResponse) => {
     const redirectLocation = upstreamResponse.headers.get("Location");
     if (
@@ -203,9 +230,9 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       upstreamResponse.status < 400 &&
       isCloudflareAccessLocation(redirectLocation)
     ) {
-      return withNoindex(jsonError(502, "Operator API upstream auth failed"));
+      return jsonError(502, "Operator API upstream auth failed");
     }
 
-    return withNoindex(buildProxyResponse(upstreamResponse, request.method));
+    return buildProxyResponse(upstreamResponse, request.method);
   },
 });
