@@ -88,8 +88,7 @@ export const CRITICAL_TEST_FILES = [
   "shared/lib/selector/__tests__/snapshot.test.ts",
   "functions/__tests__/middleware.test.ts",
   "functions/__tests__/selector-snapshot.test.ts",
-  "functions/__tests__/admin-host-gate.test.ts",
-  "functions/__tests__/admin-api-host-gate.test.ts",
+  "functions/__tests__/ops-asset-host-gates.test.ts",
   "functions/__tests__/ops-admin-proxy.test.ts",
   "functions/__tests__/site-data-proxy.test.ts",
 ];
