@@ -185,7 +185,18 @@ export const STABLECOIN_META_ASSET_FIELD_ORDER = Object.keys(
 
 const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
 
-export const STABLECOIN_SOURCE_DOMAIN_VALUES = ["reserves"] as const;
+/**
+ * Strict source-file shape validation before domain sidecars are merged.
+ * Cross-field/catalog invariants run on `StablecoinMetaAssetSchema` after merge.
+ */
+export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema;
+
+export const STABLECOIN_SOURCE_DOMAIN_VALUES = [
+  "reserves",
+  "mint-authority",
+  "compliance",
+  "risk-review",
+] as const;
 export type StablecoinSourceDomain = typeof STABLECOIN_SOURCE_DOMAIN_VALUES[number];
 
 export const StablecoinReservesSidecarSchema = z
@@ -194,6 +205,93 @@ export const StablecoinReservesSidecarSchema = z
     reserves: FullReserveCompositionSchema,
   })
   .strict();
+
+export const StablecoinMintAuthoritySidecarSchema = z
+  .object({
+    id: StablecoinIdSchema,
+    mintAuthority: MintAuthorityProfileSchema,
+  })
+  .strict();
+
+export const StablecoinComplianceSidecarSchema = z
+  .object({
+    id: StablecoinIdSchema,
+    mica: MicaProfileSchema.optional(),
+    genius: GeniusProfileSchema.optional(),
+  })
+  .strict()
+  .superRefine((sidecar, ctx) => {
+    if (sidecar.mica == null && sidecar.genius == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "compliance sidecars require mica or genius",
+        path: ["mica"],
+      });
+    }
+  });
+
+export const StablecoinRiskReviewSidecarSchema = z
+  .object({
+    id: StablecoinIdSchema,
+    canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
+    blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
+    oracleRisk: OracleRiskProfileSchema.optional(),
+    bridgeRouteRisk: BridgeRouteRiskProfileSchema.optional(),
+  })
+  .strict()
+  .superRefine((sidecar, ctx) => {
+    if (
+      sidecar.canBeBlacklisted === undefined &&
+      sidecar.blacklistabilityReview == null &&
+      sidecar.oracleRisk == null &&
+      sidecar.bridgeRouteRisk == null
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "risk-review sidecars require at least one reviewed risk field",
+        path: ["blacklistabilityReview"],
+      });
+    }
+
+    if (sidecar.canBeBlacklisted !== undefined && sidecar.blacklistabilityReview == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
+        path: ["blacklistabilityReview"],
+      });
+    }
+
+    if (
+      sidecar.canBeBlacklisted !== undefined &&
+      sidecar.blacklistabilityReview?.reviewedStatus !== undefined &&
+      sidecar.blacklistabilityReview.reviewedStatus !== sidecar.canBeBlacklisted
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
+        path: ["blacklistabilityReview", "reviewedStatus"],
+      });
+    }
+  });
+
+export const STABLECOIN_SOURCE_DOMAIN_FIELDS = {
+  reserves: ["reserves"],
+  "mint-authority": ["mintAuthority"],
+  compliance: ["mica", "genius"],
+  "risk-review": [
+    "canBeBlacklisted",
+    "blacklistabilityReview",
+    "oracleRisk",
+    "bridgeRouteRisk",
+  ],
+} as const satisfies Record<StablecoinSourceDomain, readonly (keyof StablecoinMeta)[]>;
+
+export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = {
+  reserves: StablecoinReservesSidecarSchema,
+  "mint-authority": StablecoinMintAuthoritySidecarSchema,
+  compliance: StablecoinComplianceSidecarSchema,
+  "risk-review": StablecoinRiskReviewSidecarSchema,
+} as const satisfies Record<StablecoinSourceDomain, z.ZodTypeAny>;
 
 const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
 

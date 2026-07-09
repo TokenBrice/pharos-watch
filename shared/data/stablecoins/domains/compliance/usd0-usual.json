@@ -1,0 +1,102 @@
+{
+  "id": "usd0-usual",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — EMTWP.csv (EMT issuers)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA MiCA register landing page — authorized EMT issuer register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Cryptonomist: France launch of USD0, Usual Protocol",
+        "url": "https://en.cryptonomist.ch/2024/02/29/france-the-usual-protocol-launches-usd0-the-stablecoin-that-rewards-the-community/"
+      },
+      {
+        "label": "ChainArgos: USD as Usual — MiCA analysis",
+        "url": "https://www.chainargos.com/usd-as-usual/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USD0 is a 1:1 USD-pegged, RWA-backed token redeemable on-chain — token-level characteristics fit \"payment stablecoin\" under the GENIUS Act. However, the issuer is Usual DAO, a France-domiciled decentralized autonomous organization with no US legal entity. Whether and how the GENIUS Act's issuer-level obligations reach a DAO issuer domiciled in France is genuinely unclear, especially while foreign-issuer comparability rules remain in proposed-rulemaking phase.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text (S.1582)",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute"
+        },
+        {
+          "label": "Treasury state-regime comparability NPRM (FR 2026-06489)",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Usual DAO",
+    "issuerDomicile": "France",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.rwa.xyz/assets/USD0",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USD0 is DAO-issued (Usual DAO holds 100% protocol asset ownership per UIP-15, Dec 2025) with Usual Labs SAS (France) acting as service provider, not issuer. No public GENIUS authorization, state-qualified approval, official application, or foreign-exception registration was located. Applicability marked unclear because GENIUS Act issuer-level obligations on a France-domiciled DAO with no US legal entity remain unresolved while foreign-issuer comparability rulemaking is still at NPRM stage.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "USD0 factsheet",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/usd0",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD0 RWA collateral",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "RWA.xyz USD0 asset page",
+        "url": "https://app.rwa.xyz/assets/USD0",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Usual DAO governance — UIP-15 protocol ownership",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation (usual.money/docs)",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "Web search for Usual/USD0 + GENIUS Act compliance announcements (June 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "USD0 is DAO-issued and redeemable against RWA collateral; re-verification confirms no public GENIUS authorization, state-qualified approval, official application, or foreign registration source was located as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

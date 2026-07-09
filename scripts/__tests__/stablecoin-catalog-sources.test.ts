@@ -81,6 +81,41 @@ function makeReserves(): Array<Record<string, unknown>> {
   ];
 }
 
+function makeMintAuthority(): Record<string, unknown> {
+  return {
+    mintPath: "unknown",
+    authorityPosture: "unknown",
+    confidence: "unknown",
+    summary: "The fixture mint authority remains unresolved.",
+    review: {
+      sourceFreeRationale: "Catalog loader fixture without external research.",
+      evidence: "The fixture records enough evidence text for strict schema validation.",
+      reviewer: "test",
+      reviewedAt: "2026-07-09",
+    },
+  };
+}
+
+function makeGeniusProfile(): Record<string, unknown> {
+  return {
+    applicability: "unclear",
+    authorizationStatus: "unknown",
+    issuerPathway: "unknown",
+    reviewer: "test",
+    reviewedAt: "2026-07-09",
+  };
+}
+
+function makeBlacklistabilityReview(): Record<string, unknown> {
+  return {
+    reviewedStatus: true,
+    sourceFreeRationale: "Catalog loader fixture without external research.",
+    evidence: "The fixture models a direct blacklistability control surface.",
+    reviewer: "test",
+    reviewedAt: "2026-07-09",
+  };
+}
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { force: true, recursive: true });
@@ -170,6 +205,59 @@ describe("stablecoin catalog source helpers", () => {
     ]);
   });
 
+  it("merges all research sidecar domains into one stablecoin projection", () => {
+    const rootDir = makeTempRoot();
+    const mintAuthority = makeMintAuthority();
+    const genius = makeGeniusProfile();
+    const blacklistabilityReview = makeBlacklistabilityReview();
+    const oracleRisk = {
+      tier: "opaque-or-unknown",
+      summary: "The fixture oracle design remains unknown.",
+    };
+    const bridgeRouteRisk = {
+      tier: "opaque-or-unknown",
+      summary: "The fixture bridge route remains unknown.",
+      reviewedAt: "2026-07-09",
+      reviewer: "test",
+      confidence: "unknown",
+      sourceFreeRationale: "Catalog loader fixture without external research.",
+    };
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/mint-authority/sidecar-usd.json", {
+      id: "sidecar-usd",
+      mintAuthority,
+    });
+    writeJson(rootDir, "shared/data/stablecoins/domains/compliance/sidecar-usd.json", {
+      id: "sidecar-usd",
+      mica: { status: "out-of-scope" },
+      genius,
+    });
+    writeJson(rootDir, "shared/data/stablecoins/domains/risk-review/sidecar-usd.json", {
+      id: "sidecar-usd",
+      canBeBlacklisted: true,
+      blacklistabilityReview,
+      oracleRisk,
+      bridgeRouteRisk,
+    });
+
+    const [entry] = loadPerCoinStablecoinEntries(rootDir);
+    expect(entry?.coin).toMatchObject({
+      mintAuthority,
+      mica: { status: "out-of-scope" },
+      genius,
+      canBeBlacklisted: true,
+      blacklistabilityReview,
+      oracleRisk,
+      bridgeRouteRisk,
+    });
+    expect(entry?.sidecarFiles).toEqual([
+      "shared/data/stablecoins/domains/compliance/sidecar-usd.json",
+      "shared/data/stablecoins/domains/mint-authority/sidecar-usd.json",
+      "shared/data/stablecoins/domains/risk-review/sidecar-usd.json",
+    ]);
+  });
+
   it("rejects sidecars whose id does not match the sidecar file id", () => {
     const rootDir = makeTempRoot();
 
@@ -212,6 +300,24 @@ describe("stablecoin catalog source helpers", () => {
     );
   });
 
+  it("rejects research sidecars while any field from that domain remains in the base", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(
+      rootDir,
+      "shared/data/stablecoins/coins/sidecar-usd.json",
+      makeCoin("sidecar-usd", { mica: { status: "out-of-scope" } }),
+    );
+    writeJson(rootDir, "shared/data/stablecoins/domains/compliance/sidecar-usd.json", {
+      id: "sidecar-usd",
+      genius: makeGeniusProfile(),
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /field "mica" already exists in shared\/data\/stablecoins\/coins\/sidecar-usd\.json/,
+    );
+  });
+
   it("rejects unknown fields in strict sidecar schemas", () => {
     const rootDir = makeTempRoot();
 
@@ -220,6 +326,19 @@ describe("stablecoin catalog source helpers", () => {
       id: "sidecar-usd",
       reserves: makeReserves(),
       notes: "not part of the reserves sidecar schema",
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key/);
+  });
+
+  it("rejects unknown fields in research sidecar schemas through the loader", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/compliance/sidecar-usd.json", {
+      id: "sidecar-usd",
+      genius: makeGeniusProfile(),
+      jurisdiction: { country: "US" },
     });
 
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key/);
@@ -236,6 +355,20 @@ describe("stablecoin catalog source helpers", () => {
 
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
       /Unsupported stablecoin sidecar domain directories: shared\/data\/stablecoins\/domains\/ratings/,
+    );
+  });
+
+  it("rejects research sidecars without a matching base coin", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/other-usd.json", makeCoin("other-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/mint-authority/orphan-usd.json", {
+      id: "orphan-usd",
+      mintAuthority: makeMintAuthority(),
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /no matching base coin found.*"orphan-usd"/,
     );
   });
 

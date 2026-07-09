@@ -1,0 +1,86 @@
+{
+  "id": "usn-noon",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.noon.capital"
+      },
+      {
+        "label": "Website",
+        "url": "https://noon.capital"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Noon USN is an omnichain token minted natively on Ethereum and carried to Sophon, zkSync Era, Starknet, TAC and others via native burn/mint over external validated messaging networks. The verified Ethereum implementation (USNUpgradeableHyperlane) inherits LayerZero V2 OFTUpgradeable -- the token itself is the OFT, so the home chain burns/mints rather than using a lockbox adapter -- and additionally integrates Hyperlane (configureHyperlane/configureISM/sendTokensViaHyperlane/handle/mailbox). Noon's contracts page labels the Sophon and zkSync deployments \"USN OFT,\" and its interoperability page documents Hyperlane burn-on-source/mint-on-destination as the cross-chain route. Supply therefore moves by external-validated-network burn/mint, not a third-party lockbox or lock/mint. The specific DVN security stack and Hyperlane ISM configuration were not retrievable, so the validation parameters are unreviewed.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "LayerZero OFT (Omnichain Fungible Token)",
+        "slug": "layerzero",
+        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
+        "bridgeTypes": [
+          "burn-mint",
+          "omnichain-token",
+          "external-messaging"
+        ],
+        "note": "Noon docs explicitly label Sophon and zkSync Era USN deployments as OFT; Ethereum is the native home chain."
+      },
+      {
+        "source": "explorer",
+        "name": "USNUpgradeableHyperlane implementation (OFTUpgradeable + Hyperlane)",
+        "slug": "sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata",
+        "bridgeTypes": [
+          "burn-mint",
+          "layerzero-oft",
+          "hyperlane-warp"
+        ],
+        "note": "Verified impl inherits OFTUpgradeable + OAppPreCrimeSimulatorUpgradeable, native burn/mint, plus Hyperlane configureHyperlane/sendTokensViaHyperlane/handle/mailbox. Home chain is burn/mint, not a lockbox adapter."
+      },
+      {
+        "source": "docs",
+        "name": "Hyperlane interchain messaging",
+        "slug": "hyperlane",
+        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
+        "bridgeTypes": [
+          "warp-route",
+          "external-validated"
+        ],
+        "note": "Dual integration alongside LayerZero; Hyperlane Mailbox dispatch present in contract internals."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Noon official contracts and addresses (USN/sUSN labeled OFT on Sophon + zkSync Era)",
+        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+      },
+      {
+        "label": "Verified Ethereum USN implementation source (USNUpgradeableHyperlane: OFTUpgradeable + Hyperlane, burn/mint)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+      },
+      {
+        "label": "Ethereum USN token proxy (TransparentUpgradeableProxy, LayerZero v2 imports)",
+        "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed"
+      },
+      {
+        "label": "zkSync Era USN OFT contract",
+        "url": "https://explorer.zksync.io/address/0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6"
+      },
+      {
+        "label": "Starknet 2025 Year in Review (Noon USN+sUSN deployed via LayerZero OFT to Starknet)",
+        "url": "https://www.starknet.io/blog/starknet-2025-year-in-review/"
+      }
+    ]
+  }
+}

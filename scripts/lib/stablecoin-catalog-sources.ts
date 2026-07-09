@@ -5,10 +5,12 @@ import {
   findDuplicateStablecoinCatalogIds,
   findStablecoinCatalogInvariantIssues,
   STABLECOIN_META_ASSET_FIELD_ORDER,
+  STABLECOIN_SOURCE_DOMAIN_FIELDS,
+  STABLECOIN_SOURCE_DOMAIN_SCHEMAS,
   STABLECOIN_SOURCE_DOMAIN_VALUES,
   StablecoinMetaAssetArraySchema,
   StablecoinMetaAssetSchema,
-  StablecoinReservesSidecarSchema,
+  StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
 } from "../../shared/lib/stablecoins/schema";
 
@@ -116,7 +118,12 @@ function parseSingleAssetValue(value: unknown, label: string): StablecoinMeta {
 }
 
 function parseSingleAsset(relativePath: string, rootDir: string): StablecoinMeta {
-  return parseSingleAssetValue(readJson(relativePath, rootDir), relativePath);
+  const result = StablecoinMetaSourceAssetSchema.safeParse(readJson(relativePath, rootDir));
+  if (result.success) {
+    return result.data;
+  }
+
+  throw new Error(`[stablecoin-assets] Invalid ${relativePath}: ${formatSchemaIssues(result.error.issues)}`);
 }
 
 function parseGeneratedPerCoinAsset(value: unknown): StablecoinMeta[] {
@@ -131,32 +138,27 @@ function parseGeneratedPerCoinAsset(value: unknown): StablecoinMeta[] {
   );
 }
 
-function parseReservesSidecar(relativePath: string, rootDir: string): StablecoinDomainSidecarEntry {
-  const result = StablecoinReservesSidecarSchema.safeParse(readJson(relativePath, rootDir));
-  if (!result.success) {
-    throw new Error(`[stablecoin-assets] Invalid ${relativePath}: ${formatSchemaIssues(result.error.issues)}`);
-  }
-
-  return {
-    domain: "reserves",
-    fields: ["reserves"],
-    file: relativePath,
-    id: result.data.id,
-    patch: {
-      reserves: result.data.reserves,
-    },
-  };
-}
-
 function parseDomainSidecar(
   domain: StablecoinSourceDomain,
   relativePath: string,
   rootDir: string,
 ): StablecoinDomainSidecarEntry {
-  switch (domain) {
-    case "reserves":
-      return parseReservesSidecar(relativePath, rootDir);
+  const result = STABLECOIN_SOURCE_DOMAIN_SCHEMAS[domain].safeParse(readJson(relativePath, rootDir));
+  if (!result.success) {
+    throw new Error(`[stablecoin-assets] Invalid ${relativePath}: ${formatSchemaIssues(result.error.issues)}`);
   }
+
+  const parsed = result.data as { id: string } & Partial<StablecoinMeta>;
+  const fields = STABLECOIN_SOURCE_DOMAIN_FIELDS[domain].filter((field) => hasOwnField(parsed, field));
+  const patch = Object.fromEntries(fields.map((field) => [field, parsed[field]])) as Partial<StablecoinMeta>;
+
+  return {
+    domain,
+    fields: [...fields],
+    file: relativePath,
+    id: parsed.id,
+    patch,
+  };
 }
 
 function stablecoinIdFromJsonFileName(fileName: string): string {
@@ -229,14 +231,16 @@ function mergeStablecoinSidecars(
       );
     }
 
-    for (const field of sidecar.fields) {
+    for (const field of STABLECOIN_SOURCE_DOMAIN_FIELDS[sidecar.domain]) {
       if (hasOwnField(entry.coin, field)) {
         throw new Error(
           `[stablecoin-assets] ${sidecar.file}: field "${String(field)}" already exists in ${entry.file}; ` +
-          "move the field completely into the sidecar or remove the sidecar copy",
+          `move every ${sidecar.domain} field completely into the sidecar`,
         );
       }
+    }
 
+    for (const field of sidecar.fields) {
       if (patchFields.has(field)) {
         throw new Error(
           `[stablecoin-assets] ${sidecar.file}: field "${String(field)}" ` +

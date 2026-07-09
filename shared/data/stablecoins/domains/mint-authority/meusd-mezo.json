@@ -1,0 +1,161 @@
+{
+  "id": "meusd-mezo",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "MUSD is primarily minted on Mezo through a BTC-only overcollateralized CDP/Liquity-style borrower path; the Mezo mintList (BorrowerOperations, InterestRateManager, EnclaveDebtManager proxies) and the Ethereum token/bridge surface all trace to the same 5/9 Safe, which owns the token and every proxy admin on both chains.",
+    "controls": [
+      {
+        "chain": "mezo",
+        "address": "0x44b1bac67dda612a41a58aaf779143b181dee031",
+        "label": "Mezo MUSD borrower/CDP mint path (BorrowerOperations; mintList also includes InterestRateManager 0x4a4537… and EnclaveDebtManager 0x2c5e9a…)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mezo docs describe MUSD minting against native and wrapped BTC collateral at 110% minimum collateralization through a Liquity-style borrower flow.",
+        "sources": [
+          {
+            "label": "Mezo MUSD docs",
+            "url": "https://mezo.org/docs/users/musd/"
+          },
+          {
+            "label": "MUSD on Mezo explorer",
+            "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          }
+        ],
+        "evidence": "At Mezo block 9611141: full MintListAddressAdded log scan via the Mezo Blockscout API returned exactly 3 entries — BorrowerOperations proxy 0x44b1ba…, InterestRateManager proxy 0x4a4537…, EnclaveDebtManager proxy 0x2c5e9a… — with zero MintListAddressRemoved events; mintList(addr)=true confirmed live for all 3. All three are verified TransparentUpgradeableProxy contracts whose ProxyAdmin owner() is the 5/9 Safe 0x98D889…"
+      },
+      {
+        "chain": "mezo",
+        "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+        "label": "MUSD Mezo owner Safe (token owner + ProxyAdmin owner of all 3 mintList proxies)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 5,
+          "owners": [
+            "0x7f043FF8B5Ce02E543eE83fcdec94944D24ebD5d",
+            "0x3F9bb00672AD7254eBa4be9Fe65860CE298A3AB8",
+            "0x930b76784C1FB86335ab174dFE321B44eA0ADfdA",
+            "0xAbB0C40DBc7FF3455087888C87217064Ad10a944",
+            "0x9bE76D5aB050aa8c77f6Ad25F25f633B2cB8ed85",
+            "0x696BA87e3Ef864335A9E30Ae4653b516Fb93a1AB",
+            "0x91149ef9449Bd1068346B6098ebB9624c2D3e849",
+            "0xF63bc5326c4d5ab123a20Ec5D5805B365a3355E4",
+            "0x6F016C33e55e40f24239fB9ab96A6e3D75059686"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 9611141,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "MUSD owner Safe on Mezo explorer",
+            "url": "https://explorer.mezo.org/address/0x98D8899c3030741925BE630C710A98B57F397C7a"
+          }
+        ],
+        "evidence": "At Mezo block 9611141 via mainnet.mezo.public.validationcloud.io: MUSD.owner() = 0x98D889…; getOwners() returned the same 9 signers as the Ethereum Safe, getThreshold() = 5, getModulesPaginated returned empty, guard storage slot = 0, masterCopy slot = 0xd9Db270c… (GnosisSafe 1.3.0). The Safe owns addToMintList/removeFromMintList on the token and the ProxyAdmins of all 3 mintList proxies."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+        "label": "MUSD token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 5,
+          "owners": [
+            "0x3F9bb00672AD7254eBa4be9Fe65860CE298A3AB8",
+            "0x7f043FF8B5Ce02E543eE83fcdec94944D24ebD5d",
+            "0x930b76784C1FB86335ab174dFE321B44eA0ADfdA",
+            "0xAbB0C40DBc7FF3455087888C87217064Ad10a944",
+            "0x9bE76D5aB050aa8c77f6Ad25F25f633B2cB8ed85",
+            "0x696BA87e3Ef864335A9E30Ae4653b516Fb93a1AB",
+            "0x91149ef9449Bd1068346B6098ebB9624c2D3e849",
+            "0xF63bc5326c4d5ab123a20Ec5D5805B365a3355E4",
+            "0x6F016C33e55e40f24239fB9ab96A6e3D75059686"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25165875,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "MUSD token source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+          },
+          {
+            "label": "MUSD owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+          }
+        ],
+        "evidence": "MUSD.owner() returned this Safe; Safe API showed 5/9 with no modules and no guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5293158bf7a81ed05418da497a80f7e6dbf4477e",
+        "label": "MUSD Wormhole NTT manager",
+        "role": "bridge-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Wormhole NTT minting is bounded by configured transfer limits; the MUSD 5/9 Safe owns the NTT manager and can change those limits.",
+        "routeChecks": {
+          "attestorQuorum": "getThreshold() returned 1",
+          "caps": "getCurrentOutboundCapacity() returned a very high capacity; inbound read reverted and needs follow-up"
+        },
+        "sources": [
+          {
+            "label": "MUSD NTT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x075108f275ed81c9cfc01065e6e50ceea81d6363?fields=abi,metadata"
+          },
+          {
+            "label": "MUSD mintList logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186&fromBlock=0&toBlock=latest&topic0=0xb5f5e667e3c69826355d38372c34ea9b6dbe059e935081194d5eea2e8ad2692e"
+          }
+        ],
+        "evidence": "MUSD mintList(address) returned true. The proxy implementation is Wormhole NTT Manager; owner() returned the MUSD 5/9 Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mezo MUSD docs",
+          "url": "https://mezo.org/docs/users/musd"
+        },
+        {
+          "label": "MUSD token source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+        },
+        {
+          "label": "MUSD owner Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+        },
+        {
+          "label": "MUSD on Mezo explorer",
+          "url": "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        }
+      ],
+      "evidence": "Ethereum (block 25294738, prior pass): MUSD.owner() = 5/9 Safe 0x98D889… (Safe API: no modules, no guard); three mintList entries true, of which two are dead noOp contracts and the active one is the Wormhole NTT manager (owner = same Safe); NTT inbound cap from Base = 256M tokens. Mezo (block 9611141, 2026-06-11, via mainnet.mezo.public.validationcloud.io + Mezo Blockscout API): MUSD.owner() = the same 5/9 Safe deployed at the same address on Mezo — getOwners() returned the identical 9 signers, getThreshold() = 5, getModulesPaginated empty, guard slot = 0, masterCopy = GnosisSafe 1.3.0. Full MintListAddressAdded/Removed scan: exactly 3 minters (BorrowerOperations 0x44b1ba…, InterestRateManager 0x4a4537…, EnclaveDebtManager 0x2c5e9a…), zero removals, all 3 confirmed live via mintList()=true; all 3 are verified TransparentUpgradeableProxy contracts whose ProxyAdmin owner() is the 5/9 Safe. Every mint surface on both chains traces to the BTC-collateralized CDP system governed by that Safe.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}
