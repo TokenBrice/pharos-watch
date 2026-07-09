@@ -7,6 +7,7 @@ import {
 } from "../ci/check-cli-args-policy.mjs";
 
 const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
+const REPOSITORY_SCAN_TIMEOUT_MS = 15_000;
 
 function createSourceReader(sources: Record<string, string>) {
   return (path: string): string => {
@@ -43,7 +44,7 @@ describe("check-cli-args-policy", () => {
 
     expect(exitCode, stderr).toBe(0);
     expect(stdout).toMatch(/CLI argument policy: OK \(\d+ entrypoints; \d+ strict, \d+ exempt\)/);
-  });
+  }, REPOSITORY_SCAN_TIMEOUT_MS);
 
   it("rejects a newly discovered process.argv entrypoint until it is classified", () => {
     const result = evaluateCliArgsPolicy({
