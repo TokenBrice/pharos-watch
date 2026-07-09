@@ -250,9 +250,15 @@ describe("handleTelegramWebhook", () => {
         runMeta: { changes: 0 },
       },
       {
-        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
         rows: [],
-        first: { status: "processed", received_at: 1_700_000_000 },
+        first: {
+          status: "processed",
+          received_at: 1_700_000_000,
+          effect_state: "started",
+          claim_owner: "owner-processed",
+          claim_generation: 1,
+        },
       },
     ]);
 
@@ -266,6 +272,73 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation"))).toBe(false);
+  });
+
+  it("does not replay command effects when the terminal processed marker fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const firstDb = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "SET effect_state = 'started'",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "SET status = 'processed'",
+        rows: [],
+        throwError: new Error("processed marker unavailable"),
+      },
+      {
+        match: "SET status = 'failed'",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    const first = await handleTelegramWebhook(
+      firstDb,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }),
+      "test-secret",
+      "bot-token",
+    );
+    expect(first.status).toBe(500);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const retryDb = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO telegram_processed_updates",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
+        rows: [],
+        first: {
+          status: "failed",
+          received_at: Math.floor(Date.now() / 1000),
+          effect_state: "started",
+          claim_owner: "owner-first",
+          claim_generation: 1,
+        },
+      },
+    ]);
+    const retry = await handleTelegramWebhook(
+      retryDb,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 5_500 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(retry.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(retryDb.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation")))
+      .toBe(false);
+    errorSpy.mockRestore();
   });
 
   it("welcomes a group when my_chat_member reports the bot was added", async () => {
@@ -563,9 +636,15 @@ describe("handleTelegramWebhook", () => {
         runMeta: { changes: 0 },
       },
       {
-        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
         rows: [],
-        first: { status: "processing", received_at: Math.floor(Date.now() / 1000) },
+        first: {
+          status: "processing",
+          received_at: Math.floor(Date.now() / 1000),
+          effect_state: "unstarted",
+          claim_owner: "owner-current",
+          claim_generation: 1,
+        },
       },
     ]);
 
@@ -591,9 +670,15 @@ describe("handleTelegramWebhook", () => {
         runMeta: { changes: 0 },
       },
       {
-        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
         rows: [],
-        first: { status: "processing", received_at: Math.floor(Date.now() / 1000) - 600 },
+        first: {
+          status: "processing",
+          received_at: Math.floor(Date.now() / 1000) - 600,
+          effect_state: "unstarted",
+          claim_owner: "owner-stale",
+          claim_generation: 1,
+        },
       },
       {
         match: "UPDATE telegram_processed_updates",
@@ -630,9 +715,15 @@ describe("handleTelegramWebhook", () => {
         runMeta: { changes: 0 },
       },
       {
-        match: "SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?",
+        match: "SELECT status, received_at, effect_state, claim_owner, claim_generation",
         rows: [],
-        first: { status: "failed", received_at: 1_700_000_000 },
+        first: {
+          status: "failed",
+          received_at: 1_700_000_000,
+          effect_state: "unstarted",
+          claim_owner: "owner-failed",
+          claim_generation: 1,
+        },
       },
       {
         match: "UPDATE telegram_processed_updates",

@@ -36,30 +36,39 @@ export async function readPendingCapacitySnapshot(
   try {
     const row = await db
       .prepare(
-        `SELECT COUNT(*) AS total,
-                SUM(CASE WHEN COALESCE(expires_at, created_at + ?) <= ? THEN 1 ELSE 0 END) AS expired,
+        `SELECT SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total,
                 SUM(CASE
-                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) <= ?
+                      THEN 1 ELSE 0
+                    END) AS expired,
+                SUM(CASE
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) > ?
                        AND (not_before_at IS NULL OR not_before_at <= ?)
                       THEN 1 ELSE 0
                     END) AS due,
                 SUM(CASE
-                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) > ?
                        AND not_before_at IS NOT NULL
                        AND not_before_at > ?
                       THEN 1 ELSE 0
                     END) AS deferred,
                 SUM(CASE
-                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) > ?
                        AND COALESCE(expires_at, created_at + ?) <= ?
                       THEN 1 ELSE 0
                     END) AS near_ttl,
                 MIN(CASE
-                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) > ?
                       THEN created_at
                     END) AS oldest_pending_created_at,
                 MIN(CASE
-                      WHEN COALESCE(expires_at, created_at + ?) > ?
+                      WHEN delivery_state = 'pending'
+                       AND COALESCE(expires_at, created_at + ?) > ?
                        AND (not_before_at IS NULL OR not_before_at <= ?)
                       THEN created_at
                     END) AS oldest_due_created_at

@@ -5,16 +5,27 @@ import { unixNow } from "./subscribers";
 
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
 
-export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight";
+export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight" | "effect_unknown";
 
 export interface TelegramProcessedUpdateClaim {
   status: TelegramProcessedUpdateClaimStatus;
   retryAfterSec?: number;
+  claimOwner?: string;
+  claimGeneration?: number;
 }
 
 interface ProcessedUpdateRow {
   status: string;
   received_at: number;
+  effect_state: string;
+  claim_owner: string | null;
+  claim_generation: number;
+}
+
+function createProcessedUpdateClaimOwner(updateId: number): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const suffix = cryptoObj?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `telegram-update:${updateId}:${suffix}`;
 }
 
 export async function claimTelegramProcessedUpdate(
@@ -29,6 +40,7 @@ export async function claimTelegramProcessedUpdate(
 ): Promise<TelegramProcessedUpdateClaim> {
   const staleSec = input.processingStaleSec ?? TELEGRAM_PROCESSING_STALE_SEC;
   const staleBefore = input.nowSec - staleSec;
+  const claimOwner = createProcessedUpdateClaimOwner(input.updateId);
   const insert = await db
     .prepare(
       `INSERT OR IGNORE INTO telegram_processed_updates (
@@ -38,19 +50,35 @@ export async function claimTelegramProcessedUpdate(
          update_type,
          chat_id,
          status,
-         error_class
+         error_class,
+         effect_state,
+         effect_key,
+         effect_started_at,
+         claim_owner,
+         claim_generation
        )
-       VALUES (?, ?, NULL, ?, ?, 'processing', NULL)`,
+       VALUES (?, ?, NULL, ?, ?, 'processing', NULL, 'unstarted', ?, NULL, ?, 1)`,
     )
-    .bind(input.updateId, input.nowSec, input.updateType, input.chatId)
+    .bind(
+      input.updateId,
+      input.nowSec,
+      input.updateType,
+      input.chatId,
+      `telegram-update:${input.updateId}`,
+      claimOwner,
+    )
     .run();
 
   if (d1ChangeCount(insert) > 0) {
-    return { status: "claimed" };
+    return { status: "claimed", claimOwner, claimGeneration: 1 };
   }
 
   const existing = await db
-    .prepare("SELECT status, received_at FROM telegram_processed_updates WHERE update_id = ?")
+    .prepare(
+      `SELECT status, received_at, effect_state, claim_owner, claim_generation
+         FROM telegram_processed_updates
+        WHERE update_id = ?`,
+    )
     .bind(input.updateId)
     .first<ProcessedUpdateRow>();
 
@@ -60,6 +88,10 @@ export async function claimTelegramProcessedUpdate(
 
   if (existing.status === "processed") {
     return { status: "duplicate" };
+  }
+
+  if (existing.effect_state === "started") {
+    return { status: "effect_unknown" };
   }
 
   if (existing.status === "processing" && existing.received_at > staleBefore) {
@@ -77,43 +109,111 @@ export async function claimTelegramProcessedUpdate(
               update_type = COALESCE(?, update_type),
               chat_id = COALESCE(?, chat_id),
               status = 'processing',
-              error_class = NULL
+              error_class = NULL,
+              effect_state = 'unstarted',
+              effect_started_at = NULL,
+              claim_owner = ?,
+              claim_generation = claim_generation + 1
         WHERE update_id = ?
+          AND effect_state = 'unstarted'
+          AND claim_generation = ?
           AND (
             status = 'failed'
             OR (status = 'processing' AND received_at <= ?)
           )`,
     )
-    .bind(input.nowSec, input.updateType, input.chatId, input.updateId, staleBefore)
+    .bind(
+      input.nowSec,
+      input.updateType,
+      input.chatId,
+      claimOwner,
+      input.updateId,
+      existing.claim_generation,
+      staleBefore,
+    )
     .run();
 
   if (d1ChangeCount(reclaim) > 0) {
-    return { status: "claimed" };
+    return {
+      status: "claimed",
+      claimOwner,
+      claimGeneration: existing.claim_generation + 1,
+    };
   }
 
   return { status: "in_flight", retryAfterSec: staleSec };
 }
 
+export async function markTelegramProcessedUpdateEffectStarted(
+  db: D1Database,
+  input: {
+    updateId: number;
+    nowSec: number;
+    claimOwner: string;
+    claimGeneration: number;
+  },
+): Promise<void> {
+  const result = await db
+    .prepare(
+      `UPDATE telegram_processed_updates
+          SET effect_state = 'started',
+              effect_started_at = ?
+        WHERE update_id = ?
+          AND status = 'processing'
+          AND effect_state = 'unstarted'
+          AND claim_owner = ?
+          AND claim_generation = ?`,
+    )
+    .bind(input.nowSec, input.updateId, input.claimOwner, input.claimGeneration)
+    .run();
+  if (d1ChangeCount(result) !== 1) {
+    throw new Error(`Telegram update ${input.updateId} lost its effect-start claim`);
+  }
+}
+
 export async function markTelegramProcessedUpdateProcessed(
   db: D1Database,
-  input: { updateId: number; nowSec: number; errorClass?: string | null },
+  input: {
+    updateId: number;
+    nowSec: number;
+    claimOwner: string;
+    claimGeneration: number;
+    errorClass?: string | null;
+  },
 ): Promise<void> {
-  await db
+  const result = await db
     .prepare(
       `UPDATE telegram_processed_updates
           SET status = 'processed',
               processed_at = ?,
               error_class = ?
         WHERE update_id = ?
-          AND status = 'processing'`,
+          AND status = 'processing'
+          AND effect_state = 'started'
+          AND claim_owner = ?
+          AND claim_generation = ?`,
     )
-    .bind(input.nowSec, input.errorClass ?? null, input.updateId)
+    .bind(
+      input.nowSec,
+      input.errorClass ?? null,
+      input.updateId,
+      input.claimOwner,
+      input.claimGeneration,
+    )
     .run();
+  if (d1ChangeCount(result) !== 1) {
+    throw new Error(`Telegram update ${input.updateId} terminal marker lost ownership`);
+  }
 }
 
 export async function markTelegramProcessedUpdateFailed(
   db: D1Database,
-  input: { updateId: number; errorClass: string | null },
+  input: {
+    updateId: number;
+    claimOwner: string;
+    claimGeneration: number;
+    errorClass: string | null;
+  },
 ): Promise<void> {
   await db
     .prepare(
@@ -122,9 +222,17 @@ export async function markTelegramProcessedUpdateFailed(
               processed_at = NULL,
               error_class = ?
         WHERE update_id = ?
-          AND status = 'processing'`,
+          AND status = 'processing'
+          AND effect_state = 'started'
+          AND claim_owner = ?
+          AND claim_generation = ?`,
     )
-    .bind(input.errorClass, input.updateId)
+    .bind(
+      input.errorClass,
+      input.updateId,
+      input.claimOwner,
+      input.claimGeneration,
+    )
     .run();
 }
 

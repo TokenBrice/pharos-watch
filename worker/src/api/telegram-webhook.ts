@@ -26,6 +26,7 @@ import {
   acquireTelegramCommandCooldown,
   claimTelegramProcessedUpdate,
   loadPendingDisambiguation,
+  markTelegramProcessedUpdateEffectStarted,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
   migrateTelegramChatId,
@@ -145,6 +146,7 @@ export const handleTelegramWebhook = withErrorHandler(
     const updateId = update.update_id;
     const claimedUpdateId =
       typeof updateId === "number" && Number.isFinite(updateId) ? updateId : null;
+    let processedUpdateClaim: { owner: string; generation: number } | null = null;
     const nowSec = unixNow();
     if (claimedUpdateId != null) {
       const claim = await claimTelegramProcessedUpdate(db, {
@@ -169,15 +171,38 @@ export const handleTelegramWebhook = withErrorHandler(
             },
           });
         }
+        if (claim.status === "effect_unknown") {
+          logTelegramEvent({
+            level: "warn",
+            message: "duplicate update suppressed after effect execution started",
+            action: "processed-update-effect-unknown",
+            updateId: claimedUpdateId,
+          });
+        }
         return ok();
       }
+      if (!claim.claimOwner || claim.claimGeneration == null) {
+        throw new Error(`Telegram update ${claimedUpdateId} claim token is missing`);
+      }
+      processedUpdateClaim = {
+        owner: claim.claimOwner,
+        generation: claim.claimGeneration,
+      };
+      await markTelegramProcessedUpdateEffectStarted(db, {
+        updateId: claimedUpdateId,
+        nowSec,
+        claimOwner: processedUpdateClaim.owner,
+        claimGeneration: processedUpdateClaim.generation,
+      });
     }
 
     const finishOk = async (errorClass: string | null = null): Promise<Response> => {
-      if (claimedUpdateId != null) {
+      if (claimedUpdateId != null && processedUpdateClaim) {
         await markTelegramProcessedUpdateProcessed(db, {
           updateId: claimedUpdateId,
           nowSec: unixNow(),
+          claimOwner: processedUpdateClaim.owner,
+          claimGeneration: processedUpdateClaim.generation,
           errorClass,
         });
       }
@@ -321,9 +346,11 @@ export const handleTelegramWebhook = withErrorHandler(
 
       return await handleTelegramMessageUpdate({ db, update, botToken, finishOk });
     } catch (err) {
-      if (claimedUpdateId != null) {
+      if (claimedUpdateId != null && processedUpdateClaim) {
         await markTelegramProcessedUpdateFailed(db, {
           updateId: claimedUpdateId,
+          claimOwner: processedUpdateClaim.owner,
+          claimGeneration: processedUpdateClaim.generation,
           errorClass: classifyWebhookError(err),
         });
       }

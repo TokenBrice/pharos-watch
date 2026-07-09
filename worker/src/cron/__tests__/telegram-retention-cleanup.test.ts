@@ -275,7 +275,7 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.cappedAtLimit.jobs).toBe(false);
   });
 
-  it("drains processed-update retention across multiple capped batches", async () => {
+  it("caps processed-update retention to one bounded batch", async () => {
     const state = makeState();
     const now = Math.floor(Date.now() / 1000);
     const staleReceivedAt = now - 8 * 24 * 60 * 60;
@@ -286,13 +286,13 @@ describe("runTelegramRetentionCleanup", () => {
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.processedUpdates).toHaveLength(0);
+    expect(state.processedUpdates).toHaveLength(7_001);
     const metadata = JSON.parse(result.metadata!) as {
       processedUpdatesPruned: number;
       cappedAtLimit: { processedUpdates: boolean };
     };
-    expect(metadata.processedUpdatesPruned).toBe(12_001);
-    expect(metadata.cappedAtLimit.processedUpdates).toBe(false);
+    expect(metadata.processedUpdatesPruned).toBe(5_000);
+    expect(metadata.cappedAtLimit.processedUpdates).toBe(true);
   });
 
   it("prunes stale Telegram chat cache residue by prefix", async () => {

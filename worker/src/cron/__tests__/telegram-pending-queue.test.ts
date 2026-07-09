@@ -68,7 +68,10 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       expires_at INTEGER,
       processing_owner TEXT,
       processing_started_at INTEGER,
-      processing_expires_at INTEGER
+      processing_expires_at INTEGER,
+      delivery_state TEXT NOT NULL DEFAULT 'pending',
+      delivery_started_at INTEGER,
+      delivery_completed_at INTEGER
     );
 
     CREATE TABLE telegram_subscribers (
@@ -512,6 +515,72 @@ describe("drainPendingQueue", () => {
     );
     expect(deletes).toHaveLength(1);
     expect(deletes[0]?.binds).toEqual([701]);
+  });
+
+  it("does not resend after a successful delivery when pending-row deletion fails", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    });
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    insertPendingSqlite(sqlite, {
+      id: 702,
+      chatId: "delete-failure-chat",
+      html: "<b>Delivered once</b>",
+      createdAt: now - 30,
+      expiresAt: now + 600,
+      dedupeKey: "delete-failure-key",
+    });
+    const deleteFailingDb = {
+      ...db,
+      prepare: (sql: string) => {
+        if (sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")) {
+          return {
+            bind: () => ({ run: async () => { throw new Error("delete failed"); } }),
+          } as unknown as D1PreparedStatement;
+        }
+        return db.prepare(sql);
+      },
+    } as D1Database;
+
+    const first = await drainPendingQueue(deleteFailingDb, "bot-token", 1);
+    expect(first.sent).toBe(1);
+    expect(sqlite.prepare("SELECT delivery_state FROM telegram_pending_alerts WHERE id = 702").get())
+      .toEqual({ delivery_state: "sent" });
+
+    const second = await drainPendingQueue(db, "bot-token", 1);
+    expect(second.attempted).toBe(0);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not claim legacy pending rows whose target is already terminal", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    insertPendingSqlite(sqlite, {
+      id: 703,
+      chatId: "terminal-target-chat",
+      html: "<b>Already delivered</b>",
+      createdAt: now - 30,
+      expiresAt: now + 600,
+      dedupeKey: "terminal-target-key",
+    });
+    sqlite.prepare(
+      "INSERT INTO telegram_alert_job_targets (pending_dedupe_key, status, created_at) VALUES (?, 'sent', ?)",
+    ).run("terminal-target-key", now - 30);
+
+    const result = await drainPendingQueue(db, "bot-token", 1);
+
+    expect(result.attempted).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT delivery_state FROM telegram_pending_alerts WHERE id = 703").get())
+      .toEqual({ delivery_state: "sent" });
   });
 
   it("keeps retrying retryable rows past the legacy 5-attempt cap (age-based retry)", async () => {
@@ -2136,7 +2205,7 @@ describe("readPendingCapacitySnapshot", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "COUNT(*) AS total",
+        match: "delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
         first: {
           total: 80,
           expired: 5,

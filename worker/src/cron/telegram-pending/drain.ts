@@ -92,6 +92,26 @@ function appendPendingTargetStatus(
   targetStatusUpdates.push(update);
 }
 
+async function reconcileTerminalTargetRows(db: D1Database, nowSec: number): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE telegram_pending_alerts
+          SET delivery_state = 'sent',
+              delivery_completed_at = COALESCE(delivery_completed_at, ?),
+              updated_at = ?
+        WHERE delivery_state = 'pending'
+          AND dedupe_key IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+              FROM telegram_alert_job_targets t
+             WHERE t.pending_dedupe_key = telegram_pending_alerts.dedupe_key
+               AND t.status IN ('sent', 'expired')
+          )`,
+    )
+    .bind(nowSec, nowSec)
+    .run();
+}
+
 async function selectPendingClaimCandidateIds(
   db: D1Database,
   nowSec: number,
@@ -103,6 +123,16 @@ async function selectPendingClaimCandidateIds(
       `SELECT p.id
          FROM telegram_pending_alerts p
         WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
+          AND p.delivery_state = 'pending'
+          AND (
+            p.dedupe_key IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+                FROM telegram_alert_job_targets t
+               WHERE t.pending_dedupe_key = p.dedupe_key
+                 AND t.status IN ('sent', 'expired')
+            )
+          )
           AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
           AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
           AND (
@@ -213,6 +243,56 @@ async function releasePendingClaimsByIds(
   }
 }
 
+async function markPendingRowsSending(
+  db: D1Database,
+  ids: readonly number[],
+  owner: string,
+  nowSec: number,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const changed = await batchExecute(db, ids.map((id) =>
+    db
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sending',
+                delivery_started_at = COALESCE(delivery_started_at, ?),
+                updated_at = ?
+          WHERE id = ?
+            AND processing_owner = ?
+            AND delivery_state = 'pending'`,
+      )
+      .bind(nowSec, nowSec, id, owner),
+  ));
+  if (changed !== ids.length) {
+    throw new Error(`Telegram pending delivery ownership changed before send (${changed}/${ids.length})`);
+  }
+}
+
+async function markSentPendingAlerts(
+  db: D1Database,
+  ids: readonly number[],
+  owner: string,
+  nowSec: number,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const changed = await batchExecute(db, ids.map((id) =>
+    db
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sent',
+                delivery_completed_at = ?,
+                updated_at = ?
+          WHERE id = ?
+            AND processing_owner = ?
+            AND delivery_state = 'sending'`,
+      )
+      .bind(nowSec, nowSec, id, owner),
+  ));
+  if (changed !== ids.length) {
+    throw new Error(`Telegram sent-state persistence was not confirmed (${changed}/${ids.length})`);
+  }
+}
+
 async function recordPendingDrainTelemetry(
   db: D1Database,
   deliveryDiagnostics: PendingDeliveryDiagnostic[],
@@ -286,6 +366,8 @@ async function persistPendingRetries(
       .prepare(
         `UPDATE telegram_pending_alerts
             SET attempts = attempts + 1,
+                delivery_state = 'pending',
+                delivery_started_at = NULL,
                 not_before_at = ?,
                 last_error_class = ?,
                 retry_after_sec = ?,
@@ -387,6 +469,7 @@ export async function drainPendingQueue(
 ): Promise<PendingDrainResult> {
   if (limit <= 0) return emptyDrainResult();
   const nowSec = Math.floor(Date.now() / 1000);
+  await reconcileTerminalTargetRows(db, nowSec);
   const globalBackoffUntil = await readTelegramGlobalBackoff(db, nowSec);
   if (globalBackoffUntil != null) {
     return {
@@ -453,6 +536,7 @@ export async function drainPendingQueue(
       return false;
     });
     if (batch.length === 0) continue;
+    await markPendingRowsSending(db, batch.map((row) => row.id), claimOwner, nowSec);
     if (batch.length > 0) options.markTelegramDeliveryStarted?.();
     const results = await Promise.all(
       batch.map(async (row) => {
@@ -546,6 +630,7 @@ export async function drainPendingQueue(
   const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure;
 
   await flushChatSuccessResets(db, chatsToResetOnSuccess);
+  await markSentPendingAlerts(db, sentIdsToDelete, claimOwner, nowSec);
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
 
   for (const chatId of disabledChatIds) {

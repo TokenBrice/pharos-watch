@@ -13,23 +13,17 @@ const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
 const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
 const RETENTION_DELETE_BATCH_LIMIT = 10_000;
 
-async function pruneAllTelegramProcessedUpdates(
+async function pruneTelegramProcessedUpdatesCapped(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  let pruned = 0;
-  let lastBatch = 0;
-
-  do {
-    throwIfAborted(signal);
-    lastBatch = await pruneTelegramProcessedUpdates(db, { nowSec, signal });
-    pruned += lastBatch;
-  } while (lastBatch >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT);
+  throwIfAborted(signal);
+  const pruned = await pruneTelegramProcessedUpdates(db, { nowSec, signal });
 
   return {
     pruned,
-    cappedAtLimit: lastBatch >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+    cappedAtLimit: pruned >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
   };
 }
 
@@ -94,7 +88,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec, signal);
   throwIfAborted(signal);
 
-  const processedUpdates = await pruneAllTelegramProcessedUpdates(db, nowSec, signal);
+  const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal);
   throwIfAborted(signal);
 
   const deadLetters = await deleteOlderThanCapped(
