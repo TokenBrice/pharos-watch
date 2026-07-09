@@ -33,12 +33,25 @@ const fetchJsonWithRetryMock = vi.fn(
     return { response, body };
   },
 );
+const fetchTextWithRetryMock = vi.fn(
+  async (
+    url: string,
+    init?: RequestInit,
+    maxRetries?: number,
+    options?: { passthrough404?: boolean },
+  ): Promise<{ response: Response; body: string } | null> => {
+    const response = await fetchWithRetryMock(url, init, maxRetries, options);
+    if (!response) return null;
+    return { response, body: await response.clone().text() };
+  },
+);
 
 // Keep detail tests deterministic and fast: we validate handler behavior,
 // not fetch-retry backoff timing.
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
   fetchJsonWithRetry: fetchJsonWithRetryMock,
+  fetchTextWithRetry: fetchTextWithRetryMock,
 }));
 
 const { handleStablecoinDetail } = await import("../stablecoin-detail");
@@ -93,6 +106,11 @@ describe("handleStablecoinDetail", () => {
       const cloned = response.clone();
       const body = (await cloned.json()) as unknown;
       return { response, body };
+    });
+    fetchTextWithRetryMock.mockReset().mockImplementation(async (url, init, maxRetries, options) => {
+      const response = await fetchWithRetryMock(url, init, maxRetries, options);
+      if (!response) return null;
+      return { response, body: await response.clone().text() };
     });
   });
 
@@ -411,6 +429,12 @@ describe("handleStablecoinDetail", () => {
     await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(ctx.waitUntil).toHaveBeenCalled();
+    await Promise.allSettled(ctx.waitUntilPromises);
+    const detailWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "detail:usdt-tether"
+    );
+    expect(detailWrite?.sql).toContain("ON CONFLICT(key) DO UPDATE");
+    expect(detailWrite?.sql).toContain("WHERE cache.updated_at <= excluded.updated_at");
   });
 
   it("passes the CoinGecko API key through the commodity detail path", async () => {

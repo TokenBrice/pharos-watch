@@ -3,7 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { jsonResponse } from "../lib/api-utils";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
@@ -63,22 +63,22 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
 
     try {
       // Fetch historical prices + market caps from CoinGecko
-      const cgRes = await fetchWithRetry(
+      const cgResult = await fetchJsonWithRetry<{
+        prices: [number, number][];
+        market_caps: [number, number][];
+      }>(
         cgUrl(`/coins/${meta.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
         { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
         2,
         { timeoutMs: 30_000 },
       );
 
-      if (!cgRes) {
+      if (!cgResult) {
         errors.push(`${meta.symbol}: CoinGecko fetch failed (geckoId=${meta.geckoId})`);
         continue;
       }
 
-      const cgData = (await cgRes.json()) as {
-        prices: [number, number][];
-        market_caps: [number, number][];
-      };
+      const cgData = cgResult.body;
 
       const cgPrices = cgData.prices ?? [];
       const cgMarketCaps = cgData.market_caps ?? [];

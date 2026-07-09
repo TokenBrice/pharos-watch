@@ -3,7 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { CoinGeckoMarketChartSchema } from "../lib/external-api-schemas";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { getNativePegQueryCurrencies } from "../lib/native-peg-quotes";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { rethrowIfAborted, sleepWithSignal } from "../lib/abort";
@@ -211,14 +211,14 @@ async function fetchCgPriceHistoryDaily(
       startSec != null
         ? `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${endSec}&precision=full`
         : `/coins/${geckoId}/market_chart?vs_currency=${vsCurrency}&days=max`;
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry(
       cgUrl(path, coingeckoApiKey),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
       2,
       { timeoutMs: 30_000 },
     );
-    if (!res) return [];
-    const parsed = CoinGeckoMarketChartSchema.safeParse(await res.json());
+    if (!result) return [];
+    const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
     if (!parsed.success) {
       console.warn("[backfill-pricing] CG market chart validation failed:", parsed.error.message);
       return [];
@@ -254,7 +254,7 @@ export async function fetchCgPriceHistoryHourly(
   try {
     if (startSec < HOURLY_EPOCH) {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
-      const phaseOne = await fetchWithRetry(
+      const phaseOne = await fetchJsonWithRetry(
         cgUrl(
           `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
           coingeckoApiKey,
@@ -264,7 +264,7 @@ export async function fetchCgPriceHistoryHourly(
         { timeoutMs: 30_000 },
       );
       if (phaseOne) {
-        const parsed = CoinGeckoMarketChartSchema.safeParse(await phaseOne.json());
+        const parsed = CoinGeckoMarketChartSchema.safeParse(phaseOne.body);
         if (parsed.success) {
           for (const [timestampMs, price] of parsed.data.prices) {
             if (price > 0) {
@@ -283,7 +283,7 @@ export async function fetchCgPriceHistoryHourly(
     const chunkTo = Math.min(chunkFrom + CHUNK_SEC, endSec);
     try {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry(
         cgUrl(
           `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${chunkFrom}&to=${chunkTo}&precision=full`,
           coingeckoApiKey,
@@ -292,8 +292,8 @@ export async function fetchCgPriceHistoryHourly(
         2,
         { timeoutMs: 30_000 },
       );
-      if (!res) continue;
-      const parsed = CoinGeckoMarketChartSchema.safeParse(await res.json());
+      if (!result) continue;
+      const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
       if (!parsed.success) continue;
       for (const [timestampMs, price] of parsed.data.prices) {
         if (price > 0) {
@@ -324,16 +324,16 @@ async function fetchDlPriceChart(
   try {
     const normalizedEnd = end ?? Math.floor(Date.now() / 1000);
     const spanDays = Math.max(1, Math.min(800, Math.ceil((normalizedEnd - start) / DAY_SECONDS) + 1));
-    const res = await fetchWithRetry(
+    const result = await fetchJsonWithRetry<{
+      coins?: Record<string, { prices?: PricePoint[] }>;
+    }>(
       `${DEFILLAMA_COINS}/chart/${coinId}?start=${start}&span=${spanDays}&period=1d`,
       { headers: { "User-Agent": USER_AGENT }, signal },
       1,
       { timeoutMs: 20_000 },
     );
-    if (!res?.ok) return [];
-    const data = await res.json() as {
-      coins?: Record<string, { prices?: PricePoint[] }>;
-    };
+    if (!result?.response.ok) return [];
+    const data = result.body;
     return dedupeAndSortPrices(data.coins?.[coinId]?.prices ?? []);
   } catch (err) {
     rethrowIfAborted(err, signal);

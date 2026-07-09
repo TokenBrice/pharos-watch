@@ -1,4 +1,4 @@
-import { setCache } from "../../lib/db-cache";
+import { setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
@@ -116,6 +116,7 @@ export function createDetailResponseHelpers(config: {
   execCtx: ExecutionContext;
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
+  const requestStartedAt = Math.floor(Date.now() / 1000);
 
   // Failed/oversized cache writes used to vanish into sampled console logs,
   // leaving flagship coins on a synchronous-refetch-per-request path for
@@ -145,7 +146,7 @@ export function createDetailResponseHelpers(config: {
           return;
         }
         try {
-          await setCache(config.db, cacheKey, body);
+          await setCacheIfNewer(config.db, cacheKey, body, requestStartedAt);
         } catch (err) {
           console.error(
             `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${bodyBytes} error=${String(err).slice(0, 300)}`,

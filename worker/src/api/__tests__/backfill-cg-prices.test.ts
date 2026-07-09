@@ -4,8 +4,8 @@ import { handleBackfillCgPrices } from "../backfill-cg-prices";
 
 stubCryptoForAuth();
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async () => (
+vi.mock("../../lib/fetch-retry", () => {
+  const fetchWithRetry = vi.fn(async () => (
     new Response(
       JSON.stringify({
         prices: [[1_700_000_000_000, 1.001]],
@@ -13,8 +13,15 @@ vi.mock("../../lib/fetch-retry", () => ({
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     )
-  )),
-}));
+  ));
+  return {
+    fetchWithRetry,
+    fetchJsonWithRetry: async (..._args: unknown[]) => {
+      const response = await fetchWithRetry();
+      return { response, body: await response.json() };
+    },
+  };
+});
 
 function makeDb(existingRows: Array<{ snapshot_date: number; price: number | null; circulating_usd: number }> = []): D1Database {
   const stmt = (sql: string) => ({

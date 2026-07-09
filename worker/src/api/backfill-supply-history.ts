@@ -12,7 +12,7 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
   fetchEvmUint256AtBlock,
@@ -675,25 +675,25 @@ async function backfillCommodity(
   const priceSpan = priceRange?.endSec != null
     ? Math.max(1, Math.ceil((priceRange.endSec - priceStart) / DAY_SECONDS) + 1)
     : 500;
-  const [protocolRes, priceRes] = await Promise.all([
-    fetchWithRetry(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
+  const [protocolResult, priceResult] = await Promise.all([
+    fetchJsonWithRetry<{
+      mcap?: number;
+      tvl?: { date: number; totalLiquidityUSD: number }[];
+    }>(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
       headers: { "User-Agent": USER_AGENT },
       signal: config.signal,
     }),
-    fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${priceStart}&span=${Math.min(500, priceSpan)}`, {
+    fetchJsonWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${priceStart}&span=${Math.min(500, priceSpan)}`, {
       headers: { "User-Agent": USER_AGENT },
       signal: config.signal,
     }),
   ]);
 
-  if (!protocolRes?.ok) {
-    return { rows: 0, error: `protocol API returned ${protocolRes?.status ?? "no response"}` };
+  if (!protocolResult?.response.ok) {
+    return { rows: 0, error: `protocol API returned ${protocolResult?.response.status ?? "no response"}` };
   }
 
-  const protocolData = (await protocolRes.json()) as {
-    mcap?: number;
-    tvl?: { date: number; totalLiquidityUSD: number }[];
-  };
+  const protocolData = protocolResult.body;
   const tvlHistory = protocolData.tvl ?? [];
   if (tvlHistory.length === 0) {
     return { rows: 0, error: "no TVL history and CoinGecko unavailable" };
@@ -710,8 +710,8 @@ async function backfillCommodity(
   }
 
   let prices: { timestamp: number; price: number }[] = [];
-  if (priceRes?.ok) {
-    prices = extractDefiLlamaCoinChartPrices(await priceRes.json(), config.geckoId);
+  if (priceResult?.response.ok) {
+    prices = extractDefiLlamaCoinChartPrices(priceResult.body, config.geckoId);
   }
 
   function findPrice(date: number): number | null {
@@ -891,8 +891,8 @@ async function executeBackfillSupplyHistory(
     let detail: StablecoinDetail | null = null;
     let historicalPrices: { timestamp: number; price: number }[] = [];
     try {
-      const [detailRes, priceSeries] = await Promise.all([
-        fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
+      const [detailResult, priceSeries] = await Promise.all([
+        fetchJsonWithRetry<StablecoinDetail>(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
           headers: { "User-Agent": USER_AGENT },
           signal,
         }),
@@ -905,11 +905,11 @@ async function executeBackfillSupplyHistory(
             })
           : Promise.resolve(null),
       ]);
-      if (!detailRes?.ok) {
-        errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
+      if (!detailResult?.response.ok) {
+        errors.push(`${meta.symbol}: DL returned ${detailResult?.response.status ?? "no response"}`);
         continue;
       }
-      detail = (await detailRes.json()) as StablecoinDetail;
+      detail = detailResult.body;
 
       historicalPrices = priceSeries?.prices ?? [];
     } catch (err) {
