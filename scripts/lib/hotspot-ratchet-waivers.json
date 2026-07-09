@@ -31,14 +31,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
   },
-  "src/app/stablecoin/[id]/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
@@ -66,14 +58,6 @@
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/lib/yield-view-model.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",

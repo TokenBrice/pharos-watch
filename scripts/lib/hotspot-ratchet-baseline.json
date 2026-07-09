@@ -84,16 +84,28 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 899,
-    "maxFunctionLines": 489,
-    "branchCount": 59,
+    "fileLines": 234,
+    "maxFunctionLines": 183,
+    "branchCount": 4,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 250,
+      "maxFunctionLines": 200,
+      "branchCount": 8
+    },
+    "notes": "Column descriptors, row derivation, frame rendering, and desktop/mobile row cells now live in focused modules. Keep this public table component as the interaction and composition shell."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "fileLines": 411,
+    "maxFunctionLines": 369,
+    "branchCount": 23,
     "disposition": "queued-p4",
     "targetBudget": {
-      "fileLines": 830,
-      "maxFunctionLines": 450,
-      "branchCount": 55
+      "fileLines": 380,
+      "maxFunctionLines": 320,
+      "branchCount": 20
     },
-    "notes": "Stablecoin table still owns filter orchestration, toolbar composition, virtualization, and overview-specific rendering. Keep enrolled after the Figma overview density pass; split table state/view-model concerns before adding more table behavior."
+    "notes": "Yield history rendering remains a large chart coordinator. Split range/series derivation from chart presentation before adding more overlays or interaction modes."
   },
   "src/app/chains/[chain]/client.tsx": {
     "fileLines": 135,
@@ -106,6 +118,18 @@
       "branchCount": 45
     },
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
+  },
+  "src/app/yield/client.tsx": {
+    "fileLines": 535,
+    "maxFunctionLines": 356,
+    "branchCount": 35,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 500,
+      "maxFunctionLines": 320,
+      "branchCount": 30
+    },
+    "notes": "The yield workbench route still combines query orchestration, URL state, toolbar state, and section composition. Move route state and presentation sections behind focused controller boundaries before extending the workbench."
   },
   "worker/src/cron/sync-stablecoins.ts": {
     "fileLines": 201,
@@ -264,16 +288,16 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "src/components/api-key-request-form.tsx": {
-    "fileLines": 464,
-    "maxFunctionLines": 423,
-    "branchCount": 28,
-    "disposition": "queued-p4",
+    "fileLines": 25,
+    "maxFunctionLines": 17,
+    "branchCount": 1,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 420,
-      "maxFunctionLines": 340,
-      "branchCount": 25
+      "fileLines": 40,
+      "maxFunctionLines": 25,
+      "branchCount": 3
     },
-    "notes": "The public self-serve form now delegates request, verification, copy, and one-time reveal state to `use-api-key-request-form-state`. Keep future behavior in the hook or focused subcomponents instead of regrowing the presentation shell."
+    "notes": "The public form is now a thin composition shell over field and one-time reveal sections, with workflow state retained in the dedicated hook. Keep transport and field behavior out of this facade."
   },
   "src/hooks/use-api-key-request-form-state.ts": {
     "fileLines": 200,
@@ -288,16 +312,16 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 917,
-    "maxFunctionLines": 121,
-    "branchCount": 37,
-    "disposition": "queued-p4",
+    "fileLines": 163,
+    "maxFunctionLines": 93,
+    "branchCount": 8,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 560,
-      "maxFunctionLines": 180,
-      "branchCount": 40
+      "fileLines": 200,
+      "maxFunctionLines": 110,
+      "branchCount": 10
     },
-    "notes": "The stablecoin detail page and hero share this view-model layer, now with expanded redemption backstop, mint authority, market metric, and reserve/detail shaping. Split those domains into focused helpers before expanding the detail surface further."
+    "notes": "The compatibility facade now delegates query availability, hero metrics, and public contracts to focused view-model modules. Add new derivation to the owning module rather than regrowing this barrel."
   },
   "worker/src/api/api-key-requests.ts": {
     "fileLines": 9,
@@ -490,6 +514,18 @@
       "branchCount": 16
     },
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
+  },
+  "worker/src/cron/depeg-detection/decision-engine.ts": {
+    "fileLines": 839,
+    "maxFunctionLines": 142,
+    "branchCount": 58,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 780,
+      "maxFunctionLines": 125,
+      "branchCount": 50
+    },
+    "notes": "The depeg decision engine remains the largest newly exposed policy module. Split evidence aggregation from decision-state transitions while preserving the resolver contract and replay behavior."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
     "fileLines": 101,
