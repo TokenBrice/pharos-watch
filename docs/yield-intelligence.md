@@ -1035,7 +1035,7 @@ Each `history` row includes:
 
 **Files:** `src/app/stablecoin/[id]/yield/page.tsx` (SSG wrapper), `src/app/stablecoin/[id]/yield/client.tsx` (interactive)
 
-Generated for every non-pre-launch tracked coin (lending-opportunity rows can appear for any tracked stablecoin, so the deep link must be reachable beyond `flags.yieldBearing`). The route renders the peer rail, per-source APY history, warning-signal timeline, and source-switch history for the selected coin; coins with no live yield row render an empty-state card, and only IDs absent from the tracked registry return `notFound()`. All known-coin pages carry noindex (`robots: { index: false, follow: true }`) metadata.
+Statically generated only for non-pre-launch yield-bearing coins and the curated auto-lending allowlist shared with the Worker. The route renders the peer rail, per-source APY history, warning-signal timeline, and source-switch history for the selected coin; allowlisted coins with no live row render an empty-state card. Requests for a known tracked coin without a materialized workbench are redirected by the Pages stablecoin shim to `/yield/?compare=<id>&from=detail-fallback`, while unknown IDs remain 404s. Materialized workbenches carry noindex (`robots: { index: false, follow: true }`) metadata.
 
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 
