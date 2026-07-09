@@ -315,7 +315,7 @@ Total documented public operations: **38**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
-| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `chainId?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?`, `includeTotal?` | 200, 400, 401, 429, 503 |
+| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `chainId?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?`, `cursor?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/chains` | Chains | Chains | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -778,8 +778,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `sortBy`        | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`                                                                                                                             |
 | `sortDirection` | `string`  | `desc`  | Sort direction: `asc`, `desc`                                                                                                                                                  |
 | `limit`         | `integer` | `1000`  | Max results (0–1000; `0` maps to default `1000`)                                                                                                                               |
-| `offset`        | `integer` | `0`     | Pagination offset                                                                                                                                                              |
-| `includeTotal`  | `boolean` | `true`  | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false`                                                                       |
+| `offset`        | `integer` | `0`     | Legacy pagination offset (0–25,000); cannot be combined with `cursor`                                                                                                          |
+| `cursor`        | `string`  | —       | Opaque keyset cursor from `nextCursor`; preferred for deep pagination and valid for every supported sort order                                                                |
+| `includeTotal`  | `boolean` | `false` | When `true`, runs an exact `COUNT(*)`; otherwise `total` is a page lower bound and `totalExact` is `false`                                                                      |
 
 **Response**
 
@@ -787,6 +788,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 {
   "events": [BlacklistEvent, ...],
   "total": 13422,
+  "totalExact": true,
+  "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLCJldmVudC1pZCJdfQ",
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
@@ -798,6 +801,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   }
 }
 ```
+
+Prefer `cursor`/`nextCursor` for sequential or deep traversal. Numbered FreezeWatch pages opt into exact totals and retain bounded offset pagination for direct page navigation.
 
 **`BlacklistEvent`**
 

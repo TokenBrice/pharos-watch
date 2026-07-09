@@ -30,6 +30,7 @@ const VALID_CHAIN_IDS = getSupportedBlacklistChainIds();
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
 const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
 const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
+const BLACKLIST_MAX_OFFSET = 25_000;
 const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection, string>> = {
   date: {
     asc: "timestamp ASC, id ASC",
@@ -48,6 +49,36 @@ const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection
     desc: "event_type DESC, timestamp DESC, id DESC",
   },
 };
+
+function getBlacklistCursor(sortBy: BlacklistSortKey, sortDirection: BlacklistSortDirection) {
+  const primaryDirection: "ASC" | "DESC" = sortDirection === "asc" ? "ASC" : "DESC";
+  if (sortBy === "date") {
+    return {
+      columns: [
+        { column: "timestamp", type: "number" as const, direction: primaryDirection, getValue: (row: BlacklistEventRow) => row.timestamp },
+        { column: "id", type: "string" as const, direction: primaryDirection, getValue: (row: BlacklistEventRow) => row.id },
+      ],
+    };
+  }
+
+  const primaryColumn = sortBy === "stablecoin"
+    ? "stablecoin"
+    : sortBy === "chain"
+      ? "chain_name"
+      : "event_type";
+  const getPrimaryValue = (row: BlacklistEventRow) => sortBy === "stablecoin"
+    ? row.stablecoin
+    : sortBy === "chain"
+      ? row.chain_name
+      : row.event_type;
+  return {
+    columns: [
+      { column: primaryColumn, type: "string" as const, direction: primaryDirection, getValue: getPrimaryValue },
+      { column: "timestamp", type: "number" as const, direction: "DESC" as const, getValue: (row: BlacklistEventRow) => row.timestamp },
+      { column: "id", type: "string" as const, direction: "DESC" as const, getValue: (row: BlacklistEventRow) => row.id },
+    ],
+  };
+}
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
@@ -105,6 +136,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   return buildPaginatedEventResponse<BlacklistEventRow, BlacklistEvent>(db, {
     tableName: "blacklist_events",
     orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
+    queryComment: "pharos:blacklist-events",
     conditions,
     filterBindings,
     mapRow: mapBlacklistEventRow,
@@ -113,8 +145,11 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
       defaultLimit: 1000,
       minLimit: 0,
       maxLimit: 1000,
+      maxOffset: BLACKLIST_MAX_OFFSET,
       zeroLimitAsDefault: true,
+      includeTotalDefault: false,
     },
+    cursor: getBlacklistCursor(sortBy, sortDirection),
     freshness: {
       producerJob: "sync-blacklist",
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,

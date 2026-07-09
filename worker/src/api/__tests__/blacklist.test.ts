@@ -9,7 +9,7 @@ describe("handleBlacklist", () => {
   function makeDbWithDataBindCapture(capture: (args: unknown[]) => void): D1Database {
     const stmt = (sql: string) => ({
       bind: (...args: unknown[]) => {
-        if (sql.includes("SELECT * FROM blacklist_events")) {
+        if (sql.includes("FROM blacklist_events") && !sql.includes("COUNT(")) {
           capture(args);
         }
         return {
@@ -41,16 +41,29 @@ describe("handleBlacklist", () => {
     } as unknown as D1Database;
   }
 
-  it("returns 200 with events and total", async () => {
+  it("returns an inexact lower-bound total by default without running COUNT(*)", async () => {
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
+    expect(body.totalExact).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*)"))).toBe(false);
+  });
+
+  it("runs the exact count only when includeTotal=true", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 42 }] },
+      { match: "blacklist_events", rows: [row] },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?includeTotal=true"));
+    const body = (await res.json()) as { total: number; totalExact: boolean };
+    expect(body.total).toBe(42);
+    expect(body.totalExact).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*)"))).toBe(true);
   });
 
   it("includes methodology version metadata", async () => {
@@ -302,6 +315,46 @@ describe("handleBlacklist", () => {
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=0"));
     expect(res.status).toBe(200);
-    expect(dataBinds).toContain(1000);
+    // Cursor-capable feeds request one look-ahead row to decide nextCursor.
+    expect(dataBinds).toContain(1001);
+  });
+
+  it("caps legacy offset pagination and accepts the maximum supported offset", async () => {
+    const rejected = await handleBlacklist(mockD1([]), new URL("https://x/api/blacklist?offset=25001"));
+    expect(rejected.status).toBe(400);
+
+    let dataBinds: unknown[] = [];
+    const accepted = await handleBlacklist(
+      makeDbWithDataBindCapture((args) => { dataBinds = args; }),
+      new URL("https://x/api/blacklist?offset=25000"),
+    );
+    expect(accepted.status).toBe(200);
+    expect(dataBinds).toContain(25_000);
+  });
+
+  it("uses keyset cursor bindings for the selected sort order", async () => {
+    const firstDb = mockD1([
+      { match: "blacklist_events", rows: [
+        makeBlacklistRow({ id: "b", stablecoin: "USDT", timestamp: 200 }),
+        makeBlacklistRow({ id: "a", stablecoin: "USDT", timestamp: 100 }),
+      ] },
+    ]);
+    const first = await handleBlacklist(
+      firstDb,
+      new URL("https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc"),
+    );
+    const firstBody = await first.json() as { nextCursor: string | null };
+    expect(firstBody.nextCursor).toBeTruthy();
+
+    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
+    const next = await handleBlacklist(
+      nextDb,
+      new URL(`https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc&cursor=${firstBody.nextCursor}`),
+    );
+    expect(next.status).toBe(200);
+    const query = nextDb.getHistory().find((entry) => entry.sql.includes("pharos:blacklist-events:page"));
+    expect(query?.sql).toContain("stablecoin > ?");
+    expect(query?.sql).toContain("stablecoin = ? AND timestamp < ?");
+    expect(query?.binds.slice(0, 6)).toEqual(["USDT", "USDT", 200, "USDT", 200, "b"]);
   });
 });

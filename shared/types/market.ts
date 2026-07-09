@@ -539,6 +539,8 @@ export type BlacklistEvent = z.infer<typeof BlacklistEventSchema>;
 export const BlacklistResponseSchema = z.object({
   events: z.array(BlacklistEventSchema),
   total: z.number(),
+  totalExact: z.boolean().optional(),
+  nextCursor: z.string().nullable().optional(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;

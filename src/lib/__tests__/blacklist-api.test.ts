@@ -134,6 +134,8 @@ describe("blacklist-api", () => {
       sortDirection: "asc",
       limit: 50,
       offset: 100,
+      cursor: "opaque-cursor",
+      includeTotal: true,
     });
 
     expect(result).toEqual(body);
@@ -147,7 +149,9 @@ describe("blacklist-api", () => {
     expect(url).toContain("sortBy=chain");
     expect(url).toContain("sortDirection=asc");
     expect(url).toContain("limit=50");
-    expect(url).toContain("offset=100");
+    expect(url).not.toContain("offset=100");
+    expect(url).toContain("cursor=opaque-cursor");
+    expect(url).toContain("includeTotal=true");
   });
 
   it("fetchBlacklistSummary hits the dedicated summary endpoint", async () => {
