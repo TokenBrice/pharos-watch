@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
 
-export function useIsMobile(breakpoint = 640): boolean {
+export function useIsMobile(breakpoint = 640, serverSnapshot = false): boolean {
   const query = `(max-width: ${breakpoint - 1}px)`;
 
   const subscribe = useCallback(
@@ -18,7 +18,7 @@ export function useIsMobile(breakpoint = 640): boolean {
     () => (typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false),
     [query],
   );
-  const getServerSnapshot = useCallback(() => false, []);
+  const getServerSnapshot = useCallback(() => serverSnapshot, [serverSnapshot]);
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
