@@ -165,6 +165,9 @@
         "coinId": "usdd-tron-dao-reserve",
         "depType": "wrapper",
         "expectedAssetAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+      },
+      "redemptionLiquidity": {
+        "source": "atomic-full-backing"
       }
     }
   },
