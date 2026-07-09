@@ -1,4 +1,4 @@
-import { documentedVariableFee, sourceRef } from "../shared";
+import { fixedFee, sourceRef } from "../shared";
 import { defineStablecoinRedeemConfig, REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
 export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig({
@@ -9,8 +9,9 @@ export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig
     fallbackRatio: 0.005,
     basis: "hot-buffer",
   },
-  costModel: documentedVariableFee(
-    "Ethena docs describe direct USDe redemption for whitelisted mint users at $1 into supported stable assets, with users reimbursing transaction gas and execution costs rather than paying a separate fixed protocol fee",
+  costModel: fixedFee(
+    10,
+    "Ethena's public fees API reports mint_fee_bps/redeem_fee_bps = 10 for USDT/USDC benefactors, and the USDe terms and conditions cite a reimbursement charge of 10 basis points",
   ),
   reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
@@ -28,6 +29,11 @@ export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG = defineStablecoinRedeemConfig
       "Ethena collateral API",
       "https://app.ethena.fi/api/positions/current/collateral",
       ["capacity"],
+    ),
+    sourceRef(
+      "Ethena API documentation overview",
+      "https://docs.ethena.fi/api-documentation/overview",
+      ["fees"],
     ),
   ],
   notes: [

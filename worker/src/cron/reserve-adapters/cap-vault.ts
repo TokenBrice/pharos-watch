@@ -24,6 +24,13 @@ const TOTAL_SUPPLIES_SELECTOR = "0x9782e821";
 const TOTAL_BORROWS_SELECTOR = "0x8d730124";
 const AVAILABLE_BALANCE_SELECTOR = "0xa0821be3";
 const PAUSED_SELECTOR = "0x2e48152c";
+// Inherited from Cap's Minter; returns a ray (1e27 = 100%) flat redeem fee.
+const GET_REDEEM_FEE_SELECTOR = "0xc6d98f1a";
+const REDEEM_FEE_RAY_SCALE = 10n ** 27n;
+
+function redeemFeeBpsFromRay(raw: bigint): number {
+  return Number((raw * 10_000n + REDEEM_FEE_RAY_SCALE / 2n) / REDEEM_FEE_RAY_SCALE);
+}
 
 interface CapVaultAssetConfig {
   address: string;
@@ -99,6 +106,7 @@ export function adaptCapVaultState(args: {
   assets: CapVaultAssetState[];
   supplyUsd: number | null;
   contractAddress: string;
+  redemptionFeeBps?: number | null;
 }): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const activeAssets = args.assets.filter((asset) => asset.totalSupplied > 0);
@@ -208,6 +216,7 @@ export function adaptCapVaultState(args: {
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
+        feeBps: args.redemptionFeeBps,
       }),
     },
   };
@@ -239,8 +248,12 @@ export async function fetchCapVaultReserves(
     throw new Error(`${ADAPTER_KEY} assets() returned no assets for ${coin.id}`);
   }
 
-  const tokenSupplyRaw = await onchain.uint256(contractAddress, TOTAL_SUPPLY_SELECTOR);
+  const [tokenSupplyRaw, redeemFeeRaw] = await Promise.all([
+    onchain.uint256(contractAddress, TOTAL_SUPPLY_SELECTOR),
+    onchain.uint256(contractAddress, GET_REDEEM_FEE_SELECTOR),
+  ]);
   const supplyUsd = tokenSupplyRaw != null ? decimalNumberFromBigInt(tokenSupplyRaw, 18) : null;
+  const redemptionFeeBps = redeemFeeRaw != null ? redeemFeeBpsFromRay(redeemFeeRaw) : null;
 
   const assetStates = await Promise.all(assetAddresses.map(async (address) => {
     const encodedAddress = encodeAddress(address);
@@ -301,5 +314,6 @@ export async function fetchCapVaultReserves(
     assets: assetStates,
     supplyUsd,
     contractAddress,
+    redemptionFeeBps,
   });
 }

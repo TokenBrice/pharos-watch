@@ -536,7 +536,7 @@ describe("getRedemptionBackstopConfig", () => {
       accessModel: "issuer-api",
       settlementModel: "same-day",
       capacityModel: { kind: "reserve-sync-metadata" },
-      costModel: { kind: "dynamic-or-unclear" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-04-15",
     });
     expect(getRedemptionBackstopConfig("ustb-superstate")?.docs?.length).toBeGreaterThan(0);
@@ -618,7 +618,7 @@ describe("getRedemptionBackstopConfig", () => {
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.005 },
-      costModel: { kind: "dynamic-or-unclear" },
+      costModel: { kind: "fee-bps", feeBps: 10 },
       reviewedAt: "2026-03-23",
     });
     expect(getRedemptionBackstopConfig("usde-ethena")?.docs?.length).toBeGreaterThan(0);

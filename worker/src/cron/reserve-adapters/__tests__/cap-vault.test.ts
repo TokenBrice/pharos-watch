@@ -45,6 +45,8 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptCapVaultState, fetchCapVaultReserves } from "../cap-vault";
 import { fetchOnchainUint256, fetchOnchainRawCall } from "../helpers";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 function makeSignal(): AbortSignal {
   return AbortSignal.timeout(5_000);
@@ -107,6 +109,58 @@ describe("adaptCapVaultState", () => {
       },
     });
     expect(result.warnings?.some((warning) => warning.code === "cap-asset-paused")).toBe(true);
+  });
+
+  it("emits the on-chain redeem fee in redemption telemetry and passes validation", () => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      supplyUsd: 100,
+      redemptionFeeBps: 0,
+      assets: [
+        {
+          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          name: "USDC",
+          risk: "low",
+          coinId: "usdc-circle",
+          decimals: 6,
+          totalSupplied: 100,
+          totalBorrowed: 0,
+          available: 100,
+          paused: false,
+          pausedStatusUnavailable: false,
+          priceUsd: 1,
+        },
+      ],
+    });
+
+    expect(result.metadata?.redemptionFeeBps).toBe(0);
+    expect(result.metadata?.redemption).toMatchObject({ feeBps: 0 });
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("cap-vault") ?? undefined }).valid).toBe(true);
+  });
+
+  it("omits the redemption fee telemetry when the redeem fee could not be read", () => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      supplyUsd: 100,
+      redemptionFeeBps: null,
+      assets: [
+        {
+          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          name: "USDC",
+          risk: "low",
+          decimals: 6,
+          totalSupplied: 100,
+          totalBorrowed: 0,
+          available: 100,
+          paused: false,
+          pausedStatusUnavailable: false,
+          priceUsd: 1,
+        },
+      ],
+    });
+
+    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 
   it("marks the route paused when no unpaused capacity remains", () => {
@@ -321,22 +375,24 @@ describe("fetchCapVaultReserves", () => {
     return encodeAddressArray([address]);
   }
 
-  // Helper: fill the mock queue for assets(), totalSupply(), then per-asset calls.
+  // Helper: fill the mock queue for assets(), totalSupply(), getRedeemFee(), then per-asset calls.
   function primeMocks(options: {
     decimals: bigint | null;
     totalSupplies: bigint | null;
     totalBorrows: bigint | null;
     available: bigint | null;
     paused: string | null;
+    redeemFee?: bigint | null;
   }) {
     // fetchOnchainRawCall order: assets() → paused()
     vi.mocked(fetchOnchainRawCall)
       .mockResolvedValueOnce(encodeSingleAddressArray(assetAddress))
       .mockResolvedValueOnce(options.paused);
 
-    // fetchOnchainUint256 order: totalSupply(vault) → decimals(asset), totalSupplies(asset), totalBorrows(asset), available(asset)
+    // fetchOnchainUint256 order: totalSupply(vault), getRedeemFee(vault) → decimals(asset), totalSupplies(asset), totalBorrows(asset), available(asset)
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
+      .mockResolvedValueOnce(options.redeemFee === undefined ? 0n : options.redeemFee) // vault getRedeemFee() (ray)
       .mockResolvedValueOnce(options.decimals) // asset decimals
       .mockResolvedValueOnce(options.totalSupplies) // totalSupplies(asset)
       .mockResolvedValueOnce(options.totalBorrows) // totalBorrows(asset)
@@ -446,6 +502,37 @@ describe("fetchCapVaultReserves", () => {
     expect(result.metadata?.immediateRedeemableUsd).toBe(0);
   });
 
+  it("reads getRedeemFee() and converts the ray value to bps", async () => {
+    primeMocks({
+      decimals: 6n,
+      totalSupplies: 50_000000n,
+      totalBorrows: 0n,
+      available: 50_000000n,
+      paused: encodedFalse,
+      redeemFee: 1_000000000000000000000000n, // 1e24 ray == 10 bps
+    });
+
+    const result = await fetchCapVaultReserves(coin, config, makeSignal());
+    expect(result.metadata?.redemptionFeeBps).toBe(10);
+    expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("cap-vault") ?? undefined }).valid).toBe(true);
+  });
+
+  it("omits the redemption fee when getRedeemFee() is unreadable", async () => {
+    primeMocks({
+      decimals: 6n,
+      totalSupplies: 50_000000n,
+      totalBorrows: 0n,
+      available: 50_000000n,
+      paused: encodedFalse,
+      redeemFee: null,
+    });
+
+    const result = await fetchCapVaultReserves(coin, config, makeSignal());
+    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
+  });
+
   it("defaults an unconfigured on-chain asset to high risk and emits a degraded warning", async () => {
     primeMocks({
       decimals: 6n,
@@ -482,6 +569,7 @@ describe("fetchCapVaultReserves", () => {
 
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
+      .mockResolvedValueOnce(0n) // vault getRedeemFee() (ray)
       .mockResolvedValueOnce(6n) // USDC decimals
       .mockResolvedValueOnce(50_000000n) // USDC totalSupplies
       .mockResolvedValueOnce(0n) // USDC totalBorrows

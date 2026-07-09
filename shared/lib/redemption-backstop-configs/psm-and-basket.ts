@@ -28,12 +28,17 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee("Fixed redemption fee, but public docs do not publish the current rate"),
+    costModel: documentedVariableFee(
+      "The cUSD vault's inherited Minter sets a flat on-chain redeem fee, queryable via getRedeemFee() (currently 0 ray / 0 bps; whitelisted users pay 0%); dynamic mint/burn fees do not apply to proportional redemption beyond this flat fee",
+      "formula",
+    ),
     docs: [
       sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),
       sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
       sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
       sourceRef("Cap risks", "https://docs.cap.app/risks", ["capacity", "settlement"]),
+      sourceRef("Cap vault Minter", "https://docs.cap.app/concepts/vault/minter", ["fees"]),
+      sourceRef("Cap Minter contract reference", "https://docs.cap.app/developers/contracts/minter.md", ["fees"]),
     ],
     notes: [
       "Cap docs describe cUSD as always redeemable against the underlying reserve basket, with dynamic interest rates preventing full utilization so withdrawals remain atomic",

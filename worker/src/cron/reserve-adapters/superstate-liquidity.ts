@@ -3,7 +3,12 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
-import { fetchJsonWithRetry } from "./helpers";
+import { decimalNumberFromBigInt, fetchErc20Balance, fetchJsonWithRetry, requireOnchainInput } from "./helpers";
+
+// Superstate's instant-redemption buffer: USDC held by the RedemptionIdle contract on Ethereum.
+const USDC_ETHEREUM_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const SUPERSTATE_REDEMPTION_IDLE_ADDRESS = "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf";
+const USDC_DECIMALS = 6;
 
 interface SuperstateLiquidityEntry {
   circle_usd_available_amount?: string | number;
@@ -24,6 +29,7 @@ export function adaptSuperstateLiquidity(
   navResult: AdapterResult,
   payload: SuperstateLiquidityResponse,
   ticker: string,
+  onchainRedemptionIdleUsd: number,
 ): AdapterResult {
   const entry = payload[ticker];
   if (!entry) {
@@ -32,7 +38,8 @@ export function adaptSuperstateLiquidity(
 
   const circleUsdAvailable = parseAmount(entry.circle_usd_available_amount, "circle_usd_available_amount");
   const usdcRedemptionIdle = parseAmount(entry.usdc_redemption_idle_balance, "usdc_redemption_idle_balance");
-  const capacityUsd = circleUsdAvailable + usdcRedemptionIdle;
+  // Kept as context/fallback; the on-chain RedemptionIdle balance above is now the capacity of record.
+  const apiLiquidityUsd = circleUsdAvailable + usdcRedemptionIdle;
   const navDetails =
     typeof navResult.metadata?.details === "object" && navResult.metadata.details != null
       ? navResult.metadata.details
@@ -45,19 +52,21 @@ export function adaptSuperstateLiquidity(
       superstateLiquidityTicker: ticker,
       circleUsdAvailable,
       usdcRedemptionIdle,
-      immediateRedeemableUsd: capacityUsd,
-      liquidityFreshnessSource: "same-run-api" as const,
+      apiLiquidityUsd,
+      immediateRedeemableUsd: onchainRedemptionIdleUsd,
+      liquidityFreshnessSource: "same-run-onchain" as const,
       redemption: {
-        capacityUsd,
-        capacityKind: "live-proxy-validated" as const,
-        freshnessKind: "same-run-api" as const,
-        routeStatus: capacityUsd > 0 ? "open" as const : "paused" as const,
-        routeStatusSource: "protocol-api" as const,
-        sourceUrls: ["https://api.superstate.com/v1/funds/liquidity"],
+        capacityUsd: onchainRedemptionIdleUsd,
+        capacityKind: "live-direct-bounded" as const,
+        freshnessKind: "same-run-onchain" as const,
+        routeStatus: onchainRedemptionIdleUsd > 0 ? "open" as const : "paused" as const,
+        routeStatusSource: "onchain" as const,
+        sourceUrls: [`https://etherscan.io/address/${SUPERSTATE_REDEMPTION_IDLE_ADDRESS}`],
       },
       details: {
         ...navDetails,
-        liquidityFreshnessSource: "same-run-api",
+        apiLiquidityUsd,
+        liquidityFreshnessSource: "same-run-onchain",
       },
     },
   };
@@ -71,20 +80,43 @@ export async function fetchSuperstateLiquidityReserves(
 ): Promise<AdapterResult> {
   const params = parseLiveReserveAdapterParams("superstate-liquidity", config.params);
   const { liquidityUrl, ticker, ...chainlinkParams } = params;
-  const navResult = await fetchChainlinkNavCore(
-    coin,
-    {
-      ...config,
-      params: chainlinkParams,
-    },
-    signal,
-    ctx,
+  const input = requireOnchainInput(config.inputs.primary, "superstate-liquidity");
+
+  const [navResult, payload, redemptionIdleBalanceRaw] = await Promise.all([
+    fetchChainlinkNavCore(
+      coin,
+      {
+        ...config,
+        params: chainlinkParams,
+      },
+      signal,
+      ctx,
+    ),
+    fetchJsonWithRetry<SuperstateLiquidityResponse>(
+      liquidityUrl,
+      signal,
+      12_000,
+      ctx,
+    ),
+    fetchErc20Balance(
+      input,
+      USDC_ETHEREUM_ADDRESS,
+      SUPERSTATE_REDEMPTION_IDLE_ADDRESS,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
+  ]);
+
+  if (redemptionIdleBalanceRaw == null) {
+    throw new Error("superstate-liquidity: failed to read RedemptionIdle contract USDC balance");
+  }
+
+  return adaptSuperstateLiquidity(
+    navResult,
+    payload,
+    ticker,
+    decimalNumberFromBigInt(redemptionIdleBalanceRaw, USDC_DECIMALS),
   );
-  const payload = await fetchJsonWithRetry<SuperstateLiquidityResponse>(
-    liquidityUrl,
-    signal,
-    12_000,
-    ctx,
-  );
-  return adaptSuperstateLiquidity(navResult, payload, ticker);
 }

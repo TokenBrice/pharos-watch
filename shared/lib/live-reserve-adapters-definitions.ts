@@ -182,7 +182,7 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "chainlink-nav": {
@@ -581,7 +581,7 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
