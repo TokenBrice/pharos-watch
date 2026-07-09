@@ -4,6 +4,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import {
   DECIMALS_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
@@ -18,6 +19,7 @@ import {
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  type OnchainCallers,
 } from "./helpers";
 import { ratioFromRaw } from "./slice-math";
 import { reserveDegradedWarning } from "./warnings";
@@ -92,6 +94,55 @@ function parseSliceConfig(params: M0WrapperUnderlyingParams): SliceConfig {
   };
 }
 
+interface WrapperUnderlyingBalances {
+  mTokenAddress: `0x${string}`;
+  totalSupplyRaw: bigint;
+  wrapperDecimals: number;
+  underlyingBalanceRaw: bigint;
+  underlyingDecimals: number;
+}
+
+// Reads mToken()/totalSupply()/decimals()/M-balance for one wrapper deployment.
+// Shared by the primary chain and each `additionalDeployments` entry so a
+// multichain coin's coverage ratio is computed from the true sum of supply and
+// backing across every deployment rather than a single chain's snapshot.
+async function readWrapperUnderlyingBalances(
+  onchain: OnchainCallers,
+  wrapperAddress: `0x${string}`,
+  mTokenSelector: string,
+  expectedMTokenAddress: `0x${string}` | null,
+  coinId: string,
+  deploymentLabel: string,
+): Promise<WrapperUnderlyingBalances> {
+  const mTokenRaw = await onchain.raw(wrapperAddress, mTokenSelector);
+  const mTokenAddress = decodeAddressWord(mTokenRaw)?.toLowerCase() as `0x${string}` | undefined;
+  if (!mTokenAddress) {
+    throw new Error(`${ADAPTER_KEY} could not read mToken() for ${coinId}${deploymentLabel}`);
+  }
+  if (expectedMTokenAddress && mTokenAddress !== expectedMTokenAddress) {
+    throw new Error(
+      `${ADAPTER_KEY} mToken() returned ${mTokenAddress}, expected ${expectedMTokenAddress}${deploymentLabel}`,
+    );
+  }
+
+  const [totalSupplyRaw, wrapperDecimalsRaw, underlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
+    onchain.uint256(wrapperAddress, TOTAL_SUPPLY_SELECTOR),
+    onchain.raw(wrapperAddress, DECIMALS_SELECTOR),
+    onchain.uint256(mTokenAddress, encodeBalanceOfCallData(wrapperAddress)),
+    onchain.raw(mTokenAddress, DECIMALS_SELECTOR),
+  ]);
+  if (totalSupplyRaw == null) throw new Error(`${ADAPTER_KEY} totalSupply() failed for ${coinId}${deploymentLabel}`);
+  if (underlyingBalanceRaw == null) {
+    throw new Error(`${ADAPTER_KEY} M balanceOf(wrapper) failed for ${coinId}${deploymentLabel}`);
+  }
+  const wrapperDecimals = decodeUint8Word(wrapperDecimalsRaw);
+  const underlyingDecimals = decodeUint8Word(underlyingDecimalsRaw);
+  if (wrapperDecimals == null) throw new Error(`${ADAPTER_KEY} wrapper decimals invalid for ${coinId}${deploymentLabel}`);
+  if (underlyingDecimals == null) throw new Error(`${ADAPTER_KEY} M decimals invalid for ${coinId}${deploymentLabel}`);
+
+  return { mTokenAddress, totalSupplyRaw, wrapperDecimals, underlyingBalanceRaw, underlyingDecimals };
+}
+
 export async function fetchM0WrapperUnderlyingReserves(
   coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -113,27 +164,71 @@ export async function fetchM0WrapperUnderlyingReserves(
     timeoutMs,
   });
 
-  const mTokenRaw = await onchain.raw(wrapperAddress, params.mTokenSelector ?? DEFAULT_M_TOKEN_SELECTOR);
-  const mTokenAddress = decodeAddressWord(mTokenRaw)?.toLowerCase() as `0x${string}` | undefined;
-  if (!mTokenAddress) {
-    throw new Error(`${ADAPTER_KEY} could not read mToken() for ${coin.id}`);
-  }
-  if (expectedMTokenAddress && mTokenAddress !== expectedMTokenAddress) {
-    throw new Error(`${ADAPTER_KEY} mToken() returned ${mTokenAddress}, expected ${expectedMTokenAddress}`);
-  }
+  const primary = await readWrapperUnderlyingBalances(
+    onchain,
+    wrapperAddress,
+    params.mTokenSelector ?? DEFAULT_M_TOKEN_SELECTOR,
+    expectedMTokenAddress,
+    coin.id,
+    "",
+  );
+  const { mTokenAddress, wrapperDecimals, underlyingDecimals } = primary;
+  let totalSupplyRaw = primary.totalSupplyRaw;
+  let underlyingBalanceRaw = primary.underlyingBalanceRaw;
 
-  const [totalSupplyRaw, wrapperDecimalsRaw, underlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
-    onchain.uint256(wrapperAddress, TOTAL_SUPPLY_SELECTOR),
-    onchain.raw(wrapperAddress, DECIMALS_SELECTOR),
-    onchain.uint256(mTokenAddress, encodeBalanceOfCallData(wrapperAddress)),
-    onchain.raw(mTokenAddress, DECIMALS_SELECTOR),
-  ]);
-  if (totalSupplyRaw == null) throw new Error(`${ADAPTER_KEY} totalSupply() failed for ${coin.id}`);
-  if (underlyingBalanceRaw == null) throw new Error(`${ADAPTER_KEY} M balanceOf(wrapper) failed for ${coin.id}`);
-  const wrapperDecimals = decodeUint8Word(wrapperDecimalsRaw);
-  const underlyingDecimals = decodeUint8Word(underlyingDecimalsRaw);
-  if (wrapperDecimals == null) throw new Error(`${ADAPTER_KEY} wrapper decimals invalid for ${coin.id}`);
-  if (underlyingDecimals == null) throw new Error(`${ADAPTER_KEY} M decimals invalid for ${coin.id}`);
+  const additionalDeployments = params.additionalDeployments ?? [];
+  const deploymentBreakdown = [
+    {
+      chain: input.chain,
+      totalSupplyRaw: primary.totalSupplyRaw.toString(),
+      underlyingBalanceRaw: primary.underlyingBalanceRaw.toString(),
+    },
+  ];
+
+  if (additionalDeployments.length > 0) {
+    // Fail-closed: any additional-deployment read failure (RPC outage, decoding
+    // failure, decimals mismatch) throws rather than computing coverage from
+    // whichever deployments happened to succeed — a partial-chain aggregate is
+    // exactly the false-snapshot failure mode this aggregation exists to fix.
+    const additionalReads = await Promise.all(
+      additionalDeployments.map(async (deployment) => {
+        const deploymentRpcUrl = deployment.rpcUrl ?? getPublicRpcUrl(deployment.chain);
+        if (!deploymentRpcUrl) {
+          throw new Error(
+            `${ADAPTER_KEY} no RPC URL available for additional deployment ${deployment.chain} on ${coin.id} (refusing partial aggregate)`,
+          );
+        }
+        const deploymentOnchain = makeOnchainCallers(
+          { chain: deployment.chain, rpcMode: "public-rpc" },
+          { signal, ctx, rpcUrl: deploymentRpcUrl, timeoutMs },
+        );
+        const reads = await readWrapperUnderlyingBalances(
+          deploymentOnchain,
+          wrapperAddress,
+          params.mTokenSelector ?? DEFAULT_M_TOKEN_SELECTOR,
+          mTokenAddress,
+          coin.id,
+          ` on additional deployment ${deployment.chain} (refusing partial aggregate)`,
+        );
+        if (reads.wrapperDecimals !== wrapperDecimals || reads.underlyingDecimals !== underlyingDecimals) {
+          throw new Error(
+            `${ADAPTER_KEY} decimals mismatch on additional deployment ${deployment.chain} for ${coin.id} (refusing partial aggregate)`,
+          );
+        }
+        return { chain: deployment.chain, ...reads };
+      }),
+    );
+
+    for (const reads of additionalReads) {
+      totalSupplyRaw += reads.totalSupplyRaw;
+      underlyingBalanceRaw += reads.underlyingBalanceRaw;
+      deploymentBreakdown.push({
+        chain: reads.chain,
+        totalSupplyRaw: reads.totalSupplyRaw.toString(),
+        underlyingBalanceRaw: reads.underlyingBalanceRaw.toString(),
+      });
+    }
+  }
 
   let swapFacilityAddress: `0x${string}` | undefined;
   let swapFacilityPaused: boolean | null = null;
@@ -239,6 +334,7 @@ export async function fetchM0WrapperUnderlyingReserves(
       wrapperDecimals,
       underlyingBalanceRaw: underlyingBalanceRaw.toString(),
       underlyingDecimals,
+      ...(additionalDeployments.length > 0 ? { deployments: deploymentBreakdown } : {}),
       ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
         ? { collateralizationRatio }
         : {}),

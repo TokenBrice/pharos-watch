@@ -255,7 +255,12 @@
         "https://dashboard.m0.org/stablecoins/usdnr",
         "https://docs.m0.org/get-started/resources/addresses/"
       ],
-      "rpcUrl": "https://ethereum.publicnode.com"
+      "rpcUrl": "https://ethereum.publicnode.com",
+      "additionalDeployments": [
+        {
+          "chain": "fluent"
+        }
+      ]
     }
   },
   "launchDate": "2026-04-24"

@@ -143,6 +143,34 @@ describe("LiveReservesConfigSchema URL validation", () => {
     })).toThrow(/Invalid option/);
   });
 
+  it("accepts m0-wrapper-underlying additionalDeployments and rejects malformed entries", () => {
+    const baseParams = {
+      mode: "m-extension" as const,
+      slice: { name: "M token", risk: "very-low" as const },
+    };
+
+    expect(
+      parseLiveReserveAdapterParams("m0-wrapper-underlying", {
+        ...baseParams,
+        additionalDeployments: [{ chain: "fluent" }],
+      }),
+    ).toMatchObject({ additionalDeployments: [{ chain: "fluent" }] });
+
+    expect(() =>
+      parseLiveReserveAdapterParams("m0-wrapper-underlying", {
+        ...baseParams,
+        additionalDeployments: [],
+      }),
+    ).toThrow();
+
+    expect(() =>
+      parseLiveReserveAdapterParams("m0-wrapper-underlying", {
+        ...baseParams,
+        additionalDeployments: [{ chain: "fluent", rpcUrl: "/not-absolute" }],
+      }),
+    ).toThrow(/Invalid/);
+  });
+
   it("accepts configured live reserve URLs", () => {
     const failures: string[] = [];
 

@@ -17,6 +17,8 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   manta: "https://pacific-rpc.manta.network/http",
   // Plasma Finance L2 — only public RPC; required for syzusd-yuzu ERC-4626 NAV fetch
   plasma: "https://rpc.plasma.to",
+  // Required for usdnr-nerona's m0-wrapper-underlying additional-deployment aggregation
+  fluent: "https://rpc.fluent.xyz",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {

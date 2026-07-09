@@ -223,4 +223,111 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
       }),
     ]);
   });
+
+  it("does not report a deployment breakdown when no additionalDeployments are configured", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
+      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(80_000_000_000000n) });
+      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
+      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(81_000_000_000000n) });
+      }
+      return null;
+    });
+
+    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
+    const result = await fetchM0WrapperUnderlyingReserves(
+      { id: "wm-m0", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
+      baseConfig(),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata?.deployments).toBeUndefined();
+  });
+
+  it("aggregates supply and underlying balance across the primary chain and additionalDeployments", async () => {
+    const ETHEREUM_TOTAL_SUPPLY = 130_407_000000n;
+    const ETHEREUM_M_BALANCE = 130_470_000000n;
+    const FLUENT_TOTAL_SUPPLY = 2_925_967_000000n;
+    const FLUENT_M_BALANCE = 2_929_656_000000n;
+
+    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      const isFluent = url === "https://rpc.fluent.xyz";
+      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(isFluent ? FLUENT_TOTAL_SUPPLY : ETHEREUM_TOTAL_SUPPLY) });
+      }
+      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
+      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(isFluent ? FLUENT_M_BALANCE : ETHEREUM_M_BALANCE) });
+      }
+      return null;
+    });
+
+    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
+    const result = await fetchM0WrapperUnderlyingReserves(
+      { id: "usdnr-nerona", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
+      baseConfig({ additionalDeployments: [{ chain: "fluent" }] }),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    const totalSupplyRaw = ETHEREUM_TOTAL_SUPPLY + FLUENT_TOTAL_SUPPLY;
+    const underlyingBalanceRaw = ETHEREUM_M_BALANCE + FLUENT_M_BALANCE;
+    expect(result.metadata).toMatchObject({
+      totalSupplyRaw: totalSupplyRaw.toString(),
+      underlyingBalanceRaw: underlyingBalanceRaw.toString(),
+      deployments: [
+        {
+          chain: "ethereum",
+          totalSupplyRaw: ETHEREUM_TOTAL_SUPPLY.toString(),
+          underlyingBalanceRaw: ETHEREUM_M_BALANCE.toString(),
+        },
+        {
+          chain: "fluent",
+          totalSupplyRaw: FLUENT_TOTAL_SUPPLY.toString(),
+          underlyingBalanceRaw: FLUENT_M_BALANCE.toString(),
+        },
+      ],
+    });
+    const collateralizationRatio = result.metadata?.collateralizationRatio as number;
+    expect(collateralizationRatio).toBeCloseTo(Number(underlyingBalanceRaw) / Number(totalSupplyRaw), 6);
+    expect(collateralizationRatio).toBeGreaterThan(1);
+    expect(result.warnings ?? []).toEqual([]);
+  }, 15_000);
+
+  it("fails closed when an additional deployment's reads fail, refusing to aggregate fewer chains", async () => {
+    fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "https://rpc.fluent.xyz") {
+        return jsonResponse({ error: { code: -32000, message: "eth_call unavailable" } });
+      }
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      const to = call.to?.toLowerCase();
+      if (call.data === "0xc3b6f939") return jsonResponse({ result: addressResult(M_TOKEN) });
+      if (call.data === "0x18160ddd") return jsonResponse({ result: uint256Result(130_407_000000n) });
+      if (call.data === "0x313ce567") return jsonResponse({ result: uint256Result(6) });
+      if (to === M_TOKEN && call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(130_470_000000n) });
+      }
+      return null;
+    });
+
+    const { fetchM0WrapperUnderlyingReserves } = await import("../m0-wrapper-underlying");
+    await expect(
+      fetchM0WrapperUnderlyingReserves(
+        { id: "usdnr-nerona", contracts: [{ chain: "ethereum", address: WRAPPER, decimals: 6 }] } as StablecoinMeta,
+        baseConfig({ additionalDeployments: [{ chain: "fluent" }] }),
+        new AbortController().signal,
+        { chainRpcs: testChainRpcs },
+      ),
+    ).rejects.toThrow(/additional deployment fluent .*refusing partial aggregate/);
+  });
 });
