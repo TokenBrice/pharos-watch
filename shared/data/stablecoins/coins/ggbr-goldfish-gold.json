@@ -13,6 +13,7 @@
   },
   "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
   "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.001,
   "detailProvider": "commodity",
   "geckoId": "goldfish-gold",

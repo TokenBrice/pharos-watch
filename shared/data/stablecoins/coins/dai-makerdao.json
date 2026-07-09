@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
-  "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+  "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; SKY (formerly MKR) acts as backstop (minted and sold to cover bad debt)",
   "mechanismArchetype": "cdp",
   "llamaId": "5",
   "detailProvider": "defillama",

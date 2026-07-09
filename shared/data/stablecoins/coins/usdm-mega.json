@@ -139,7 +139,7 @@
   "contracts": [
     {
       "chain": "megaeth",
-      "address": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7",
+      "address": "0xfafddbb3fc7688494971a79cc65dca3ef82079e7",
       "decimals": 18
     },
     {

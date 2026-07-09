@@ -34,6 +34,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/worldlibertyfi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.bitgo.com/usd1/attestations/"
     }
   ],
   "jurisdiction": {
@@ -160,6 +168,11 @@
     },
     {
       "chain": "mantle",
+      "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+      "decimals": 18
+    },
+    {
+      "chain": "morph-l2",
       "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
       "decimals": 18
     },

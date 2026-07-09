@@ -13,6 +13,7 @@
   },
   "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
   "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "matrixdock-gold",

@@ -2,21 +2,34 @@
   "id": "xtusd-xt",
   "name": "XTUSD",
   "symbol": "XTUSD",
-  "oneLiner": "XTUSD is XT.com's centralized dollar token, issued from limited-disclosure issuer reserves with no Pharos-modeled holder redemption route.",
+  "oneLiner": "XTUSD is XT.com/XSC's MakerDAO-style vault dollar, minted against overcollateralized XTDao crypto vaults with limited public on-chain tooling for Pharos.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
-  "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
-  "pegMechanism": "Centralized exchange-issued dollar token with issuance and account exits handled through XT.com infrastructure; no Pharos redemption backstop is modeled without source-reviewed public terms",
-  "mechanismArchetype": "fiat-cash",
+  "collateral": "Overcollateralized XTDao vault collateral on XSC; issuer materials describe XT as the initial collateral asset with protocol support for additional collateral over time, but public live collateral composition remains hard to verify without XSC tooling.",
+  "pegMechanism": "XTDao CDP: users mint XTUSD against overcollateralized vaults; risky vaults are auctioned to keep collateral above outstanding debt. Secondary market and account liquidity run through XT.com, and Pharos does not model a fiat cash redemption window.",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "xtusd",
   "protocolSlug": "xt-com",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "XT.com documents XTUSD as an XTDao vault system with collateral auctions, but public issuer materials do not identify the price oracle, feed source, or failover path used for vault collateral on XSC.",
+    "reviewedAt": "2026-07-09",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "XT.COM TAI to XTUSD announcement",
+        "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

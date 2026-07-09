@@ -2,7 +2,7 @@
   "id": "kau-kinesis",
   "name": "Kinesis Gold",
   "symbol": "KAU",
-  "oneLiner": "KAU is Kinesis Gold, a token redeemable for one gram of LBMA-approved physical gold held in allocated ABX vaults, with transaction-fee yield sharing.",
+  "oneLiner": "KAU (ERC-20) is KMS Labs' Ethereum gold token backed 1:1 by native Kinesis KAU; physical redemption is two-step and ERC-20 balances do not earn fee yield.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
-  "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
+  "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by LBMA-approved allocated physical gold in ABX vaults.",
+  "pegMechanism": "ERC-20 KAU is redeemable for Kinesis-native KAU through KMS Labs after compliance onboarding, then for physical gold through Kinesis Cayman subject to platform terms; no Kinesis fee-yield accrues on ERC-20 balances.",
   "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.03215072258749015,
   "detailProvider": "commodity",

@@ -30,7 +30,7 @@
       "url": "https://krwq.cash"
     },
     {
-      "label": "X",
+      "label": "Twitter",
       "url": "https://x.com/krwqcash"
     },
     {
@@ -64,7 +64,7 @@
     },
     {
       "chain": "polygon",
-      "address": "0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2",
+      "address": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
       "decimals": 18
     },
     {

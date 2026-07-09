@@ -2,7 +2,7 @@
   "id": "susdc-spark",
   "name": "Spark Savings USDC",
   "symbol": "spUSDC",
-  "oneLiner": "spUSDC is Spark's ERC-4626 savings wrapper of USDC; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDC liquidity.",
+  "oneLiner": "spUSDC is Spark's ERC-4626 V2 savings wrapper of USDC; share price compounds the Vault Savings Rate while exits redeem from vault USDC liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,9 +22,8 @@
   "variantKind": "savings-passthrough",
   "canBeBlacklisted": true,
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
-  "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
-  "mechanismArchetype": "cdp",
+  "collateral": "USDC deposited into Spark Savings Vault V2 (ERC-4626 asset=USDC); idle USDC is deployed by the Spark Liquidity Layer. Spark documents V2 USD vaults as economically fully backed by USDS / Sky balance-sheet liquidity for redemptions.",
+  "pegMechanism": "Deposit USDC to mint spUSDC; share price appreciates against USDC as the Vault Savings Rate (vsr) accrues while SLL deploys idle assets. Withdrawals burn spUSDC for USDC subject to vault idle liquidity or Savings Liquidity Intents for large exits.",
   "detailProvider": "coingecko",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
@@ -198,6 +197,5 @@
     }
   },
   "launchDate": "2025-11-12",
-  "archetypeOverride": true,
   "geckoId": "spark-savings-usdc"
 }

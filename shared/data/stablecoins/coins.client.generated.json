@@ -478,7 +478,7 @@
     "id": "apxusd-apyx",
     "name": "apxUSD",
     "symbol": "apxUSD",
-    "oneLiner": "apxUSD is Apyx's dollar stablecoin backed by preferred shares of Digital Asset Treasury companies plus a cash and T-Bill buffer, mintable 1:1.",
+    "oneLiner": "apxUSD is Apyx's DAT preferred-equity-backed dollar with a cash/T-Bill buffer; whitelist-only primary mint/redeem settles in USDC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -3915,6 +3915,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gold-token-sa-dgld-tokenized-gold",
     "launchDate": "2022-11-03",
     "commodityOunces": 1,
@@ -4269,7 +4270,6 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "algorithmic",
     "geckoId": "dtrinity-usd",
     "launchDate": "2024-12-18",
     "genius": {
@@ -5784,6 +5784,7 @@
       "rwa": true,
       "navToken": true
     },
+    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
     "launchDate": "2026-03-19",
     "canBeBlacklisted": true,
@@ -7094,6 +7095,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "goldfish-gold",
     "launchDate": "2025-10-21",
     "commodityOunces": 0.001,
@@ -7400,6 +7402,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gram-gold",
     "launchDate": "2022-11-01",
     "commodityOunces": 0.0321507466,
@@ -7452,6 +7455,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gram-silver",
     "launchDate": "2022-11-01",
     "commodityOunces": 0.0321507466,
@@ -8909,7 +8913,7 @@
       "navToken": false
     },
     "mechanismArchetype": "cdp",
-    "geckoId": "iusd",
+    "geckoId": "indigo-protocol-iusd",
     "protocolSlug": "indigo-protocol",
     "canBeBlacklisted": false,
     "reserves": [
@@ -9444,7 +9448,7 @@
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "cdp",
     "geckoId": "dephaser-jpy",
     "launchDate": "2024-10-16",
     "reserves": [
@@ -9760,7 +9764,7 @@
     "id": "kau-kinesis",
     "name": "Kinesis Gold",
     "symbol": "KAU",
-    "oneLiner": "KAU is Kinesis Gold, a token redeemable for one gram of LBMA-approved physical gold held in allocated ABX vaults, with transaction-fee yield sharing.",
+    "oneLiner": "KAU (ERC-20) is KMS Labs' Ethereum gold token backed 1:1 by native Kinesis KAU; physical redemption is two-step and ERC-20 balances do not earn fee yield.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -12487,7 +12491,7 @@
       {
         "date": "2026-06-30",
         "type": "partnership",
-        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPal",
+        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPay Corporation",
         "sourceUrl": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue"
       },
       {
@@ -15933,7 +15937,7 @@
     "id": "susdc-spark",
     "name": "Spark Savings USDC",
     "symbol": "spUSDC",
-    "oneLiner": "spUSDC is Spark's ERC-4626 savings wrapper of USDC; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDC liquidity.",
+    "oneLiner": "spUSDC is Spark's ERC-4626 V2 savings wrapper of USDC; share price compounds the Vault Savings Rate while exits redeem from vault USDC liquidity.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -15942,8 +15946,6 @@
       "rwa": false,
       "navToken": true
     },
-    "mechanismArchetype": "cdp",
-    "archetypeOverride": true,
     "geckoId": "spark-savings-usdc",
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
@@ -16162,6 +16164,7 @@
       "rwa": false,
       "navToken": true
     },
+    "geckoId": "spark-savings-usdt",
     "variantOf": "usdt-tether",
     "variantKind": "savings-passthrough",
     "launchDate": "2025-11-12",
@@ -18157,7 +18160,7 @@
     "id": "usde-ethena",
     "name": "Ethena USDe",
     "symbol": "USDe",
-    "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates.",
+    "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions; funding yield accrues to sUSDe stakers.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -19047,6 +19050,7 @@
       "rwa": false,
       "navToken": false
     },
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "monetrix-usd",
     "reserves": [
       {
@@ -20346,12 +20350,12 @@
     "id": "usdu-unitas",
     "name": "Unitas",
     "symbol": "USDU",
-    "oneLiner": "USDU is Unitas's delta-neutral synthetic dollar: long JLP hedged by short perps via Copper/Ceffu, with permissionless USDC mint/redeem on Solana and BSC.",
+    "oneLiner": "USDU is Unitas's delta-neutral synthetic dollar; direct USDC mint/redeem is whitelist-restricted, while most users acquire USDu on secondary markets.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -22102,6 +22106,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
     "launchDate": "2021-12-15",
@@ -22998,6 +23003,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "matrixdock-silver",
     "launchDate": "2026-03-17",
     "commodityOunces": 1,
@@ -23091,6 +23097,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "matrixdock-gold",
     "launchDate": "2024-09-16",
     "commodityOunces": 1,
@@ -23142,6 +23149,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "tether-gold",
     "protocolSlug": "tether-gold",
     "launchDate": "2020-01-23",
@@ -23292,6 +23300,7 @@
       "rwa": true,
       "navToken": false
     },
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "kinka",
     "launchDate": "2024-02-21",
     "canBeBlacklisted": true,
@@ -23513,16 +23522,16 @@
     "id": "xtusd-xt",
     "name": "XTUSD",
     "symbol": "XTUSD",
-    "oneLiner": "XTUSD is XT.com's centralized dollar token, issued from limited-disclosure issuer reserves with no Pharos-modeled holder redemption route.",
+    "oneLiner": "XTUSD is XT.com/XSC's MakerDAO-style vault dollar, minted against overcollateralized XTDao crypto vaults with limited public on-chain tooling for Pharos.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "cdp",
     "geckoId": "xtusd",
     "protocolSlug": "xt-com",
     "reserves": [
@@ -24098,12 +24107,12 @@
     "id": "yzusd-yuzu",
     "name": "Yuzu USD",
     "symbol": "YZUSD",
-    "oneLiner": "yzUSD is Yuzu's KYC-gated yield-bearing dollar on Plasma, minted 1:1 with USDT0 and backed by overcollateralized DeFi strategies with a yzPP junior tranche.",
+    "oneLiner": "yzUSD is Yuzu's KYC-gated base dollar on Plasma, minted 1:1 with USDT0; yield accrues through the separate syzUSD wrapper.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },

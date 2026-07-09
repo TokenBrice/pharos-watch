@@ -1764,7 +1764,7 @@
     "detailProvider": "defillama",
     "name": "apxUSD",
     "symbol": "apxUSD",
-    "oneLiner": "apxUSD is Apyx's dollar stablecoin backed by preferred shares of Digital Asset Treasury companies plus a cash and T-Bill buffer, mintable 1:1.",
+    "oneLiner": "apxUSD is Apyx's DAT preferred-equity-backed dollar with a cash/T-Bill buffer; whitelist-only primary mint/redeem settles in USDC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -1774,7 +1774,7 @@
       "navToken": false
     },
     "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — variable-rate, dividend-bearing preferred equity from companies holding digital assets (e.g., Strategy STRC, Strive SATA), held in excess of apxUSD outstanding, plus a cash and short-term U.S. Treasury Bill buffer (incl. USDC) for liquidity; redemptions settle in USDC, with preferred-share positions sold to USDC under stress",
-    "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
+    "pegMechanism": "Whitelisted primary-market mint/redeem with USDC settlement at Redemption Value; secondary liquidity and arbitrage support non-whitelisted holders, while Protocol-Owned Liquidity provides an additional stability buffer during market stress.",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apxusd",
     "proofOfReserves": {
@@ -3464,7 +3464,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -5247,7 +5247,7 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0",
+        "address": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
         "decimals": 18
       },
       {
@@ -7829,7 +7829,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -10004,7 +10004,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -11904,7 +11904,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -12607,7 +12607,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -14225,7 +14225,7 @@
       "navToken": false
     },
     "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
-    "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+    "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; SKY (formerly MKR) acts as backstop (minted and sold to cover bad debt)",
     "mechanismArchetype": "cdp",
     "geckoId": "dai",
     "pythFeedId": "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
@@ -14823,6 +14823,7 @@
     },
     "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
     "pegMechanism": "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "gold-token-sa-dgld-tokenized-gold",
     "proofOfReserves": {
@@ -14918,7 +14919,7 @@
       },
       {
         "chain": "base",
-        "address": "0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9",
+        "address": "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
         "decimals": 18
       }
     ],
@@ -14929,32 +14930,22 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "canonical-bridge",
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "bridgeRouteRisk": {
-      "tier": "canonical-rollup-bridge",
-      "summary": "Gold Token SA states that DGLD was deployed on Base through Base native Ethereum bridge infrastructure. The reviewed route is therefore a canonical L2 bridge path, not an independent liquidity or validator bridge.",
-      "reviewedAt": "2026-06-13",
-      "reviewer": "Codex bridge route review",
+      "tier": "issuer-native-burn-mint",
+      "summary": "As of June 30 2026, DGLD closed the Ethereum-Base bridge path and redeployed Base as an independently gold-backed native issuance. Cross-chain exposure is issuer-managed multichain mint/redeem rather than a live canonical rollup bridge supply path.",
+      "reviewedAt": "2026-07-09",
+      "reviewer": "Codex static metadata correction review",
       "confidence": "verified",
-      "protocols": [
-        {
-          "source": "docs",
-          "name": "Base native bridge",
-          "url": "https://docs.base.org/base-chain/network-information/bridges",
-          "bridgeTypes": [
-            "canonicalBridge"
-          ]
-        }
-      ],
       "sources": [
         {
-          "label": "DGLD Base launch",
-          "url": "https://dgld.ch/news/major-milestone-for-dgld-now-live-on-base"
+          "label": "DGLD post-incident report",
+          "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
         },
         {
-          "label": "Base bridge docs",
-          "url": "https://docs.base.org/base-chain/network-information/bridges"
+          "label": "DGLD smart-contract audits",
+          "url": "https://dgld.ch/legal/smart-contract-audits"
         }
       ]
     },
@@ -16017,7 +16008,6 @@
     },
     "collateral": "Ethereum: USDT0/USDC0-style whitelisted stablecoin and yield-bearing collateral in isolated dUSD reserves. Fraxtal: frxUSD/sfrxUSD and other Frax-aligned USD collateral in isolated reserves. Katana: whitelisted USD stablecoins and yieldcoins in isolated reserves. Sonic: whitelisted USD stablecoins/yieldcoins such as frxUSD/sfrxUSD in isolated reserves. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
-    "mechanismArchetype": "algorithmic",
     "geckoId": "dtrinity-usd",
     "links": [
       {
@@ -17223,7 +17213,7 @@
         "url": "https://www.telco.in/en/digital-cash"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/telcoin"
       },
       {
@@ -17644,7 +17634,7 @@
         "url": "https://usual.money/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/usualmoney"
       },
       {
@@ -19047,7 +19037,7 @@
         "url": "https://3adao.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/3aaaDAO"
       },
       {
@@ -19837,7 +19827,7 @@
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/tokencomtr"
       },
       {
@@ -20770,6 +20760,7 @@
     },
     "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
     "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -25625,7 +25616,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -26104,6 +26095,7 @@
     },
     "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
     "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.001,
     "geckoId": "goldfish-gold",
     "links": [
@@ -26469,7 +26461,7 @@
       },
       {
         "chain": "mantle",
-        "address": "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73",
+        "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
         "decimals": 18
       },
       {
@@ -26652,7 +26644,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -27058,7 +27050,7 @@
         "url": "https://www.streamex.com/GLDY"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/streamex"
       },
       {
@@ -27211,6 +27203,7 @@
     },
     "collateral": "Each GRAMG is directly collateralized by PAXG held on-chain as reserve collateral; GRAMG is minted and burned as equivalent PAXG is added to or removed from the reserve wallet. The underlying PAXG is gold-backed through Paxos custody, while Token Teknoloji also discloses physical-gold reserve claims including Turkish Central Bank custody.",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-gold",
     "proofOfReserves": {
@@ -27227,7 +27220,7 @@
         "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/tokencomtr"
       }
     ],
@@ -27397,6 +27390,7 @@
     },
     "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-silver",
     "cmcSlug": "silver-grams",
@@ -27414,7 +27408,7 @@
         "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/tokencomtr"
       },
       {
@@ -27627,7 +27621,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.morpho.org/curation/overview"
+        "url": "https://docs.morpho.org/curate/"
       }
     ],
     "mintAuthority": {
@@ -27653,7 +27647,7 @@
             },
             {
               "label": "Morpho curation docs",
-              "url": "https://docs.morpho.org/curation/overview"
+              "url": "https://docs.morpho.org/curate/"
             }
           ],
           "evidence": "At Ethereum block 25295208: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (not a proxy, immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Safe v1.3.0, 7 owners, threshold=4, modules=[], confirmed via getOwners()/getThreshold()/getModulesPaginated()). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC confirmed)."
@@ -27683,7 +27677,7 @@
           },
           {
             "label": "Morpho curation docs",
-            "url": "https://docs.morpho.org/curation/overview"
+            "url": "https://docs.morpho.org/curate/"
           }
         ],
         "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
@@ -27719,7 +27713,7 @@
       "sources": [
         {
           "label": "Morpho curation docs",
-          "url": "https://docs.morpho.org/curation/overview"
+          "url": "https://docs.morpho.org/curate/"
         },
         {
           "label": "L2BEAT Across",
@@ -27807,7 +27801,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.morpho.org/curation/overview"
+        "url": "https://docs.morpho.org/curate/"
       }
     ],
     "mintAuthority": {
@@ -27833,7 +27827,7 @@
             },
             {
               "label": "Morpho curation docs",
-              "url": "https://docs.morpho.org/curation/overview"
+              "url": "https://docs.morpho.org/curate/"
             }
           ],
           "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 7/4 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
@@ -27863,7 +27857,7 @@
           },
           {
             "label": "Morpho curation docs",
-            "url": "https://docs.morpho.org/curation/overview"
+            "url": "https://docs.morpho.org/curate/"
           }
         ],
         "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
@@ -28872,7 +28866,7 @@
         "url": "https://www.gyndore.com/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/gyndore"
       },
       {
@@ -29802,7 +29796,7 @@
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
     "links": [
       {
-        "label": "Securitize",
+        "label": "Website",
         "url": "https://securitize.io/primary-market/hl-scope"
       },
       {
@@ -32156,7 +32150,7 @@
     "collateral": "ADA-only collateral in overcollateralized Indigo Protocol CDP vaults; deposited ADA continues earning Cardano staking rewards via CDP Liquid Staking",
     "pegMechanism": "Overcollateralized ADA-backed CDP synthetic dollar that tracks the median oracle price of USDC, USDT, and TUSD (fault-tolerant triple-peg). Solvency is maintained by per-iAsset Stability Pools that absorb liquidations of undercollateralized CDPs (Stability Providers paid in ADA collateral plus INDY), plus V2 redemptions (RMR hard peg) and a DAO-set variable interest rate (soft peg). Collateral parameters and MCR are governed by the INDY DAO",
     "mechanismArchetype": "cdp",
-    "geckoId": "iusd",
+    "geckoId": "indigo-protocol-iusd",
     "protocolSlug": "indigo-protocol",
     "links": [
       {
@@ -33489,7 +33483,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -33874,7 +33868,7 @@
     },
     "collateral": "USDT (Optimism) and USDC (Base) deposited by users to mint JPYT; locked collateral is automatically transferred into Aave for safekeeping rather than held directly by DePhaser, backing JPYT against the yen",
     "pegMechanism": "Users lock USDT (Optimism) or USDC (Base) to mint JPYT priced off real-time USD/JPY rates from Chainlink and Pyth oracles; the deposited collateral is routed into Aave, and redemption burns JPYT to return the underlying USDT or USDC",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "cdp",
     "geckoId": "dephaser-jpy",
     "links": [
       {
@@ -35026,7 +35020,7 @@
     "detailProvider": "commodity",
     "name": "Kinesis Gold",
     "symbol": "KAU",
-    "oneLiner": "KAU is Kinesis Gold, a token redeemable for one gram of LBMA-approved physical gold held in allocated ABX vaults, with transaction-fee yield sharing.",
+    "oneLiner": "KAU (ERC-20) is KMS Labs' Ethereum gold token backed 1:1 by native Kinesis KAU; physical redemption is two-step and ERC-20 balances do not earn fee yield.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -35035,8 +35029,8 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
-    "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
+    "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by LBMA-approved allocated physical gold in ABX vaults.",
+    "pegMechanism": "ERC-20 KAU is redeemable for Kinesis-native KAU through KMS Labs after compliance onboarding, then for physical gold through Kinesis Cayman subject to platform terms; no Kinesis fee-yield accrues on ERC-20 balances.",
     "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.03215072258749015,
     "geckoId": "kinesis-gold",
@@ -35192,7 +35186,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -36006,7 +36000,7 @@
         "url": "https://krwq.cash"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/krwqcash"
       },
       {
@@ -36213,7 +36207,7 @@
       },
       {
         "chain": "polygon",
-        "address": "0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2",
+        "address": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
         "decimals": 18
       },
       {
@@ -40582,8 +40576,16 @@
     "cmcSlug": "movemoney-usd",
     "links": [
       {
+        "label": "Website",
+        "url": "https://cfx.to/"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.cfx.to/docs/key-features"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/MoveUSD"
       },
       {
         "label": "Market Page",
@@ -42749,7 +42751,7 @@
         "url": "https://docs.blox.my"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/blox_malaysia"
       }
     ],
@@ -43964,7 +43966,7 @@
       "navToken": false
     },
     "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
-    "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
+    "pegMechanism": "Permissionless 1:1 minting via router against USDC, USDT, or USDe; redemptions are restricted to KYC/KYB-approved counterparties and served from AssetReserve liquidity, while peg support also comes from arbitrage incentives, delta hedging, and a liquid stablecoin buffer.",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "nusd-2",
     "proofOfReserves": {
@@ -44269,7 +44271,7 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F",
+        "address": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
         "decimals": 18
       }
     ],
@@ -45081,7 +45083,7 @@
     "announcedDate": "2026-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Announced June 30, 2026 by Open Standard, an independent company operated by a board of 140+ partner businesses spanning payments, banking, fintech, tech, and crypto (Visa, Mastercard, American Express, Discover, Stripe, Adyen, BlackRock, BNY Mellon, Standard Chartered, U.S. Bank, BBVA, Coinbase, PayPal, Google, Samsung, Shopify, and more). OUSD is pitched as a GENIUS Act-compliant, fully-reserved dollar with zero mint/redeem fees and no volume limits, sharing most reserve earnings with partners after an operating fee. Zach Abrams (Bridge co-founder, now at Stripe) is interim CEO; Fireblocks is named for settlement infrastructure. Announced to launch natively on Solana, with Stellar and Plasma also named as launch partners, targeting 'later in 2026'. No mainnet contracts, named reserve custodian, audit, or attestation are public yet. Incumbents Circle, Tether, and PayPal's PYUSD are notably absent — Circle shares fell ~15-17% on the news.",
+    "launchPhaseDetail": "Announced June 30, 2026 by Open Standard, an independent company operated by a board of 140+ partner businesses spanning payments, banking, fintech, tech, and crypto (Visa, Mastercard, American Express, Discover, Stripe, Adyen, BlackRock, BNY Mellon, Standard Chartered, U.S. Bank, BBVA, Coinbase, PayPay Corporation, Google, Samsung, Shopify, and more). OUSD is pitched as a GENIUS Act-compliant, fully-reserved dollar with zero mint/redeem fees and no volume limits, sharing most reserve earnings with partners after an operating fee. Zach Abrams (Bridge co-founder, now at Stripe) is interim CEO; Fireblocks is named for settlement infrastructure. Announced to launch natively on Solana, with Stellar and Plasma also named as launch partners, targeting 'later in 2026'. No mainnet contracts, named reserve custodian, audit, or attestation are public yet. Incumbents Circle, Tether, and PayPal's PYUSD are notably absent — Circle shares fell ~15-17% on the news.",
     "featuredContent": [
       {
         "type": "blog",
@@ -45119,7 +45121,7 @@
       {
         "date": "2026-06-30",
         "type": "partnership",
-        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPal",
+        "title": "140+ launch partners including Visa, Mastercard, American Express, Stripe, BlackRock, Coinbase, and PayPay Corporation",
         "sourceUrl": "https://www.theblock.co/post/406736/visa-stripe-coinbase-join-open-usd-stablecoin-shares-reserve-revenue"
       },
       {
@@ -46991,7 +46993,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -51571,12 +51573,12 @@
       },
       {
         "chain": "berachain",
-        "address": "0xa744Fe3688291aC3A4a7eC917678783aD9946a1E",
+        "address": "0xa744fe3688291ac3a4a7ec917678783ad9946a1e",
         "decimals": 18
       },
       {
         "chain": "bsc",
-        "address": "0x14063733875204b35D20D5Fc52C7B5569aD00335",
+        "address": "0x14063733875204b35d20d5fc52c7b5569ad00335",
         "decimals": 18
       },
       {
@@ -53425,7 +53427,7 @@
       "navToken": true
     },
     "pegReferenceId": "gho-aave",
-    "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
+    "collateral": "GHO deposited into Aave's ERC-4626 sGHO savings vault on Ethereum; share value accrues a governance-set fixed APR with no cooldown, no slashing, and no rehypothecation of deposited funds.",
     "pegMechanism": "Deposit GHO into the ERC-4626 sGHO vault to mint sGHO shares; the share-to-GHO exchange rate rises as the Aave-governance-set savings rate accrues. The vault's `asset()` is GHO and standard ERC-4626 `convertToAssets()` / `totalAssets()` reads expose NAV per share. Pharos prices this entry from the vault's share exchange rate rather than secondary-market liquidity.",
     "mechanismArchetype": "cdp",
     "links": [
@@ -54191,7 +54193,7 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E",
+        "address": "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
         "decimals": 6
       },
       {
@@ -57255,7 +57257,7 @@
     "detailProvider": "coingecko",
     "name": "Spark Savings USDC",
     "symbol": "spUSDC",
-    "oneLiner": "spUSDC is Spark's ERC-4626 savings wrapper of USDC; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDC liquidity.",
+    "oneLiner": "spUSDC is Spark's ERC-4626 V2 savings wrapper of USDC; share price compounds the Vault Savings Rate while exits redeem from vault USDC liquidity.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -57265,9 +57267,8 @@
       "navToken": true
     },
     "pegReferenceId": "usdc-circle",
-    "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
-    "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
-    "mechanismArchetype": "cdp",
+    "collateral": "USDC deposited into Spark Savings Vault V2 (ERC-4626 asset=USDC); idle USDC is deployed by the Spark Liquidity Layer. Spark documents V2 USD vaults as economically fully backed by USDS / Sky balance-sheet liquidity for redemptions.",
+    "pegMechanism": "Deposit USDC to mint spUSDC; share price appreciates against USDC as the Vault Savings Rate (vsr) accrues while SLL deploys idle assets. Withdrawals burn spUSDC for USDC subject to vault idle liquidity or Savings Liquidity Intents for large exits.",
     "geckoId": "spark-savings-usdc",
     "links": [
       {
@@ -57411,7 +57412,6 @@
     },
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
-    "archetypeOverride": true,
     "reserves": [
       {
         "name": "USDC deposited in Spark Savings vault",
@@ -58231,8 +58231,9 @@
       "navToken": true
     },
     "pegReferenceId": "usdt-tether",
-    "collateral": "USDT deployed through Spark Liquidity Layer allocation routes.",
-    "pegMechanism": "Users deposit USDT into Spark Liquidity Layer routes and receive sUSDT, a yield-bearing receipt whose value reflects SLL-managed allocations rather than Spark Savings Rate or the DAI/USDS PSM.",
+    "collateral": "USDT deposited into Spark Savings Vault V2 (ERC-4626 asset=USDT); idle USDT is taken by the Spark Liquidity Layer into SparkLend, Morpho, and other supported yield strategies, with Spark docs framing V2 USD vaults as economically backed by USDS / Sky balance-sheet liquidity for redemptions.",
+    "pegMechanism": "Users deposit USDT into Spark Savings Vault V2 and receive spUSDT; a permissioned Spark Liquidity Layer taker deploys idle USDT into yield strategies while share value accrues via the vault savings rate (vsr), not the Sky Savings Rate or legacy sUSDC path.",
+    "geckoId": "spark-savings-usdt",
     "links": [
       {
         "label": "Website",
@@ -60513,7 +60514,7 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0xd0580192E98eA6CEB9c7b6191Ed2E27560911697",
+        "address": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
         "decimals": 18
       }
     ],
@@ -62711,6 +62712,14 @@
       {
         "label": "Twitter",
         "url": "https://x.com/worldlibertyfi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.bitgo.com/usd1/attestations/"
       }
     ],
     "jurisdiction": {
@@ -62949,6 +62958,11 @@
       },
       {
         "chain": "mantle",
+        "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "decimals": 18
+      },
+      {
+        "chain": "morph-l2",
         "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
         "decimals": 18
       },
@@ -65281,7 +65295,7 @@
       },
       {
         "chain": "cronos",
-        "address": "0xc21223249ca28397b4b6541dffaecc539bff0c59",
+        "address": "0x3d7f2c478aafdb65542bcb44bceec05849999d2d",
         "decimals": 6
       },
       {
@@ -66209,7 +66223,7 @@
     "detailProvider": "defillama",
     "name": "Ethena USDe",
     "symbol": "USDe",
-    "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates.",
+    "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions; funding yield accrues to sUSDe stakers.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -66219,7 +66233,7 @@
       "navToken": false
     },
     "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
-    "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
+    "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Anchorage Digital, Kraken) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-usde",
     "pythFeedId": "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
@@ -67466,6 +67480,11 @@
       {
         "chain": "ethereum",
         "address": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x004b506865409877c9fa29bfb1eba929984b9bbc",
         "decimals": 6
       },
       {
@@ -69535,7 +69554,7 @@
     "contracts": [
       {
         "chain": "megaeth",
-        "address": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7",
+        "address": "0xfafddbb3fc7688494971a79cc65dca3ef82079e7",
         "decimals": 18
       },
       {
@@ -69843,8 +69862,9 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC backing on HyperEVM; holders can stake USDM into the separate sUSDM wrapper for Monetrix strategy yield, but liquid USDM itself is the base dollar token.",
-    "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
+    "collateral": "USDC at mint, then deployed into Monetrix's on-chain Hyperliquid delta-neutral portfolio including spot assets, matching short perpetual positions, portfolio-margin slots, and vault or redeem-escrow USDC. Liquid USDM is the base dollar receipt; strategy yield accrues only via the separate sUSDM wrapper.",
+    "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows while backing is deployed into a delta-neutral Hyperliquid portfolio. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "monetrix-usd",
     "proofOfReserves": {
       "type": "self-reported",
@@ -73975,11 +73995,11 @@
         "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
       },
       {
-        "label": "Bridge",
+        "label": "Website",
         "url": "https://www.bridge.xyz/"
       },
       {
-        "label": "Bridge Issuance Docs",
+        "label": "Docs",
         "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
       },
       {
@@ -74928,17 +74948,17 @@
     "detailProvider": "defillama",
     "name": "Unitas",
     "symbol": "USDU",
-    "oneLiner": "USDU is Unitas's delta-neutral synthetic dollar: long JLP hedged by short perps via Copper/Ceffu, with permissionless USDC mint/redeem on Solana and BSC.",
+    "oneLiner": "USDU is Unitas's delta-neutral synthetic dollar; direct USDC mint/redeem is whitelist-restricted, while most users acquire USDu on secondary markets.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
     "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
-    "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; mainnet mint/redeem against USDC is permissionless on Solana and BSC, with the DAO retaining optional KYC/KYB gating powers",
+    "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced via Copper/Ceffu off-exchange settlement; direct mint/redeem against USDC is restricted to whitelisted participants on Solana and BSC, while retail access is primarily secondary-market.",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "usdu",
     "proofOfReserves": {
@@ -76678,7 +76698,7 @@
       },
       {
         "label": "Ethereum contract",
-        "url": "https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
+        "url": "https://etherscan.io/token/0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1"
       }
     ],
     "mintAuthority": {
@@ -78744,7 +78764,7 @@
   {
     "id": "usx-dforce",
     "llamaId": "44",
-    "detailProvider": "coingecko",
+    "detailProvider": "defillama",
     "name": "dForce USD",
     "symbol": "USX",
     "oneLiner": "USX is dForce's CDP-style stablecoin currently trading at a deep discount to USD, reflecting legacy debt on the dForce/Unitus lending protocol.",
@@ -79325,7 +79345,7 @@
       },
       {
         "chain": "bsc",
-        "address": "0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311",
+        "address": "0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
         "decimals": 6
       },
       {
@@ -81323,6 +81343,7 @@
     },
     "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
     "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 0.0321507466,
     "geckoId": "vnx-gold",
     "protocolSlug": "vnx",
@@ -81341,7 +81362,7 @@
         "url": "https://vnx.li/gold/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/VNX_Platform"
       },
       {
@@ -81949,7 +81970,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/ripioapp"
       }
     ],
@@ -82169,7 +82190,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/ripioapp"
       }
     ],
@@ -82398,7 +82419,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/ripioapp"
       },
       {
@@ -83524,7 +83545,7 @@
         "url": "https://www.ripio.com/en/cryptocurrencies/wmxn"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/ripioapp"
       }
     ],
@@ -83755,7 +83776,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/ripioapp"
       },
       {
@@ -84948,6 +84969,7 @@
     },
     "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
     "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "matrixdock-silver",
     "proofOfReserves": {
@@ -84965,7 +84987,7 @@
         "url": "https://www.matrixdock.com/xagm"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/matrixdock"
       },
       {
@@ -85325,6 +85347,7 @@
     },
     "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
     "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "matrixdock-gold",
     "proofOfReserves": {
@@ -85570,6 +85593,7 @@
     },
     "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
     "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "tether-gold",
     "pythFeedId": "0x44465e17d2e9d390e70c999d5a11fda4f092847fcd2e3e5aa089d96c98a30e67",
@@ -86156,6 +86180,7 @@
     },
     "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
     "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
+    "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "kinka",
     "proofOfReserves": {
@@ -86673,7 +86698,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -87174,18 +87199,18 @@
     "detailProvider": "coingecko",
     "name": "XTUSD",
     "symbol": "XTUSD",
-    "oneLiner": "XTUSD is XT.com's centralized dollar token, issued from limited-disclosure issuer reserves with no Pharos-modeled holder redemption route.",
+    "oneLiner": "XTUSD is XT.com/XSC's MakerDAO-style vault dollar, minted against overcollateralized XTDao crypto vaults with limited public on-chain tooling for Pharos.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
-    "pegMechanism": "Centralized exchange-issued dollar token with issuance and account exits handled through XT.com infrastructure; no Pharos redemption backstop is modeled without source-reviewed public terms",
-    "mechanismArchetype": "fiat-cash",
+    "collateral": "Overcollateralized XTDao vault collateral on XSC; issuer materials describe XT as the initial collateral asset with protocol support for additional collateral over time, but public live collateral composition remains hard to verify without XSC tooling.",
+    "pegMechanism": "XTDao CDP: users mint XTUSD against overcollateralized vaults; risky vaults are auctioned to keep collateral above outstanding debt. Secondary market and account liquidity run through XT.com, and Pharos does not model a fiat cash redemption window.",
+    "mechanismArchetype": "cdp",
     "geckoId": "xtusd",
     "protocolSlug": "xt-com",
     "links": [
@@ -87252,6 +87277,19 @@
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "custodyModel": "cex",
+    "oracleRisk": {
+      "tier": "opaque-or-unknown",
+      "summary": "XT.com documents XTUSD as an XTDao vault system with collateral auctions, but public issuer materials do not identify the price oracle, feed source, or failover path used for vault collateral on XSC.",
+      "reviewedAt": "2026-07-09",
+      "reviewer": "Codex data review",
+      "confidence": "limited",
+      "sources": [
+        {
+          "label": "XT.COM TAI to XTUSD announcement",
+          "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "XT.com issuer-managed reserve assets",
@@ -89196,12 +89234,12 @@
     "detailProvider": "defillama",
     "name": "Yuzu USD",
     "symbol": "YZUSD",
-    "oneLiner": "yzUSD is Yuzu's KYC-gated yield-bearing dollar on Plasma, minted 1:1 with USDT0 and backed by overcollateralized DeFi strategies with a yzPP junior tranche.",
+    "oneLiner": "yzUSD is Yuzu's KYC-gated base dollar on Plasma, minted 1:1 with USDT0; yield accrues through the separate syzUSD wrapper.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -89523,7 +89561,7 @@
         "url": "https://www.mento.org/"
       },
       {
-        "label": "X",
+        "label": "Twitter",
         "url": "https://x.com/MentoLabs"
       },
       {
@@ -90480,12 +90518,7 @@
     },
     "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
     "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
-    "links": [
-      {
-        "label": "X",
-        "url": "https://x.com/Goal3_xyz"
-      }
-    ],
+    "links": [],
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",

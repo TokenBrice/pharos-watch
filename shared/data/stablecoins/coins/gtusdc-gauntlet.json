@@ -41,7 +41,7 @@
           },
           {
             "label": "Morpho curation docs",
-            "url": "https://docs.morpho.org/curation/overview"
+            "url": "https://docs.morpho.org/curate/"
           }
         ],
         "evidence": "At Ethereum block 25295208: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (not a proxy, immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Safe v1.3.0, 7 owners, threshold=4, modules=[], confirmed via getOwners()/getThreshold()/getModulesPaginated()). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC confirmed)."
@@ -71,7 +71,7 @@
         },
         {
           "label": "Morpho curation docs",
-          "url": "https://docs.morpho.org/curation/overview"
+          "url": "https://docs.morpho.org/curate/"
         }
       ],
       "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
@@ -97,7 +97,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.morpho.org/curation/overview"
+      "url": "https://docs.morpho.org/curate/"
     }
   ],
   "contracts": [
@@ -118,7 +118,7 @@
     "sources": [
       {
         "label": "Morpho curation docs",
-        "url": "https://docs.morpho.org/curation/overview"
+        "url": "https://docs.morpho.org/curate/"
       },
       {
         "label": "L2BEAT Across",

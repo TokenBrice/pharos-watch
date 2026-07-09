@@ -1,7 +1,7 @@
 {
   "id": "usx-dforce",
   "llamaId": "44",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "name": "dForce USD",
   "symbol": "USX",
   "oneLiner": "USX is dForce's CDP-style stablecoin currently trading at a deep discount to USD, reflecting legacy debt on the dForce/Unitus lending protocol.",

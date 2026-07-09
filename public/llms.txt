@@ -466,7 +466,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Staked USD Coin (sUSD)](https://pharos.watch/stablecoin/susd-hedgecore/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Indigo iUSD (iUSD)](https://pharos.watch/stablecoin/iusd-indigo-protocol/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Lumi Finance LUAUSD (LUAUSD)](https://pharos.watch/stablecoin/luausd-lumi-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [XTUSD (XTUSD)](https://pharos.watch/stablecoin/xtusd-xt/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [XTUSD (XTUSD)](https://pharos.watch/stablecoin/xtusd-xt/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [WEMIX Dollar (WEMIX$)](https://pharos.watch/stablecoin/wemix-dollar-wemix/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Glo Dollar (USDGLO)](https://pharos.watch/stablecoin/usdglo-glo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Djed Stablecoin (DJED)](https://pharos.watch/stablecoin/djed-coti/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

@@ -13,6 +13,7 @@
   },
   "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {

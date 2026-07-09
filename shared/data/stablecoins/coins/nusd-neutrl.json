@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
-  "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
+  "pegMechanism": "Permissionless 1:1 minting via router against USDC, USDT, or USDe; redemptions are restricted to KYC/KYB-approved counterparties and served from AssetReserve liquidity, while peg support also comes from arbitrage incentives, delta hedging, and a liquid stablecoin buffer.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "346",
   "detailProvider": "defillama",

@@ -13,6 +13,7 @@
   },
   "collateral": "Each GRAMG is directly collateralized by PAXG held on-chain as reserve collateral; GRAMG is minted and burned as equivalent PAXG is added to or removed from the reserve wallet. The underlying PAXG is gold-backed through Paxos custody, while Token Teknoloji also discloses physical-gold reserve claims including Turkish Central Bank custody.",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.0321507466,
   "detailProvider": "commodity",
   "geckoId": "gram-gold",
@@ -57,7 +58,7 @@
       "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
     },
     {
-      "label": "X",
+      "label": "Twitter",
       "url": "https://x.com/tokencomtr"
     }
   ],

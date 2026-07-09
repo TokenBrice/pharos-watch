@@ -78,12 +78,12 @@
     },
     {
       "chain": "berachain",
-      "address": "0xa744Fe3688291aC3A4a7eC917678783aD9946a1E",
+      "address": "0xa744fe3688291ac3a4a7ec917678783ad9946a1e",
       "decimals": 18
     },
     {
       "chain": "bsc",
-      "address": "0x14063733875204b35D20D5Fc52C7B5569aD00335",
+      "address": "0x14063733875204b35d20d5fc52c7b5569ad00335",
       "decimals": 18
     },
     {

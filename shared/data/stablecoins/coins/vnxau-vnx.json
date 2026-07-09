@@ -13,6 +13,7 @@
   },
   "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
   "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
+  "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.0321507466,
   "detailProvider": "commodity",
   "geckoId": "vnx-gold",
@@ -32,7 +33,7 @@
       "url": "https://vnx.li/gold/"
     },
     {
-      "label": "X",
+      "label": "Twitter",
       "url": "https://x.com/VNX_Platform"
     },
     {

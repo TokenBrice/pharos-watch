@@ -28,12 +28,7 @@
       }
     ]
   },
-  "links": [
-    {
-      "label": "X",
-      "url": "https://x.com/Goal3_xyz"
-    }
-  ],
+  "links": [],
   "contracts": [
     {
       "chain": "zksync",

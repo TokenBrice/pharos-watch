@@ -19,8 +19,16 @@
   "mechanismArchetype": "fiat-cash",
   "links": [
     {
+      "label": "Website",
+      "url": "https://cfx.to/"
+    },
+    {
       "label": "Docs",
       "url": "https://docs.cfx.to/docs/key-features"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MoveUSD"
     },
     {
       "label": "Market Page",

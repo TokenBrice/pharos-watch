@@ -22,9 +22,10 @@
   "variantKind": "savings-passthrough",
   "canBeBlacklisted": true,
   "pegReferenceId": "usdt-tether",
-  "collateral": "USDT deployed through Spark Liquidity Layer allocation routes.",
-  "pegMechanism": "Users deposit USDT into Spark Liquidity Layer routes and receive sUSDT, a yield-bearing receipt whose value reflects SLL-managed allocations rather than Spark Savings Rate or the DAI/USDS PSM.",
+  "collateral": "USDT deposited into Spark Savings Vault V2 (ERC-4626 asset=USDT); idle USDT is taken by the Spark Liquidity Layer into SparkLend, Morpho, and other supported yield strategies, with Spark docs framing V2 USD vaults as economically backed by USDS / Sky balance-sheet liquidity for redemptions.",
+  "pegMechanism": "Users deposit USDT into Spark Savings Vault V2 and receive spUSDT; a permissioned Spark Liquidity Layer taker deploys idle USDT into yield strategies while share value accrues via the vault savings rate (vsr), not the Sky Savings Rate or legacy sUSDC path.",
   "detailProvider": "coingecko",
+  "geckoId": "spark-savings-usdt",
   "links": [
     {
       "label": "Website",

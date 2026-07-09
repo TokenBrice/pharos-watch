@@ -131,6 +131,11 @@
       "decimals": 6
     },
     {
+      "chain": "arbitrum",
+      "address": "0x004b506865409877c9fa29bfb1eba929984b9bbc",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
       "decimals": 6
