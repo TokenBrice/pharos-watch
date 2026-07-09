@@ -42,7 +42,7 @@ All configured source URLs must be absolute URLs. The schema enforces this for H
 
 ### Registry-Defined Adapter Classes
 
-The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines four important adapter properties that are not user-configured per coin:
+The single lightweight declaration in `shared/lib/live-reserve-adapter-declarations.ts` owns each adapter key, its params-schema identifier and accepted primary input kinds, config validation policy, public source definition, provenance status, and display badge metadata. `shared/lib/live-reserve-adapter-descriptors.ts` resolves those identifiers to Zod schemas only for config/registry consumers. `LIVE_RESERVE_ADAPTER_KEYS`, `LiveReserveAdapterKey`, definitions, schema lookups, provenance lookups, and display lookups are derived compatibility projections; key-only consumers do not initialize the Zod schema catalog. Four important descriptor properties are not user-configured per coin:
 
 | Property              | Meaning                                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -197,11 +197,11 @@ the end of every healthy run.
 
 Cron result statuses:
 
-| Status     | When                                                                               |
-| ---------- | ---------------------------------------------------------------------------------- |
-| `ok`       | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)`   |
+| Status     | When                                                                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ok`       | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)`                                                                                                        |
 | `degraded` | At least one configured coin synced and `failed + skipped > ceil(total * 0.1)`; OR no coin synced but every skip was a circuit-breaker hold (no real failures, no budget-deferred tail) |
-| `error`    | No configured coin synced and at least one coin truly failed or was budget-deferred (`failed > 0` or `deferredSkipped > 0`) |
+| `error`    | No configured coin synced and at least one coin truly failed or was budget-deferred (`failed > 0` or `deferredSkipped > 0`)                                                             |
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
@@ -402,69 +402,69 @@ Fallback, template-fallback, and unavailable responses use a shorter edge cache 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
 This table reflects the shared adapter registry. `Configured coins` can be `0` for deliberately parked implementations retained for a future binding.
 
-| Adapter                    | Primary input                                    | Semantics                                             | Configured coins |
-| -------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
-| `abracadabra`              | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `accountable`              | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
-| `anzen-usdz`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `asymmetry`                | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `attestation-pdf-index`    | `http-html`                                      | `attestation-mix`                                     | 8                |
-| `blast-usdb-yield-manager` | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `btcfi`                    | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `cap-vault`                | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 18               |
-| `chainlink-por`            | `onchain-evm`                                    | `attestation-mix`                                     | 5                |
-| `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
-| `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 61               |
-| `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 36               |
-| `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `evm-branch-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 9                |
-| `falcon`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `fdusd-transparency`       | `http-html`                                      | `attestation-mix`                                     | 1                |
-| `frax-balance-sheet`       | `http-json`                                      | `attestation-mix`                                     | 3                |
-| `frax-fpi-collateral`      | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `fx`                       | `http-json` / `onchain-evm`                     | `collateral-mix`                                      | 1                |
-| `gho`                      | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `infinifi`                 | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `jupusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `liquity-v1`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `liquity-native-active-pool` | `onchain-evm`                                   | `collateral-mix`                                      | 1                |
-| `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 6                |
-| `lista`                    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 7                |
-| `m0-wrapper-underlying`    | `onchain-evm`                                    | `single-asset`                                        | 3                |
-| `mento`                    | `http-json`                                      | `collateral-mix`                                      | 13               |
-| `nest-vault-positions`     | `http-json`                                      | `collateral-mix`                                      | 5                |
-| `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 0                |
-| `origin-vault-balances`    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `pusd-vault`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `quantoz-transparency`     | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
-| `resupply-pairs`           | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `reserve-protocol-dtf`     | `http-json` / `onchain-evm`                     | `collateral-mix`                                      | 1                |
-| `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 3                |
-| `ripple-transparency`      | `http-html`                                      | `attestation-mix`                                     | 1                |
-| `river-protocol-info`      | `http-json`                                      | `protocol-reserve`                                    | 1                |
-| `sgforge-coinvertible`     | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `sgho-wrapper`             | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 45               |
-| `sky-makercore`            | `http-json`                                      | `collateral-mix`                                      | 2                |
-| `solstice-attestation`     | `http-json`                                      | `protocol-reserve`                                    | 1                |
-| `spiko-api`                | `http-json`                                      | `single-asset`                                        | 6                |
-| `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
-| `tether-transparency`      | `http-json`                                      | `attestation-mix`                                     | 2                |
-| `united-por`               | `http-json`                                      | `single-asset`                                        | 1                |
-| `usd1-bundle-oracle`       | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `usdai-proof-of-reserves`  | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `usdgo-transparency`       | `http-json`                                      | `attestation-mix`                                     | 1                |
-| `usdd-data-platform`       | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `usdh-native-markets`      | `http-html`                                      | `attestation-mix`                                     | 1                |
-| `usdtb-transparency`       | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `yamato`                   | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `zephyr-scanner`           | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| Adapter                      | Primary input                                    | Semantics                                             | Configured coins |
+| ---------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
+| `abracadabra`                | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `accountable`                | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
+| `anzen-usdz`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `asymmetry`                  | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `attestation-pdf-index`      | `http-html`                                      | `attestation-mix`                                     | 8                |
+| `blast-usdb-yield-manager`   | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `btcfi`                      | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `cap-vault`                  | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
+| `chainlink-nav`              | `onchain-evm`                                    | `single-asset`                                        | 18               |
+| `chainlink-por`              | `onchain-evm`                                    | `attestation-mix`                                     | 5                |
+| `circle-transparency`        | `http-html`                                      | `attestation-mix`                                     | 2                |
+| `collateral-positions-api`   | `http-json`                                      | `collateral-mix`                                      | 2                |
+| `crvusd`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `curated-validated`          | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 61               |
+| `dola-inverse`               | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `erc4626-single-asset`       | `onchain-evm`                                    | `single-asset`                                        | 36               |
+| `ethena`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `evm-branch-balances`        | `onchain-evm`                                    | `collateral-mix`                                      | 9                |
+| `falcon`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `fdusd-transparency`         | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `frax-balance-sheet`         | `http-json`                                      | `attestation-mix`                                     | 3                |
+| `frax-fpi-collateral`        | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `fx`                         | `http-json` / `onchain-evm`                      | `collateral-mix`                                      | 1                |
+| `gho`                        | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
+| `infinifi`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `jupusd`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `liquity-v1`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `liquity-native-active-pool` | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `liquity-v2-branches`        | `onchain-evm`                                    | `collateral-mix`                                      | 6                |
+| `lista`                      | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `m0`                         | `http-json`                                      | `protocol-reserve`                                    | 7                |
+| `m0-wrapper-underlying`      | `onchain-evm`                                    | `single-asset`                                        | 3                |
+| `mento`                      | `http-json`                                      | `collateral-mix`                                      | 13               |
+| `nest-vault-positions`       | `http-json`                                      | `collateral-mix`                                      | 5                |
+| `openeden-usdo`              | `http-json`                                      | `collateral-mix`                                      | 0                |
+| `origin-vault-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `pusd-vault`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `quantoz-transparency`       | `http-html`                                      | `attestation-mix`                                     | 2                |
+| `re-metrics`                 | `http-html`                                      | `collateral-mix`                                      | 1                |
+| `resupply-pairs`             | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `reserve-protocol-dtf`       | `http-json` / `onchain-evm`                      | `collateral-mix`                                      | 1                |
+| `reservoir`                  | `http-json`                                      | `protocol-reserve`                                    | 3                |
+| `ripple-transparency`        | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `river-protocol-info`        | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| `sgforge-coinvertible`       | `http-html`                                      | `attestation-mix`                                     | 2                |
+| `sgho-wrapper`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `single-asset`               | `http-json` / `onchain-evm`                      | `single-asset`                                        | 45               |
+| `sky-makercore`              | `http-json`                                      | `collateral-mix`                                      | 2                |
+| `solstice-attestation`       | `http-json`                                      | `protocol-reserve`                                    | 1                |
+| `spiko-api`                  | `http-json`                                      | `single-asset`                                        | 6                |
+| `superstate-liquidity`       | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
+| `tether-transparency`        | `http-json`                                      | `attestation-mix`                                     | 2                |
+| `united-por`                 | `http-json`                                      | `single-asset`                                        | 1                |
+| `usd1-bundle-oracle`         | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `usdai-proof-of-reserves`    | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `usdgo-transparency`         | `http-json`                                      | `attestation-mix`                                     | 1                |
+| `usdd-data-platform`         | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `usdh-native-markets`        | `http-html`                                      | `attestation-mix`                                     | 1                |
+| `usdtb-transparency`         | `http-json`                                      | `collateral-mix`                                      | 1                |
+| `yamato`                     | `onchain-evm`                                    | `single-asset`                                        | 1                |
+| `zephyr-scanner`             | `http-json`                                      | `protocol-reserve`                                    | 1                |
 
 `reserve-protocol-dtf` keeps its legacy Reserve discovery API path for
 timestampless fallback reads, but score-grade configs can use the direct
@@ -486,7 +486,7 @@ score-grade only while the permissionless guard is open; if the guard is closed
 above the threshold, the route is surfaced as cohort-limited and remains
 excluded from Safety Score liquidity.
 
-Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts` and covered by the registry tests. Every registered key has one of these statuses:
+Adapter key intent is declared with the adapter descriptor and covered by the registry tests. Every registered key has one of these statuses:
 
 | Status    | Meaning                                                                   |
 | --------- | ------------------------------------------------------------------------- |
@@ -497,11 +497,11 @@ Adapter key intent is tracked in `shared/lib/live-reserve-adapter-provenance.ts`
 
 Current unbound registered adapter is explicit:
 
-| Adapter                | Status   | Rationale                                                                                                            | Parked since | Next review |
-| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------- |
-| `openeden-usdo`        | `parked` | OpenEden USDO adapter is retained, but its live config was suspended because OpenEden's gateway blocks Cloudflare Worker egress; rebind once the issuer allowlists our egress. | 2026-06-25   | 2026-12-25  |
+| Adapter         | Status   | Rationale                                                                                                                                                                      | Parked since | Next review |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ----------- |
+| `openeden-usdo` | `parked` | OpenEden USDO adapter is retained, but its live config was suspended because OpenEden's gateway blocks Cloudflare Worker egress; rebind once the issuer allowlists our egress. | 2026-06-25   | 2026-12-25  |
 
-`parked` and `retired` adapters carry `parkedSince` and `nextReview` ISO dates in `shared/lib/live-reserve-adapter-provenance.ts`. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
+`parked` and `retired` descriptors carry `parkedSince` and `nextReview` ISO dates. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
 
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current CHFAU StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself. Until Frankencoin's price API publishes CHFAU directly, this route values the CHFAU bridge balance through the existing VCHF CHF-price proxy.
 
@@ -591,16 +591,13 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 ### Adding a New Adapter
 
-To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these eight surfaces in order. The registry test at `worker/src/cron/reserve-adapters/__tests__/registry.test.ts` will fail if any of (1)–(4) drift; (5)–(8) are caught by validators or surface gaps in the next sync.
+To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these surfaces in order. The shared projection test and Worker registry test fail if descriptor or fetcher coverage drifts.
 
-1. **Adapter fetch function** — add `worker/src/cron/reserve-adapters/<key>.ts` exporting `async function fetch<Name>Reserves(coin, config, signal, ctx?): Promise<AdapterResult>`. Adapter contract lives in `worker/src/cron/reserve-adapters/types.ts` (`AdapterFn`, `AdapterContext`, `AdapterResult`). Use helpers from `./helpers` rather than rebuilding fetch/parse/freshness primitives.
-2. **Registry wiring** — import the fetch function and add it to `ADAPTER_FNS` in `worker/src/cron/reserve-adapters/index.ts`.
-3. **Adapter key union** — append the new key to `LIVE_RESERVE_ADAPTER_KEYS` in `shared/types/live-reserve-adapter-keys.ts:1` (re-exported from `shared/types/live-reserves.ts`). The `LiveReserveAdapterKey` union (`live-reserve-adapter-keys.ts:60`) is derived from this array.
-4. **Adapter definition** — add an entry to `LIVE_RESERVE_ADAPTER_DEFINITIONS` in `shared/lib/live-reserve-adapters-definitions.ts` declaring `sourceModel`, `evidenceClass`, `sharedSourceMode`, `redemptionTelemetry`, and optional `validation`. Determines whether the adapter renders as `Live`, `Curated-Validated`, or `Proof` and which freshness invariants run.
-5. **Provenance entry** — add the adapter to `LIVE_RESERVE_ADAPTER_PROVENANCE` in `shared/lib/live-reserve-adapter-provenance.ts` (source URLs, license, review cadence, parked/active state).
-6. **Params schema** — add a Zod schema to `adapterParamsSchemas` in `shared/lib/live-reserve-adapters-schemas.ts`. `parseLiveReserveAdapterParams("<key>", config.params)` resolves to this schema in the adapter body. Also extend `LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS` in the same file if the adapter takes a primary input kind not yet declared.
-7. **Test + fixture** — add `worker/src/cron/reserve-adapters/__tests__/<key>.test.ts`. HTTP-html adapters need a captured fixture in `__tests__/fixtures/<key>.html`; HTTP-json adapters fixture the payload inline; on-chain adapters mock `fetchOnchainRawCall` / `fetchOnchainUint256` returns.
-8. **Documentation** — register the adapter in the Adapter Registry table above and add a one-line note in this file's helper/adapter notes section if it introduces non-obvious semantics.
+1. **Params schema, when needed** — define a reusable Zod schema in `shared/lib/live-reserve-adapter-schema-primitives.ts` and expose it through `LIVE_RESERVE_PARAM_SCHEMAS`. Reuse `none` or another existing schema when the shape already matches.
+2. **Descriptor declaration** — add one entry to `LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS` in `shared/lib/live-reserve-adapter-declarations.ts`. Declare accepted primary input kinds, params-schema identifier, source/evidence class, source-sharing policy, supported semantics/versions, redemption telemetry, validation policy, and only non-default provenance or display metadata. The key union and all shared lookup maps derive from this entry.
+3. **Adapter fetch function** — add `worker/src/cron/reserve-adapters/<key>.ts` exporting `async function fetch<Name>Reserves(coin, config, signal, ctx?): Promise<AdapterResult>`. Adapter contract lives in `worker/src/cron/reserve-adapters/types.ts` (`AdapterFn`, `AdapterContext`, `AdapterResult`). Use helpers from `./helpers` rather than rebuilding fetch/parse/freshness primitives.
+4. **Worker fetcher wiring** — import the fetch function and add it to `LIVE_RESERVE_ADAPTER_FETCHERS` in `worker/src/cron/reserve-adapters/index.ts`. This remains separate because Worker implementations cannot enter the runtime-neutral shared registry.
+5. **Config, test, fixture, and docs** — bind the coin's `liveReservesConfig`, add `worker/src/cron/reserve-adapters/__tests__/<key>.test.ts`, capture an HTTP-html fixture when applicable, and register non-obvious semantics in the Adapter Registry notes above.
 
 Minimal scaffold (HTTP-json single-asset shape):
 
@@ -616,7 +613,10 @@ import {
   requireJsonInput,
 } from "./helpers";
 
-interface MyAdapterPayload { totalReserves: number; updatedAt?: string }
+interface MyAdapterPayload {
+  totalReserves: number;
+  updatedAt?: string;
+}
 
 export async function fetchMyAdapterReserves(
   _coin: StablecoinMeta,
@@ -660,20 +660,24 @@ export async function fetchMyAdapterReserves(
 
 ## File Index
 
-| File                                             | Role                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `shared/types/live-reserves.ts`                  | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                                   |
-| `shared/lib/live-reserve-adapters.ts`            | Shared adapter registry, source/evidence classes, validation policy, and config schemas                |
-| `shared/lib/stablecoins/registry.ts`             | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
-| `worker/src/cron/sync-live-reserves.ts`          | 4-hourly sync orchestration and cron result statuses                                                   |
-| `worker/src/cron/reserve-adapters/index.ts`      | Adapter registry                                                                                       |
-| `worker/src/cron/reserve-adapters/helpers.ts`    | Shared adapter fetch / normalization helpers                                                           |
-| `worker/src/lib/live-reserves-store.ts`          | Public facade over the live-reserve store helpers                                                      |
-| `worker/src/lib/live-reserves-store-read.ts`     | D1 read/query helpers and authoritative row loaders                                                    |
-| `worker/src/lib/live-reserves-store-write.ts`    | D1 write paths and history pruning                                                                     |
-| `worker/src/lib/live-reserves-store-overview.ts` | Status overview, scoring-eligible freshness checks, and authoritative snapshot maps                    |
-| `worker/src/lib/live-reserves-store-views.ts`    | Detail/API reserve-result resolution and curated/static fallback handling                              |
-| `worker/src/lib/live-reserves-store-shared.ts`   | Shared live-reserve store types, constants, and row mapping                                            |
-| `worker/src/api/stablecoin-reserves.ts`          | Public API handler                                                                                     |
-| `src/hooks/use-stablecoin-reserves.ts`           | Frontend query hook                                                                                    |
-| `src/hooks/use-stablecoin-detail-view-model.ts`  | Detail-page integration                                                                                |
+| File                                                   | Role                                                                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `shared/types/live-reserve-core.ts`                    | Runtime-neutral reserve descriptor enums, input types, and validation policy                           |
+| `shared/types/live-reserves.ts`                        | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                                   |
+| `shared/lib/live-reserve-adapter-declarations.ts`      | Lightweight single adapter key/schema-id/definition/provenance/display declaration                     |
+| `shared/lib/live-reserve-adapter-descriptors.ts`       | Zod-resolved descriptor registry plus derived compatibility projections                                |
+| `shared/lib/live-reserve-adapter-schema-primitives.ts` | Reusable Zod config/input schema primitives consumed by descriptors                                    |
+| `shared/lib/live-reserve-adapters.ts`                  | Stable shared facade for descriptor projections and config parsing                                     |
+| `shared/lib/stablecoins/registry.ts`                   | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
+| `worker/src/cron/sync-live-reserves.ts`                | 4-hourly sync orchestration and cron result statuses                                                   |
+| `worker/src/cron/reserve-adapters/index.ts`            | Exhaustive Worker-only adapter fetcher map and runtime registry                                        |
+| `worker/src/cron/reserve-adapters/helpers.ts`          | Shared adapter fetch / normalization helpers                                                           |
+| `worker/src/lib/live-reserves-store.ts`                | Public facade over the live-reserve store helpers                                                      |
+| `worker/src/lib/live-reserves-store-read.ts`           | D1 read/query helpers and authoritative row loaders                                                    |
+| `worker/src/lib/live-reserves-store-write.ts`          | D1 write paths and history pruning                                                                     |
+| `worker/src/lib/live-reserves-store-overview.ts`       | Status overview, scoring-eligible freshness checks, and authoritative snapshot maps                    |
+| `worker/src/lib/live-reserves-store-views.ts`          | Detail/API reserve-result resolution and curated/static fallback handling                              |
+| `worker/src/lib/live-reserves-store-shared.ts`         | Shared live-reserve store types, constants, and row mapping                                            |
+| `worker/src/api/stablecoin-reserves.ts`                | Public API handler                                                                                     |
+| `src/hooks/use-stablecoin-reserves.ts`                 | Frontend query hook                                                                                    |
+| `src/hooks/use-stablecoin-detail-view-model.ts`        | Detail-page integration                                                                                |
