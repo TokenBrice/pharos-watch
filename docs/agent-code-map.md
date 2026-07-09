@@ -309,6 +309,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/lib/proxy-paths.ts` - OPS_ADMIN_PROXY_PREFIX, SITE_DATA_PROXY_PREFIX, resolveOpsAdminUpstreamPath, resolveSiteDataRequestedPath
 - `functions/lib/proxy-utils.ts` - buildProxyResponse, buildUpstreamHeaders, isHtmlResponse, jsonError, summarizeFetchError
 - `functions/lib/request-attribution.ts` - REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV, isRequestSourceAttributionDisabled, recordSiteDataRequest, resetSiteDataRequestAttributionStateForTests
+- `functions/lib/selector-canonical-snapshot.ts` - SelectorCanonicalSnapshotEnv, recomputeVerifiedSelectorSnapshot
 - `functions/lib/site-api-env.ts` - SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, SiteDataProxyEnv, SiteDataProxyEnvIssue, resolveSiteApiOrigin
 - `functions/lib/site-data-origin.ts` - rejectIfNotSiteDataUiOrigin
 - `functions/lib/trusted-upstream-origin.ts` - resolveTrustedHttpsOrigin
@@ -699,6 +700,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/build-l2beat-safety-score-candidates.test.ts`
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
+- `scripts/__tests__/check-cli-args-policy.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
 - `scripts/__tests__/check-cron-abort-contract.test.ts` - helperDropsSignal, run, scheduled
 - `scripts/__tests__/check-cron-connection-budget.test.ts`
@@ -745,5 +747,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/generated-artifact-entrypoints.test.ts`
 - `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
-- `scripts/__tests__/lighthouse-static-export.test.ts`
-- ... 233 more files omitted; use `rg --files scripts` for the full list.
+- ... 236 more files omitted; use `rg --files scripts` for the full list.
