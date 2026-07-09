@@ -834,7 +834,7 @@ describe("identifyCoverageGaps", () => {
         stablecoinId: "reusd-re-protocol",
         code: "convert-to-assets-empty",
         since: "2026-03-15",
-        nextReviewAt: "2026-07-09",
+        nextReviewAt: "2026-08-09",
         sourceKey: "onchain:reusd-re-protocol",
         chain: "ethereum",
         contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
@@ -861,13 +861,13 @@ describe("probeQuarantinedDeterministicAdapters", () => {
       stablecoinId: "reusd-re-protocol",
       code: "convert-to-assets-empty",
       since: "2026-03-15",
-      nextReviewAt: "2026-07-09",
+      nextReviewAt: "2026-08-09",
     },
     {
       stablecoinId: "scrvusd-curve",
       code: "wrapper-not-yet-supported",
       since: "2026-04-11",
-      nextReviewAt: "2026-07-09",
+      nextReviewAt: "2026-10-09",
     },
   ];
   const chainRpcs = new Map<string, ChainRpcConfig>([
@@ -907,7 +907,7 @@ describe("probeQuarantinedDeterministicAdapters", () => {
       stablecoinId: "reusd-re-protocol",
       code: "convert-to-assets-empty",
       since: "2026-03-15",
-      nextReviewAt: "2026-07-09",
+      nextReviewAt: "2026-08-09",
       sourceKey: "onchain:reusd-re-protocol",
       chain: "ethereum",
       contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",

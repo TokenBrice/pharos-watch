@@ -263,14 +263,14 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
   "scrvusd-curve": {
     code: "wrapper-not-yet-supported",
     since: "2026-04-11",
-    nextReviewAt: "2026-07-09",
-    note: "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep quarantined because the dedicated current-rate reader remains canonical; generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY",
   },
   "reusd-re-protocol": {
     code: "convert-to-assets-empty",
     since: "2026-03-15",
-    nextReviewAt: "2026-07-09",
-    note: "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
+    nextReviewAt: "2026-08-09",
+    note: "2026-07-09 review: keep quarantined pending a successful monthly probe or protocol-specific deterministic reader; generic convertToAssets probe returns empty data",
   },
 };
 
@@ -322,8 +322,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed off-chain Binance account yield product; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for off-chain Binance account yield product; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "bd-basedollar": {
     code: "no-public-yield-source",
@@ -344,8 +344,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed issuer-distributed gold leasing yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for issuer-distributed gold leasing yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "gynusd-gyndore": {
     code: "pre-launch",
@@ -361,38 +361,38 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "home-homecoin": {
     code: "issuer-distributed-yield",
     since: "2026-05-22",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed issuer-distributed home-loan payment yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for issuer-distributed home-loan payment yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "gusd-gate": {
     code: "off-chain-account-product",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Gate account-product yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for Gate account-product yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000031-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000033-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000089-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pc0000101-tradable": {
     code: "private-credit-note",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-10-09",
+    note: "2026-07-09 review: keep intentional gap for reviewed Tradable private-credit note; no public runtime APY feed is wired or confirmed for holder-rate resolution",
   },
   "pusd-polaris": {
     code: "no-public-yield-source",
@@ -402,8 +402,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "stkgho-umbrella-aave": {
     code: "external-emissions-only",
     since: "2026-04-14",
-    nextReviewAt: "2026-07-09",
-    note: "reviewed Umbrella external emissions over a 1:1 GHO staking receipt; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-08-09",
+    note: "2026-07-09 review: keep intentional gap until an emissions-specific adapter is scoped; reviewed Umbrella external emissions over a 1:1 GHO staking receipt, with no public runtime APY feed wired or confirmed for holder-rate resolution",
   },
   "trusd-tori": {
     code: "pre-launch",

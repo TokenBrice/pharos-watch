@@ -90,6 +90,8 @@ Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIEL
 
 When promoting an adapter out of `quarantined` or `intentional-gap`, remove the typed entry (the legacy string map derives from the typed map, so a single edit propagates). Always set `since` to the date the lifecycle change happens; set `nextReviewAt` when the gap is expected to be revisited soon.
 
+When a lifecycle review date comes due and the adapter stays quarantined or intentionally uncovered, update the typed reason `note` with the review date and disposition, then move `nextReviewAt` to the next concrete review window. Do not leave past-due review dates in the registry after a coverage-drain pass.
+
 ## Decision Ledger Retention (v8.14)
 
 - Every `yield_source_decisions` row is tagged with a `retention_reason` of `trend` or `audit`.

@@ -282,14 +282,14 @@ describe("yield config registry", () => {
     expect(BigInt(QUARANTINED_DETERMINISTIC_PROBE_CONFIGS[0].inputAmount)).toBe(ONE_E18_INPUT_AMOUNT);
   });
 
-  it("tracks the July quarantine review date in typed lifecycle metadata", () => {
+  it("tracks current quarantine review windows in typed lifecycle metadata", () => {
     expect(YIELD_ADAPTER_LIFECYCLE["scrvusd-curve"]).toMatchObject({
       lifecycle: "quarantined",
-      reason: expect.objectContaining({ nextReviewAt: "2026-07-09" }),
+      reason: expect.objectContaining({ nextReviewAt: "2026-10-09" }),
     });
     expect(YIELD_ADAPTER_LIFECYCLE["reusd-re-protocol"]).toMatchObject({
       lifecycle: "quarantined",
-      reason: expect.objectContaining({ nextReviewAt: "2026-07-09" }),
+      reason: expect.objectContaining({ nextReviewAt: "2026-08-09" }),
     });
   });
 
