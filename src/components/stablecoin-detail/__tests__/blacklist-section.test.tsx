@@ -145,4 +145,19 @@ describe("BlacklistSection", () => {
     render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
     expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
   });
+
+  it("renders cached summary data with a stale notice when refresh fails", () => {
+    const cachedSummary = summaryStub();
+    vi.mocked(useBlacklistSummary).mockReturnValue({
+      ...cachedSummary,
+      error: new Error("summary refresh failed"),
+      dataUpdatedAt: Date.parse("2026-07-10T00:00:00Z"),
+      refetch: vi.fn(),
+    } as ReturnType<typeof useBlacklistSummary>);
+
+    render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+
+    expect(screen.getByRole("status").textContent).toContain("refresh failed; showing the last available data");
+    expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
+  });
 });

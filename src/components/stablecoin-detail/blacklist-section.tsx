@@ -62,6 +62,14 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
           <p className="mt-1 text-sm text-muted-foreground">
             Addresses the issuer has frozen, released, or destroyed on this asset.
           </p>
+          {state.state === "stale-with-data" ? (
+            <QueryStateNotice
+              state="stale-with-data"
+              label="Blacklist activity data"
+              dataUpdatedAt={state.dataUpdatedAt}
+              onRetry={() => void state.refetch()}
+            />
+          ) : null}
           {state.state === "unavailable" ? (
             <QueryStateNotice
               state="unavailable"
@@ -70,14 +78,6 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
             />
           ) : isLoading || !summary ? (
             <>
-              {state.state === "stale-with-data" ? (
-                <QueryStateNotice
-                  state="stale-with-data"
-                  label="Blacklist activity data"
-                  dataUpdatedAt={state.dataUpdatedAt}
-                  onRetry={() => void state.refetch()}
-                />
-              ) : null}
               <BlacklistDetailStats symbol={symbol} stats={undefined} isLoading />
               <Skeleton className="h-[220px] w-full rounded-xl sm:h-[260px]" />
             </>
