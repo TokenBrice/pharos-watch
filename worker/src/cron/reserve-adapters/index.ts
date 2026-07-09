@@ -50,6 +50,7 @@ import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
+import { fetchTetherTransparencyReserves } from "./tether-transparency";
 import { fetchUnitedPorReserves } from "./united-por";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
 import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
@@ -115,6 +116,7 @@ const ADAPTER_FNS = {
   "sky-makercore": fetchSkyMakercoreReserves,
   "spiko-api": fetchSpikoApiReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
+  "tether-transparency": fetchTetherTransparencyReserves,
   "united-por": fetchUnitedPorReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
   "usdh-native-markets": fetchUsdhNativeMarketsReserves,

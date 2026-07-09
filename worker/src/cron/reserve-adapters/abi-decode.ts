@@ -41,3 +41,16 @@ export function decodeAddressArrayWord(raw: string | null | undefined): `0x${str
     return null;
   }
 }
+
+export function decodeBytes32ArrayWord(raw: string | null | undefined): `0x${string}`[] | null {
+  if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
+  try {
+    const [items] = decodeAbiParameters(
+      [{ type: "bytes32[]" }],
+      raw as `0x${string}`,
+    ) as readonly [`0x${string}`[]];
+    return items.map((item) => item.toLowerCase() as `0x${string}`);
+  } catch {
+    return null;
+  }
+}

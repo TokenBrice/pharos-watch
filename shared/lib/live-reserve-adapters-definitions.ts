@@ -424,9 +424,12 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
   mento: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
-    sharedSourceMode: "source-invariant",
+    // Per-coin on-chain redemption reads (broker-pool/liquity-v2-cr/fpmm-pool)
+    // make the adapter's output coin-specific, so results can no longer be
+    // shared across coins within a run.
+    sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -611,6 +614,22 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  // NOTE(owner-review): evidenceClass "independent" mirrors the frax-balance-sheet
+  // issuer-balance-sheet precedent (live total assets/liabilities + freshness,
+  // configured static composition), but the totals here are Tether's own
+  // self-published transparency.json rather than a third-party-audited feed.
+  // Flagged for owner review of whether this should instead be "static-validated".
+  "tether-transparency": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "source-invariant",
+    configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,

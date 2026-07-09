@@ -82,9 +82,13 @@ describe("reserve adapter real-registry smoke", () => {
     expect(result).toMatchObject({
       status: "synced",
       breakerOutcome: true,
-      hasWarnings: false,
+      // ceur-celo's live redemption telemetry (Mento broker-pool) needs
+      // ctx.chainRpcs to resolve a Celo RPC candidate; this test's ctx omits
+      // it, so the redemption read fails closed with a degraded warning while
+      // the reserve composition below is persisted unaffected.
+      hasWarnings: true,
     });
-    expect(result.warningMessages).toEqual([]);
+    expect(result.warningMessages).toEqual(["ceur-celo:mento-redemption-telemetry-failed"]);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(fetchSpy.mock.calls[0]?.[0]).toBe(
       "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve",
@@ -97,7 +101,7 @@ describe("reserve adapter real-registry smoke", () => {
     expect(compositionInsert).toBeDefined();
     expect(compositionInsert!.binds[0]).toBe("ceur-celo");
     expect(compositionInsert!.binds[3]).toBe("mento");
-    expect(compositionInsert!.binds[6]).toBe(0);
+    expect(compositionInsert!.binds[6]).toBe(1);
 
     const slices = JSON.parse(String(compositionInsert!.binds[1])) as Array<Record<string, unknown>>;
     expect(slices).toEqual(expect.arrayContaining([
@@ -113,7 +117,9 @@ describe("reserve adapter real-registry smoke", () => {
       stableReservePct: 81,
     });
     expect(typeof metadata.durationMs).toBe("number");
-    expect(compositionInsert!.binds[7]).toBeNull();
+    expect(JSON.parse(String(compositionInsert!.binds[7]))).toEqual([
+      expect.objectContaining({ code: "mento-redemption-telemetry-failed" }),
+    ]);
 
     const attemptHistoryInsert = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history (")
@@ -121,7 +127,7 @@ describe("reserve adapter real-registry smoke", () => {
     expect(attemptHistoryInsert).toBeDefined();
     expect(attemptHistoryInsert!.binds[0]).toBe("ceur-celo");
     expect(attemptHistoryInsert!.binds[2]).toBe("mento");
-    expect(attemptHistoryInsert!.binds[5]).toBe("ok");
+    expect(attemptHistoryInsert!.binds[5]).toBe("degraded");
     expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE reserve_sync_state"))).toBe(true);
   });
 });

@@ -253,20 +253,22 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("promotes the next non-top-100 tranche to reviewed medium-confidence routes", () => {
+    // cUSD/cEUR moved to live reserve-sync-metadata capacity (Mento broker-pool
+    // redemption telemetry) on 2026-07-09; see the Mento redemption batch.
     expect(getRedemptionBackstopConfig("cusd-celo")).toMatchObject({
       routeFamily: "collateral-redeem",
       outputAssetType: "mixed-collateral",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-07-09",
     });
 
     expect(getRedemptionBackstopConfig("ceur-celo")).toMatchObject({
       routeFamily: "collateral-redeem",
       outputAssetType: "mixed-collateral",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-07-09",
     });
 
     expect(getRedemptionBackstopConfig("alusd-alchemix")).toMatchObject({

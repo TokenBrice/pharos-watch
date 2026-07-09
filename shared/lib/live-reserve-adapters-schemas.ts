@@ -578,9 +578,72 @@ const jupusdParamsSchema = z
   })
   .strict();
 
+// Broker-pool redemption: the coin's own token trades against a stable/USDm
+// counter asset in a Mento V2 BiPoolManager pool. `pools` names the token pair;
+// the adapter enumerates BiPoolManager.getExchangeIds()/getPoolExchange() at
+// runtime and matches by these addresses rather than hardcoding exchangeIds.
+const mentoBrokerPoolCounterAssetSchema = z
+  .object({
+    address: z.string(),
+    label: z.string().optional(),
+  })
+  .strict();
+
+const mentoBrokerPoolEntrySchema = z
+  .object({
+    selfTokenAddress: z.string(),
+    counterAsset: mentoBrokerPoolCounterAssetSchema,
+  })
+  .strict();
+
+const mentoBrokerPoolRedemptionParamsSchema = z
+  .object({
+    kind: z.literal("broker-pool"),
+    pools: z.array(mentoBrokerPoolEntrySchema).min(1),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+// Liquity-v2-fork CDP redemption (GBPm/mento-protocol/bold): capacity reads
+// ActivePool debt against the CDP's own token total supply.
+const mentoLiquityV2CrRedemptionParamsSchema = z
+  .object({
+    kind: z.literal("liquity-v2-cr"),
+    collateralRegistryAddress: z.string(),
+    troveManagerAddress: z.string(),
+    activePoolAddress: z.string(),
+    tokenAddress: z.string(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+// Mento V3 FPMM pool (JPYm/CHFm): capacity reads the USDm balance held by the
+// pool; no fee telemetry (FPMM fee getter is not verified).
+const mentoFpmmPoolRedemptionParamsSchema = z
+  .object({
+    kind: z.literal("fpmm-pool"),
+    poolAddress: z.string(),
+    usdmTokenAddress: z.string(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
+  mentoBrokerPoolRedemptionParamsSchema,
+  mentoLiquityV2CrRedemptionParamsSchema,
+  mentoFpmmPoolRedemptionParamsSchema,
+]);
+
 const mentoParamsSchema = z
   .object({
     cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm", "XOFm"]).optional(),
+    redemption: mentoRedemptionParamsSchema.optional(),
   })
   .strict();
 
@@ -600,6 +663,13 @@ const spikoApiParamsSchema = z
 const unitedPorParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
+  })
+  .strict();
+
+const tetherTransparencyParamsSchema = z
+  .object({
+    currencyIso: z.enum(["usdt", "xaut"]),
+    slices: z.array(ReserveSliceSchema).min(1),
   })
   .strict();
 
@@ -709,6 +779,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "spiko-api": { primaryInputKinds: ["http-json"], params: spikoApiParamsSchema },
   "superstate-liquidity": { primaryInputKinds: ["onchain-evm"], params: superstateLiquidityParamsSchema },
   "river-protocol-info": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "tether-transparency": { primaryInputKinds: ["http-json"], params: tetherTransparencyParamsSchema },
   "united-por": { primaryInputKinds: ["http-json"], params: unitedPorParamsSchema },
   "usdgo-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "usdh-native-markets": { primaryInputKinds: ["http-html"], params: noParamsSchema },

@@ -162,7 +162,7 @@
     "scoring": {
       "maxSourceAgeSec": 4000000
     },
-    "breakerScope": "mento-reserve",
+    "breakerScope": "mento-reserve-zarm",
     "display": {
       "url": "https://reserve.mento.org/",
       "label": "Mento Reserve"
@@ -171,6 +171,18 @@
       "primary": {
         "kind": "http-json",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    },
+    "params": {
+      "redemption": {
+        "kind": "broker-pool",
+        "pools": [
+          {
+            "selfTokenAddress": "0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6",
+            "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
+          }
+        ],
+        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
       }
     }
   },

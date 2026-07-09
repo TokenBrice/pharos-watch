@@ -220,7 +220,7 @@
     "scoring": {
       "maxSourceAgeSec": 4000000
     },
-    "breakerScope": "mento-reserve",
+    "breakerScope": "mento-reserve-cusd",
     "display": {
       "url": "https://reserve.mento.org/",
       "label": "Reserve"
@@ -229,6 +229,22 @@
       "primary": {
         "kind": "http-json",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    },
+    "params": {
+      "redemption": {
+        "kind": "broker-pool",
+        "pools": [
+          {
+            "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+            "counterAsset": { "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c", "label": "USDC" }
+          },
+          {
+            "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+            "counterAsset": { "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", "label": "USDT" }
+          }
+        ],
+        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
       }
     }
   },

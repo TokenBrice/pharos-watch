@@ -198,7 +198,13 @@
       }
     },
     "params": {
-      "cdpStablecoin": "CHFm"
+      "cdpStablecoin": "CHFm",
+      "redemption": {
+        "kind": "fpmm-pool",
+        "poolAddress": "0xDC81135fD82f02Cae736E261FB676B716663e8b8",
+        "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+        "sourceUrls": ["https://docs.mento.org/mento-v3"]
+      }
     }
   },
   "dependencies": [

@@ -20277,7 +20277,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "tether-transparency"
   },
   {
     "id": "usdtb-ethena",
@@ -23188,7 +23188,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "single-asset"
+    "liveReserveAdapter": "tether-transparency"
   },
   {
     "id": "xdai-gnosis",

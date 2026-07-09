@@ -3604,7 +3604,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-audm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -3617,6 +3617,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x7175504C455076F15c04A2F90a8e352281F492F9",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -7981,7 +7998,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-brlm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -7994,6 +8011,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -10116,7 +10150,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-cadm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -10129,6 +10163,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0xff4Ab19391af240c311c54200a492233052B6325",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -11248,7 +11299,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-ceur",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Reserve"
@@ -11261,6 +11312,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -12054,7 +12122,15 @@
         }
       },
       "params": {
-        "cdpStablecoin": "CHFm"
+        "cdpStablecoin": "CHFm",
+        "redemption": {
+          "kind": "fpmm-pool",
+          "poolAddress": "0xDC81135fD82f02Cae736E261FB676B716663e8b8",
+          "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+          "sourceUrls": [
+            "https://docs.mento.org/mento-v3"
+          ]
+        }
       }
     },
     "launchDate": "2025-06-06"
@@ -12723,7 +12799,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-copm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -12736,6 +12812,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x8A567e2aE79CA692Bd748aB832081C45de4041eA",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -13946,7 +14039,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-cusd",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Reserve"
@@ -13959,6 +14052,30 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "counterAsset": {
+                "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
+                "label": "USDC"
+              }
+            },
+            {
+              "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "counterAsset": {
+                "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
+                "label": "USDT"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -25822,7 +25939,18 @@
         }
       },
       "params": {
-        "cdpStablecoin": "GBPm"
+        "cdpStablecoin": "GBPm",
+        "redemption": {
+          "kind": "liquity-v2-cr",
+          "collateralRegistryAddress": "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb",
+          "troveManagerAddress": "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
+          "activePoolAddress": "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2",
+          "tokenAddress": "0xCCF663b1fF11028f0b19058d0f7B674004a40746",
+          "sourceUrls": [
+            "https://docs.mento.org/mento-v3/dive-deeper/cdp",
+            "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          ]
+        }
       }
     },
     "launchDate": "2025-04-13"
@@ -26832,7 +26960,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-ghsm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -26845,6 +26973,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0xfAeA5F3404bbA20D3cc2f8C4B0A888F55a3c7313",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -33777,7 +33922,15 @@
         }
       },
       "params": {
-        "cdpStablecoin": "JPYm"
+        "cdpStablecoin": "JPYm",
+        "redemption": {
+          "kind": "fpmm-pool",
+          "poolAddress": "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41",
+          "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+          "sourceUrls": [
+            "https://docs.mento.org/mento-v3"
+          ]
+        }
       }
     },
     "launchDate": "2025-06-06"
@@ -35370,7 +35523,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-kesm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -35383,6 +35536,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x456a3D042C0DbD3db53D5489e98dFb038553B0d0",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -47188,7 +47358,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-phpm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -47201,6 +47371,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },
@@ -70803,7 +70990,12 @@
           "https://dashboard.m0.org/stablecoins/usdnr",
           "https://docs.m0.org/get-started/resources/addresses/"
         ],
-        "rpcUrl": "https://ethereum.publicnode.com"
+        "rpcUrl": "https://ethereum.publicnode.com",
+        "additionalDeployments": [
+          {
+            "chain": "fluent"
+          }
+        ]
       }
     },
     "launchDate": "2026-04-24"
@@ -74792,13 +74984,37 @@
         "url": "https://tether.to/en/transparency",
         "label": "Tether Transparency"
       },
-      "adapter": "curated-validated",
+      "adapter": "tether-transparency",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://app.tether.to/transparency.json"
         }
+      },
+      "params": {
+        "currencyIso": "usdt",
+        "slices": [
+          {
+            "name": "Direct & indirect U.S. Treasury Bills",
+            "pct": 73.5,
+            "risk": "very-low"
+          },
+          {
+            "name": "Physical gold bars",
+            "pct": 10.4,
+            "risk": "very-low"
+          },
+          {
+            "name": "Bitcoin",
+            "pct": 3.7,
+            "risk": "medium"
+          },
+          {
+            "name": "Other reserves (cash & equivalents, secured loans, corporate bonds, other investments)",
+            "pct": 12.4,
+            "risk": "medium"
+          }
+        ]
       }
     },
     "launchDate": "2014-10-06"
@@ -85952,23 +86168,28 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "xaut-tether",
       "display": {
-        "url": "https://gold.tether.to/",
-        "label": "Tether Gold"
+        "url": "https://tether.to/en/transparency",
+        "label": "Tether Gold Transparency"
       },
-      "adapter": "single-asset",
+      "adapter": "tether-transparency",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://app.tether.to/transparency.json"
         }
       },
       "params": {
-        "label": "Physical gold bars (LBMA Good Delivery)",
-        "risk": "very-low"
+        "currencyIso": "xaut",
+        "slices": [
+          {
+            "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
+            "pct": 100,
+            "risk": "very-low"
+          }
+        ]
       }
     },
     "launchDate": "2020-01-23"
@@ -89857,7 +90078,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
-      "breakerScope": "mento-reserve",
+      "breakerScope": "mento-reserve-zarm",
       "display": {
         "url": "https://reserve.mento.org/",
         "label": "Mento Reserve"
@@ -89870,6 +90091,23 @@
         "primary": {
           "kind": "http-json",
           "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      },
+      "params": {
+        "redemption": {
+          "kind": "broker-pool",
+          "pools": [
+            {
+              "selfTokenAddress": "0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6",
+              "counterAsset": {
+                "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+                "label": "USDm"
+              }
+            }
+          ],
+          "sourceUrls": [
+            "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          ]
         }
       }
     },

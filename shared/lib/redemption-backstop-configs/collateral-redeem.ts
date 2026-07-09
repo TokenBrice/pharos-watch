@@ -17,10 +17,19 @@ import {
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
   REVIEWED_WRAPPER_WAVE_AT,
-  REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "./review-dates";
 const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
-const REVIEWED_MENTO_CDP_AT = REVIEWED_YIELD_COVERAGE_WAVE_AT;
+// Mento redemption batch: 13 coins' live reserve sync now reads direct
+// on-chain redemption telemetry (Broker/BiPoolManager pools, the GBPm
+// Liquity-v2-fork CDP, or the JPYm/CHFm FPMM pools), so their capacity model
+// moves from documented-bound to reserve-sync-metadata.
+const REVIEWED_MENTO_LIVE_REDEMPTION_AT = "2026-07-09";
+const MENTO_BIPOOLMANAGER_DOC = sourceRef(
+  "Mento BiPoolManager smart-contract docs",
+  "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager",
+  ["route", "capacity", "fees"],
+);
+const MENTO_V3_DOC = sourceRef("Mento V3 docs", "https://docs.mento.org/mento-v3", ["route"]);
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
@@ -43,9 +52,13 @@ function defineCollateralRecordEntries(configs: Record<string, RedemptionBacksto
   });
 }
 
-const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
+// JPYm/CHFm: live telemetry now reads the coin's Mento V3 FPMM pool USDm
+// balance as direct redemption capacity; the underlying CDP fee mechanics
+// (and its costModel) are unchanged, per reviewed docs.
+const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
-  ...documentedBoundSupplyFull(REVIEWED_MENTO_CDP_AT),
+  capacityModel: { kind: "reserve-sync-metadata" },
+  reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
   outputAssetType: "stable-single",
   costModel: undisclosedReviewedFee(
     "Mento CDP redemption/repayment path burns the FX stablecoin against USDm collateral at oracle value; public docs reviewed do not publish one global fixed redemption fee",
@@ -63,18 +76,24 @@ const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
       "access",
     ]),
     sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity", "fees", "settlement"]),
+    MENTO_V3_DOC,
   ],
   notes: [
-    "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption; live reserve sync reads the corresponding Mento dashboard CDP rows",
+    "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption.",
+    "Live reserve sync now reads the coin's Mento V3 FPMM pool USDm balance each run and reports it as direct redemption capacity, replacing the prior documented-bound/eventual-only model; no live fee telemetry is available for this pool shape.",
   ],
 };
 
-const mentoLocalFxCdpRedeemConfig: RedemptionBackstopConfig = {
+// cUSD (USDm), cEUR (EURm), and the 8 local-FX stables all redeem through a
+// Mento Broker/BiPoolManager pool against a stable or USDm counter asset.
+const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
-  ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+  capacityModel: { kind: "reserve-sync-metadata" },
+  reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
   outputAssetType: "stable-single",
-  costModel: undisclosedReviewedFee(
-    "Mento CDP redemptions follow Liquity v2-style mechanics against USDm collateral with FX oracle pricing; public docs reviewed do not publish one global fixed redemption fee",
+  costModel: documentedVariableFee(
+    "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
+    "formula",
   ),
   docs: [
     sourceRef("Mento CDP docs", "https://docs.mento.org/mento-v3/dive-deeper/cdp", [
@@ -93,22 +112,24 @@ const mentoLocalFxCdpRedeemConfig: RedemptionBackstopConfig = {
     ]),
     sourceRef("Mento V3 addresses", "https://docs.mento.org/mento-v3/build/deployments/addresses", ["route", "access"]),
     sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+    MENTO_BIPOOLMANAGER_DOC,
+    MENTO_V3_DOC,
   ],
   notes: [
     "Mento V3 docs describe FX stables as USDm-collateralized Liquity v2-style CDP debt, with normal redemptions following the CDP branch mechanics.",
     "FX market-hours gating can temporarily block normal redemptions and close-trove operations; current docs list Friday 21:00 UTC through Sunday 23:00 UTC plus specified holidays.",
-    "Current Mento reserve sync exposes reserve-wide collateral for these local-FX rows, so this static route stays documented-bound/eventual-only until per-symbol CDP telemetry is available.",
+    "Live reserve sync now enumerates the coin's Mento Broker/BiPoolManager pool (getExchangeIds/getPoolExchange) each run and reports the current counter-asset bucket depth and pool spread as direct redemption capacity and fee, replacing the prior documented-bound/eventual-only model.",
   ],
 };
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
-  ...defineBatch(["gbpm-mento", "jpym-mento", "chfm-mento"], mentoCdpRedeemConfig, {
+  ...defineBatch(["jpym-mento", "chfm-mento"], mentoFpmmPoolRedeemConfig, {
     sourceFilePath: SOURCE_FILE_PATH,
   }),
   ...defineBatch(
     ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "phpm-mento", "zarm-mento"],
-    mentoLocalFxCdpRedeemConfig,
+    mentoBrokerPoolRedeemConfig,
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
   ...defineCollateralRecordEntries({
@@ -319,10 +340,12 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "cusd-celo": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
-        "Mento AMM burn-to-redeem against reserve assets at oracle rate; circuit breakers enforce safety bounds",
+        "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
+        "formula",
       ),
       docs: [
         sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", [
@@ -330,17 +353,22 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "capacity",
         ]),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+        MENTO_BIPOOLMANAGER_DOC,
+        MENTO_V3_DOC,
       ],
       notes: [
         "Mento docs describe cUSD as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+        "Live reserve sync now enumerates USDm's Mento Broker/BiPoolManager pools (getExchangeIds/getPoolExchange) each run, summing the matched USDC/USDT counter-asset bucket depths as direct redemption capacity and reporting the current pool spread as fee.",
       ],
     },
     "ceur-celo": {
       ...collateralRedeemBase,
-      ...reviewedDirectRedemptionSupplyFull,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
-        "BiPoolManager virtual AMM on Celo; mint/burn against reserve assets at oracle-enforced EUR rate; circuit breaker limits",
+        "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
+        "formula",
       ),
       docs: [
         sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", [
@@ -348,9 +376,45 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "capacity",
         ]),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+        MENTO_BIPOOLMANAGER_DOC,
+        MENTO_V3_DOC,
       ],
       notes: [
         "Mento docs describe cEUR as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+        "Live reserve sync now enumerates EURm's Mento Broker/BiPoolManager USDm/EURm pool (getExchangeIds/getPoolExchange) each run, reporting the USDm counter-asset bucket depth as direct redemption capacity and the current pool spread as fee.",
+      ],
+    },
+    "gbpm-mento": {
+      ...collateralRedeemBase,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
+      outputAssetType: "stable-single",
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef("Mento CDP docs", "https://docs.mento.org/mento-v3/dive-deeper/cdp", [
+          "route",
+          "capacity",
+          "access",
+          "settlement",
+          "fees",
+        ]),
+        sourceRef("Mento CDP smart-contract docs", "https://docs.mento.org/mento-v3/build/smart-contracts/cdps", [
+          "route",
+          "capacity",
+          "access",
+          "settlement",
+          "fees",
+        ]),
+        sourceRef("Mento V3 addresses", "https://docs.mento.org/mento-v3/build/deployments/addresses", [
+          "route",
+          "access",
+        ]),
+        sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+        MENTO_V3_DOC,
+      ],
+      notes: [
+        "GBPm is a mento-protocol/bold (Liquity v2 fork) CDP branch collateralized by USDm.",
+        "Live reserve sync now reads the branch's ActivePool debt against GBPm total supply each run, reporting the resulting ratio as direct redemption capacity, and CollateralRegistry.getRedemptionRateWithDecay() as the current redemption fee.",
       ],
     },
     "usdp-parallel": {

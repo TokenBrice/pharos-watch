@@ -1,11 +1,21 @@
+import { decodeAbiParameters } from "viem/utils";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters-schemas";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
+import { decodeBytes32ArrayWord } from "./abi-decode";
 import {
+  buildRedemptionSnapshotMetadata,
+  decimalNumberFromBigInt,
+  fetchErc20Balance,
+  fetchErc20TotalSupply,
   fetchJsonWithRetry,
+  fetchOnchainRateBps,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
   fetchTextWithRetry,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
@@ -506,6 +516,286 @@ async function fetchMentoDashboardTimestamp(
   }
 }
 
+// --- Redemption telemetry ---------------------------------------------------
+//
+// Independent per-coin on-chain reads on Celo (chain id 42220), run after the
+// analytics-API reserve composition above. Three shapes, matching how each
+// Mento family member actually redeems:
+//   - broker-pool: coin trades against a stable/USDm counter asset in a Mento
+//     V2 Broker/BiPoolManager pool (cUSD/USDm, cEUR/EURm, and the 8 local-FX
+//     stables).
+//   - liquity-v2-cr: a mento-protocol/bold (Liquity v2 fork) CDP branch
+//     (GBPm).
+//   - fpmm-pool: a Mento V3 FPMM pool that redeems into USDm (JPYm, CHFm).
+// Any read failure fails closed: no redemption telemetry is emitted for that
+// coin (a degraded warning is added instead) and the reserve composition
+// computed above is returned unaffected.
+
+type EvmOnchainInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
+
+const CELO_CHAIN = "celo";
+const CELO_ONCHAIN_INPUT: EvmOnchainInput = { kind: "onchain-evm", chain: CELO_CHAIN, rpcMode: "public-rpc" };
+
+// Mento V2 BiPoolManager on Celo; verified against forno.celo.org and
+// docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager (2026-07-09).
+const MENTO_BIPOOL_MANAGER_ADDRESS = "0x22d9db95E6Ae61c104A7B6F6C78D7993B94ec901";
+const GET_EXCHANGE_IDS_SELECTOR = "0xdc162e36"; // getExchangeIds()
+const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
+// PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
+const POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
+
+// mento-protocol/bold (GBPm) is a Liquity v2 fork sharing the ActivePool debt
+// and redemption-rate selectors already verified in liquity-v2-branches.ts.
+const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
+// The Mento fork's TroveManager has no hasBeenShutDown(); it exposes
+// shutdownTime() (0 = live, nonzero = branch shut down) - verified on-chain
+// against 0xb38aEf2b... on 2026-07-09 (hasBeenShutDown reverts there).
+const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
+const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
+
+const POOL_EXCHANGE_ABI_PARAMETERS = [
+  {
+    type: "tuple",
+    components: [
+      { name: "asset0", type: "address" },
+      { name: "asset1", type: "address" },
+      { name: "pricingModule", type: "address" },
+      { name: "bucket0", type: "uint256" },
+      { name: "bucket1", type: "uint256" },
+      { name: "lastBucketUpdate", type: "uint256" },
+      {
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "spread", type: "uint256" },
+          { name: "referenceRateFeedID", type: "address" },
+          { name: "referenceRateResetFrequency", type: "uint256" },
+          { name: "minimumReports", type: "uint256" },
+          { name: "stablePoolResetSize", type: "uint256" },
+        ],
+      },
+    ],
+  },
+] as const;
+
+interface MentoPoolExchange {
+  asset0: `0x${string}`;
+  asset1: `0x${string}`;
+  pricingModule: `0x${string}`;
+  bucket0: bigint;
+  bucket1: bigint;
+  lastBucketUpdate: bigint;
+  config: {
+    spread: bigint;
+    referenceRateFeedID: `0x${string}`;
+    referenceRateResetFrequency: bigint;
+    minimumReports: bigint;
+    stablePoolResetSize: bigint;
+  };
+}
+
+function decodePoolExchange(raw: string | null): MentoPoolExchange | null {
+  if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
+  try {
+    const [decoded] = decodeAbiParameters(
+      POOL_EXCHANGE_ABI_PARAMETERS,
+      raw as `0x${string}`,
+    ) as readonly [MentoPoolExchange];
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+type MentoParams = LiveReserveAdapterParamsByKey["mento"];
+type MentoRedemptionParams = NonNullable<MentoParams["redemption"]>;
+type MentoBrokerPoolParams = Extract<MentoRedemptionParams, { kind: "broker-pool" }>;
+type MentoLiquityV2CrParams = Extract<MentoRedemptionParams, { kind: "liquity-v2-cr" }>;
+type MentoFpmmPoolParams = Extract<MentoRedemptionParams, { kind: "fpmm-pool" }>;
+
+async function fetchMentoBrokerPoolRedemption(
+  params: MentoBrokerPoolParams,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<NonNullable<AdapterResult["metadata"]>> {
+  const callOptions = {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
+    chain: CELO_ONCHAIN_INPUT.chain,
+  };
+
+  const exchangeIdsRaw = await fetchOnchainRawCall({
+    ...callOptions,
+    contract: MENTO_BIPOOL_MANAGER_ADDRESS,
+    data: GET_EXCHANGE_IDS_SELECTOR,
+  });
+  const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw);
+  if (!exchangeIds || exchangeIds.length === 0) {
+    throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
+  }
+
+  const poolExchanges = await Promise.all(
+    exchangeIds.map((exchangeId) => fetchOnchainRawCall({
+      ...callOptions,
+      contract: MENTO_BIPOOL_MANAGER_ADDRESS,
+      data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
+    }).then(decodePoolExchange)),
+  );
+
+  let capacityUsd = 0;
+  let maxFeeBps: number | null = null;
+  for (const poolConfig of params.pools) {
+    const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
+    const counterAddress = poolConfig.counterAsset.address.toLowerCase();
+    const match = poolExchanges.find((pool) => {
+      if (!pool) return false;
+      const asset0 = pool.asset0.toLowerCase();
+      const asset1 = pool.asset1.toLowerCase();
+      return (
+        (asset0 === selfAddress && asset1 === counterAddress) ||
+        (asset0 === counterAddress && asset1 === selfAddress)
+      );
+    });
+    if (!match) {
+      throw new Error(
+        `mento broker-pool: no matching BiPoolManager exchange for ${poolConfig.selfTokenAddress}/${poolConfig.counterAsset.address}`,
+      );
+    }
+    // BiPoolManager tracks virtual bucket depths at 18-decimal precision
+    // regardless of the counter asset's native token decimals (e.g.
+    // USDC/USDT); the counter bucket is the sellable redemption capacity,
+    // valued 1:1 USD since every configured counter asset is USD- or
+    // USDm-pegged.
+    const counterBucketRaw = match.asset0.toLowerCase() === counterAddress ? match.bucket0 : match.bucket1;
+    capacityUsd += decimalNumberFromBigInt(counterBucketRaw, 18);
+    const feeBps = Number((match.config.spread * 10_000n) / POOL_SPREAD_FIXIDITY_SCALE);
+    maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
+  }
+
+  if (capacityUsd <= 0) {
+    throw new Error("mento broker-pool: matched pools returned zero counter-asset capacity");
+  }
+
+  return buildRedemptionSnapshotMetadata({
+    capacityUsd,
+    capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain",
+    routeStatus: "open",
+    routeStatusSource: "onchain",
+    holderEligibility: "any-holder",
+    settlementDelaySec: 0,
+    feeBps: maxFeeBps,
+    ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
+  });
+}
+
+async function fetchMentoLiquityV2CrRedemption(
+  params: MentoLiquityV2CrParams,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<NonNullable<AdapterResult["metadata"]>> {
+  const callOptions = {
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
+    chain: CELO_ONCHAIN_INPUT.chain,
+  };
+
+  const [debtRaw, shutDownRaw, feeBps, totalSupplyRaw] = await Promise.all([
+    fetchOnchainUint256({ ...callOptions, contract: params.activePoolAddress, data: LIQUITY_V2_DEBT_SELECTOR }),
+    fetchOnchainRawCall({ ...callOptions, contract: params.troveManagerAddress, data: LIQUITY_V2_SHUTDOWN_SELECTOR }),
+    fetchOnchainRateBps(
+      CELO_ONCHAIN_INPUT,
+      { contract: params.collateralRegistryAddress, selector: LIQUITY_V2_REDEMPTION_RATE_SELECTOR, decimals: 18 },
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
+    fetchErc20TotalSupply(CELO_ONCHAIN_INPUT, params.tokenAddress, signal, ctx, params.rpcUrl, params.fallbackRpcUrl),
+  ]);
+
+  if (debtRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) {
+    throw new Error("mento liquity-v2-cr: could not read ActivePool debt or token total supply");
+  }
+
+  // shutdownTime() returns a uint256 timestamp: 0 while the branch is live,
+  // nonzero once shut down. A null read keeps the honest "unknown" status.
+  const shutdownTime = shutDownRaw != null && /^0x[0-9a-fA-F]{64}$/.test(shutDownRaw) ? BigInt(shutDownRaw) : null;
+  const routeStatus = shutdownTime == null ? "unknown" : shutdownTime > 0n ? "degraded" : "open";
+  const capacityRatioOfSupply = Math.min(
+    1,
+    decimalNumberFromBigInt(debtRaw, 18) / decimalNumberFromBigInt(totalSupplyRaw, 18),
+  );
+
+  return buildRedemptionSnapshotMetadata({
+    capacityRatioOfSupply,
+    capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain",
+    routeStatus,
+    routeStatusSource: "onchain",
+    holderEligibility: "any-holder",
+    settlementDelaySec: 0,
+    feeBps,
+    ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
+  });
+}
+
+async function fetchMentoFpmmPoolRedemption(
+  params: MentoFpmmPoolParams,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<NonNullable<AdapterResult["metadata"]>> {
+  const balanceRaw = await fetchErc20Balance(
+    CELO_ONCHAIN_INPUT,
+    params.usdmTokenAddress,
+    params.poolAddress,
+    signal,
+    ctx,
+    params.rpcUrl,
+    params.fallbackRpcUrl,
+  );
+  if (balanceRaw == null) {
+    throw new Error("mento fpmm-pool: could not read USDm pool balance");
+  }
+  const capacityUsd = decimalNumberFromBigInt(balanceRaw, 18);
+  if (capacityUsd <= 0) {
+    throw new Error("mento fpmm-pool: USDm pool balance returned zero capacity");
+  }
+
+  return buildRedemptionSnapshotMetadata({
+    capacityUsd,
+    capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain",
+    routeStatus: "open",
+    routeStatusSource: "onchain",
+    holderEligibility: "any-holder",
+    settlementDelaySec: 0,
+    // No fee emission: the FPMM fee getter is not verified for JPYm/CHFm.
+    ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
+  });
+}
+
+function fetchMentoRedemptionMetadata(
+  redemption: MentoRedemptionParams,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<NonNullable<AdapterResult["metadata"]>> {
+  switch (redemption.kind) {
+    case "broker-pool":
+      return fetchMentoBrokerPoolRedemption(redemption, signal, ctx);
+    case "liquity-v2-cr":
+      return fetchMentoLiquityV2CrRedemption(redemption, signal, ctx);
+    case "fpmm-pool":
+      return fetchMentoFpmmPoolRedemption(redemption, signal, ctx);
+  }
+}
+
 export async function fetchMentoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -525,7 +815,24 @@ export async function fetchMentoReserves(
   const result = params.cdpStablecoin
     ? adaptMentoCdpComposition(payload, params.cdpStablecoin, sourceTimestamp)
     : adaptMentoReserveComposition(payload, sourceTimestamp);
-  return dashboardWarnings.length > 0
-    ? { ...result, warnings: [...(result.warnings ?? []), ...dashboardWarnings] }
-    : result;
+  const warnings = [...(result.warnings ?? []), ...dashboardWarnings];
+
+  if (!params.redemption) {
+    return warnings.length > 0 ? { ...result, warnings } : result;
+  }
+
+  try {
+    const redemptionMetadata = await fetchMentoRedemptionMetadata(params.redemption, signal, ctx);
+    return {
+      ...result,
+      ...(warnings.length > 0 ? { warnings } : {}),
+      metadata: { ...result.metadata, ...redemptionMetadata },
+    };
+  } catch (error) {
+    warnings.push(reserveDegradedWarning(
+      "mento-redemption-telemetry-failed",
+      `Mento redemption telemetry read failed: ${toErrorMessage(error)}`,
+    ));
+    return { ...result, warnings };
+  }
 }

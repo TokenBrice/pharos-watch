@@ -522,15 +522,15 @@ describe("orderConfiguredCoinsForSync", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["gho"].evidenceClass).toBe("independent");
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["curated-validated"].evidenceClass).toBe("static-validated");
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["single-asset"].evidenceClass).toBe("weak-live-probe");
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["mento"].sharedSourceMode).toBe("source-invariant");
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["m0"].sharedSourceMode).toBe("source-invariant");
 
     const ordered = orderConfiguredCoinsForSync([
       makeQueueCoin("w1", "single-asset"),
       makeQueueCoin("i1", "liquity-v1"),
       makeQueueCoin("s1", "curated-validated"),
-      makeQueueCoin("m1", "mento"),
+      makeQueueCoin("m1", "m0"),
       makeQueueCoin("i2", "gho"),
-      makeQueueCoin("m2", "mento"),
+      makeQueueCoin("m2", "m0"),
     ]);
 
     // m2 joins its source-invariant group at m1's anchor position; everything
@@ -555,7 +555,7 @@ describe("orderConfiguredCoinsForSync", () => {
     const sourceInvariantAdapters = Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS)
       .filter(([, definition]) => definition.sharedSourceMode === "source-invariant")
       .map(([key]) => key);
-    expect(sourceInvariantAdapters).toContain("mento");
+    expect(sourceInvariantAdapters).toContain("m0");
 
     for (const adapter of sourceInvariantAdapters) {
       const positions = SYNC_ORDERED_CONFIGURED_COINS
