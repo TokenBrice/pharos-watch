@@ -8,10 +8,7 @@ import {
   stripQueryVerificationTokenFromUrl,
   stripVerificationTokenFromUrl,
 } from "@/lib/api-key-verification-url";
-import {
-  submitApiKeyRequest,
-  verifyApiKeyRequestToken,
-} from "@/lib/api-key-self-serve";
+import { submitApiKeyRequest, verifyApiKeyRequestToken } from "@/lib/api-key-self-serve";
 import {
   apiKeyRequestWorkflowReducer,
   buildApiKeySelfServeRequestPayload,
