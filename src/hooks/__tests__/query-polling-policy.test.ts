@@ -40,6 +40,14 @@ function mockQueryReturn() {
   });
 }
 
+function queryContext(queryKey: readonly unknown[]) {
+  return {
+    signal: new AbortController().signal,
+    queryKey,
+    meta: undefined,
+  } as never;
+}
+
 function minimalStatusResponse() {
   return {
     timestamp: 1,
@@ -313,7 +321,7 @@ describe("query polling policy", () => {
       staleTime: number;
       refetchInterval: number;
       queryKey: unknown[];
-      queryFn: () => Promise<unknown[]>;
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
     };
 
     expect(options.enabled).toBe(true);
@@ -322,7 +330,7 @@ describe("query polling policy", () => {
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
 
-    await options.queryFn();
+    await options.queryFn(queryContext(options.queryKey));
 
     const [publicCall, adminCall] = fetchMock.mock.calls;
     expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
@@ -344,10 +352,11 @@ describe("query polling policy", () => {
 
     useEndpointProbes();
     const options = useQueryMock.mock.calls[0][0] as {
-      queryFn: () => Promise<Array<{ error?: string; status: number | null }>>;
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<Array<{ error?: string; status: number | null }>>;
+      queryKey: readonly unknown[];
     };
 
-    const resultPromise = options.queryFn();
+    const resultPromise = options.queryFn(queryContext(options.queryKey));
     const publicSignal = (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal;
     const adminSignal = (fetchMock.mock.calls[1]?.[1] as RequestInit | undefined)?.signal;
 

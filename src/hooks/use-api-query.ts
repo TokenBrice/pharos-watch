@@ -8,7 +8,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
+import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
@@ -95,7 +95,7 @@ export function createApiQueryFn<T>(
 ): ApiQueryFunction<T> {
   return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetch<T>(path, await resolveSchema(schema), requestInit, contractMode);
+    return apiFetch<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
   };
 }
 
@@ -108,17 +108,8 @@ export function createApiQueryFnWithMeta<T>(
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
   return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetchWithMeta<T>(path, await resolveSchema(schema), requestInit, metaMaxAgeSec, contractMode);
+    return apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, metaMaxAgeSec, contractMode);
   };
-}
-
-function isSchemaLike<T>(value: SchemaLikeSource<T>): value is SchemaLike<T> {
-  return typeof value === "object" && value !== null && typeof value.safeParse === "function";
-}
-
-async function resolveSchema<T>(schema: SchemaLikeSource<T> | undefined): Promise<SchemaLike<T> | undefined> {
-  if (!schema) return undefined;
-  return isSchemaLike(schema) ? schema : schema();
 }
 
 export function createPollingQueryOptions<T>(
@@ -228,7 +219,7 @@ export interface ApiQueryWithMetaResult<T> extends Omit<
   meta: ApiMeta | null;
 }
 
-function unwrapApiQueryWithMetaResult<T>(
+export function unwrapApiQueryWithMetaResult<T>(
   query: UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
 ): ApiQueryWithMetaResult<T> {
   const { data, ...rest } = query;

@@ -1,25 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useApiQueryMock } = vi.hoisted(() => ({
-  useApiQueryMock: vi.fn(),
+const { useQueryMock } = vi.hoisted(() => ({
+  useQueryMock: vi.fn(),
 }));
 
-vi.mock("../use-api-query", async () => {
-  const actual = await vi.importActual<typeof import("../use-api-query")>("../use-api-query");
-  return {
-    ...actual,
-    useApiQuery: useApiQueryMock,
-  };
-});
+vi.mock("@tanstack/react-query", () => ({
+  keepPreviousData: Symbol("keepPreviousData"),
+  useQuery: useQueryMock,
+}));
 
 import { CRON_15MIN } from "@/lib/cron-intervals";
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
 import { useUsdsStatus } from "../api-hooks";
 
 describe("useUsdsStatus", () => {
   beforeEach(() => {
-    useApiQueryMock.mockReset();
-    useApiQueryMock.mockReturnValue({
+    useQueryMock.mockReset();
+    useQueryMock.mockReturnValue({
       data: null,
       error: null,
       isLoading: false,
@@ -31,12 +27,11 @@ describe("useUsdsStatus", () => {
   it("uses the shared USDS status descriptor options", () => {
     useUsdsStatus();
 
-    expect(useApiQueryMock).toHaveBeenCalledWith(
-      ["usds-status"],
-      "/api/usds-status",
-      CRON_15MIN,
+    expect(useQueryMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        schema: FRONTEND_API_QUERY_RUNTIME_REGISTRY.usdsStatus.schema,
+        queryKey: ["usds-status"],
+        staleTime: CRON_15MIN,
+        refetchInterval: 2 * CRON_15MIN,
       }),
     );
   });

@@ -17,6 +17,7 @@ import {
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY } from "../../src/lib/api-query-registry";
 import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
+import { resolveSchemaLike, type SchemaLikeSource } from "../../src/lib/schema-like";
 import {
   HOMEPAGE_BOOTSTRAP_VERSION,
   normalizeHomepageBootstrapPayload,
@@ -180,10 +181,11 @@ async function fetchBootstrapQuery(
   id: HomepageBootstrapQueryId,
   path: string,
   maxAgeSec: number,
-  schema: { safeParse: (value: unknown) => { success: boolean; data?: unknown } } | undefined,
+  schemaSource: SchemaLikeSource<unknown> | undefined,
 ): Promise<HomepageBootstrapQuery | null> {
   const url = `${apiBase}${path}`;
   try {
+    const schema = await resolveSchemaLike(schemaSource);
     const response = await fetch(url, { headers: fetchHeaders(apiBase) });
     if (!response.ok) {
       console.warn(`[generate-homepage-bootstrap] ${path} -> HTTP ${response.status}`);
@@ -243,13 +245,13 @@ async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayloa
   };
 }
 
-function validateCheckedInPayload(): void {
+async function validateCheckedInPayload(): Promise<void> {
   const payload = parseExistingPayload();
   if (!payload) {
     fail(`${OUTPUT_PATH} is missing or invalid`);
   }
 
-  const errors = validateHomepageBootstrapPayloadData(payload);
+  const errors = await validateHomepageBootstrapPayloadData(payload);
   if (errors.length > 0) {
     fail(`payload data failed schema validation:\n${errors.join("\n")}`);
   }
@@ -257,7 +259,7 @@ function validateCheckedInPayload(): void {
 
 async function main(): Promise<void> {
   if (CHECK_MODE) {
-    validateCheckedInPayload();
+    await validateCheckedInPayload();
     console.log("[generate-homepage-bootstrap] checked payload shape");
     return;
   }

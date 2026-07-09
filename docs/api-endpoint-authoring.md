@@ -15,9 +15,11 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 | Messaging and ops route bindings | `worker/src/routes/messaging-routes.ts`, `worker/src/routes/ops-routes.ts` |
 | Dynamic route bindings | `worker/src/routes/dynamic-routes.ts` |
 | Frontend API helpers | `src/hooks/api-hooks.ts`, `src/hooks/use-api-query.ts`, `src/lib/api.ts` |
-| Frontend API query registry | `src/lib/api-query-runtime-registry.ts` — runtime descriptor table (Zod-free) consumed by `src/hooks/api-hooks.ts` (and other browser hooks) and by `src/lib/homepage-bootstrap-runtime.ts`; the schema-bearing `src/lib/api-query-registry.ts` is consumed only by `src/lib/homepage-bootstrap.ts` for build-time bootstrap generation |
+| Frontend API query descriptors | `src/lib/api-query-descriptors.ts` is the single declaration table for paths, query keys, polling/freshness policy, response mode, and cached lazy schema loaders. `src/lib/api-query-base-registry.ts`, `src/lib/api-query-runtime-registry.ts`, and `src/lib/api-query-registry.ts` are compatibility projections/aliases and must not declare endpoints. `src/hooks/api-hooks.ts` derives plain-versus-meta execution from each descriptor's `responseMode`; homepage bootstrap generation resolves the same lazy schema source. |
 | Public contract | `docs/api-reference.md` affected endpoint section |
 | Public OpenAPI/Postman artifact metadata | `scripts/lib/public-api-artifact-catalog.ts` |
+
+The root `RegimeBar` is a deliberate global-shell exception: `useStabilityIndexLight()` imports the stability domain descriptor directly and validates only the PSI fields it renders with a small pass-through contract. This keeps the classic Zod stability schema out of the all-route client graph while preserving the full payload in the shared TanStack cache. The `/stability-index/` detail query retains the full lazy schema.
 
 ## Implementation Checklist
 
@@ -26,7 +28,7 @@ Use this checklist when adding or changing a Worker API endpoint. The route regi
 3. Bind the endpoint key to a handler in the appropriate `worker/src/routes/*-routes.ts` file, or add a dynamic route only when the path family cannot be represented as a static endpoint.
 4. Keep handler code under `worker/src/api/` and return through shared response helpers (`jsonResponse`, `errorResponse`, cache helpers) so status codes, CORS, and freshness behavior remain consistent.
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.
-6. If the frontend consumes the endpoint, add a typed hook and schema validation where nested response data is accessed. For cron-backed data, default to `staleTime = producer interval` and `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
+6. If the frontend consumes the endpoint, add one typed entry to `FRONTEND_API_QUERY_DESCRIPTORS` and retain a narrow public hook when call-site ergonomics require one. Choose `responseMode` (`plain`, `meta`, or `static`) in the descriptor; the hook/query-option wrappers derive transport behavior from it. Keep response schemas behind `createLazySchema()` except for deliberately small global-shell validators. For cron-backed data, default to `staleTime = producer interval` and `refetchInterval = 2x producer interval`; document intentional exceptions such as health/status probes or faster UI polling over slow snapshots.
 7. Update `docs/api-reference.md` with methods, auth lane, parameters, cache profile, response shape, and error bodies.
 8. If the endpoint is an integration-facing public `GET` route, add or update `scripts/lib/public-api-artifact-catalog.ts` so OpenAPI and Postman exports stay aligned with the runtime route metadata.
 9. Add or update handler tests in `worker/src/api/__tests__/`. For critical endpoints, include the relevant suite in `npm run test:critical-contracts` only when it belongs on the critical path.

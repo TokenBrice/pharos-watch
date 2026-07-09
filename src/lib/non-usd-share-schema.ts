@@ -1,4 +1,4 @@
-import type { NonUsdSharePoint } from "@/lib/api-query-base-registry";
+import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
 import { z, type ZodType } from "zod";
 
 export const NonUsdSharePointSchema: ZodType<NonUsdSharePoint> = z.object({
