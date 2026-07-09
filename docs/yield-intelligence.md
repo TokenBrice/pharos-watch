@@ -331,7 +331,7 @@ vaults.fyi is an optional supplemental source family for coverage review and sel
 - The adapter applies TVL, APY, active/corruption/warning, vault-score, and local credit-budget gates before writing cache candidates.
 - Source keys are stable as `protocol-api:vaults-fyi:<chain>:<vault>`. The row `project` and `sourceRisk.venueProtocol` use the underlying protocol slug from vaults.fyi when available.
 - Provider telemetry exposes `pageCapReached` and `creditCapReached` so expected bounded probes are distinguishable from provider errors.
-- Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the hourly publisher require vaults.fyi.
+- Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the hourly publisher require vaults.fyi. Disabled-family telemetry distinguishes `disabled` (flag off/unset), `no-key` (enabled without runtime secret), and `invalid-config` (malformed enable flag) so operators can tell configuration states apart.
 
 ### Opportunity-Level Tranche Safety
 

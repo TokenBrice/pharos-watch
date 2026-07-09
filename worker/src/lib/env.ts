@@ -97,6 +97,7 @@ export interface CloudflareD1StatusConfig {
 export type VaultsFyiRuntimeConfig =
   | {
       enabled: false;
+      disabledReason: "not-enabled" | "no-key" | "invalid-enabled-flag";
       apiKey: null;
       rankableVaults: [];
       maxCreditsPerRun: null;
@@ -105,6 +106,7 @@ export type VaultsFyiRuntimeConfig =
     }
   | {
       enabled: true;
+      disabledReason: null;
       apiKey: string;
       rankableVaults: string[];
       maxCreditsPerRun: number | null;
@@ -155,11 +157,18 @@ export function resolveVaultsFyiConfig(
     | "VAULTS_FYI_MAX_PAGES_PER_RUN"
   >,
 ): VaultsFyiRuntimeConfig {
-  const explicitlyEnabled = parseBooleanEnv(env.VAULTS_FYI_ENABLED) === true;
+  const enabledFlag = parseBooleanEnv(env.VAULTS_FYI_ENABLED);
+  const explicitlyEnabled = enabledFlag === true;
   const apiKey = getConfiguredValue(env.VAULTS_FYI_API_KEY);
   if (!explicitlyEnabled || !apiKey) {
+    const hasEnableValue = Boolean(env.VAULTS_FYI_ENABLED?.trim());
     return {
       enabled: false,
+      disabledReason: explicitlyEnabled
+        ? "no-key"
+        : hasEnableValue && enabledFlag === null
+          ? "invalid-enabled-flag"
+          : "not-enabled",
       apiKey: null,
       rankableVaults: [],
       maxCreditsPerRun: null,
@@ -169,6 +178,7 @@ export function resolveVaultsFyiConfig(
   }
   return {
     enabled: true,
+    disabledReason: null,
     apiKey,
     rankableVaults: parseCsvEnv(env.VAULTS_FYI_RANKABLE_VAULTS),
     maxCreditsPerRun: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_CREDITS_PER_RUN),
@@ -178,14 +188,14 @@ export function resolveVaultsFyiConfig(
 }
 
 export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {
-  return hasConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID)
-    || hasConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN)
-    || hasConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID);
+  return (
+    hasConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID) ||
+    hasConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN) ||
+    hasConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID)
+  );
 }
 
-export function resolveCloudflareD1StatusConfig(
-  env: CloudflareD1StatusBindings,
-): CloudflareD1StatusConfig | null {
+export function resolveCloudflareD1StatusConfig(env: CloudflareD1StatusBindings): CloudflareD1StatusConfig | null {
   const accountId = getConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID);
   const apiToken = getConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN);
   const databaseId = getConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID);
@@ -234,7 +244,8 @@ export function validateWorkerEnvContract(
   if (hasOpsApiAud !== hasAccessTeamDomain) {
     issues.push({
       code: "ops-access-partial-config",
-      message: "CF_ACCESS_OPS_API_AUD and CF_ACCESS_TEAM_DOMAIN must be configured together for ops-api Access JWT verification.",
+      message:
+        "CF_ACCESS_OPS_API_AUD and CF_ACCESS_TEAM_DOMAIN must be configured together for ops-api Access JWT verification.",
     });
   }
 
@@ -243,42 +254,48 @@ export function validateWorkerEnvContract(
   if (hasCloudflareD1StatusBinding && !hasCloudflareD1StatusConfig) {
     issues.push({
       code: "d1-status-partial-config",
-      message: "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 status metrics.",
+      message:
+        "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 status metrics.",
     });
   }
 
   if (!hasConfiguredValue(env.SITE_API_SHARED_SECRET)) {
     issues.push({
       code: "site-api-secret-misconfigured",
-      message: "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
+      message:
+        "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
     });
   }
 
   if (!hasConfiguredValue(env.GITHUB_PAT) || !hasConfiguredValue(env.FEEDBACK_IP_SALT)) {
     issues.push({
       code: "feedback-env-misconfigured",
-      message: "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
+      message:
+        "GITHUB_PAT and FEEDBACK_IP_SALT must be configured together; POST /api/feedback returns 503 until both are set.",
     });
   }
 
-  const hasSelfServeBinding = hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT)
-    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER)
-    || hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
-    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM)
-    || hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO)
-    || hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL)
-    || hasConfiguredValue(env.RESEND_API_KEY);
-  const hasSelfServeConfig = hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT)
-    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER)
-    && hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
-    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM)
-    && hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO)
-    && hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL)
-    && hasConfiguredValue(env.RESEND_API_KEY);
+  const hasSelfServeBinding =
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) ||
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER) ||
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER) ||
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM) ||
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO) ||
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL) ||
+    hasConfiguredValue(env.RESEND_API_KEY);
+  const hasSelfServeConfig =
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) &&
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER) &&
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER) &&
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_FROM) &&
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_EMAIL_REPLY_TO) &&
+    hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL) &&
+    hasConfiguredValue(env.RESEND_API_KEY);
   if (hasSelfServeBinding && !hasSelfServeConfig) {
     issues.push({
       code: "api-key-self-serve-env-misconfigured",
-      message: "Self-serve API key email verification bindings must be configured together; POST /api/api-key-requests returns 503 until they are complete.",
+      message:
+        "Self-serve API key email verification bindings must be configured together; POST /api/api-key-requests returns 503 until they are complete.",
     });
   }
 
@@ -303,7 +320,8 @@ export function validateWorkerEnvContract(
   if (!hasConfiguredValue(env.BANXICO_TOKEN)) {
     issues.push({
       code: "banxico-token-missing",
-      message: "BANXICO_TOKEN must be configured; fetch-tbill-rate cannot refresh the official MXN CETES benchmark without it.",
+      message:
+        "BANXICO_TOKEN must be configured; fetch-tbill-rate cannot refresh the official MXN CETES benchmark without it.",
     });
   }
 
@@ -315,28 +333,32 @@ export function validateWorkerEnvContract(
   if (hasTelegramBotToken && !hasTelegramWebhookSecret) {
     issues.push({
       code: "telegram-env-misconfigured",
-      message: "TELEGRAM_BOT_TOKEN is configured without TELEGRAM_WEBHOOK_SECRET; Telegram webhook registration is skipped until both are set.",
+      message:
+        "TELEGRAM_BOT_TOKEN is configured without TELEGRAM_WEBHOOK_SECRET; Telegram webhook registration is skipped until both are set.",
     });
   }
 
   if (hasTelegramWebhookSecret && !hasTelegramBotToken) {
     issues.push({
       code: "telegram-env-misconfigured",
-      message: "TELEGRAM_WEBHOOK_SECRET is configured without TELEGRAM_BOT_TOKEN; Telegram webhook requests cannot be reconciled until both are set.",
+      message:
+        "TELEGRAM_WEBHOOK_SECRET is configured without TELEGRAM_BOT_TOKEN; Telegram webhook requests cannot be reconciled until both are set.",
     });
   }
 
   if (hasTelegramBotTokenPrevious && !hasTelegramBotToken) {
     issues.push({
       code: "telegram-env-misconfigured",
-      message: "TELEGRAM_BOT_TOKEN_PREVIOUS is configured without TELEGRAM_BOT_TOKEN; remove the previous token or restore the current Telegram bot token.",
+      message:
+        "TELEGRAM_BOT_TOKEN_PREVIOUS is configured without TELEGRAM_BOT_TOKEN; remove the previous token or restore the current Telegram bot token.",
     });
   }
 
   if (hasTelegramWebhookSecretPrevious && !hasTelegramWebhookSecret) {
     issues.push({
       code: "telegram-env-misconfigured",
-      message: "TELEGRAM_WEBHOOK_SECRET_PREVIOUS is configured without TELEGRAM_WEBHOOK_SECRET; remove the previous secret or restore the current Telegram webhook secret.",
+      message:
+        "TELEGRAM_WEBHOOK_SECRET_PREVIOUS is configured without TELEGRAM_WEBHOOK_SECRET; remove the previous secret or restore the current Telegram webhook secret.",
     });
   }
 

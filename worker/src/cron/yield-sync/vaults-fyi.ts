@@ -122,9 +122,7 @@ function getRunCreditsCap(config: VaultsFyiRuntimeConfig): number {
 }
 
 function getMaxPagesPerRun(config: VaultsFyiRuntimeConfig): number {
-  return config.enabled && config.maxPagesPerRun != null
-    ? config.maxPagesPerRun
-    : VAULTS_FYI_DEFAULT_MAX_PAGES_PER_RUN;
+  return config.enabled && config.maxPagesPerRun != null ? config.maxPagesPerRun : VAULTS_FYI_DEFAULT_MAX_PAGES_PER_RUN;
 }
 
 async function fetchVaultsFyiJson(
@@ -168,9 +166,10 @@ function detailedVaultListCredits(rowCount: number): number {
 
 function getRemainingCredits(telemetry: VaultsFyiTelemetry): number {
   const runRemaining = telemetry.creditsCap - telemetry.creditsEstimated;
-  const monthlyRemaining = telemetry.monthlyCreditsEstimated == null
-    ? Number.POSITIVE_INFINITY
-    : telemetry.monthlyCreditsCap - telemetry.monthlyCreditsEstimated;
+  const monthlyRemaining =
+    telemetry.monthlyCreditsEstimated == null
+      ? Number.POSITIVE_INFINITY
+      : telemetry.monthlyCreditsCap - telemetry.monthlyCreditsEstimated;
   return Math.max(0, Math.min(runRemaining, monthlyRemaining));
 }
 
@@ -181,11 +180,7 @@ function getDetailedVaultsPerPage(telemetry: VaultsFyiTelemetry): number | null 
   return creditBoundedRows > 0 ? Math.min(VAULTS_FYI_PAGE_SIZE, creditBoundedRows) : null;
 }
 
-function buildDetailedVaultsPath(args: {
-  page: number;
-  perPage: number;
-  allowedNetworks?: string[];
-}): string {
+function buildDetailedVaultsPath(args: { page: number; perPage: number; allowedNetworks?: string[] }): string {
   const params = new URLSearchParams();
   params.set("page", String(args.page));
   params.set("perPage", String(args.perPage));
@@ -202,18 +197,19 @@ function buildDetailedVaultsPath(args: {
   return `/detailed-vaults?${params.toString()}`;
 }
 
-function getResponseNextPage(body: unknown, fallbackNextPage: number, rowCount: number, perPage: number): number | null {
+function getResponseNextPage(
+  body: unknown,
+  fallbackNextPage: number,
+  rowCount: number,
+  perPage: number,
+): number | null {
   if (isRecord(body) && "nextPage" in body) {
-    return Number.isInteger(body.nextPage) ? body.nextPage as number : null;
+    return Number.isInteger(body.nextPage) ? (body.nextPage as number) : null;
   }
   return rowCount >= perPage ? fallbackNextPage : null;
 }
 
-function limitRowsToRequestedPageSize(
-  rows: unknown[],
-  perPage: number,
-  telemetry: VaultsFyiTelemetry,
-): unknown[] {
+function limitRowsToRequestedPageSize(rows: unknown[], perPage: number, telemetry: VaultsFyiTelemetry): unknown[] {
   if (rows.length <= perPage) return rows;
   recordVaultsFyiDrop(telemetry, "malformed", `over-page:${rows.length}>${perPage}`);
   telemetry.status = "partial";
@@ -222,11 +218,11 @@ function limitRowsToRequestedPageSize(
 }
 
 function canSpendCredits(telemetry: VaultsFyiTelemetry, credits: number): boolean {
-  return telemetry.creditsEstimated + credits <= telemetry.creditsCap
-    && (
-      telemetry.monthlyCreditsEstimated == null
-      || telemetry.monthlyCreditsEstimated + credits <= telemetry.monthlyCreditsCap
-    );
+  return (
+    telemetry.creditsEstimated + credits <= telemetry.creditsCap &&
+    (telemetry.monthlyCreditsEstimated == null ||
+      telemetry.monthlyCreditsEstimated + credits <= telemetry.monthlyCreditsCap)
+  );
 }
 
 async function spendCredits(
@@ -271,11 +267,7 @@ async function runInventoryProbe(params: {
       params.telemetry.skipReason = params.telemetry.rawVaultCount > 0 ? null : "credit-cap";
       return;
     }
-    const body = await fetchVaultsFyiJson(
-      buildDetailedVaultsPath({ page, perPage }),
-      params.config,
-      params.signal,
-    );
+    const body = await fetchVaultsFyiJson(buildDetailedVaultsPath({ page, perPage }), params.config, params.signal);
     params.telemetry.requestCount += 1;
     params.telemetry.pageCount += 1;
     if (!body) {
@@ -296,7 +288,13 @@ async function runInventoryProbe(params: {
       params.telemetry.skipReason = "invalid-payload";
       return;
     }
-    await spendCredits(params.db, params.bucket, params.telemetry, detailedVaultListCredits(rows.length), params.signal);
+    await spendCredits(
+      params.db,
+      params.bucket,
+      params.telemetry,
+      detailedVaultListCredits(rows.length),
+      params.signal,
+    );
     params.telemetry.rawVaultCount += rows.length;
     params.telemetry.auditOnlyCount += rows.length;
     const nextPage = getResponseNextPage(body.body, page + 1, rows.length, perPage);
@@ -387,11 +385,19 @@ export async function fetchVaultsFyiSources({
 }: VaultsFyiSourceParams = {}): Promise<VaultsFyiSourceResult> {
   const startedAtMs = Date.now();
   const enabled = config?.enabled === true;
+  const disabledSkipReason =
+    config?.enabled === false
+      ? config.disabledReason === "no-key"
+        ? "no-key"
+        : config.disabledReason === "invalid-enabled-flag"
+          ? "invalid-config"
+          : "disabled"
+      : "disabled";
   const telemetry = emptyTelemetry({
     enabled,
     hasKey: enabled && Boolean(config?.apiKey),
     status: enabled ? "ok" : "skipped",
-    skipReason: enabled ? null : "disabled",
+    skipReason: enabled ? null : disabledSkipReason,
     creditsCap: config ? getRunCreditsCap(config) : VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN,
     monthlyCreditsCap: config ? getMonthlyCreditsCap(config) : VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_MONTH,
   });
@@ -449,12 +455,17 @@ export async function fetchVaultsFyiSources({
     }
 
     if (
-      telemetry.skipReason === "provider-quota"
-      || telemetry.skipReason === "credit-cap"
-      || telemetry.skipReason === "invalid-config"
+      telemetry.skipReason === "provider-quota" ||
+      telemetry.skipReason === "credit-cap" ||
+      telemetry.skipReason === "invalid-config"
     ) {
       circuitOutcome = "neutral";
-    } else if (telemetry.status === "failed" || telemetry.skipReason === "request-failed" || telemetry.skipReason === "invalid-payload" || telemetry.skipReason === "unauthorized") {
+    } else if (
+      telemetry.status === "failed" ||
+      telemetry.skipReason === "request-failed" ||
+      telemetry.skipReason === "invalid-payload" ||
+      telemetry.skipReason === "unauthorized"
+    ) {
       circuitOutcome = "failure";
     } else {
       circuitOutcome = "success";

@@ -7,7 +7,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` DEX lane and `16,46 * * * *` charts lane have had time to settle. It does not depend on the separate `26,56 * * * *` DEWS / PSI lane.
 - `sync-yield-supplemental` runs on its own slower `25 */4 * * *` trigger and feeds a cache snapshot that the hourly publisher consumes.
 - The hourly publisher is now the freshness path for `yield-rankings`; optional upstream families are deliberately kept off that path.
-- vaults.fyi is an optional gated supplemental source. It is disabled unless `VAULTS_FYI_ENABLED=true` and `VAULTS_FYI_API_KEY` are configured; without `VAULTS_FYI_RANKABLE_VAULTS`, it records audit-only inventory telemetry and emits no production candidates.
+- vaults.fyi is an optional gated supplemental source. It is disabled unless `VAULTS_FYI_ENABLED=true` and `VAULTS_FYI_API_KEY` are configured; without `VAULTS_FYI_RANKABLE_VAULTS`, it records audit-only inventory telemetry and emits no production candidates. Supplemental telemetry distinguishes `disabled`, `no-key`, and `invalid-config` skip reasons so ops can tell flag-off, missing secret, and malformed enable flag states apart.
 
 ## Runtime Guardrails
 
@@ -45,7 +45,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - The hourly publisher prefers fresh per-family supplemental caches when present, so a malformed or stale family cache suppresses only that family while other fresh families can still publish optional rows. If no family cache is usable, the publisher falls back to the legacy aggregate cache.
 - Aave on-chain reads are batched two assets at a time to stay below the Worker connection ceiling even on the isolated supplemental trigger.
 - the monthly yield coverage audit now counts explicit auto-lending overrides and curated exact-pool overrides as covered DL surfaces, and its high-TVL gap list is scoped to unsupported protocol families so the report stays actionable.
-- Configure vaults.fyi credentials only as Worker runtime secrets. Do not commit a credential or put one in docs. `VAULTS_FYI_MAX_CREDITS_PER_RUN`, `VAULTS_FYI_MAX_CREDITS_PER_MONTH`, and `VAULTS_FYI_MAX_PAGES_PER_RUN` bound local spend estimates; provider quota/errors fail open and should not block the hourly publisher.
+- Configure vaults.fyi credentials only as Worker runtime secrets. Do not commit a credential or put one in docs. `VAULTS_FYI_MAX_CREDITS_PER_RUN`, `VAULTS_FYI_MAX_CREDITS_PER_MONTH`, and `VAULTS_FYI_MAX_PAGES_PER_RUN` bound local spend estimates; provider quota/errors fail open and should not block the hourly publisher. In `sourceCoverage.sourceFamilySummaries.vaultsFyi.provider.vaultsFyi`, `skipReason: "disabled"` means the enable flag is off/unset, `"no-key"` means the flag is true but the runtime secret is absent, and `"invalid-config"` includes a malformed enable flag.
 
 ## Yield Health Thresholds
 

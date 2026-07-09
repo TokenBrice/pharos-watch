@@ -18,13 +18,16 @@ function buildRuntime(env: Partial<ScheduledRuntimeContext["env"]> = {}): {
   const signal = new AbortController().signal;
   const reportProgress = vi.fn(async () => {});
   const chainRpcs = new Map<string, ChainRpcConfig>([
-    ["ethereum", {
-      chainId: "ethereum",
-      chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example",
-      explorerUrl: "https://etherscan.io",
-    }],
+    [
+      "ethereum",
+      {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example",
+        explorerUrl: "https://etherscan.io",
+      },
+    ],
   ]);
   const runLeasedCron = vi.fn(async (_job: string, fn) => fn(signal, reportProgress));
   return {
@@ -59,20 +62,15 @@ describe("runYieldSupplementalSlot", () => {
 
     await runYieldSupplementalSlot(runtime);
 
-    expect(syncYieldSupplemental).toHaveBeenCalledWith(
-      runtime.db,
-      signal,
-      runtime.chainRpcs,
-      reportProgress,
-      {
-        enabled: false,
-        apiKey: null,
-        rankableVaults: [],
-        maxCreditsPerRun: null,
-        maxCreditsPerMonth: null,
-        maxPagesPerRun: null,
-      },
-    );
+    expect(syncYieldSupplemental).toHaveBeenCalledWith(runtime.db, signal, runtime.chainRpcs, reportProgress, {
+      enabled: false,
+      disabledReason: "not-enabled",
+      apiKey: null,
+      rankableVaults: [],
+      maxCreditsPerRun: null,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    });
   });
 
   it("passes enabled vaults.fyi config when explicitly configured", async () => {
@@ -85,19 +83,14 @@ describe("runYieldSupplementalSlot", () => {
 
     await runYieldSupplementalSlot(runtime);
 
-    expect(syncYieldSupplemental).toHaveBeenCalledWith(
-      runtime.db,
-      signal,
-      runtime.chainRpcs,
-      reportProgress,
-      {
-        enabled: true,
-        apiKey: "vaults-key",
-        rankableVaults: ["base:vault-a"],
-        maxCreditsPerRun: 25,
-        maxCreditsPerMonth: null,
-        maxPagesPerRun: null,
-      },
-    );
+    expect(syncYieldSupplemental).toHaveBeenCalledWith(runtime.db, signal, runtime.chainRpcs, reportProgress, {
+      enabled: true,
+      disabledReason: null,
+      apiKey: "vaults-key",
+      rankableVaults: ["base:vault-a"],
+      maxCreditsPerRun: 25,
+      maxCreditsPerMonth: null,
+      maxPagesPerRun: null,
+    });
   });
 });

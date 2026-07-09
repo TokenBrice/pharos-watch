@@ -32,9 +32,12 @@ function response(body: unknown, status = 200): Response {
   });
 }
 
-function enabledConfig(overrides: Partial<Extract<VaultsFyiRuntimeConfig, { enabled: true }>> = {}): VaultsFyiRuntimeConfig {
+function enabledConfig(
+  overrides: Partial<Extract<VaultsFyiRuntimeConfig, { enabled: true }>> = {},
+): VaultsFyiRuntimeConfig {
   return {
     enabled: true,
+    disabledReason: null,
     apiKey: "test-placeholder-key",
     rankableVaults: [],
     maxCreditsPerRun: null,
@@ -75,21 +78,60 @@ describe("fetchVaultsFyiSources", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    await expect(fetchVaultsFyiSources({
-      config: {
-        enabled: false,
-        apiKey: null,
-        rankableVaults: [],
-        maxCreditsPerRun: null,
-        maxCreditsPerMonth: null,
-        maxPagesPerRun: null,
-      },
-    })).resolves.toMatchObject({
+    await expect(
+      fetchVaultsFyiSources({
+        config: {
+          enabled: false,
+          disabledReason: "not-enabled",
+          apiKey: null,
+          rankableVaults: [],
+          maxCreditsPerRun: null,
+          maxCreditsPerMonth: null,
+          maxPagesPerRun: null,
+        },
+      }),
+    ).resolves.toMatchObject({
       candidates: [],
       telemetry: { status: "skipped", skipReason: "disabled", requestCount: 0 },
     });
 
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("surfaces disabled config reasons as skip telemetry", async () => {
+    await expect(
+      fetchVaultsFyiSources({
+        config: {
+          enabled: false,
+          disabledReason: "no-key",
+          apiKey: null,
+          rankableVaults: [],
+          maxCreditsPerRun: null,
+          maxCreditsPerMonth: null,
+          maxPagesPerRun: null,
+        },
+      }),
+    ).resolves.toMatchObject({
+      candidates: [],
+      telemetry: { status: "skipped", skipReason: "no-key", requestCount: 0 },
+    });
+
+    await expect(
+      fetchVaultsFyiSources({
+        config: {
+          enabled: false,
+          disabledReason: "invalid-enabled-flag",
+          apiKey: null,
+          rankableVaults: [],
+          maxCreditsPerRun: null,
+          maxCreditsPerMonth: null,
+          maxPagesPerRun: null,
+        },
+      }),
+    ).resolves.toMatchObject({
+      candidates: [],
+      telemetry: { status: "skipped", skipReason: "invalid-config", requestCount: 0 },
+    });
   });
 
   it("runs a cheap audit-only inventory probe when enabled without rankable vaults", async () => {
@@ -100,7 +142,9 @@ describe("fetchVaultsFyiSources", () => {
       expect(url).toContain("perPage=8");
       expect(url).not.toContain("test-placeholder-key");
       expect(new Headers(init?.headers).get("x-api-key")).toBe("test-placeholder-key");
-      return response({ data: [detailedVault(), detailedVault({ address: "0x2222222222222222222222222222222222222222" })] });
+      return response({
+        data: [detailedVault(), detailedVault({ address: "0x2222222222222222222222222222222222222222" })],
+      });
     });
     vi.stubGlobal("fetch", fetchSpy);
 
@@ -128,7 +172,10 @@ describe("fetchVaultsFyiSources", () => {
     const rows = Array.from({ length: 8 }, (_, index) =>
       detailedVault({ address: `0x${String(index + 1).padStart(40, "0")}` }),
     );
-    vi.stubGlobal("fetch", vi.fn(async () => response({ data: rows })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => response({ data: rows })),
+    );
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig(),
@@ -176,10 +223,7 @@ describe("fetchVaultsFyiSources", () => {
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({
         maxCreditsPerRun: 100,
-        rankableVaults: [
-          "mainnet/0x1111111111111111111111111111111111111111",
-          "mainnet/vault-b",
-        ],
+        rankableVaults: ["mainnet/0x1111111111111111111111111111111111111111", "mainnet/vault-b"],
       }),
       startSec: 1_781_267_400,
     });
@@ -263,7 +307,10 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it.each([403, 429])("fails open as skipped on provider quota HTTP %s without emitting candidates", async (status) => {
-    vi.stubGlobal("fetch", vi.fn(async () => response({ error: "quota" }, status)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => response({ error: "quota" }, status)),
+    );
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["mainnet:vault-a"] }),
