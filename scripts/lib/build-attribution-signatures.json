@@ -15,5 +15,6 @@
   { "name": "newsreader-font", "marker": "Newsreader" },
   { "name": "pre-launch-shell", "marker": "Pre-launch Universe" },
   { "name": "methodology-version", "marker": "createMethodologyVersion" },
-  { "name": "error-boundary", "marker": "retryCount<3" }
+  { "name": "error-boundary", "marker": "retryCount<3" },
+  { "name": "depeg-event-related-data", "marker": "\"slug\":\"usdc-2023-03-11\"" }
 ]
