@@ -7,10 +7,11 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 ## Route Shape
 
 - **Route shell:** `src/app/stablecoin/[id]/page.tsx`
-- **Client composition:** `src/app/stablecoin/[id]/client.tsx`
-- **Yield subroute:** `src/app/stablecoin/[id]/yield/page.tsx` and `src/app/stablecoin/[id]/yield/client.tsx` for every non-pre-launch tracked coin
+- **Client composition:** `src/app/stablecoin/[id]/client.tsx` plus the adjacent section-group modules listed in the File Index
+- **Yield subroute:** `src/app/stablecoin/[id]/yield/page.tsx` and `src/app/stablecoin/[id]/yield/client.tsx` for yield-bearing coins and curated auto-lending workbenches; known tracked coins without a static workbench redirect to `/yield/?compare=<id>&from=detail-fallback`
 - **Primary hook:** `src/hooks/use-stablecoin-detail-view-model.ts`
-- **Pure view-model builder:** `src/lib/stablecoin-detail-view-model.ts`
+- **Pure view-model facade:** `src/lib/stablecoin-detail-view-model.ts`
+- **View-model owners:** `src/lib/stablecoin-detail-query-view-model.ts`, `src/lib/stablecoin-detail-hero-view-model.ts`, and `src/lib/stablecoin-detail-view-model-types.ts`
 - **Section components:** `src/components/stablecoin-detail/*`
 
 `generateStaticParams()` prebuilds one page per tracked stablecoin ID from `TRACKED_STABLECOINS`. The server route also:
@@ -282,9 +283,17 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | File                                                                | Role                                                       |
 | ------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `src/app/stablecoin/[id]/page.tsx`                                  | Static params, metadata, JSON-LD, server shell             |
-| `src/app/stablecoin/[id]/client.tsx`                                | Client-side section composition and dynamic imports        |
+| `src/app/stablecoin/[id]/client.tsx`                                | Thin client route and query-state orchestration             |
+| `src/app/stablecoin/[id]/detail-content.tsx`                        | Detail-page layout and section-group composition            |
+| `src/app/stablecoin/[id]/detail-lazy-sections.tsx`                  | Dynamic section imports and loading boundaries              |
+| `src/app/stablecoin/[id]/detail-risk-context-sections.tsx`          | Risk and context section group                              |
+| `src/app/stablecoin/[id]/detail-liquidity-activity-sections.tsx`    | Liquidity and activity section group                        |
+| `src/app/stablecoin/[id]/detail-history-explore-sections.tsx`       | History and onward-navigation section group                 |
 | `src/hooks/use-stablecoin-detail-view-model.ts`                     | Query wiring + aggregate retry handler                     |
-| `src/lib/stablecoin-detail-view-model.ts`                           | Pure derivation and fallback assembly                      |
+| `src/lib/stablecoin-detail-view-model.ts`                           | Public view-model compatibility facade                     |
+| `src/lib/stablecoin-detail-query-view-model.ts`                     | Query availability, freshness, and section assembly        |
+| `src/lib/stablecoin-detail-hero-view-model.ts`                      | Hero metrics and presentation derivation                   |
+| `src/lib/stablecoin-detail-view-model-types.ts`                     | Shared detail view-model contracts                         |
 | `src/components/stablecoin-detail/hero-card.tsx`                    | Detail hero surface                                        |
 | `src/components/stablecoin-detail/section-banner.tsx`               | Section banner heading shared by the detail zones          |
 | `src/components/stablecoin-detail/reserve-panel.tsx`                | Reserve View panel, notices, links, retry action           |

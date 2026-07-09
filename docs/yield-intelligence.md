@@ -1018,7 +1018,7 @@ Each `history` row includes:
 
 ### Page: `/yield`
 
-**Files:** `src/app/yield/page.tsx` (SSG wrapper), `src/app/yield/client.tsx` (interactive)
+**Files:** `src/app/yield/page.tsx` (SSG wrapper), `src/app/yield/client.tsx` (interactive), and the filter, facet, and presentation modules listed in the file index behind the `src/lib/yield-view-model.ts` facade
 
 **Layout (top to bottom):**
 
@@ -1244,6 +1244,12 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/lib/yield-constants.ts`                                          | Warning-signal labels, `formatYieldWarningSignal`, `getPysColor`, `computePysBreakdown` — shared frontend yield utilities                                                                                                     |
 | `src/lib/yield-decision-ledger.ts`                                    | Frontend display helper for source-selection decision-ledger reason/rejection labels                                                                                                                                          |
 | `src/lib/yield-peers.ts`                                              | Pure peer-rail cohort selection for `/stablecoin/<id>/yield/`                                                                                                                                                                 |
+| `src/lib/yield-view-model.ts`                                         | Public yield workbench view-model facade                                                                                                                                                                                       |
+| `src/lib/yield-view-model-types.ts`                                   | Shared workbench view-model contracts                                                                                                                                                                                          |
+| `src/lib/yield-view-model-helpers.ts`                                 | Shared row/filter derivation helpers                                                                                                                                                                                            |
+| `src/lib/yield-view-model-filter-axes.ts`                             | Filter-axis registry and risk-budget ownership                                                                                                                                                                                  |
+| `src/lib/yield-view-model-facets.ts`                                  | Facet counts and filter option derivation                                                                                                                                                                                        |
+| `src/lib/yield-view-model-presentation.ts`                            | Active-filter summaries and presentation projection                                                                                                                                                                             |
 | `src/lib/__tests__/yield-constants.test.ts`                           | Unit tests for shared frontend yield utilities                                                                                                                                                                                |
 | `src/app/yield/page.tsx`                                              | SSG page wrapper with metadata                                                                                                                                                                                                |
 | `src/app/yield/client.tsx`                                            | Interactive page: hero scatter, risk budget, filters, leaderboard, selector handoff strip, source board, and reference-rate surfaces                                                                                          |

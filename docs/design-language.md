@@ -389,6 +389,8 @@ Current component roles:
 
 Content/reference tables should stay static: no sorting, export, toolbar, or pagination unless the route explicitly needs those controls. Tables with captions keep caption-based accessible names; unnamed framed tables derive a fallback label from `tableId`. Accessibility-only chart data tables may remain specialized.
 
+The homepage stablecoin overview keeps its public composition shell in `src/components/stablecoin-table.tsx`. Column descriptors live in `src/components/stablecoin-table-columns.tsx`, preferences and virtualized row derivation in `src/components/stablecoin-table-model.ts`, frame/loading/pagination rendering in `src/components/stablecoin-table-view.tsx`, and row ownership is split across `src/components/stablecoin-table-row.tsx`, `src/components/stablecoin-table-row-model.ts`, `src/components/stablecoin-table-row-cells.tsx`, and `src/components/stablecoin-table-row-types.ts`. Extend the narrow owner instead of adding table behavior back to the shell.
+
 ---
 
 ## Contextual Explainability
