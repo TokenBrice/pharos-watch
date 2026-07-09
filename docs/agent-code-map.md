@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/crawl-geckoterminal-pools.ts` - GeckoTerminalPoolsStageDependencies, crawlGeckoTerminalPoolsStage
 - `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
 - `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS, DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun
-- ... 347 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 352 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
