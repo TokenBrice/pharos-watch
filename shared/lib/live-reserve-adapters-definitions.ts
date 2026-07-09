@@ -462,6 +462,14 @@ const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "pusd-vault": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   "quantoz-transparency": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",

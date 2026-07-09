@@ -42,6 +42,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "nest-vault-positions": "live",
   "openeden-usdo": "live",
   "origin-vault-balances": "live",
+  "pusd-vault": "live",
   "quantoz-transparency": "live",
   "re-metrics": "live",
   "resupply-pairs": "live",

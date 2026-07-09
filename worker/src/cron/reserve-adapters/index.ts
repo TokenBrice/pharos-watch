@@ -34,6 +34,7 @@ import { fetchMentoReserves } from "./mento";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
+import { fetchPusdVaultReserves } from "./pusd-vault";
 import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchResupplyPairsReserves } from "./resupply-pairs";
@@ -98,6 +99,7 @@ const ADAPTER_FNS = {
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
+  "pusd-vault": fetchPusdVaultReserves,
   "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
   "resupply-pairs": fetchResupplyPairsReserves,

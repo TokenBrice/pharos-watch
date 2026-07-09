@@ -437,6 +437,24 @@ const originVaultBalancesParamsSchema = z
   })
   .strict();
 
+const pusdVaultAssetSchema = z
+  .object({
+    address: z.string(),
+    decimals: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const pusdVaultParamsSchema = z
+  .object({
+    vaultAddress: z.string(),
+    assets: z.array(pusdVaultAssetSchema).min(1),
+    slice: reserveSliceDescriptorSchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const nestVaultPositionsParamsSchema = z
   .object({
     priceUrl: AbsoluteUrlSchema,
@@ -658,6 +676,7 @@ export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMe
   "nest-vault-positions": { primaryInputKinds: ["http-json"], params: nestVaultPositionsParamsSchema },
   "openeden-usdo": { primaryInputKinds: ["http-json"], params: noParamsSchema },
   "origin-vault-balances": { primaryInputKinds: ["onchain-evm"], params: originVaultBalancesParamsSchema },
+  "pusd-vault": { primaryInputKinds: ["onchain-evm"], params: pusdVaultParamsSchema },
   "quantoz-transparency": { primaryInputKinds: ["http-html"], params: quantozTransparencyParamsSchema },
   "re-metrics": { primaryInputKinds: ["http-html"], params: noParamsSchema },
   "resupply-pairs": { primaryInputKinds: ["onchain-evm"], params: resupplyPairsParamsSchema },

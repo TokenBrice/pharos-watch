@@ -61,6 +61,7 @@ export const LIVE_RESERVE_ADAPTER_PROVENANCE = {
     nextReview: "2026-12-25",
   },
   "origin-vault-balances": { status: "active", rationale: ACTIVE_RATIONALE },
+  "pusd-vault": { status: "active", rationale: ACTIVE_RATIONALE },
   "quantoz-transparency": { status: "active", rationale: ACTIVE_RATIONALE },
   "re-metrics": { status: "active", rationale: ACTIVE_RATIONALE },
   "resupply-pairs": { status: "active", rationale: ACTIVE_RATIONALE },

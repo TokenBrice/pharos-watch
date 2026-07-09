@@ -35,6 +35,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "nest-vault-positions",
   "openeden-usdo",
   "origin-vault-balances",
+  "pusd-vault",
   "quantoz-transparency",
   "re-metrics",
   "resupply-pairs",

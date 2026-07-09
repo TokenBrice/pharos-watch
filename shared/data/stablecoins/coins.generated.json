@@ -48092,19 +48092,41 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "pusd-polymarket",
       "display": {
-        "url": "https://docs.polymarket.com/concepts/pusd",
-        "label": "Polymarket PUSD docs"
+        "url": "https://polygonscan.com/address/0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
+        "label": "PUSD backing vault (Polygonscan)"
       },
-      "adapter": "curated-validated",
+      "adapter": "pusd-vault",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "polygon",
           "rpcMode": "public-rpc"
         }
+      },
+      "params": {
+        "vaultAddress": "0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
+        "assets": [
+          {
+            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+            "decimals": 6
+          },
+          {
+            "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+            "decimals": 6
+          }
+        ],
+        "slice": {
+          "name": "USDC / USDC.e on Polygon",
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        "sourceUrls": [
+          "https://docs.polymarket.com/concepts/pusd"
+        ]
       }
     },
     "launchDate": "2026-04-28"

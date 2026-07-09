@@ -13321,7 +13321,7 @@
         }
       ]
     },
-    "liveReserveAdapter": "curated-validated"
+    "liveReserveAdapter": "pusd-vault"
   },
   {
     "id": "pyusd-paypal",
