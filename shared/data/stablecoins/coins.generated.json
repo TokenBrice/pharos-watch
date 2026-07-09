@@ -52291,9 +52291,6 @@
           "coinId": "bold-liquity",
           "depType": "wrapper",
           "expectedAssetAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d"
-        },
-        "redemptionLiquidity": {
-          "source": "atomic-full-backing"
         }
       }
     },
@@ -61546,18 +61543,23 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "u-united-stables",
       "display": {
         "url": "https://u.tech/",
-        "label": "United Stables"
+        "label": "United Stables PoR"
       },
-      "adapter": "curated-validated",
+      "adapter": "united-por",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://u.tech/u-client-api/v1/public/u/por"
+        }
+      },
+      "params": {
+        "slice": {
+          "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+          "risk": "low"
         }
       }
     },
