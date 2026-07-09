@@ -209,10 +209,15 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-admin-view-model.ts` - ApiKeySummaryItem, CreateExpiryMode, CreateKeyState, DEFAULT_CREATE_KEY_STATE, EditableKeyState, buildApiKeyInventorySummary
 - `src/lib/api-key-request-admin-view-model.ts` - API_KEY_REQUEST_ACTION_LABELS, API_KEY_REQUEST_STATUS_FILTERS, API_KEY_REQUEST_STATUS_LABELS, ApiKeyRequestAction, ApiKeyRequestCardViewModel, ApiKeyRequestSummaryItem
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
-- `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripQueryVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
-- `src/lib/api-query-base-registry.ts` - FRONTEND_API_QUERY_BASE_REGISTRY, FrontendApiQueryBaseDescriptor, FrontendStaticApiQueryBaseDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
-- `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor
-- `src/lib/api-query-runtime-registry.ts` - FRONTEND_API_QUERY_RUNTIME_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor
+- `src/lib/api-key-self-serve.ts` - submitApiKeyRequest, verifyApiKeyRequestToken
+- `src/lib/api-key-verification-url.ts` - readVerificationTokenFromUrl, stripQueryVerificationTokenFromUrl, stripVerificationTokenFromUrl
+- `src/lib/api-query-base-registry.ts` - FRONTEND_API_QUERY_BASE_REGISTRY
+- `src/lib/api-query-contract.ts` - FrontendAnyApiQueryDescriptor, FrontendApiQueryBaseDescriptor, FrontendApiQueryBaseRegistry, FrontendApiQueryDescriptor, FrontendApiQueryResponseMode, FrontendStaticApiQueryBaseDescriptor
+- `src/lib/api-query-descriptors.ts` - FRONTEND_API_QUERY_DESCRIPTORS, FrontendApiQueryDescriptorRegistry, MintBurnEventsDescriptorOptions
+- `src/lib/api-query-domains/stability-detail.ts` - STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR
+- `src/lib/api-query-domains/stability-light.ts` - STABILITY_INDEX_QUERY_DESCRIPTOR, StabilityIndexLightResponseSchema
+- `src/lib/api-query-registry.ts`
+- `src/lib/api-query-runtime-registry.ts`
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
 - `src/lib/api-url.ts` - API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase
 - `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
@@ -242,19 +247,16 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
 - `src/lib/command-palette-search-data.ts` - COMMAND_PALETTE_STABLECOINS, CommandPaletteStablecoinSearchItem
 - `src/lib/command-palette-verbs.ts` - ParsedVerb, buildCompareHrefFromCoinIds, parsePaletteInput, resolveCoinIdFromToken
-- `src/lib/command-palette.ts` - OPEN_COMMAND_PALETTE_EVENT, openCommandPalette
-- `src/lib/compare-config.ts` - COMPARE_COIN_OPTIONS, COMPARE_COLORS, COMPARISON_PRESETS, ID_TO_COMPARE_COIN, MAX_COMPARE_COINS, getPresetCoins
-- `src/lib/compare-derive.ts` - ComparisonCoinEntry, ComparisonMeta, FlowCardEntry, FlowSeriesEntry, SupplySeriesEntry, deriveComparisonCoins
-- `src/lib/compare-links.ts` - STATIC_COMPARE_PAIRS, StaticComparisonLink, buildLiveCompareUrl, buildStaticComparisonSlug, getPrimaryStaticComparisonLinkForCoin
-- `src/lib/compare-pages.ts` - ComparisonFaqItem, ComparisonSnippetAnswer, STATIC_COMPARE_PAIRS, STATIC_COMPARISON_PAGES, STATIC_COMPARISON_PAGE_BY_SLUG, buildComparisonAtAGlanceRows
-- ... 147 more files omitted; use `rg --files src/lib` for the full list.
+- ... 163 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
 - `src/components/ai-disclosure-badge.tsx` - AiDisclosureBadge
 - `src/components/ai-disclosure.ts` - AiDisclosureFields, buildAiDisclosureLine, formatAiSummaryDate
 - `src/components/ai-summary.tsx` - AiSummary
+- `src/components/api-key-request-fields.tsx` - ApiKeyRequestFields
 - `src/components/api-key-request-form.tsx` - ApiKeyRequestForm
+- `src/components/api-key-request-reveal.tsx` - ApiKeyRequestReveal
 - `src/components/api-reference-layout.tsx` - ApiReferenceLayout
 - `src/components/api-reference-mobile-nav.tsx` - ApiReferenceMobileNav
 - `src/components/api-reference-sidebar.tsx` - ApiReferenceSidebar, SidebarSection, SidebarSubsection
@@ -289,9 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- `src/components/coin-notice.tsx` - CoinNotices
-- `src/components/coin-selector.tsx` - CoinSelector
-- ... 381 more files omitted; use `rg --files src/components` for the full list.
+- ... 390 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -311,9 +311,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/lib/request-attribution.ts` - REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV, isRequestSourceAttributionDisabled, recordSiteDataRequest, resetSiteDataRequestAttributionStateForTests
 - `functions/lib/site-api-env.ts` - SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS, SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS, SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS, SiteDataProxyEnv, SiteDataProxyEnvIssue, resolveSiteApiOrigin
 - `functions/lib/site-data-origin.ts` - rejectIfNotSiteDataUiOrigin
-- `functions/lib/upstream-proxy.ts` - DEFAULT_PROXY_TIMEOUT_MS, fetchUpstreamProxy, resolveWildcardProxyPath
+- `functions/lib/trusted-upstream-origin.ts` - resolveTrustedHttpsOrigin
+- `functions/lib/upstream-proxy.ts` - DEFAULT_PROXY_TIMEOUT_MS, MAX_PROXY_RESPONSE_BODY_BYTES, fetchUpstreamProxy, resolveWildcardProxyPath
 - `functions/selector-snapshot/[[path]].ts` - onRequest
-- `functions/stablecoin/[[path]].ts` - onRequest, resolveLegacyStablecoinRedirect
+- `functions/stablecoin/[[path]].ts` - onRequest, resolveLegacyStablecoinRedirect, resolveMissingYieldWorkbenchRedirect
 
 ## Shared library
 
@@ -377,7 +378,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
 - `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
-- ... 258 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 266 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -397,7 +398,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/apyusd-apyx.json` - 29 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
 - `shared/data/stablecoins/coins/asusdf-astherus.json` - 25 keys
-- `shared/data/stablecoins/coins/audd-novatti.json` - 25 keys
+- `shared/data/stablecoins/coins/audd-novatti.json` - 24 keys
 - `shared/data/stablecoins/coins/audf-forte.json` - 21 keys
 - `shared/data/stablecoins/coins/audm-macropod.json` - 28 keys
 - `shared/data/stablecoins/coins/audm-mento.json` - 28 keys
@@ -421,7 +422,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brl-b3.json` - 23 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
 - `shared/data/stablecoins/coins/brl1-brl1.json` - 25 keys
-- ... 386 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 401 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -617,7 +618,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-discovery/crawl-geckoterminal-pools.ts` - GeckoTerminalPoolsStageDependencies, crawlGeckoTerminalPoolsStage
 - `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
 - `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS, DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun
-- ... 352 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 356 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -681,7 +682,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPricesDetailed, pickBestTicker
-- ... 252 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 253 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -721,6 +722,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-test-typecheck.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
+- `scripts/__tests__/cli-args.test.ts`
 - `scripts/__tests__/client-registry-field-contract.test.ts`
 - `scripts/__tests__/command-runner.test.ts`
 - `scripts/__tests__/coverage-audit-cli.test.ts`
@@ -744,5 +746,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generated-artifact-entrypoints.test.ts`
 - `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
 - `scripts/__tests__/lighthouse-static-export.test.ts`
-- `scripts/__tests__/merge-gate-parallel-mode.test.ts`
-- ... 225 more files omitted; use `rg --files scripts` for the full list.
+- ... 233 more files omitted; use `rg --files scripts` for the full list.
