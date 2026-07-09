@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { clearAllTrackingTimers } from "@/lib/analytics";
-import { stripQueryVerificationTokenFromUrl } from "@/lib/api-key-self-serve";
+import { stripQueryVerificationTokenFromUrl } from "@/lib/api-key-verification-url";
 import { scheduleIdle } from "@/lib/browser-utils";
 
 declare global {

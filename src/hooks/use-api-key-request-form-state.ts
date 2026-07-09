@@ -7,6 +7,8 @@ import {
   readVerificationTokenFromUrl,
   stripQueryVerificationTokenFromUrl,
   stripVerificationTokenFromUrl,
+} from "@/lib/api-key-verification-url";
+import {
   submitApiKeyRequest,
   verifyApiKeyRequestToken,
 } from "@/lib/api-key-self-serve";
