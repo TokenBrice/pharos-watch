@@ -232,6 +232,7 @@ describe("syncYieldSupplemental", () => {
     const signal = new AbortController().signal;
     const vaultsFyi = {
       enabled: true as const,
+      disabledReason: null,
       apiKey: "vaults-key",
       rankableVaults: ["base:vault-a"],
       maxCreditsPerRun: 25,
