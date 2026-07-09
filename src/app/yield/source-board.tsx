@@ -32,6 +32,12 @@ import type {
 
 interface YieldSourceBoardProps {
   model: YieldSourceBoardModel;
+  activeFilters?: {
+    depth?: string;
+    sourceConfidence?: string;
+    sourcePosture?: string;
+  };
+  onFilterChange?: (key: string, value: string) => void;
 }
 
 const LANE_DIGEST_COUNT = 5;
@@ -119,12 +125,27 @@ function buildPostureAriaLabel(counts: Record<YieldSourcePosture, number>): stri
   return `Source posture mix: ${parts.join(", ")}`;
 }
 
+type StackBarFilterTarget = {
+  key: "depth" | "sourceConfidence" | "sourcePosture";
+  value: string;
+};
+
 function StackBar({
   segments,
   ariaLabel,
+  onSegmentSelect,
 }: {
-  segments: ReadonlyArray<{ key: string; bg: string; count: number; description: string; label: string }>;
+  segments: ReadonlyArray<{
+    key: string;
+    bg: string;
+    count: number;
+    description: string;
+    label: string;
+    target?: StackBarFilterTarget;
+    active?: boolean;
+  }>;
   ariaLabel: string;
+  onSegmentSelect?: (target: StackBarFilterTarget, active: boolean) => void;
 }) {
   const total = segments.reduce((sum, seg) => sum + seg.count, 0);
   if (total === 0) return null;
@@ -142,28 +163,44 @@ function StackBar({
         .filter((seg) => seg.count > 0)
         .map((seg) => {
           const percentage = (seg.count / total) * 100;
-          const isTooNarrowForFocus = percentage < 14;
+          const isInteractive = seg.target != null && onSegmentSelect != null;
+          const isTooNarrowForFocus = percentage < 14 && !isInteractive;
+          const triggerLabel = `${seg.label}: ${seg.count}. ${seg.description}`;
+          const triggerClassName = cn(
+            "block h-full",
+            isInteractive
+              ? "pharos-focus-ring cursor-pointer border-0 p-0"
+              : isTooNarrowForFocus
+                ? "pointer-events-none"
+                : "pharos-focus-ring cursor-help",
+            seg.active && "ring-2 ring-inset ring-foreground/70",
+            seg.bg,
+          );
+
           return (
             <Tooltip key={seg.key}>
               <TooltipTrigger asChild>
-                <span
-                  // aria-label is prohibited on role=generic; the focusable
-                  // trigger needs a real role (same pattern as the yield
-                  // rows' benchmark-mismatch dot).
-                  role={isTooNarrowForFocus ? undefined : "button"}
-                  tabIndex={isTooNarrowForFocus ? undefined : 0}
-                  aria-label={
-                    isTooNarrowForFocus
-                      ? undefined
-                      : `${seg.label}: ${seg.count}. ${seg.description}`
-                  }
-                  className={cn(
-                    "block h-full",
-                    isTooNarrowForFocus ? "pointer-events-none" : "pharos-focus-ring cursor-help",
-                    seg.bg,
-                  )}
-                  style={{ width: `${percentage}%` }}
-                />
+                {isInteractive ? (
+                  <button
+                    type="button"
+                    aria-label={`${triggerLabel} ${seg.active ? "Clear filter." : "Filter rows."}`}
+                    aria-pressed={seg.active}
+                    className={triggerClassName}
+                    style={{ width: `${percentage}%` }}
+                    onClick={() => onSegmentSelect(seg.target!, seg.active === true)}
+                  />
+                ) : (
+                  <span
+                    // aria-label is prohibited on role=generic; the focusable
+                    // trigger needs a real role (same pattern as the yield
+                    // rows' benchmark-mismatch dot).
+                    role={isTooNarrowForFocus ? undefined : "button"}
+                    tabIndex={isTooNarrowForFocus ? undefined : 0}
+                    aria-label={isTooNarrowForFocus ? undefined : triggerLabel}
+                    className={triggerClassName}
+                    style={{ width: `${percentage}%` }}
+                  />
+                )}
               </TooltipTrigger>
               <TooltipContent className="max-w-[260px] text-xs">
                 <span className="font-medium">
@@ -178,7 +215,15 @@ function StackBar({
   );
 }
 
-function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
+function SourceQualityBars({
+  model,
+  activeFilters,
+  onFilterChange,
+}: {
+  model: YieldSourceBoardModel;
+  activeFilters?: YieldSourceBoardProps["activeFilters"];
+  onFilterChange?: YieldSourceBoardProps["onFilterChange"];
+}) {
   const confidenceTotal =
     YIELD_SOURCE_CONFIDENCE_ORDER.reduce(
       (sum, tier) => sum + model.selectedConfidenceCounts[tier],
@@ -196,6 +241,8 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
       count: model.selectedConfidenceCounts[tier],
       description: YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].description,
       label: YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label,
+      target: { key: "sourceConfidence" as const, value: tier },
+      active: activeFilters?.sourceConfidence === tier,
     })),
     {
       key: "unknown",
@@ -212,6 +259,8 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
     count: model.depthCounts[lens],
     description: YIELD_SOURCE_DEPTH_DEFINITIONS[lens].description,
     label: YIELD_SOURCE_DEPTH_DEFINITIONS[lens].label,
+    target: { key: "depth" as const, value: lens },
+    active: activeFilters?.depth === lens,
   }));
 
   const postureSegments = YIELD_SOURCE_POSTURE_ORDER.map((posture) => ({
@@ -220,7 +269,16 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
     count: model.postureCounts[posture],
     description: YIELD_SOURCE_POSTURE_DEFINITIONS[posture].description,
     label: formatYieldSourcePosture(posture),
+    target: {
+      key: "sourcePosture" as const,
+      value: posture === "watch" ? "watch-only" : posture,
+    },
+    active: activeFilters?.sourcePosture === (posture === "watch" ? "watch-only" : posture),
   }));
+
+  const handleSegmentSelect = onFilterChange
+    ? (target: StackBarFilterTarget, active: boolean) => onFilterChange(target.key, active ? "all" : target.value)
+    : undefined;
 
   return (
     <div className="space-y-3 rounded-md border border-border/60 bg-muted/10 p-3">
@@ -228,7 +286,11 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-3">
             <span className="w-20 shrink-0 text-xs font-medium text-foreground">Posture</span>
-            <StackBar segments={postureSegments} ariaLabel={buildPostureAriaLabel(model.postureCounts)} />
+            <StackBar
+              segments={postureSegments}
+              ariaLabel={buildPostureAriaLabel(model.postureCounts)}
+              onSegmentSelect={handleSegmentSelect}
+            />
           </div>
           <p className="pl-[5.75rem] text-xs text-muted-foreground">
             {formatPostureSummary(model.postureCounts)}
@@ -245,6 +307,7 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
                 model.selectedConfidenceCounts,
                 model.selectedConfidenceUnknownCount,
               )}
+              onSegmentSelect={handleSegmentSelect}
             />
           </div>
           <p className="pl-[5.75rem] text-xs text-muted-foreground">
@@ -259,7 +322,11 @@ function SourceQualityBars({ model }: { model: YieldSourceBoardModel }) {
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-3">
             <span className="w-20 shrink-0 text-xs font-medium text-foreground">Depth</span>
-            <StackBar segments={depthSegments} ariaLabel={buildDepthAriaLabel(model.depthCounts)} />
+            <StackBar
+              segments={depthSegments}
+              ariaLabel={buildDepthAriaLabel(model.depthCounts)}
+              onSegmentSelect={handleSegmentSelect}
+            />
           </div>
           <p className="pl-[5.75rem] text-xs text-muted-foreground">
             {formatDepthSummary(model.depthCounts)}
@@ -454,7 +521,7 @@ function DisclosureToggle({
   );
 }
 
-export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
+export function YieldSourceBoard({ model, activeFilters, onFilterChange }: YieldSourceBoardProps) {
   const disclosureId = useId();
   const ledgerId = useId();
   const [openDisclosure, setOpenDisclosure] = useState<DisclosureKey | null>(null);
@@ -491,7 +558,11 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
             </p>
           </div>
 
-          <SourceQualityBars model={model} />
+          <SourceQualityBars
+            model={model}
+            activeFilters={activeFilters}
+            onFilterChange={onFilterChange}
+          />
 
           <div className="border-t border-border/50 pt-5">
             <SourceRiskDriverChips drivers={model.topSourceRiskDrivers} />

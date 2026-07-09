@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useId, useState } from "react";
-import { ChevronDown, Search, Star, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Search, Star, X } from "lucide-react";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import {
   getActiveFilterSummaries,
@@ -145,6 +145,8 @@ export function YieldLeaderboardControls({
   const yieldTypeTabs = options.yieldType.filter((option) => option.count > 0);
   const { idSet: watchlistIds } = useWatchlist();
   const watchlistActive = filters.watchlist === "only";
+  const attentionActive = filters.attention === "watchlist";
+  const attentionCount = options.attention.find((option) => option.value === "watchlist")?.count ?? 0;
   const showWatching = watchlistIds.size > 0;
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
@@ -260,21 +262,38 @@ export function YieldLeaderboardControls({
           Views
         </span>
         {showWatching ? (
-          <ChipButton
-            label="Watching"
-            count={watchlistIds.size}
-            active={watchlistActive}
-            ariaPressed={watchlistActive}
-            dataActive={watchlistActive}
-            title="Show only yields you are watching"
-            onClick={() => onFilterChange("watchlist", watchlistActive ? "all" : "only")}
-            leadingIcon={
-              <Star
-                aria-hidden="true"
-                className={cn("h-3 w-3", watchlistActive ? "fill-amber-500 text-amber-500" : "fill-none")}
-              />
-            }
-          />
+          <>
+            <ChipButton
+              label="Watching"
+              count={watchlistIds.size}
+              active={watchlistActive}
+              ariaPressed={watchlistActive}
+              dataActive={watchlistActive}
+              title="Show only yields you are watching"
+              onClick={() => onFilterChange("watchlist", watchlistActive ? "all" : "only")}
+              leadingIcon={
+                <Star
+                  aria-hidden="true"
+                  className={cn("h-3 w-3", watchlistActive ? "fill-amber-500 text-amber-500" : "fill-none")}
+                />
+              }
+            />
+            <ChipButton
+              label="Needs attention"
+              count={attentionCount}
+              active={attentionActive}
+              ariaPressed={attentionActive}
+              dataActive={attentionActive}
+              title="Show watched yields with warnings or source changes"
+              onClick={() => onFilterChange("attention", attentionActive ? "all" : "watchlist")}
+              leadingIcon={
+                <AlertTriangle
+                  aria-hidden="true"
+                  className={cn("h-3 w-3", attentionActive ? "fill-amber-500 text-amber-500" : "fill-none")}
+                />
+              }
+            />
+          </>
         ) : null}
         {presets.map((preset) => (
           <ChipButton

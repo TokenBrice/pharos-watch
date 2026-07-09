@@ -22,6 +22,7 @@ import { YieldCoinIndex } from "@/app/yield/coin-index";
 import {
   buildYieldViewModel,
   getActiveFilterSummaries,
+  RISK_BUDGET_FILTER_KEYS,
   YIELD_PRESET_SPECS,
   YIELD_RISK_BUDGET_SPECS,
   type YieldPresetKey,
@@ -133,6 +134,7 @@ export function YieldClient() {
       sourcePosture: searchParams.get("sourcePosture"),
       trending: searchParams.get("trending"),
       watchlist: searchParams.get("watchlist"),
+      attention: searchParams.get("attention"),
     }),
     [searchParams],
   );
@@ -167,13 +169,30 @@ export function YieldClient() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
+  const sourceBoardViewModel = useMemo<YieldViewModel>(
+    () =>
+      buildYieldViewModel(rankings, {
+        ...urlParams,
+        depth: null,
+        sourceConfidence: null,
+        sourcePosture: null,
+      }, {
+        benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+        fallbackBenchmark: data?.provenance?.benchmark ?? null,
+        watchlistIds: watchlist.idSet,
+      }),
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
+  );
+
+  const sourceBoardRows = sourceBoardViewModel.visibleRows;
+
   const sourceBoardModel = useMemo(
     () =>
-      buildYieldSourceBoardModel(visibleRows, {
+      buildYieldSourceBoardModel(sourceBoardRows, {
         benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
         fallbackBenchmark: data?.provenance?.benchmark ?? null,
       }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, visibleRows],
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, sourceBoardRows],
   );
 
   // Counts the full /yield ranking universe per peg currency (not filter-
@@ -247,7 +266,7 @@ export function YieldClient() {
       const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
       if (!spec) return;
       replaceParams((params) => {
-        for (const paramKey of Object.keys(viewModel.normalizedParams)) {
+        for (const paramKey of RISK_BUDGET_FILTER_KEYS) {
           params.delete(paramKey);
         }
         for (const [paramKey, value] of Object.entries(spec.overrides)) {
@@ -256,7 +275,7 @@ export function YieldClient() {
         }
       });
     },
-    [replaceParams, viewModel.normalizedParams],
+    [replaceParams],
   );
 
   const handleNavigate = useCallback(
@@ -455,7 +474,7 @@ export function YieldClient() {
               ) : null}
             </div>
           ) : null}
-          {visibleRows.length > 0 ? (
+          {visibleRows.length > 0 || sourceBoardModel.selectedCount > 0 ? (
             <>
               <ReferenceRatesStrip
                 benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
@@ -464,7 +483,15 @@ export function YieldClient() {
                 safetySnapshot={data.provenance?.safetySnapshot ?? null}
                 currencyCounts={currencyCounts}
               />
-              <YieldSourceBoard model={sourceBoardModel} />
+              <YieldSourceBoard
+                model={sourceBoardModel}
+                activeFilters={{
+                  depth: viewModel.filters.depth,
+                  sourceConfidence: viewModel.filters.sourceConfidence,
+                  sourcePosture: viewModel.filters.sourcePosture,
+                }}
+                onFilterChange={handleFilterChange}
+              />
             </>
           ) : null}
           <YieldCoinIndex />

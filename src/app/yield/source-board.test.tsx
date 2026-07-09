@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
@@ -114,6 +114,39 @@ describe("YieldSourceBoard", () => {
     expect(screen.getByText(/1 deterministic · 2 curated/)).toBeTruthy();
     expect(screen.getByRole("group", { name: /Source posture mix:/i })).toBeTruthy();
     expect(screen.getByText(/3 watch/)).toBeTruthy();
+  });
+
+  it("turns source-quality segments into filters when a handler is provided", () => {
+    const onFilterChange = vi.fn();
+    const model = buildYieldSourceBoardModel([
+      makeBoardRanking(),
+    ]);
+
+    render(<YieldSourceBoard model={model} onFilterChange={onFilterChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Watch: 1\..*Filter rows/i }));
+    expect(onFilterChange).toHaveBeenCalledWith("sourcePosture", "watch-only");
+  });
+
+  it("clears an active source-quality segment when clicked again", () => {
+    const onFilterChange = vi.fn();
+    const model = buildYieldSourceBoardModel([
+      makeBoardRanking(),
+    ]);
+
+    render(
+      <YieldSourceBoard
+        model={model}
+        activeFilters={{ sourcePosture: "watch-only" }}
+        onFilterChange={onFilterChange}
+      />,
+    );
+
+    const watchSegment = screen.getByRole("button", { name: /Watch: 1\..*Clear filter/i });
+    expect(watchSegment.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(watchSegment);
+    expect(onFilterChange).toHaveBeenCalledWith("sourcePosture", "all");
   });
 
   it("hides confidence and depth bars when there are no counts to show", () => {

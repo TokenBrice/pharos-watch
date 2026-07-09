@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldClient } from "./client";
@@ -136,5 +136,34 @@ describe("YieldClient", () => {
 
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
+  });
+
+  it("risk budget changes preserve non-risk research filters", () => {
+    searchParamsMock.set("peg", "USD");
+    searchParamsMock.set("q", "coin");
+    searchParamsMock.set("minSafety", "65");
+    searchParamsMock.set("depth", "thin");
+    searchParamsMock.set("sourcePosture", "speculative");
+    searchParamsMock.set("sourceConfidence", "curated");
+    searchParamsMock.set("warnings", "only");
+
+    render(<YieldClient />);
+
+    fireEvent.change(screen.getByRole("slider", { name: "Risk tolerance" }), {
+      target: { value: "0" },
+    });
+
+    expect(replaceParamsMock).toHaveBeenCalledTimes(1);
+    const update = replaceParamsMock.mock.calls[0]?.[0] as (params: URLSearchParams) => void;
+    const params = new URLSearchParams(searchParamsMock);
+    update(params);
+
+    expect(params.get("peg")).toBe("USD");
+    expect(params.get("q")).toBe("coin");
+    expect(params.get("minSafety")).toBe("80");
+    expect(params.get("depth")).toBe("hide-thin");
+    expect(params.get("sourcePosture")).toBe("clean");
+    expect(params.get("warnings")).toBe("hide");
+    expect(params.get("sourceConfidence")).toBeNull();
   });
 });

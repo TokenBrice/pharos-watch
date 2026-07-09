@@ -26,9 +26,10 @@ export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
 export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
-export type YieldSourcePostureFilter = "all" | YieldSourcePosture;
+export type YieldSourcePostureFilter = "all" | YieldSourcePosture | "watch-only";
 export type YieldTrendingFilter = "all" | "rising";
 export type YieldWatchlistFilter = "all" | "only";
+export type YieldAttentionFilter = "all" | "watchlist";
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -45,6 +46,7 @@ export interface YieldViewModelUrlParams {
   sourcePosture?: string | null;
   trending?: string | null;
   watchlist?: string | null;
+  attention?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -68,6 +70,7 @@ export interface YieldViewModelFilters {
   sourcePosture: YieldSourcePostureFilter;
   trending: YieldTrendingFilter;
   watchlist: YieldWatchlistFilter;
+  attention: YieldAttentionFilter;
 }
 
 // Priority order for the "other" peg bucket sort. USD is excluded because it is
@@ -136,6 +139,7 @@ export const DEFAULT_FILTERS: YieldViewModelFilters = {
   sourcePosture: "all",
   trending: "all",
   watchlist: "all",
+  attention: "all",
 };
 
 export interface YieldPresetSpec {
@@ -234,9 +238,9 @@ export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
   },
   {
     key: "watchlist-warnings",
-    label: "Watchlist warnings",
-    description: "Rows surfacing one or more warning signals",
-    overrides: { warnings: "only" },
+    label: "Watching needs attention",
+    description: "Starred rows with warnings or source changes",
+    overrides: { attention: "watchlist" },
   },
 ];
 

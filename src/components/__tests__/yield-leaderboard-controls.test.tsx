@@ -18,13 +18,14 @@ const rows = [
     safetyScore: 82,
     sourceTvlUsd: 5_000_000,
     pharosYieldScore: 72,
-    provenance: makeYieldProvenance({ confidenceTier: "curated" }),
+    provenance: makeYieldProvenance({ confidenceTier: "curated", sourceSwitch: true }),
   }),
   makeYieldRanking({
     id: "usdt-tether",
     symbol: "USDT",
     name: "Tether USD",
     yieldType: "lending-opportunity",
+    warningSignals: ["low-source-tvl"],
     safetyScore: 65,
     sourceTvlUsd: 50_000_000,
     pharosYieldScore: 58,
@@ -92,6 +93,50 @@ describe("YieldLeaderboardControls", () => {
 
     fireEvent.click(chip);
     expect(onFilterChange).toHaveBeenCalledWith("watchlist", "only");
+  });
+
+  it("shows a watchlist attention inbox chip and toggles its composite filter", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle", "usdt-tether"]));
+    const onFilterChange = vi.fn();
+
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel({}, new Set(["usdc-circle", "usdt-tether"]))}
+        onFilterChange={onFilterChange}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    const chip = screen.getByRole("button", { name: /^Needs attention\d+$/ });
+    expect(chip.textContent).toContain("2");
+    expect(chip.getAttribute("data-active")).toBe("false");
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(chip);
+    expect(onFilterChange).toHaveBeenCalledWith("attention", "watchlist");
+  });
+
+  it("renders the attention inbox chip as active and toggles back to all", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
+    const onFilterChange = vi.fn();
+
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel({ attention: "watchlist" }, new Set(["usdc-circle"]))}
+        onFilterChange={onFilterChange}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    const chip = screen.getByRole("button", { name: /^Needs attention\d+$/ });
+    expect(chip.getAttribute("data-active")).toBe("true");
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Starred rows with warnings or source changes")).toBeTruthy();
+
+    fireEvent.click(chip);
+    expect(onFilterChange).toHaveBeenCalledWith("attention", "all");
   });
 
   it("renders the Watching chip as active and toggles back to all when already filtering", () => {

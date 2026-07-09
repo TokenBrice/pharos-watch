@@ -88,6 +88,7 @@ describe("buildYieldViewModel", () => {
       benchmark: "JPY",
       opportunity: "venue",
       sourcePosture: "reckless",
+      attention: "urgent",
     });
 
     expect(model.filters).toMatchObject({
@@ -100,6 +101,7 @@ describe("buildYieldViewModel", () => {
       benchmark: "all",
       opportunity: "all",
       sourcePosture: "all",
+      attention: "all",
     });
     expect(model.invalidParamKeys).toEqual([
       "peg",
@@ -111,6 +113,7 @@ describe("buildYieldViewModel", () => {
       "benchmark",
       "opportunity",
       "sourcePosture",
+      "attention",
     ]);
     expect(model.visibleRows).toHaveLength(3);
   });
@@ -317,12 +320,17 @@ describe("buildYieldViewModel", () => {
     expect(watch.visibleRows.map((row) => row.id)).toEqual(["clean-row", "watch-row"]);
     expect(watch.comparisonLabel).toBe("Clean/watch source posture");
 
+    const watchOnly = buildYieldViewModel(postureRows, { sourcePosture: "watch-only" });
+    expect(watchOnly.visibleRows.map((row) => row.id)).toEqual(["watch-row"]);
+    expect(watchOnly.comparisonLabel).toBe("Watch source posture");
+
     const speculative = buildYieldViewModel(postureRows, { sourcePosture: "speculative" });
     expect(speculative.visibleRows.map((row) => row.id)).toEqual(["spec-row"]);
     expect(speculative.options.sourcePosture).toEqual([
       { value: "all", label: "All postures", count: 3 },
       { value: "clean", label: "Clean", count: 1 },
       { value: "watch", label: "Clean + watch", count: 2 },
+      { value: "watch-only", label: "Watch only", count: 1 },
       { value: "speculative", label: "Speculative", count: 1 },
     ]);
     expect(speculative.visibleRows[0]?.sourcePosture).toBe("speculative");
@@ -361,11 +369,13 @@ describe("buildYieldViewModel", () => {
   });
 
   it("marks the active preset and counts its matching rows", () => {
-    const warningsModel = buildYieldViewModel(rows, { warnings: "only" });
+    const warningsModel = buildYieldViewModel(rows, { attention: "watchlist" }, {
+      watchlistIds: new Set(["usdc-circle", "eurc-circle", "usdt-tether"]),
+    });
     expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
     const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
     expect(watchlist?.active).toBe(true);
-    expect(watchlist?.count).toBe(2);
+    expect(watchlist?.count).toBe(3);
 
     const defaultModel = buildYieldViewModel(rows, {});
     expect(defaultModel.matchingPreset).toBeNull();
@@ -447,6 +457,28 @@ describe("buildYieldViewModel", () => {
 
     const onlyModel = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds });
     expect(onlyModel.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
+  it("filters watched rows that need attention without forcing warnings/source-changed AND semantics", () => {
+    const watchlistIds = new Set(["usdc-circle", "eurc-circle", "usdt-tether"]);
+
+    const allModel = buildYieldViewModel(rows, {}, { watchlistIds });
+    expect(allModel.options.attention.find((option) => option.value === "watchlist")?.count).toBe(3);
+
+    const attentionModel = buildYieldViewModel(rows, { attention: "watchlist" }, { watchlistIds });
+    expect(attentionModel.visibleRows.map((row) => row.id)).toEqual([
+      "usdc-circle",
+      "eurc-circle",
+      "usdt-tether",
+    ]);
+    expect(attentionModel.comparisonLabel).toBe("Watched rows needing attention");
+
+    const warningAndChangedOnly = buildYieldViewModel(rows, {
+      watchlist: "only",
+      warnings: "only",
+      sourceChanged: "only",
+    }, { watchlistIds });
+    expect(warningAndChangedOnly.visibleRows.map((row) => row.id)).toEqual([]);
   });
 
   it("normalizes invalid watchlist URL params back to default", () => {

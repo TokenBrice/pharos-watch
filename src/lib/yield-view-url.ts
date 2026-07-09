@@ -2,6 +2,7 @@ import { DEFAULT_FILTERS } from "@/lib/yield-view-config";
 import type {
   YieldBenchmarkFilter,
   YieldDepthFilter,
+  YieldAttentionFilter,
   YieldOpportunityFilter,
   YieldPegFilter,
   YieldSourceChangedFilter,
@@ -27,6 +28,7 @@ interface YieldViewModelOptions {
   depth: YieldFilterOption[];
   sourceChanged: YieldFilterOption[];
   sourcePosture: YieldFilterOption[];
+  attention: YieldFilterOption[];
 }
 
 function normalizeTextParam(value: string | null | undefined): string {
@@ -67,6 +69,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
   const validSourcePosture = new Set(options.sourcePosture.map((option) => option.value));
   const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
   const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
+  const validAttention = new Set<YieldAttentionFilter>(["all", "watchlist"]);
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -83,6 +86,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
     sourcePosture: normalizeOption(params.sourcePosture, validSourcePosture, DEFAULT_FILTERS.sourcePosture) as YieldSourcePostureFilter,
     trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
     watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
+    attention: normalizeOption(params.attention, validAttention, DEFAULT_FILTERS.attention),
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
@@ -100,6 +104,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
     sourcePosture: filters.sourcePosture === DEFAULT_FILTERS.sourcePosture ? null : filters.sourcePosture,
     trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
     watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
+    attention: filters.attention === DEFAULT_FILTERS.attention ? null : filters.attention,
   };
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
