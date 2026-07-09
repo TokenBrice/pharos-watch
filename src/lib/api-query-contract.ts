@@ -43,7 +43,7 @@ export function defineApiQuery<
   return { ...base, responseMode, schema };
 }
 
-export function defineStaticApiQuery<
+function defineStaticApiQuery<
   TBase extends FrontendStaticApiQueryBaseDescriptor,
   TData,
 >(

@@ -22,7 +22,7 @@ export function createLazySchema<T>(loader: () => Promise<SchemaLike<T>>): Schem
   };
 }
 
-export function isSchemaLike<T>(value: SchemaLikeSource<T>): value is SchemaLike<T> {
+function isSchemaLike<T>(value: SchemaLikeSource<T>): value is SchemaLike<T> {
   return typeof value === "object" && value !== null && typeof value.safeParse === "function";
 }
 

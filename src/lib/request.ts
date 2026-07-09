@@ -1,7 +1,7 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
 
-export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
 export type RequestFailureKind = "http" | "network" | "timeout" | "aborted" | "superseded" | "parse" | "schema";
 

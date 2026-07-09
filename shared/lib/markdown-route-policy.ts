@@ -1,4 +1,4 @@
-export const MARKDOWN_ROUTE_PREFIXES = [
+const MARKDOWN_ROUTE_PREFIXES = [
   "/methodology/",
   "/stablecoin/",
   "/changelog/",
@@ -6,7 +6,7 @@ export const MARKDOWN_ROUTE_PREFIXES = [
   "/docs/",
 ] as const;
 
-export const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
+const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
 
 function hasMarkdownRoutePrefix(pathname: string): boolean {
   return MARKDOWN_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));

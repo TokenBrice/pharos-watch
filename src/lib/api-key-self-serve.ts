@@ -17,12 +17,6 @@ const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSche
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
 );
 
-export {
-  readVerificationTokenFromUrl,
-  stripQueryVerificationTokenFromUrl,
-  stripVerificationTokenFromUrl,
-} from "@/lib/api-key-verification-url";
-
 interface ApiErrorPayload {
   error?: string;
   message?: string;

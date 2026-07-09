@@ -7,7 +7,7 @@ import {
 } from "../types/live-reserve-adapter-declarations";
 import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-schema-primitives";
 
-export { LIVE_RESERVE_ADAPTER_KEYS, LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
+export { LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
 export type {
   LiveReserveAdapterKey,
   LiveReserveAdapterProvenance,

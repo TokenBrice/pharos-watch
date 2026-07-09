@@ -116,6 +116,9 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/stablecoins/schema.ts::STABLECOIN_META_ASSET_FIELD_ORDER",
   "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_VALUES",
   "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema",
+  "shared/lib/stablecoins/schema.ts::StablecoinMetaSourceAssetSchema",
+  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_FIELDS",
+  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_SCHEMAS",
   "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema",
   "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema",
   // Consumed by scripts/lib/stablecoin-catalog-sources.ts (out-of-scan-scope).
