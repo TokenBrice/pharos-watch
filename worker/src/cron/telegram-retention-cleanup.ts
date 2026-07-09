@@ -2,7 +2,12 @@ import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/cron-lease";
-import { TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT, pruneTelegramProcessedUpdates } from "../api/telegram-webhook-store";
+import {
+  TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+  countTelegramProcessedUpdateBacklog,
+  pruneTelegramProcessedUpdates,
+  type TelegramProcessedUpdateBacklog,
+} from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
 
 const DAY_SEC = 24 * 60 * 60;
@@ -12,18 +17,65 @@ const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
 const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
 const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
 const RETENTION_DELETE_BATCH_LIMIT = 10_000;
+export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
+export const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
+
+interface TelegramRetentionCleanupOptions {
+  monotonicNow?: () => number;
+  processedUpdateTimeBudgetMs?: number;
+}
+
+interface ProcessedUpdateDeleteResult extends CappedDeleteResult {
+  batches: number;
+  remainingBacklog: TelegramProcessedUpdateBacklog;
+  timeBudgetExhausted: boolean;
+  timeBudgetMs: number;
+}
 
 async function pruneTelegramProcessedUpdatesCapped(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
-): Promise<CappedDeleteResult> {
+  options: TelegramRetentionCleanupOptions = {},
+): Promise<ProcessedUpdateDeleteResult> {
+  const monotonicNow = options.monotonicNow ?? (() => performance.now());
+  const timeBudgetMs = options.processedUpdateTimeBudgetMs ?? TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS;
+  if (!Number.isFinite(timeBudgetMs) || timeBudgetMs <= 0) {
+    throw new RangeError("Telegram processed-update prune time budget must be positive.");
+  }
+
+  const startedAt = monotonicNow();
+  let pruned = 0;
+  let batches = 0;
+  let timeBudgetExhausted = false;
+
+  while (pruned < TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT) {
+    throwIfAborted(signal);
+    if (monotonicNow() - startedAt >= timeBudgetMs) {
+      timeBudgetExhausted = true;
+      break;
+    }
+
+    const limit = Math.min(
+      TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
+      TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT - pruned,
+    );
+    const batchPruned = await pruneTelegramProcessedUpdates(db, { nowSec, limit, signal });
+    batches += 1;
+    pruned += batchPruned;
+    if (batchPruned < limit) break;
+  }
+
   throwIfAborted(signal);
-  const pruned = await pruneTelegramProcessedUpdates(db, { nowSec, signal });
+  const remainingBacklog = await countTelegramProcessedUpdateBacklog(db, { nowSec, signal });
 
   return {
     pruned,
     cappedAtLimit: pruned >= TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+    batches,
+    remainingBacklog,
+    timeBudgetExhausted,
+    timeBudgetMs,
   };
 }
 
@@ -82,13 +134,17 @@ async function deleteCachePrefixOlderThanCapped(
   };
 }
 
-export async function runTelegramRetentionCleanup(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function runTelegramRetentionCleanup(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: TelegramRetentionCleanupOptions = {},
+): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec, signal);
   throwIfAborted(signal);
 
-  const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal);
+  const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal, options);
   throwIfAborted(signal);
 
   const deadLetters = await deleteOlderThanCapped(
@@ -224,7 +280,20 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
       groupWelcomeCachePruned: groupWelcomeCache.pruned,
       reEngagementWarningCachePruned: reEngagementWarningCache.pruned,
       expiredTargetsReconciled,
+      runBudgetTruncated: processedUpdates.remainingBacklog.count > 0,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
+      processedUpdatePruneBudget: {
+        rowLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+        batchLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
+        timeBudgetMs: processedUpdates.timeBudgetMs,
+        batches: processedUpdates.batches,
+        timeBudgetExhausted: processedUpdates.timeBudgetExhausted,
+      },
+      processedUpdatesRemainingBacklog: {
+        count: processedUpdates.remainingBacklog.count,
+        exact: processedUpdates.remainingBacklog.exact,
+        probeLimit: processedUpdates.remainingBacklog.probeLimit,
+      },
       cappedAtLimit: {
         processedUpdates: processedUpdates.cappedAtLimit,
         deadLetters: deadLetters.cappedAtLimit,

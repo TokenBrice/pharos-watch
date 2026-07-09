@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
+  countTelegramProcessedUpdateBacklog,
   loadPendingDisambiguation,
   persistPendingConfirmBulk,
   persistPendingDisambiguationRow,
@@ -159,10 +160,10 @@ describe("pruneTelegramProcessedUpdates", () => {
 
     expect(pruned).toBe(7);
     const [entry] = db.getHistory();
-    expect(entry?.binds).toEqual([1_699_999_940]);
+    expect(entry?.binds).toEqual([1_699_999_940, 5_000]);
     expect(entry?.sql).toContain("WHERE update_id IN");
     expect(entry?.sql).toContain("ORDER BY received_at ASC, update_id ASC");
-    expect(entry?.sql).toContain("LIMIT 5000");
+    expect(entry?.sql).toContain("LIMIT ?");
   });
 
   it("deletes at most 5000 expired processed update rows per call", async () => {
@@ -213,6 +214,10 @@ describe("pruneTelegramProcessedUpdates", () => {
         return Number(row.count);
       };
       const db = createSqliteD1(sqlite);
+      await expect(countTelegramProcessedUpdateBacklog(db, {
+        nowSec: 1_700_000_000,
+        retentionSec: 60,
+      })).resolves.toEqual({ count: 5_001, exact: false, probeLimit: 5_001 });
 
       const firstPruned = await pruneTelegramProcessedUpdates(db, {
         nowSec: 1_700_000_000,
@@ -222,6 +227,10 @@ describe("pruneTelegramProcessedUpdates", () => {
       expect(firstPruned).toBe(5_000);
       expect(countRows("WHERE received_at < ?", 1_699_999_940)).toBe(1);
       expect(countRows("WHERE received_at >= ?", 1_699_999_940)).toBe(1);
+      await expect(countTelegramProcessedUpdateBacklog(db, {
+        nowSec: 1_700_000_000,
+        retentionSec: 60,
+      })).resolves.toEqual({ count: 1, exact: true, probeLimit: 5_001 });
 
       const secondPruned = await pruneTelegramProcessedUpdates(db, {
         nowSec: 1_700_000_000,
@@ -231,9 +240,12 @@ describe("pruneTelegramProcessedUpdates", () => {
       expect(secondPruned).toBe(1);
       expect(countRows("WHERE received_at < ?", 1_699_999_940)).toBe(0);
       expect(countRows()).toBe(1);
+      await expect(countTelegramProcessedUpdateBacklog(db, {
+        nowSec: 1_700_000_000,
+        retentionSec: 60,
+      })).resolves.toEqual({ count: 0, exact: true, probeLimit: 5_001 });
     } finally {
       sqlite.close();
     }
   });
-
 });

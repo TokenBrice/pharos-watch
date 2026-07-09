@@ -4,6 +4,13 @@ import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
 
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
+export const TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT = TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT + 1;
+
+export interface TelegramProcessedUpdateBacklog {
+  count: number;
+  exact: boolean;
+  probeLimit: number;
+}
 
 export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight" | "effect_unknown";
 
@@ -238,10 +245,16 @@ export async function markTelegramProcessedUpdateFailed(
 
 export async function pruneTelegramProcessedUpdates(
   db: D1Database,
-  input: { nowSec?: number; retentionSec?: number; signal?: AbortSignal } = {},
+  input: { nowSec?: number; retentionSec?: number; limit?: number; signal?: AbortSignal } = {},
 ): Promise<number> {
   const nowSec = input.nowSec ?? unixNow();
   const retentionSec = input.retentionSec ?? TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC;
+  const limit = input.limit ?? TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT) {
+    throw new RangeError(
+      `Telegram processed-update prune limit must be between 1 and ${TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT}.`,
+    );
+  }
   const result = await runWithOverloadRetry(
     () =>
       db
@@ -252,15 +265,47 @@ export async function pruneTelegramProcessedUpdates(
                 FROM telegram_processed_updates
                WHERE received_at < ?
                ORDER BY received_at ASC, update_id ASC
-               LIMIT ${TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT}
+               LIMIT ?
             )`,
         )
-        .bind(nowSec - retentionSec)
+        .bind(nowSec - retentionSec, limit)
         .run(),
     3,
     input.signal,
   );
   return d1ChangeCount(result);
+}
+
+export async function countTelegramProcessedUpdateBacklog(
+  db: D1Database,
+  input: { nowSec?: number; retentionSec?: number; signal?: AbortSignal } = {},
+): Promise<TelegramProcessedUpdateBacklog> {
+  const nowSec = input.nowSec ?? unixNow();
+  const retentionSec = input.retentionSec ?? TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC;
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT COUNT(*) AS count
+             FROM (
+               SELECT update_id
+                 FROM telegram_processed_updates
+                WHERE received_at < ?
+                ORDER BY received_at ASC, update_id ASC
+                LIMIT ?
+             )`,
+        )
+        .bind(nowSec - retentionSec, TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT)
+        .first<{ count: number }>(),
+    3,
+    input.signal,
+  );
+  const count = Math.max(0, Number(row?.count ?? 0));
+  return {
+    count,
+    exact: count < TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT,
+    probeLimit: TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT,
+  };
 }
 
 export interface TelegramCommandCooldownResult {
