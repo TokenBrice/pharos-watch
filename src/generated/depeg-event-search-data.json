@@ -1,11 +1,92 @@
 [
   {
-    "slug": "usdc-2023-03-11",
-    "stablecoinId": "usdc-circle",
-    "symbol": "USDC",
-    "pegType": "USD",
+    "slug": "usda-2026-07-06",
+    "stablecoinId": "usda-alpha-partner",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": 1300,
-    "startedAt": 1678492800
+    "peakDeviationBps": -503,
+    "startedAt": 1783297163
+  },
+  {
+    "slug": "eurm-2026-07-05",
+    "stablecoinId": "ceur-celo",
+    "symbol": "EURm",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -754,
+    "startedAt": 1783247661
+  },
+  {
+    "slug": "idrt-2026-07-04",
+    "stablecoinId": "idrt-rupiah-token",
+    "symbol": "IDRT",
+    "pegType": "peggedIDR",
+    "direction": "below",
+    "peakDeviationBps": -7770,
+    "startedAt": 1783132496
+  },
+  {
+    "slug": "kag-2026-06-29",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -1190,
+    "startedAt": 1782739240
+  },
+  {
+    "slug": "rusd-2026-06-26",
+    "stablecoinId": "rusd-royal-dollar",
+    "symbol": "RUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -8997,
+    "startedAt": 1782453826
+  },
+  {
+    "slug": "reusd-2026-06-24",
+    "stablecoinId": "reusd-resupply",
+    "symbol": "REUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -4451,
+    "startedAt": 1782340540
+  },
+  {
+    "slug": "mai-2026-06-24",
+    "stablecoinId": "mai-qidao",
+    "symbol": "MAI",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1917,
+    "startedAt": 1782313533
+  },
+  {
+    "slug": "tryb-2026-06-23",
+    "stablecoinId": "tryb-bilira",
+    "symbol": "TRYB",
+    "pegType": "peggedTRY",
+    "direction": "below",
+    "peakDeviationBps": -9829,
+    "startedAt": 1782242432
+  },
+  {
+    "slug": "rusd-2026-06-22",
+    "stablecoinId": "rusd-royal-dollar",
+    "symbol": "RUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7001,
+    "startedAt": 1782159574
+  },
+  {
+    "slug": "reur-2026-06-22",
+    "stablecoinId": "reur-royal-euro",
+    "symbol": "REUR",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -6933,
+    "startedAt": 1782145197
   }
 ]

@@ -16,20 +16,26 @@
 export const MIN_DEPEG_PAGE_DEVIATION_BPS = 500;
 
 /**
- * Only the event pages linked from the server-rendered `/depeg/` archive are
- * crawl targets. The full event table remains available through the API and
- * live tracker; the static export keeps a bounded editorial subset so the
- * Cloudflare Pages direct-upload file count stays below its hard cap.
+ * Grow-only archive epoch (2026-01-01T00:00:00Z). Every confirmed event that
+ * starts at or after this instant and clears MIN_DEPEG_PAGE_DEVIATION_BPS
+ * keeps a permanent static page, permanently listed in the archive and the
+ * sitemap. This replaces the former 12-newest recency window
+ * (INDEXABLE_DEPEG_EVENT_LIMIT), which deleted already-ranked pages as newer
+ * events arrived — Search Console showed churned-out event URLs returning
+ * 404 after earning impressions and clicks.
  *
- * The limit bounds the recency slice only; pinned slugs are additive.
+ * File-count budget: the static export writes ~9 files per event route.
+ * 2026 H1 produced ~260 qualifying events (~1.5/day), so the archive adds
+ * roughly 5k files/year against the Cloudflare Pages 20k direct-upload cap
+ * (~13k used today) — revisit the epoch or split deploys before that cap
+ * gets close, but do not reintroduce deletion of published event URLs.
  */
-export const INDEXABLE_DEPEG_EVENT_LIMIT = 12;
+export const DEPEG_ARCHIVE_EPOCH_SECONDS = 1_767_225_600;
 
 /**
- * Durable indexability ledger. Pinned events are unioned into both the static
- * page set and the indexable set, so they can never churn to noindex as newer
- * qualifying events arrive (~daily in production — a grow-only set would be
- * unbounded, so durability is an explicit editorial decision: pin the slug).
+ * Durable indexability ledger for events that predate the archive epoch.
+ * Pinned events are unioned into both the static page set and the indexable
+ * set. Post-epoch events no longer need pinning — permanence is structural.
  */
 export const PINNED_DEPEG_EVENT_SLUGS = ["usdc-2023-03-11"] as const;
 
@@ -65,8 +71,8 @@ export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
   const bySlug = new Map(events.map((event) => [event.slug, event] as const));
   const selected = new Map<string, T>();
 
-  for (const event of sortNewestDeterministic(events).slice(0, INDEXABLE_DEPEG_EVENT_LIMIT)) {
-    selected.set(event.slug, event);
+  for (const event of events) {
+    if (event.startedAt >= DEPEG_ARCHIVE_EPOCH_SECONDS) selected.set(event.slug, event);
   }
   for (const slug of PINNED_DEPEG_EVENT_SLUGS) {
     const event = bySlug.get(slug);

@@ -98,13 +98,22 @@ describe("feed routes smoke", () => {
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Depeg Events</title>");
     expect(xml).toContain("<channel>");
-    // data/depeg-events.json carries at least the seeded USDC 2023-03-11 event;
-    // CI sync populates the rest. The route empty-channel branch still exists
-    // for the case where the file becomes [].
+    // data/depeg-events.json carries a committed seed (newest window + the
+    // grow-only archive set); CI sync refreshes it at build. The route
+    // empty-channel branch still exists for the case where the file becomes [].
+    const seeded = (await import("../../../../data/depeg-events.json")).default as Array<{
+      slug: string;
+      startedAt: number;
+      peakDeviationBps: number;
+    }>;
+    const { selectStaticDepegEventPages } = await import("../../depeg/[event]/config");
+    const newest = selectStaticDepegEventPages(seeded)[0];
+    expect(newest).toBeDefined();
     expect(xml).toContain("<item>");
-    expect(xml).toContain("pharos:depeg-event:usdc-2023-03-11");
-    expect(xml).toContain("https://pharos.watch/depeg/usdc-2023-03-11/");
-    expect(xml).not.toContain("pharos:depeg-event:usdc-circle-2023-03-11");
+    expect(xml).toContain(`pharos:depeg-event:${newest.slug}`);
+    expect(xml).toContain(`https://pharos.watch/depeg/${newest.slug}/`);
+    // Legacy stablecoinId-based guids must never resurface.
+    expect(xml).not.toContain("pharos:depeg-event:usdc-circle-");
   });
 
   it("depeg route tolerates a missing prebuild events file", async () => {

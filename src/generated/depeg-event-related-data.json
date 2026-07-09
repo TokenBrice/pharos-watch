@@ -1,11 +1,2153 @@
 [
   {
+    "slug": "usda-2026-07-06",
+    "stablecoinId": "usda-alpha-partner",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -503,
+    "startedAt": 1783297163
+  },
+  {
+    "slug": "eurm-2026-07-05",
+    "stablecoinId": "ceur-celo",
+    "symbol": "EURm",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -754,
+    "startedAt": 1783247661
+  },
+  {
+    "slug": "idrt-2026-07-04",
+    "stablecoinId": "idrt-rupiah-token",
+    "symbol": "IDRT",
+    "pegType": "peggedIDR",
+    "direction": "below",
+    "peakDeviationBps": -7770,
+    "startedAt": 1783132496
+  },
+  {
+    "slug": "kag-2026-06-29",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -1190,
+    "startedAt": 1782739240
+  },
+  {
+    "slug": "rusd-2026-06-26",
+    "stablecoinId": "rusd-royal-dollar",
+    "symbol": "RUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -8997,
+    "startedAt": 1782453826
+  },
+  {
+    "slug": "reusd-2026-06-24",
+    "stablecoinId": "reusd-resupply",
+    "symbol": "REUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -4451,
+    "startedAt": 1782340540
+  },
+  {
+    "slug": "mai-2026-06-24",
+    "stablecoinId": "mai-qidao",
+    "symbol": "MAI",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1917,
+    "startedAt": 1782313533
+  },
+  {
+    "slug": "tryb-2026-06-23",
+    "stablecoinId": "tryb-bilira",
+    "symbol": "TRYB",
+    "pegType": "peggedTRY",
+    "direction": "below",
+    "peakDeviationBps": -9829,
+    "startedAt": 1782242432
+  },
+  {
+    "slug": "rusd-2026-06-22",
+    "stablecoinId": "rusd-royal-dollar",
+    "symbol": "RUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7001,
+    "startedAt": 1782159574
+  },
+  {
+    "slug": "reur-2026-06-22",
+    "stablecoinId": "reur-royal-euro",
+    "symbol": "REUR",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -6933,
+    "startedAt": 1782145197
+  },
+  {
+    "slug": "gyen-2026-06-21",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -6439,
+    "startedAt": 1782067771
+  },
+  {
+    "slug": "usx-2026-06-21",
+    "stablecoinId": "usx-dforce",
+    "symbol": "USX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -5783,
+    "startedAt": 1782040737
+  },
+  {
+    "slug": "msusd-2026-06-21",
+    "stablecoinId": "msusd-main-street",
+    "symbol": "MSUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -8204,
+    "startedAt": 1782038941
+  },
+  {
+    "slug": "usdr-2026-06-21",
+    "stablecoinId": "usdr-stablr",
+    "symbol": "USDR",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7492,
+    "startedAt": 1782038941
+  },
+  {
+    "slug": "eurs-2026-06-19",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1424,
+    "startedAt": 1781859887
+  },
+  {
+    "slug": "xaum-2026-06-15",
+    "stablecoinId": "xaum-matrixdock",
+    "symbol": "XAUm",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 998,
+    "startedAt": 1781558356
+  },
+  {
+    "slug": "kag-2026-06-14",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -729,
+    "startedAt": 1781476446
+  },
+  {
+    "slug": "mai-2026-06-13",
+    "stablecoinId": "mai-qidao",
+    "symbol": "MAI",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1916,
+    "startedAt": 1781364925
+  },
+  {
+    "slug": "mim-2026-06-08",
+    "stablecoinId": "mim-abracadabra",
+    "symbol": "MIM",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -9201,
+    "startedAt": 1780937476
+  },
+  {
+    "slug": "xaum-2026-06-05",
+    "stablecoinId": "xaum-matrixdock",
+    "symbol": "XAUm",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 800,
+    "startedAt": 1780668339
+  },
+  {
+    "slug": "apxusd-2026-06-02",
+    "stablecoinId": "apxusd-apyx",
+    "symbol": "apxUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3159,
+    "startedAt": 1780437028
+  },
+  {
+    "slug": "eurs-2026-06-02",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1508,
+    "startedAt": 1780392000
+  },
+  {
+    "slug": "eurs-2026-06-01",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1660,
+    "startedAt": 1780284963
+  },
+  {
+    "slug": "usdxl-2026-05-29",
+    "stablecoinId": "usdxl-last",
+    "symbol": "USDXL",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 737,
+    "startedAt": 1780068077
+  },
+  {
+    "slug": "usdr-2026-05-24",
+    "stablecoinId": "usdr-stablr",
+    "symbol": "USDR",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7546,
+    "startedAt": 1779596458
+  },
+  {
+    "slug": "eurr-2026-05-24",
+    "stablecoinId": "eurr-stablr",
+    "symbol": "EURR",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -3980,
+    "startedAt": 1779587456
+  },
+  {
+    "slug": "usdxl-2026-05-20-up-90019",
+    "stablecoinId": "usdxl-last",
+    "symbol": "USDXL",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 669,
+    "startedAt": 1779312065
+  },
+  {
+    "slug": "xaum-2026-05-19",
+    "stablecoinId": "xaum-matrixdock",
+    "symbol": "XAUm",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 537,
+    "startedAt": 1779196756
+  },
+  {
+    "slug": "mai-2026-05-13",
+    "stablecoinId": "mai-qidao",
+    "symbol": "MAI",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3541,
+    "startedAt": 1778635218
+  },
+  {
+    "slug": "jpyc-2026-05-12",
+    "stablecoinId": "jpyc-jpyc",
+    "symbol": "JPYC",
+    "pegType": "peggedJPY",
+    "direction": "above",
+    "peakDeviationBps": 2102,
+    "startedAt": 1778559531
+  },
+  {
+    "slug": "usdp-2026-05-06",
+    "stablecoinId": "usdp-parallel",
+    "symbol": "USDp",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 2203,
+    "startedAt": 1778044764
+  },
+  {
+    "slug": "eurs-2026-05-05",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 886,
+    "startedAt": 1777957505
+  },
+  {
+    "slug": "pmusd-2026-05-02",
+    "stablecoinId": "pmusd-precious-metals",
+    "symbol": "pmUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -5568,
+    "startedAt": 1777682936
+  },
+  {
+    "slug": "pusd-2026-04-23",
+    "stablecoinId": "pusd-pleasing",
+    "symbol": "PUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -9652,
+    "startedAt": 1776957536
+  },
+  {
+    "slug": "eurs-2026-04-19",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 3510,
+    "startedAt": 1776623704
+  },
+  {
+    "slug": "usdx-2026-04-17-down-89631",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -593,
+    "startedAt": 1776463473
+  },
+  {
+    "slug": "musd-2026-04-13-up-89598",
+    "stablecoinId": "meusd-mezo",
+    "symbol": "MUSD",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 591,
+    "startedAt": 1776124175
+  },
+  {
+    "slug": "evausdt-2026-04-12",
+    "stablecoinId": "evausdt-eva",
+    "symbol": "evaUSDT",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 623,
+    "startedAt": 1776008975
+  },
+  {
+    "slug": "kag-2026-04-12",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -540,
+    "startedAt": 1775995487
+  },
+  {
+    "slug": "gyd-2026-04-11",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1520,
+    "startedAt": 1775905469
+  },
+  {
+    "slug": "pgold-2026-04-02",
+    "stablecoinId": "pgold-pleasing",
+    "symbol": "PGOLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -540,
+    "startedAt": 1775153996
+  },
+  {
+    "slug": "gyen-2026-04-01",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "above",
+    "peakDeviationBps": 2544,
+    "startedAt": 1775001600
+  },
+  {
+    "slug": "rai-2026-03-25",
+    "stablecoinId": "rai-reflexer",
+    "symbol": "RAI",
+    "pegType": "peggedVAR",
+    "direction": "above",
+    "peakDeviationBps": 13603,
+    "startedAt": 1774431284
+  },
+  {
+    "slug": "apxusd-2026-03-23",
+    "stablecoinId": "apxusd-apyx",
+    "symbol": "apxUSD",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 1257,
+    "startedAt": 1774289931
+  },
+  {
+    "slug": "kau-2026-03-22-down-88054",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -944,
+    "startedAt": 1774198866
+  },
+  {
+    "slug": "eurs-2026-03-22-down-88052",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -973,
+    "startedAt": 1774193459
+  },
+  {
+    "slug": "eurs-2026-03-22-up",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 641,
+    "startedAt": 1774192556
+  },
+  {
+    "slug": "eurs-2026-03-22-down-88050",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -982,
+    "startedAt": 1774188961
+  },
+  {
+    "slug": "kau-2026-03-22-up-88042",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 954,
+    "startedAt": 1774162835
+  },
+  {
+    "slug": "gyd-2026-03-22-down-88037",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774152030
+  },
+  {
+    "slug": "dola-2026-03-22",
+    "stablecoinId": "dola-inverse-finance",
+    "symbol": "DOLA",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1037,
+    "startedAt": 1774147524
+  },
+  {
+    "slug": "usr-2026-03-22",
+    "stablecoinId": "usr-resolv",
+    "symbol": "USR",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -9025,
+    "startedAt": 1774145097
+  },
+  {
+    "slug": "gyd-2026-03-22-down-88030",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774144826
+  },
+  {
+    "slug": "gyd-2026-03-22-down-88029",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774143028
+  },
+  {
+    "slug": "usdx-2026-03-22",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -736,
+    "startedAt": 1774142127
+  },
+  {
+    "slug": "gyd-2026-03-22-down-88026",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774141230
+  },
+  {
+    "slug": "gyd-2026-03-21",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774129527
+  },
+  {
+    "slug": "kau-2026-03-21-up-88017",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 831,
+    "startedAt": 1774112438
+  },
+  {
+    "slug": "usdx-2026-03-21",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -669,
+    "startedAt": 1774105237
+  },
+  {
+    "slug": "kag-2026-03-20-up-87986",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "above",
+    "peakDeviationBps": 806,
+    "startedAt": 1774044046
+  },
+  {
+    "slug": "kau-2026-03-20",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 653,
+    "startedAt": 1774044046
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87982",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774035075
+  },
+  {
+    "slug": "pusd-2026-03-20-down-87981",
+    "stablecoinId": "pusd-pleasing",
+    "symbol": "PUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -653,
+    "startedAt": 1774034183
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87976",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774027878
+  },
+  {
+    "slug": "pusd-2026-03-20-down-87974",
+    "stablecoinId": "pusd-pleasing",
+    "symbol": "PUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -634,
+    "startedAt": 1774026970
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87972",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1518,
+    "startedAt": 1774026080
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87971",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1518,
+    "startedAt": 1774024275
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87969",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774022478
+  },
+  {
+    "slug": "pusd-2026-03-20-down-87967",
+    "stablecoinId": "pusd-pleasing",
+    "symbol": "PUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -535,
+    "startedAt": 1774021585
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87966",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774020683
+  },
+  {
+    "slug": "dgld-2026-03-20-up-87960",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 518,
+    "startedAt": 1774016192
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87959",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1774015294
+  },
+  {
+    "slug": "usdx-2026-03-20-down-87958",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -688,
+    "startedAt": 1774015294
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87956",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1518,
+    "startedAt": 1774013494
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87951",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1518,
+    "startedAt": 1774010797
+  },
+  {
+    "slug": "gyd-2026-03-20-down-87933",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1773983758
+  },
+  {
+    "slug": "eurs-2026-03-20-up",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 783,
+    "startedAt": 1773981986
+  },
+  {
+    "slug": "usdx-2026-03-20-down-87935",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -687,
+    "startedAt": 1773981986
+  },
+  {
+    "slug": "eurs-2026-03-20-down",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -2652,
+    "startedAt": 1773975631
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87920",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1520,
+    "startedAt": 1773959460
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87917",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1773954057
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87915",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1519,
+    "startedAt": 1773945948
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87913",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773943251
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87909",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1134,
+    "startedAt": 1773939650
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87906",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1132,
+    "startedAt": 1773934243
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87904",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773930639
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87902",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773927056
+  },
+  {
+    "slug": "pusd-2026-03-19-down-87900",
+    "stablecoinId": "pusd-plume",
+    "symbol": "pUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -4049,
+    "startedAt": 1773925231
+  },
+  {
+    "slug": "usdx-2026-03-19-down-87899",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7191,
+    "startedAt": 1773925231
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87895",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1129,
+    "startedAt": 1773923440
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87891",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773916288
+  },
+  {
+    "slug": "pusd-2026-03-19-down-87892",
+    "stablecoinId": "pusd-plume",
+    "symbol": "pUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3975,
+    "startedAt": 1773916288
+  },
+  {
+    "slug": "usdx-2026-03-19-down-87890",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7191,
+    "startedAt": 1773916288
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87883",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773909964
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87879",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1132,
+    "startedAt": 1773907256
+  },
+  {
+    "slug": "gyd-2026-03-19-down-87877",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1133,
+    "startedAt": 1773903657
+  },
+  {
+    "slug": "pusd-2026-03-19-down-87870",
+    "stablecoinId": "pusd-plume",
+    "symbol": "pUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3976,
+    "startedAt": 1773883908
+  },
+  {
+    "slug": "usdx-2026-03-18",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7191,
+    "startedAt": 1773873072
+  },
+  {
+    "slug": "yusd-2026-03-18",
+    "stablecoinId": "yusd-aegis",
+    "symbol": "YUSD",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 1631,
+    "startedAt": 1773863215
+  },
+  {
+    "slug": "reusd-2026-03-18-down-87852",
+    "stablecoinId": "reusd-resupply",
+    "symbol": "REUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -580,
+    "startedAt": 1773859574
+  },
+  {
+    "slug": "eurm-2026-03-17",
+    "stablecoinId": "ceur-celo",
+    "symbol": "EURm",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -656,
+    "startedAt": 1773782144
+  },
+  {
+    "slug": "reusd-2026-03-17-down-87744",
+    "stablecoinId": "reusd-resupply",
+    "symbol": "REUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -528,
+    "startedAt": 1773771343
+  },
+  {
+    "slug": "gyen-2026-03-17-down-87738",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -2344,
+    "startedAt": 1773765948
+  },
+  {
+    "slug": "gyen-2026-03-17-down-87716",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -1426,
+    "startedAt": 1773746169
+  },
+  {
+    "slug": "dusd-2026-03-17-down-87709",
+    "stablecoinId": "dusd-dtrinity",
+    "symbol": "dUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -517,
+    "startedAt": 1773740766
+  },
+  {
+    "slug": "pusd-2026-03-17",
+    "stablecoinId": "pusd-plume",
+    "symbol": "pUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3727,
+    "startedAt": 1773738966
+  },
+  {
+    "slug": "dusd-2026-03-17-down-87697",
+    "stablecoinId": "dusd-dtrinity",
+    "symbol": "dUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -519,
+    "startedAt": 1773722759
+  },
+  {
+    "slug": "dusd-2026-03-17-down-87692",
+    "stablecoinId": "dusd-dtrinity",
+    "symbol": "dUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -514,
+    "startedAt": 1773718262
+  },
+  {
+    "slug": "eurs-2026-03-17",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 783,
+    "startedAt": 1773718262
+  },
+  {
+    "slug": "pusd-2026-03-16",
+    "stablecoinId": "pusd-plume",
+    "symbol": "pUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3133,
+    "startedAt": 1773689496
+  },
+  {
+    "slug": "gyen-2026-03-15",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -2611,
+    "startedAt": 1773577896
+  },
+  {
+    "slug": "kau-2026-03-15-up-87620",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 667,
+    "startedAt": 1773568860
+  },
+  {
+    "slug": "kau-2026-03-15-down",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -693,
+    "startedAt": 1773547260
+  },
+  {
+    "slug": "kau-2026-03-14-up-87580",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 810,
+    "startedAt": 1773518473
+  },
+  {
+    "slug": "idrt-2026-03-14",
+    "stablecoinId": "idrt-rupiah-token",
+    "symbol": "IDRT",
+    "pegType": "peggedIDR",
+    "direction": "below",
+    "peakDeviationBps": -8631,
+    "startedAt": 1773487888
+  },
+  {
+    "slug": "kag-2026-03-14",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "above",
+    "peakDeviationBps": 649,
+    "startedAt": 1773450038
+  },
+  {
+    "slug": "kau-2026-03-14-up-87527",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1091,
+    "startedAt": 1773450038
+  },
+  {
+    "slug": "gyen-2026-03-13",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -2840,
+    "startedAt": 1773417651
+  },
+  {
+    "slug": "idrt-2026-03-13",
+    "stablecoinId": "idrt-rupiah-token",
+    "symbol": "IDRT",
+    "pegType": "peggedIDR",
+    "direction": "below",
+    "peakDeviationBps": -8014,
+    "startedAt": 1773403246
+  },
+  {
+    "slug": "dgld-2026-03-12-up-87460",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 548,
+    "startedAt": 1773329428
+  },
+  {
+    "slug": "nect-2026-03-12-down-87449",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -517,
+    "startedAt": 1773313286
+  },
+  {
+    "slug": "kag-2026-03-11",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -601,
+    "startedAt": 1773226857
+  },
+  {
+    "slug": "usdx-2026-03-11",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3214,
+    "startedAt": 1773194450
+  },
+  {
+    "slug": "eurs-2026-03-10-up",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1043,
+    "startedAt": 1773143162
+  },
+  {
+    "slug": "usnd-2026-03-10-up",
+    "stablecoinId": "usnd-nerite",
+    "symbol": "USND",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 788,
+    "startedAt": 1773129658
+  },
+  {
+    "slug": "eurs-2026-03-10-down",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -1952,
+    "startedAt": 1773115221
+  },
+  {
+    "slug": "nect-2026-03-08-down-87248",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -550,
+    "startedAt": 1773003625
+  },
+  {
+    "slug": "nect-2026-03-08-down-86797",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -554,
+    "startedAt": 1773000024
+  },
+  {
+    "slug": "kau-2026-03-08-down-84645",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -1752,
+    "startedAt": 1772985624
+  },
+  {
+    "slug": "usdx-2026-03-08",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3492,
+    "startedAt": 1772985624
+  },
+  {
+    "slug": "kau-2026-03-08-up",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 913,
+    "startedAt": 1772928022
+  },
+  {
+    "slug": "nect-2026-03-07-down-84614",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -549,
+    "startedAt": 1772910045
+  },
+  {
+    "slug": "brz-2026-03-07-down-84603",
+    "stablecoinId": "brz-transfero",
+    "symbol": "BRZ",
+    "pegType": "peggedREAL",
+    "direction": "below",
+    "peakDeviationBps": -1123,
+    "startedAt": 1772898330
+  },
+  {
+    "slug": "brz-2026-03-07-down-84582",
+    "stablecoinId": "brz-transfero",
+    "symbol": "BRZ",
+    "pegType": "peggedREAL",
+    "direction": "below",
+    "peakDeviationBps": -9843,
+    "startedAt": 1772856019
+  },
+  {
+    "slug": "kau-2026-03-07-up",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 606,
+    "startedAt": 1772845217
+  },
+  {
+    "slug": "eurs-2026-03-06",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 923,
+    "startedAt": 1772827344
+  },
+  {
+    "slug": "gyen-2026-03-06",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -2521,
+    "startedAt": 1772827344
+  },
+  {
+    "slug": "usdx-2026-03-06-down-84560",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1087,
+    "startedAt": 1772827344
+  },
+  {
+    "slug": "usdx-2026-03-06-down-84530",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -882,
+    "startedAt": 1772788512
+  },
+  {
+    "slug": "satusd-2026-03-04",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -580,
+    "startedAt": 1772636466
+  },
+  {
+    "slug": "usdx-2026-03-04",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1283,
+    "startedAt": 1772597740
+  },
+  {
+    "slug": "kag-2026-03-03-up-83850",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "above",
+    "peakDeviationBps": 598,
+    "startedAt": 1772517664
+  },
+  {
+    "slug": "usdx-2026-03-02",
+    "stablecoinId": "usdx-hex-trust",
+    "symbol": "USDX",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -3101,
+    "startedAt": 1772493358
+  },
+  {
+    "slug": "aid-2026-03-02",
+    "stablecoinId": "aid-gaib",
+    "symbol": "AID",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -4258,
+    "startedAt": 1772467226
+  },
+  {
+    "slug": "usn-2026-03-02",
+    "stablecoinId": "usn-noon",
+    "symbol": "USN",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 1200,
+    "startedAt": 1772463628
+  },
+  {
+    "slug": "kau-2026-03-01-up-78555",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 2036,
+    "startedAt": 1772373623
+  },
+  {
+    "slug": "kag-2026-03-01-up-78521",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "above",
+    "peakDeviationBps": 755,
+    "startedAt": 1772355615
+  },
+  {
+    "slug": "kag-2026-03-01-down",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "below",
+    "peakDeviationBps": -564,
+    "startedAt": 1772344866
+  },
+  {
+    "slug": "kau-2026-03-01-up-76764",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1015,
+    "startedAt": 1772341267
+  },
+  {
+    "slug": "kag-2026-02-28-up-76729",
+    "stablecoinId": "kag-kinesis",
+    "symbol": "KAG",
+    "pegType": "peggedSILVER",
+    "direction": "above",
+    "peakDeviationBps": 605,
+    "startedAt": 1772301646
+  },
+  {
+    "slug": "kau-2026-02-28-up-76716",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 783,
+    "startedAt": 1772290834
+  },
+  {
+    "slug": "nect-2026-02-27-down-76614",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -516,
+    "startedAt": 1772200843
+  },
+  {
+    "slug": "nect-2026-02-27-down-76591",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -505,
+    "startedAt": 1772172970
+  },
+  {
+    "slug": "nect-2026-02-27-down-76588",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -555,
+    "startedAt": 1772162169
+  },
+  {
+    "slug": "eurs-2026-02-26",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1221,
+    "startedAt": 1772100972
+  },
+  {
+    "slug": "satusd-2026-02-25-down-72238",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -542,
+    "startedAt": 1772055061
+  },
+  {
+    "slug": "satusd-2026-02-25-down-24510",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -869,
+    "startedAt": 1772020858
+  },
+  {
+    "slug": "satusd-2026-02-25-down-31917",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1187,
+    "startedAt": 1772017281
+  },
+  {
+    "slug": "usnd-2026-02-24",
+    "stablecoinId": "usnd-nerite",
+    "symbol": "USND",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 522,
+    "startedAt": 1771941853
+  },
+  {
+    "slug": "dgld-2026-02-24",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 10627,
+    "startedAt": 1771941691
+  },
+  {
+    "slug": "dgld-2026-02-23-up-25108",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 10604,
+    "startedAt": 1771887774
+  },
+  {
+    "slug": "dgld-2026-02-23-up-24479",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 10475,
+    "startedAt": 1771886757
+  },
+  {
+    "slug": "dgld-2026-02-23-down-24473",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -2108,
+    "startedAt": 1771866957
+  },
+  {
+    "slug": "usnd-2026-02-23",
+    "stablecoinId": "usnd-nerite",
+    "symbol": "USND",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 598,
+    "startedAt": 1771855376
+  },
+  {
+    "slug": "tryb-2026-02-23",
+    "stablecoinId": "tryb-bilira",
+    "symbol": "TRYB",
+    "pegType": "peggedTRY",
+    "direction": "below",
+    "peakDeviationBps": -508,
+    "startedAt": 1771847149
+  },
+  {
+    "slug": "dgld-2026-02-23-down-25107",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -4963,
+    "startedAt": 1771833731
+  },
+  {
+    "slug": "nect-2026-02-23",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -503,
+    "startedAt": 1771819365
+  },
+  {
+    "slug": "nect-2026-02-22-down-24463",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -645,
+    "startedAt": 1771795013
+  },
+  {
+    "slug": "nect-2026-02-22-down-49476",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -650,
+    "startedAt": 1771794197
+  },
+  {
+    "slug": "nect-2026-02-22-down-24455",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -663,
+    "startedAt": 1771740939
+  },
+  {
+    "slug": "nect-2026-02-22-down-49475",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -666,
+    "startedAt": 1771740212
+  },
+  {
+    "slug": "reusd-2026-02-22",
+    "stablecoinId": "reusd-re-protocol",
+    "symbol": "reUSD",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 624,
+    "startedAt": 1771720299
+  },
+  {
+    "slug": "nect-2026-02-21-down-24442",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -556,
+    "startedAt": 1771690246
+  },
+  {
+    "slug": "nect-2026-02-21-down-49474",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -559,
+    "startedAt": 1771689743
+  },
+  {
+    "slug": "nect-2026-02-21-down-24437",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -527,
+    "startedAt": 1771669847
+  },
+  {
+    "slug": "nect-2026-02-21-down-49472",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -528,
+    "startedAt": 1771668146
+  },
+  {
+    "slug": "nect-2026-02-20-down-49466",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -531,
+    "startedAt": 1771560219
+  },
+  {
+    "slug": "nect-2026-02-20-down-49465",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -530,
+    "startedAt": 1771545776
+  },
+  {
+    "slug": "nect-2026-02-19-down-49464",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -519,
+    "startedAt": 1771527722
+  },
+  {
+    "slug": "rubt-2026-02-19",
+    "stablecoinId": "351",
+    "symbol": "RUBT",
+    "pegType": "peggedRUB",
+    "direction": "above",
+    "peakDeviationBps": 756748,
+    "startedAt": 1771511441
+  },
+  {
+    "slug": "nect-2026-02-19-down-49461",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -527,
+    "startedAt": 1771484530
+  },
+  {
+    "slug": "bean-2026-02-18",
+    "stablecoinId": "bean-beanstalk",
+    "symbol": "BEAN",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -7820,
+    "startedAt": 1771433167
+  },
+  {
+    "slug": "satusd-2026-02-18",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -573,
+    "startedAt": 1771408938
+  },
+  {
+    "slug": "usnd-2026-02-17",
+    "stablecoinId": "usnd-nerite",
+    "symbol": "USND",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 706,
+    "startedAt": 1771333389
+  },
+  {
+    "slug": "nect-2026-02-16-down-49448",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -541,
+    "startedAt": 1771228997
+  },
+  {
+    "slug": "nect-2026-02-16-down-49447",
+    "stablecoinId": "nect-beraborrow",
+    "symbol": "NECT",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -541,
+    "startedAt": 1771218163
+  },
+  {
+    "slug": "tryb-2026-02-16",
+    "stablecoinId": "tryb-bilira",
+    "symbol": "TRYB",
+    "pegType": "peggedTRY",
+    "direction": "below",
+    "peakDeviationBps": -965,
+    "startedAt": 1771200000
+  },
+  {
+    "slug": "usn-2026-02-14-up-24424",
+    "stablecoinId": "usn-noon",
+    "symbol": "USN",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 569,
+    "startedAt": 1771075505
+  },
+  {
+    "slug": "usn-2026-02-14-up-49237",
+    "stablecoinId": "usn-noon",
+    "symbol": "USN",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 567,
+    "startedAt": 1771074028
+  },
+  {
+    "slug": "kau-2026-02-14",
+    "stablecoinId": "kau-kinesis",
+    "symbol": "KAU",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1109,
+    "startedAt": 1771027200
+  },
+  {
+    "slug": "honey-2026-02-13-up-24422",
+    "stablecoinId": "honey-berachain",
+    "symbol": "HONEY",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 660,
+    "startedAt": 1770981942
+  },
+  {
+    "slug": "honey-2026-02-13-up-47255",
+    "stablecoinId": "honey-berachain",
+    "symbol": "HONEY",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 656,
+    "startedAt": 1770980550
+  },
+  {
+    "slug": "satusd-2026-02-12",
+    "stablecoinId": "satusd-river",
+    "symbol": "satUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -960,
+    "startedAt": 1770858222
+  },
+  {
+    "slug": "gyen-2026-02-11",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -2620,
+    "startedAt": 1770768000
+  },
+  {
+    "slug": "usdb-2026-02-06-up",
+    "stablecoinId": "usdb-blast",
+    "symbol": "USDB",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 537,
+    "startedAt": 1770339634
+  },
+  {
+    "slug": "cgo-2026-02-05-down-68671",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -568,
+    "startedAt": 1770325455
+  },
+  {
+    "slug": "dgld-2026-02-05-up-25082",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 781,
+    "startedAt": 1770293019
+  },
+  {
+    "slug": "dgld-2026-02-05-up-25081",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 829,
+    "startedAt": 1770278515
+  },
+  {
+    "slug": "cgo-2026-02-05-up",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 565,
+    "startedAt": 1770249817
+  },
+  {
+    "slug": "pgold-2026-02-04-up-86781",
+    "stablecoinId": "pgold-pleasing",
+    "symbol": "PGOLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 538,
+    "startedAt": 1770242564
+  },
+  {
+    "slug": "dgld-2026-02-03-down-25079",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -527,
+    "startedAt": 1770094872
+  },
+  {
+    "slug": "cgo-2026-02-02-down-68659",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -520,
+    "startedAt": 1770033846
+  },
+  {
+    "slug": "cgo-2026-02-02-down-68658",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -663,
+    "startedAt": 1770012277
+  },
+  {
+    "slug": "pgold-2026-02-02-down-86774",
+    "stablecoinId": "pgold-pleasing",
+    "symbol": "PGOLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -574,
+    "startedAt": 1770012270
+  },
+  {
+    "slug": "xnk-2026-02-02-down-89940",
+    "stablecoinId": "xnk-kinka",
+    "symbol": "XNK",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -601,
+    "startedAt": 1770012104
+  },
+  {
+    "slug": "dgld-2026-02-01",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -599,
+    "startedAt": 1769983323
+  },
+  {
+    "slug": "yusd-2026-02-01",
+    "stablecoinId": "yusd-aegis",
+    "symbol": "YUSD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -977,
+    "startedAt": 1769961837
+  },
+  {
+    "slug": "eurs-2026-02-01",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "above",
+    "peakDeviationBps": 1232,
+    "startedAt": 1769904000
+  },
+  {
+    "slug": "usdb-2026-01-31",
+    "stablecoinId": "usdb-blast",
+    "symbol": "USDB",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -548,
+    "startedAt": 1769871928
+  },
+  {
+    "slug": "gyd-2026-01-31",
+    "stablecoinId": "gyd-gyroscope",
+    "symbol": "GYD",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -2553,
+    "startedAt": 1769853682
+  },
+  {
+    "slug": "dgld-2026-01-30-up-25072",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1309,
+    "startedAt": 1769767317
+  },
+  {
+    "slug": "cgo-2026-01-30-up-68653",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 643,
+    "startedAt": 1769749403
+  },
+  {
+    "slug": "dgld-2026-01-30-up-25071",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1265,
+    "startedAt": 1769749271
+  },
+  {
+    "slug": "dgld-2026-01-30-up-25070",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1227,
+    "startedAt": 1769734925
+  },
+  {
+    "slug": "dgld-2026-01-29-up-25069",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 1048,
+    "startedAt": 1769713298
+  },
+  {
+    "slug": "xnk-2026-01-29-up-89934",
+    "stablecoinId": "xnk-kinka",
+    "symbol": "XNK",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 651,
+    "startedAt": 1769709679
+  },
+  {
+    "slug": "cgo-2026-01-29-up-68652",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 723,
+    "startedAt": 1769706165
+  },
+  {
+    "slug": "dgld-2026-01-29-up-25068",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 893,
+    "startedAt": 1769706109
+  },
+  {
+    "slug": "cgo-2026-01-29-up-68651",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 720,
+    "startedAt": 1769688197
+  },
+  {
+    "slug": "pgold-2026-01-29",
+    "stablecoinId": "pgold-pleasing",
+    "symbol": "PGOLD",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 664,
+    "startedAt": 1769688182
+  },
+  {
+    "slug": "xnk-2026-01-29-up-89933",
+    "stablecoinId": "xnk-kinka",
+    "symbol": "XNK",
+    "pegType": "peggedGOLD",
+    "direction": "above",
+    "peakDeviationBps": 510,
+    "startedAt": 1769655690
+  },
+  {
+    "slug": "hollar-2026-01-29",
+    "stablecoinId": "hollar-hydrated",
+    "symbol": "HOLLAR",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -691,
+    "startedAt": 1769655675
+  },
+  {
+    "slug": "dgld-2026-01-28-down-25067",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -698,
+    "startedAt": 1769594493
+  },
+  {
+    "slug": "dgld-2026-01-28-down-25066",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -746,
+    "startedAt": 1769565701
+  },
+  {
+    "slug": "usdm-2026-01-27-down-58612",
+    "stablecoinId": "usdm-moneta",
+    "symbol": "USDM",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -539,
+    "startedAt": 1769551328
+  },
+  {
+    "slug": "dgld-2026-01-27-down-25065",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -698,
+    "startedAt": 1769551308
+  },
+  {
+    "slug": "usda-2026-01-27",
+    "stablecoinId": "usda-anzens",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -518,
+    "startedAt": 1769536964
+  },
+  {
+    "slug": "dgld-2026-01-27-down-25064",
+    "stablecoinId": "dgld-gold-token-sa",
+    "symbol": "DGLD",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -577,
+    "startedAt": 1769533310
+  },
+  {
+    "slug": "cgo-2026-01-27",
+    "stablecoinId": "cgo-comtech",
+    "symbol": "CGO",
+    "pegType": "peggedGOLD",
+    "direction": "below",
+    "peakDeviationBps": -513,
+    "startedAt": 1769515411
+  },
+  {
+    "slug": "usda-2026-01-26",
+    "stablecoinId": "usda-anzens",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -533,
+    "startedAt": 1769393002
+  },
+  {
+    "slug": "honey-2026-01-25",
+    "stablecoinId": "honey-berachain",
+    "symbol": "HONEY",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 4981,
+    "startedAt": 1769382090
+  },
+  {
+    "slug": "usdm-2026-01-25-down-58610",
+    "stablecoinId": "usdm-moneta",
+    "symbol": "USDM",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -568,
+    "startedAt": 1769356953
+  },
+  {
+    "slug": "honey-2026-01-24-up-47252",
+    "stablecoinId": "honey-berachain",
+    "symbol": "HONEY",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 1240,
+    "startedAt": 1769212911
+  },
+  {
+    "slug": "gyen-2026-01-23",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -1912,
+    "startedAt": 1769126400
+  },
+  {
+    "slug": "mim-2026-01-20",
+    "stablecoinId": "mim-abracadabra",
+    "symbol": "MIM",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 595,
+    "startedAt": 1768881676
+  },
+  {
+    "slug": "usda-2026-01-17",
+    "stablecoinId": "usda-anzens",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
+    "direction": "above",
+    "peakDeviationBps": 521,
+    "startedAt": 1768647688
+  },
+  {
+    "slug": "gyen-2026-01-17",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -1142,
+    "startedAt": 1768608000
+  },
+  {
+    "slug": "gyen-2026-01-13",
+    "stablecoinId": "gyen-gyen",
+    "symbol": "GYEN",
+    "pegType": "peggedJPY",
+    "direction": "below",
+    "peakDeviationBps": -789,
+    "startedAt": 1768262400
+  },
+  {
     "slug": "usdc-2023-03-11",
     "stablecoinId": "usdc-circle",
     "symbol": "USDC",
-    "pegType": "USD",
+    "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": 1300,
-    "startedAt": 1678492800
+    "peakDeviationBps": -1211,
+    "startedAt": 1678500095
   }
 ]
