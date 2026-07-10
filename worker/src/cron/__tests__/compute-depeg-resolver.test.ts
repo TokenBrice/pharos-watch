@@ -8,6 +8,7 @@ import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/publ
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -169,6 +170,39 @@ describe("computeDepegResolver", () => {
       }),
       updated_at: NOW_SEC,
     };
+  }
+
+  function healthyDewsPublicationTables() {
+    const computedAt = NOW_SEC - 300;
+    const stressRows = [
+      {
+        stablecoin_id: "lane-b-test",
+        score: 22,
+        band: "WATCH",
+        signals_json: JSON.stringify({ price: { available: true, value: 22 } }),
+        computed_at: computedAt,
+      },
+    ];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: computedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: stressRows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(stressRows.map((row) => row.stablecoin_id)),
+      }),
+      updated_at: computedAt,
+    };
+    return [
+      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow(), pointer] },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [computedAt],
+        rows: stressRows,
+      },
+    ];
   }
 
   function readDdrSnapshotPayload(db: Pick<MockD1Database, "getHistory">) {
@@ -459,7 +493,7 @@ describe("computeDepegResolver", () => {
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
@@ -532,7 +566,7 @@ describe("computeDepegResolver", () => {
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
@@ -608,7 +642,7 @@ describe("computeDepegResolver", () => {
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
@@ -672,7 +706,7 @@ describe("computeDepegResolver", () => {
           },
         ],
       },
-      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);

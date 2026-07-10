@@ -181,35 +181,65 @@ vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
 });
 vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
+  let latestCheckpoint: Record<string, unknown> | null = null;
   return {
     ...actual,
-    beginScheduledCheckpoint: vi.fn(async (db: D1Database, input: Record<string, unknown>) => ({
-      scheduleKey: input.scheduleKey,
-      slotStartedAt: input.slotStartedAt,
-      job: input.job,
-      attemptNo: 1,
-      executionGeneration: 1,
-      invocationId: input.invocationId,
-      workerVersion: input.workerVersion ?? null,
-      queueHash: input.queueHash,
-      state: "running",
-      nextItemKey: input.nextItemKey ?? null,
-      currentItemKey: null,
-      currentDomainAttemptId: null,
-      itemsDone: 0,
-      itemsTotal: input.itemsTotal ?? 0,
-      childDispositions: {},
-      recoveryOwner: null,
-      recoveryLeaseUntil: null,
-      sourceAttemptNo: null,
-      error: null,
-      createdAt: 0,
-      updatedAt: 0,
-      completedAt: null,
-    })),
-    setScheduledCheckpointChildDisposition: vi.fn(async () => undefined),
+    beginScheduledCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
+      latestCheckpoint = {
+        scheduleKey: input.scheduleKey,
+        slotStartedAt: input.slotStartedAt,
+        job: input.job,
+        attemptNo: 1,
+        executionGeneration: 1,
+        invocationId: input.invocationId,
+        workerVersion: input.workerVersion ?? null,
+        queueHash: input.queueHash,
+        state: "running",
+        nextItemKey: input.nextItemKey ?? null,
+        currentItemKey: null,
+        currentDomainAttemptId: null,
+        itemsDone: 0,
+        itemsTotal: input.itemsTotal ?? 0,
+        childDispositions: {},
+        recoveryOwner: null,
+        recoveryLeaseUntil: null,
+        sourceAttemptNo: null,
+        error: null,
+        createdAt: 0,
+        updatedAt: 0,
+        completedAt: null,
+      };
+      return latestCheckpoint;
+    }),
+    loadScheduledCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
+      ...latestCheckpoint,
+      nextItemKey: null,
+      itemsDone: latestCheckpoint.itemsTotal,
+    }),
+    setScheduledCheckpointChildDisposition: vi.fn(async (
+      _db: D1Database,
+      _identity: Record<string, unknown>,
+      job: string,
+      disposition: string,
+    ) => {
+      if (!latestCheckpoint) return;
+      latestCheckpoint = {
+        ...latestCheckpoint,
+        childDispositions: {
+          ...(latestCheckpoint.childDispositions as Record<string, unknown>),
+          [job]: disposition,
+        },
+      };
+    }),
     finishScheduledCheckpoint: vi.fn(async () => undefined),
     claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
+  };
+});
+vi.mock("../lib/reserve-recovery-fault-injection", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/reserve-recovery-fault-injection")>();
+  return {
+    ...actual,
+    loadReserveRecoveryFaultInjectionController: vi.fn(async () => null),
   };
 });
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
