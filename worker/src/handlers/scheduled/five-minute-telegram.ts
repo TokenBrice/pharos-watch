@@ -2,7 +2,8 @@ import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial:
- *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog/broker retry (1) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
+ *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (1) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
+ *   budget-only, serial: Telegram registration reconciliation (1), durable alert-broker delivery drain (1)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -37,6 +38,52 @@ import {
   mergeScheduledSlotSummaries,
   summarizeSkippedScheduledJob,
 } from "./slot-summary";
+
+const ALERT_BROKER_DELIVERY_DRAIN_SURFACE = "alert-broker-delivery-drain";
+
+async function runAlertBrokerDeliveryDrain(runtime: ScheduledRuntimeContext): Promise<void> {
+  const startedMs = Date.now();
+  try {
+    const delivery = await runRuntimeBudgetOnlyTask(
+      runtime,
+      ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
+      () => dispatchPendingAlertBrokerDeliveries(runtime.db, {
+        webhookUrl: runtime.alertWebhookUrl,
+        limit: 25,
+      }),
+    );
+    const unresolved = delivery.failed + delivery.missingTarget;
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: delivery.due,
+      processedCount: delivery.delivered,
+      outcome: unresolved > 0 ? "degraded" : "ok",
+      error: unresolved > 0
+        ? `${delivery.failed} failed and ${delivery.missingTarget} missing-target deliveries remain retryable`
+        : null,
+      metadata: delivery,
+      producer: getRuntimeProducerIdentity(runtime, ALERT_BROKER_DELIVERY_DRAIN_SURFACE),
+    });
+  } catch (err) {
+    const error = toErrorMessage(err);
+    logTelegramEvent({
+      message: "durable alert broker delivery drain failed",
+      action: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
+      module: "five-minute-telegram",
+      err: error,
+    });
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "error",
+      error,
+      producer: getRuntimeProducerIdentity(runtime, ALERT_BROKER_DELIVERY_DRAIN_SURFACE),
+    });
+  }
+}
 
 function logReconciliationSuccess(
   action: string,
@@ -123,24 +170,12 @@ function buildTelegramSlotGroups(
         {
           job: "telegram-degradation-watchdog",
           errorMessage: "[cron] telegram-degradation-watchdog failed:",
-          run: async (signal) => {
-            const watchdog = await runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
+          run: (signal) =>
+            runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
               pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
               safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
               alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
-            });
-            const delivery = await dispatchPendingAlertBrokerDeliveries(runtime.db, {
-              webhookUrl: runtime.alertWebhookUrl,
-              limit: 25,
-            });
-            const metadata = watchdog.metadata
-              ? JSON.parse(watchdog.metadata) as Record<string, unknown>
-              : {};
-            return {
-              ...watchdog,
-              metadata: JSON.stringify({ ...metadata, alertBrokerDelivery: delivery }),
-            };
-          },
+            }),
         },
         {
           job: "telegram-disambiguation-cleanup",
@@ -210,7 +245,8 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       metadata: { botTokenConfigured: false },
       producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
     });
-    return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 1 });
+    await runAlertBrokerDeliveryDrain(runtime);
+    return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 2 });
   }
 
   const reconciliationResults = await runRuntimeBudgetOnlyTask(
@@ -282,5 +318,6 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     "five-minute telegram slot",
     buildTelegramSlotGroups(runtime, runtime.env.TELEGRAM_BOT_TOKEN),
   );
-  return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 1 });
+  await runAlertBrokerDeliveryDrain(runtime);
+  return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 2 });
 }

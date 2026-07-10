@@ -53,6 +53,10 @@ export interface AlchemyRouteFields {
   alchemyApiKey: string | null;
 }
 
+export interface AlertWebhookRouteFields {
+  alertWebhookUrl: string | null;
+}
+
 export interface ApiKeysRouteFields {
   apiKeyHashPepper: string | undefined;
 }
@@ -69,8 +73,13 @@ export interface CloudflareD1StatusRouteFields {
   cloudflareD1StatusBindings: CloudflareD1StatusBindings;
 }
 
+export interface WorkerVersionRouteFields {
+  workerVersion: string | null;
+}
+
 export interface RouteDependencyFieldMap {
   apiKeyHashPepper: ApiKeysRouteFields;
+  alertWebhookUrl: AlertWebhookRouteFields;
   alchemyApiKey: AlchemyRouteFields;
   anthropicApiKey: Pick<DigestRouteFields, "anthropicApiKey">;
   cloudflareD1StatusConfig: CloudflareD1StatusRouteFields;
@@ -79,6 +88,7 @@ export interface RouteDependencyFieldMap {
   apiKeySelfServeEnv: ApiKeySelfServeRouteFields;
   feedbackEnv: FeedbackRouteFields;
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
+  workerVersion: WorkerVersionRouteFields;
   telegram: TelegramRouteFields;
 }
 

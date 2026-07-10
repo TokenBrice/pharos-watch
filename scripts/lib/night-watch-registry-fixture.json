@@ -76,5 +76,9 @@
     "snapshot-supply": ["quarterHourly", "daily0800Utc"]
   },
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
-  "budgetOnlySurfaces": ["digest-trigger-poll", "telegram-registration-reconciliation"]
+  "budgetOnlySurfaces": [
+    "alert-broker-delivery-drain",
+    "digest-trigger-poll",
+    "telegram-registration-reconciliation"
+  ]
 }

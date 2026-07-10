@@ -175,6 +175,7 @@ export const API_PATHS = {
     buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
   killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
     buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
+  armReserveRecoveryFaultInjection: () => "/api/admin/reserve-recovery-fault-injection",
   bulkDismissDiscoveryCandidates: (params?: { all?: boolean; ids?: string }) =>
     buildQueryPath("/api/bulk-dismiss-discovery-candidates", { all: params?.all, ids: params?.ids }),
   clearTelegramPending: (params?: { chatId?: string; olderThanSec?: number }) =>
@@ -182,6 +183,7 @@ export const API_PATHS = {
       chat_id: params?.chatId,
       older_than_sec: params?.olderThanSec,
     }),
+  alertBrokerCanary: () => "/api/alert-broker-canary",
   adminTelegramResend: () => "/api/admin-telegram-resend",
   adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
   statusProbeHistory: (params?: { path?: string; days?: number }) =>

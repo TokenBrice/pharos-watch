@@ -74,6 +74,7 @@ describe("handleStatus", () => {
         match: "FROM cache",
         matchBinds: [
           "cron:budget-surface:telegram-registration-reconciliation",
+          "cron:budget-surface:alert-broker-delivery-drain",
           "cron:budget-surface:digest-trigger-poll",
         ],
         rows: [
@@ -126,14 +127,19 @@ describe("handleStatus", () => {
         outcome: "unknown",
       }),
       expect.objectContaining({
+        job: "alert-broker-delivery-drain",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
         job: "digest-trigger-poll",
         telemetryStatus: "fresh",
         outcome: "skipped",
         skippedReason: "no-pending-request",
       }),
     ]);
-    expect(body.summary.budgetOnlySurfaceCount).toBe(2);
-    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(1);
+    expect(body.summary.budgetOnlySurfaceCount).toBe(3);
+    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(2);
   });
 
   it("includes in-flight cron progress when a leased job is still running", async () => {

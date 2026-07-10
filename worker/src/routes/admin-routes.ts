@@ -18,7 +18,9 @@ import { handleBulkDismissDiscoveryCandidates } from "../api/admin-bulk-dismiss-
 import { handleClearTelegramPending } from "../api/admin-telegram-pending";
 import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
 import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
+import { handleAlertBrokerCanary } from "../api/admin-alert-broker-canary";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
+import { handleArmReserveRecoveryFaultInjection } from "../api/admin-reserve-recovery-fault-injection";
 import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
 import { defineStaticRoute, type StaticRouteDefinition, type StaticRouteHandler } from "./shared";
 import type { EndpointKey } from "@shared/lib/api-endpoints";
@@ -53,8 +55,11 @@ export const ADMIN_STATIC_ROUTES = [
   defineIdempotentAdminRoute("backfill-yield-history", ({ db, url, trustedAdmin, request }) =>
     handleBackfillYieldHistory(db, url, trustedAdmin, request),
   ),
-  defineIdempotentAdminRoute("backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>
-    handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
+  defineConditionalIdempotentAdminRoute(
+    "backfill-mint-burn-prices",
+    ({ url }) => url.searchParams.get("dry-run") === "false" || url.searchParams.get("dryRun") === "false",
+    ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+      handleBackfillMintBurnPrices(db, url, trustedAdmin, request, { coingeckoApiKey }),
   ),
   defineIdempotentAdminRoute("backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
     handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
@@ -79,8 +84,15 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("reset-cron-lease", handleResetCronLease),
   defineStaticRoute("reset-circuit-breaker", handleResetCircuitBreaker),
   defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
+  defineStaticRoute("reserve-recovery-fault-injection", ({ db, request, trustedAdmin, workerVersion }) =>
+    handleArmReserveRecoveryFaultInjection(db, request, trustedAdmin, workerVersion)),
   defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),
   defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
+  defineConditionalIdempotentAdminRoute(
+    "alert-broker-canary",
+    ({ url }) => url.searchParams.get("execute") === "true",
+    handleAlertBrokerCanary,
+  ),
   defineStaticRoute("admin-telegram-resend", handleAdminTelegramResend),
   defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),

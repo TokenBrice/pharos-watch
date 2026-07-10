@@ -96,6 +96,13 @@ export interface AlertBrokerSummary {
   queryFailed: boolean;
 }
 
+export interface AlertBrokerEpisodeDelivery {
+  transition: AlertBrokerTransition;
+  state: AlertDeliveryState;
+  attempts: number;
+  lastError: string | null;
+}
+
 const CONDITION_COLUMNS = `condition_key, fingerprint, state, mode, severity, generation, episode, streak,
   first_observed_at, last_observed_at, activated_at, recovered_at, cooldown_until,
   title, message, recovery_title, recovery_message, metadata_json, last_transition, updated_at`;
@@ -507,6 +514,35 @@ export async function dispatchPendingAlertBrokerDeliveries(
     else if (state === "failed") summary.failed++;
   }
   return summary;
+}
+
+export async function loadAlertBrokerEpisodeDeliveries(
+  db: D1Database,
+  conditionKey: string,
+  episode: number,
+): Promise<AlertBrokerEpisodeDelivery[]> {
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT transition, state, attempts, last_error
+           FROM alert_broker_deliveries
+          WHERE condition_key = ? AND episode = ?
+          ORDER BY created_at ASC, transition ASC`,
+      )
+      .bind(conditionKey, episode)
+      .all<{
+        transition: AlertBrokerTransition;
+        state: AlertDeliveryState;
+        attempts: number;
+        last_error: string | null;
+      }>(),
+  );
+  return (rows.results ?? []).map((row) => ({
+    transition: row.transition,
+    state: row.state,
+    attempts: row.attempts,
+    lastError: row.last_error,
+  }));
 }
 
 export async function loadAlertBrokerSummary(db: D1Database): Promise<AlertBrokerSummary> {

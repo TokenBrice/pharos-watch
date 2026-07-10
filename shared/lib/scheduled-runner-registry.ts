@@ -71,7 +71,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "telegram-disambiguation-cleanup",
       "telegram-pulse-snapshot",
     ]],
-    budgetOnlyJobs: ["telegram-registration-reconciliation"],
+    budgetOnlyJobs: ["telegram-registration-reconciliation", "alert-broker-delivery-drain"],
   },
   fiveMinuteReserveRecovery: {
     jobChains: [["reserve-recovery"]],

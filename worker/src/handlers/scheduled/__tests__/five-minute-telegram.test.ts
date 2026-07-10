@@ -37,6 +37,7 @@ vi.mock("../preflight-skip", () => ({
 import { logSkippedCronRun } from "../preflight-skip";
 import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
+import { dispatchPendingAlertBrokerDeliveries } from "../../../lib/alert-broker";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
@@ -92,6 +93,15 @@ describe("runFiveMinuteTelegramSlot", () => {
       outcome: "skipped",
       skippedReason: "missing-telegram-bot-token",
     }));
+    expect(dispatchPendingAlertBrokerDeliveries).toHaveBeenCalledWith(expect.anything(), {
+      webhookUrl: null,
+      limit: 25,
+    });
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "alert-broker-delivery-drain",
+      outcome: "ok",
+    }));
+    expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
   it("runs reconciliation in order and still runs slot groups after a reconciliation failure", async () => {
@@ -135,6 +145,10 @@ describe("runFiveMinuteTelegramSlot", () => {
         error: null,
       } as unknown as Awaited<ReturnType<typeof publishTelegramPulseSnapshotWithOutcome>>;
     });
+    vi.mocked(dispatchPendingAlertBrokerDeliveries).mockImplementation(async () => {
+      order.push("broker-drain");
+      return { due: 1, delivered: 1, failed: 0, missingTarget: 0 };
+    });
 
     const runtime = buildRuntime();
     runtime.env = {
@@ -159,6 +173,7 @@ describe("runFiveMinuteTelegramSlot", () => {
       "watchdog",
       "cleanup",
       "pulse",
+      "broker-drain",
     ]);
     expect(vi.mocked(runtime.runLeasedCron).mock.calls.map(([job]) => job)).toEqual([
       "dispatch-telegram-alerts",
@@ -189,6 +204,7 @@ describe("runFiveMinuteTelegramSlot", () => {
       "telegram-pulse-snapshot",
     ]);
     expect(summary.jobsErrored).toBe(0);
+    expect(summary.budgetOnlyJobs).toBe(2);
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "telegram-registration-reconciliation",
       dueCount: 4,
@@ -198,6 +214,32 @@ describe("runFiveMinuteTelegramSlot", () => {
         attemptedCount: 4,
         failedActions: ["reconcile-profile"],
       }),
+    }));
+  });
+
+  it("records retryable broker delivery failures as degraded budget telemetry", async () => {
+    vi.mocked(dispatchPendingAlertBrokerDeliveries).mockResolvedValue({
+      due: 2,
+      delivered: 0,
+      failed: 1,
+      missingTarget: 1,
+    });
+
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime());
+
+    expect(summary.budgetOnlyJobs).toBe(2);
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "alert-broker-delivery-drain",
+      dueCount: 2,
+      processedCount: 0,
+      outcome: "degraded",
+      error: expect.stringContaining("1 failed"),
+      metadata: {
+        due: 2,
+        delivered: 0,
+        failed: 1,
+        missingTarget: 1,
+      },
     }));
   });
 });

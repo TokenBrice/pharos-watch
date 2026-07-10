@@ -6,6 +6,7 @@ export type EndpointPublicApiAccess = "protected" | "exempt";
 export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
   | "apiKeyHashPepper"
+  | "alertWebhookUrl"
   | "alchemyApiKey"
   | "anthropicApiKey"
   | "cloudflareD1StatusConfig"
@@ -14,6 +15,7 @@ export type EndpointDependency =
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
+  | "workerVersion"
   | "telegram";
 
 export type StatusPageActionGroup = "recovery" | "audit" | "communications";
@@ -634,6 +636,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminMutation({
     key: "backfill-mint-burn-prices",
     path: API_PATHS.backfillMintBurnPrices(),
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Mint/Burn Prices",
@@ -722,6 +725,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   adminMutation({
+    key: "reserve-recovery-fault-injection",
+    path: API_PATHS.armReserveRecoveryFaultInjection(),
+    routeDependencies: ["workerVersion"],
+    probeGroup: "manual",
+  }),
+  adminMutation({
     key: "bulk-dismiss-discovery-candidates",
     path: API_PATHS.bulkDismissDiscoveryCandidates(),
     probeGroup: "manual",
@@ -729,6 +738,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminMutation({
     key: "clear-telegram-pending",
     path: API_PATHS.clearTelegramPending(),
+    probeGroup: "manual",
+  }),
+  adminMutation({
+    key: "alert-broker-canary",
+    path: API_PATHS.alertBrokerCanary(),
+    routeDependencies: ["alertWebhookUrl"],
     probeGroup: "manual",
   }),
   adminMutation({

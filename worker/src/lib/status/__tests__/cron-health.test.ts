@@ -553,4 +553,156 @@ describe("loadCronHealth — worker job attempt telemetry", () => {
       metadata: { progress: { stage: "evaluation" } },
     });
   });
+
+  it("immediately marks a critical producer unhealthy when its latest active attempt is stale", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "ROW_NUMBER() OVER",
+        rows: [{
+          attempt_id: "attempt-stale-critical",
+          idempotency_key: "scheduled-slot|quarterHourly|sync-stablecoins|1",
+          schedule_key: "quarterHourly",
+          job: "sync-stablecoins",
+          slot_started_at: NOW - 300,
+          producer_path: "quarterHourly",
+          producer_kind: "scheduled-slot",
+          invocation_id: "invocation-critical",
+          worker_version: "version-a",
+          state: "running",
+          status_class: null,
+          attempt_no: 1,
+          owner: "owner-critical",
+          lease_until: NOW - 1,
+          queued_at: NOW - 300,
+          claimed_at: NOW - 299,
+          started_at: NOW - 299,
+          last_heartbeat_at: NOW - 10,
+          finished_at: null,
+          updated_at: NOW - 10,
+          duration_ms: null,
+          item_count: null,
+          result_metadata_json: null,
+          error: null,
+        }],
+      },
+      {
+        match: "COUNT(*) AS active_count",
+        rows: [],
+        first: { active_count: 1, stale_count: 1 },
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.crons["sync-stablecoins"]?.lastRun?.status).toBe("ok");
+    expect(snapshot.crons["sync-stablecoins"]?.latestAttempt?.stale).toBe(true);
+    expect(snapshot.crons["sync-stablecoins"]?.healthy).toBe(false);
+    expect(snapshot.availabilityImpactingUnhealthyCrons).toBe(1);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+  });
+
+  it("applies watch impact without escalating availability for a stale watch-tier attempt", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "ROW_NUMBER() OVER",
+        rows: [{
+          attempt_id: "attempt-stale-watch",
+          idempotency_key: "scheduled-slot|hourlyYieldSync|sync-yield-data|1",
+          schedule_key: "hourlyYieldSync",
+          job: "sync-yield-data",
+          slot_started_at: NOW - 300,
+          producer_path: "hourlyYieldSync",
+          producer_kind: "scheduled-slot",
+          invocation_id: "invocation-watch",
+          worker_version: "version-a",
+          state: "running",
+          status_class: null,
+          attempt_no: 1,
+          owner: "owner-watch",
+          lease_until: NOW + 300,
+          queued_at: NOW - 3_000,
+          claimed_at: NOW - 2_999,
+          started_at: NOW - 2_999,
+          last_heartbeat_at: NOW - 2_100,
+          finished_at: null,
+          updated_at: NOW - 2_100,
+          duration_ms: null,
+          item_count: null,
+          result_metadata_json: null,
+          error: null,
+        }],
+      },
+      {
+        match: "COUNT(*) AS active_count",
+        rows: [],
+        first: { active_count: 1, stale_count: 1 },
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.crons["sync-yield-data"]?.lastRun?.status).toBe("ok");
+    expect(snapshot.crons["sync-yield-data"]?.latestAttempt?.stale).toBe(true);
+    expect(snapshot.crons["sync-yield-data"]?.healthy).toBe(false);
+    expect(snapshot.availabilityImpactingUnhealthyCrons).toBe(0);
+    expect(snapshot.watchUnhealthyCrons).toBe(1);
+  });
+
+  it("does not let unavailable cron history mask a definite stale critical attempt", async () => {
+    const db = mockD1([
+      { match: "UNION ALL", rows: [], throwError: new Error("cron history unavailable") },
+      { match: "FROM cron_leases", rows: [] },
+      { match: "FROM cron_run_progress", rows: [] },
+      {
+        match: "ROW_NUMBER() OVER",
+        rows: [{
+          attempt_id: "attempt-stale-with-history-gap",
+          idempotency_key: "scheduled-slot|quarterHourly|sync-stablecoins|1",
+          schedule_key: "quarterHourly",
+          job: "sync-stablecoins",
+          slot_started_at: NOW - 300,
+          producer_path: "quarterHourly",
+          producer_kind: "scheduled-slot",
+          invocation_id: "invocation-history-gap",
+          worker_version: "version-a",
+          state: "running",
+          status_class: null,
+          attempt_no: 1,
+          owner: "owner-history-gap",
+          lease_until: NOW - 1,
+          queued_at: NOW - 300,
+          claimed_at: NOW - 299,
+          started_at: NOW - 299,
+          last_heartbeat_at: NOW - 10,
+          finished_at: null,
+          updated_at: NOW - 10,
+          duration_ms: null,
+          item_count: null,
+          result_metadata_json: null,
+          error: null,
+        }],
+      },
+      {
+        match: "COUNT(*) AS active_count",
+        rows: [],
+        first: { active_count: 1, stale_count: 1 },
+      },
+    ]);
+
+    const snapshot = await loadCronHealth(db, NOW);
+
+    expect(snapshot.cronHistoryQueryFailed).toBe(true);
+    expect(snapshot.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
+    expect(snapshot.crons["sync-stablecoins"]?.latestAttempt?.stale).toBe(true);
+    expect(snapshot.crons["sync-stablecoins"]?.healthy).toBe(false);
+    expect(snapshot.availabilityImpactingUnhealthyCrons).toBe(1);
+  });
 });
