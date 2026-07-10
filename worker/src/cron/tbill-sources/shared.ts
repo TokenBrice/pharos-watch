@@ -180,8 +180,9 @@ export async function fetchAndParseBenchmark<T>({
       parsed = parse(result.body);
     } catch (error) {
       logWorkerEvent({
+        scope: "lib",
         level: "warn",
-        code: "benchmark_parse_failed",
+        event: "benchmark_parse_failed",
         message: `${warnLabel} parse failed`,
         error,
       });
