@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -28,7 +30,13 @@ vi.mock("../../lib/circuit-breaker", async (importOriginal) => ({
   recordOutcomeDecision: vi.fn(async () => undefined),
 }));
 
-import { buildVaultsFyiBudgetPlan, fetchVaultsFyiSources } from "../yield-sync/vaults-fyi";
+import {
+  buildVaultsFyiBudgetPlan,
+  fetchVaultsFyiSources,
+  finalizeMonthlyCredits,
+  readMonthlyCredits,
+  reserveMonthlyCredits,
+} from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 
 function response(body: unknown, status = 200): Response {
@@ -84,7 +92,7 @@ function creditLedgerDb(initialValue: string | null) {
         run: async () => {
           value = String(binds[1]);
           writes.push(value);
-          return { success: true };
+          return { success: true, meta: { changes: 1 } };
         },
       }),
     }),
@@ -92,11 +100,32 @@ function creditLedgerDb(initialValue: string | null) {
   return { db, writes };
 }
 
+function sqliteCreditLedgerDb() {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+  return { sqlite, db: createSqliteD1(sqlite) };
+}
+
 describe("fetchVaultsFyiSources", () => {
+  const openDatabases: DatabaseSync[] = [];
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    for (const sqlite of openDatabases.splice(0)) sqlite.close();
   });
+
+  function sqliteLedger() {
+    const value = sqliteCreditLedgerDb();
+    openDatabases.push(value.sqlite);
+    return value;
+  }
 
   it("throttles an unsafe four-hour run cap below the monthly quota", () => {
     const plan = buildVaultsFyiBudgetPlan({
@@ -134,14 +163,16 @@ describe("fetchVaultsFyiSources", () => {
 
     expect(writes).toHaveLength(2);
     expect(JSON.parse(writes[0]!)).toMatchObject({
-      version: 2,
+      version: 3,
       bucket,
+      generation: 1,
       creditsEstimated: 100,
       creditsReserved: 12,
     });
     expect(JSON.parse(writes[1]!)).toMatchObject({
-      version: 2,
+      version: 3,
       bucket,
+      generation: 2,
       creditsEstimated: 104,
       creditsReserved: 0,
       reservationId: null,
@@ -153,6 +184,77 @@ describe("fetchVaultsFyiSources", () => {
       monthlyCreditsReserved: 0,
       monthlyBudgetWarning: true,
       coverageBudgetState: "throttled",
+    });
+  });
+
+  it("allows only one concurrent reservation owner to win the ledger CAS", async () => {
+    const { db } = sqliteLedger();
+    const bucket = "2026-07";
+    const nowSec = Date.parse("2026-07-01T00:25:00.000Z") / 1000;
+    const empty = await readMonthlyCredits(db, bucket, nowSec);
+    expect(empty).not.toBeNull();
+
+    const claims = await Promise.all([
+      reserveMonthlyCredits(db, bucket, empty!, 12, nowSec),
+      reserveMonthlyCredits(db, bucket, empty!, 12, nowSec),
+    ]);
+
+    expect(claims.filter((claim) => claim != null)).toHaveLength(1);
+    const current = await readMonthlyCredits(db, bucket, nowSec);
+    expect(current).toMatchObject({ generation: 1, creditsEstimated: 0, creditsReserved: 12 });
+  });
+
+  it("prevents an expired owner from overwriting a newer reservation", async () => {
+    const { db } = sqliteLedger();
+    const bucket = "2026-07";
+    const firstAt = Date.parse("2026-07-01T00:25:00.000Z") / 1000;
+    const initial = await readMonthlyCredits(db, bucket, firstAt);
+    const first = await reserveMonthlyCredits(db, bucket, initial!, 12, firstAt);
+    expect(first).not.toBeNull();
+
+    const secondAt = firstAt + 21 * 60;
+    const afterExpiry = await readMonthlyCredits(db, bucket, secondAt);
+    const second = await reserveMonthlyCredits(db, bucket, afterExpiry!, 10, secondAt);
+    expect(second).not.toBeNull();
+
+    await expect(finalizeMonthlyCredits(db, first, 4)).resolves.toBe(false);
+    const current = await readMonthlyCredits(db, bucket, secondAt);
+    expect(current).toMatchObject({
+      generation: 2,
+      creditsEstimated: 0,
+      creditsReserved: 10,
+      reservationId: second!.reservationId,
+    });
+  });
+
+  it("keeps month rollover ledgers independent and releases zero-spend reservations", async () => {
+    const { db } = sqliteLedger();
+    const julyAt = Date.parse("2026-07-31T20:25:00.000Z") / 1000;
+    const augustAt = Date.parse("2026-08-01T00:25:00.000Z") / 1000;
+    const july = await reserveMonthlyCredits(
+      db,
+      "2026-07",
+      (await readMonthlyCredits(db, "2026-07", julyAt))!,
+      5,
+      julyAt,
+    );
+    const august = await reserveMonthlyCredits(
+      db,
+      "2026-08",
+      (await readMonthlyCredits(db, "2026-08", augustAt))!,
+      12,
+      augustAt,
+    );
+
+    expect(july).not.toBeNull();
+    expect(august).not.toBeNull();
+    await expect(finalizeMonthlyCredits(db, august, 0)).resolves.toBe(true);
+    await expect(readMonthlyCredits(db, "2026-07", julyAt)).resolves.toMatchObject({ creditsReserved: 5 });
+    await expect(readMonthlyCredits(db, "2026-08", augustAt)).resolves.toMatchObject({
+      generation: 2,
+      creditsEstimated: 0,
+      creditsReserved: 0,
+      reservationId: null,
     });
   });
 

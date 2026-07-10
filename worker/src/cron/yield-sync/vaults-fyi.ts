@@ -1,7 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, MIN_LENDING_POOL_TVL_USD, USER_AGENT } from "../../lib/constants";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -87,7 +87,8 @@ function getCurrentMonthBucket(nowSec: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-interface VaultsFyiCreditLedger {
+export interface VaultsFyiCreditLedger {
+  generation: number;
   creditsEstimated: number;
   creditsReserved: number;
   reservationId: string | null;
@@ -96,10 +97,17 @@ interface VaultsFyiCreditLedger {
 
 interface VaultsFyiCreditReservation extends VaultsFyiCreditLedger {
   bucket: string;
+  ledgerValue: string;
 }
 
 function emptyCreditLedger(): VaultsFyiCreditLedger {
-  return { creditsEstimated: 0, creditsReserved: 0, reservationId: null, reservationExpiresAt: null };
+  return {
+    generation: 0,
+    creditsEstimated: 0,
+    creditsReserved: 0,
+    reservationId: null,
+    reservationExpiresAt: null,
+  };
 }
 
 function parseCreditLedger(value: string | null | undefined, bucket: string, nowSec: number): VaultsFyiCreditLedger {
@@ -112,11 +120,15 @@ function parseCreditLedger(value: string | null | undefined, bucket: string, now
     const creditsEstimated = Number.isFinite(parsed.creditsEstimated) && parsed.creditsEstimated > 0
       ? Math.trunc(parsed.creditsEstimated)
       : 0;
+    const generation = typeof parsed.generation === "number" && Number.isInteger(parsed.generation) && parsed.generation > 0
+      ? parsed.generation
+      : 0;
     const reservationExpiresAt = typeof parsed.reservationExpiresAt === "number"
       ? Math.trunc(parsed.reservationExpiresAt)
       : null;
     const reservationActive = reservationExpiresAt != null && reservationExpiresAt > nowSec;
     return {
+      generation,
       creditsEstimated,
       creditsReserved:
         reservationActive && typeof parsed.creditsReserved === "number" && Number.isFinite(parsed.creditsReserved)
@@ -130,7 +142,7 @@ function parseCreditLedger(value: string | null | undefined, bucket: string, now
   }
 }
 
-async function readMonthlyCredits(
+export async function readMonthlyCredits(
   db: D1Database | undefined,
   bucket: string,
   nowSec: number,
@@ -140,19 +152,34 @@ async function readMonthlyCredits(
   return parseCreditLedger(cached?.value, bucket, nowSec);
 }
 
-async function writeMonthlyCredits(
-  db: D1Database | undefined,
+function serializeMonthlyCredits(bucket: string, ledger: VaultsFyiCreditLedger): string {
+  return JSON.stringify({ version: 3, bucket, ...ledger });
+}
+
+async function compareAndSwapMonthlyCredits(
+  db: D1Database,
   bucket: string,
+  expectedValue: string | null,
   ledger: VaultsFyiCreditLedger,
+  nowSec: number,
   signal?: AbortSignal,
-): Promise<void> {
-  if (!db) return;
-  await setCache(
-    db,
-    `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`,
-    JSON.stringify({ version: 2, bucket, ...ledger }),
-    signal,
-  );
+): Promise<{ changed: boolean; value: string }> {
+  throwIfAborted(signal);
+  const key = `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`;
+  const value = serializeMonthlyCredits(bucket, ledger);
+  const result = await db
+    .prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at
+       WHERE cache.value IS ?`,
+    )
+    .bind(key, value, nowSec, expectedValue)
+    .run();
+  throwIfAborted(signal);
+  return { changed: (result.meta.changes ?? 0) === 1, value };
 }
 
 function getRunsRemainingInMonth(nowSec: number): number {
@@ -203,44 +230,69 @@ export function buildVaultsFyiBudgetPlan(input: {
   } as const;
 }
 
-async function reserveMonthlyCredits(
+export async function reserveMonthlyCredits(
   db: D1Database,
   bucket: string,
-  ledger: VaultsFyiCreditLedger,
+  expectedLedger: VaultsFyiCreditLedger,
   credits: number,
   nowSec: number,
   signal?: AbortSignal,
-): Promise<VaultsFyiCreditReservation> {
+): Promise<VaultsFyiCreditReservation | null> {
+  const cached = await getCache(db, `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`);
+  const ledger = parseCreditLedger(cached?.value, bucket, nowSec);
+  if (
+    ledger.generation !== expectedLedger.generation
+    || ledger.creditsEstimated !== expectedLedger.creditsEstimated
+    || ledger.creditsReserved !== expectedLedger.creditsReserved
+    || ledger.reservationId !== expectedLedger.reservationId
+    || ledger.reservationExpiresAt !== expectedLedger.reservationExpiresAt
+    || ledger.creditsReserved > 0
+    || ledger.reservationId != null
+  ) {
+    return null;
+  }
   const reservationId = crypto.randomUUID();
-  const reservation: VaultsFyiCreditReservation = {
-    bucket,
+  const nextLedger: VaultsFyiCreditLedger = {
+    generation: ledger.generation + 1,
     creditsEstimated: ledger.creditsEstimated,
     creditsReserved: credits,
     reservationId,
     reservationExpiresAt: nowSec + VAULTS_FYI_RESERVATION_TTL_SEC,
   };
-  await writeMonthlyCredits(db, bucket, reservation, signal);
-  return reservation;
+  const claimed = await compareAndSwapMonthlyCredits(
+    db,
+    bucket,
+    cached?.value ?? null,
+    nextLedger,
+    nowSec,
+    signal,
+  );
+  if (!claimed.changed) return null;
+  return { bucket, ...nextLedger, ledgerValue: claimed.value };
 }
 
-async function finalizeMonthlyCredits(
+export async function finalizeMonthlyCredits(
   db: D1Database | undefined,
   reservation: VaultsFyiCreditReservation | null,
   creditsSpent: number,
   signal?: AbortSignal,
-): Promise<void> {
-  if (!db || !reservation) return;
-  await writeMonthlyCredits(
+): Promise<boolean> {
+  if (!db || !reservation) return false;
+  const finalized = await compareAndSwapMonthlyCredits(
     db,
     reservation.bucket,
+    reservation.ledgerValue,
     {
+      generation: reservation.generation + 1,
       creditsEstimated: reservation.creditsEstimated + creditsSpent,
       creditsReserved: 0,
       reservationId: null,
       reservationExpiresAt: null,
     },
+    Math.floor(Date.now() / 1000),
     signal,
   );
+  return finalized.changed;
 }
 
 function getMonthlyCreditsCap(config: VaultsFyiRuntimeConfig): number {
@@ -567,7 +619,13 @@ export async function fetchVaultsFyiSources({
         startSec,
         signal,
       );
-      telemetry.monthlyCreditsReserved = telemetry.creditsCap;
+      if (reservation) {
+        telemetry.monthlyCreditsReserved = telemetry.creditsCap;
+      } else {
+        telemetry.creditsCap = 0;
+        telemetry.monthlyCreditsReserved = null;
+        telemetry.coverageBudgetState = "throttled";
+      }
     }
   }
 
@@ -626,8 +684,19 @@ export async function fetchVaultsFyiSources({
     budget.cleanup();
     telemetry.durationMs = Date.now() - startedAtMs;
     telemetry.budgetExhausted ||= budget.budgetController.signal.aborted;
-    await finalizeMonthlyCredits(db, reservation, telemetry.creditsEstimated).then(() => {
-      if (reservation) telemetry.monthlyCreditsReserved = 0;
+    await finalizeMonthlyCredits(db, reservation, telemetry.creditsEstimated).then((finalized) => {
+      if (reservation) telemetry.monthlyCreditsReserved = finalized ? 0 : null;
+      if (reservation && !finalized) {
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "vaults_fyi_credit_reservation_ownership_lost",
+          job: "sync-yield-supplemental",
+          provider: "vaults-fyi",
+          source: "credit-ledger",
+          message: "vaults.fyi credit reservation was superseded before finalization",
+        });
+      }
     }).catch((error: unknown) => {
       logWorkerEvent({
         scope: "lib",
