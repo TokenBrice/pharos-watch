@@ -50,6 +50,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "compute-dews": DEFAULT_CRON_TIMEOUT_MS,
   "project-tape": DEFAULT_CRON_TIMEOUT_MS,
   "cron-slot-sweeper": DEFAULT_CRON_TIMEOUT_MS,
+  "reserve-recovery": 13 * 60_000,
   "status-self-check": DEFAULT_CRON_TIMEOUT_MS,
   "data-invariant-canary": DEFAULT_CRON_TIMEOUT_MS,
   "cron-staleness-watchdog": DEFAULT_CRON_TIMEOUT_MS,

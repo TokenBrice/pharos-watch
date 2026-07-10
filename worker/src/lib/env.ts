@@ -1,5 +1,12 @@
+export interface WorkerVersionMetadata {
+  id: string;
+  tag: string;
+  timestamp: string;
+}
+
 export interface Env {
   DB: D1Database;
+  CF_VERSION_METADATA: WorkerVersionMetadata;
   CORS_ORIGIN: string;
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;

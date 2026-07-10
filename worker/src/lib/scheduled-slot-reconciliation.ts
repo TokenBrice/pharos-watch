@@ -1,10 +1,11 @@
 import {
-  getScheduledSlotPlanBudgetEntries,
+  flattenScheduledSlotPlanJobs,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { markWorkerJobAttemptsAbandonedForSlot } from "./job-ledger";
+import { prepareScheduledCheckpointRecoveryForSlot } from "./scheduled-recovery-checkpoint";
 
 export interface StaleSlotExecutionArtifact {
   slot_key: string;
@@ -35,6 +36,8 @@ export interface StaleSlotReconciliationSummary {
   jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
+  recoveryCheckpointsPrepared: number;
+  notStartedCronRuns: number;
   abandonedJobs: Array<{
     job: string;
     progressStage: string | null;
@@ -80,7 +83,34 @@ async function listProgressRowsForStaleSlot(
 
 function getExpectedJobsForScheduledSlot(slotKey: string): readonly string[] {
   const plan = SCHEDULED_SLOT_PLANS[slotKey as CronScheduleKey];
-  return plan ? getScheduledSlotPlanBudgetEntries(plan) : [];
+  return plan ? flattenScheduledSlotPlanJobs(plan) : [];
+}
+
+export async function hasActiveChildLeaseForScheduledSlot(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+  nowSec: number,
+): Promise<boolean> {
+  const jobs = getExpectedJobsForScheduledSlot(slotKey);
+  if (jobs.length === 0) return false;
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT 1 AS active
+           FROM cron_run_progress p
+           JOIN cron_leases l
+             ON l.job = p.job
+            AND l.lease_owner = p.lease_owner
+          WHERE p.slot_started_at = ?
+            AND p.job IN (${jobs.map(() => "?").join(", ")})
+            AND l.lease_until >= ?
+          LIMIT 1`,
+      )
+      .bind(slotStartedAt, ...jobs, nowSec)
+      .first<{ active: number }>(),
+  );
+  return row?.active === 1;
 }
 
 async function getCronLeaseForJob(db: D1Database, job: string): Promise<StaleSlotLeaseRow | null> {
@@ -144,6 +174,47 @@ async function insertSyntheticStaleCronRun(
   );
 }
 
+async function insertSyntheticNotStartedCronRun(
+  db: D1Database,
+  slot: StaleSlotExecutionArtifact,
+  job: string,
+  nowSec: number,
+): Promise<boolean> {
+  const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO cron_runs
+           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key)
+         SELECT ?, ?, 0, 'error', ?, 0, ?, ?, ?
+          WHERE NOT EXISTS (
+            SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
+          )
+         ON CONFLICT DO NOTHING`,
+      )
+      .bind(
+        job,
+        nowSec,
+        "scheduled slot abandoned before child job started",
+        JSON.stringify({
+          reason: "stale-slot-reconciled",
+          failureCategory: "platform-abandoned",
+          childDisposition: "not_started",
+          slotKey: slot.slot_key,
+          slotStartedAt: slot.slot_started_at,
+          slotOwner: slot.execution_owner,
+          reconciledAt: nowSec,
+        }),
+        slot.slot_started_at,
+        idempotencyKey,
+        job,
+        slot.slot_started_at,
+      )
+      .run(),
+  );
+  return (result.meta.changes ?? 0) === 1;
+}
+
 async function reconcileStaleSlotArtifacts(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
@@ -154,6 +225,8 @@ async function reconcileStaleSlotArtifacts(
     jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
+    recoveryCheckpointsPrepared: 0,
+    notStartedCronRuns: 0,
     abandonedJobs: [],
   };
   const expectedJobs = getExpectedJobsForScheduledSlot(slot.slot_key);
@@ -163,7 +236,7 @@ async function reconcileStaleSlotArtifacts(
       typeof progress.lease_owner === "string" && progress.lease_owner.length > 0,
   );
   const progressRowsWithoutOwner = progressRows.filter((progress) => !progress.lease_owner);
-  const progressJobs = new Set(progressRowsWithOwner.map((progress) => progress.job));
+  const progressJobs = new Set(progressRows.map((progress) => progress.job));
   const noProgressJobs = expectedJobs.filter((job) => !progressJobs.has(job));
   if (noProgressJobs.length > 0) {
     try {
@@ -190,7 +263,46 @@ async function reconcileStaleSlotArtifacts(
     }
   }
 
+  const recovery = await prepareScheduledCheckpointRecoveryForSlot(db, {
+    scheduleKey: slot.slot_key,
+    slotStartedAt: slot.slot_started_at,
+    job: "sync-live-reserves",
+    childJobs: expectedJobs,
+    nowSec,
+  });
+  if (recovery) {
+    summary.recoveryCheckpointsPrepared++;
+  }
+
+  for (const job of noProgressJobs) {
+    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec)) {
+      summary.notStartedCronRuns++;
+      summary.syntheticCronRuns++;
+    }
+  }
+
   for (const progress of progressRowsWithoutOwner) {
+    try {
+      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
+        scheduleKey: slot.slot_key,
+        slotStartedAt: slot.slot_started_at,
+        jobs: [progress.job],
+        nowSec,
+        error: STALE_SLOT_ERROR,
+        metadata: {
+          reason: "stale-slot-reconciled",
+          reconciliationSource: "slot-ownerless-progress-sweep",
+          slotKey: slot.slot_key,
+          slotStartedAt: slot.slot_started_at,
+          slotOwner: slot.execution_owner,
+          progressStage: progress.stage,
+          progressUpdatedAt: progress.updated_at,
+          reconciledAt: nowSec,
+        },
+      });
+    } catch (err) {
+      console.warn(`[cron-slot] Failed to abandon ownerless attempt for ${progress.job}@${slot.slot_started_at}:`, err);
+    }
     const progressDelete = await runWithOverloadRetry(() =>
       db
         .prepare(

@@ -33,6 +33,8 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
     import("./scheduled/yield-supplemental").then((mod) => mod.runYieldSupplementalSlot),
   fiveMinuteTelegramAlerts: () =>
     import("./scheduled/five-minute-telegram").then((mod) => mod.runFiveMinuteTelegramSlot),
+  fiveMinuteReserveRecovery: () =>
+    import("./scheduled/reserve-recovery").then((mod) => mod.runFiveMinuteReserveRecoverySlot),
   digestTriggerPoll: () => import("./scheduled/digest-trigger-poll").then((mod) => mod.runDigestTriggerPollSlot),
   daily0300Utc: () => import("./scheduled/daily-0300").then((mod) => mod.runDaily0300Slot),
   daily0800Utc: () => import("./scheduled/daily-0800").then((mod) => mod.runDaily0800Slot),
@@ -75,6 +77,7 @@ const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFe
   statusSelfCheckOffset: SHORT_SLOT_FENCE_POLICY,
   digestTriggerPoll: SHORT_SLOT_FENCE_POLICY,
   fiveMinuteTelegramAlerts: MEDIUM_SLOT_FENCE_POLICY,
+  fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
   quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyChartsOffset: MEDIUM_SLOT_FENCE_POLICY,

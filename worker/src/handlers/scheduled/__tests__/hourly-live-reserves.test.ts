@@ -24,6 +24,35 @@ vi.mock("../../../lib/alerts", () => ({
 vi.mock("../../../lib/db-cache", () => ({
   setCache: vi.fn(async () => {}),
 }));
+vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
+  beginScheduledCheckpoint: vi.fn(async () => ({
+    scheduleKey: "fourHourlyReserveSync",
+    slotStartedAt: 0,
+    job: "sync-live-reserves",
+    attemptNo: 1,
+    executionGeneration: 1,
+    invocationId: "test-checkpoint",
+    workerVersion: null,
+    queueHash: "test",
+    state: "running",
+    nextItemKey: null,
+    currentItemKey: null,
+    currentDomainAttemptId: null,
+    itemsDone: 0,
+    itemsTotal: 0,
+    childDispositions: {},
+    recoveryOwner: null,
+    recoveryLeaseUntil: null,
+    sourceAttemptNo: null,
+    error: null,
+    createdAt: 0,
+    updatedAt: 0,
+    completedAt: null,
+  })),
+  setScheduledCheckpointChildDisposition: vi.fn(async () => {}),
+  finishScheduledCheckpoint: vi.fn(async () => {}),
+  checkpointErrorMetadata: vi.fn(() => "error"),
+}));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";

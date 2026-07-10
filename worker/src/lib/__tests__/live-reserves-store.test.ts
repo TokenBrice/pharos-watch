@@ -18,16 +18,28 @@ import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
 describe("live-reserves-store", () => {
-  it("computes max sync age from the newest successful live reserve sync", async () => {
+  it("computes max sync age from the oldest required reserve attempt", async () => {
     const db = mockD1([
       {
-        match: "SELECT MAX(last_success_at) AS max_ts FROM reserve_sync_state",
+        match: "SELECT MIN(last_attempted_at) AS oldest_ts",
         rows: [],
-        first: { max_ts: 950 },
+        first: { oldest_ts: 950, observed_count: 1 },
       },
     ]);
 
     await expect(getMaxSyncAge(db, 1_000)).resolves.toBe(50);
+  });
+
+  it("treats a missing required reserve state row as infinitely stale", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT MIN(last_attempted_at) AS oldest_ts",
+        rows: [],
+        first: { oldest_ts: 950, observed_count: 1 },
+      },
+    ]);
+
+    await expect(getMaxSyncAge(db, 1_000, ["coin-a", "coin-b"])).resolves.toBe(Infinity);
   });
 
   it("falls back when reserve composition exists without a matching successful sync state", async () => {

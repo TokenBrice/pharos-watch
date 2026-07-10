@@ -3,6 +3,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import {
   reconcileStaleSlotArtifactsAndRecordEvent,
+  hasActiveChildLeaseForScheduledSlot,
   type StaleSlotExecutionArtifact,
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
@@ -92,6 +93,8 @@ export interface ScheduledSlotSweepSummary {
   jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
+  recoveryCheckpointsPrepared: number;
+  notStartedCronRuns: number;
   abandonedSlots: Array<{
     slotKey: string;
     slotStartedAt: number;
@@ -258,12 +261,17 @@ export async function sweepStaleScheduledSlotExecutions(
     jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
+    recoveryCheckpointsPrepared: 0,
+    notStartedCronRuns: 0,
     abandonedSlots: [],
   };
 
   for (const staleSlot of staleSlots) {
     if (options.signal?.aborted) {
       throw options.signal.reason instanceof Error ? options.signal.reason : new Error("scheduled slot sweep aborted");
+    }
+    if (await hasActiveChildLeaseForScheduledSlot(db, staleSlot.slot_key, staleSlot.slot_started_at, nowSec)) {
+      continue;
     }
     const reconciliationOwner = createLeaseOwner(`stale-slot:${staleSlot.slot_key}`);
     const reconciliationGeneration = await claimStaleScheduledSlotForReconciliation(
@@ -293,6 +301,8 @@ export async function sweepStaleScheduledSlotExecutions(
     summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
     summary.progressRowsCleared += reconciliation.progressRowsCleared;
     summary.leasesCleared += reconciliation.leasesCleared;
+    summary.recoveryCheckpointsPrepared += reconciliation.recoveryCheckpointsPrepared;
+    summary.notStartedCronRuns += reconciliation.notStartedCronRuns;
     summary.abandonedSlots.push({
       slotKey: staleSlot.slot_key,
       slotStartedAt: staleSlot.slot_started_at,
@@ -357,6 +367,9 @@ async function claimScheduledSlotExecution(
       staleBefore,
       takenOverAt: nowSec,
     };
+    if (await hasActiveChildLeaseForScheduledSlot(db, slotKey, slotStartedAt, nowSec)) {
+      return { status: "running" };
+    }
     const takeover = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -577,8 +590,10 @@ export async function runScheduledSlotWithFence(
       deadlineTimer = setTimeout(abortForDeadline, delayMs);
     }
   }
+  let heartbeatInFlight: Promise<void> | null = null;
   const timer = setInterval(() => {
-    void touchScheduledSlotExecution(
+    if (heartbeatInFlight) return;
+    heartbeatInFlight = touchScheduledSlotExecution(
       db,
       slotKey,
       opts.slotStartedAt,
@@ -591,6 +606,8 @@ export async function runScheduledSlotWithFence(
     }).catch((err) => {
       heartbeatFailures++;
       console.warn(`[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
+    }).finally(() => {
+      heartbeatInFlight = null;
     });
   }, heartbeatSec * 1000);
 
@@ -611,6 +628,8 @@ export async function runScheduledSlotWithFence(
     if (heartbeatOwnershipLost) {
       throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
     }
+    clearInterval(timer);
+    await heartbeatInFlight;
     const finished = await finishScheduledSlotExecution(
       db,
       slotKey,
@@ -632,6 +651,8 @@ export async function runScheduledSlotWithFence(
       metadata: slotMetadata,
     };
   } catch (err) {
+    clearInterval(timer);
+    await heartbeatInFlight;
     await finishScheduledSlotExecution(
       db,
       slotKey,

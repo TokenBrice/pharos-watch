@@ -248,14 +248,13 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, error, item_count")) {
-            const [job, startedAt, durationMs, error, metadata, slotStartedAt] = args as [
-              string,
-              number,
-              number,
-              string | null,
-              string | null,
-              number | null,
-            ];
+            const isNotStarted = sql.includes("SELECT ?, ?, 0, 'error'");
+            const job = args[0] as string;
+            const startedAt = args[1] as number;
+            const durationMs = isNotStarted ? 0 : args[2] as number;
+            const error = args[isNotStarted ? 2 : 3] as string | null;
+            const metadata = args[isNotStarted ? 3 : 4] as string | null;
+            const slotStartedAt = args[isNotStarted ? 4 : 5] as number | null;
             cronRuns.push({
               job,
               started_at: startedAt,
@@ -571,6 +570,19 @@ function makeLeaseDb(seed?: {
           return { success: true, meta: { changes: 0 } };
         },
         first: async () => {
+          if (sql.includes("SELECT 1 AS active") && sql.includes("JOIN cron_leases")) {
+            const [slotStartedAt, ...jobAndNow] = args as [number, ...(string | number)[]];
+            const activeAt = Number(jobAndNow[jobAndNow.length - 1]);
+            const jobs = jobAndNow.slice(0, -1).filter((value): value is string => typeof value === "string");
+            const active = [...progressRows.values()].some((progress) => {
+              if (progress.slot_started_at !== slotStartedAt || !jobs.includes(progress.job) || !progress.lease_owner) {
+                return false;
+              }
+              const lease = leases.get(progress.job);
+              return lease?.lease_owner === progress.lease_owner && lease.lease_until >= activeAt;
+            });
+            return active ? { active: 1 } : null;
+          }
           if (sql.includes("SELECT state, execution_owner, execution_generation, started_at, updated_at")) {
             const [slotKey, slotStartedAt] = args as [string, number];
             const row = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
@@ -1548,7 +1560,8 @@ describe("runScheduledSlotWithFence", () => {
         previousStartedAt: slotStartedAt,
         previousUpdatedAt: now - 1800,
         reconciliation: {
-          syntheticCronRuns: 0,
+          syntheticCronRuns: 1,
+          notStartedCronRuns: 1,
           progressRowsCleared: 0,
           leasesCleared: 0,
         },
@@ -1986,12 +1999,19 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 0,
+      syntheticCronRuns: 1,
+      notStartedCronRuns: 1,
       jobAttemptsAbandoned: 1,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
-    expect(db.getRuns()).toEqual([]);
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "sync-yield-data",
+        status: "error",
+        slot_started_at: staleSlotStartedAt,
+      }),
+    ]);
     const attempt = db.getJobAttempt(attemptId);
     expect(attempt).toMatchObject({
       state: "abandoned",
@@ -2057,6 +2077,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(summary).toMatchObject({
       slotsReconciled: 1,
       syntheticCronRuns: 0,
+      notStartedCronRuns: 0,
       jobAttemptsAbandoned: 1,
       progressRowsCleared: 1,
       leasesCleared: 0,
@@ -2188,7 +2209,8 @@ describe("runScheduledSlotWithFence", () => {
     expect(summary).toMatchObject({
       candidateSlots: 1,
       slotsReconciled: 1,
-      syntheticCronRuns: 0,
+      syntheticCronRuns: 6,
+      notStartedCronRuns: 6,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
@@ -2199,7 +2221,8 @@ describe("runScheduledSlotWithFence", () => {
         abandonedJobs: [],
       }),
     ]);
-    expect(db.getRuns()).toEqual([]);
+    expect(db.getRuns()).toHaveLength(6);
+    expect(db.getRuns().every((run) => run.slot_started_at === staleSlotStartedAt)).toBe(true);
     expect(db.getProgress("daily-digest")).toBeDefined();
     expect(db.getLease("daily-digest")).toBeDefined();
     expect(db.getSlot("quarterHourly", staleSlotStartedAt)?.result_status).toBe("error");
@@ -2210,7 +2233,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [{
-        slot_key: "hourlyYield",
+        slot_key: "hourlyYieldSync",
         slot_started_at: staleSlotStartedAt,
         state: "running",
         result_status: null,
@@ -2239,18 +2262,12 @@ describe("runScheduledSlotWithFence", () => {
 
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
 
-    expect(summary.slotsReconciled).toBe(1);
+    expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 0 });
     expect(db.getRuns()).toEqual([]);
     expect(db.getProgress("sync-yield-data")).toBeDefined();
     expect(db.getLease("sync-yield-data")).toBeDefined();
-    const staleSlot = db.getSlot("hourlyYield", staleSlotStartedAt);
-    expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
-      staleSlotReconciliation: {
-        syntheticCronRuns: 0,
-        progressRowsCleared: 0,
-        leasesCleared: 0,
-      },
-    });
+    const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
+    expect(staleSlot).toMatchObject({ state: "running", execution_owner: "slot-owner-a" });
   });
 
   it("stores child job summaries and degraded slot status", async () => {

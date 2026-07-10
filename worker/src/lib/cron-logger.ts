@@ -250,6 +250,7 @@ export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>
 export interface CronRunLoggerOptions {
   slotStartedAt?: number | null;
   timeoutBudget?: ResolvedCronTimeoutBudget;
+  abortSignal?: AbortSignal;
 }
 
 // --- Internal helpers ---
@@ -325,6 +326,9 @@ export async function logCronRun(
   const timeoutBudget = options?.timeoutBudget ?? resolveCronTimeoutBudget(job);
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const ac = new AbortController();
+  const operationSignal = options?.abortSignal
+    ? AbortSignal.any([ac.signal, options.abortSignal])
+    : ac.signal;
   const timeoutError = new CronTimeoutError(job, timeoutMs, getCronTimeoutBudgetMetadata(timeoutBudget));
   let resolvedResult: CronResult | void;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
@@ -360,7 +364,7 @@ export async function logCronRun(
     }
 
     const jobOutcomePromise: Promise<CronJobOutcome> = Promise.resolve()
-      .then(() => fn(ac.signal, reportProgress))
+      .then(() => fn(operationSignal, reportProgress))
       .then(
         (value) => ({ status: "fulfilled" as const, value }),
         (error) => ({ status: "rejected" as const, error }),

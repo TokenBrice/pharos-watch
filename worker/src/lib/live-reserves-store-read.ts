@@ -119,10 +119,21 @@ export async function loadReserveCompositionRowMap(
 export async function getMaxSyncAge(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
+  stablecoinIds?: readonly string[],
 ): Promise<number> {
+  if (stablecoinIds?.length === 0) return Infinity;
+  const configuredFilter = stablecoinIds
+    ? ` WHERE stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})`
+    : "";
   const row = await db
-    .prepare("SELECT MAX(last_success_at) AS max_ts FROM reserve_sync_state")
-    .first<{ max_ts: number | null }>();
-  if (!row?.max_ts) return Infinity;
-  return now - row.max_ts;
+    .prepare(
+      `SELECT MIN(last_attempted_at) AS oldest_ts,
+              COUNT(DISTINCT stablecoin_id) AS observed_count
+         FROM reserve_sync_state${configuredFilter}`,
+    )
+    .bind(...(stablecoinIds ?? []))
+    .first<{ oldest_ts: number | null; observed_count: number }>();
+  if (stablecoinIds && (row?.observed_count ?? 0) !== new Set(stablecoinIds).size) return Infinity;
+  if (!row?.oldest_ts) return Infinity;
+  return now - row.oldest_ts;
 }

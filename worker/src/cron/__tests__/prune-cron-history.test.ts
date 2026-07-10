@@ -25,6 +25,11 @@ interface CanaryRunRow {
   observed_at: number;
 }
 
+interface RecoveryCheckpointRow {
+  updated_at: number;
+  state: string;
+}
+
 interface SelectorSnapshotDailyQuotaRow {
   quota_date: string;
 }
@@ -45,6 +50,7 @@ function createStubDb(): {
   jobAttempts: JobAttemptRow[];
   repairTasks: RepairTaskRow[];
   canaryRuns: CanaryRunRow[];
+  recoveryCheckpoints: RecoveryCheckpointRow[];
   selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[];
   blockTimestampCacheRows: BlockTimestampCacheRow[];
   slotExecs: SlotExecRow[];
@@ -53,6 +59,7 @@ function createStubDb(): {
   const jobAttempts: JobAttemptRow[] = [];
   const repairTasks: RepairTaskRow[] = [];
   const canaryRuns: CanaryRunRow[] = [];
+  const recoveryCheckpoints: RecoveryCheckpointRow[] = [];
   const selectorSnapshotDailyQuotaRows: SelectorSnapshotDailyQuotaRow[] = [];
   const blockTimestampCacheRows: BlockTimestampCacheRow[] = [];
   const slotExecs: SlotExecRow[] = [];
@@ -146,6 +153,18 @@ function createStubDb(): {
           }
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.includes("DELETE FROM worker_scheduled_checkpoints")) {
+          const [cutoff] = bound as [number];
+          let removed = 0;
+          const terminalStates = new Set(["completed", "failed", "platform_abandoned"]);
+          for (let i = recoveryCheckpoints.length - 1; i >= 0; i--) {
+            if (recoveryCheckpoints[i].updated_at < cutoff && terminalStates.has(recoveryCheckpoints[i].state)) {
+              recoveryCheckpoints.splice(i, 1);
+              removed += 1;
+            }
+          }
+          return { success: true, meta: { changes: removed } };
+        }
         return { success: true, meta: { changes: 0 } };
       },
       first: async () => null,
@@ -168,6 +187,7 @@ function createStubDb(): {
     jobAttempts,
     repairTasks,
     canaryRuns,
+    recoveryCheckpoints,
     selectorSnapshotDailyQuotaRows,
     blockTimestampCacheRows,
     slotExecs,
@@ -265,6 +285,24 @@ describe("runPruneCronHistory", () => {
     expect(metadata.canaryRunsDeleted).toBe(1);
   });
 
+  it("removes terminal recovery checkpoints older than 14 days without deleting recoverable work", async () => {
+    const { db, recoveryCheckpoints } = createStubDb();
+    const now = Math.floor(Date.now() / 1000);
+    recoveryCheckpoints.push({ state: "completed", updated_at: now - TWO_WEEKS_SEC - 3600 });
+    recoveryCheckpoints.push({ state: "platform_abandoned", updated_at: now - TWO_WEEKS_SEC - 3600 });
+    recoveryCheckpoints.push({ state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 });
+    recoveryCheckpoints.push({ state: "failed", updated_at: now - 3600 });
+
+    const result = await runPruneCronHistory(db);
+
+    expect(recoveryCheckpoints).toEqual([
+      { state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 },
+      { state: "failed", updated_at: now - 3600 },
+    ]);
+    const metadata = JSON.parse(result.metadata!) as { recoveryCheckpointsDeleted: number };
+    expect(metadata.recoveryCheckpointsDeleted).toBe(2);
+  });
+
   it("removes selector snapshot daily quota rows older than 2 days and keeps newer rows", async () => {
     const { db, selectorSnapshotDailyQuotaRows } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
@@ -309,6 +347,7 @@ describe("runPruneCronHistory", () => {
       jobAttempts,
       repairTasks,
       canaryRuns,
+      recoveryCheckpoints,
       selectorSnapshotDailyQuotaRows,
       blockTimestampCacheRows,
       slotExecs,
@@ -318,6 +357,7 @@ describe("runPruneCronHistory", () => {
     jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
     repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
     canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 1 });
+    recoveryCheckpoints.push({ state: "completed", updated_at: now - TWO_WEEKS_SEC - 1 });
     selectorSnapshotDailyQuotaRows.push({ quota_date: toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60) });
     blockTimestampCacheRows.push({ updated_at: now - TWO_WEEKS_SEC - 1 });
     slotExecs.push({ slot_key: "quarterHourly", slot_started_at: now - TWO_WEEKS_SEC - 1 });
@@ -328,6 +368,7 @@ describe("runPruneCronHistory", () => {
       jobAttemptsDeleted: number;
       repairTasksDeleted: number;
       canaryRunsDeleted: number;
+      recoveryCheckpointsDeleted: number;
       selectorSnapshotDailyQuotaDeleted: number;
       blockTimestampCacheDeleted: number;
       slotExecutionsDeleted: number;
@@ -335,6 +376,7 @@ describe("runPruneCronHistory", () => {
       cutoffJobAttemptsSec: number;
       cutoffRepairTasksSec: number;
       cutoffCanaryRunsSec: number;
+      cutoffRecoveryCheckpointsSec: number;
       cutoffSelectorSnapshotDailyQuotaDate: string;
       cutoffBlockTimestampCacheSec: number;
       cutoffSlotExecutionsSec: number;
@@ -344,6 +386,7 @@ describe("runPruneCronHistory", () => {
     expect(metadata.jobAttemptsDeleted).toBe(1);
     expect(metadata.repairTasksDeleted).toBe(1);
     expect(metadata.canaryRunsDeleted).toBe(1);
+    expect(metadata.recoveryCheckpointsDeleted).toBe(1);
     expect(metadata.selectorSnapshotDailyQuotaDeleted).toBe(1);
     expect(metadata.blockTimestampCacheDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
@@ -351,6 +394,7 @@ describe("runPruneCronHistory", () => {
     expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - NINETY_DAYS_SEC, -2);
+    expect(metadata.cutoffRecoveryCheckpointsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
     expect(metadata.cutoffSelectorSnapshotDailyQuotaDate).toBe(toUtcDateString(now - TWO_DAYS_SEC));
     expect(metadata.cutoffBlockTimestampCacheSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);
     expect(metadata.cutoffSlotExecutionsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);

@@ -57,6 +57,30 @@ export async function didReserveSyncSuccessBecomeAuthoritative(
   return row?.finalized === 1;
 }
 
+export async function didReserveSyncAttemptBecomeAuthoritative(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): Promise<boolean> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT 1 AS finalized
+           FROM reserve_composition c
+           JOIN reserve_sync_state s
+             ON s.stablecoin_id = c.stablecoin_id
+          WHERE c.stablecoin_id = ?
+            AND c.attempt_id = ?
+            AND s.last_success_attempt_id = c.attempt_id
+            AND s.pending_attempt_id IS NULL
+          LIMIT 1`,
+      )
+      .bind(stablecoinId, attemptId)
+      .first<{ finalized: number }>(),
+  );
+  return row?.finalized === 1;
+}
+
 export async function finalizeReserveSyncSuccess(
   db: D1Database,
   composition: ReserveCompositionRecord,

@@ -43,6 +43,14 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "CF_VERSION_METADATA",
+    valueType: "WorkerVersionMetadata",
+    description: "Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation.",
+    runtimes: {
+      worker: { order: 49, status: "required" },
+    },
+  },
+  {
     key: "CORS_ORIGIN",
     valueType: "string",
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",
@@ -266,7 +274,7 @@ export const ENV_BINDINGS = [
   {
     key: "VAULTS_FYI_MAX_CREDITS_PER_RUN",
     valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run.",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run. Production uses 13 at the four-hour cadence and can lower the effective allowance to keep the UTC-month forecast within the monthly cap.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 52, status: "optional" },
@@ -275,7 +283,7 @@ export const ENV_BINDINGS = [
   {
     key: "VAULTS_FYI_MAX_CREDITS_PER_MONTH",
     valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month.",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month. Fetches reserve credit allowance before provider work; telemetry warns before 75 percent projected or actual utilization.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 53, status: "optional" },

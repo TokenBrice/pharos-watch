@@ -19,6 +19,20 @@ import { sendAlert } from "../../lib/alerts";
 import { logCronEvent, recordCronFailure, type CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import {
+  beginScheduledCheckpoint,
+  checkpointErrorMetadata,
+  finishScheduledCheckpoint,
+  setScheduledCheckpointChildDisposition,
+  type ScheduledCheckpointIdentity,
+  type ScheduledRecoveryCheckpoint,
+} from "../../lib/scheduled-recovery-checkpoint";
+import {
+  LIVE_RESERVE_QUEUE_HASH,
+  SYNC_ORDERED_CONFIGURED_COINS,
+} from "../../cron/sync-live-reserves-shared";
+import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
@@ -108,7 +122,11 @@ async function runReservePostSyncWatchdog(
     const driftIds = drift.driftCoins.map((d) => d.id).sort();
     await setCache(runtime.db, SNAPSHOT_KEYS.reserve, JSON.stringify(driftIds), signal);
 
-    maxSyncAgeSec = await getMaxSyncAge(runtime.db);
+    maxSyncAgeSec = await getMaxSyncAge(
+      runtime.db,
+      Math.floor(Date.now() / 1000),
+      SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id),
+    );
     throwIfAborted(signal);
     // Alert after ~3 missed 4-hourly runs, matching the "several missed runs"
     // posture the previous 6h threshold gave at the prior hourly cadence.
@@ -117,7 +135,7 @@ async function runReservePostSyncWatchdog(
         runtime,
         "live-reserve-sync-stale",
         "Live reserve sync stale",
-        `No successful sync in ${Math.round(maxSyncAgeSec / 3600)}h. Check cron scheduler.`,
+        `Oldest configured reserve has not been attempted in ${Math.round(maxSyncAgeSec / 3600)}h. Check cron scheduler.`,
         { maxAgeHours: Math.round(maxSyncAgeSec / 3600) },
       );
     }
@@ -176,8 +194,57 @@ async function runReservePostSyncWatchdog(
   };
 }
 
-function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
+export const LIVE_RESERVE_SLOT_JOBS = flattenScheduledSlotPlanJobs(
+  SCHEDULED_SLOT_PLANS.fourHourlyReserveSync,
+);
+
+function checkpointIdentity(checkpoint: ScheduledRecoveryCheckpoint): ScheduledCheckpointIdentity {
+  return {
+    scheduleKey: checkpoint.scheduleKey,
+    slotStartedAt: checkpoint.slotStartedAt,
+    job: checkpoint.job,
+    attemptNo: checkpoint.attemptNo,
+    executionGeneration: checkpoint.executionGeneration,
+    invocationId: checkpoint.invocationId,
+  };
+}
+
+function checkpointTask(
+  runtime: ScheduledRuntimeContext,
+  checkpoint: ScheduledRecoveryCheckpoint,
+  task: ScheduledSlotGroup["tasks"][number],
+): ScheduledSlotGroup["tasks"][number] {
+  return {
+    ...task,
+    run: async (signal, reportProgress) => {
+      const identity = checkpointIdentity(checkpoint);
+      await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "running");
+      try {
+        const result = await task.run(signal, reportProgress);
+        await setScheduledCheckpointChildDisposition(
+          runtime.db,
+          identity,
+          task.job,
+          result?.status === "error" ? "failed" : "completed",
+        );
+        return result;
+      } catch (error) {
+        try {
+          await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "failed");
+        } catch (checkpointError) {
+          console.warn(`[hourly-live-reserves] Failed to mark ${task.job} checkpoint failed:`, checkpointError);
+        }
+        throw error;
+      }
+    },
+  };
+}
+
+function buildReserveSyncSlotGroups(
+  runtime: ScheduledRuntimeContext,
+  checkpoint: ScheduledRecoveryCheckpoint,
+): ScheduledSlotGroup[] {
+  const groups: ScheduledSlotGroup[] = [
     {
       mode: "serial",
       label: "reserve-adapters",
@@ -197,6 +264,8 @@ function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): Scheduled
                 chainRpcs: runtime.chainRpcs,
               },
               reportProgress,
+              undefined,
+              checkpointIdentity(checkpoint),
             ),
         },
         {
@@ -223,12 +292,47 @@ function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): Scheduled
       ],
     },
   ];
+  return groups.map((group) => ({
+    ...group,
+    tasks: group.tasks
+      .filter((task) => checkpoint.childDispositions[task.job] !== "completed")
+      .map((task) => checkpointTask(runtime, checkpoint, task)),
+  }));
 }
 
 export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(
-    runtime,
-    "four-hourly reserve sync slot",
-    buildReserveSyncSlotGroups(runtime),
-  );
+  const checkpoint = runtime.recoveryCheckpoint ?? await beginScheduledCheckpoint(runtime.db, {
+    scheduleKey: runtime.scheduleKey,
+    slotStartedAt: runtime.slotStartedAt,
+    job: "sync-live-reserves",
+    invocationId: runtime.invocationId ?? createLeaseOwner("reserve-checkpoint"),
+    workerVersion: runtime.workerVersion ?? null,
+    queueHash: LIVE_RESERVE_QUEUE_HASH,
+    nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
+    itemsTotal: SYNC_ORDERED_CONFIGURED_COINS.length,
+    childJobs: LIVE_RESERVE_SLOT_JOBS,
+  });
+  const identity = checkpointIdentity(checkpoint);
+  try {
+    const summary = await runScheduledSlotGroups(
+      runtime,
+      "four-hourly reserve sync slot",
+      buildReserveSyncSlotGroups(runtime, checkpoint),
+    );
+    await finishScheduledCheckpoint(runtime.db, identity, {
+      state: summary.jobsErrored > 0 ? "failed" : "completed",
+      error: summary.jobsErrored > 0 ? "one or more reserve-slot children failed" : null,
+    });
+    return summary;
+  } catch (error) {
+    try {
+      await finishScheduledCheckpoint(runtime.db, identity, {
+        state: "failed",
+        error: checkpointErrorMetadata(error),
+      });
+    } catch (checkpointError) {
+      console.warn("[hourly-live-reserves] Failed to finish reserve checkpoint:", checkpointError);
+    }
+    throw error;
+  }
 }

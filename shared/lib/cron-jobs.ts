@@ -27,6 +27,11 @@ const CRON_SCHEDULE_DEFINITIONS = {
     intervalSec: 300,
     offsetSec: 2 * 60,
   },
+  fiveMinuteReserveRecovery: {
+    schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
+    intervalSec: 300,
+    offsetSec: 60,
+  },
   digestTriggerPoll: { schedule: "*/5 * * * *", intervalSec: 300, offsetSec: 0 },
   daily0300Utc: { schedule: "0 3 * * *", intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { schedule: "0 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
@@ -221,6 +226,16 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "isolated",
     maxConnections: 1, // DB stale-slot reconciliation plus optional webhook alert
     connectionGroup: "status-self-check-chain",
+  },
+  {
+    job: "reserve-recovery",
+    label: "Reserve recovery",
+    group: "five-minute",
+    scheduleKey: "fiveMinuteReserveRecovery",
+    triggerMode: "isolated",
+    statusImpact: "critical",
+    maxConnections: 2,
+    connectionGroup: "reserve-recovery-chain",
   },
   {
     job: "status-self-check",

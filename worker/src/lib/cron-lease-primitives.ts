@@ -268,9 +268,11 @@ export async function runCronWithLease<T>(
     abortForLeaseLoss(renewFailures);
   };
 
+  let renewalInFlight: Promise<void> | null = null;
   const timer = setInterval(() => {
+    if (renewalInFlight) return;
     leaseRenewAttempts++;
-    void runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2, opts?.abortSignal)
+    renewalInFlight = runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2, opts?.abortSignal)
       .then(async (renewal) => {
         if (!renewal.renewed) {
           markOwnershipLost();
@@ -283,6 +285,9 @@ export async function runCronWithLease<T>(
       })
       .catch(() => {
         markRenewError();
+      })
+      .finally(() => {
+        renewalInFlight = null;
       });
   }, heartbeatSec * 1000);
 
@@ -373,6 +378,7 @@ export async function runCronWithLease<T>(
     };
   } finally {
     clearHeartbeat();
+    await renewalInFlight;
     if (shouldReleaseLease) {
       try {
         await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);

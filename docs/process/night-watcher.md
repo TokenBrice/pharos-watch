@@ -35,7 +35,7 @@ Extend into a second cycle if:
 
 Mandatory coverage:
 
-- Account for all 19 cron trigger slots.
+- Account for all 20 cron trigger slots, including the isolated five-minute reserve-recovery lane.
 - Account for every `CRON_JOB_DEFINITIONS` job.
 - Account for every `CRON_CONNECTION_BUDGET_ENTRIES` surface, including budget-only surfaces exposed under `/api/status.budgetOnlySurfaces` rather than standalone cron rows:
   - `telegram-registration-reconciliation`

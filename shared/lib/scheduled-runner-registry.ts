@@ -67,6 +67,9 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
     budgetOnlyJobs: ["telegram-registration-reconciliation"],
   },
+  fiveMinuteReserveRecovery: {
+    jobChains: [["reserve-recovery"]],
+  },
   digestTriggerPoll: {
     jobChains: [["daily-digest"]],
     budgetOnlyJobs: ["digest-trigger-poll"],

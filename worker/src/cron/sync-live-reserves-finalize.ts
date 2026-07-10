@@ -61,6 +61,12 @@ export interface FinalizeReserveSyncRunArgs {
   loadedCursorState: LoadedLiveReserveCursorState | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
+  setupPhaseMs?: number;
+  queuePhaseMs?: number;
+  cohortItemsDoneBeforeRun?: number;
+  attemptedCoins?: number;
+  adapterPhaseMs?: number;
+  d1PhaseMs?: number;
 }
 
 interface LiveReserveFinalizationWarning {
@@ -285,6 +291,7 @@ function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
+  const finalizationStartedMs = Date.now();
   const finalizationBudget = resolveFinalizationBudget(args);
 
   await reportCronProgress(args.reportProgress, {
@@ -408,6 +415,18 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
       finalizationDeadlineMs: finalizationBudget.deadlineMs,
       finalizationRemainingMs: finalizationBudget.remainingMs,
+      phaseTimingsMs: {
+        setup: args.setupPhaseMs ?? 0,
+        queue: args.queuePhaseMs ?? 0,
+        adapter: args.adapterPhaseMs ?? 0,
+        d1CoinPersistence: args.d1PhaseMs ?? 0,
+        finalization: Date.now() - finalizationStartedMs,
+      },
+      attemptedCoins: args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped,
+      cohortItemsDoneBeforeRun: args.cohortItemsDoneBeforeRun ?? 0,
+      cohortItemsDoneAfterRun:
+        (args.cohortItemsDoneBeforeRun ?? 0)
+        + (args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped),
       finalizationTailBudgetExhausted:
         finalizationBudget.breakerOutcomeBudgetExhausted
         || finalizationBudget.artifactCleanupSkipped

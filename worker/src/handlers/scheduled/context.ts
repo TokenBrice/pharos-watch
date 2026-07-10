@@ -26,6 +26,7 @@ import {
   type MintBurnFreshnessConfig,
 } from "../../lib/mint-burn-health-config";
 import { logWorkerEvent } from "../../lib/structured-log";
+import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
@@ -41,6 +42,7 @@ const LONG_RUNNING_LEASE_OPTIONS = { heartbeatSec: 30, maxRenewFailures: 3 } sat
 const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec" | "maxRenewFailures">> = {
   "sync-stablecoins": LONG_RUNNING_LEASE_OPTIONS,
   "sync-live-reserves": LONG_RUNNING_LEASE_OPTIONS,
+  "reserve-recovery": LONG_RUNNING_LEASE_OPTIONS,
   "sync-dex-liquidity": LONG_RUNNING_LEASE_OPTIONS,
   "sync-dex-discovery": LONG_RUNNING_LEASE_OPTIONS,
   "sync-yield-data": LONG_RUNNING_LEASE_OPTIONS,
@@ -75,6 +77,12 @@ export interface ScheduledRuntimeContext {
   scheduledTimeMs: number | null;
   slotStartedAt: number;
   slotSignal?: AbortSignal;
+  slotBudgetStartedAtMs?: number;
+  invocationId?: string;
+  workerVersion?: string | null;
+  jobAttemptNo?: number;
+  producerKind?: string;
+  recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
@@ -123,6 +131,10 @@ export interface ScheduledRuntimeInit {
   scheduledTimeMs: number | null;
   slotStartedAt: number;
   slotBudgetStartedAtMs?: number;
+  parentSignal?: AbortSignal;
+  jobAttemptNo?: number;
+  producerKind?: string;
+  recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
 }
 
 export function createScheduledRuntimeContext(
@@ -140,8 +152,12 @@ export function createScheduledRuntimeContext(
   const workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
   const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
   const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
+  const invocationId = createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
+  const workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
+  const jobAttemptNo = scheduled.jobAttemptNo ?? 1;
+  const producerKind = scheduled.producerKind ?? "scheduled-slot";
 
-  return {
+  const runtime: ScheduledRuntimeContext = {
     db,
     env,
     ctx,
@@ -149,6 +165,12 @@ export function createScheduledRuntimeContext(
     scheduleKey: scheduled.scheduleKey,
     scheduledTimeMs: scheduled.scheduledTimeMs,
     slotStartedAt: scheduled.slotStartedAt,
+    slotBudgetStartedAtMs,
+    invocationId,
+    workerVersion,
+    jobAttemptNo,
+    producerKind,
+    ...(scheduled.recoveryCheckpoint ? { recoveryCheckpoint: scheduled.recoveryCheckpoint } : {}),
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
     mintBurnFreshnessConfig,
@@ -171,6 +193,8 @@ export function createScheduledRuntimeContext(
             scheduleKey: scheduled.scheduleKey,
             job,
             slotStartedAt: scheduled.slotStartedAt,
+            attemptNo: jobAttemptNo,
+            producerKind,
           });
         } catch (err) {
           logJobLedgerWriteFailure(job, "worker_job_attempt_create_failed", err);
@@ -179,7 +203,14 @@ export function createScheduledRuntimeContext(
 
       try {
         const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
-          const slotMeta = { slotStartedAt: scheduled.slotStartedAt, scheduleKey: scheduled.scheduleKey };
+          const slotMeta = {
+            slotStartedAt: scheduled.slotStartedAt,
+            scheduleKey: scheduled.scheduleKey,
+            invocationId,
+            workerVersion,
+            attemptNo: jobAttemptNo,
+            producerKind,
+          };
           const leaseOwner = createLeaseOwner(job);
           const reportProgressWithLedger: CronProgressReporter = async (update) => {
             await reportProgress(update);
@@ -287,6 +318,9 @@ export function createScheduledRuntimeContext(
         }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
+          abortSignal: runtime.slotSignal && scheduled.parentSignal
+            ? AbortSignal.any([runtime.slotSignal, scheduled.parentSignal])
+            : runtime.slotSignal ?? scheduled.parentSignal,
         });
         if (ledgerIdentity) {
           try {
@@ -316,4 +350,5 @@ export function createScheduledRuntimeContext(
       }
     },
   };
+  return runtime;
 }
