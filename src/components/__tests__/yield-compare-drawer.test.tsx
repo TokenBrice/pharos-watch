@@ -122,6 +122,32 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByText("Curated source preferred | 1 alternate rejected").length).toBeGreaterThan(0);
   });
 
+  it("shows PYS evidence qualification and keeps remove controls touch-sized", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            provenance: {
+              scoreQualification: "partial",
+              evidenceCompleteness: 0.71,
+            },
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("PYS qualification").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("partial (71% complete)").length).toBeGreaterThan(0);
+    for (const button of screen.getAllByRole("button", { name: "Remove USDC from compare" })) {
+      expect(button.className).toContain("h-11");
+      expect(button.className).toContain("w-11");
+    }
+  });
+
   it("renders 'Coin not in current view' placeholder when a selected id is filtered out", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,absent-coin");
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);

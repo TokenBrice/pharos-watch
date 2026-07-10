@@ -60,6 +60,14 @@ function formatVenueTier(row: YieldViewModelRow): string {
   return `${label}${weightedLabel}${confidenceLabel}`;
 }
 
+function formatEvidenceQualification(row: YieldViewModelRow): string {
+  const qualification = row.provenance?.scoreQualification ?? (row.pharosYieldScore == null ? "NR" : "rated");
+  const completeness = row.provenance?.evidenceCompleteness;
+  return typeof completeness === "number"
+    ? `${qualification} (${Math.round(completeness * 100)}% complete)`
+    : qualification;
+}
+
 const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
   {
     key: "apy30d",
@@ -72,6 +80,12 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     label: "PYS",
     align: "right",
     render: (row) => (row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"),
+  },
+  {
+    key: "qualification",
+    label: "PYS qualification",
+    align: "left",
+    render: formatEvidenceQualification,
   },
   {
     key: "safety",
@@ -151,6 +165,8 @@ const COMPARE_EXPORT_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
   { header: "Name", accessor: (row) => row.name },
   { header: "APY 30d (%)", accessor: (row) => row.apy30d },
   { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
+  { header: "PYS qualification", accessor: (row) => row.provenance?.scoreQualification ?? "unknown" },
+  { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
   { header: "Source", accessor: (row) => row.yieldSource },
@@ -341,7 +357,7 @@ export function YieldCompareDrawer({
                       <button
                         type="button"
                         onClick={() => toggle(column.id)}
-                        className="pharos-focus-ring ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="pharos-focus-ring ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Remove ${symbol} from compare`}
                       >
                         <XIcon className="h-3 w-3" aria-hidden="true" />

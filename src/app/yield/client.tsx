@@ -2,7 +2,6 @@
 
 import { useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
@@ -231,7 +230,6 @@ export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankingsSummary();
   const { data: logos } = useLogos();
   const { searchParams, setParam, replaceParams } = useUrlFilters();
-  const router = useRouter();
   const arrivedFromSelector = searchParams.get("from") === "selector";
   const workbenchFallbackId = parseYieldWorkbenchFallbackId(searchParams.get(YIELD_WORKBENCH_FALLBACK_PARAM));
 
@@ -459,13 +457,6 @@ export function YieldClient() {
     [replaceParams, viewModel.riskBudget.stops],
   );
 
-  const handleNavigate = useCallback(
-    (id: string) => {
-      router.push(buildStablecoinUrl(id));
-    },
-    [router],
-  );
-
   const stats = viewModel.stats;
 
   if (isLoading) {
@@ -596,7 +587,6 @@ export function YieldClient() {
                   showBenchmarkReference
                   usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
                   logos={logos}
-                  onDotClick={handleNavigate}
                   compact
                   frame="bare"
                 />

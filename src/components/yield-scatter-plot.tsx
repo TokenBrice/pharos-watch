@@ -54,7 +54,6 @@ interface YieldScatterPlotProps {
   benchmarkIsFallback?: boolean;
   usesDefaultBenchmarkFrame?: boolean;
   logos?: Record<string, string>;
-  onDotClick: (id: string) => void;
   compact?: boolean;
   /**
    * "stage" (default) wraps the chart in its own `pharos-chart-stage` frame.
@@ -274,7 +273,6 @@ export function YieldScatterPlot({
   benchmarkIsFallback = false,
   usesDefaultBenchmarkFrame = false,
   logos,
-  onDotClick,
   compact = false,
   frame = "stage",
 }: YieldScatterPlotProps) {
@@ -343,15 +341,6 @@ export function YieldScatterPlot({
     return nudgeOverlaps(clipped, safetyDomain, plotYDomain, width || 900, height || 300, isMobile);
   }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile]);
 
-  const handleClick = useCallback(
-    (entry: unknown) => {
-      if (entry && typeof entry === "object" && "id" in entry && typeof (entry as { id: unknown }).id === "string") {
-        onDotClick((entry as { id: string }).id);
-      }
-    },
-    [onDotClick],
-  );
-
   const logoIdPrefix = useSvgId("yield-logo");
 
   const renderLogoMarker = useCallback(
@@ -394,7 +383,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Click a logo to open its detail page.`}
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -514,8 +503,6 @@ export function YieldScatterPlot({
 
               <Scatter
                 data={data}
-                onClick={handleClick}
-                cursor="pointer"
                 shape={renderLogoMarker}
                 activeShape={renderActiveLogoMarker}
               />

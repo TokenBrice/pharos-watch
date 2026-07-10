@@ -176,12 +176,15 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Name", accessor: (entry) => entry.row.name },
   { header: "APY 30d (%)", accessor: (entry) => entry.row.apy30d },
   { header: "PYS", accessor: (entry) => entry.row.pharosYieldScore ?? "NR" },
+  { header: "PYS qualification", accessor: (entry) => entry.row.provenance?.scoreQualification ?? "unknown" },
+  { header: "PYS null reason", accessor: (entry) => entry.row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
   { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },
   { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
   { header: "Source confidence", accessor: (entry) => entry.row.provenance?.confidenceTier ?? "unknown" },
+  { header: "Evidence completeness", accessor: (entry) => entry.row.provenance?.evidenceCompleteness ?? "unknown" },
   { header: "Benchmark", accessor: (entry) => entry.row.benchmarkLabel ?? "unknown" },
   { header: "TVL USD", accessor: (entry) => entry.row.sourceTvlUsd ?? "unknown" },
   { header: "Stability", accessor: (entry) => entry.row.yieldStability ?? "unknown" },
@@ -423,6 +426,7 @@ export function YieldLeaderboard({
         }}
       />
       <YieldCompareTray rows={comparisonRows} logos={logos} onOpenDrawer={handleOpenCompare} />
+      {compare.ids.length > 0 ? <div className="h-20 sm:hidden" aria-hidden="true" /> : null}
       <YieldCompareDrawer
         open={compareDrawerOpen}
         onOpenChange={setCompareDrawerOpen}

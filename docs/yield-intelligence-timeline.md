@@ -13,6 +13,7 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 - Withholds exact PYS with `pysNullReason: opportunity-evidence-missing` and NR qualification when the venue is unreviewed, market size is unknown, or a non-Royco structured tranche lacks market status
 - Keeps the bespoke Royco Dawn tranche market-health model and publishes the same contract for uniform completeness auditing
 - Never modifies the underlying stablecoin's Report Card score or grade; holder yield on the coin itself scores exactly as before
+- Recomputes generic opportunity safety during API live-safety hydration and preserves NR when critical venue or market evidence is missing; pre-v8.32 cached rows remain compatible
 - Leaves PYS formula weights, benchmark rates, and source-risk calibration unchanged
 
 ---

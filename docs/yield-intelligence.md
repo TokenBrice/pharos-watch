@@ -822,6 +822,8 @@ GBP attempts additionally write bounded cron metadata for every FRED, ALFRED, an
 
 Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from current report-card data at API read time. The API first uses the exact published `report-cards:snapshot` and computes a report-card fallback when that snapshot is unavailable. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report card, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
 
+For v8.32 external opportunities, read-time hydration recomputes the opportunity-level safety contract from the live underlying Report Card plus the published venue and market evidence. It preserves `opportunity-evidence-missing` and an NR qualification when critical market evidence is absent; hydration cannot replace market-level safety with the underlying stablecoin score or requalify an NR opportunity. Pre-v8.32 cached rows without an `opportunityRisk` contract retain their legacy compatibility behavior.
+
 The two top-level safety provenance fields have different clocks. `provenance.safetySnapshot` is immutable publish-time evidence: it names the exact compact report-card generation used by the hourly cron to compute the cached rankings. Read-time hydration never overwrites it. Optional `provenance.liveSafetyHydration` instead reports the current hydration `kind`, row coverage counts/ratio, reason, source (`report-cards:snapshot` or `computed-report-cards`), publication generation, methodology, and publish time. Hydration is marked degraded when DEX-liquidity/redemption inputs are stale, the full report-card snapshot is over age, or live row coverage is below 0.75; the API appends the `yield-safety-hydration-degraded` body warning and emits HTTP `Warning: 199`. A hydration exception returns the cached published safety fields with the same warning code/header.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
@@ -1046,9 +1048,9 @@ Each `history` row includes:
 1. `QueryErrorNotice` when the rankings query fails
 2. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
 3. Optional selector handoff strip when opened from the Stablecoin Picker
-4. Hero scatter card with the summary metrics integrated into the card header
-5. Risk-budget slider and filter controls
-6. Yield leaderboard table
+4. Risk-budget controls and active policy
+5. Hero decision panel with risk-qualified highlights and a capped scatter mini-map
+6. Filter controls and the yield leaderboard table
 7. Reference rates strip, Yield Sources board for the active filtered ranking scope, and coin index
 8. Disclaimer / FAQ
 
@@ -1095,7 +1097,7 @@ The section returns `null` once rankings have loaded and the coin is neither `yi
 
 ### `YieldScatterPlot` (`src/components/yield-scatter-plot.tsx`)
 
-Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-source point per stablecoin, auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
+Recharts scatter chart. X = safety score, Y = APY (%). The default workbench mini-map caps the set at 48 top-ranked and APY-outlier rows; the complete accessible result set remains in the leaderboard. The chart auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's compact WebP logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
 
 **Quadrants** (divided at safety = 60 and APY = the visible benchmark frame rate):
 
@@ -1106,7 +1108,7 @@ Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-
 | Play It Safe | High safety, below benchmark | Blue (5% opacity)  |
 | Why Bother?  | Low safety, below benchmark  | Gray (5% opacity)  |
 
-Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Scatter tooltips show each row's own benchmark label/rate and 30d excess-yield value. Click a dot to navigate to that coin's detail page.
+Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Scatter tooltips show each row's own benchmark label/rate and 30d excess-yield value. Points are intentionally noninteractive; row actions, keyboard navigation, and detail links live in the leaderboard.
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
@@ -1127,6 +1129,8 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 **Source-risk visibility:** Desktop and mobile rows show a labeled compact summary such as `Source risk 42/100 | 1.32x` when the nested source-risk penalty is material. Stablecoin detail yield surfaces render a permanent `YieldSourceRiskCard`; the embedded detail section uses the compact variant, while `/stablecoin/<id>/yield/` keeps the full card and `VenueRiskBreakdown` when `sourceRisk.venueRiskScores` exists. These use the published `sourceRisk.sourceRiskScore` and `sourceRisk.sourceRiskPenalty` fields and are visibility changes only; neutral or missing evidence stays visually quiet.
 
 **Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, shows the decision-ledger card when present, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
+
+**Compare and export:** Comparison renders stacked summaries on narrow screens and a metric table on wider screens. It includes PYS qualification and evidence completeness alongside safety, source posture, venue risk, depth, stability, warnings, and benchmark context. Remove/share controls keep a 44px target, and an additional mobile content spacer prevents the fixed compare tray from covering the final leaderboard actions. Ranking and comparison CSV exports include score qualification and null reason; the ranking export also includes evidence completeness.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
