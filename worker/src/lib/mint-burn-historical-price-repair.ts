@@ -15,6 +15,8 @@ const COINGECKO_SOURCE = "repair:coingecko-market-chart-event-day";
 const DEFILLAMA_GECKO_SOURCE = "repair:defillama-gecko-chart-event-day";
 const DEFILLAMA_CONTRACT_SOURCE = "repair:defillama-contract-chart-event-day";
 const SUPPLY_HISTORY_SOURCE = "repair:supply-history-event-day";
+const DEFILLAMA_CHART_MAX_SPAN_DAYS = 800;
+const DEFILLAMA_CHART_MAX_WINDOWS_PER_SOURCE = 8;
 
 interface MintBurnHistoricalRepairRow {
   id: string;
@@ -163,6 +165,66 @@ function normalizeDefiLlamaPoints(points: unknown): HistoricalPricePoint[] {
   return normalized.sort((left, right) => left.timestamp - right.timestamp);
 }
 
+interface DefiLlamaChartWindow {
+  startSec: number;
+  spanDays: number;
+}
+
+function buildDefiLlamaChartWindows(
+  startSec: number,
+  endSec: number,
+): DefiLlamaChartWindow[] | null {
+  if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || endSec < startSec) return null;
+  const requestedSpanDays = Math.max(1, Math.ceil((endSec - startSec) / DAY_SECONDS) + 1);
+  const windowCount = Math.ceil(requestedSpanDays / DEFILLAMA_CHART_MAX_SPAN_DAYS);
+  if (windowCount > DEFILLAMA_CHART_MAX_WINDOWS_PER_SOURCE) return null;
+
+  const windows: DefiLlamaChartWindow[] = [];
+  let coveredDays = 0;
+  while (coveredDays < requestedSpanDays) {
+    const spanDays = Math.min(
+      DEFILLAMA_CHART_MAX_SPAN_DAYS,
+      requestedSpanDays - coveredDays,
+    );
+    windows.push({
+      startSec: startSec + coveredDays * DAY_SECONDS,
+      spanDays,
+    });
+    coveredDays += spanDays;
+  }
+  return windows;
+}
+
+async function loadDefiLlamaChartWindow(input: {
+  coinId: string;
+  source: string;
+  window: DefiLlamaChartWindow;
+}): Promise<HistoricalPriceSeriesResult> {
+  const result = await fetchJsonWithRetry<{ coins?: Record<string, { prices?: unknown }> }>(
+    `${DEFILLAMA_COINS}/chart/${input.coinId}?start=${input.window.startSec}&span=${input.window.spanDays}&period=1d`,
+    { headers: { "User-Agent": USER_AGENT } },
+    1,
+    { timeoutMs: 20_000, returnFinalResponse: true },
+  );
+  if (!result) {
+    return { source: input.source, status: "unavailable", points: [], detail: "no-response" };
+  }
+  if (!result.response.ok) {
+    const definitiveEmpty = result.response.status === 404;
+    return {
+      source: input.source,
+      status: definitiveEmpty ? "empty" : "unavailable",
+      points: [],
+      detail: `http-${result.response.status}`,
+    };
+  }
+  if (!result.body || typeof result.body !== "object") {
+    return { source: input.source, status: "unavailable", points: [], detail: "invalid-payload" };
+  }
+  const points = normalizeDefiLlamaPoints(result.body.coins?.[input.coinId]?.prices);
+  return { source: input.source, status: points.length > 0 ? "available" : "empty", points };
+}
+
 export const productionHistoricalMintPriceSourceLoader: HistoricalMintPriceSourceLoader = {
   async loadCoinGecko({ meta, startSec, endSec, coingeckoApiKey }) {
     const source = meta.geckoId ? `${COINGECKO_SOURCE}:${meta.geckoId}` : COINGECKO_SOURCE;
@@ -202,29 +264,34 @@ export const productionHistoricalMintPriceSourceLoader: HistoricalMintPriceSourc
   },
 
   async loadDefiLlama({ coinId, source, startSec, endSec }) {
-    const spanDays = Math.max(1, Math.min(800, Math.ceil((endSec - startSec) / DAY_SECONDS) + 1));
-    const result = await fetchJsonWithRetry<{ coins?: Record<string, { prices?: unknown }> }>(
-      `${DEFILLAMA_COINS}/chart/${coinId}?start=${startSec}&span=${spanDays}&period=1d`,
-      { headers: { "User-Agent": USER_AGENT } },
-      1,
-      { timeoutMs: 20_000, returnFinalResponse: true },
-    );
-    if (!result) {
-      return { source, status: "unavailable", points: [], detail: "no-response" };
-    }
-    if (!result.response.ok) {
-      const definitiveEmpty = result.response.status === 404;
+    const windows = buildDefiLlamaChartWindows(startSec, endSec);
+    if (!windows) {
       return {
         source,
-        status: definitiveEmpty ? "empty" : "unavailable",
+        status: "unavailable",
         points: [],
-        detail: `http-${result.response.status}`,
+        detail: `range-exceeds-window-budget:${DEFILLAMA_CHART_MAX_WINDOWS_PER_SOURCE}x${DEFILLAMA_CHART_MAX_SPAN_DAYS}d`,
       };
     }
-    if (!result.body || typeof result.body !== "object") {
-      return { source, status: "unavailable", points: [], detail: "invalid-payload" };
+
+    const points: HistoricalPricePoint[] = [];
+    const unavailableDetails: string[] = [];
+    for (const window of windows) {
+      const windowResult = await loadDefiLlamaChartWindow({ coinId, source, window });
+      points.push(...windowResult.points);
+      if (windowResult.status === "unavailable") {
+        unavailableDetails.push(`${window.startSec}:${windowResult.detail ?? "unavailable"}`);
+      }
     }
-    const points = normalizeDefiLlamaPoints(result.body.coins?.[coinId]?.prices);
+    points.sort((left, right) => left.timestamp - right.timestamp);
+    if (unavailableDetails.length > 0) {
+      return {
+        source,
+        status: "unavailable",
+        points,
+        detail: unavailableDetails.join(",").slice(0, 500),
+      };
+    }
     return { source, status: points.length > 0 ? "available" : "empty", points };
   },
 };

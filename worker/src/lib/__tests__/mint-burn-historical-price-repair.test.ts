@@ -5,6 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { describe, expect, it, vi } from "vitest";
 import {
+  productionHistoricalMintPriceSourceLoader,
   repairHistoricalMintBurnPrices,
   resolveHistoricalMintPrice,
   type HistoricalMintPriceSourceLoader,
@@ -185,6 +186,109 @@ describe("historical mint/burn price repair", () => {
       disposition: "retry",
       reason: "event-day-source-temporarily-unavailable:cg:http-429",
     });
+  });
+
+  it("chunks a coin-wide DefiLlama span so an event beyond day 800 cannot be falsely irreducible", async () => {
+    const db = makeSqliteD1();
+    const earlyDay = Date.parse("2020-01-01T00:00:00.000Z") / 1000;
+    const lateDay = earlyDay + 900 * DAY;
+    const earlyTimestamp = earlyDay + 12 * 3600;
+    const lateTimestamp = lateDay + 12 * 3600;
+    const latePriceTimestamp = lateDay + 11 * 3600;
+    const geckoWindows: Array<{ start: number; span: number }> = [];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const requestUrl = input instanceof Request ? input.url : String(input);
+      const url = new URL(requestUrl);
+      if (url.pathname.includes("/coins/tether/market_chart/range")) {
+        return new Response(JSON.stringify({ prices: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const chartMarker = "/chart/";
+      const chartIndex = url.pathname.indexOf(chartMarker);
+      if (chartIndex >= 0) {
+        const coinId = decodeURIComponent(url.pathname.slice(chartIndex + chartMarker.length));
+        const start = Number(url.searchParams.get("start"));
+        const span = Number(url.searchParams.get("span"));
+        if (coinId === "coingecko:tether") geckoWindows.push({ start, span });
+        const windowEnd = start + span * DAY;
+        const prices = coinId === "coingecko:tether"
+          && latePriceTimestamp >= start
+          && latePriceTimestamp < windowEnd
+          ? [{ timestamp: latePriceTimestamp, price: 0.999 }]
+          : [];
+        return new Response(JSON.stringify({ coins: { [coinId]: { prices } } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected historical repair URL: ${requestUrl}`);
+    });
+
+    try {
+      insertEvent(db, { id: "event-before-800", stablecoinId: "usdt-tether", timestamp: earlyTimestamp });
+      insertEvent(db, { id: "event-after-800", stablecoinId: "usdt-tether", timestamp: lateTimestamp });
+
+      const result = await repairHistoricalMintBurnPrices(db, {
+        dryRun: true,
+        limit: 2,
+        nowSec: lateDay + DAY,
+      });
+
+      expect(geckoWindows).toEqual([
+        { start: earlyDay, span: 800 },
+        { start: earlyDay + 800 * DAY, span: 102 },
+      ]);
+      expect(result).toMatchObject({
+        selected: 2,
+        recovered: 1,
+        classifiedIrreducible: 1,
+        deferredForRetry: 0,
+      });
+      expect(result.dispositions.find((row) => row.eventId === "event-after-800")).toMatchObject({
+        disposition: "recover",
+        price: 0.999,
+        priceTimestamp: latePriceTimestamp,
+        priceSource: "repair:defillama-gecko-chart-event-day:tether",
+        reason: null,
+      });
+      expect(result.dispositions.find((row) => row.eventId === "event-before-800")).toMatchObject({
+        disposition: "irreducible",
+      });
+    } finally {
+      fetchSpy.mockRestore();
+      db.close();
+    }
+  });
+
+  it("returns an unavailable source instead of querying beyond the bounded DefiLlama window budget", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      const sourceResult = await productionHistoricalMintPriceSourceLoader.loadDefiLlama({
+        coinId: "coingecko:tether",
+        source: "repair:defillama-gecko-chart-event-day:tether",
+        startSec: 0,
+        endSec: 7_000 * DAY,
+      });
+
+      expect(sourceResult).toMatchObject({
+        status: "unavailable",
+        points: [],
+        detail: "range-exceeds-window-budget:8x800d",
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(resolveHistoricalMintPrice({
+        meta: TRACKED_META_BY_ID.get("usdt-tether")!,
+        eventTimestamp: 6_900 * DAY,
+        sourceResults: [sourceResult],
+      })).toMatchObject({
+        resolution: null,
+        disposition: "retry",
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it("rebuilds and verifies hourly aggregates before finalizing recovery, then reruns idempotently", async () => {
