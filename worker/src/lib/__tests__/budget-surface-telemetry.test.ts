@@ -45,6 +45,12 @@ describe("budget-only surface telemetry", () => {
         outcome: "unknown",
       }),
       expect.objectContaining({
+        job: "telegram-digest-outbox-drain",
+        telemetryStatus: "missing",
+        telemetryUnknown: true,
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
         job: "digest-trigger-poll",
         telemetryStatus: "fresh",
         telemetryUnknown: false,

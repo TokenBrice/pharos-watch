@@ -43,8 +43,10 @@ const DEFAULT_BUDGETS = {
   // narrow post-ratchet ceiling with about 1 KiB of headroom for gzip variance.
   largestCssGzipBytes: 69_632,
   totalStaticMediaBytes: 2_000_000,
-  // Allow documented App Router + RSC payload growth on docs-heavy release pages.
-  largestHtmlBytes: 2_700_000,
+  // API-reference schema and route-contract growth measured 2,705,204 bytes
+  // in the July 2026 export. Retain about 10 KB of headroom while keeping
+  // future docs-heavy App Router payload growth reviewable.
+  largestHtmlBytes: 2_715_000,
   // Keep the homepage bootstrap/RSC payload from silently growing into the
   // mobile critical path again without constraining long-form docs pages.
   // The homepage table moved directly under the KPI band (1f76d3c36), which
@@ -56,9 +58,10 @@ const DEFAULT_BUDGETS = {
   // Safety Score v8.12 exposed bridge-route and oracle-risk report-card fields;
   // Yield source-role / alternate-summary contracts then pushed the generated
   // API reference helper to ~1.33 MB. Night Watch publication and recovery
-  // contracts measured 1,350,636 bytes; retain about 1% headroom so the next
-  // public schema expansion still has to re-ratchet deliberately.
-  largestTxtBytes: 1_365_000,
+  // contracts measured 1,350,636 bytes; the July 2026 API-reference expansion
+  // measured 1,369,509 bytes. Retain about 10 KB of headroom so the next public
+  // schema expansion still has to re-ratchet deliberately.
+  largestTxtBytes: 1_380_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD plus the inline critical-CSS block
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the

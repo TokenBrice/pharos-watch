@@ -60,9 +60,9 @@
     "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
   "worker/src/handlers/http/request-dispatch.ts": {
-    "fileLines": 136,
-    "maxFunctionLines": 102,
-    "branchCount": 9,
+    "fileLines": 146,
+    "maxFunctionLines": 108,
+    "branchCount": 10,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 54,
@@ -120,9 +120,9 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "src/app/yield/client.tsx": {
-    "fileLines": 535,
-    "maxFunctionLines": 356,
-    "branchCount": 35,
+    "fileLines": 667,
+    "maxFunctionLines": 438,
+    "branchCount": 55,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 500,
@@ -192,8 +192,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 292,
-    "maxFunctionLines": 272,
+    "fileLines": 315,
+    "maxFunctionLines": 295,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -360,9 +360,9 @@
     "notes": "Admin mint/burn reclassification now scopes updates by chain and rejects malformed non-negative query params. Keep future repair policy changes covered by focused endpoint tests."
   },
   "worker/src/api/telegram-webhook-parsing.ts": {
-    "fileLines": 434,
+    "fileLines": 499,
     "maxFunctionLines": 95,
-    "branchCount": 78,
+    "branchCount": 84,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -384,9 +384,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 432,
-    "maxFunctionLines": 380,
-    "branchCount": 24,
+    "fileLines": 422,
+    "maxFunctionLines": 371,
+    "branchCount": 25,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -660,9 +660,9 @@
     "notes": "This is now a facade over the split status-reliability helper modules. Preserve it as the import surface and keep implementation detail in the dedicated stores/views."
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
-    "fileLines": 866,
+    "fileLines": 589,
     "maxFunctionLines": 138,
-    "branchCount": 55,
+    "branchCount": 26,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 700,

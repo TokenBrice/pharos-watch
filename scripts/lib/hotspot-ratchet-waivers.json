@@ -15,22 +15,6 @@
     "reviewAfter": "2026-09-16",
     "nextAction": "Separate Mini App state/auth orchestration and preset mutation handling from the route presentation shell."
   },
-  "src/app/pharoswatchbot/page.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/app/screener/picker/selector-state.ts": {
-    "disposition": "queued-p4",
-    "notes": "Selector picker state concentrates URL parsing, persistence, filtering, and reducer-style state transitions. It surfaced after the selector engine split and should be decomposed separately from shared selector scoring.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
@@ -38,14 +22,6 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/depeg-resolver-reviewer-module.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The depeg resolver reviewer module combines review-data loading, filter state, projection helpers, table rendering, and action-state handling for the DDRR operator surface. This release is clearing validation debt rather than widening the UI split; keep it queued for a focused reviewer-module decomposition pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-07",
-    "reviewAfter": "2026-10-07",
-    "nextAction": "Extract reviewer data/filter orchestration and table/action rendering into focused helpers after the DDRR operator surface stabilizes."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
@@ -78,14 +54,6 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
-  },
-  "worker/src/cron/yield-sync/sources-optional-protocols-supplemental.ts": {
-    "disposition": "queued-p4",
-    "notes": "The supplemental optional-protocol yield source crossed the branch-count candidate threshold after the Beefy chain-nested TVL fix and abort-awareness work. Waive for this gate; split per-protocol payload parsing from the shared supplemental family pipeline in a focused yield-source cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-08",
-    "reviewAfter": "2026-10-08",
-    "nextAction": "Extract per-protocol (Beefy/peers) payload parsing into focused helpers behind the existing source-family contract."
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
@@ -135,30 +103,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "worker/src/lib/redemption-backstop-live-metadata.ts": {
-    "disposition": "queued-p4",
-    "notes": "Live redemption-backstop metadata builder surfaced as a branch-count hotspot after the latest candidate scan. Keep queued rather than widening this release gate; split provider metadata normalization from live projection in a focused redemption-backstop cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-16",
-    "reviewAfter": "2026-09-16",
-    "nextAction": "Extract provider metadata normalization and projection helpers from the live redemption-backstop metadata module."
-  },
-  "src/app/compare/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Entered the maxFunctionLines candidate set during the 2026-07-02 design-consistency pass: the Analyze-group alignment added a CompareScopeHero band (already extracted as its own component), nudging the file over the top-12 line. CompareClient() itself predates the pass at ~370 lines - it owns selection state, cohort toggles, share-url sync, and live-refresh timers.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-02",
-    "reviewAfter": "2026-09-30",
-    "nextAction": "Extract CompareClient selection/cohort state and the live-refresh timer wiring into hooks so the component drops back under the function-lines threshold."
-  },
-  "worker/src/lib/scheduled-recovery-checkpoint.ts": {
-    "disposition": "queued-p4",
-    "notes": "Night Watch recovery added durable checkpoint fencing, takeover eligibility, and lifecycle persistence to one store module. Keep the release scoped to correctness; separate SQL construction and row parsing after the recovery contract has soaked.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-10",
-    "reviewAfter": "2026-10-10",
-    "nextAction": "Extract checkpoint row parsing and prepared-statement builders behind the current recovery-checkpoint API."
-  },
   "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
     "notes": "The Treasury-rate producer combines multiple source adapters, validation, fallback selection, and publication metadata. It entered the file-size candidate set during the Night Watch release and needs a source-adapter split rather than a rushed gate refactor.",
@@ -167,14 +111,6 @@
     "reviewAfter": "2026-10-10",
     "nextAction": "Extract provider fetch/parse adapters from Treasury-rate selection and publication orchestration."
   },
-  "worker/src/cron/status-self-check.ts": {
-    "disposition": "queued-p4",
-    "notes": "Status self-check owns several operational health families and their alert projections. The Night Watch checks increased its visibility as a file-size hotspot; decompose by check family after the new contracts have production evidence.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-10",
-    "reviewAfter": "2026-10-10",
-    "nextAction": "Split scheduler, publication, and capacity check families into focused evaluators behind the existing self-check entrypoint."
-  },
   "worker/src/cron/yield-sync/vaults-fyi.ts": {
     "disposition": "queued-p4",
     "notes": "The Vaults.fyi adapter now includes quota reservation, pagination, normalization, and degradation metadata. Its branch count warrants a focused adapter decomposition after the quota fencing behavior has soaked.",
@@ -182,5 +118,101 @@
     "createdAt": "2026-07-10",
     "reviewAfter": "2026-10-10",
     "nextAction": "Extract quota/pagination state handling from payload normalization and opportunity projection."
+  },
+  "worker/src/cron/telegram-pending/drain.ts": {
+    "disposition": "queued-p4",
+    "notes": "Pending Telegram delivery currently combines stale-send reconciliation, claim lifecycle handling, retry policy, and queue draining. The module is operationally sensitive, so its newly surfaced file, function, and branch hotspots should be reduced in a dedicated behavior-preserving pass.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract stale-send reconciliation and claim/retry state transitions from the queue-drain coordinator behind the existing pending-delivery contracts."
+  },
+  "src/lib/status-dashboard-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "The status dashboard model centralizes probe summaries, cron grouping, issue classification, evidence projection, and operator decisions. Its file and branch counts warrant separating independent projection families without changing the dashboard contract.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Split probe, cron, issue, and operator-decision projections into focused model helpers while preserving the exported dashboard types."
+  },
+  "src/app/admin/sections/cron-lane-table.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The admin cron-lane table owns lane projections, budget diagnostics, status details, and the full table rendering surface. Its file size is now a candidate even though the public component remains a single operational view.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract cron-lane row modeling and budget/status detail cells into focused modules, leaving CronLaneTable as the composition shell."
+  },
+  "worker/src/cron/telegram-alert-source-events.ts": {
+    "disposition": "queued-p4",
+    "notes": "Telegram source-event persistence spans event lifecycle storage, subscriber page resolution, baseline commits, expiry, and completion. The file-size hotspot reflects several durable workflow responsibilities that need a coordinated store split.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Separate source-event row persistence from subscriber-page resolution and lifecycle transitions behind the current exported API."
+  },
+  "src/components/status/api-keys-panel-parts.tsx": {
+    "disposition": "queued-p4",
+    "notes": "API-key panel parts intentionally collect inventory controls, creation and reveal dialogs, pagination, table rendering, and detail editing. The file is a top-size candidate and should be split by interaction family before more admin controls are added.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Move inventory controls, dialogs, table, and detail editor into focused component modules while keeping the panel-facing props stable."
+  },
+  "worker/src/cron/dispatch-telegram-routing.ts": {
+    "disposition": "queued-p4",
+    "notes": "Telegram dispatch routing combines alert grouping, subscriber routing, burst collapse, queue planning, formatting selection, and fresh-send partitioning. Its branch hotspot should be reduced along those established routing phases.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract burst-collapse and subscriber queue-planning phases from formatting and fresh-send partitioning while preserving routing outputs."
+  },
+  "worker/src/cron/yield-sync/evaluation.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield evaluation still coordinates source qualification, benchmark policy, arbitration, history, and cooperative progress reporting. The long evaluation function needs a dedicated split that preserves deterministic ranking behavior.",
+    "owner": "yield-intelligence",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract per-source qualification and result assembly from evaluateYieldSources, retaining a thin synchronous and cooperative orchestration layer."
+  },
+  "src/components/status/api-keys-panel.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The API-key panel component coordinates inventory queries, filters, pagination, creation, reveal/replay flows, edits, revocation, and audit presentation. Its long component should be decomposed after the current admin workflow stabilizes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
+  },
+  "worker/src/api/yield-rankings-cache.ts": {
+    "disposition": "queued-p4",
+    "notes": "The yield rankings cache handler combines cache freshness, row decoding, filter and qualification policy, ranking projection, and response publication. Its branch count warrants separating cache access from ranking assembly.",
+    "owner": "yield-intelligence",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract cached-row decoding and ranking/filter projection from handleYieldRankings while preserving response and cache semantics."
+  },
+  "src/lib/pipeline-workspace-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "The pipeline workspace model derives quality, integrity, loader-error, severity, and mode summaries from the status response. Its branch hotspot reflects multiple independent operational projections sharing one module.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Split quality, integrity, and mode-summary derivation into focused model modules while retaining the current workspace API."
+  },
+  "src/components/status/admin-action-execution-dialog.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The admin action dialog owns action-specific input state, validation, confirmation, execution, and result rendering across several operational commands. Its long component needs a command-model split before additional actions are introduced.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract action-specific form models and execution-result rendering, leaving the dialog to coordinate selection, confirmation, and submission."
+  },
+  "src/app/admin/status-dashboard/triage-summary.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The status triage summary renders the complete operator decision surface, including issue grouping, evidence context, next steps, and supporting diagnostics. Its long render function should be split by triage section without changing prioritization behavior.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract issue, evidence, and next-step presentation sections into focused components while keeping TriageSummary as the ordered composition boundary."
   }
 }

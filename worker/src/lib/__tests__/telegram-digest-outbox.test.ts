@@ -23,6 +23,7 @@ interface StoredEdition {
   last_status_code: number | null;
 }
 
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
 const migrationSql = readFileSync(
   fileURLToPath(new NodeUrl("../../../migrations/0184_telegram_digest_outbox.sql", import.meta.url)),
   "utf8",
@@ -293,10 +294,10 @@ describe("Telegram digest outbox", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
-    expect(result).toMatchObject({ outcome: "failed_permanent", errorClass: "bad_request" });
+    expect(result).toMatchObject({ outcome: "failed_permanent", errorClass: "formatting_error" });
     expect(loadEdition(sqlite)).toMatchObject({
       state: "failed_permanent",
-      last_error_class: "bad_request",
+      last_error_class: "formatting_error",
       last_status_code: 400,
     });
 

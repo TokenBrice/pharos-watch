@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-07-06 to 2026-07-10
+
+Operator admin splits into routed workspaces, PharosWatchBot delivery turns durable, and ~$189B of reserves go live.
+
+- **Routed operator workspaces**: The single-page admin dashboard splits into eight routed workspaces — Triage, Pipeline, Reliability, Crons, Actions, Comms, History, and API Management — with guarded replay-safe actions and durable audit history.
+- **Truthful bot delivery**: PharosWatchBot preserves opt-outs across chat migrations, applies presets atomically, serializes per-chat delivery, makes weekly digests durable, pauses sends during outages, and gains lossless watchlist exports.
+- **Bot privacy & app resilience**: Unauthenticated Telegram ingress is bounded, general logs stay aggregate-only, adoption is measured without user tracking, embedded analytics are isolated, and the Mini App recovers failed launches and stale sessions.
+- **Yield decision workbench**: The yield workbench moves to summary rankings with a complete decision and comparison workflow, source-selection evidence, actionable trust filters, a detail-page peer rail, and registry-wide freshness eligibility.
+- **Live reserve coverage**: Live reserve adapters land for USDT and XAUt (~$186B), Spiko, USDtb, United's U, and PUSD, and redemption methodology v4.17 adds live-direct capacity telemetry for USTB and the 13-coin Mento family.
+- **Coin page template**: The stablecoin detail page completes its Figma template: pill-tab section nav, a four-column hero KPI band, an xl right rail with safety, news, and contracts, faithful data modules, and a Sources modal.
+- **Coverage & data**: GYEN moves to frozen status, a full editorial sweep refreshes 76 AI summaries, depeg event pages become a grow-only permanent archive, 17 comparison pairs land, and verified metadata corrections apply.
+- **Pipeline correctness**: A worker-wide remediation adds durable operations schemas, an alert broker, effect fencing, and exact publication generations, so interrupted crons recover and partial data can no longer publish as complete.
+
 ## 2026-06-29 to 2026-07-05
 
 The redesigned homepage canon now spans every nav group, a vaults.fyi yield source lands, and kUSD joins pre-launch.

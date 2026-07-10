@@ -159,13 +159,13 @@ describe("HistorySection", () => {
 
   it("labels row-limited history as bounded and keeps negative deployment correlation unknown", () => {
     const props = baseProps();
-    const boundedTransitions = Array.from({ length: 100 }, (_, index) => ({
+    const boundedTransitions: StatusTransition[] = Array.from({ length: 100 }, (_, index) => ({
       ...transition,
       id: index + 1,
-      from: "healthy" as const,
+      from: "degraded" as const,
       to: "healthy" as const,
       rawStatus: "healthy" as const,
-      transitionType: "hold" as const,
+      transitionType: "recover" as const,
       at: transition.at - index,
     }));
     render(
