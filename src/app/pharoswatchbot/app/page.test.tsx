@@ -30,6 +30,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   Reflect.deleteProperty(window, "Telegram");
+  window.history.replaceState({}, "", "/pharoswatchbot/app/");
 });
 
 describe("PharosWatchBotMiniAppPage", () => {
@@ -47,36 +48,40 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode(null)).toBe(false);
   });
 
-  it("renders browser preview without calling session APIs", async () => {
-    vi.useFakeTimers();
+  it("renders browser preview immediately without calling session APIs", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     render(<PharosWatchBotMiniAppPage />);
-
-    await act(async () => {
-      vi.advanceTimersByTime(550);
-    });
 
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("waits for delayed Telegram launch data before falling back to preview", async () => {
+  it("waits for the page script to expose delayed Telegram launch data", async () => {
     vi.useFakeTimers();
-    const webApp = { initData: "", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() };
-    window.Telegram = { WebApp: webApp };
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
+    const script = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
+    expect(script).toBeTruthy();
 
     await act(async () => {
       vi.advanceTimersByTime(600);
     });
     expect(fetchMock).not.toHaveBeenCalled();
 
-    webApp.initData = "signed-init-data";
+    window.Telegram = {
+      WebApp: {
+        initData: "signed-init-data",
+        platform: "tdesktop",
+        initDataUnsafe: { user: { username: "watcher" } },
+        ready: vi.fn(),
+      },
+    };
     await act(async () => {
+      script?.dispatchEvent(new Event("load"));
       vi.advanceTimersByTime(50);
       await Promise.resolve();
       await Promise.resolve();
@@ -89,9 +94,59 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
-  it("shows a Telegram launch-data error when the bridge exists but initData never arrives", async () => {
+  it("treats the SDK object created in a normal browser as standalone", () => {
     vi.useFakeTimers();
-    window.Telegram = { WebApp: { initData: "", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    window.Telegram = { WebApp: { initData: "", platform: "unknown", ready: vi.fn() } };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("treats launch data from an unsupported host as browser preview", () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=unknown");
+    window.Telegram = {
+      WebApp: {
+        initData: "signed-init-data",
+        platform: "unknown",
+        initDataUnsafe: { user: { username: "watcher" } },
+        ready: vi.fn(),
+      },
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("offers a bot link when missing launch data cannot close a WebView", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(8_050);
+    });
+
+    expect(screen.getByRole("link", { name: "Open PharosWatchBot" }).getAttribute("href")).toBe("https://t.me/PharosWatchBot");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("closes a supported Telegram launch when initData never arrives", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+    const close = vi.fn();
+    window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -102,6 +157,8 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
 
     expect(screen.getByText("Telegram launch data was not available. Close and reopen from PharosWatchBot.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close and reopen" }));
+    expect(close).toHaveBeenCalledTimes(1);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -147,6 +204,22 @@ describe("PharosWatchBotMiniAppPage", () => {
     render(<PharosWatchBotMiniAppPage />);
 
     await waitFor(() => expect(screen.getByText("Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.")).toBeTruthy());
+  });
+
+  it("retries a failed session request when launch data is available", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "Unavailable" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Could not load Mini App settings. Reopen from Telegram or try again.")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("routes coin start params to the watchlist view", async () => {

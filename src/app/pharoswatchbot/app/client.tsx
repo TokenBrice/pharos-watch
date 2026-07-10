@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, ShieldAlert } from "lucide-react";
+import { ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
@@ -24,6 +25,7 @@ import { isPausedSentinel } from "./format";
 import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
+const BOT_URL = "https://t.me/PharosWatchBot";
 /** Bot DM deep link that triggers the synthetic `/sample` alert (the Mini App cannot call the Bot API). */
 const BOT_DM_SAMPLE_LINK = "https://t.me/PharosWatchBot?start=sample";
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
@@ -378,7 +380,24 @@ export function PharosWatchBotMiniAppClient() {
 
         {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
         {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
-        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={triggerRefresh}>Retry</MiniButton></div></section> : null}
+        {status === "error" ? (
+          <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p>
+            <div className="mt-3">
+              {initData ? (
+                <MiniButton variant="secondary" onClick={triggerRefresh}>Retry</MiniButton>
+              ) : webApp?.close ? (
+                <MiniButton variant="secondary" onClick={handleClose}>Close and reopen</MiniButton>
+              ) : (
+                <Button asChild variant="outline" className="gap-2">
+                  <a href={BOT_URL} target="_blank" rel="noopener noreferrer">
+                    Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </Button>
+              )}
+            </div>
+          </section>
+        ) : null}
         {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
         {showStaleAuthBanner ? (
           <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">

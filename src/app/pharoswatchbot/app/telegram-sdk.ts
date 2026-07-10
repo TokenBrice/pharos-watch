@@ -57,6 +57,7 @@ interface TelegramSettingsButton {
 
 export interface TelegramWebAppSdk {
   initData: string;
+  platform?: string;
   initDataUnsafe?: {
     user?: { first_name?: string; username?: string };
     start_param?: string;
@@ -110,21 +111,24 @@ export function getTelegramLaunchContext(): {
   const webApp = window.Telegram?.WebApp ?? null;
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash);
+  const launchData = hash.get("tgWebAppData") ?? search.get("tgWebAppData");
+  const launchPlatform = hash.get("tgWebAppPlatform") ?? search.get("tgWebAppPlatform") ?? webApp?.platform ?? null;
+  const hasUnsupportedTelegramHost = launchPlatform?.toLowerCase() === "unknown";
+  // Loading telegram-web-app.js creates WebApp with platform="unknown" in every browser.
+  // Only Telegram-provided launch data on a supported host justifies the long SDK poll;
+  // the Worker remains authoritative for validating the data's signature.
   const hasTelegramLaunchHint = Boolean(
-    webApp
-    || window.Telegram
-    || search.has("tgWebAppStartParam")
-    || search.has("tgWebAppVersion")
-    || search.has("tgWebAppPlatform")
-    || hash.has("tgWebAppData")
-    || hash.has("tgWebAppVersion")
-    || hash.has("tgWebAppPlatform"),
+    launchData
+    && launchPlatform
+    && !hasUnsupportedTelegramHost,
   );
   return {
     webApp,
-    initData: webApp?.initData ?? "",
+    initData: hasUnsupportedTelegramHost ? "" : webApp?.initData ?? "",
     startParam: webApp?.initDataUnsafe?.start_param ?? search.get("tgWebAppStartParam") ?? search.get("startapp"),
-    previewName: webApp?.initDataUnsafe?.user?.first_name ?? webApp?.initDataUnsafe?.user?.username ?? null,
+    previewName: hasUnsupportedTelegramHost
+      ? null
+      : webApp?.initDataUnsafe?.user?.first_name ?? webApp?.initDataUnsafe?.user?.username ?? null,
     hasTelegramLaunchHint,
   };
 }
