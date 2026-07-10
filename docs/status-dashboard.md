@@ -60,7 +60,7 @@ The active frontend operator mode is now:
   - a compact triage header with the three independent verdict axes (`Service`, `Evidence`, and `Intervention`), recovery-hold context, `FreshnessIndicator`, and `RefreshCountdown`
   - blocker, cron-error, public-health, watch, reserve-drift, and classification-warning summary badges
   - deduplicated blockers and a `Needs attention` queue ordered by severity, public impact, age, and stable registry order
-  - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open
+  - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open; it auto-expands only on the first evaluated signal after evidence loads, and later signals surface a `New signal` badge on the collapsed summary instead of forcing the section open (`src/app/admin/use-auto-expand.ts`)
   - a promoted `Recommended Now` action strip derived from blocking causes and unhealthy cron lanes
   - explicit stale-client, public-health divergence, and background-fetch notices that preserve the last good payload
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
@@ -125,6 +125,10 @@ The active frontend operator mode is now:
 - Workspace clients own only the queries their route requires. Triage does not mount credential inventory, endpoint matrices, cache tables, or healthy cron rows; Reliability owns endpoint/demand reads, History owns transition and audit reads, and API Management owns credential inventory and audit reads.
 - `src/lib/status-dashboard-model.ts`
   - Provides pure status derivations and cron group construction without owning React polling or a root five-second clock
+- `src/hooks/use-critical-ops-model.ts`
+  - Builds the memoized Triage/Actions dashboard model from status, public health, and critical browser probes
+  - The model is memoized on its actual data dependencies and rebuilds only when query evidence changes or a required query crosses the staleness boundary (`STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs`); there is no free-running interval clock at the workspace root
+  - Relative-time labels (dashboard fetch age, diagnostics sync floor) self-update inside the `FreshnessIndicator` leaf component instead of rerendering the workspace
 - `src/lib/status/action-recommendations.ts`
   - Shared recommendation engine reused by the status model and status UI components
 - `src/lib/status/cron-config.ts`
@@ -663,6 +667,15 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 - Added focused Pipeline, Reliability, Cron, Actions, Comms, History, and API-key workbenches with URL-backed modes and bounded mounting.
 - Made catalog actions and credential lifecycle mutations replay-safe, surfaced execution certainty through the proxy, and unified durable action/credential activity in History.
 - Added sanitized authenticated browser fixtures across 320, 390, 768, 1024, and 1440 px plus axe, 200% text reflow, light/dark, forced-colors, and reduced-motion coverage.
+
+## Rendering and Refresh Model (2026-07-11)
+
+- No workspace owns a free-running root clock. The Triage/Actions model hook re-anchors when query evidence refreshes and wakes again only at the per-query staleness boundary, so wall-clock time cannot rebuild the dashboard model between those events. Relative-time labels tick inside `FreshnessIndicator` leaves.
+- Collapsed `<details>` disclosures mount their content only while open (`src/components/status/lazy-details.tsx`): healthy endpoint-probe, cache-freshness, and circuit-breaker tables, budget-only surface evidence rows, and the Triage diagnostics panel keep no hidden subtree in the DOM when closed.
+- Triage auto-expansion is evaluated once, during the first render that carries definite evidence, so the primary shell paints in its final layout. Late-arriving issues badge the collapsed diagnostics summary; they never force a section open or move the operator mid-task.
+- Refetches keep the last successful payload visible; `WorkspaceStatusBoundary` shows a background-failure notice instead of blanking the workspace.
+- Default Triage render budgets are guarded by `src/app/admin/__tests__/triage-budgets.test.tsx`: under 60 interactive main-area controls and under 100 table body rows on the initial healthy render, with the diagnostics disclosure closed and unmounted.
+- Display-font assets: an earlier ops-host review observed 404s for the licensed `ABCWhyteInktrap-Regular.woff2` / `ABCWhyteInktrap-Bold.woff2` files. Clean builds intentionally standardize on the tracked Bricolage Grotesque display face and emit no references to the licensed Whyte files (they are gitignored and staged only via `npm run install:whyte-fonts`), so the ops origin no longer issues those requests. The ops chrome uses the same tracked font stack as the public host.
 
 ---
 
