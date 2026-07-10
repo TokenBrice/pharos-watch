@@ -83,6 +83,7 @@ export interface FetchEvmEventsIncrementalResult {
   coveredTopicCount: number;
   providerCalls: number;
   maxSplitDepth: number;
+  failureSamples: string[];
 }
 
 export function shouldPreferRpcLogScan(chainId: string): boolean {
@@ -330,6 +331,7 @@ export async function fetchEvmEventsIncremental(
       coveredTopicCount: 0,
       providerCalls: 0,
       maxSplitDepth: 0,
+      failureSamples: [],
     };
   }
 
@@ -343,6 +345,7 @@ export async function fetchEvmEventsIncremental(
   let coveredTopicCount = 0;
   let providerCalls = 0;
   let maxSplitDepth = 0;
+  const failureSamples: string[] = [];
   let explorerUnavailable = false;
   let rpcTargetPromise: Promise<RpcLogTarget | null> | null = null;
   const getRpcTarget = (): Promise<RpcLogTarget | null> => {
@@ -351,6 +354,7 @@ export async function fetchEvmEventsIncremental(
   };
 
   const topicHashes = getBlacklistTopicHashes(config);
+  const preferRpcLogs = shouldPreferRpcLogScan(config.chain.chainId);
   throwIfAborted(signal);
   if (safeHead != null && fromBlock > safeHead + 1) {
     return {
@@ -367,9 +371,12 @@ export async function fetchEvmEventsIncremental(
       coveredTopicCount: 0,
       providerCalls: 0,
       maxSplitDepth: 0,
+      failureSamples: [],
     };
   }
-  for (const topicHash of topicHashes) {
+  for (let topicIndex = 0; topicIndex < topicHashes.length; topicIndex++) {
+    const topicHash = topicHashes[topicIndex]!;
+    if (preferRpcLogs && topicIndex > 0) break;
     throwIfAborted(signal);
     if (blacklistRuntimeBudgetReached(runBudget)) {
       incomplete = true;
@@ -385,7 +392,7 @@ export async function fetchEvmEventsIncremental(
     let sourceHadGap = false;
     let topicScannedToBlock: number | null = null;
     let noRangeRequired = false;
-    const preferRpcLogs = shouldPreferRpcLogScan(config.chain.chainId);
+    const rpcTopicHashes = preferRpcLogs && topicIndex === 0 ? topicHashes : [topicHash];
 
     if (!preferRpcLogs && !explorerUnavailable && safeHead != null) {
       const explorerWindow = EXPLORER_LOG_SCAN_WINDOWS[config.chain.chainId];
@@ -447,7 +454,7 @@ export async function fetchEvmEventsIncremental(
             : await fetchAlchemyLogs(
                 rpcTarget.rpcUrl,
                 config.contractAddress,
-                [{ index: 0, value: topicHash }],
+                [{ index: 0, value: rpcTopicHashes.length === 1 ? topicHash : rpcTopicHashes }],
                 fromBlock,
                 scanToBlock,
                 runBudget.subrequestBudget,
@@ -458,6 +465,9 @@ export async function fetchEvmEventsIncremental(
         if (fetchedLogs) {
           providerCalls += fetchedLogs.calls;
           maxSplitDepth = Math.max(maxSplitDepth, fetchedLogs.maxDepth);
+          if (fetchedLogs.failureReason && failureSamples.length < 4) {
+            failureSamples.push(fetchedLogs.failureReason.slice(0, 120));
+          }
           noRangeRequired = fromBlock > scanToBlock;
           const uniqueBlocks = [
             ...new Set(
@@ -513,7 +523,7 @@ export async function fetchEvmEventsIncremental(
       apiError = true;
     }
     if (topicScannedToBlock != null && (topicScannedToBlock >= fromBlock || noRangeRequired)) {
-      coveredTopicCount++;
+      coveredTopicCount += preferRpcLogs ? rpcTopicHashes.length : 1;
       scannedToBlock = scannedToBlock == null ? topicScannedToBlock : Math.min(scannedToBlock, topicScannedToBlock);
     }
 
@@ -552,5 +562,6 @@ export async function fetchEvmEventsIncremental(
     coveredTopicCount,
     providerCalls,
     maxSplitDepth,
+    failureSamples,
   };
 }

@@ -16,6 +16,16 @@ const PAGINATED_TABLES = new Set([
   "depeg_events_with_provenance",
 ]);
 
+const PAGINATED_INDEXES_BY_TABLE: Readonly<Record<string, ReadonlySet<string>>> = {
+  blacklist_events: new Set([
+    "idx_blacklist_events_public_date_page",
+    "idx_blacklist_events_public_stablecoin_page",
+    "idx_blacklist_events_public_chain_page",
+    "idx_blacklist_events_public_chain_id_page",
+    "idx_blacklist_events_public_event_page",
+  ]),
+};
+
 const PAGINATED_ORDER_COLS = new Set([
   "timestamp",
   "block_number",
@@ -32,6 +42,7 @@ const PAGINATED_ORDER_DIRECTIONS = new Set(["ASC", "DESC"]);
 
 interface PaginatedEventQueryConfig<TRow, TEvent> {
   tableName: string;
+  indexName?: string;
   orderBy: string;
   queryComment?: string;
   conditions: string[];
@@ -69,6 +80,7 @@ interface PaginatedEventCursorConfig<TRow> {
 
 interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<string, unknown>> {
   tableName: string;
+  indexName?: string;
   orderBy: string;
   queryComment?: string;
   conditions: string[];
@@ -190,12 +202,21 @@ function buildSqlComment(comment: string | undefined, suffix: string): string {
   return `/* ${comment}:${suffix} */ `;
 }
 
+function buildFromClause(tableName: string, indexName: string | undefined): string {
+  if (!indexName) return tableName;
+  if (!PAGINATED_INDEXES_BY_TABLE[tableName]?.has(indexName)) {
+    throw new Error(`Invalid pagination index ${indexName} for table ${tableName}`);
+  }
+  return `${tableName} INDEXED BY ${indexName}`;
+}
+
 export async function fetchPaginatedEvents<TRow, TEvent>(
   db: D1Database,
   config: PaginatedEventQueryConfig<TRow, TEvent>,
 ): Promise<{ events: TEvent[]; total: number; totalExact?: boolean; nextCursor?: string | null }> {
   if (!PAGINATED_TABLES.has(config.tableName)) throw new Error(`Invalid table: ${config.tableName}`);
   validateCursorConfig(config.cursor);
+  const fromClause = buildFromClause(config.tableName, config.indexName);
 
   const normalizedOrderBy = config.orderBy.trim().replace(/\s+/g, " ");
   const orderClauses = normalizedOrderBy
@@ -235,7 +256,7 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
 
   // SAFETY: `tableName` and every `ORDER BY` clause token are validated against allowlists above.
   const dataSql =
-    `SELECT ${buildSqlComment(config.queryComment, "page")}* FROM ${config.tableName}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
+    `SELECT ${buildSqlComment(config.queryComment, "page")}* FROM ${fromClause}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
   const dataStatement = db.prepare(dataSql).bind(...dataFilterBindings, ...paginationBindings);
 
   let total: number | null = null;
@@ -249,7 +270,7 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
     const [countBatch, dataResult] = await db.batch([
       // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
       db.prepare(
-        `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${config.tableName}${countWhere}`,
+        `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${fromClause}${countWhere}`,
       ).bind(...config.filterBindings),
       dataStatement,
     ]);
@@ -338,6 +359,7 @@ export async function buildPaginatedEventResponse<
 
   const { events, total, totalExact, nextCursor } = await fetchPaginatedEvents<TRow, TEvent>(db, {
     tableName: config.tableName,
+    indexName: config.indexName,
     orderBy: config.orderBy,
     queryComment: config.queryComment,
     conditions: config.conditions,

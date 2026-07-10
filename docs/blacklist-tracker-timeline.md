@@ -11,6 +11,9 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 - **Contiguous safe frontiers** - EVM scans resolve real safe heads, bound Arbitrum ranges, and advance only to the minimum frontier proven across every required topic; the retired 99,999,999 sentinel is gone.
 - **Fail-visible publication** - any required config skip/failure withholds snapshots, whose freshness now follows the oldest successful config scan.
 - **Provider hardening** - TronGrid next links are origin/path/event validated, recursive log scans honor the run deadline, Etherscan pacing matches three requests per second, and bounded call/depth telemetry is retained.
+- **Efficient proven coverage** - RPC-backed configs combine required signatures into one OR-topic scan; recursive Alchemy splitting stops after 64 calls, and per-config scan telemetry retains only four bounded failure samples for 14 days.
+- **Durable maintenance** - amount repair priority/retry state survives runs, while unambiguous event and balance identities migrate in bounded post-scan batches without guessing ambiguous scopes.
+- **Guarded correctness recovery** - the 86-event USDT/Tron Night Watch manifest is content-hashed and replayed only through a dry-run-first, current-Time-Travel-bookmark-gated, non-global-reset action. Durable public/admin evidence requires exact identity, `8,874,287.612325 USDT` destroy, balance, Tron, and seven-config Arbitrum parity.
 
 ---
 

@@ -41,10 +41,23 @@ import {
   recordBlacklistConfigSkips,
   type BlacklistConfigAttempt,
 } from "./blacklist/state";
+import {
+  persistBlacklistProviderScanTelemetry,
+  type BlacklistProviderScanTelemetry,
+} from "./blacklist/provider-telemetry";
+import {
+  migrateLegacyBlacklistIdentities,
+  type BlacklistLegacyIdentityMigrationResult,
+} from "./blacklist/legacy-identity-migration";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
+// createRateLimiter is intentionally serial. Keep the declared live
+// concurrency aligned with that implementation and the shared six-connection
+// trigger budget; throughput is controlled independently by requests/second.
+export const BLACKLIST_PROVIDER_LIVE_CONCURRENCY = 1;
+export const BLACKLIST_PROVIDER_REQUESTS_PER_SECOND = 3;
 
 type SyncBlacklistResult = {
   itemCount: number;
@@ -91,6 +104,7 @@ function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCurso
     coveredTopicCount: result.coveredTopicCount,
     providerCalls: result.providerCalls,
     maxSplitDepth: 0,
+    failureSamples: result.apiError || result.incomplete ? ["trongrid-incomplete"] : [],
   };
 }
 
@@ -115,6 +129,7 @@ function buildEvmScanResult(args: {
     coveredTopicCount: result.coveredTopicCount,
     providerCalls: result.providerCalls,
     maxSplitDepth: result.maxSplitDepth,
+    failureSamples: result.failureSamples,
   };
 }
 
@@ -189,8 +204,8 @@ async function scanBlacklistConfig(args: {
 
 export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
   const { db, etherscanApiKey, trongridApiKey, drpcApiKey, externalEtherscanRL, signal, onProgress, chainRpcs } = opts;
-  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(3);
-  const tronLimiter = createRateLimiter(3);
+  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(BLACKLIST_PROVIDER_REQUESTS_PER_SECOND);
+  const tronLimiter = createRateLimiter(BLACKLIST_PROVIDER_REQUESTS_PER_SECOND);
   const runBudget = createBlacklistRunBudget({
     subrequestLimit: 900,
     runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
@@ -234,6 +249,15 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let stateConflicts = 0;
   let blacklistProviderCalls = 0;
   let maxProviderSplitDepth = 0;
+  const providerScanTelemetry: BlacklistProviderScanTelemetry[] = [];
+  let providerTelemetryWritten = 0;
+  let providerTelemetryError: string | null = null;
+  let legacyIdentityMigration: BlacklistLegacyIdentityMigrationResult = {
+    eventMigrated: 0,
+    balanceMigrated: 0,
+    ambiguousSkipped: 0,
+  };
+  let legacyIdentityMigrationError: string | null = null;
   const coverageOutcomeCounts: Record<string, number> = {};
   const etherscanCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
   await reportCronProgress(
@@ -345,6 +369,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         chainRpcs,
         getChainTimestampCache,
       });
+      let insertedRowsForConfig = 0;
 
       if (config.chain.type === "tron") {
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
@@ -368,6 +393,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           chainRpcs,
         });
         recordProcessedRows(counters, processed);
+        insertedRowsForConfig = processed.insertedRows;
 
         if (result.incomplete) {
           runtimeBudgetHit ||= !result.apiError;
@@ -400,6 +426,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           chainRpcs,
         });
         recordProcessedRows(counters, processed);
+        insertedRowsForConfig = processed.insertedRows;
 
         if (result.incomplete) {
           runtimeBudgetHit ||= !result.apiError;
@@ -441,6 +468,28 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       blacklistProviderCalls += result.providerCalls;
       maxProviderSplitDepth = Math.max(maxProviderSplitDepth, result.maxSplitDepth);
       coverageOutcomeCounts[result.coverageOutcome] = (coverageOutcomeCounts[result.coverageOutcome] ?? 0) + 1;
+      providerScanTelemetry.push({
+        configKey,
+        chainId: config.chain.chainId,
+        providerMode:
+          config.chain.type === "tron"
+            ? "trongrid"
+            : result.usedRpcLogs
+              ? result.topicCount > 1
+                ? "rpc-or-topics"
+                : "rpc"
+              : "etherscan",
+        coverageOutcome: result.coverageOutcome,
+        fromCursor: lastBlock,
+        scannedToCursor: result.scannedToCursor,
+        safeHead: result.safeHead,
+        fetchedRowCount: result.rows.length,
+        insertedRowCount: insertedRowsForConfig,
+        providerCallCount: result.providerCalls,
+        maxSplitDepth: result.maxSplitDepth,
+        failureSamples: result.failureSamples,
+        observedAt: Math.floor(Date.now() / 1000),
+      });
 
       const completedAt = Math.floor(Date.now() / 1000);
       const finalized = await finalizeBlacklistConfigAttempt(
@@ -511,12 +560,35 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       state.consecutiveSkips = 0;
       state.lastOutcome = "exception";
       coverageOutcomeCounts.exception = (coverageOutcomeCounts.exception ?? 0) + 1;
+      providerScanTelemetry.push({
+        configKey,
+        chainId: config.chain.chainId,
+        providerMode: "exception",
+        coverageOutcome: "exception",
+        fromCursor: lastBlock,
+        scannedToCursor: null,
+        safeHead: null,
+        fetchedRowCount: 0,
+        insertedRowCount: 0,
+        providerCallCount: 0,
+        maxSplitDepth: 0,
+        failureSamples: [toErrorMessage(err)],
+        observedAt: Math.floor(Date.now() / 1000),
+      });
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
 
   // Historical amount repair and ledger mirroring are maintenance work. They
   // run only after every admissible event source has had its turn.
+  if (!blacklistRuntimeBudgetReached(runBudget)) {
+    try {
+      legacyIdentityMigration = await migrateLegacyBlacklistIdentities(db, signal);
+    } catch (error) {
+      legacyIdentityMigrationError = error instanceof Error ? error.name : "UnknownError";
+      console.warn("[sync-blacklist] Legacy identity migration failed:", error);
+    }
+  }
   if (etherscanCircuitAllowed && !blacklistRuntimeBudgetReached(runBudget)) {
     try {
       const backfill = await backfillAmounts(
@@ -537,6 +609,17 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     console.warn("[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
   }
   tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "post-sync", { runBudget, signal });
+  try {
+    providerTelemetryWritten = await persistBlacklistProviderScanTelemetry(
+      db,
+      providerScanTelemetry,
+      Math.floor(Date.now() / 1000),
+      signal,
+    );
+  } catch (error) {
+    providerTelemetryError = error instanceof Error ? error.name : "UnknownError";
+    console.warn("[sync-blacklist] Provider telemetry persistence failed:", error);
+  }
 
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
@@ -634,6 +717,14 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         coverageOutcomeCounts,
         blacklistProviderCalls,
         maxProviderSplitDepth,
+        providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
+        providerLimiterRequestsPerSecond: BLACKLIST_PROVIDER_REQUESTS_PER_SECOND,
+        providerTelemetryWritten,
+        providerTelemetryError,
+        legacyIdentityEventMigrated: legacyIdentityMigration.eventMigrated,
+        legacyIdentityBalanceMigrated: legacyIdentityMigration.balanceMigrated,
+        legacyIdentityAmbiguousSkipped: legacyIdentityMigration.ambiguousSkipped,
+        legacyIdentityMigrationError,
         runtimeBudgetReached: runtimeBudgetHit,
         subrequestBudgetReached,
         runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,

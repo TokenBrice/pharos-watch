@@ -30,10 +30,7 @@ import {
   type BlacklistRecentEventTypeCounts,
   type BlacklistStablecoin,
 } from "@shared/types/market";
-import {
-  buildBlacklistQuarterlyChartFromSnapshots,
-  sortKeyToLabel,
-} from "@shared/lib/blacklist-aggregates";
+import { buildBlacklistQuarterlyChartFromSnapshots, sortKeyToLabel } from "@shared/lib/blacklist-aggregates";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import {
@@ -42,6 +39,7 @@ import {
   computeBlacklistTrackedSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
+import { loadBlacklistReconciliationStatus } from "../lib/blacklist-reconciliation-status";
 
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
 const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
@@ -245,11 +243,12 @@ function buildDataQuality(
   // but it is not an actionable stale condition unless the provider is failing
   // or recoverable amount gaps cross the shared gap thresholds.
   const actionableStaleSnapshotCount = 0;
-  const status = gapStatus === "stale"
-    ? "stale"
-    : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
-      ? "degraded"
-      : "ok";
+  const status =
+    gapStatus === "stale"
+      ? "stale"
+      : gapStatus === "degraded" || freezeLedgerMeta.providerFailedCount > 0
+        ? "degraded"
+        : "ok";
   const warnings: string[] = [];
   if (gapStatus !== "healthy" && gapMetrics.missingAmounts > 0) warnings.push("recoverable-amount-gaps");
   if (freezeLedgerMeta.providerFailedCount > 0) warnings.push("current-balance-provider-failures");
@@ -301,9 +300,10 @@ function resolveActiveBlacklistRecords(
   const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
   const frozenAddresses = activeRecords.filter((record) => record.destroyedAt == null).length;
 
-  const perCoinFrozenAddressCount = Object.fromEntries(
-    BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-  ) as Record<BlacklistStablecoin, number>;
+  const perCoinFrozenAddressCount = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
   for (const record of activeRecords) {
     if (record.destroyedAt != null) continue;
     if (!isBlacklistStablecoin(record.stablecoin)) continue;
@@ -380,14 +380,14 @@ function buildPerCoinRecentEventTypes(
 function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPayload {
   if (!isRecord(value)) return false;
   return (
-    isRecord(value.stats)
-    && Array.isArray(value.chart)
-    && Array.isArray(value.chains)
-    && isRecord(value.coverage)
-    && isRecord(value.freezeLedgerMeta)
-    && isRecord(value.dataQuality)
-    && typeof value.totalEvents === "number"
-    && isRecord(value.methodology)
+    isRecord(value.stats) &&
+    Array.isArray(value.chart) &&
+    Array.isArray(value.chains) &&
+    isRecord(value.coverage) &&
+    isRecord(value.freezeLedgerMeta) &&
+    isRecord(value.dataQuality) &&
+    typeof value.totalEvents === "number" &&
+    isRecord(value.methodology)
   );
 }
 
@@ -395,10 +395,10 @@ function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySna
   try {
     const parsed = JSON.parse(value) as Partial<CachedBlacklistSummarySnapshot>;
     if (
-      parsed.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION
-      || typeof parsed.materializedAt !== "number"
-      || typeof parsed.freshnessTs !== "number"
-      || !isBlacklistSummaryPayload(parsed.payload)
+      parsed.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION ||
+      typeof parsed.materializedAt !== "number" ||
+      typeof parsed.freshnessTs !== "number" ||
+      !isBlacklistSummaryPayload(parsed.payload)
     ) {
       return null;
     }
@@ -422,12 +422,11 @@ async function readBlacklistSummarySnapshot(db: D1Database): Promise<CachedBlack
   return parseBlacklistSummarySnapshot(row.value);
 }
 
-async function writeBlacklistSummarySnapshot(
-  db: D1Database,
-  snapshot: CachedBlacklistSummarySnapshot,
-): Promise<void> {
+async function writeBlacklistSummarySnapshot(db: D1Database, snapshot: CachedBlacklistSummarySnapshot): Promise<void> {
   await db
-    .prepare("/* blacklist-summary-snapshot-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .prepare(
+      "/* blacklist-summary-snapshot-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    )
     .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt)
     .run();
 }
@@ -437,33 +436,34 @@ async function buildBlacklistSummaryPayload(
   now = Math.floor(Date.now() / 1000),
   options?: { freshnessTsOverride?: number },
 ): Promise<BuiltBlacklistSummary> {
-    const sevenDayCutoffSec = now - 7 * 86400;
-    const [
-      perCoinResult,
-      perCoinQuarterlyResult,
-      perCoinRecentResult,
-      aggregateRow,
-      currentBalances,
-      activeHistory,
-      gapMetrics,
-    ] = await Promise.all([
-      db
-        .prepare(
-          `/* blacklist-summary-per-coin-event-counts */
+  const sevenDayCutoffSec = now - 7 * 86400;
+  const [
+    perCoinResult,
+    perCoinQuarterlyResult,
+    perCoinRecentResult,
+    aggregateRow,
+    currentBalances,
+    activeHistory,
+    gapMetrics,
+    reconciliation,
+  ] = await Promise.all([
+    db
+      .prepare(
+        `/* blacklist-summary-per-coin-event-counts */
            SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
            FROM blacklist_events
            WHERE suppression_reason IS NULL
            GROUP BY stablecoin, event_type`,
-        )
-        .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>(),
+      )
+      .all<{ stablecoin: string; event_type: string; n: number; usd_sum: number }>(),
 
-      // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
-      // page chart. Bucketing matches the JS helper in
-      // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
-      // align with the main-page chart.
-      db
-        .prepare(
-          `/* blacklist-summary-quarterly-event-counts */
+    // Per-coin, per-quarter, per-event-type counts for the stablecoin detail
+    // page chart. Bucketing matches the JS helper in
+    // shared/lib/blacklist-aggregates.ts (year*4 + floor(month/3)) so labels
+    // align with the main-page chart.
+    db
+      .prepare(
+        `/* blacklist-summary-quarterly-event-counts */
            SELECT
              stablecoin,
              (CAST(strftime('%Y', datetime(timestamp, 'unixepoch')) AS INTEGER) * 4 +
@@ -473,32 +473,32 @@ async function buildBlacklistSummaryPayload(
            FROM blacklist_events
            WHERE suppression_reason IS NULL
            GROUP BY stablecoin, quarter_sort_key, event_type`,
-        )
-        .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>(),
+      )
+      .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>(),
 
-      // Per-coin, per-event-type counts for the last 7 days. Powers the
-      // detail-page RecentBlacklistBanner without forcing the client to fetch
-      // a 250-row event payload just to compute three counters. Time window
-      // mirrors the 7d cutoff applied client-side previously.
-      db
-        .prepare(
-          `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
+    // Per-coin, per-event-type counts for the last 7 days. Powers the
+    // detail-page RecentBlacklistBanner without forcing the client to fetch
+    // a 250-row event payload just to compute three counters. Time window
+    // mirrors the 7d cutoff applied client-side previously.
+    db
+      .prepare(
+        `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
            SELECT stablecoin, event_type, COUNT(*) AS n
            FROM blacklist_events
            WHERE suppression_reason IS NULL
              AND timestamp >= ?
            GROUP BY stablecoin, event_type`,
-        )
-        .bind(sevenDayCutoffSec)
-        .all<{ stablecoin: string; event_type: string; n: number }>(),
+      )
+      .bind(sevenDayCutoffSec)
+      .all<{ stablecoin: string; event_type: string; n: number }>(),
 
-      // Collapse total / max(timestamp) / recoverable-gap / recent-30d /
-      // recent-24h into a single aggregate pass so we don't hit the
-      // public-events table five separate times under the
-      // WHERE suppression_reason IS NULL predicate.
-      db
-        .prepare(
-          `/* blacklist-summary-public-aggregate */
+    // Collapse total / max(timestamp) / recoverable-gap / recent-30d /
+    // recent-24h into a single aggregate pass so we don't hit the
+    // public-events table five separate times under the
+    // WHERE suppression_reason IS NULL predicate.
+    db
+      .prepare(
+        `/* blacklist-summary-public-aggregate */
            SELECT
              COUNT(*) AS total,
              MAX(timestamp) AS max_ts,
@@ -506,128 +506,136 @@ async function buildBlacklistSummaryPayload(
              SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
            FROM blacklist_events
            WHERE suppression_reason IS NULL`,
-        )
-        .bind(now - 30 * 86400, now - 86400)
-        .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
+      )
+      .bind(now - 30 * 86400, now - 86400)
+      .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
 
-      loadBlacklistCurrentBalanceMap(db),
-      queryLatestEventTypeHistory(db),
-      queryBlacklistGapMetrics(db, now, {
-        producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
-        cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
-      }),
-    ]);
-    const latestTs = aggregateRow?.max_ts ?? now;
+    loadBlacklistCurrentBalanceMap(db),
+    queryLatestEventTypeHistory(db),
+    queryBlacklistGapMetrics(db, now, {
+      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
+      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+    }),
+    loadBlacklistReconciliationStatus(db),
+  ]);
+  const latestTs = aggregateRow?.max_ts ?? now;
 
-    const { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats } =
-      resolveActiveBlacklistRecords(activeHistory, currentBalances);
-    const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
-    const coverage = buildCoverage();
-    const freezeLedgerMeta = buildFreezeLedgerMeta(currentBalances, gapMetrics, trackedStats.trackedAmountGapCount, now);
-    const dataQuality = buildDataQuality(freezeLedgerMeta, gapMetrics, coverage);
+  const { activeRecordEvents, frozenAddresses, perCoinFrozenAddressCount, activeStats } = resolveActiveBlacklistRecords(
+    activeHistory,
+    currentBalances,
+  );
+  const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
+  const coverage = buildCoverage();
+  const freezeLedgerMeta = buildFreezeLedgerMeta(currentBalances, gapMetrics, trackedStats.trackedAmountGapCount, now);
+  const dataQuality = buildDataQuality(freezeLedgerMeta, gapMetrics, coverage);
 
-    const perCoinBlacklistCounts = Object.fromEntries(
-      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-    ) as Record<BlacklistStablecoin, number>;
-    const perCoinTotalEvents = Object.fromEntries(
-      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-    ) as Record<BlacklistStablecoin, number>;
-    let destroyedTotal = 0;
-    const blacklistBySymbol = new Map<string, number>();
-    for (const row of perCoinResult.results ?? []) {
-      if (!isBlacklistStablecoin(row.stablecoin)) continue;
-      const symbol = row.stablecoin;
-      perCoinTotalEvents[symbol] += row.n;
-      if (row.event_type === "blacklist") {
-        perCoinBlacklistCounts[symbol] = row.n;
-        blacklistBySymbol.set(row.stablecoin, row.n);
-      }
-      if (row.event_type === "destroy") destroyedTotal += row.usd_sum ?? 0;
+  const perCoinBlacklistCounts = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
+  const perCoinTotalEvents = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
+  let destroyedTotal = 0;
+  const blacklistBySymbol = new Map<string, number>();
+  for (const row of perCoinResult.results ?? []) {
+    if (!isBlacklistStablecoin(row.stablecoin)) continue;
+    const symbol = row.stablecoin;
+    perCoinTotalEvents[symbol] += row.n;
+    if (row.event_type === "blacklist") {
+      perCoinBlacklistCounts[symbol] = row.n;
+      blacklistBySymbol.set(row.stablecoin, row.n);
     }
+    if (row.event_type === "destroy") destroyedTotal += row.usd_sum ?? 0;
+  }
 
-    const usdcBlacklisted = blacklistBySymbol.get("USDC") ?? 0;
-    const usdtBlacklisted = blacklistBySymbol.get("USDT") ?? 0;
-    const goldBlacklisted = (blacklistBySymbol.get("PAXG") ?? 0) + (blacklistBySymbol.get("XAUT") ?? 0);
+  const usdcBlacklisted = blacklistBySymbol.get("USDC") ?? 0;
+  const usdtBlacklisted = blacklistBySymbol.get("USDT") ?? 0;
+  const goldBlacklisted = (blacklistBySymbol.get("PAXG") ?? 0) + (blacklistBySymbol.get("XAUT") ?? 0);
 
-    // ---------------- Per-coin detail fields (detail-page block) ----------------
-    // perCoinFrozenAddressCount is resolved alongside activeRecordEvents in
-    // resolveActiveBlacklistRecords so its legacy-vs-snapshot branch matches frozenAddresses.
+  // ---------------- Per-coin detail fields (detail-page block) ----------------
+  // perCoinFrozenAddressCount is resolved alongside activeRecordEvents in
+  // resolveActiveBlacklistRecords so its legacy-vs-snapshot branch matches frozenAddresses.
 
-    const perCoinFrozenTotal = Object.fromEntries(
-      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-    ) as Record<BlacklistStablecoin, number>;
-    for (const snapshot of currentBalances.values()) {
-      if (isDestroySnapshot(snapshot)) continue;
-      if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
-      if (!isBlacklistStablecoin(snapshot.stablecoin)) continue;
-      perCoinFrozenTotal[snapshot.stablecoin] += snapshot.amountUsd;
-    }
+  const perCoinFrozenTotal = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
+  for (const snapshot of currentBalances.values()) {
+    if (isDestroySnapshot(snapshot)) continue;
+    if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
+    if (!isBlacklistStablecoin(snapshot.stablecoin)) continue;
+    perCoinFrozenTotal[snapshot.stablecoin] += snapshot.amountUsd;
+  }
 
-    const perCoinDestroyedTotal = Object.fromEntries(
-      BLACKLIST_STABLECOINS.map((s) => [s, 0]),
-    ) as Record<BlacklistStablecoin, number>;
-    for (const row of perCoinResult.results ?? []) {
-      if (row.event_type !== "destroy") continue;
-      if (!isBlacklistStablecoin(row.stablecoin)) continue;
-      perCoinDestroyedTotal[row.stablecoin] += row.usd_sum ?? 0;
-    }
+  const perCoinDestroyedTotal = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
+    BlacklistStablecoin,
+    number
+  >;
+  for (const row of perCoinResult.results ?? []) {
+    if (row.event_type !== "destroy") continue;
+    if (!isBlacklistStablecoin(row.stablecoin)) continue;
+    perCoinDestroyedTotal[row.stablecoin] += row.usd_sum ?? 0;
+  }
 
-    const perCoinQuarterlyEventTypes = buildPerCoinQuarterlyEventTypes(perCoinQuarterlyResult.results ?? []);
-    const perCoinRecentEventTypes = buildPerCoinRecentEventTypes(perCoinRecentResult.results ?? []);
+  const perCoinQuarterlyEventTypes = buildPerCoinQuarterlyEventTypes(perCoinQuarterlyResult.results ?? []);
+  const perCoinRecentEventTypes = buildPerCoinRecentEventTypes(perCoinRecentResult.results ?? []);
 
-    const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, activeRecordEvents);
+  const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, activeRecordEvents);
 
-    const chainOptions = [
-      ...new Map(
-        CONTRACT_CONFIGS.map((c) => [c.chain.chainId, { id: c.chain.chainId, name: c.chain.chainName }]),
-      ).values(),
-    ].sort((a, b) => a.name.localeCompare(b.name));
+  const chainOptions = [
+    ...new Map(
+      CONTRACT_CONFIGS.map((c) => [c.chain.chainId, { id: c.chain.chainId, name: c.chain.chainName }]),
+    ).values(),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
-    const freshnessTs = options?.freshnessTsOverride
-      ?? await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
+  const freshnessTs =
+    options?.freshnessTsOverride ?? (await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs));
 
-    return {
-      payload: {
-        stats: {
-          usdcBlacklisted,
-          usdtBlacklisted,
-          goldBlacklisted,
-          frozenAddresses, // NET, not distinct-ever
-          destroyedTotal,
-          recentCount: aggregateRow?.recent_30d ?? 0,
-          recentCount24h: aggregateRow?.recent_24h ?? 0,
-          recoverableGapCount: gapMetrics.missingAmounts,
-          activeAddressCount: activeStats.activeAddressCount,
-          activeFrozenTotal: activeStats.activeFrozenTotal,
-          activeAmountGapCount: activeStats.activeAmountGapCount,
-          trackedAddressCount: trackedStats.trackedAddressCount,
-          trackedFrozenTotal: trackedStats.trackedFrozenTotal,
-          trackedAmountGapCount: trackedStats.trackedAmountGapCount,
-          perCoinBlacklistCounts,
-          perCoinTotalEvents,
-          perCoinFrozenAddressCount,
-          perCoinFrozenTotal,
-          perCoinDestroyedTotal,
-          perCoinQuarterlyEventTypes,
-          perCoinRecentEventTypes,
-        },
-        chart,
-        chains: chainOptions,
-        coverage,
-        freezeLedgerMeta,
-        dataQuality,
-        totalEvents: aggregateRow?.total ?? 0,
-        methodology: buildMethodologyEnvelope({
-          version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
-          versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-          currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
-          currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-          changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-          asOf: latestTs,
-        }),
+  return {
+    payload: {
+      stats: {
+        usdcBlacklisted,
+        usdtBlacklisted,
+        goldBlacklisted,
+        frozenAddresses, // NET, not distinct-ever
+        destroyedTotal,
+        recentCount: aggregateRow?.recent_30d ?? 0,
+        recentCount24h: aggregateRow?.recent_24h ?? 0,
+        recoverableGapCount: gapMetrics.missingAmounts,
+        activeAddressCount: activeStats.activeAddressCount,
+        activeFrozenTotal: activeStats.activeFrozenTotal,
+        activeAmountGapCount: activeStats.activeAmountGapCount,
+        trackedAddressCount: trackedStats.trackedAddressCount,
+        trackedFrozenTotal: trackedStats.trackedFrozenTotal,
+        trackedAmountGapCount: trackedStats.trackedAmountGapCount,
+        perCoinBlacklistCounts,
+        perCoinTotalEvents,
+        perCoinFrozenAddressCount,
+        perCoinFrozenTotal,
+        perCoinDestroyedTotal,
+        perCoinQuarterlyEventTypes,
+        perCoinRecentEventTypes,
       },
-      freshnessTs,
-    };
+      chart,
+      chains: chainOptions,
+      coverage,
+      freezeLedgerMeta,
+      dataQuality,
+      reconciliation,
+      totalEvents: aggregateRow?.total ?? 0,
+      methodology: buildMethodologyEnvelope({
+        version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+        versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+        currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+        currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+        changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+        asOf: latestTs,
+      }),
+    },
+    freshnessTs,
+  };
 }
 
 export async function materializeBlacklistSummarySnapshot(
@@ -660,7 +668,17 @@ export const handleBlacklistSummary = withErrorHandler(
     const now = Math.floor(Date.now() / 1000);
     const snapshot = await readBlacklistSummarySnapshot(db);
     if (snapshot) {
-      return jsonResponse(snapshot.payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+      let payload = snapshot.payload;
+      if (!isRecord(payload.reconciliation)) {
+        try {
+          const reconciliation = await loadBlacklistReconciliationStatus(db);
+          if (reconciliation.status !== "not-run") payload = { ...payload, reconciliation };
+        } catch {
+          // The summary cache remains backward-compatible while migration 0181
+          // rolls out. A later producer write includes the durable status.
+        }
+      }
+      return jsonResponse(payload, blacklistSummaryHeaders(snapshot.freshnessTs));
     }
 
     const built = await buildBlacklistSummaryPayload(db, now);

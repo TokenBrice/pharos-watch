@@ -1,5 +1,5 @@
 import { ALCHEMY_CHAINS } from "./chain-registry";
-import type { SubrequestBudget, TopicFilter } from "./evm-logs";
+import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
 import { throwIfAborted } from "./abort";
@@ -14,11 +14,11 @@ export interface AlchemyLogEntry {
   address: string;
   topics: string[];
   data: string;
-  blockNumber: string;   // hex
+  blockNumber: string; // hex
   transactionHash: string;
   transactionIndex: string; // hex
   blockHash: string;
-  logIndex: string;       // hex
+  logIndex: string; // hex
   removed: boolean;
 }
 
@@ -59,6 +59,12 @@ export interface AlchemyLogsFetchResult {
   scannedToBlock: number;
   calls: number;
   maxDepth: number;
+  failureReason?: string;
+}
+
+export interface AlchemyTopicFilter {
+  index: number;
+  value: string | readonly string[];
 }
 
 type FetchLogsRangeResult = AlchemyLogsFetchResult;
@@ -272,13 +278,17 @@ export async function getAlchemyTransactionContextBatchMany(
 export async function fetchAlchemyLogs(
   alchemyUrl: string,
   contractAddress: string,
-  topics: TopicFilter[],
+  topics: AlchemyTopicFilter[],
   fromBlock: number,
   toBlock: number,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-  options?: { deadlineMs?: number },
+  options?: { deadlineMs?: number; maxSplitCalls?: number },
 ): Promise<AlchemyLogsFetchResult | null> {
+  const callBudget = {
+    count: 0,
+    limit: Math.max(1, Math.floor(options?.maxSplitCalls ?? DEFAULT_LOG_SPLIT_MAX_CALLS)),
+  };
   return fetchAlchemyLogsRange(
     alchemyUrl,
     contractAddress,
@@ -289,13 +299,22 @@ export async function fetchAlchemyLogs(
     signal,
     0,
     options,
+    callBudget,
   );
 }
 
 const LOG_SPLIT_MAX_DEPTH = 8;
 const LOG_SPLIT_MIN_RANGE = 8;
+export const DEFAULT_LOG_SPLIT_MAX_CALLS = 64;
 
-function shouldSplitLogRange(errorMessage: string | null, code: number | null, status: number, transientHttpError: boolean): boolean {
+type LogSplitCallBudget = { count: number; limit: number };
+
+function shouldSplitLogRange(
+  errorMessage: string | null,
+  code: number | null,
+  status: number,
+  transientHttpError: boolean,
+): boolean {
   if (transientHttpError) return true;
   if (status === 429 || status === 408 || status === 504) return true;
   if (code === -32005 || code === -32000) return true;
@@ -315,13 +334,14 @@ function shouldSplitLogRange(errorMessage: string | null, code: number | null, s
 async function fetchAlchemyLogsRange(
   alchemyUrl: string,
   contractAddress: string,
-  topics: TopicFilter[],
+  topics: AlchemyTopicFilter[],
   fromBlock: number,
   toBlock: number,
   budget: SubrequestBudget,
   signal: AbortSignal | undefined,
   depth: number,
-  options?: { deadlineMs?: number },
+  options: { deadlineMs?: number; maxSplitCalls?: number } | undefined,
+  callBudget: LogSplitCallBudget,
 ): Promise<FetchLogsRangeResult> {
   if (fromBlock > toBlock) {
     return { logs: [], complete: true, scannedToBlock: toBlock, calls: 0, maxDepth: depth };
@@ -332,27 +352,46 @@ async function fetchAlchemyLogsRange(
   }
 
   if (budgetExhausted(budget)) {
-    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: depth };
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: fromBlock - 1,
+      calls: 0,
+      maxDepth: depth,
+      failureReason: "subrequest-budget-exhausted",
+    };
+  }
+  if (callBudget.count >= callBudget.limit) {
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: fromBlock - 1,
+      calls: 0,
+      maxDepth: depth,
+      failureReason: "split-call-cap",
+    };
   }
   budget.count++;
+  callBudget.count++;
 
-  const topicArray: (string | null)[] = [];
+  const topicArray: (string | readonly string[] | null)[] = [];
   for (const { index, value } of topics) {
     while (topicArray.length <= index) topicArray.push(null);
     topicArray[index] = value;
   }
 
-  const params = [{
-    address: contractAddress,
-    fromBlock: "0x" + fromBlock.toString(16),
-    toBlock: "0x" + toBlock.toString(16),
-    topics: topicArray,
-  }];
+  const params = [
+    {
+      address: contractAddress,
+      fromBlock: "0x" + fromBlock.toString(16),
+      toBlock: "0x" + toBlock.toString(16),
+      topics: topicArray,
+    },
+  ];
 
   try {
-    const timeoutMs = options?.deadlineMs != null
-      ? Math.max(1, options.deadlineMs - Date.now())
-      : ALCHEMY_RPC_TIMEOUT_MS;
+    const timeoutMs =
+      options?.deadlineMs != null ? Math.max(1, options.deadlineMs - Date.now()) : ALCHEMY_RPC_TIMEOUT_MS;
     const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal, timeoutMs);
     if (Array.isArray(rpc.result)) {
       return { logs: rpc.result, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
@@ -368,12 +407,26 @@ async function fetchAlchemyLogsRange(
     );
 
     if (!canSplit || !splitRecommended) {
-      return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
+      return {
+        logs: [],
+        complete: false,
+        scannedToBlock: fromBlock - 1,
+        calls: 1,
+        maxDepth: depth,
+        failureReason: splitRecommended ? "split-limit" : "provider-error",
+      };
     }
 
     const mid = Math.floor((fromBlock + toBlock) / 2);
     if (mid <= fromBlock || mid >= toBlock) {
-      return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
+      return {
+        logs: [],
+        complete: false,
+        scannedToBlock: fromBlock - 1,
+        calls: 1,
+        maxDepth: depth,
+        failureReason: "unsplittable-range",
+      };
     }
 
     // Walk split ranges depth-first so one oversized scan cannot fan out into
@@ -388,6 +441,7 @@ async function fetchAlchemyLogsRange(
       signal,
       depth + 1,
       options,
+      callBudget,
     );
     if (!left.complete) {
       return {
@@ -396,6 +450,7 @@ async function fetchAlchemyLogsRange(
         scannedToBlock: left.scannedToBlock,
         calls: 1 + left.calls,
         maxDepth: Math.max(depth, left.maxDepth),
+        failureReason: left.failureReason,
       };
     }
 
@@ -409,6 +464,7 @@ async function fetchAlchemyLogsRange(
       signal,
       depth + 1,
       options,
+      callBudget,
     );
 
     return {
@@ -417,10 +473,18 @@ async function fetchAlchemyLogsRange(
       scannedToBlock: right.scannedToBlock,
       calls: 1 + left.calls + right.calls,
       maxDepth: Math.max(depth, left.maxDepth, right.maxDepth),
+      failureReason: right.failureReason,
     };
   } catch (e) {
     console.warn("[alchemy-logs] eth_getLogs failed:", e);
-    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
+    return {
+      logs: [],
+      complete: false,
+      scannedToBlock: fromBlock - 1,
+      calls: 1,
+      maxDepth: depth,
+      failureReason: "exception",
+    };
   }
 }
 
@@ -430,10 +494,7 @@ const TIMESTAMP_BATCH_SIZE = 50;
 // D1 enforces a relatively low SQL variable cap in some environments; keep this conservative.
 const D1_SAFE_MAX_SQL_VARIABLES = 90;
 const TIMESTAMP_CACHE_READ_FIXED_BINDINGS = 2; // chain_id + updated_at
-const TIMESTAMP_CACHE_READ_CHUNK = Math.max(
-  1,
-  D1_SAFE_MAX_SQL_VARIABLES - TIMESTAMP_CACHE_READ_FIXED_BINDINGS,
-);
+const TIMESTAMP_CACHE_READ_CHUNK = Math.max(1, D1_SAFE_MAX_SQL_VARIABLES - TIMESTAMP_CACHE_READ_FIXED_BINDINGS);
 const DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC = 14 * DAY_SECONDS;
 const TIMESTAMP_RETRY_BATCH_SIZES = [TIMESTAMP_BATCH_SIZE, 10, 1] as const;
 
@@ -476,7 +537,7 @@ async function fetchBlockTimestampBatch(
       return missingAll();
     }
 
-    const parsed = await res.json() as unknown;
+    const parsed = (await res.json()) as unknown;
     if (!Array.isArray(parsed)) {
       console.warn("[alchemy-logs] batch eth_getBlockByNumber returned non-array JSON body");
       return missingAll();
@@ -597,9 +658,8 @@ export async function resolveBlockTimestamps(
       budget.count++;
 
       const batch = remotePending.slice(i, i + batchSize);
-      const timeoutMs = options?.deadlineMs != null
-        ? Math.max(1, options.deadlineMs - Date.now())
-        : ALCHEMY_RPC_TIMEOUT_MS;
+      const timeoutMs =
+        options?.deadlineMs != null ? Math.max(1, options.deadlineMs - Date.now()) : ALCHEMY_RPC_TIMEOUT_MS;
       const result = await fetchBlockTimestampBatch(alchemyUrl, batch, options?.signal, timeoutMs);
       fetchIssues += result.issueCount;
       for (const [block, ts] of result.timestamps) {
@@ -618,7 +678,9 @@ export async function resolveBlockTimestamps(
     const totalNeeded = uniqueBlocks.length;
     const stillMissing = uniqueBlocks.filter((b) => !timestamps.has(b)).length;
     if (stillMissing > 0) {
-      console.warn(`[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${fetchIssues} fetch issue(s)`);
+      console.warn(
+        `[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${fetchIssues} fetch issue(s)`,
+      );
     }
   }
 

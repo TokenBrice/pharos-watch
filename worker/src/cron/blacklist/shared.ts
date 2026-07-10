@@ -59,16 +59,11 @@ export interface BlacklistScanResult {
   coveredTopicCount: number;
   providerCalls: number;
   maxSplitDepth: number;
+  failureSamples: string[];
 }
 
 export type BlacklistScanCoverageOutcome =
-  | "complete"
-  | "quiet"
-  | "partial"
-  | "provider_error"
-  | "missing_topic"
-  | "incomplete"
-  | "cursor_ahead";
+  "complete" | "quiet" | "partial" | "provider_error" | "missing_topic" | "incomplete" | "cursor_ahead";
 
 interface BuildBlacklistRowOptions {
   id: string;

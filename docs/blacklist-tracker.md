@@ -157,8 +157,8 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 
 ### USD1 (World Liberty Financial USD)
 
-| Chain    | Address                                      | Decimals | Events |
-| -------- | -------------------------------------------- | -------- | ------ |
+| Chain    | Address                                      | Decimals | Events                                                                                                |
+| -------- | -------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------- |
 | Ethereum | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
 | BSC      | `0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d` | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
 | Tron     | `TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc`         | 18       | Dual-index freeze/unfreeze plus WLFI `FrozenAccountDrained` / `FrozenFundsReallocated` destroy events |
@@ -212,21 +212,21 @@ All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals:
 
 ### Direct EVM coverage wave (v3.9)
 
-| Asset | Chain(s) | Events | Notes |
-| ----- | -------- | ------ | ----- |
-| FDUSD | Ethereum, BSC, Arbitrum | `Freeze(address,address)`, `Unfreeze(address,address)` | Dual-index account address in `topics[2]` |
-| BRZ | Ethereum, Gnosis | `Blacklisted(address)`, `UnBlacklisted(address)` | Indexed address; BRL-denominated USD conversion |
-| AUSD | Arbitrum, Base | `AccountFrozen(address)`, `AccountUnfrozen(address)` | Indexed address |
-| MNEE | Ethereum | `AccountFrozen(address)`, `AccountUnfrozen(address)`, `FundsConfiscated(address,uint256,address)`, `HoldingsBurnt(address,uint256)` | Confiscation/burn amounts are indexed in `topics[2]`; AccountBlacklisted/AccountDelisted intentionally deferred |
-| EURI | Ethereum, BSC | `Freeze(address,address)`, `Unfreeze(address,address)` | Dual-index account address; EUR-denominated USD conversion |
-| USDQ | Ethereum, Polygon | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)` | USDT0/Hadron pattern |
-| USDO | Ethereum, Base | `AccountBanned(address)`, `AccountUnbanned(address)` | Indexed address |
-| USDX | Ethereum | `AddedBlacklist(address)`, `RemovedBlacklist(address)` | Non-indexed address in data |
-| AID | Ethereum, Arbitrum | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])` | Dynamic address-array event expands to one row per address; Base remains deferred |
-| TGBP | Ethereum, Avalanche, Polygon | `Banned(address)`, `UnBanned(address)` | Indexed address; GBP-denominated USD conversion; Base and BSC remain deferred |
-| EURC | Ethereum, Base, Avalanche | `Blacklisted(address)`, `UnBlacklisted(address)` | Circle mirror-zero rows are preserved with suppression metadata and excluded from public aggregates |
-| USDP | Ethereum | `FreezeAddress(address)`, `UnfreezeAddress(address)`, `FrozenAddressWiped(address)` | Same freeze pattern as PYUSD/USDG (Paxos family) |
-| BUIDL | Ethereum, BSC, Optimism, Arbitrum, Avalanche, Polygon | `Seize(address,address,uint256,string)`, `OmnibusSeize(address,address,uint256,string,uint8)` | Seize-only coverage mapped to `destroy`; not a live blacklist/freeze state |
+| Asset | Chain(s)                                              | Events                                                                                                                              | Notes                                                                                                           |
+| ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| FDUSD | Ethereum, BSC, Arbitrum                               | `Freeze(address,address)`, `Unfreeze(address,address)`                                                                              | Dual-index account address in `topics[2]`                                                                       |
+| BRZ   | Ethereum, Gnosis                                      | `Blacklisted(address)`, `UnBlacklisted(address)`                                                                                    | Indexed address; BRL-denominated USD conversion                                                                 |
+| AUSD  | Arbitrum, Base                                        | `AccountFrozen(address)`, `AccountUnfrozen(address)`                                                                                | Indexed address                                                                                                 |
+| MNEE  | Ethereum                                              | `AccountFrozen(address)`, `AccountUnfrozen(address)`, `FundsConfiscated(address,uint256,address)`, `HoldingsBurnt(address,uint256)` | Confiscation/burn amounts are indexed in `topics[2]`; AccountBlacklisted/AccountDelisted intentionally deferred |
+| EURI  | Ethereum, BSC                                         | `Freeze(address,address)`, `Unfreeze(address,address)`                                                                              | Dual-index account address; EUR-denominated USD conversion                                                      |
+| USDQ  | Ethereum, Polygon                                     | `BlockPlaced(address)`, `BlockReleased(address)`, `DestroyedBlockedFunds(address,uint256)`                                          | USDT0/Hadron pattern                                                                                            |
+| USDO  | Ethereum, Base                                        | `AccountBanned(address)`, `AccountUnbanned(address)`                                                                                | Indexed address                                                                                                 |
+| USDX  | Ethereum                                              | `AddedBlacklist(address)`, `RemovedBlacklist(address)`                                                                              | Non-indexed address in data                                                                                     |
+| AID   | Ethereum, Arbitrum                                    | `AddedToDenyList(address[])`, `RemovedFromDenyList(address[])`                                                                      | Dynamic address-array event expands to one row per address; Base remains deferred                               |
+| TGBP  | Ethereum, Avalanche, Polygon                          | `Banned(address)`, `UnBanned(address)`                                                                                              | Indexed address; GBP-denominated USD conversion; Base and BSC remain deferred                                   |
+| EURC  | Ethereum, Base, Avalanche                             | `Blacklisted(address)`, `UnBlacklisted(address)`                                                                                    | Circle mirror-zero rows are preserved with suppression metadata and excluded from public aggregates             |
+| USDP  | Ethereum                                              | `FreezeAddress(address)`, `UnfreezeAddress(address)`, `FrozenAddressWiped(address)`                                                 | Same freeze pattern as PYUSD/USDG (Paxos family)                                                                |
+| BUIDL | Ethereum, BSC, Optimism, Arbitrum, Avalanche, Polygon | `Seize(address,address,uint256,string)`, `OmnibusSeize(address,address,uint256,string,uint8)`                                       | Seize-only coverage mapped to `destroy`; not a live blacklist/freeze state                                      |
 
 ---
 
@@ -684,7 +684,8 @@ For EVM configs, partial provider coverage advances only to the minimum contiguo
    - EVM: resolve a real chain head, subtract the 15-minute safety margin, and fetch logs from `cursor + 1` only to that safe head via Etherscan `getLogs` or chain RPC `eth_getLogs`.
    - Selected RPC-log configs seed empty cursors from known contract deployment blocks instead of scanning from genesis
    - RPC-log chains scan in bounded windows per run; Arbitrum is also bounded to 25,000,000 explorer/Alchemy-primary blocks or 250,000 fallback-RPC blocks.
-   - Every configured topic reports complete, quiet, partial, provider-error, missing-topic, or incomplete coverage. The shared cursor advances only to the minimum contiguous frontier.
+   - RPC providers receive all required topic0 signatures as one OR-topic filter when supported. Explorer scans remain per-topic. Every configured topic reports complete, quiet, partial, provider-error, missing-topic, or incomplete coverage, and the shared cursor advances only to the minimum contiguous frontier.
+   - Recursive Alchemy range splitting is sequential and bounded by depth, the run deadline, the shared subrequest budget, and a 64-call per-scan ceiling.
    - Tron: fetch confirmed events from `lastTimestamp` through `now - 15 minutes` via TronGrid `/contracts/{addr}/events`, using the documented `min_timestamp`, `max_timestamp`, and fingerprint parameters.
    - TronGrid pagination links must remain on the exact HTTPS TronGrid contract/event endpoint; malformed, cross-origin, cyclic, or overlong links fail the config without forwarding the API key.
    - Parse events into `BlacklistRow` objects
@@ -711,13 +712,19 @@ For EVM configs, partial provider coverage advances only to the minimum contiguo
    - Record the latest safe head and reset or increment per-config success/failure/skip streaks.
 
 5. **Historical maintenance** (runs after event admission)
-   - Backfill up to 100 non-Tron rows with recoverable/provider/ambiguous amount statuses, plus eligible legacy derived-zero rows.
+   - Enqueue recoverable/provider/ambiguous amount rows and eligible legacy derived-zero rows, then backfill up to 100 due rows by durable priority/retry availability.
+   - Close resolved or terminal repair rows; provider failures retain bounded exponential retry timing instead of spending every run indefinitely.
+   - Migrate up to 100 unambiguous legacy event identities and 50 contract-scoped current-balance identities. Ambiguous same-symbol/same-chain rows are never guessed.
    - Reapply the Tron current-balance ledger mirror so newly ingested rows resolve in the same cycle.
    - Maintenance yields to the event scan and stops under the shared runtime/subrequest budget.
 
 6. **Producer snapshots**
    - Publish only when every required config has a successful complete/quiet scan, no state conflict occurred, and snapshot tail budget remains.
    - Stamp freshness with the oldest required config's `last_succeeded_at`, not the cron completion time.
+
+7. **Bounded provider telemetry**
+   - Persist per-config provider mode, coverage outcome, from/to/safe frontiers, fetched/inserted counts, provider call count, maximum split depth, and at most four bounded failure samples.
+   - Retain 14 days, pruning on the blacklist lane.
 
 ### Safety Margins
 
@@ -773,17 +780,17 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 
 **Query parameters:**
 
-| Param        | Type   | Default | Description                                                          |
-| ------------ | ------ | ------- | -------------------------------------------------------------------- |
-| `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
-| `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`, `"TUSD"`, `"NUSD"`, `"EURCV"`, `"USDA"`, `"USAT"`, `"AEUR"`, `"XUSD"`, `"XAUM"`, `"JPYC"`, `"FRXUSD"`, `"FIDD"`) |
-| `chain`      | string | --      | Filter by `chain_name`                                               |
-| `chainId`    | string | --      | Filter by canonical chain id; must match `chain` if both are provided |
-| `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
-| `q`          | string | --      | Case-insensitive address substring search                            |
-| `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
-| `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
+| Param           | Type   | Default | Description                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`         | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                                                                                                                                                                                                                                                                                                                                 |
+| `offset`        | number | 0       | Pagination offset                                                                                                                                                                                                                                                                                                                                                                |
+| `stablecoin`    | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`, `"TUSD"`, `"NUSD"`, `"EURCV"`, `"USDA"`, `"USAT"`, `"AEUR"`, `"XUSD"`, `"XAUM"`, `"JPYC"`, `"FRXUSD"`, `"FIDD"`) |
+| `chain`         | string | --      | Filter by `chain_name`                                                                                                                                                                                                                                                                                                                                                           |
+| `chainId`       | string | --      | Filter by canonical chain id; must match `chain` if both are provided                                                                                                                                                                                                                                                                                                            |
+| `eventType`     | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`)                                                                                                                                                                                                                                                                                                             |
+| `q`             | string | --      | Case-insensitive address substring search                                                                                                                                                                                                                                                                                                                                        |
+| `sortBy`        | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)                                                                                                                                                                                                                                                                                                                      |
+| `sortDirection` | string | desc    | Sort direction (`"asc"`, `"desc"`)                                                                                                                                                                                                                                                                                                                                               |
 
 The handler now exposes only unsuppressed rows for the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, and FIDD.
 
@@ -841,6 +848,7 @@ The summary now mixes two intentionally distinct lenses:
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
 - tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from last-known successful `blacklist_current_balances` snapshots
 - data-quality metadata when available, including snapshot age, source/status distributions, provider failures, and manifest-derived deferred coverage; retained snapshot age, permanent unavailable rows, and deferred coverage are diagnostics unless recoverable gaps or provider failures cross warning criteria
+- latest guarded reconciliation evidence under `reconciliation`, including immutable manifest identity/hash, exact event and destroyed-amount parity, targeted balance replay parity, unresolved gaps, recorded-bookmark presence, and Tron/Arbitrum safe-head proof
 - quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter
 
 Coverage entries are contract/config-level records. Every supported row is expected to carry the required tracked fields `symbol`, `stablecoinId`, `chainId`, `chainName`, `contractAddress`, `configKey`, `providerSource`, `eventFamilies`, and `eventTypes`; deferred rows carry `symbol`, `chainId`, and `reason`.
@@ -851,7 +859,7 @@ Coverage entries are contract/config-level records. Every supported row is expec
 
 ### POST /api/reset-blacklist-sync
 
-Requires Access service-token headers on `ops-api.pharos.watch`.  Rolls back sync state:
+Requires Access service-token headers on `ops-api.pharos.watch`. Rolls back sync state:
 
 - EVM: subtract 50,000 blocks (~7 days on Ethereum)
 - Tron: subtract 604,800,000 ms (7 days)
@@ -915,14 +923,14 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 
 **File:** `src/app/freezewatch/page.tsx`
 
-| Component        | File                                   | Description                                                                                     |
-| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
-| Search           | (inline)                               | Server-backed address search                                                                    |
-| BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
-| BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, and wiped value                      |
+| Component        | File                                   | Description                                                                                                  |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                                      |
+| Search           | (inline)                               | Server-backed address search                                                                                 |
+| BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                              |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, and wiped value                                   |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
-| CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination |
+| CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination            |
 
 On mobile, the event ledger renders event cards instead of the dense table. The same server-side sort, filter, search,
 pagination, and CSV export state is preserved; cards prioritize asset, chain, action, event time, amount provenance,
@@ -966,11 +974,11 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 
 ## Environment Variables
 
-| Variable            | Type   | Required | Description                                                          |
-| ------------------- | ------ | -------- | -------------------------------------------------------------------- |
-| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls        |
-| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                          |
-| `DRPC_API_KEY`      | Secret | No       | dRPC key for archive node balance lookups (all EVM chains including mainnet) |
+| Variable            | Type   | Required | Description                                                                                                                                      |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls                                                                                    |
+| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                                                                                                      |
+| `DRPC_API_KEY`      | Secret | No       | dRPC key for archive node balance lookups (all EVM chains including mainnet)                                                                     |
 | `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans; strongly recommended for faster historical catch-up on zero-cursor configs |
 
 ---
@@ -1003,22 +1011,22 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 
 ## File Index
 
-| File                                                       | Role                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `worker/src/cron/sync-blacklist.ts`                        | Main cron: incremental scan, backfill, balance enrichment, sync state                      |
-| `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
-| `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
-| `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
-| `worker/src/routes/registry.ts`                            | API route aggregator/dispatcher; admin route definitions live in `ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`) |
-| `worker/src/handlers/scheduled.ts`                         | Thin cron-expression dispatcher for scheduled slots                                        |
-| `worker/src/handlers/scheduled/hourly-blacklist.ts`         | Dedicated 6-hourly `sync-blacklist` slot runner                                            |
-| `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
-| `worker/migrations/0000_baseline.sql`                      | Baseline blacklist schema, including `blacklist_events`, `blacklist_sync_state`, and the pre-0072 index/version additions |
-| `worker/migrations/0076_blacklist_provenance_and_amount_semantics.sql` | Adds amount provenance and semantics columns                                  |
-| `worker/migrations/0077_blacklist_amount_recovery_telemetry.sql` | Adds recovery-attempt telemetry for unresolved amount rows                       |
-| `src/hooks/use-blacklist-events.ts`                        | TanStack Query hook                                                                        |
-| `src/app/freezewatch/page.tsx`                              | FreezeWatch page with filters, stats, chart, table                                         |
-| `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |
-| `src/components/blacklist-table.tsx`                       | Sortable paginated table                                                                   |
-| `src/components/blacklist-stats.tsx`                       | Summary statistics cards                                                                   |
-| `src/components/blacklist-chart.tsx`                       | Quarterly tracked freeze-ledger chart                                                    |
+| File                                                                   | Role                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `worker/src/cron/sync-blacklist.ts`                                    | Main cron: incremental scan, backfill, balance enrichment, sync state                                                                                                                                                          |
+| `worker/src/lib/blacklist-contracts.ts`                                | Blacklist event configs: chains, event signatures, and shared-contract resolution rules                                                                                                                                        |
+| `worker/src/lib/evm-logs.ts`                                           | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`                                                                                                                                                 |
+| `worker/src/api/blacklist.ts`                                          | `GET /api/blacklist` handler                                                                                                                                                                                                   |
+| `worker/src/routes/registry.ts`                                        | API route aggregator/dispatcher; admin route definitions live in `ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`) |
+| `worker/src/handlers/scheduled.ts`                                     | Thin cron-expression dispatcher for scheduled slots                                                                                                                                                                            |
+| `worker/src/handlers/scheduled/hourly-blacklist.ts`                    | Dedicated 6-hourly `sync-blacklist` slot runner                                                                                                                                                                                |
+| `worker/src/lib/db.ts`                                                 | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                                                                                                                                                           |
+| `worker/migrations/0000_baseline.sql`                                  | Baseline blacklist schema, including `blacklist_events`, `blacklist_sync_state`, and the pre-0072 index/version additions                                                                                                      |
+| `worker/migrations/0076_blacklist_provenance_and_amount_semantics.sql` | Adds amount provenance and semantics columns                                                                                                                                                                                   |
+| `worker/migrations/0077_blacklist_amount_recovery_telemetry.sql`       | Adds recovery-attempt telemetry for unresolved amount rows                                                                                                                                                                     |
+| `src/hooks/use-blacklist-events.ts`                                    | TanStack Query hook                                                                                                                                                                                                            |
+| `src/app/freezewatch/page.tsx`                                         | FreezeWatch page with filters, stats, chart, table                                                                                                                                                                             |
+| `src/components/blacklist-filters.tsx`                                 | Filter UI (stablecoin, chain, event type)                                                                                                                                                                                      |
+| `src/components/blacklist-table.tsx`                                   | Sortable paginated table                                                                                                                                                                                                       |
+| `src/components/blacklist-stats.tsx`                                   | Summary statistics cards                                                                                                                                                                                                       |
+| `src/components/blacklist-chart.tsx`                                   | Quarterly tracked freeze-ledger chart                                                                                                                                                                                          |

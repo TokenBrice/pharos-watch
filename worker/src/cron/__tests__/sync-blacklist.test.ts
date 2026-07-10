@@ -995,7 +995,7 @@ describe("syncBlacklist", () => {
     }
   });
 
-  it("does not advance a multi-topic RPC cursor when budget is exhausted before all topics are scanned", async () => {
+  it("advances a multi-topic RPC cursor after one complete OR-topic scan", async () => {
     const db = makeDb();
     const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
     expect(baseConfig).toBeDefined();
@@ -1046,8 +1046,17 @@ describe("syncBlacklist", () => {
       expect(meta.subrequestBudgetReached).toBe(true);
       expect(fetchAlchemyLogs).toHaveBeenCalledTimes(1);
       const finalization = findStateFinalization(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-      expect(finalization?.binds[0]).toBe(0);
-      expect(finalization?.binds[11]).toBe("incomplete");
+      expect(finalization?.binds[0]).toBe(19_960_000);
+      expect(finalization?.binds[11]).toBe("quiet");
+      expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[2]).toEqual([
+        {
+          index: 0,
+          value: [
+            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+            "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e",
+          ],
+        },
+      ]);
     } finally {
       baseConfig.events = previousEvents;
     }

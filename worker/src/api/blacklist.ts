@@ -50,6 +50,20 @@ const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection
   },
 };
 
+function getBlacklistPageIndex(
+  sortBy: BlacklistSortKey,
+  filters: { stablecoin: boolean; chain: boolean; chainId: boolean; eventType: boolean },
+): string {
+  if (sortBy === "stablecoin") return "idx_blacklist_events_public_stablecoin_page";
+  if (sortBy === "chain") return "idx_blacklist_events_public_chain_page";
+  if (sortBy === "event") return "idx_blacklist_events_public_event_page";
+  if (filters.stablecoin) return "idx_blacklist_events_public_stablecoin_page";
+  if (filters.chain) return "idx_blacklist_events_public_chain_page";
+  if (filters.chainId) return "idx_blacklist_events_public_chain_id_page";
+  if (filters.eventType) return "idx_blacklist_events_public_event_page";
+  return "idx_blacklist_events_public_date_page";
+}
+
 function getBlacklistCursor(sortBy: BlacklistSortKey, sortDirection: BlacklistSortDirection) {
   const primaryDirection: "ASC" | "DESC" = sortDirection === "asc" ? "ASC" : "DESC";
   if (sortBy === "date") {
@@ -135,6 +149,12 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   return buildPaginatedEventResponse<BlacklistEventRow, BlacklistEvent>(db, {
     tableName: "blacklist_events",
+    indexName: getBlacklistPageIndex(sortBy, {
+      stablecoin: stablecoin != null,
+      chain: chain != null,
+      chainId: chainId != null,
+      eventType: eventType != null,
+    }),
     orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
     queryComment: "pharos:blacklist-events",
     conditions,
