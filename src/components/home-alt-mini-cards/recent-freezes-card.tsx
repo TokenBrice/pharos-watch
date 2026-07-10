@@ -150,7 +150,7 @@ export function RecentFreezesCard(): React.JSX.Element {
               onClick={() => setWindowKey("24h")}
               aria-pressed={windowKey === "24h"}
               data-state={windowKey === "24h" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               24h
             </button>
@@ -159,7 +159,7 @@ export function RecentFreezesCard(): React.JSX.Element {
               onClick={() => setWindowKey("7d")}
               aria-pressed={windowKey === "7d"}
               data-state={windowKey === "7d" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               7d
             </button>
