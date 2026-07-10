@@ -260,7 +260,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/coin-tracker-links.ts` - CoinTrackerLink, TrackerKind, buildAllCoinTrackerLinks, buildCoinTrackerLink
 - `src/lib/collateral-usage-model.ts` - CollateralUsageCoin, CollateralUsageEntry
 - `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
-- ... 172 more files omitted; use `rg --files src/lib` for the full list.
+- ... 173 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -304,7 +304,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 407 more files omitted; use `rg --files src/components` for the full list.
+- ... 408 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -393,7 +393,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
-- ... 278 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 281 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -551,7 +551,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/depeg-resolver.ts` - handleDepegResolver
 - `worker/src/api/dex-liquidity-evidence.ts` - LiquidityEvidenceClassification, classifyLiquidityEvidence, isTrendworthyLiquiditySnapshot
 - `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
-- ... 133 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 135 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
