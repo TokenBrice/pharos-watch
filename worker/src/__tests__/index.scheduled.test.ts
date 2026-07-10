@@ -136,6 +136,15 @@ const cronMocks = vi.hoisted(() => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
   sendAlert: vi.fn(async () => true),
+  reportAlertCondition: vi.fn(async () => ({
+    mode: "shadow",
+    conditionKey: "test",
+    fingerprint: "test",
+    state: "recovered",
+    streak: 0,
+    transition: null,
+    deliveryState: null,
+  })),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -280,6 +289,17 @@ vi.mock("../lib/alerts", async (importOriginal) => {
     sendAlert: cronMocks.sendAlert,
   };
 });
+
+vi.mock("../lib/alert-broker", () => ({
+  normalizeAlertBrokerMode: () => "shadow",
+  reportAlertCondition: cronMocks.reportAlertCondition,
+  dispatchPendingAlertBrokerDeliveries: vi.fn(async () => ({
+    due: 0,
+    delivered: 0,
+    failed: 0,
+    missingTarget: 0,
+  })),
+}));
 
 vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/circuit-breaker")>();

@@ -279,7 +279,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
-    maxConnections: 0, // DB-only inspection plus optional webhook alert
+    maxConnections: 1, // DB inspection plus one serial durable-broker webhook retry
     connectionGroup: "five-minute-telegram-chain",
   },
   {

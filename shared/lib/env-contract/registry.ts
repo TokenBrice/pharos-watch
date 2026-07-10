@@ -624,6 +624,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "ALERT_BROKER_MODE",
+    valueType: "string",
+    description: "Durable alert broker mode. `off` bypasses persistence, `shadow` records transitions only, `status` also affects health, and `alert` additionally claims and retries webhook delivery.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 50, status: "optional" },
+    },
+  },
+  {
     key: "OPS_UI_ORIGIN",
     valueType: "string",
     description: "Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks.",

@@ -96,6 +96,7 @@ export function deriveAvailabilityStatus(input: {
     input.publicHealth.mintBurnQueryError == null && !input.publicHealth.mintBurnBootstrap
       ? input.publicHealth.mintBurnImpactStatus
       : "healthy",
+    input.publicHealth.alertBrokerImpactStatus,
   );
   return maxStatus(baseAvailabilityStatus, publicAvailabilityFloor);
 }

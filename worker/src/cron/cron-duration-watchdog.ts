@@ -1,4 +1,4 @@
-import { sendAlert } from "../lib/alerts";
+import { deliverOperationalAlert } from "../lib/operational-alert";
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS, runWithOverloadRetry } from "../lib/cron-lease";
 import { getCache, setCache } from "../lib/db-cache";
@@ -314,6 +314,7 @@ export async function runCronDurationWatchdog(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
+  alertBrokerMode?: string,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
@@ -424,6 +425,20 @@ export async function runCronDurationWatchdog(
   const durationDiagnostics = await loadDurationDiagnostics(db, runtimeBreaching, sinceSec, signal);
 
   if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
+    if (alertBrokerMode != null) {
+      await deliverOperationalAlert({
+        db,
+        conditionKey: "watchdog:cron-runtime-or-slot-abandonment",
+        active: false,
+        severity: "critical",
+        title: "Cron runtime budget or slot abandonment breach",
+        message: "No cron runtime or slot-abandonment threshold is breached.",
+        recoveryTitle: "Cron runtime and slot abandonment recovered",
+        recoveryMessage: "All watched runtime and scheduled-slot abandonment thresholds are within budget.",
+        webhookUrl: alertWebhookUrl,
+        brokerMode: alertBrokerMode,
+      });
+    }
     return {
       itemCount: stats.length + slotStats.length,
       metadata: JSON.stringify({
@@ -441,7 +456,8 @@ export async function runCronDurationWatchdog(
 
   const marker = await getCache(db, ALERT_MARKER_KEY);
   throwIfAborted(signal);
-  const dueForAlert = nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
+  const dueForAlert = alertBrokerMode != null
+    || nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
   let alerted = false;
   if (dueForAlert) {
     const diagnosticsByJob = new Map(durationDiagnostics.map((entry) => [entry.job, entry]));
@@ -461,10 +477,7 @@ export async function runCronDurationWatchdog(
       `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
       `(${Math.round(entry.abandonmentRatio * 100)}%), ${entry.errorSlots} total error slot(s)`,
     );
-    alerted = await sendAlert(
-      alertWebhookUrl,
-      "Cron runtime budget or slot abandonment breach",
-      [
+    const message = [
         "Cron runtime pressure and scheduled-slot abandonment are reported separately.",
         ...(runtimeLines.length > 0
           ? ["Runtime budget pressure:", ...runtimeLines]
@@ -473,8 +486,25 @@ export async function runCronDurationWatchdog(
           ? ["Scheduled slot abandonment:", ...slotLines]
           : []),
         "Treat runtime budget pressure as capacity work; treat slot abandonment as worker infrastructure/platform interruption.",
-      ].join("\n"),
-    );
+      ].join("\n");
+    alerted = await deliverOperationalAlert({
+      db,
+      conditionKey: "watchdog:cron-runtime-or-slot-abandonment",
+      active: true,
+      severity: "critical",
+      title: "Cron runtime budget or slot abandonment breach",
+      message,
+      recoveryTitle: "Cron runtime and slot abandonment recovered",
+      recoveryMessage: "All watched runtime and scheduled-slot abandonment thresholds are within budget.",
+      fingerprint: { watchdog: "cron-runtime-or-slot-abandonment" },
+      metadata: {
+        runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
+        slotAbandonmentBreaching: slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
+      },
+      webhookUrl: alertWebhookUrl,
+      brokerMode: alertBrokerMode,
+      cooldownSec: ALERT_COOLDOWN_SEC,
+    });
     if (alerted) {
       await setCache(db, ALERT_MARKER_KEY, JSON.stringify({ lastAlertedAt: nowSec }));
     }

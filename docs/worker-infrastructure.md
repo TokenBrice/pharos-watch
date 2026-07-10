@@ -62,11 +62,11 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config now sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-dex-liquidity,sync-stablecoins,sync-yield-data`. This records best-effort scheduled-job attempts in `worker_job_attempts` for the long-job watchlist without changing cron execution, leases, or `cron_runs`; `write` is reserved for later promotion and currently behaves like `shadow`. Leave the allowlist in place until attempt, heartbeat, terminal-state, status, and prune behavior have soaked cleanly.
+Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-dex-liquidity,sync-stablecoins,sync-yield-data`. Shadow mode records best-effort attempts without changing the job result. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job, so promote only after two clean observed cycles; rollback is `shadow` or `off`.
 
 Repair task runner: unset `WORKER_REPAIR_RUNNER_MODE` defaults to `off`, but the checked-in Worker config now sets `shadow`. DDR repair-required events are dual-written into `worker_repair_tasks` while the existing DDR cache marker remains a status fallback. `shadow` records due/stale backlog telemetry without claiming rows. `enabled` runs a bounded DB-only daily 03:00 batch that claims at most five due repair tasks, closes DDR tasks already resolved by event links/deletes, and defers unresolved manual DDR repairs.
 
-Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, but the checked-in Worker config now sets `shadow`. The DB/cache-only `data-invariant-canary` job runs in the status self-check slot, records structural findings in `worker_canary_runs` and `/api/status.canaries`, and does not change producer publication behavior. Promote to `status` only after shadow rows are stable and any degraded/error checks are understood.
+Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, but the checked-in Worker config sets `shadow`. `off` skips and writes no run, `shadow` records observed findings while the cron remains OK, `status` returns degraded findings to status, and `alert` returns critical findings as an error for the durable broker. Promote one step at a time only after two clean cycles; rollback is the preceding mode.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -92,6 +92,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional comma-separated allowlist for exact-address price providers; unset auto-enables DexPaprika plus configured key-backed providers. Use `none` to disable, or include `dexscreener-address` only for explicit opt-in to that Cloudflare/WAF-protected public lane. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
 | `ALERT_WEBHOOK_URL` | `string` | optional | - | - | Webhook URL used for Discord/Slack-style error alerts. |
+| `ALERT_BROKER_MODE` | `string` | optional | - | - | Durable alert mode: `off` bypasses state, `shadow` records episodes only, `status` also affects health, and `alert` claims/retries webhook delivery. Checked-in default: `shadow`. |
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
 | `JUPITER_API_KEY` | `string` | optional | - | - | Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`. |
@@ -134,10 +135,10 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `MAINTENANCE_MODE` | `string` | optional | - | - | Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses. |
 | `REQUEST_SOURCE_ATTRIBUTION_DISABLED` | `string` | optional | - | optional | Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes. |
 | `API_KEY_REQUEST_ATTRIBUTION_DISABLED` | `string` | optional | - | - | Worker-only operational telemetry kill switch for per-key public API attribution writes. |
-| `WORKER_JOB_LEDGER_MODE` | `string` | optional | - | - | Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution; `write` is reserved for later promotion and currently behaves like `shadow`. |
+| `WORKER_JOB_LEDGER_MODE` | `string` | optional | - | - | Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes ledger persistence part of the job contract. |
 | `WORKER_JOB_LEDGER_ALLOWLIST` | `string` | optional | - | - | Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled. |
 | `WORKER_REPAIR_RUNNER_MODE` | `string` | optional | - | - | Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` records due/stale backlog telemetry without claiming rows; `enabled` lets the daily DB-only runner claim, close, or defer a small batch. |
-| `WORKER_CANARY_MODE` | `string` | optional | - | - | Worker data-invariant canary mode. Unset or `off` skips writes; `shadow`, `status`, and `alert` record structural canary telemetry without changing producer behavior. |
+| `WORKER_CANARY_MODE` | `string` | optional | - | - | Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors. |
 | `OPS_UI_ORIGIN` | `string` | reserved | optional | optional | Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks. |
 | `OPS_API_ORIGIN` | `string` | reserved | optional | - | Ops API origin override; reserved on the worker and active on the Pages admin proxy upstream hop. |
 | `CF_ACCESS_OPS_UI_AUD` | `string` | reserved | required | - | Cloudflare Access audience used by the Pages ops proxy to verify the inbound UI JWT. |
@@ -459,7 +460,7 @@ Cron expressions are source-owned in `worker/wrangler.toml`. The canonical sched
 
 `snapshot-supply` retry requires the stablecoins-cache capability, which is now true only when every active registry ID is present or covered by an owned unexpired waiver. `snapshot-supply` additionally requires positive supply for that exact active set before advancing its daily completion marker. Both `snapshot-supply` and `snapshot-chain-supply` write once per UTC date, keyed on the `snapshotDate` stored in a `cache` table marker (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`), so the quarter-hourly slot produces exactly one completed snapshot per UTC day after a healthy exact-set run. `sync-stablecoins` runs the optional serialized GeckoTerminal soft-source probe under a 90-second cap that is clipped further when earlier phases run long, preserving a 90-second tail before the 8-minute stablecoin cron timeout. `publish-report-card-cache` also requires the stablecoins-cache capability. It rejects missing, duplicate, defunct-active, or unexpected live IDs and validates that the active expected count equals scored plus NR. It then writes the full `report-cards:snapshot`, compact/yield-safety `report_card_cache`, and Telegram `alert:safety-source-cache` projections in one D1 batch under the same publication generation and methodology; the daily grade-history job cannot overwrite one projection independently. `compute-depeg-resolver` is DB-only after cache reads: it resolves canonical DDR incidents, evaluates forecast readiness, records healthy/unhealthy lock opportunities, seals one immutable `public_prediction` prediction or no-call per incident when the first healthy run observes readiness `>0.75` or when the first healthy run reaches the 72h backstop, finalizes first-publication manifests before projecting `cache["depeg-resolver:snapshot"]`, and rebuilds `cache["depeg-resolver-review:snapshot"]` from first-publication exposure, errata, and policy-universe coverage. Degraded readiness/backstop runs record `lock_deferred` state instead of freezing predictions/no-calls; incidents that recover or become terminal before a healthy lock are reported as pre-lock coverage outcomes; and publication failures surface as retry/failure coverage debt rather than public predictions. Repair-required DDR events are tracked through `cache["ddr:repair-debt:v1"]` and `/api/status` data-quality warnings instead of turning an otherwise published DDR run into a scheduler outage. Old `sticky-24h-v1` exposures remain reviewable with their original policy metadata. DDRR failures are reported in cron metadata without failing an already-written DDR snapshot unless the cron abort signal fires. `stability-index` and `compute-dews` run on the decoupled half-hourly DB-only trigger (Trigger 9). `sync-dex-liquidity` still refreshes every 30 minutes on its own lane, while `sync-stablecoin-charts` uses a separate half-hourly trigger with one scheduled hourly cadence bucket, and `sync-yield-data` still publishes on its own hourly post-DEX trigger.
 
-**Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
+Stablecoins freshness is observed only by `cron-staleness-watchdog`; the quarter-hour producer no longer emits a duplicate inline alert.
 
 ### Trigger 2: `9,24,39,54 * * * *` (status self-check - isolated offset)
 
@@ -676,12 +677,13 @@ Fetch-heavy provider phases should use `worker/src/lib/provider-execution.ts` fo
 
 Shared cron behavior is narrower than a single worker-wide tier system:
 
-- `runLeasedCron(...)` / `logCronRun(...)` record `ok`, `error`, and lease-skip outcomes per job in `cron_runs`
-- thrown job errors trigger `sendAlert()` and are re-thrown unless the scheduled slot catches them locally to keep sibling jobs running
-- retries, degraded returns, no-write fallbacks, and cooldowns are job-specific rather than enforced by one shared classification layer
-- fire-and-forget cleanup work may use `.catch()` when failure should not crash the main cron path
+- `runLeasedCron(...)` / `logCronRun(...)` record terminal outcomes per canonical schedule/job/path and persist Worker version plus invocation identity.
+- A weighted slot semaphore admits at most five live external fetches, including sidecars and budget-only work; heartbeats and ledger writes are serialized per job.
+- Thrown or explicit error outcomes are awaited and reported to the durable alert broker before rethrow. A later non-error run closes the same condition identity.
+- Degraded returns, no-write fallbacks, and producer-specific retries remain job-owned, while alert episode/delivery dedupe is broker-owned.
+- Sidecar publication returns a structured terminal outcome; failures cannot be swallowed behind a successful parent result.
 
-There is no shared 10-minute alert-dedup layer in the worker today. Any cooldown or dedupe behavior is implemented by individual jobs when needed.
+The broker persists one incident and one recovery per episode, claims webhook delivery with a lease, retries failed or missing-target deliveries on the five-minute Telegram lane, and exposes delivery failures through public/admin health. Legacy cache markers remain only as rollout-compatible observation state; scheduled webhook transport has one owner in `alert-broker.ts`.
 
 ## Telegram Alert Bot
 
@@ -734,12 +736,14 @@ async function logCronRun(
 - On normal completion: inserts row into `cron_runs` with `status = resolvedResult.status ?? "ok"`, `item_count`, and `metadata`; returned statuses such as `degraded`, `skipped_locked`, `skipped_neutral`, or `error` are preserved
 - Assigns each append-only run insert an `idempotency_key`; the partial unique index makes an ambiguous committed D1 overload retry a no-op instead of duplicate telemetry
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
-- On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
+- On error: inserts a terminal row, awaits the durable broker observation, and re-throws a typed aggregate through the slot fence
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - Returns the job's `CronResult` when the handler provides one
-- History pruning is handled by the daily `prune-cron-history` job on `0 3 * * *`, not by `logCronRun()` inline. That job deletes `cron_runs` rows older than 7 days, terminal `worker_job_attempts` / `worker_repair_tasks` rows older than 7 days, `cron_slot_executions` and `block_timestamp_cache` rows older than 14 days, `worker_canary_runs` rows older than 90 days, and `selector_snapshot_daily_quota` rows older than 2 days.
+- Persisted cron metadata is compacted globally below 64 KiB; rich in-process results are not copied wholesale into `cron_runs`.
+- `worker_producer_history` and `worker_producer_heads` distinguish invocation completion from productive output and publication for every schedule/job/path/kind, including shared paths and budget-only surfaces. Calendar work keeps its UTC-month identity.
+- History pruning is handled by the daily `prune-cron-history` job. It retains regular producer history for 30 days, budget-only history for 90 days, and calendar-keyed history for 550 days in addition to the existing cron/slot/attempt retention.
 
-**Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error, slot_started_at, idempotency_key)`
+**Schema:** `cron_runs` includes schedule/path/kind, invocation/version, productivity, publication count, calendar identity, and the existing timing/status/error fields. Durable history lives in `worker_producer_history`, `worker_producer_heads`, `surface_publication_generations`, and `budget_surface_history`.
 
 ### In-flight Cron Progress
 
@@ -885,27 +889,29 @@ Primary-oracle implementation notes:
 
 ## Alert System
 
-**File:** `worker/src/lib/alerts.ts`
+**Files:** `worker/src/lib/alert-broker.ts`, `worker/src/lib/operational-alert.ts`, and transport-only `worker/src/lib/alerts.ts`.
 
-```typescript
-export function normalizeWebhookUrl(url: string | undefined): string | null;
-export async function sendAlert(
-  webhookUrl: string | null | undefined,
-  title: string,
-  message: string,
-): Promise<boolean>;
-```
+Scheduled producers report stable condition keys, fingerprints, severity, active/recovered observations, and bounded metadata. `alert_broker_conditions` generation-fences incident state; `alert_broker_deliveries` owns one incident and one recovery delivery per episode. Delivery claims are leased, failures and missing webhook targets remain retryable/visible, and the five-minute lane drains due retries. Public and admin status use the same broker summary and classification floor.
 
-Auto-detects webhook format from URL:
+Modes are operationally distinct:
+
+| Mode | Persistence | Health impact | Webhook delivery |
+| --- | --- | --- | --- |
+| `off` | none | none | none |
+| `shadow` | condition and transition evidence | none | none |
+| `status` | condition and transition evidence | active/failing conditions degrade health | none |
+| `alert` | full broker state | active/failing conditions degrade health | claimed, awaited, and retried |
+
+`sendAlert()` is the broker's transport adapter and auto-detects webhook format from URL:
 
 | URL contains               | Format                                             |
 | -------------------------- | -------------------------------------------------- |
 | `discord.com/api/webhooks` | Discord embed (red, `[Pharos] {title}`, timestamp) |
 | Anything else              | Slack markdown (`*[Pharos] {title}*\n{message}`)   |
 
-`sendAlert()` returns `true` only when the webhook responds with `2xx`. Non-2xx responses and fetch errors are logged with status/context, and failures never propagate to caller control flow.
+`sendAlert()` returns `true` only when the webhook responds with `2xx`. The broker converts false/throwing transport outcomes into durable `failed` delivery rows; a missing URL becomes `missing_target` rather than silent success.
 
-`fetch-tbill-rate` uses the shared alert helper for repeated GBP SONIA retained benchmark fallback. The first retained run only writes streak metadata; the second consecutive daily retained run sends `GBP SONIA retained benchmark fallback` and records a cron event. It stores `lastAlertedAt` only when the webhook send succeeds, so failed or unconfigured webhook attempts do not start the 24-hour suppression window. A fresh GBP market observation resets the streak and records `gbp-retained-fallback-recovered`.
+Rollout: keep `shadow` until condition identities are clean, promote to `status`, provision `ALERT_WEBHOOK_URL`, inject one synthetic incident and recovery, then promote to `alert`. Roll back immediately with `ALERT_BROKER_MODE=off` or `shadow`; keep broker rows for forensic reconciliation.
 
 ---
 

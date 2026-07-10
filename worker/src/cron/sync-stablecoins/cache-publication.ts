@@ -2,7 +2,7 @@ import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry"
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
-import { sendAlert } from "../../lib/alerts";
+import { deliverOperationalAlert } from "../../lib/operational-alert";
 import {
   savePriceCache,
   setCacheIfNewer,
@@ -39,6 +39,7 @@ export interface ValidateAndCacheInput {
   syncStartSec: number;
   signal?: AbortSignal;
   alertWebhookUrl?: string | null;
+  alertBrokerMode?: string;
   /** "main" or "fallback" - controls log messages and alert context */
   validationContext: "main" | "fallback";
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
@@ -61,6 +62,7 @@ export async function validateAndWriteStablecoinsCache(
     syncStartSec,
     signal,
     alertWebhookUrl,
+    alertBrokerMode,
     validationContext,
     returnIfAborted,
   } = input;
@@ -100,11 +102,20 @@ export async function validateAndWriteStablecoinsCache(
       `[sync-stablecoins] Schema validation failed${validationContext === "fallback" ? " in CG fallback" : ""}; blocking stablecoins cache write:`,
       issueSummary,
     );
-    await sendAlert(
-      alertWebhookUrl ?? null,
-      "Stablecoins schema validation warning",
-      `context=${validationContext}; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
-    );
+    await deliverOperationalAlert({
+      db,
+      conditionKey: "stablecoins:schema-validation-blocked",
+      active: true,
+      severity: "critical",
+      title: "Stablecoins schema validation warning",
+      message: `context=${validationContext}; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
+      recoveryTitle: "Stablecoins schema validation recovered",
+      recoveryMessage: "The stablecoins publication payload passes its schema again.",
+      fingerprint: { condition: "stablecoins-schema-validation-blocked" },
+      metadata: { validationContext, stablecoinsCacheAgeSec },
+      webhookUrl: alertWebhookUrl ?? null,
+      brokerMode: alertBrokerMode,
+    });
     await writeInvalidStablecoinsDiagnostic(
       db,
       syncStartSec,
@@ -120,6 +131,21 @@ export async function validateAndWriteStablecoinsCache(
       syncStartSec,
       blockedResult: buildBlockedResult(stablecoinsCacheAgeSec),
     };
+  }
+
+  if (alertBrokerMode != null) {
+    await deliverOperationalAlert({
+      db,
+      conditionKey: "stablecoins:schema-validation-blocked",
+      active: false,
+      severity: "critical",
+      title: "Stablecoins schema validation warning",
+      message: "The stablecoins publication payload passes its schema.",
+      recoveryTitle: "Stablecoins schema validation recovered",
+      recoveryMessage: "The stablecoins publication payload passes its schema again.",
+      webhookUrl: alertWebhookUrl ?? null,
+      brokerMode: alertBrokerMode,
+    });
   }
 
   const cacheWriteAbort = returnIfAborted(signal, validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache");

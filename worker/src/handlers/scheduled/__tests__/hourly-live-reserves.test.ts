@@ -18,8 +18,12 @@ vi.mock("../../../lib/live-reserves-store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
 }));
-vi.mock("../../../lib/alerts", () => ({
-  sendAlert: vi.fn(async () => {}),
+vi.mock("../../../lib/alert-broker", () => ({
+  reportAlertCondition: vi.fn(async () => ({
+    state: "recovered",
+    transition: null,
+    deliveryState: null,
+  })),
 }));
 vi.mock("../../../lib/db-cache", () => ({
   setCache: vi.fn(async () => {}),
@@ -53,12 +57,16 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   finishScheduledCheckpoint: vi.fn(async () => {}),
   checkpointErrorMetadata: vi.fn(() => "error"),
 }));
+vi.mock("../preflight-skip", () => ({
+  logSkippedCronRun: vi.fn(async () => undefined),
+}));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
+import { reportAlertCondition } from "../../../lib/alert-broker";
 
 describe("runFourHourlyReserveSyncSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -183,5 +191,19 @@ describe("runFourHourlyReserveSyncSlot", () => {
       expect.stringContaining("[cron-failure:reserve-post-sync-watchdog]"),
       expect.any(String),
     );
+  });
+
+  it("records healthy conditions so prior reserve incidents can recover", async () => {
+    await runFourHourlyReserveSyncSlot(buildRuntime());
+
+    expect(reportAlertCondition).toHaveBeenCalledTimes(3);
+    expect(reportAlertCondition).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      conditionKey: "reserve:collateral-score-drift",
+      active: false,
+    }));
+    expect(reportAlertCondition).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      conditionKey: "reserve:live-reserve-sync-stale",
+      active: false,
+    }));
   });
 });

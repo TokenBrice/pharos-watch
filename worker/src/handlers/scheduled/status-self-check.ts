@@ -14,7 +14,12 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-slot-sweeper",
           errorMessage: "[cron] cron-slot-sweeper failed in isolated slot:",
-          run: (signal) => runCronSlotSweeper(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runCronSlotSweeper(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
         {
           job: "status-self-check",
@@ -26,6 +31,7 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               ctx: runtime.ctx,
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               alertWebhookUrl: runtime.alertWebhookUrl,
+              alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
             }),
         },
@@ -42,7 +48,12 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-staleness-watchdog",
           errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
-          run: (signal) => runCronStalenessWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runCronStalenessWatchdog(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
       ],
     },

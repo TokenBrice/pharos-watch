@@ -22,6 +22,14 @@ vi.mock("../../../lib/telegram-webhook-registration", () => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
+vi.mock("../../../lib/alert-broker", () => ({
+  dispatchPendingAlertBrokerDeliveries: vi.fn(async () => ({
+    due: 0,
+    delivered: 0,
+    failed: 0,
+    missingTarget: 0,
+  })),
+}));
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));

@@ -23,6 +23,7 @@ import {
 import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
+import { loadAlertBrokerSummary, type AlertBrokerSummary } from "./alert-broker";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -61,6 +62,17 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   },
 };
 
+const EMPTY_ALERT_BROKER_SUMMARY: AlertBrokerSummary = {
+  activeCount: 0,
+  pendingCount: 0,
+  criticalActiveCount: 0,
+  failedDeliveryCount: 0,
+  missingTargetCount: 0,
+  oldestActiveAt: null,
+  activeConditionKeys: [],
+  queryFailed: false,
+};
+
 export interface PublicHealthAssessment {
   dbHealthy: boolean;
   overallStatus: HealthResponse["status"];
@@ -83,6 +95,8 @@ export interface PublicHealthAssessment {
   openCircuitCount: number;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
+  alertBroker: AlertBrokerSummary;
+  alertBrokerImpactStatus: HealthResponse["status"];
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
@@ -327,6 +341,8 @@ export async function assessPublicHealth(
       openCircuitCount: 0,
       circuitImpactStatus: "healthy",
       circuitQueryError: null,
+      alertBroker: { ...EMPTY_ALERT_BROKER_SUMMARY },
+      alertBrokerImpactStatus: "stale",
     };
   }
 
@@ -335,6 +351,7 @@ export async function assessPublicHealth(
     blacklistResult,
     mintBurnResult,
     circuitResult,
+    alertBroker,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
@@ -370,6 +387,7 @@ export async function assessPublicHealth(
         });
         return { circuits: {}, error: publicHealthErrorMessage("circuit") };
       }),
+    loadAlertBrokerSummary(db),
   ]);
 
   const cachesWithProvider: Record<string, CacheStatus> = {};
@@ -413,6 +431,22 @@ export async function assessPublicHealth(
     warnings.push("circuit-query-failed");
   }
 
+  const alertBrokerImpactStatus = alertBroker.queryFailed || alertBroker.criticalActiveCount > 0
+    ? "degraded"
+    : alertBroker.activeCount > 0 || alertBroker.failedDeliveryCount > 0 || alertBroker.missingTargetCount > 0
+      ? "degraded"
+      : "healthy";
+  if (alertBroker.queryFailed) warnings.push("alert-broker-query-failed");
+  if (alertBroker.activeConditionKeys.length > 0) {
+    warnings.push(`active-alert-conditions:${alertBroker.activeConditionKeys.join(",")}`);
+  }
+  if (alertBroker.failedDeliveryCount > 0) {
+    warnings.push(`alert-delivery-failed:${alertBroker.failedDeliveryCount}`);
+  }
+  if (alertBroker.missingTargetCount > 0) {
+    warnings.push(`alert-delivery-missing-target:${alertBroker.missingTargetCount}`);
+  }
+
   const blacklistImpactStatus = blacklistResult.error
     ? "degraded"
     : blacklistResult.metrics
@@ -427,6 +461,7 @@ export async function assessPublicHealth(
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
     blacklistImpactStatus,
+    alertBrokerImpactStatus,
   );
 
   return {
@@ -451,5 +486,7 @@ export async function assessPublicHealth(
     openCircuitCount,
     circuitImpactStatus,
     circuitQueryError: circuitResult.error,
+    alertBroker,
+    alertBrokerImpactStatus,
   };
 }

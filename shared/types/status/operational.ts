@@ -1,5 +1,35 @@
 import type { StatusHealthOrUnknown } from "./core";
-import type { CircuitRecord } from "./public-health";
+
+export interface AlertBrokerHealthSummary {
+  activeCount: number;
+  pendingCount: number;
+  criticalActiveCount: number;
+  failedDeliveryCount: number;
+  missingTargetCount: number;
+  oldestActiveAt: number | null;
+  activeConditionKeys: string[];
+  queryFailed: boolean;
+}
+
+export interface ProducerHeadStatus {
+  scheduleKey: string;
+  job: string;
+  producerPath: string;
+  producerKind: string;
+  observed: boolean;
+  lastInvocationId: string | null;
+  lastWorkerVersion: string | null;
+  lastInvokedAt: number | null;
+  lastCompletedAt: number | null;
+  lastOutcome: string | null;
+  lastError: string | null;
+  lastProductiveInvocationId: string | null;
+  lastProductiveAt: number | null;
+  lastProductiveItemCount: number | null;
+  lastPublicationAt: number | null;
+  invocationCount: number;
+  productiveCount: number;
+}
 
 export type PublicationSurfaceId =
   "dex-liquidity" | "yield-rankings" | "stablecoins" | "dews" | "psi" | "report-card-cache";
@@ -94,7 +124,7 @@ export interface DependencyHealth {
 export interface ProviderCircuitHealthEntry {
   providerId: string;
   family: string;
-  state: CircuitRecord["state"];
+  state: "closed" | "half-open" | "open";
   consecutiveFailures: number;
   openedAt: number | null;
   openAgeSec: number | null;

@@ -85,6 +85,17 @@ function makePublicHealth(
     openCircuitCount: 0,
     circuitImpactStatus: "healthy",
     circuitQueryError: null,
+    alertBroker: {
+      activeCount: 0,
+      pendingCount: 0,
+      criticalActiveCount: 0,
+      failedDeliveryCount: 0,
+      missingTargetCount: 0,
+      oldestActiveAt: null,
+      activeConditionKeys: [],
+      queryFailed: false,
+    },
+    alertBrokerImpactStatus: "healthy",
     ...overrides,
   };
 }
@@ -272,6 +283,25 @@ describe("status evaluation policy", () => {
     });
 
     expect(availability).toBe("healthy");
+  });
+
+  it("uses the same durable alert floor for admin availability", () => {
+    const availability = deriveAvailabilityStatus({
+      publicHealth: makePublicHealth({
+        alertBrokerImpactStatus: "degraded",
+        alertBroker: {
+          ...makePublicHealth().alertBroker,
+          activeCount: 1,
+          criticalActiveCount: 1,
+          activeConditionKeys: ["cron:sync-live-reserves"],
+        },
+      }),
+      availabilityImpactingCronErrors: 0,
+      availabilityImpactingUnhealthyCrons: 0,
+      availabilityImpactingConsecutiveCronErrors: 0,
+    });
+
+    expect(availability).toBe("degraded");
   });
 });
 

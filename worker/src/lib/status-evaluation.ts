@@ -49,6 +49,7 @@ export interface RawStatusComputation {
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"]; reserveComposition: StatusResponse["reserveComposition"];
   freshnessDiagnostics: CacheFreshnessDiagnostic[];
+  alertBroker: StatusResponse["alertBroker"];
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
@@ -86,6 +87,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
     summary: emptyStatusSummary(),
     reserveComposition: emptyReserveComposition(),
     freshnessDiagnostics: [],
+    alertBroker: undefined,
   };
 }
 
@@ -249,6 +251,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     datasetFreshness,
     reserveComposition,
     freshnessDiagnostics: publicHealth.cacheDiagnostics,
+    alertBroker: publicHealth.alertBroker,
     summary: buildStatusSummary({
       cronHealth,
       budgetOnlySurfaces,

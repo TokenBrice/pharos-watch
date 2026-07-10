@@ -3,6 +3,7 @@ import type { CacheStatus, StatusHealthValue } from "./core";
 import { StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
 import { SAFETY_ALERT_SOURCE_STATE_VALUES, type SafetyAlertFieldsNullable } from "./telegram";
+import type { AlertBrokerHealthSummary } from "./operational";
 
 const SafetyAlertFieldsNullableSchemaShape = {
   safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
@@ -100,6 +101,7 @@ export interface HealthResponse {
     };
   };
   circuits: Record<string, CircuitRecord>;
+  alertBroker?: AlertBrokerHealthSummary;
   telegramSummary?: TelegramHealthSummary | null;
 }
 
@@ -144,6 +146,16 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
+  alertBroker: z.object({
+    activeCount: z.number(),
+    pendingCount: z.number(),
+    criticalActiveCount: z.number(),
+    failedDeliveryCount: z.number(),
+    missingTargetCount: z.number(),
+    oldestActiveAt: z.number().nullable(),
+    activeConditionKeys: z.array(z.string()),
+    queryFailed: z.boolean(),
+  }).optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });
 

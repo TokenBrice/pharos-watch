@@ -59,6 +59,17 @@ function stubPublicHealth(overallStatus: "healthy" | "degraded" | "stale"): Publ
     openCircuitCount: 0,
     circuitImpactStatus: "healthy",
     circuitQueryError: null,
+    alertBroker: {
+      activeCount: 0,
+      pendingCount: 0,
+      criticalActiveCount: 0,
+      failedDeliveryCount: 0,
+      missingTargetCount: 0,
+      oldestActiveAt: null,
+      activeConditionKeys: [],
+      queryFailed: false,
+    },
+    alertBrokerImpactStatus: "healthy",
   };
 }
 

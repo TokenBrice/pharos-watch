@@ -2,7 +2,7 @@ import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial:
- *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (0) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
+ *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog/broker retry (1) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -14,6 +14,7 @@ import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
+import { dispatchPendingAlertBrokerDeliveries } from "../../lib/alert-broker";
 import {
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,
@@ -122,11 +123,24 @@ function buildTelegramSlotGroups(
         {
           job: "telegram-degradation-watchdog",
           errorMessage: "[cron] telegram-degradation-watchdog failed:",
-          run: (signal) =>
-            runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
+          run: async (signal) => {
+            const watchdog = await runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
               pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
               safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
-            }),
+              alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
+            });
+            const delivery = await dispatchPendingAlertBrokerDeliveries(runtime.db, {
+              webhookUrl: runtime.alertWebhookUrl,
+              limit: 25,
+            });
+            const metadata = watchdog.metadata
+              ? JSON.parse(watchdog.metadata) as Record<string, unknown>
+              : {};
+            return {
+              ...watchdog,
+              metadata: JSON.stringify({ ...metadata, alertBrokerDelivery: delivery }),
+            };
+          },
         },
         {
           job: "telegram-disambiguation-cleanup",

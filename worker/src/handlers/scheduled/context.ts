@@ -8,7 +8,11 @@ import {
   type CronLeaseOptions,
 } from "../../lib/cron-lease";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
+import { normalizeWebhookUrl } from "../../lib/alerts";
+import {
+  normalizeAlertBrokerMode,
+  reportAlertCondition,
+} from "../../lib/alert-broker";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
@@ -187,6 +191,7 @@ export function createScheduledRuntimeContext(
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   const alertWebhookUrl = normalizeWebhookUrl(env.ALERT_WEBHOOK_URL);
+  const alertBrokerMode = normalizeAlertBrokerMode(env.ALERT_BROKER_MODE);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
   const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
@@ -240,6 +245,36 @@ export function createScheduledRuntimeContext(
         throw new Error(`${scheduled.scheduleKey}/${job} is budget-only and cannot use runLeasedCron`);
       }
       const timeoutBudget = resolveCronTimeoutBudget(job, { slotBudgetStartedAtMs });
+      const cronFailureConditionKey = `cron:${scheduled.scheduleKey}:${descriptor.producerPath}:${job}:terminal-error`;
+      const reportCronFailureCondition = async (
+        active: boolean,
+        title: string,
+        message: string,
+      ): Promise<void> => {
+        await reportAlertCondition(db, {
+          conditionKey: cronFailureConditionKey,
+          active,
+          fingerprint: {
+            scheduleKey: scheduled.scheduleKey,
+            producerPath: descriptor.producerPath,
+            job,
+          },
+          severity: "critical",
+          title,
+          message,
+          recoveryTitle: `Cron recovered: ${job}`,
+          recoveryMessage: `${scheduled.scheduleKey}/${descriptor.producerPath}/${job} completed without an error status.`,
+          metadata: {
+            scheduleKey: scheduled.scheduleKey,
+            producerPath: descriptor.producerPath,
+            job,
+            invocationId,
+            workerVersion,
+          },
+          mode: alertBrokerMode,
+          webhookUrl: alertWebhookUrl,
+        });
+      };
       const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
       const ledgerEnabled = shouldRecordWorkerJobAttempt({
         mode: workerJobLedgerMode,
@@ -394,7 +429,7 @@ export function createScheduledRuntimeContext(
           });
 
           return { ...result, metadata };
-        }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
+        }, (title, message) => reportCronFailureCondition(true, title, message), {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
           abortSignal: combinedSlotSignal,
@@ -402,6 +437,22 @@ export function createScheduledRuntimeContext(
             ...getProducerIdentity(job),
           },
         });
+        if (result?.status !== "error") {
+          try {
+            await reportCronFailureCondition(false, `Cron failure: ${job}`, "");
+          } catch (error) {
+            logWorkerEvent({
+              scope: "lib",
+              level: alertBrokerMode === "shadow" ? "warn" : "error",
+              event: "alert_broker_recovery_observation_failed",
+              job,
+              source: cronFailureConditionKey,
+              message: "Failed to persist cron recovery observation",
+              error,
+            });
+            if (alertBrokerMode === "status" || alertBrokerMode === "alert") throw error;
+          }
+        }
         if (ledgerIdentity) {
           try {
             await finishWorkerJobAttempt(db, {

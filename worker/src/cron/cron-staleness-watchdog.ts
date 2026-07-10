@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/api-freshness";
 import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
-import { sendAlert } from "../lib/alerts";
+import { deliverOperationalAlert } from "../lib/operational-alert";
 import { readAlertMarker } from "../lib/alert-marker";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
@@ -331,6 +331,7 @@ export async function runCronStalenessWatchdog(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
+  alertBrokerMode?: string,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const status = await buildCacheStatuses(db, nowSec);
@@ -341,7 +342,7 @@ export async function runCronStalenessWatchdog(
   const dependencyRecoveryChecks = buildDependencyRecoveryChecks(watchedObservations);
   const markers = await loadAlertMarkers(db, watchedObservations);
   const staleCacheKeys = new Set(stale.map((observation) => observation.cacheKey));
-  const dueForAlert = stale.filter((observation) => {
+  const dueForAlert = alertBrokerMode != null ? stale : stale.filter((observation) => {
     const marker = markers.get(observation.cacheKey);
     return alertWebhookUrl && nowSec - (marker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC;
   });
@@ -355,21 +356,58 @@ export async function runCronStalenessWatchdog(
 
   const alertedCacheKeys = new Set<string>();
   if (dueForAlert.length > 0) {
-    const delivered = await sendAlert(alertWebhookUrl, "Cron freshness stale", buildAlertMessage(dueForAlert, nowSec));
+    const delivered = await deliverOperationalAlert({
+      db,
+      conditionKey: "watchdog:cron-freshness-stale",
+      active: true,
+      severity: "critical",
+      title: "Cron freshness stale",
+      message: buildAlertMessage(dueForAlert, nowSec),
+      recoveryTitle: "Cron freshness recovered",
+      recoveryMessage: "All watched cron freshness lanes are within their availability budgets.",
+      fingerprint: { watchdog: "cron-freshness-stale" },
+      metadata: { staleCacheKeys: stale.map((entry) => entry.cacheKey) },
+      webhookUrl: alertWebhookUrl,
+      brokerMode: alertBrokerMode,
+      cooldownSec: ALERT_COOLDOWN_SEC,
+    });
     if (delivered) {
       for (const observation of dueForAlert) {
         alertedCacheKeys.add(observation.cacheKey);
       }
     }
+  } else if (alertBrokerMode != null) {
+    await deliverOperationalAlert({
+      db,
+      conditionKey: "watchdog:cron-freshness-stale",
+      active: false,
+      severity: "critical",
+      title: "Cron freshness stale",
+      message: "All watched cron freshness lanes are current.",
+      recoveryTitle: "Cron freshness recovered",
+      recoveryMessage: "All watched cron freshness lanes are within their availability budgets.",
+      webhookUrl: alertWebhookUrl,
+      brokerMode: alertBrokerMode,
+    });
   }
 
   const recoveredAlertedCacheKeys = new Set<string>();
   const recoveryAlertFailedCacheKeys = new Set<string>();
   if (recovered.length > 0) {
     const alertableRecovered = recovered.filter((observation) => (markers.get(observation.cacheKey)?.lastAlertedAt ?? 0) > 0);
-    let recoveredAlertDelivered = alertableRecovered.length === 0;
-    if (alertableRecovered.length > 0) {
-      recoveredAlertDelivered = await sendAlert(alertWebhookUrl, "Cron freshness recovered", buildRecoveryMessage(alertableRecovered, nowSec));
+    let recoveredAlertDelivered = alertBrokerMode != null || alertableRecovered.length === 0;
+    if (alertableRecovered.length > 0 && alertBrokerMode == null) {
+      recoveredAlertDelivered = await deliverOperationalAlert({
+        db,
+        conditionKey: "watchdog:cron-freshness-stale",
+        active: false,
+        severity: "critical",
+        title: "Cron freshness stale",
+        message: buildRecoveryMessage(alertableRecovered, nowSec),
+        recoveryTitle: "Cron freshness recovered",
+        recoveryMessage: buildRecoveryMessage(alertableRecovered, nowSec),
+        webhookUrl: alertWebhookUrl,
+      });
       for (const observation of alertableRecovered) {
         if (recoveredAlertDelivered) {
           recoveredAlertedCacheKeys.add(observation.cacheKey);
@@ -396,16 +434,26 @@ export async function runCronStalenessWatchdog(
 
   const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
   let detailFailureAlerted = false;
-  if (detailWriteFailures.length > 0 && alertWebhookUrl) {
+  if (detailWriteFailures.length > 0 && (alertWebhookUrl || alertBrokerMode != null)) {
     const detailMarkerKey = alertCacheKey("detail-write-failures");
     const detailMarkerRow = await getCache(db, detailMarkerKey);
     const detailMarker = readMarker(detailMarkerRow?.value);
-    if (nowSec - (detailMarker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC) {
-      detailFailureAlerted = await sendAlert(
-        alertWebhookUrl,
-        "Detail cache writes failing",
-        buildDetailWriteFailureMessage(detailWriteFailures, nowSec),
-      );
+    if (alertBrokerMode != null || nowSec - (detailMarker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC) {
+      detailFailureAlerted = await deliverOperationalAlert({
+        db,
+        conditionKey: "watchdog:detail-cache-write-failures",
+        active: true,
+        severity: "warning",
+        title: "Detail cache writes failing",
+        message: buildDetailWriteFailureMessage(detailWriteFailures, nowSec),
+        recoveryTitle: "Detail cache writes recovered",
+        recoveryMessage: "No recent detail-cache write failure markers remain.",
+        fingerprint: { watchdog: "detail-cache-write-failures" },
+        metadata: { failureCount: detailWriteFailures.length },
+        webhookUrl: alertWebhookUrl,
+        brokerMode: alertBrokerMode,
+        cooldownSec: ALERT_COOLDOWN_SEC,
+      });
       await setCache(
         db,
         detailMarkerKey,
@@ -416,6 +464,19 @@ export async function runCronStalenessWatchdog(
         } satisfies AlertMarker),
       );
     }
+  } else if (alertBrokerMode != null) {
+    await deliverOperationalAlert({
+      db,
+      conditionKey: "watchdog:detail-cache-write-failures",
+      active: false,
+      severity: "warning",
+      title: "Detail cache writes failing",
+      message: "No recent detail-cache write failure markers remain.",
+      recoveryTitle: "Detail cache writes recovered",
+      recoveryMessage: "No recent detail-cache write failure markers remain.",
+      webhookUrl: alertWebhookUrl,
+      brokerMode: alertBrokerMode,
+    });
   }
 
   return {

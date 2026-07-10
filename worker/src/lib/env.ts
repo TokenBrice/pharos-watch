@@ -73,6 +73,7 @@ export interface Env {
   WORKER_JOB_LEDGER_ALLOWLIST?: string;
   WORKER_REPAIR_RUNNER_MODE?: string;
   WORKER_CANARY_MODE?: string;
+  ALERT_BROKER_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

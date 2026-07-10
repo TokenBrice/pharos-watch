@@ -22,10 +22,12 @@ import {
 import type { BudgetOnlySurfaceStatus, CronStatus } from "./cron";
 import type {
   CanaryStatus,
+  AlertBrokerHealthSummary,
   D1UsageSummary,
   DependencyHealth,
   ProviderCircuitHealth,
   PublicationHealth,
+  ProducerHeadStatus,
 } from "./operational";
 import { CacheStatusSchema, StatusHealthOrUnknownSchema } from "./schema-primitives";
 import type { TelegramBotStats } from "./telegram";
@@ -57,7 +59,8 @@ export type StatusSectionKey =
   | "scheduledSlots"
   | "mintBurnReconciliation"
   | "reserveDrift"
-  | "classificationWarnings";
+  | "classificationWarnings"
+  | "producerHistory";
 
 export interface StatusSectionError {
   code: string;
@@ -136,6 +139,8 @@ export interface StatusResponse {
   dependencyHealth?: DependencyHealth | null;
   providerCircuitHealth?: ProviderCircuitHealth | null;
   canaries?: CanaryStatus | null;
+  alertBroker?: AlertBrokerHealthSummary;
+  producerHeads?: ProducerHeadStatus[];
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted
@@ -317,6 +322,8 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z
     dependencyHealth: statusObjectSchema<DependencyHealth>().nullable().optional(),
     providerCircuitHealth: statusObjectSchema<ProviderCircuitHealth>().nullable().optional(),
     canaries: statusObjectSchema<CanaryStatus>().nullable().optional(),
+    alertBroker: statusObjectSchema<AlertBrokerHealthSummary>().optional(),
+    producerHeads: z.array(statusObjectSchema<ProducerHeadStatus>()).optional(),
     priceSourceHealth: statusObjectSchema<PriceSourceHealth>().nullable(),
     priceProviderDiagnostics: z.array(z.record(z.string(), z.unknown())).nullable(),
     gtProbe: StatusJsonObjectSchema.nullable(),

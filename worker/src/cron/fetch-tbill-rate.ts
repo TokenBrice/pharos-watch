@@ -1,5 +1,6 @@
 import { getCache, setCache } from "../lib/db-cache";
-import { normalizeWebhookUrl, sendAlert } from "../lib/alerts";
+import { normalizeWebhookUrl } from "../lib/alerts";
+import { deliverOperationalAlert } from "../lib/operational-alert";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
@@ -213,10 +214,11 @@ async function updateGbpRetainedFallbackMonitor(params: {
   db: D1Database;
   benchmark: ParsedYieldBenchmarkMeta | null;
   alertWebhookUrl: string | null | undefined;
+  alertBrokerMode?: string;
   fetchedAt: number;
   signal?: AbortSignal;
 }): Promise<Record<string, unknown>> {
-  const { db, benchmark, alertWebhookUrl, fetchedAt, signal } = params;
+  const { db, benchmark, alertWebhookUrl, alertBrokerMode, fetchedAt, signal } = params;
   const webhookUrl = normalizeWebhookUrl(alertWebhookUrl ?? undefined);
   try {
     const cached = await getCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
@@ -242,23 +244,33 @@ async function updateGbpRetainedFallbackMonitor(params: {
 
       const thresholdReached = consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_ALERT_THRESHOLD;
       const suppressedByCooldown =
+        alertBrokerMode == null
+        &&
         thresholdReached
         && streak.lastAlertedAt != null
         && fetchedAt - streak.lastAlertedAt < GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC;
       let webhookAlerted = false;
       if (thresholdReached && !suppressedByCooldown) {
-        webhookAlerted = webhookUrl
-          ? await sendAlert(
-              webhookUrl,
-              "GBP SONIA retained benchmark fallback",
-              [
+        webhookAlerted = await deliverOperationalAlert({
+          db,
+          conditionKey: "benchmark:gbp-sonia-retained-fallback",
+          active: true,
+          severity: "warning",
+          title: "GBP SONIA retained benchmark fallback",
+          message: [
                 `GBP SONIA benchmark retained the previous market rate for ${consecutiveRetainedRuns} consecutive fetch-tbill-rate runs.`,
                 `fallbackMode=${benchmark.fallbackMode}; retainedSource=${benchmark.source ?? "unknown"}.`,
                 `lastMarketSource=${benchmark.lastMarketSource ?? "unknown"}; lastMarketRecordDate=${benchmark.lastMarketRecordDate ?? "unknown"}.`,
                 "Runbook: docs/runbooks/yield-benchmark-fallback-stale.md",
-              ].join("\n"),
-            )
-          : false;
+          ].join("\n"),
+          recoveryTitle: "GBP SONIA benchmark recovered",
+          recoveryMessage: "GBP SONIA has returned to a fresh market publication.",
+          fingerprint: { benchmark: "GBP", condition: "retained-fallback" },
+          metadata: { consecutiveRetainedRuns, fallbackMode: benchmark.fallbackMode },
+          webhookUrl,
+          brokerMode: alertBrokerMode,
+          cooldownSec: GBP_RETAINED_FALLBACK_ALERT_COOLDOWN_SEC,
+        });
         await logCronEvent(db, {
           job: "fetch-tbill-rate",
           eventType: "gbp-retained-fallback-repeated",
@@ -296,6 +308,20 @@ async function updateGbpRetainedFallbackMonitor(params: {
     }
 
     if (!isFreshGbpBenchmark(benchmark)) {
+      if (alertBrokerMode != null) {
+        await deliverOperationalAlert({
+          db,
+          conditionKey: "benchmark:gbp-sonia-retained-fallback",
+          active: false,
+          severity: "warning",
+          title: "GBP SONIA retained benchmark fallback",
+          message: "GBP is not on the repeated retained-fallback path.",
+          recoveryTitle: "GBP SONIA benchmark recovered",
+          recoveryMessage: "GBP SONIA is no longer on the repeated retained-fallback path.",
+          webhookUrl,
+          brokerMode: alertBrokerMode,
+        });
+      }
       const unavailable: GbpRetainedFallbackStreak = {
         ...previous,
         consecutiveFreshRuns: 0,
@@ -316,6 +342,20 @@ async function updateGbpRetainedFallbackMonitor(params: {
     }
 
     const consecutiveFreshRuns = previous.consecutiveFreshRuns + 1;
+    if (alertBrokerMode != null) {
+      await deliverOperationalAlert({
+        db,
+        conditionKey: "benchmark:gbp-sonia-retained-fallback",
+        active: false,
+        severity: "warning",
+        title: "GBP SONIA retained benchmark fallback",
+        message: "GBP SONIA is fresh.",
+        recoveryTitle: "GBP SONIA benchmark recovered",
+        recoveryMessage: "GBP SONIA has returned to a fresh market publication.",
+        webhookUrl,
+        brokerMode: alertBrokerMode,
+      });
+    }
     const recovered: GbpRetainedFallbackStreak = {
       consecutiveRetainedRuns: 0,
       consecutiveFreshRuns,
@@ -801,7 +841,7 @@ function buildGbpResponseDiagnosticMetadata(
 export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
-  env?: Pick<Env, "BANXICO_TOKEN" | "ALERT_WEBHOOK_URL">,
+  env?: Pick<Env, "BANXICO_TOKEN" | "ALERT_WEBHOOK_URL" | "ALERT_BROKER_MODE">,
 ): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
   throwIfAborted(signal);
@@ -817,6 +857,7 @@ export async function fetchTbillRate(
       db,
       benchmark: benchmarks.GBP,
       alertWebhookUrl: env?.ALERT_WEBHOOK_URL,
+      alertBrokerMode: env?.ALERT_BROKER_MODE,
       fetchedAt,
       signal,
     });
@@ -866,6 +907,7 @@ export async function fetchTbillRate(
     db,
     benchmark: benchmarks.GBP,
     alertWebhookUrl: env?.ALERT_WEBHOOK_URL,
+    alertBrokerMode: env?.ALERT_BROKER_MODE,
     fetchedAt,
     signal,
   });

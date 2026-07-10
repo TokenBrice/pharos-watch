@@ -20,6 +20,9 @@ import { buildDependencyHealth } from "../lib/dependency-health";
 import type { StatusResponse, StatusSectionError } from "@shared/types/status";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import { runAdminRoute } from "../lib/route-wrappers";
+import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registry";
+import type { ProducerHeadStatus } from "@shared/types/status";
+import { loadProducerHeads } from "../lib/producer-history";
 
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
@@ -27,6 +30,52 @@ interface ResolvedRawStatus {
   raw: Awaited<ReturnType<typeof computeRawStatus>>;
   snapshotFallbackReason: StatusSnapshotFallbackReason | null;
   snapshotError?: string;
+}
+
+async function loadProducerHeadStatuses(
+  db: D1Database,
+): Promise<{ heads: ProducerHeadStatus[]; error: StatusSectionError | null }> {
+  try {
+    const persisted = await loadProducerHeads(db);
+    const byIdentity = new Map(persisted.map((head) => [
+      `${head.scheduleKey}\u0000${head.job}\u0000${head.producerPath}\u0000${head.producerKind}`,
+      head,
+    ]));
+    return {
+      heads: SCHEDULED_TASK_DESCRIPTORS.map((descriptor) => {
+        const key = `${descriptor.scheduleKey}\u0000${descriptor.job}\u0000${descriptor.producerPath}\u0000${descriptor.producerKind}`;
+        const head = byIdentity.get(key);
+        return {
+          scheduleKey: descriptor.scheduleKey,
+          job: descriptor.job,
+          producerPath: descriptor.producerPath,
+          producerKind: descriptor.producerKind,
+          observed: head != null,
+          lastInvocationId: head?.lastInvocationId ?? null,
+          lastWorkerVersion: head?.lastWorkerVersion ?? null,
+          lastInvokedAt: head?.lastInvokedAt ?? null,
+          lastCompletedAt: head?.lastCompletedAt ?? null,
+          lastOutcome: head?.lastOutcome ?? null,
+          lastError: head?.lastError ?? null,
+          lastProductiveInvocationId: head?.lastProductiveInvocationId ?? null,
+          lastProductiveAt: head?.lastProductiveAt ?? null,
+          lastProductiveItemCount: head?.lastProductiveItemCount ?? null,
+          lastPublicationAt: head?.lastPublicationAt ?? null,
+          invocationCount: head?.invocationCount ?? 0,
+          productiveCount: head?.productiveCount ?? 0,
+        };
+      }),
+      error: null,
+    };
+  } catch {
+    return {
+      heads: [],
+      error: {
+        code: "producer_history_read_failed",
+        message: "Producer invocation and productivity history unavailable.",
+      },
+    };
+  }
 }
 
 function stripCanarySummaryFields(
@@ -150,6 +199,7 @@ export function handleStatus(
         discrepancyStreak,
         timeline,
         supplements,
+        producerHistory,
       ] = await Promise.all([
         getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
         getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
@@ -161,6 +211,7 @@ export function handleStatus(
           coingeckoApiKey,
           cloudflareD1StatusBindings,
         ),
+        loadProducerHeadStatuses(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
@@ -217,6 +268,7 @@ export function handleStatus(
           ...supplements.sectionErrors,
           ...(snapshotErrorSection ? { statusSnapshot: snapshotErrorSection } : {}),
           ...(dependencyHealthError ? { dependencyHealth: dependencyHealthError } : {}),
+          ...(producerHistory.error ? { producerHistory: producerHistory.error } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
         summary: {
@@ -230,6 +282,8 @@ export function handleStatus(
         dependencyHealth,
         providerCircuitHealth: supplements.providerCircuitHealth,
         canaries: supplements.canaries,
+        alertBroker: raw.alertBroker,
+        producerHeads: producerHistory.heads,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,
