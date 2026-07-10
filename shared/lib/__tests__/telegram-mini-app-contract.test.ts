@@ -4,6 +4,7 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TelegramMiniAppCatalogSchema,
+  TelegramMiniAppMutableStateSchema,
   TelegramMiniAppMutationRequestSchema,
   TelegramMiniAppOperationSchema,
   TelegramMiniAppResponseSchema,
@@ -105,6 +106,22 @@ describe("Telegram Mini App shared contract", () => {
     expect(TelegramMiniAppCatalogSchema.parse(TELEGRAM_MINI_APP_CATALOG).searchableCoins.length).toBeGreaterThan(300);
     expect(TELEGRAM_MINI_APP_CATALOG_VERSION).toMatch(/^catalog-v1-[0-9a-f]{8}$/);
     expect(JSON.stringify(TELEGRAM_MINI_APP_CATALOG).length).toBeGreaterThan(40_000);
+  });
+
+  it("rejects unknown preset ids at catalog and mutable-state boundaries", () => {
+    expect(TelegramMiniAppCatalogSchema.safeParse({
+      ...TELEGRAM_MINI_APP_CATALOG,
+      recommendedPresets: [{ id: "unknown-preset", label: "Unknown" }],
+    }).success).toBe(false);
+    expect(TelegramMiniAppMutableStateSchema.safeParse({
+      ...mutableState,
+      presets: [{
+        id: "unknown-preset",
+        label: "Unknown",
+        alertTypes: { dews: true, depeg: false, safety: false },
+        depegStepBps: null,
+      }],
+    }).success).toBe(false);
   });
 
   it("distinguishes rolling-deploy compatibility without accepting partial capabilities", () => {

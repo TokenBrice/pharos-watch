@@ -85,6 +85,7 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
   return (
     <article
       id={`coin-row-${coin.stablecoinId}`}
+      tabIndex={-1}
       className={cn(
         "rounded-2xl border bg-card/90 p-4 transition-colors",
         highlighted

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   createTelegramMiniAppSnapshot,
+  telegramMiniAppStateRevision,
   type TelegramMiniAppMutableState,
 } from "@shared/lib/telegram-mini-app-contract";
 import { isMiniAppErrorCode, miniAppErrorMessage, MINI_APP_ERROR_CODES, MiniAppRequestError } from "./error-messages";
@@ -512,7 +513,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("reverts optimistic global toggles after a generic mutation failure without reloading", async () => {
+  it("keeps confirmed global toggles unchanged after a generic mutation failure", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => baseState })
@@ -530,6 +531,71 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("Something went wrong. Try again or reopen Telegram.")).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("keeps server-confirmed values visible while a mutation response is pending", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const nextState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true },
+      },
+    };
+    let resolveMutation: ((response: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void) | undefined;
+    const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
+      resolveMutation = resolve;
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockReturnValueOnce(mutationResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
+    fireEvent.click(safetyToggle);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(safetyToggle.getAttribute("aria-pressed")).toBe("false");
+    expect(safetyToggle.getAttribute("aria-busy")).toBe("true");
+    expect(safetyToggle).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /Launch/i })).toHaveProperty("disabled", true);
+
+    resolveMutation?.({ ok: true, json: async () => nextState });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("true"));
+    expect(screen.getByRole("button", { name: /Safety/i }).hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("keeps last-known state visible and read-only after refresh failure until retry succeeds", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.spyOn(Date, "now").mockReturnValue(1_725_000_000_000);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "offline", code: "internal" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Refresh session" }));
+
+    const staleHeading = await screen.findByRole("heading", { name: "Showing last-known settings" });
+    const stalePanel = staleHeading.closest("section");
+    expect(stalePanel).toBeTruthy();
+    const { catalog: _catalog, ...mutableState } = baseState;
+    expect(within(stalePanel as HTMLElement).getByText(telegramMiniAppStateRevision(mutableState))).toBeTruthy();
+    expect(stalePanel?.textContent).toContain("Telegram Mini App auth is temporarily unavailable. Try again shortly.");
+    expect(stalePanel?.querySelector("time")?.getAttribute("datetime")).toBe("2024-08-30T06:40:00.000Z");
+
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+    fireEvent.click(within(stalePanel as HTMLElement).getByRole("button", { name: "Retry refresh" }));
+
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Showing last-known settings" })).toBeNull());
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", false);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("disables mutation controls for the server retry window and announces the countdown", async () => {
@@ -747,6 +813,48 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getAllByRole("button", { name: /^Follow / })[0]?.getAttribute("aria-label")).toBe("Follow USDT");
   });
 
+  it("keeps suggested coins useful for followed and read-only accounts", async () => {
+    const readOnlyState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+      catalog: {
+        ...baseState.catalog,
+        searchableCoins: [
+          ...baseState.catalog.searchableCoins,
+          { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" },
+        ],
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => readOnlyState }));
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<PharosWatchBotMiniAppPage />);
+      await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+      fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+
+      const followedSuggestion = screen.getByRole("button", { name: "Go to followed USDC" });
+      const searchSuggestion = screen.getByRole("button", { name: "Search for USDT" });
+      expect(followedSuggestion).toHaveProperty("disabled", false);
+      expect(searchSuggestion).toHaveProperty("disabled", false);
+
+      fireEvent.click(followedSuggestion);
+      const coinRow = document.getElementById("coin-row-usdc-circle");
+      await waitFor(() => expect(document.activeElement).toBe(coinRow));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });
+
+      fireEvent.click(searchSuggestion);
+      const searchInput = screen.getByLabelText("Search stablecoins");
+      expect((searchInput as HTMLInputElement).value).toBe("USDT");
+      await waitFor(() => expect(document.activeElement).toBe(searchInput));
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it("clears per-coin snooze with the right durationToken", async () => {
     const coinSnoozed: TelegramMiniAppState = {
       ...baseState,
@@ -789,6 +897,48 @@ describe("PharosWatchBotMiniAppPage", () => {
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-timezone", timezone: "Europe/Paris" } }),
     }));
+  });
+
+  it("offers a compact timezone picker plus searchable full coverage and confirmed recent zones", async () => {
+    const honoluluState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: "Pacific/Honolulu" },
+      },
+    };
+    const parisState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: "Europe/Paris" },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => honoluluState })
+      .mockResolvedValueOnce({ ok: true, json: async () => parisState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    const compactPicker = screen.getByLabelText("Timezone") as HTMLSelectElement;
+    const fullPicker = screen.getByLabelText("Timezone name") as HTMLInputElement;
+    const datalist = document.getElementById("telegram-mini-app-timezone-options");
+    expect(compactPicker.options.length).toBeLessThan(20);
+    expect(datalist?.querySelectorAll("option").length).toBeGreaterThan(compactPicker.options.length);
+
+    fireEvent.change(fullPicker, { target: { value: "Pacific/Honolulu" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply timezone" }));
+    await waitFor(() => expect(compactPicker.value).toBe("Pacific/Honolulu"));
+
+    fireEvent.change(compactPicker, { target: { value: "Europe/Paris" } });
+    await waitFor(() => expect(compactPicker.value).toBe("Europe/Paris"));
+    expect(Array.from(compactPicker.options).some((option) => option.text === "Recent: Pacific/Honolulu")).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("renders quiet hours in the configured timezone", async () => {

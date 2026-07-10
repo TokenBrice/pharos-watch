@@ -211,7 +211,7 @@ export const TelegramMiniAppCatalogSchema = z
     recommendedPresets: z.array(
       z
         .object({
-          id: z.string(),
+          id: TelegramPresetIdSchema,
           label: z.string(),
           description: z.string().nullable().optional(),
         })
@@ -265,7 +265,7 @@ export const TelegramMiniAppMutableStateSchema = z
     presets: z.array(
       z
         .object({
-          id: z.string(),
+          id: TelegramPresetIdSchema,
           label: z.string(),
           description: z.string().optional(),
           alertTypes: PresetAlertTypesSchema,

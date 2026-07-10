@@ -6,7 +6,10 @@ import {
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   TelegramMiniAppErrorResponseSchema,
   TelegramMiniAppResponseSchema,
+  TelegramMiniAppSnapshotSchema,
   TelegramMiniAppStateSchema as SharedTelegramMiniAppStateSchema,
+  telegramMiniAppStateRevision,
+  type TelegramMiniAppMutableState,
   type TelegramMiniAppResponse,
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
@@ -15,6 +18,11 @@ import type { ZodType } from "zod";
 import { isMiniAppErrorCode, MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
 
 export const TelegramMiniAppStateSchema = SharedTelegramMiniAppStateSchema;
+
+export interface TelegramMiniAppClientSnapshot {
+  state: TelegramMiniAppState;
+  stateRevision: string;
+}
 
 function formatZodIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
   return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
@@ -68,31 +76,41 @@ export async function postMiniAppJson<T>(path: string, body: unknown, schema: Zo
   return result.data;
 }
 
-function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMiniAppState {
-  if (!("state" in response)) {
+function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMiniAppClientSnapshot {
+  const compact = TelegramMiniAppSnapshotSchema.safeParse(response);
+  if (!compact.success) {
     // Rolling deploy: a new static client can still consume an older Worker's
     // full-catalog response. The next matching Worker response becomes compact.
-    return response;
+    const legacy = SharedTelegramMiniAppStateSchema.parse(response);
+    const { catalog: _catalog, ...mutableState } = legacy;
+    return {
+      state: legacy,
+      stateRevision: telegramMiniAppStateRevision(mutableState as TelegramMiniAppMutableState),
+    };
   }
-  if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
+  const snapshot = compact.data;
+  if (snapshot.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
     throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
+      contractVersion: snapshot.contractVersion,
+      catalogVersion: snapshot.catalogVersion,
     });
   }
-  if (response.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
+  if (snapshot.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
     throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
+      contractVersion: snapshot.contractVersion,
+      catalogVersion: snapshot.catalogVersion,
     });
   }
   return {
-    ...response.state,
-    catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
+    state: {
+      ...snapshot.state,
+      catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
+    },
+    stateRevision: snapshot.stateRevision,
   };
 }
 
-export async function postMiniAppState(path: string, body: unknown): Promise<TelegramMiniAppState> {
+export async function postMiniAppSnapshot(path: string, body: unknown): Promise<TelegramMiniAppClientSnapshot> {
   const query = new URLSearchParams({
     [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
     [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -100,6 +118,10 @@ export async function postMiniAppState(path: string, body: unknown): Promise<Tel
   const separator = path.includes("?") ? "&" : "?";
   const response = await postMiniAppJson(`${path}${separator}${query}`, body, TelegramMiniAppResponseSchema);
   return hydrateMiniAppResponse(response);
+}
+
+export async function postMiniAppState(path: string, body: unknown): Promise<TelegramMiniAppState> {
+  return (await postMiniAppSnapshot(path, body)).state;
 }
 
 const VERSION_REFRESH_STORAGE_KEY = "pharos-mini-app-version-refresh";

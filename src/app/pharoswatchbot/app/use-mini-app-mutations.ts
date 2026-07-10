@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { ALERT_LABELS } from "./constants";
 import {
@@ -9,15 +9,15 @@ import {
 } from "./error-messages";
 import {
   isMiniAppVersionMismatch,
-  postMiniAppState,
+  postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
+  type TelegramMiniAppClientSnapshot,
 } from "./mini-app-api";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type {
   FollowedPreset,
   SubscribedCoin,
   TelegramAlertType,
-  TelegramDepegStepBps,
   TelegramMiniAppOperation,
   TelegramMiniAppState,
 } from "./types";
@@ -72,17 +72,6 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
   }
 }
 
-function optimisticGlobalAlerts(state: TelegramMiniAppState, operation: TelegramMiniAppOperation): Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null } {
-  const base = state.subscriber.globalAlerts;
-  if (operation.kind === "set-global") {
-    return { ...base, [operation.alertType]: operation.enabled };
-  }
-  if (operation.kind === "set-global-depeg-step") {
-    return { ...base, depegStepBps: operation.depegStepBps };
-  }
-  return base;
-}
-
 function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
   return { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
 }
@@ -108,19 +97,21 @@ export interface UseMiniAppMutationsArgs {
   state: TelegramMiniAppState | null;
   /** Telegram WebApp handle (for haptics, closing-confirmation, requestWriteAccess, checkHomeScreenStatus). */
   webApp: TelegramWebAppSdk | null;
-  /** Replace the server snapshot. Called after every successful non-`forget-me` mutation. */
-  onStateReplaced: (next: TelegramMiniAppState) => void;
+  /** Replace the confirmed server snapshot after a successful non-`forget-me` mutation. */
+  onSnapshotReplaced: (next: TelegramMiniAppClientSnapshot) => void;
   /** Reload the session (used on 401/stale-auth recovery). */
   reloadSession: (options?: { clearMessage?: boolean }) => Promise<void>;
   /** Whether the 6s message auto-dismiss is active. Caller passes `status === "ready"`. */
   messageAutoDismissActive: boolean;
+  /** False while session state is refreshing, stale, or otherwise read-only. */
+  mutationsAllowed: boolean;
 }
 
 export interface UseMiniAppMutationsResult {
-  /** Composite optimistic snapshot, or `null` while `state` is `null`. */
-  optimisticState: TelegramMiniAppState | null;
-  /** Optimistic global alerts object (separate handle because `SettingsPanel` consumes it independently). */
-  optimisticGlobals: TelegramMiniAppState["subscriber"]["globalAlerts"];
+  /** Last server-confirmed state, or `null` before the first successful load. */
+  displayState: TelegramMiniAppState | null;
+  /** Server-confirmed global alert settings. */
+  confirmedGlobals: TelegramMiniAppState["subscriber"]["globalAlerts"];
   /** True between dispatch and either resolve or reject of `performMutation`. */
   isMutating: boolean;
   /** Mutation currently in flight, used for scoped control feedback. */
@@ -138,10 +129,10 @@ export interface UseMiniAppMutationsResult {
   /** Returned status when `checkHomeScreenStatus` probe ran. Null until then. */
   homeScreenStatus: string | null;
 
-  /** Optimistic dispatch for non-destructive local mutations; server-resolved preset follows dispatch directly. */
+  /** Dispatch a mutation without changing visible values before server confirmation. */
   mutate: (operation: TelegramMiniAppOperation) => void;
-  /** Imperative dispatch: skips optimistic layer, returns the server snapshot on success. */
-  performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppState | null>;
+  /** Imperative dispatch returning the confirmed server snapshot on success. */
+  performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppClientSnapshot | null>;
   /** Bound handler for the remove-coin flow: confirm-then-mutate + arm undo on success. */
   remove: (coin: SubscribedCoin) => void;
   /** Bound handler for the undo button. No-op if `pendingUndo` is null. */
@@ -162,13 +153,11 @@ export interface UseMiniAppMutationsResult {
 }
 
 /**
- * Mutation flow + optimistic state + undo + message/announcement + post-mutation one-shots.
+ * Server-confirmed mutation flow + pending feedback + undo + announcements.
  *
  * Fragile invariants this hook protects:
- * 1. `applyOptimisticOperation(op)` is called inside `startTransition`, and `performMutation`
- *    is fired as a non-awaited Promise OUTSIDE that transition. React 19 reverts the
- *    optimistic value automatically when the surrounding transition rejects, so failure
- *    handling does not manually rewrite optimistic state.
+ * 1. Visible values remain at the last confirmed snapshot while a request is pending.
+ *    `pendingOperation` drives scoped `aria-busy` feedback and the server response owns the update.
  * 2. T-57 (`requestWriteAccess`) and T-58 (`checkHomeScreenStatus`) one-shot refs live in
  *    this hook and persist across renders for the browser session.
  * 3. `enableClosingConfirmation` / `disableClosingConfirmation` are paired around the
@@ -177,7 +166,15 @@ export interface UseMiniAppMutationsResult {
  *    would point at a coin that no longer exists in the just-emptied subscriber row.
  */
 export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMutationsResult {
-  const { initData, state, webApp, onStateReplaced, reloadSession, messageAutoDismissActive } = args;
+  const {
+    initData,
+    state,
+    webApp,
+    onSnapshotReplaced,
+    reloadSession,
+    messageAutoDismissActive,
+    mutationsAllowed,
+  } = args;
   // webApp identity is stable per render, so showConfirm is safe to hoist once.
   const showConfirm = webApp?.showConfirm;
   const [isMutating, setIsMutating] = useState(false);
@@ -194,57 +191,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
   const mutationLimitWasActiveRef = useRef(false);
-  const [, startTransition] = useTransition();
-
-  const [optimisticOperation, applyOptimisticOperation] = useOptimistic<
-    TelegramMiniAppOperation | null,
-    TelegramMiniAppOperation | null
-  >(null, (_prev, next) => next);
-
-  const optimisticGlobals = useMemo(() => {
-    if (state && optimisticOperation) return optimisticGlobalAlerts(state, optimisticOperation);
-    return state?.subscriber.globalAlerts ?? defaultGlobalAlerts();
-  }, [state, optimisticOperation]);
-
-  const subscriptionsForView: TelegramMiniAppState["subscriptions"] = useMemo(() => {
-    if (!state) return [];
-    if (!optimisticOperation || optimisticOperation.kind !== "set-coin") return state.subscriptions;
-    return state.subscriptions.map((coin) => {
-      if (coin.stablecoinId !== optimisticOperation.stablecoinId) return coin;
-      const patch = optimisticOperation.patch;
-      const nextAlertTypes = patch.alertTypes
-        ? { ...coin.alertTypes, ...patch.alertTypes }
-        : coin.alertTypes;
-      const nextAlertOverrides = patch.alertTypes
-        ? {
-            dews: false,
-            depeg: false,
-            safety: false,
-            launch: false,
-            reserve: false,
-            ...coin.alertOverrides,
-            ...Object.fromEntries(Object.keys(patch.alertTypes).map((type) => [type, true])),
-          }
-        : coin.alertOverrides;
-      return {
-        ...coin,
-        alertTypes: nextAlertTypes,
-        alertOverrides: nextAlertOverrides,
-        dewsMinBand: patch.dewsMinBand !== undefined ? patch.dewsMinBand : coin.dewsMinBand,
-        depegStepBps: patch.depegStepBps !== undefined ? patch.depegStepBps : coin.depegStepBps,
-        safetyMode: patch.safetyMode !== undefined ? patch.safetyMode : coin.safetyMode,
-      };
-    });
-  }, [state, optimisticOperation]);
-
-  const optimisticState: TelegramMiniAppState | null = useMemo(() => {
-    if (!state) return null;
-    return {
-      ...state,
-      subscriber: { ...state.subscriber, globalAlerts: optimisticGlobals },
-      subscriptions: subscriptionsForView,
-    };
-  }, [state, optimisticGlobals, subscriptionsForView]);
+  const confirmedGlobals = state?.subscriber.globalAlerts ?? defaultGlobalAlerts();
 
   // 6s message auto-dismiss while the parent reports the session is ready.
   useEffect(() => {
@@ -280,8 +227,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     return () => clearTimeout(timer);
   }, [mutationRetryAfterSec]);
 
-  const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppState | null> => {
-    if (!initData || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
+  const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppClientSnapshot | null> => {
+    if (!initData || !mutationsAllowed || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
     // Capture pre-mutation snapshot for engagement gating (T-57).
     const preSubscriberExists = state?.subscriber.exists ?? false;
     const preChatType = state?.viewer.chatType ?? null;
@@ -289,18 +236,18 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     setPendingOperation(operation);
     webApp?.enableClosingConfirmation?.();
     try {
-      const next = await postMiniAppState(MUTATE_ENDPOINT, { initData, operation });
+      const next = await postMiniAppSnapshot(MUTATE_ENDPOINT, { initData, operation });
       if (operation.kind === "forget-me") {
         // Render the terminal screen instead of swapping state.
         setForgottenView(true);
         setMessage(null);
-        setAnnouncement(mutationSuccessAnnouncement(operation, next));
+        setAnnouncement(mutationSuccessAnnouncement(operation, next.state));
         webApp?.HapticFeedback?.notificationOccurred?.("success");
         return next;
       }
-      onStateReplaced(next);
+      onSnapshotReplaced(next);
       setMessage(null);
-      setAnnouncement(mutationSuccessAnnouncement(operation, next));
+      setAnnouncement(mutationSuccessAnnouncement(operation, next.state));
       const haptics = webApp?.HapticFeedback;
       if (operation.kind === "recommended-setup" || operation.kind === "set-coin" || operation.kind === "remove-coin") {
         haptics?.notificationOccurred?.("success");
@@ -360,18 +307,11 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, mutationRetryAfterSec, onStateReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
+  }, [initData, mutationRetryAfterSec, mutationsAllowed, onSnapshotReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
-    if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") {
-      void performMutation(operation);
-      return;
-    }
-    startTransition(() => {
-      applyOptimisticOperation(operation);
-    });
     void performMutation(operation);
-  }, [applyOptimisticOperation, performMutation]);
+  }, [performMutation]);
 
   const clearUndoToast = useCallback(() => {
     if (undoTimerRef.current) {
@@ -432,10 +372,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, [clearUndoToast, performMutation, showConfirm]);
 
   const forgetMe = useCallback(() => {
-    // Destructive, irreversible op with no optimistic-state effect: dispatch
-    // imperatively (like remove/unfollowPreset) rather than through the
-    // optimistic `mutate` layer, whose React 19 transition-revert path is
-    // inert here and merely inconsistent with the other danger-zone actions.
+    // Destructive, irreversible op: keep the confirmed state visible until
+    // the server accepts deletion, then switch to the terminal view.
     const fire = () => void performMutation({ kind: "forget-me" });
     confirmThenFire(showConfirm, "Delete all your Pharos alert data? This cannot be undone.", () => {
       confirmThenFire(showConfirm, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
@@ -457,8 +395,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   }, []);
 
   return {
-    optimisticState,
-    optimisticGlobals,
+    displayState: state,
+    confirmedGlobals,
     isMutating,
     pendingOperation,
     mutationRetryAfterSec,

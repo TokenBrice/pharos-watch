@@ -77,7 +77,7 @@ const POPULATED_STATE = {
   catalog: {
     recommendedPresets: [
       { id: "usd-top25", label: "USD Top 25", description: "Largest USD-pegged stablecoins" },
-      { id: "euro-stablecoins", label: "Euro stablecoins", description: "Tracked EUR-pegged assets" },
+      { id: "eur-top10", label: "Euro stablecoins", description: "Tracked EUR-pegged assets" },
     ],
     searchableCoins: [
       { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" },
@@ -215,6 +215,44 @@ test.describe("authenticated Telegram Mini App accessibility", () => {
     await expect(page.getByRole("heading", { name: "Reopen Telegram to edit settings" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: "Use recommended setup" })).toBeDisabled();
     await expectAxeClean(page, "stale-auth-read-only");
+  });
+
+  test("failed refresh preserves an explicit read-only snapshot until retry succeeds", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    let sessionRequestCount = 0;
+    await page.route("**/api/telegram-mini-app/session*", async (route) => {
+      sessionRequestCount += 1;
+      if (sessionRequestCount === 2) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "temporary outage", code: "internal" }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(POPULATED_STATE),
+      });
+    });
+    await installTelegramSdkFixture(page, { sdk: { colorScheme: "light", themeParams: LIGHT_THEME } });
+    await launchSignedMiniApp(page);
+
+    await page.getByRole("button", { name: "Refresh session" }).click();
+    const stalePanel = page.getByRole("status").filter({ hasText: "Showing last-known settings" });
+    await expect(stalePanel).toBeVisible();
+    await expect(stalePanel.getByText("Revision")).toBeVisible();
+    await expect(stalePanel.locator("time")).toHaveAttribute("datetime", /.+/);
+
+    await page.getByRole("tab", { name: "settings" }).click();
+    await expect(page.getByRole("button", { name: /Safety/i })).toBeDisabled();
+    await expectAxeClean(page, "failed-refresh-read-only");
+
+    await stalePanel.getByRole("button", { name: "Retry refresh" }).click();
+    await expect(stalePanel).toBeHidden();
+    await expect(page.getByRole("button", { name: /Safety/i })).toBeEnabled();
+    expect(sessionRequestCount).toBe(3);
   });
 
   test("mutation failure and forgotten terminal states are announced and accessible", async ({ page }) => {
