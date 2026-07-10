@@ -165,14 +165,43 @@ Processed updates by status and age:
 ```sql
 SELECT
   status,
+  effect_state,
+  intent_kind,
   COUNT(*) AS rows,
   MIN(received_at) AS oldest_received_at,
   MAX(COALESCE(processed_at, received_at)) AS newest_activity_at,
   SUM(CASE WHEN status = 'processing' AND received_at < ? - 300 THEN 1 ELSE 0 END) AS stale_processing
 FROM telegram_processed_updates
-GROUP BY status
+GROUP BY status, effect_state, intent_kind
 ORDER BY rows DESC;
 ```
+
+Webhook effects requiring reconciliation (bounded oldest-first sample):
+
+```sql
+SELECT
+  update_id,
+  update_type,
+  chat_id,
+  status,
+  effect_state,
+  intent_version,
+  intent_kind,
+  mutation_applied_at,
+  effect_started_at,
+  effect_kind,
+  effect_ordinal,
+  error_class,
+  claim_owner,
+  claim_generation
+FROM telegram_processed_updates
+WHERE effect_state IN ('started', 'execution_unknown')
+  AND status <> 'processed'
+ORDER BY COALESCE(effect_started_at, received_at) ASC
+LIMIT 5001;
+```
+
+Never reset these rows to `planned` or delete them merely to trigger a retry. Reconcile the exact Telegram-visible effect first; ambiguous outbound effects are at-most-once by design and retained for 90 days.
 
 Recent failed webhook updates:
 

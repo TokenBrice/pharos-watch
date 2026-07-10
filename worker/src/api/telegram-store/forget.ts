@@ -2,6 +2,10 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { unixNow } from "./subscribers";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 /**
  * Atomically wipe every subscription, preset follow, and global-alert flag
@@ -11,7 +15,7 @@ import { unixNow } from "./subscribers";
 export async function unsubscribeAll(
   db: D1Database,
   chatId: string,
-  options: { clearPending?: boolean } = {},
+  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   const now = unixNow();
   const statements = [
@@ -43,16 +47,20 @@ export async function unsubscribeAll(
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     );
   }
-  await executeAtomicBatch(db, statements);
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
 /**
  * Delete every row this subscriber owns across the Telegram tables. Retains
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
  */
-export async function forgetSubscriber(db: D1Database, chatId: string): Promise<void> {
+export async function forgetSubscriber(
+  db: D1Database,
+  chatId: string,
+  options: TelegramOperationBatchOptions = {},
+): Promise<void> {
   const now = unixNow();
-  await batchExecute(db, [
+  await executeAtomicBatch(db, appendTelegramOperationStatements([
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
@@ -63,7 +71,7 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId),
-  ]);
+  ], options));
   await pruneOverflowPlanBacklogForChat(db, chatId, now);
   await removeChatFromBurstMarkers(db, chatId);
 }
@@ -424,6 +432,7 @@ export async function migrateTelegramChatId(
   db: D1Database,
   oldChatId: string,
   newChatId: string,
+  options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   if (!oldChatId || !newChatId || oldChatId === newChatId) return;
 
@@ -548,6 +557,7 @@ export async function migrateTelegramChatId(
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(oldChatId),
     ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),
+    ...(options.operationStatements ?? []),
   ];
 
   await executeAtomicBatch(db, statements);

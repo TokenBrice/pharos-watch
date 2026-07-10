@@ -9,6 +9,10 @@ import {
   prepareRemoveSubscriptionStatements,
   prepareSubscriberAndSubscriptionStatements,
 } from "./subscriptions";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 export interface SubscribeIntentInput {
   chatId: string;
@@ -18,6 +22,7 @@ export interface SubscribeIntentInput {
   alertTypes: Set<string>;
   clearPending?: boolean;
   depegWorseningBpsStep?: 100 | 250 | 500 | null;
+  operationStatements?: D1PreparedStatement[];
 }
 
 export interface UnsubscribeIntentInput {
@@ -25,6 +30,7 @@ export interface UnsubscribeIntentInput {
   directStablecoinIds: readonly string[];
   presetIds?: readonly string[];
   clearPending?: boolean;
+  operationStatements?: D1PreparedStatement[];
 }
 
 function preparePresetSubscriptionStatements(
@@ -32,7 +38,7 @@ function preparePresetSubscriptionStatements(
   chatId: string,
   presetIds: readonly string[],
   alertTypes: Set<string>,
-  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null; operationStatements?: D1PreparedStatement[] },
 ): D1PreparedStatement[] {
   const uniquePresetIds = Array.from(new Set(presetIds));
   if (uniquePresetIds.length === 0) return [];
@@ -78,20 +84,22 @@ export async function upsertPresetSubscriptions(
   chatId: string,
   presetIds: readonly string[],
   alertTypes: Set<string>,
-  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null; operationStatements?: D1PreparedStatement[] },
 ): Promise<void> {
   const statements = preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options);
-  if (statements.length === 0) return;
-  const nowSec = unixNow();
-  await executeAtomicBatch(db, [
-    prepareUpsertSubscriberRow(db, {
-      chatId,
-      username: null,
-      nowSec,
-      bumpPreferenceGeneration: true,
-    }),
-    ...statements,
-  ]);
+  if (statements.length === 0 && (options?.operationStatements?.length ?? 0) === 0) return;
+  const domainStatements = statements.length === 0
+    ? []
+    : [
+        prepareUpsertSubscriberRow(db, {
+          chatId,
+          username: null,
+          nowSec: unixNow(),
+          bumpPreferenceGeneration: true,
+        }),
+        ...statements,
+      ];
+  await executeAtomicBatch(db, appendTelegramOperationStatements(domainStatements, options));
 }
 
 export function prepareSubscriberAndPresetStatements(
@@ -131,7 +139,10 @@ export async function applySubscribeIntent(
   db: D1Database,
   input: SubscribeIntentInput,
 ): Promise<void> {
-  await executeAtomicBatch(db, prepareSubscribeIntentStatements(db, input));
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements(prepareSubscribeIntentStatements(db, input), input),
+  );
 }
 
 export function prepareRemovePresetSubscriptionStatements(
@@ -173,20 +184,25 @@ export async function applyUnsubscribeIntent(
   db: D1Database,
   input: UnsubscribeIntentInput,
 ): Promise<void> {
-  await executeAtomicBatch(db, prepareUnsubscribeIntentStatements(db, input));
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements(prepareUnsubscribeIntentStatements(db, input), input),
+  );
 }
 
 export async function removePresetSubscriptions(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const statements = prepareRemovePresetSubscriptionStatements(db, chatId, presetIds);
-  if (statements.length === 0) return;
-  await executeAtomicBatch(db, [
-    ...statements,
-    preparePreferenceGenerationBump(db, chatId),
-  ]);
+  const domainStatements = statements.length === 0
+    ? []
+    : [...statements, preparePreferenceGenerationBump(db, chatId)];
+  const atomicStatements = appendTelegramOperationStatements(domainStatements, options);
+  if (atomicStatements.length === 0) return;
+  await executeAtomicBatch(db, atomicStatements);
 }
 
 export async function loadPresetSubscriptions(

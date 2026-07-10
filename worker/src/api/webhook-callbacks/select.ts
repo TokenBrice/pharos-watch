@@ -1,11 +1,13 @@
-import { answerCallbackQuery } from "../../lib/telegram";
 import { parseDisambiguationReply } from "../../lib/telegram-alerts";
 import {
-  clearPendingDisambiguation,
   loadPendingDisambiguation,
   unixNow,
 } from "../telegram-webhook-store";
-import { executePendingDisambiguationSelection } from "../telegram-webhook-disambiguation-selection";
+import {
+  executeNormalizedPendingSelection,
+  executePendingDisambiguationSelection,
+  parseStoredCommandSelectionIntent,
+} from "../telegram-webhook-disambiguation-selection";
 import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import {
   callbackActorUserId,
@@ -14,15 +16,36 @@ import {
   type CallbackHandler,
 } from "./_shared";
 
-export const handleSelectCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
+export const handleSelectCallback: CallbackHandler = async (ctx) => {
+  const { db, botToken, cb, chatId, parsed, answerCallback } = ctx;
   if (!hasExactParts(parsed.parts, 2)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await answerCallback({ text: "Action not recognized." });
+    return;
+  }
+  const storedSelection = parseStoredCommandSelectionIntent(ctx.storedIntent);
+  if (storedSelection) {
+    await executeNormalizedPendingSelection(
+      db,
+      botToken,
+      chatId,
+      callbackUsername(cb),
+      storedSelection,
+      {
+        beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+        planIntent: ctx.planIntent,
+        prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+        confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+        markMutationApplied: ctx.markMutationApplied,
+        storedIntent: ctx.storedIntent,
+        wasMutationApplied: ctx.wasMutationApplied,
+      },
+    );
+    await answerCallback({ text: "Selected." });
     return;
   }
   const pendingRow = await loadPendingDisambiguation(db, chatId);
   if (!pendingRow || unixNow() >= pendingRow.expires_at) {
-    if (pendingRow) await clearPendingDisambiguation(db, chatId);
-    await answerCallbackQuery(cb.id, botToken, { text: "Selection expired. Re-run the command." });
+    await answerCallback({ text: "Selection expired. Re-run the command." });
     return;
   }
   const pendingAction = parsePendingDisambiguation(pendingRow);
@@ -32,17 +55,17 @@ export const handleSelectCallback: CallbackHandler = async ({ db, botToken, cb, 
     || pendingAction.actionType === "confirm-bulk"
     || pendingAction.actionType === "forget-confirm"
   ) {
-    await answerCallbackQuery(cb.id, botToken, { text: "No ticker selection is pending." });
+    await answerCallback({ text: "No ticker selection is pending." });
     return;
   }
   const actorUserId = callbackActorUserId(cb);
   if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Only the user who started this selection can choose." });
+    await answerCallback({ text: "Only the user who started this selection can choose." });
     return;
   }
   const selectedIndices = parseDisambiguationReply(parsed.arg ?? "", pendingAction.candidates.length);
   if (!selectedIndices) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Selection not recognized." });
+    await answerCallback({ text: "Selection not recognized." });
     return;
   }
   await executePendingDisambiguationSelection(
@@ -52,6 +75,15 @@ export const handleSelectCallback: CallbackHandler = async ({ db, botToken, cb, 
     callbackUsername(cb),
     pendingAction,
     selectedIndices,
+    {
+      beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+      planIntent: ctx.planIntent,
+      prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+      confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+      markMutationApplied: ctx.markMutationApplied,
+      storedIntent: ctx.storedIntent,
+      wasMutationApplied: ctx.wasMutationApplied,
+    },
   );
-  await answerCallbackQuery(cb.id, botToken, { text: "Selected." });
+  await answerCallback({ text: "Selected." });
 };

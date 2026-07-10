@@ -160,7 +160,7 @@ describe("pruneTelegramProcessedUpdates", () => {
 
     expect(pruned).toBe(7);
     const [entry] = db.getHistory();
-    expect(entry?.binds).toEqual([1_699_999_940, 5_000]);
+    expect(entry?.binds).toEqual([1_699_999_940, 1_692_224_000, 5_000]);
     expect(entry?.sql).toContain("WHERE update_id IN");
     expect(entry?.sql).toContain("ORDER BY received_at ASC, update_id ASC");
     expect(entry?.sql).toContain("LIMIT ?");
@@ -178,7 +178,8 @@ describe("pruneTelegramProcessedUpdates", () => {
           update_type TEXT,
           chat_id TEXT,
           status TEXT NOT NULL DEFAULT 'processing',
-          error_class TEXT
+          error_class TEXT,
+          effect_state TEXT NOT NULL DEFAULT 'unstarted'
         );
       `);
 

@@ -83,7 +83,15 @@ describe("mapTelegramBotStats", () => {
         execution_unknown_sample_count: "2",
         completed_cleanup_count: "1",
       },
-      webhookEffectUnknown: { pending_count: "3" },
+      webhookEffectUnknown: {
+        pending_count: "3",
+        planned_count: "4",
+        started_count: "1",
+        execution_unknown_count: "2",
+        oldest_planned_at: "1710000040",
+        oldest_ambiguous_at: "1710000010",
+        sample_count: "7",
+      },
       retryErrorClasses: [
         { error_class: "rate_limit", pending_count: "4" },
         { error_class: "server_error", pending_count: "2" },
@@ -210,6 +218,15 @@ describe("mapTelegramBotStats", () => {
         completedPendingCleanup: 1,
       },
       webhookEffectUnknown: 3,
+      webhookEffectLifecycle: {
+        planned: 4,
+        started: 1,
+        executionUnknown: 2,
+        oldestPlannedAgeSec: 60,
+        oldestAmbiguousAgeSec: 90,
+        sampleLimit: 5001,
+        lowerBound: false,
+      },
     });
   });
 

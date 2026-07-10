@@ -31,21 +31,23 @@ import {
   upsertSubscriberRow,
   type BuiltSubscriptionUpsert,
 } from "./telegram-webhook-store";
+import type { TelegramOperationBatchOptions } from "./telegram-store/_internals";
 
 export async function toggleGlobalAlert(
   db: D1Database,
   chatId: string,
   username: string | null,
   type: GlobalAlertType,
+  options: TelegramOperationBatchOptions & { next?: 0 | 1 } = {},
 ): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
-  const next: 0 | 1 = subscriberHasGlobal(subscriber, type) ? 0 : 1;
+  const next: 0 | 1 = options.next ?? (subscriberHasGlobal(subscriber, type) ? 0 : 1);
   await upsertSubscriberRow(db, {
     chatId,
     username,
     nowSec: unixNow(),
     globalAlertOverrides: { [type]: next },
-  });
+  }, options);
 }
 
 export async function setQuietHours(
@@ -53,6 +55,7 @@ export async function setQuietHours(
   chatId: string,
   username: string | null,
   enabled: boolean,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   await upsertSubscriberRow(db, {
     chatId,
@@ -61,7 +64,7 @@ export async function setQuietHours(
     quietHours: enabled
       ? { enabled: true, startHourUtc: DEFAULT_QUIET_START_HOUR, endHourUtc: DEFAULT_QUIET_END_HOUR }
       : { enabled: false },
-  });
+  }, options);
 }
 
 /**
@@ -75,10 +78,11 @@ export async function applyCoinSetting(
   coinId: string,
   setting: string,
   value: string,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<string | null> {
   const prepared = prepareCoinSettingStatements(db, chatId, username, coinId, setting, value);
   if (prepared.description == null) return null;
-  await executeAtomicBatch(db, prepared.statements);
+  await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])]);
   return prepared.description;
 }
 

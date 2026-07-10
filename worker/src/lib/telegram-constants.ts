@@ -102,6 +102,10 @@ export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 /** Retain processed `telegram_processed_updates` rows for 7 days for replay-ack idempotency. */
 export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
 
+/** Keep ambiguous webhook effects long enough for operator reconciliation. */
+export const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_RETENTION_SEC = 90 * 24 * 60 * 60;
+export const TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC = 90 * 24 * 60 * 60;
+
 /** A `processing` claim older than this is considered stale and can be reclaimed by another worker. */
 export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
 

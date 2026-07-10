@@ -41,6 +41,16 @@ export interface TelegramWatcherLifecycleSnapshot {
   pendingDeliveries: number;
 }
 
+export interface TelegramWebhookEffectLifecycle {
+  planned: number;
+  started: number;
+  executionUnknown: number;
+  oldestPlannedAgeSec: number | null;
+  oldestAmbiguousAgeSec: number | null;
+  sampleLimit: number;
+  lowerBound: boolean;
+}
+
 export interface TelegramBotStats {
   totalChats: number;
   alertEnabledChats: number;
@@ -66,6 +76,7 @@ export interface TelegramBotStats {
   retryErrorClassCounts?: Record<string, number>;
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
   webhookEffectUnknown?: number;
+  webhookEffectLifecycle?: TelegramWebhookEffectLifecycle;
   presetQueryFailures?: number;
   /**
    * Number of inactive subscribers cleaned up in the trailing 7-day window

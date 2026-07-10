@@ -15,6 +15,8 @@ import {
   makeActionRunner,
   subscribableCoinCount,
 } from "./action-runner";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 
 export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   const { db, chatId, actorUserId } = ctx;
@@ -56,20 +58,45 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (parsed.includeAll) {
-    const persisted = await persistPendingConfirmBulk(db, {
-      chatId,
-      payload: {
-        kind: "unsubscribe",
-        presetIds: [],
-        coinIds: [],
-        unsubscribeAll: true,
-      },
-      initiatorUserId: actorUserId,
-    });
+    const payload = {
+      kind: "unsubscribe" as const,
+      presetIds: [],
+      coinIds: [],
+      unsubscribeAll: true,
+    };
+    const storedExpiresAt = ctx.storedIntent?.kind === "command:unsubscribe"
+      ? Number(ctx.storedIntent.payload.expiresAt)
+      : NaN;
+    const expiresAt = Number.isFinite(storedExpiresAt)
+      ? storedExpiresAt
+      : (ctx.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
+    await ctx.planIntent?.(createTelegramWebhookIntent("command:unsubscribe", {
+      stage: "bulk-confirm-prompt",
+      payload,
+      expiresAt,
+    }, "required"));
+    const operationStatements = ctx.preparePendingMutationAppliedStatement
+      ? [ctx.preparePendingMutationAppliedStatement({
+          chatId,
+          actionType: "confirm-bulk",
+          actionPayload: JSON.stringify(payload),
+          expiresAt,
+        })]
+      : undefined;
+    const persisted = ctx.wasMutationApplied
+      ? true
+      : await persistPendingConfirmBulk(db, {
+          chatId,
+          payload,
+          initiatorUserId: actorUserId,
+          expiresAt,
+          operationStatements,
+        });
     if (!persisted) {
       await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return;
     }
+    if (!ctx.wasMutationApplied && operationStatements) ctx.confirmAtomicMutationApplied?.();
     await ctx.replyToChatWithMarkup(
       buildBulkConfirmMessage("unsubscribe", subscribableCoinCount(), [], []),
       { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
@@ -79,7 +106,22 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
 
   const presetIds = dedupePresetIds(parsed.presetIds);
   const runAction = makeActionRunner(
-    { db, chatId, username: null, initiatorUserId: actorUserId },
+    {
+      db,
+      chatId,
+      username: null,
+      initiatorUserId: actorUserId,
+      beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+      planIntent: ctx.planIntent,
+      prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+      prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
+      preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
+      confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+      markMutationApplied: ctx.markMutationApplied,
+      storedIntent: ctx.storedIntent,
+      wasMutationApplied: ctx.wasMutationApplied,
+      operationNowSec: ctx.operationNowSec,
+    },
     ctx.botToken,
     { kind: "unsubscribe", presetIds },
   );
@@ -88,5 +130,6 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
     actionType: "unsubscribe",
     actionPayload: { presetIds },
     resolutionScope: "tracked",
+    clearPendingOnTerminal: ctx.clearPendingOnMutation,
   });
 };

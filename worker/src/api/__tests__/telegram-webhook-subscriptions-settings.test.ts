@@ -877,7 +877,7 @@ describe("handleTelegramWebhook", () => {
     );
   });
 
-  it("clears a same-initiator pending selection before running /forget", async () => {
+  it("atomically replaces a same-initiator pending selection with /forget confirmation", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {
       throw new Error("Expected USDF to be ambiguous for forget clear-and-run test");
@@ -904,7 +904,7 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/forget"), "test-secret", "bot-token");
 
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
     const forgetInsert = history.find(
       (entry) =>
         entry.sql.includes("INSERT INTO telegram_pending_disambiguation") && entry.binds.includes("forget-confirm"),

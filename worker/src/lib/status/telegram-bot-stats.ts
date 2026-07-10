@@ -41,6 +41,12 @@ interface TelegramBotAggregateRow {
 
 interface TelegramBotPendingRow {
   pending_count: number | string | null;
+  planned_count?: number | string | null;
+  started_count?: number | string | null;
+  execution_unknown_count?: number | string | null;
+  oldest_planned_at?: number | string | null;
+  oldest_ambiguous_at?: number | string | null;
+  sample_count?: number | string | null;
 }
 
 interface TelegramBotPendingDeliveryTelemetryRow {
@@ -96,6 +102,7 @@ interface OptionalTelegramTelemetry<T> {
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
 const INACTIVE_CLEANUP_JOB = "telegram-inactive-cleanup";
+const WEBHOOK_EFFECT_SAMPLE_LIMIT = 5_001;
 
 const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   COUNT(*) AS total_chats,
@@ -332,10 +339,23 @@ export const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
       )) AS execution_unknown_sample_count
   ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS completed_cleanup_count
  FROM telegram_pending_alerts`;
-const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL = `SELECT COUNT(*) AS pending_count
-  FROM telegram_processed_updates
- WHERE effect_state = 'started'
-   AND status <> 'processed'`;
+const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL = `SELECT
+  SUM(CASE WHEN effect_state IN ('started', 'execution_unknown') THEN 1 ELSE 0 END) AS pending_count,
+  SUM(CASE WHEN effect_state = 'planned' THEN 1 ELSE 0 END) AS planned_count,
+  SUM(CASE WHEN effect_state = 'started' THEN 1 ELSE 0 END) AS started_count,
+  SUM(CASE WHEN effect_state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_count,
+  MIN(CASE WHEN effect_state = 'planned' THEN received_at END) AS oldest_planned_at,
+  MIN(CASE WHEN effect_state IN ('started', 'execution_unknown')
+           THEN COALESCE(effect_started_at, received_at) END) AS oldest_ambiguous_at,
+  COUNT(*) AS sample_count
+ FROM (
+   SELECT effect_state, effect_started_at, received_at
+     FROM telegram_processed_updates
+    WHERE effect_state IN ('planned', 'started', 'execution_unknown')
+      AND status <> 'processed'
+    ORDER BY received_at ASC, update_id ASC
+    LIMIT ${WEBHOOK_EFFECT_SAMPLE_LIMIT}
+ )`;
 const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class, COUNT(*) AS pending_count
   FROM telegram_pending_alerts
  WHERE delivery_state = 'pending'
@@ -671,6 +691,23 @@ export function mapTelegramBotStats(input: {
   }
   if (webhookEffectUnknown) {
     stats.webhookEffectUnknown = coerceCount(webhookEffectUnknown.pending_count);
+    if (
+      webhookEffectUnknown.planned_count !== undefined
+      || webhookEffectUnknown.started_count !== undefined
+      || webhookEffectUnknown.execution_unknown_count !== undefined
+    ) {
+      const oldestPlannedAt = coerceNullableTimestamp(webhookEffectUnknown.oldest_planned_at);
+      const oldestAmbiguousAt = coerceNullableTimestamp(webhookEffectUnknown.oldest_ambiguous_at);
+      stats.webhookEffectLifecycle = {
+        planned: coerceCount(webhookEffectUnknown.planned_count),
+        started: coerceCount(webhookEffectUnknown.started_count),
+        executionUnknown: coerceCount(webhookEffectUnknown.execution_unknown_count),
+        oldestPlannedAgeSec: oldestPlannedAt == null ? null : Math.max(0, now - oldestPlannedAt),
+        oldestAmbiguousAgeSec: oldestAmbiguousAt == null ? null : Math.max(0, now - oldestAmbiguousAt),
+        sampleLimit: WEBHOOK_EFFECT_SAMPLE_LIMIT,
+        lowerBound: coerceCount(webhookEffectUnknown.sample_count) >= WEBHOOK_EFFECT_SAMPLE_LIMIT,
+      };
+    }
   }
 
   if (retryErrorClassCounts) {

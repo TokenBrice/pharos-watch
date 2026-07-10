@@ -619,7 +619,7 @@ describe("handleTelegramWebhook", () => {
     expect(body.text).toContain("Another user has a pending selection");
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
   });
 
   it("/start sub_<types>_<targets> in a private chat dispatches into /subscribe", async () => {

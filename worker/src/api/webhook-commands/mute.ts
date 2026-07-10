@@ -6,7 +6,12 @@ import {
 } from "../telegram-webhook-messages";
 import { parseQuietHours } from "../telegram-webhook-parsing";
 import { loadSubscriberByChat, unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
-import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
+import {
+  confirmCommandMutation,
+  prepareCommandMutation,
+  replyWithOptionalMiniApp,
+  type WebhookCommandHandler,
+} from "./context";
 
 export const handleMute: WebhookCommandHandler = async (ctx, args) => {
   const { db, chatId, username } = ctx;
@@ -16,16 +21,23 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
     return;
   }
   const subscriber = await loadSubscriberByChat(db, chatId);
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    quietHours: {
-      enabled: true,
-      startHourUtc: parsed.startHourUtc,
-      endHourUtc: parsed.endHourUtc,
-    },
+  const operation = await prepareCommandMutation(ctx, "mute", {
+    startHourUtc: parsed.startHourUtc,
+    endHourUtc: parsed.endHourUtc,
   });
+  if (!ctx.wasMutationApplied) {
+    await upsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: ctx.operationNowSec ?? unixNow(),
+      quietHours: {
+        enabled: true,
+        startHourUtc: parsed.startHourUtc,
+        endHourUtc: parsed.endHourUtc,
+      },
+    }, operation);
+    confirmCommandMutation(ctx, operation);
+  }
   await recordTelegramUsageEvent(db, {
     eventType: "quiet_hours_change",
     actionDetail: "mute",

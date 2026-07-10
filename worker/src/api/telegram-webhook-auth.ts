@@ -95,8 +95,10 @@ export async function requireGroupAdminForCallback(
   chatType: string | null | undefined,
   actorUserId: string | null,
   denialText: string,
+  beforeIrreversibleEffect: (kind: string) => Promise<void> = async () => undefined,
 ): Promise<boolean> {
   if (isChannelChatType(chatType)) {
+    await beforeIrreversibleEffect("callback-ack");
     await answerCallbackQuery(callbackQueryId, botToken, {
       text: "Channel-originated actions are not supported.",
     });
@@ -104,6 +106,7 @@ export async function requireGroupAdminForCallback(
   }
   if (!isGroupChatType(chatType)) return true;
   if (await isGroupAdminActor(botToken, chatId, actorUserId)) return true;
+  await beforeIrreversibleEffect("callback-ack");
   await answerCallbackQuery(callbackQueryId, botToken, { text: denialText });
   return false;
 }

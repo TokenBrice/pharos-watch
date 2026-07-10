@@ -97,6 +97,11 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       // message above.
       await sendWizardIntro(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId, {
         includeMiniAppButton: ctx.chatType === "private",
+        beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+        planIntent: ctx.planIntent,
+        prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+        confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+        wasMutationApplied: ctx.wasMutationApplied,
       });
       return;
   }

@@ -1,4 +1,3 @@
-import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
@@ -13,259 +12,218 @@ import {
 } from "../telegram-webhook-store";
 import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
-import type { ConfirmBulkPayload, PendingAction, PendingActionType } from "../telegram-webhook-shared";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import type { ConfirmBulkPayload, PendingAction } from "../telegram-webhook-shared";
 import {
   callbackChatType,
   callbackUsername,
   hasExactParts,
   requireAdminForMutatingCallback,
+  type CallbackContext,
   type CallbackHandler,
-  type TelegramCallbackQuery,
 } from "./_shared";
 
-type ConfirmablePendingAction<T extends PendingActionType> = Extract<PendingAction, { actionType: T }>;
+type ConfirmationKind = "bulk" | "forget";
+type ConfirmationAction = "confirm" | "cancel";
 
-async function loadConfirmablePending<T extends "forget-confirm" | "confirm-bulk">(
-  db: D1Database,
-  botToken: string,
-  cb: TelegramCallbackQuery,
-  chatId: string,
-  options: {
-    actionType: T;
-    expiredText: string;
-    notPendingText: string;
-    cancelActionDetail: string;
-  },
-  action: "confirm" | "cancel",
-): Promise<ConfirmablePendingAction<T> | null> {
-  const pendingRow = await loadPendingDisambiguation(db, chatId);
-
-  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
-    if (pendingRow) {
-      await clearPendingDisambiguation(db, chatId);
-    }
-    await answerCallbackQuery(cb.id, botToken, { text: options.expiredText });
-    return null;
-  }
-
-  const pendingAction = parsePendingDisambiguation(pendingRow);
-  if (!pendingAction || pendingAction.actionType !== options.actionType) {
-    await answerCallbackQuery(cb.id, botToken, { text: options.notPendingText });
-    return null;
-  }
-
-  const actorUserId = cb.from?.id != null ? String(cb.from.id) : null;
-  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Only the user who started this confirmation can complete it.",
-    });
-    return null;
-  }
-
-  if (action === "cancel") {
-    await clearPendingDisambiguation(db, chatId);
-    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
-      actionDetail: options.cancelActionDetail,
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
-    return null;
-  }
-
-  return pendingAction as ConfirmablePendingAction<T>;
+interface NormalizedConfirmation {
+  action: ConfirmationAction;
+  kind: ConfirmationKind;
+  expiresAt: number;
+  payload: ConfirmBulkPayload | null;
 }
 
-async function handleForgetConfirmCallback(
-  db: D1Database,
-  botToken: string,
-  cb: TelegramCallbackQuery,
-  action: "confirm" | "cancel",
-): Promise<void> {
-  const chatId = cb.message?.chat?.id?.toString();
-  if (!chatId) {
-    await answerCallbackQuery(cb.id, botToken);
-    return;
+function parseStoredConfirmation(ctx: CallbackContext): NormalizedConfirmation | null {
+  const intent = ctx.storedIntent;
+  if (!intent || intent.kind !== `callback:${ctx.parsed.action}` || intent.mutation !== "required") return null;
+  const { action, kind, expiresAt, payload } = intent.payload;
+  if (
+    (action !== "confirm" && action !== "cancel")
+    || (kind !== "bulk" && kind !== "forget")
+    || typeof expiresAt !== "number"
+  ) {
+    return null;
   }
+  if (kind === "forget") return { action, kind, expiresAt, payload: null };
+  if (typeof payload !== "object" || payload == null || Array.isArray(payload)) return null;
+  const bulk = payload as Partial<ConfirmBulkPayload>;
+  if (
+    (bulk.kind !== "subscribe" && bulk.kind !== "unsubscribe")
+    || !Array.isArray(bulk.coinIds)
+    || !Array.isArray(bulk.presetIds)
+  ) {
+    return null;
+  }
+  return { action, kind, expiresAt, payload: bulk as ConfirmBulkPayload };
+}
 
-  const pendingAction = await loadConfirmablePending(db, botToken, cb, chatId, {
-    actionType: "forget-confirm",
-    expiredText: "This confirmation has expired. Re-run /forget.",
-    notPendingText: "No forget confirmation is pending.",
-    cancelActionDetail: "callback_forget",
-  }, action);
-  if (!pendingAction) return;
-
-  try {
-    await forgetSubscriber(db, chatId);
-  } catch (err) {
-    logTelegramEvent({
-      message: "forget execution failed",
-      action: "forget-confirm",
+async function loadFreshConfirmation(
+  ctx: CallbackContext,
+  action: ConfirmationAction,
+  kind: ConfirmationKind,
+): Promise<NormalizedConfirmation | null> {
+  const pendingRow = await loadPendingDisambiguation(ctx.db, ctx.chatId);
+  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
+    await ctx.answerCallback({
+      text: kind === "forget"
+        ? "This confirmation has expired. Re-run /forget."
+        : "This confirmation has expired. Re-run the command.",
     });
-    await answerCallbackQuery(cb.id, botToken, { text: "Could not delete data. Please try again." });
-    return;
+    return null;
   }
-  // `forgetSubscriber` already cleared telegram_pending_disambiguation for the
-  // chat, so no extra clearPendingDisambiguation call is required here.
-  await recordTelegramUsageEvent(db, {
-    eventType: "command_forget",
-    actionDetail: "command",
-    outcome: "success",
-  });
-  await sendAuditedTelegramReply(
-    db,
-    chatId,
-    "Your subscriber data has been deleted. Use /start to begin again.",
-    botToken,
-    { actionDetail: "callback_forget", recordReplyOutcome: false },
-  );
-  await answerCallbackQuery(cb.id, botToken, { text: "Deleted." });
+  const pending = parsePendingDisambiguation(pendingRow);
+  const expectedType = kind === "forget" ? "forget-confirm" : "confirm-bulk";
+  if (!pending || pending.actionType !== expectedType) {
+    await ctx.answerCallback({
+      text: kind === "forget" ? "No forget confirmation is pending." : "No bulk confirmation is pending.",
+    });
+    return null;
+  }
+  const actorUserId = ctx.cb.from?.id != null ? String(ctx.cb.from.id) : null;
+  if (pending.initiatorUserId != null && pending.initiatorUserId !== actorUserId) {
+    await ctx.answerCallback({ text: "Only the user who started this confirmation can complete it." });
+    return null;
+  }
+  return {
+    action,
+    kind,
+    expiresAt: pendingRow.expires_at,
+    payload: pending.actionType === "confirm-bulk" ? pending.payload : null,
+  };
 }
 
 async function executeConfirmedBulk(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
+  ctx: CallbackContext,
   payload: ConfirmBulkPayload,
+  operationStatements?: D1PreparedStatement[],
 ): Promise<void> {
   if (payload.kind === "subscribe") {
     const alertTypes = new Set(payload.alertTypes);
     if (payload.subscribeAll) {
-      await upsertGlobalAlertTypes(db, chatId, username, alertTypes, { clearPending: true });
-      await recordTelegramUsageEvent(db, {
-        eventType: "subscribe",
-        actionDetail: "all",
-        outcome: "success",
+      await upsertGlobalAlertTypes(ctx.db, ctx.chatId, callbackUsername(ctx.cb), alertTypes, {
+        clearPending: true,
+        operationStatements,
       });
-      await recordTelegramUsageEvent(db, {
-        eventType: "global_alert_change",
-        actionDetail: "bulk_confirm",
-        outcome: "opt_in",
+    } else {
+      await applySubscribeIntent(ctx.db, {
+        chatId: ctx.chatId,
+        username: callbackUsername(ctx.cb),
+        alertTypes,
+        directStablecoinIds: payload.coinIds,
+        presetIds: payload.presetIds,
+        clearPending: true,
+        depegWorseningBpsStep: payload.depegWorseningBpsStep,
+        operationStatements,
       });
-      return;
     }
-    await applySubscribeIntent(db, {
-      chatId,
-      username,
-      alertTypes,
+    await recordTelegramUsageEvent(ctx.db, {
+      eventType: "subscribe",
+      actionDetail: payload.subscribeAll ? "all" : payload.presetIds.length > 0 ? "preset" : "coin",
+      outcome: "success",
+    });
+    return;
+  }
+  if (payload.unsubscribeAll) {
+    await unsubscribeAll(ctx.db, ctx.chatId, { clearPending: true, operationStatements });
+  } else {
+    await applyUnsubscribeIntent(ctx.db, {
+      chatId: ctx.chatId,
       directStablecoinIds: payload.coinIds,
       presetIds: payload.presetIds,
       clearPending: true,
-      depegWorseningBpsStep: payload.depegWorseningBpsStep,
-    });
-    if (payload.presetIds.length > 0) {
-      await recordTelegramUsageEvent(db, {
-        eventType: "preset_follow",
-        actionDetail: "preset",
-        outcome: "success",
-      });
-    }
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: payload.presetIds.length > 0 ? "preset" : "coin",
-      outcome: "success",
-    });
-    return;
-  }
-
-  // unsubscribe
-  if (payload.unsubscribeAll) {
-    await unsubscribeAll(db, chatId, { clearPending: true });
-    await recordTelegramUsageEvent(db, {
-      eventType: "unsubscribe",
-      actionDetail: "all",
-      outcome: "success",
-    });
-    await recordTelegramUsageEvent(db, {
-      eventType: "global_alert_change",
-      actionDetail: "bulk_confirm",
-      outcome: "opt_out",
-    });
-    return;
-  }
-  await applyUnsubscribeIntent(db, {
-    chatId,
-    directStablecoinIds: payload.coinIds,
-    presetIds: payload.presetIds,
-    clearPending: true,
-  });
-  if (payload.presetIds.length > 0) {
-    await recordTelegramUsageEvent(db, {
-      eventType: "preset_unfollow",
-      actionDetail: "preset",
-      outcome: "success",
+      operationStatements,
     });
   }
-  await recordTelegramUsageEvent(db, {
+  await recordTelegramUsageEvent(ctx.db, {
     eventType: "unsubscribe",
-    actionDetail: payload.presetIds.length > 0 ? "preset" : "coin",
+    actionDetail: payload.unsubscribeAll ? "all" : payload.presetIds.length > 0 ? "preset" : "coin",
     outcome: "success",
   });
 }
 
-async function handleBulkConfirmCallback(
-  db: D1Database,
-  botToken: string,
-  cb: TelegramCallbackQuery,
-  action: "confirm" | "cancel",
-): Promise<void> {
-  const chatId = cb.message?.chat?.id?.toString();
-  if (!chatId) {
-    await answerCallbackQuery(cb.id, botToken);
-    return;
+async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedConfirmation): Promise<void> {
+  await ctx.planIntent?.(createTelegramWebhookIntent(`callback:${normalized.action}`, {
+    action: normalized.action,
+    kind: normalized.kind,
+    expiresAt: normalized.expiresAt,
+    payload: normalized.payload,
+  }, "required"));
+  if (!ctx.wasMutationApplied) {
+    const operationStatements = ctx.prepareMutationAppliedStatement
+      ? [ctx.prepareMutationAppliedStatement()]
+      : undefined;
+    if (normalized.action === "cancel") {
+      await clearPendingDisambiguation(ctx.db, ctx.chatId, {
+        expected: {
+          actionType: normalized.kind === "forget" ? "forget-confirm" : "confirm-bulk",
+          expiresAt: normalized.expiresAt,
+        },
+        operationStatements,
+      });
+    } else if (normalized.kind === "forget") {
+      await forgetSubscriber(ctx.db, ctx.chatId, { operationStatements });
+    } else if (normalized.payload) {
+      await executeConfirmedBulk(ctx, normalized.payload, operationStatements);
+    }
+    if (operationStatements) ctx.confirmAtomicMutationApplied?.();
+    // The fallback exists for direct tests without an update_id claim; normal
+    // webhook dispatch always commits a prepared marker with the domain write.
+    else await ctx.markMutationApplied();
   }
 
-  const pendingAction = await loadConfirmablePending(db, botToken, cb, chatId, {
-    actionType: "confirm-bulk",
-    expiredText: "This confirmation has expired. Re-run the command.",
-    notPendingText: "No bulk confirmation is pending.",
-    cancelActionDetail: "callback_bulk",
-  }, action);
-  if (!pendingAction) return;
-
-  // The confirmed state change and pending-row clear commit in one store batch.
-  const username = callbackUsername(cb);
-  try {
-    await executeConfirmedBulk(db, chatId, username, pendingAction.payload);
-  } catch (err) {
-    logTelegramEvent({
-      message: "bulk confirm execution failed",
-      action: "confirm-bulk",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Could not apply changes. Please try again." });
-    return;
-  }
-  await sendAuditedTelegramReply(db, chatId, "Confirmed.", botToken, {
-    actionDetail: "callback_bulk",
+  const reply = normalized.action === "cancel"
+    ? "Cancelled."
+    : normalized.kind === "forget"
+      ? "Your subscriber data has been deleted. Use /start to begin again."
+      : "Confirmed.";
+  await ctx.beforeIrreversibleEffect(normalized.kind === "forget" ? "callback-forget-reply" : "callback-bulk-reply");
+  await sendAuditedTelegramReply(ctx.db, ctx.chatId, reply, ctx.botToken, {
+    actionDetail: normalized.kind === "forget" ? "callback_forget" : "callback_bulk",
+    ...(normalized.kind === "forget" ? { recordReplyOutcome: false } : {}),
   });
-  await answerCallbackQuery(cb.id, botToken, { text: "Applied." });
+  await ctx.answerCallback({
+    text: normalized.action === "cancel" ? "Cancelled." : normalized.kind === "forget" ? "Deleted." : "Applied.",
+  });
 }
 
-/**
- * Routes `confirm:bulk` / `confirm:forget` (and `cancel:bulk` / `cancel:forget`)
- * to the right confirmation state machine. Registered under both `confirm` and
- * `cancel` actions in `CALLBACK_HANDLERS` since the dispatch logic is identical.
- */
-export const handleBulkActionCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
+export const handleBulkActionCallback: CallbackHandler = async (ctx) => {
+  const { parsed } = ctx;
   if (
-    (parsed.action !== "confirm" && parsed.action !== "cancel") ||
-    !hasExactParts(parsed.parts, 2) ||
-    (parsed.arg !== "bulk" && parsed.arg !== "forget")
+    (parsed.action !== "confirm" && parsed.action !== "cancel")
+    || !hasExactParts(parsed.parts, 2)
+    || (parsed.arg !== "bulk" && parsed.arg !== "forget")
   ) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await ctx.answerCallback({ text: "Action not recognized." });
     return;
   }
-  if (parsed.arg === "forget") {
-    // /forget is private-chat-only; the command handler enforces that on the
-    // outgoing side, but defend in depth in case the keyboard leaks elsewhere.
-    if (callbackChatType(cb) !== "private") {
-      await answerCallbackQuery(cb.id, botToken, { text: "Open a private chat with PharosWatchBot." });
-      return;
-    }
-    await handleForgetConfirmCallback(db, botToken, cb, parsed.action);
+  if (parsed.arg === "forget" && callbackChatType(ctx.cb) !== "private") {
+    await ctx.answerCallback({ text: "Open a private chat with PharosWatchBot." });
     return;
   }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+  if (
+    parsed.arg === "bulk"
+    && !(await requireAdminForMutatingCallback(
+      ctx.db,
+      ctx.botToken,
+      ctx.cb,
+      ctx.chatId,
+      undefined,
+      ctx.beforeIrreversibleEffect,
+    ))
+  ) {
     return;
   }
-  await handleBulkConfirmCallback(db, botToken, cb, parsed.action);
+
+  const normalized = parseStoredConfirmation(ctx)
+    ?? await loadFreshConfirmation(ctx, parsed.action, parsed.arg);
+  if (!normalized) return;
+  try {
+    await applyConfirmation(ctx, normalized);
+  } catch (err) {
+    logTelegramEvent({
+      message: "confirmation callback failed",
+      action: normalized.kind === "forget" ? "forget-confirm" : "confirm-bulk",
+    });
+    throw err;
+  }
 };

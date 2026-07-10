@@ -5,6 +5,10 @@ import {
 } from "./subscribers";
 import { assertSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { executeAtomicBatch } from "../../lib/db";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
@@ -17,6 +21,7 @@ export async function setSubscriberTimezone(
   chatId: string,
   username: string | null,
   timezone: string | null,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const { sql, binds } = buildSubscriberUpsert({
     kind: "preference",
@@ -25,7 +30,10 @@ export async function setSubscriberTimezone(
     nowSec: unixNow(),
     timezone,
   });
-  await db.prepare(sql).bind(...binds).run();
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements([db.prepare(sql).bind(...binds)], options),
+  );
 }
 
 /**
@@ -38,6 +46,7 @@ export async function setSubscriberSnooze(
   chatId: string,
   username: string | null,
   untilSec: number,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const { sql, binds } = buildSubscriberUpsert({
     kind: "preference",
@@ -46,7 +55,10 @@ export async function setSubscriberSnooze(
     nowSec: unixNow(),
     alertSnoozeUntilTs: untilSec,
   });
-  await db.prepare(sql).bind(...binds).run();
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements([db.prepare(sql).bind(...binds)], options),
+  );
 }
 
 /**
@@ -60,9 +72,10 @@ export async function setSubscriptionSnooze(
   chatId: string,
   stablecoinId: string,
   untilSec: number | null,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   if (untilSec === null) {
-    await executeAtomicBatch(db, [
+    await executeAtomicBatch(db, appendTelegramOperationStatements([
       db
         .prepare(
           `UPDATE telegram_subscriptions
@@ -92,7 +105,7 @@ export async function setSubscriptionSnooze(
         )
         .bind(chatId, stablecoinId),
       preparePreferenceGenerationBump(db, chatId),
-    ]);
+    ], options));
     return;
   }
 
@@ -105,7 +118,7 @@ export async function setSubscriptionSnooze(
     nowSec: now,
     bumpPreferenceGeneration: true,
   });
-  await executeAtomicBatch(db, [
+  await executeAtomicBatch(db, appendTelegramOperationStatements([
     db.prepare(parentUpsert.sql).bind(...parentUpsert.binds),
     db
       .prepare(
@@ -118,13 +131,14 @@ export async function setSubscriptionSnooze(
            alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
       )
       .bind(chatId, stablecoinId, untilSec),
-  ]);
+  ], options));
 }
 
 export async function clearAlertSnooze(
   db: D1Database,
   chatId: string,
   username: string | null,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const { sql, binds } = buildSubscriberUpsert({
     kind: "preference",
@@ -133,5 +147,8 @@ export async function clearAlertSnooze(
     nowSec: unixNow(),
     alertSnoozeUntilTs: null,
   });
-  await db.prepare(sql).bind(...binds).run();
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements([db.prepare(sql).bind(...binds)], options),
+  );
 }

@@ -954,7 +954,7 @@ describe("handleCallbackQuery", () => {
       expect(lastAckBody().text).toContain("Open a private chat");
     });
 
-    it("confirm:forget clears an expired pending row without deleting subscriber data", async () => {
+    it("confirm:forget leaves expired pending cleanup to the cron without deleting subscriber data", async () => {
       const db = mockD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
@@ -970,7 +970,7 @@ describe("handleCallbackQuery", () => {
       });
 
       const history = db.getHistory();
-      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
       expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
       expect(lastAckBody().text).toContain("expired");
     });

@@ -15,20 +15,19 @@ import {
 import {
   handlePendingActionBeforeDispatch,
   handleSetupPendingBeforeDispatch,
+  resumeStoredPendingClearIntent,
   type ParsedTelegramCommand,
   type ReplyFn,
 } from "./telegram-webhook-pending-gate";
 import {
   handleMyChatMember,
+  isBotRemovedTransition,
   type TelegramChatMemberUpdated,
 } from "./telegram-webhook-group-welcome";
 import {
   acquireTelegramCommandCooldown,
   claimTelegramProcessedUpdate,
   loadPendingDisambiguation,
-  markTelegramProcessedUpdateEffectStarted,
-  markTelegramProcessedUpdateFailed,
-  markTelegramProcessedUpdateProcessed,
   migrateTelegramChatId,
   recordTelegramChatCommandFlood,
   releaseTelegramCommandCooldown,
@@ -56,6 +55,14 @@ import {
   GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
   GROUP_CHAT_COMMAND_FLOOD_LIMIT,
 } from "../lib/telegram-constants";
+import {
+  TelegramWebhookEffectFence,
+  createTelegramWebhookIntent,
+} from "./telegram-webhook-effect-fence";
+import {
+  executeNormalizedPendingSelection,
+  parseStoredCommandSelectionIntent,
+} from "./telegram-webhook-disambiguation-selection";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -76,6 +83,7 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
   "/set",
   "/mute",
   "/pause",
+  "/forget",
   "/unmutehours",
   "/unsnooze",
   "/import",
@@ -114,6 +122,17 @@ const CANONICAL_COMMAND_KEYS: Record<string, string> = {
   "/market": "/brief",
 };
 
+const RESUMABLE_NORMALIZED_COMMANDS = new Set([
+  "/mute",
+  "/pause",
+  "/set",
+  "/subscribe",
+  "/timezone",
+  "/unmutehours",
+  "/unsnooze",
+  "/unsubscribe",
+]);
+
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
   async (
@@ -145,7 +164,7 @@ export const handleTelegramWebhook = withErrorHandler(
     const updateId = update.update_id;
     const claimedUpdateId =
       typeof updateId === "number" && Number.isFinite(updateId) ? updateId : null;
-    let processedUpdateClaim: { owner: string; generation: number } | null = null;
+    let effectFence: TelegramWebhookEffectFence | null = null;
     const nowSec = unixNow();
     if (claimedUpdateId != null) {
       const claim = await claimTelegramProcessedUpdate(db, {
@@ -181,29 +200,34 @@ export const handleTelegramWebhook = withErrorHandler(
       if (!claim.claimOwner || claim.claimGeneration == null) {
         throw new Error("Telegram update claim token is missing");
       }
-      processedUpdateClaim = {
+      const processedUpdateClaim = {
         owner: claim.claimOwner,
         generation: claim.claimGeneration,
       };
-      await markTelegramProcessedUpdateEffectStarted(db, {
-        updateId: claimedUpdateId,
-        nowSec,
-        claimOwner: processedUpdateClaim.owner,
-        claimGeneration: processedUpdateClaim.generation,
-      });
+      effectFence = new TelegramWebhookEffectFence(
+        db,
+        claimedUpdateId,
+        processedUpdateClaim,
+        claim.storedIntent,
+        claim.mutationAppliedAt,
+      );
     }
 
     const finishOk = async (errorClass: string | null = null): Promise<Response> => {
-      if (claimedUpdateId != null && processedUpdateClaim) {
-        await markTelegramProcessedUpdateProcessed(db, {
-          updateId: claimedUpdateId,
-          nowSec: unixNow(),
-          claimOwner: processedUpdateClaim.owner,
-          claimGeneration: processedUpdateClaim.generation,
-          errorClass,
-        });
-      }
+      await effectFence?.finish(errorClass);
       return ok();
+    };
+
+    const beforeIrreversibleEffect = async (kind: string): Promise<void> => {
+      await effectFence?.beforeIrreversibleEffect(kind);
+    };
+
+    const answerWebhookCallback = async (
+      callbackQueryId: string,
+      options?: { text?: string },
+    ): Promise<void> => {
+      await beforeIrreversibleEffect("callback-ack");
+      await answerCallbackQuery(callbackQueryId, botToken, options);
     };
 
     try {
@@ -222,7 +246,7 @@ export const handleTelegramWebhook = withErrorHandler(
               actionDetail: callbackAction,
               noticeMessage: "Too many button taps at once — please slow down for a minute.",
               reply: async (message) => {
-                await answerCallbackQuery(update.callback_query!.id, botToken, { text: message });
+                await answerWebhookCallback(update.callback_query!.id, { text: message });
               },
             });
             if (!floodAllowed) return finishOk();
@@ -235,7 +259,7 @@ export const handleTelegramWebhook = withErrorHandler(
                 callbackCooldownCommand,
                 "callback",
                 async (message) => {
-                  await answerCallbackQuery(update.callback_query!.id, botToken, { text: message });
+                  await answerWebhookCallback(update.callback_query!.id, { text: message });
                 },
               );
               if (!cooldown.allowed) {
@@ -255,7 +279,7 @@ export const handleTelegramWebhook = withErrorHandler(
             isChannelChatType(update.callback_query.message?.chat?.type) &&
             callbackMutatesChatState(update.callback_query.data ?? "")
           ) {
-            await answerCallbackQuery(update.callback_query.id, botToken, {
+            await answerWebhookCallback(update.callback_query.id, {
               text: "Channel-originated actions are not supported.",
             });
             await recordTelegramUsageEvent(db, {
@@ -266,7 +290,17 @@ export const handleTelegramWebhook = withErrorHandler(
             });
             return finishOk();
           }
-          await handleCallbackQuery(db, botToken, update.callback_query);
+          await handleCallbackQuery(db, botToken, update.callback_query, {
+            beforeIrreversibleEffect,
+            markMutationApplied: async () => effectFence?.markMutationApplied(),
+            planIntent: async (intent) => effectFence?.plan(intent),
+            prepareMutationAppliedStatement: effectFence
+              ? () => effectFence.prepareMutationAppliedStatement()
+              : undefined,
+            confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+            storedIntent: effectFence?.storedIntent ?? null,
+            wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+          });
         } catch (err) {
           if (callbackChatId && callbackCooldownKey) {
             await releaseCommandCooldownBestEffort(db, {
@@ -276,8 +310,9 @@ export const handleTelegramWebhook = withErrorHandler(
               command: callbackAction,
             });
           }
+          if (effectFence?.hasStartedEffect) throw err;
           try {
-            await answerCallbackQuery(update.callback_query.id, botToken, {
+            await answerWebhookCallback(update.callback_query.id, {
               text: "Action failed. Try again.",
             });
           } catch (ackErr) {
@@ -294,15 +329,33 @@ export const handleTelegramWebhook = withErrorHandler(
       }
 
       if (update.my_chat_member) {
+        const lifecycleRemoval = isBotRemovedTransition(
+          update.my_chat_member.old_chat_member?.status,
+          update.my_chat_member.new_chat_member?.status,
+        );
+        await effectFence?.plan(createTelegramWebhookIntent("member:lifecycle", {
+          oldStatus: update.my_chat_member.old_chat_member?.status ?? null,
+          newStatus: update.my_chat_member.new_chat_member?.status ?? null,
+          chatType: update.my_chat_member.chat?.type ?? null,
+          transition: lifecycleRemoval ? "removal" : "other",
+        }, lifecycleRemoval ? "required" : "none"));
         let myChatMemberErrorClass: string | null = null;
         try {
-          await handleMyChatMember(db, botToken, update.my_chat_member);
+          await handleMyChatMember(db, botToken, update.my_chat_member, {
+            beforeIrreversibleEffect,
+            prepareMutationAppliedStatement: effectFence
+              ? () => effectFence.prepareMutationAppliedStatement()
+              : undefined,
+            confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+            wasMutationApplied: effectFence?.wasMutationApplied,
+          });
         } catch (err) {
           logTelegramEvent({
             message: "my_chat_member failed",
             action: "my_chat_member",
             errorClass: classifyTelegramLogError(err),
           });
+          if (effectFence?.hasStartedEffect) throw err;
           myChatMemberErrorClass = "my_chat_member";
         }
         return finishOk(myChatMemberErrorClass);
@@ -310,9 +363,16 @@ export const handleTelegramWebhook = withErrorHandler(
 
       const migration = resolveChatMigration(update.message);
       if (migration) {
+        await effectFence?.plan(createTelegramWebhookIntent("chat:migration", migration, "required"));
         let migrationErrorClass: string | null = null;
         try {
-          await migrateTelegramChatId(db, migration.oldChatId, migration.newChatId);
+          if (!effectFence?.wasMutationApplied) {
+            const operationStatements = effectFence
+              ? [effectFence.prepareMutationAppliedStatement()]
+              : [];
+            await migrateTelegramChatId(db, migration.oldChatId, migration.newChatId, { operationStatements });
+            effectFence?.confirmAtomicMutationApplied();
+          }
           logTelegramEvent({
             level: "info",
             message: "telegram chat id migrated",
@@ -329,16 +389,17 @@ export const handleTelegramWebhook = withErrorHandler(
         return finishOk(migrationErrorClass);
       }
 
-      return await handleTelegramMessageUpdate({ db, update, botToken, finishOk });
+      return await handleTelegramMessageUpdate({
+        db,
+        update,
+        botToken,
+        finishOk,
+        effectFence,
+        beforeIrreversibleEffect,
+        operationNowSec: nowSec,
+      });
     } catch (err) {
-      if (claimedUpdateId != null && processedUpdateClaim) {
-        await markTelegramProcessedUpdateFailed(db, {
-          updateId: claimedUpdateId,
-          claimOwner: processedUpdateClaim.owner,
-          claimGeneration: processedUpdateClaim.generation,
-          errorClass: classifyWebhookError(err),
-        });
-      }
+      await effectFence?.fail(classifyWebhookError(err));
       throw err;
     }
   },
@@ -349,8 +410,11 @@ async function handleTelegramMessageUpdate(args: {
   update: TelegramWebhookUpdateWithChatMember;
   botToken: string;
   finishOk: FinishOk;
+  effectFence: TelegramWebhookEffectFence | null;
+  beforeIrreversibleEffect: (kind: string) => Promise<void>;
+  operationNowSec: number;
 }): Promise<Response> {
-  const { db, update, botToken, finishOk } = args;
+  const { db, update, botToken, finishOk, effectFence, beforeIrreversibleEffect, operationNowSec } = args;
   const chatId = update.message?.chat?.id?.toString();
   const text = update.message?.text?.trim();
   const username = update.message?.chat?.username ?? null;
@@ -359,9 +423,11 @@ async function handleTelegramMessageUpdate(args: {
   if (!chatId || !text) return finishOk();
 
   const reply: ReplyFn = async (message) => {
+    await beforeIrreversibleEffect("message-reply");
     await sendAuditedTelegramReply(db, chatId, message, botToken);
   };
   const replyWithMarkup: ReplyWithMarkupFn = async (message, options) => {
+    await beforeIrreversibleEffect("message-reply");
     await sendAuditedTelegramReply(db, chatId, message, botToken, options);
   };
   const commandContext: WebhookCommandContext = {
@@ -371,6 +437,27 @@ async function handleTelegramMessageUpdate(args: {
     username,
     actorUserId,
     botToken,
+    operationNowSec,
+    beforeIrreversibleEffect,
+    planIntent: async (intent) => effectFence?.plan(intent),
+    prepareMutationAppliedStatement: effectFence
+      ? () => effectFence.prepareMutationAppliedStatement()
+      : undefined,
+    prepareMutationOperationStatements: effectFence
+      ? () => [
+          ...(commandContext.clearPendingOnMutation
+            ? [db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId)]
+            : []),
+          effectFence.prepareMutationAppliedStatement(),
+        ]
+      : undefined,
+    preparePendingMutationAppliedStatement: effectFence
+      ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
+      : undefined,
+    confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+    markMutationApplied: async () => effectFence?.markMutationApplied(),
+    storedIntent: effectFence?.storedIntent ?? null,
+    wasMutationApplied: effectFence?.wasMutationApplied ?? false,
     replyToChat: reply,
     replyToChatWithMarkup: replyWithMarkup,
   };
@@ -379,6 +466,71 @@ async function handleTelegramMessageUpdate(args: {
   try {
     parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
     if (parsedCommand && isGroupChatType(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
+      return finishOk();
+    }
+
+    const pendingClearResume = await resumeStoredPendingClearIntent({
+      db,
+      chatId,
+      intent: effectFence?.storedIntent,
+      operation: {
+        beforeIrreversibleEffect,
+        prepareMutationAppliedStatement: effectFence
+          ? () => effectFence.prepareMutationAppliedStatement()
+          : undefined,
+        confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+        markMutationApplied: async () => effectFence?.markMutationApplied(),
+        storedIntent: effectFence?.storedIntent ?? null,
+        wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+      },
+    });
+    if (pendingClearResume.handled) {
+      if (pendingClearResume.reply) await reply(pendingClearResume.reply);
+      if (pendingClearResume.continueCommand && parsedCommand) {
+        await dispatchParsedTelegramCommand({
+          db,
+          botToken,
+          chatId,
+          chatType,
+          actorUserId,
+          parsedCommand,
+          commandContext,
+          reply,
+          replyWithMarkup,
+        });
+      }
+      return finishOk();
+    }
+
+    const storedSelection = parseStoredCommandSelectionIntent(effectFence?.storedIntent);
+    const resumeStoredCommand = Boolean(
+      parsedCommand
+      && effectFence?.storedIntent
+      && (
+        storedSelection
+        || effectFence.storedIntent.payload.stage === "bulk-confirm-prompt"
+        || effectFence.storedIntent.payload.scope === "all"
+        || (
+          RESUMABLE_NORMALIZED_COMMANDS.has(parsedCommand.command)
+          && effectFence.storedIntent.kind === `command:${parsedCommand.command.slice(1)}`
+          && effectFence.storedIntent.mutation === "required"
+        )
+      ),
+    );
+    if (parsedCommand && resumeStoredCommand) {
+      commandContext.clearPendingOnMutation = effectFence?.storedIntent?.payload.clearPending === true;
+      await dispatchParsedTelegramCommand({
+        db,
+        botToken,
+        chatId,
+        chatType,
+        actorUserId,
+        parsedCommand,
+        commandContext,
+        reply,
+        replyWithMarkup,
+        storedSelection,
+      });
       return finishOk();
     }
 
@@ -413,6 +565,21 @@ async function handleTelegramMessageUpdate(args: {
         pendingRow,
         parsedCommand,
         reply,
+        operation: {
+          beforeIrreversibleEffect,
+          planIntent: async (intent) => effectFence?.plan(intent),
+          prepareMutationAppliedStatement: effectFence
+            ? () => effectFence.prepareMutationAppliedStatement()
+            : undefined,
+          preparePendingMutationAppliedStatement: effectFence
+            ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
+            : undefined,
+          confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+          markMutationApplied: async () => effectFence?.markMutationApplied(),
+          storedIntent: effectFence?.storedIntent ?? null,
+          wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+          operationNowSec,
+        },
       });
       if (setupResult === "finished") return finishOk();
     }
@@ -430,11 +597,32 @@ async function handleTelegramMessageUpdate(args: {
         pendingNotExpired,
         parsedCommand,
         reply,
+        operation: {
+          beforeIrreversibleEffect,
+          planIntent: async (intent) => effectFence?.plan(intent),
+          prepareMutationAppliedStatement: effectFence
+            ? () => effectFence.prepareMutationAppliedStatement()
+            : undefined,
+          preparePendingMutationAppliedStatement: effectFence
+            ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
+            : undefined,
+          confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+          markMutationApplied: async () => effectFence?.markMutationApplied(),
+          storedIntent: effectFence?.storedIntent ?? null,
+          wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+          operationNowSec,
+        },
       });
       if (pendingResult === "finished") return finishOk();
+      if (pendingResult === "continue-clear-pending") {
+        commandContext.clearPendingOnMutation = true;
+      }
     }
 
     if (!parsedCommand) return finishOk();
+    if (!effectFence?.storedIntent && !commandMutatesLocalState(parsedCommand.command, parsedCommand.args)) {
+      await effectFence?.plan(await createCommandIntent(parsedCommand));
+    }
     await dispatchParsedTelegramCommand({
       db,
       botToken,
@@ -463,6 +651,7 @@ async function handleTelegramMessageUpdate(args: {
       action: "command-dispatch",
       errorClass: classifyTelegramLogError(err),
     });
+    if (effectFence?.hasStartedEffect) throw err;
     await reply("Something went wrong, please try again.");
     return finishOk("command-dispatch");
   }
@@ -479,6 +668,7 @@ async function dispatchParsedTelegramCommand(args: {
   reply: ReplyFn;
   replyWithMarkup: ReplyWithMarkupFn;
   skipFlood?: boolean;
+  storedSelection?: ReturnType<typeof parseStoredCommandSelectionIntent>;
 }): Promise<void> {
   const {
     db,
@@ -491,6 +681,7 @@ async function dispatchParsedTelegramCommand(args: {
     reply,
     replyWithMarkup,
     skipFlood = false,
+    storedSelection,
   } = args;
   const commandStartedAtMs = Date.now();
 
@@ -532,6 +723,27 @@ async function dispatchParsedTelegramCommand(args: {
       await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied");
       return;
     }
+  }
+
+  if (storedSelection) {
+    await executeNormalizedPendingSelection(
+      db,
+      botToken,
+      chatId,
+      commandContext.username,
+      storedSelection,
+      {
+        beforeIrreversibleEffect: commandContext.beforeIrreversibleEffect,
+        planIntent: commandContext.planIntent,
+        prepareMutationAppliedStatement: commandContext.prepareMutationAppliedStatement,
+        confirmAtomicMutationApplied: commandContext.confirmAtomicMutationApplied,
+        markMutationApplied: commandContext.markMutationApplied,
+        storedIntent: commandContext.storedIntent,
+        wasMutationApplied: commandContext.wasMutationApplied,
+      },
+    );
+    await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
+    return;
   }
 
   const handler = COMMAND_HANDLERS[parsedCommand.command];
@@ -586,6 +798,53 @@ function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string 
   if (update.message) return "message";
   if (update.my_chat_member) return "my_chat_member";
   return "unknown";
+}
+
+async function digestWebhookIntentInput(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function createCommandIntent(parsed: ParsedTelegramCommand) {
+  const mutation = commandMutatesLocalState(parsed.command, parsed.args) ? "required" : "none";
+  return createTelegramWebhookIntent(`command:${parsed.command}`, {
+    command: parsed.command,
+    argsDigest: await digestWebhookIntentInput(parsed.args),
+    argsLength: parsed.args.length,
+  }, mutation);
+}
+
+async function createCallbackIntent(data: string) {
+  const rawAction = data.split(":", 1)[0] ?? "";
+  const action = /^[a-z]{1,32}$/.test(rawAction) ? rawAction : "unknown";
+  return createTelegramWebhookIntent(`callback:${action}`, {
+    action,
+    dataDigest: await digestWebhookIntentInput(data),
+    partCount: data.split(":").length,
+  }, callbackMutatesChatState(data) ? "required" : "none");
+}
+
+async function createPendingIntent(
+  pending: NonNullable<Awaited<ReturnType<typeof loadPendingDisambiguation>>>,
+) {
+  const actionType = pending.action_type && /^[a-z0-9][a-z0-9-]{0,63}$/.test(pending.action_type)
+    ? pending.action_type
+    : "unknown";
+  return createTelegramWebhookIntent(`pending:${actionType}`, {
+    actionType,
+    actionPayloadDigest: await digestWebhookIntentInput(pending.action_payload ?? ""),
+    expiresAt: pending.expires_at,
+  }, "required");
+}
+
+function commandMutatesLocalState(command: string, args: string): boolean {
+  return commandRequiresGroupAdmin(command, args)
+    || command === "/forget"
+    || command === "/cancel"
+    || (command === "/start" && (
+      parseStartPayload(args).kind === "setup" || parseStartPayload(args).kind === "none"
+    ));
 }
 
 function resolveUpdateChatId(update: TelegramWebhookUpdateWithChatMember): string | null {

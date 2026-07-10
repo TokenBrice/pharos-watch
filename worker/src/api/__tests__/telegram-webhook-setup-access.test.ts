@@ -213,7 +213,7 @@ describe("handleTelegramWebhook", () => {
     expect(body.text).not.toContain("Other useful setups");
   });
 
-  it("clears a stale setup-step row before reopening the setup wizard", async () => {
+  it("atomically replaces a stale setup-step row when reopening the setup wizard", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const db = fixtureMockD1([
@@ -237,7 +237,7 @@ describe("handleTelegramWebhook", () => {
       await handleTelegramWebhook(db, makeWebhookRequest(123, "/start"), "test-secret", "bot-token");
 
       const history = db.getHistory();
-      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
       const pendingWrites = history.filter((entry) =>
         entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
       );

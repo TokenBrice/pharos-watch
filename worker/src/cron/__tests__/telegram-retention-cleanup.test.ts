@@ -102,7 +102,7 @@ function createStubDb(
           return { success: true, meta: { changes: 0 } };
         }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
-          const [cutoff, limit] = bound as [number, number];
+          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
           const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff, limit);
           options.afterProcessedUpdateDelete?.();
           return { success: true, meta: { changes: removed } };
@@ -161,7 +161,7 @@ function createStubDb(
       },
       first: async () => {
         if (sql.includes("SELECT COUNT(*) AS count") && sql.includes("FROM telegram_processed_updates")) {
-          const [cutoff, limit] = bound as [number, number];
+          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
           const count = Math.min(
             state.processedUpdates.filter((row) => row.received_at < cutoff).length,
             limit,
