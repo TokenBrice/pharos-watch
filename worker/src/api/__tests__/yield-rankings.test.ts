@@ -750,6 +750,103 @@ describe("handleYieldRankings", () => {
     }));
   });
 
+  it("rehydrates generic external opportunities with market-level safety", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          safetyScore: 50,
+          safetyGrade: "C-",
+          sourceRisk: {
+            venueRiskWeighted: 3,
+            venueRiskTier: "medium",
+            sourceRiskPenalty: 1.1,
+            opportunityRisk: {
+              opportunityClass: "lending",
+              underlyingSafetyScore: 50,
+              opportunitySafetyScore: 45,
+              opportunitySafetyPenalty: 5,
+              venueReviewed: true,
+              missingCriticalEvidence: [],
+            },
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+
+    const res = await handleYieldRankings(makeCacheDb(payload, updatedAt));
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.safetyScore).toBe(61);
+    expect(row?.safetyGrade).toBe("C+");
+    expect(row?.provenance?.safetyProvenance).toBe("opportunity-safety");
+    expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 66,
+      opportunitySafetyScore: 61,
+      opportunitySafetyPenalty: 5,
+      missingCriticalEvidence: [],
+    });
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: 61,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      sourceRiskPenalty: 1.1,
+    }));
+  });
+
+  it("does not requalify an external opportunity with missing critical market evidence", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          sourceTvlUsd: null,
+          pharosYieldScore: null,
+          pysNullReason: "opportunity-evidence-missing",
+          sourceRisk: {
+            venueRiskTier: "unknown",
+            opportunityRisk: {
+              opportunityClass: "lending",
+              underlyingSafetyScore: 50,
+              opportunitySafetyScore: null,
+              opportunitySafetyPenalty: null,
+              venueReviewed: false,
+              missingCriticalEvidence: ["venue-review", "market-size"],
+            },
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+
+    const res = await handleYieldRankings(makeCacheDb(payload, updatedAt));
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.pharosYieldScore).toBeNull();
+    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(row?.provenance?.scoreQualification).toBe("NR");
+    expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
+      underlyingSafetyScore: 66,
+      opportunitySafetyScore: null,
+      missingCriticalEvidence: ["venue-review", "market-size"],
+    });
+  });
+
   it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {
