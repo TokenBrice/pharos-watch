@@ -24,7 +24,10 @@ import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
   normalizeDisabledSymbolSet,
+  persistMintBurnRunDrilldown,
+  resolveMintBurnResumeConfigKey,
   resolveRotatedConfigs,
+  updateMintBurnAttemptState,
 } from "./mint-burn/run-state";
 import { excludeFrozenIds } from "./shared/exclude-frozen";
 import { throwIfAborted } from "../lib/abort";
@@ -162,7 +165,7 @@ export async function syncMintBurn(
   const runStateSnapshot = await getMintBurnRunState(db, jobName);
   const runState = runStateSnapshot.state;
   const rotatedConfigs = resolveRotatedConfigs(
-    runState.lastConfigKey,
+    runState.resumeConfigKey,
     enabledConfigs,
     (c) => mintBurnConfigKey(c),
   );
@@ -248,6 +251,21 @@ export async function syncMintBurn(
     criticalContractsSatisfied, criticalContractsUnsatisfied,
     configBreakdown,
   } = phaseResult;
+  const attemptCoverage = await updateMintBurnAttemptState({
+    db,
+    jobName,
+    enabledConfigKeys: enabledConfigs.map((config) => mintBurnConfigKey(config)),
+    configBreakdown,
+    activeProviderDeferrals: phaseResult.activeProviderDeferrals,
+    nowSec: runTimestamp,
+  });
+  const runDrilldown = await persistMintBurnRunDrilldown({
+    db,
+    jobName,
+    observedAt: runTimestamp,
+    configBreakdown: configBreakdown as unknown as ReadonlyArray<Record<string, unknown>>,
+  });
+  const resumeConfigKey = resolveMintBurnResumeConfigKey(configBreakdown);
 
   await reportCronProgress(reportProgress, {
     stage: "recalc-hours",
@@ -267,7 +285,7 @@ export async function syncMintBurn(
     lane,
     jobName,
     chainHeads,
-    startIndex: enabledConfigs.findIndex((config) => mintBurnConfigKey(config) === mintBurnConfigKey(rotatedConfigs[0] ?? enabledConfigs[0])),
+    resumeConfigKey,
     enabledConfigs,
     configs,
     configsDisabled,
@@ -296,6 +314,8 @@ export async function syncMintBurn(
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown, runtimeBudgetHit: phaseResult.runtimeBudgetHit,
+    attemptCoverage,
+    runDrilldown,
     signal,
   });
 

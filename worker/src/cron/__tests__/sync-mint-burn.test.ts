@@ -454,7 +454,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.failedEventDefs).toBeTruthy();
     expect(usdt?.advancedTo).toBeNull();
@@ -485,7 +485,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.advancedTo).toBe(21_910_000);
     expect(usdt?.coverageFrontier).toBe(21_910_000);
@@ -513,7 +513,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.missingTimestampCount).toBe(1);
     expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_000);
@@ -544,7 +544,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(resolveBlockTimestamps).not.toHaveBeenCalled();
     expect(usdt?.missingTimestampCount).toBe(0);
@@ -646,7 +646,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    const usdt = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(0);
@@ -740,7 +740,7 @@ describe("syncMintBurn", () => {
 
     expect(fetchedContracts[0]).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
     expect(fetchedContracts).toContain("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(meta.configBreakdown[0].requestBudgetUsed).toBe(meta.configBreakdown[0].requestBudgetLimit);
+    expect(meta.configSamples[0].requestBudgetUsed).toBe(meta.configSamples[0].requestBudgetLimit);
   });
 
   it("stops before starting another config when the runtime budget tail is reserved", async () => {
@@ -759,7 +759,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdc = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDC");
+    const usdc = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDC");
 
     expect(meta.runtimeBudgetHit).toBe(true);
     expect(usdc?.attempted).toBe(false);
@@ -788,7 +788,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    const usdt = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
 
     expect(usdt?.requestBudgetLimit).toBe(150);
     expect(usdt?.txContextShortfalls).toBe(0);
