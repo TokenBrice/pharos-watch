@@ -74,14 +74,38 @@ describe("FreshnessIndicator", () => {
   it("keeps ticking age text out of live regions", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
-    const absoluteLabel = screen.getByRole("time").getAttribute("aria-label");
+    const absoluteLabel = screen.getByRole("time").querySelector(".sr-only")?.textContent;
 
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(absoluteLabel).toMatch(/^Refreshed at /);
+    expect(screen.getByRole("status").textContent).toBe("");
     act(() => {
       vi.advanceTimersByTime(5000);
     });
     expect(screen.getByText(/35s ago/i)).toBeDefined();
-    expect(screen.getByRole("time").getAttribute("aria-label")).toBe(absoluteLabel);
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toBe(absoluteLabel);
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("announces only freshness-state transitions, never age ticks", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(
+      <FreshnessIndicator
+        updatedAtMs={1_700_000_000_000 - 100_000}
+        staleAfterMs={120_000}
+        labelPrefix="Dashboard fetch"
+      />,
+    );
+
+    expect(screen.getByRole("status").textContent).toBe("");
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+    expect(screen.getByRole("status").textContent).toBe("Dashboard fetch is stale.");
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByRole("status").textContent).toBe("Dashboard fetch is stale.");
   });
 
   it("renders a missing timestamp as unavailable rather than extremely old", () => {
@@ -90,7 +114,7 @@ describe("FreshnessIndicator", () => {
 
     expect(screen.getByText("Dashboard fetch: not loaded")).toBeDefined();
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("unavailable");
-    expect(screen.getByRole("time").getAttribute("aria-label")).toBe("Dashboard fetch has not loaded");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toBe("Dashboard fetch has not loaded");
   });
 
   it("can label browser/dashboard fetch freshness explicitly", () => {

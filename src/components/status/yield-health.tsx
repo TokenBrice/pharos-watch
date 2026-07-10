@@ -155,7 +155,7 @@ export function YieldHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Yield Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Yield Health</CardTitle>
           <a
             href={health.runbookUrl}
             target="_blank"
@@ -213,7 +213,7 @@ export function YieldHealthCard({
 
         <div className="rounded-lg border border-border/50 p-3">
           <div className="mb-2 text-xs font-medium text-muted-foreground">Published benchmark health</div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Published benchmark health">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {Object.values(health.benchmarkRegistry.benchmarks).map((benchmark) => (
               <div key={benchmark.key} className="flex min-w-0 items-center justify-between gap-3 text-xs">
                 <span className="min-w-0 truncate text-muted-foreground">
@@ -234,7 +234,7 @@ export function YieldHealthCard({
               Warn below {formatPercentFromRatio(health.sourceRiskCoverage.threshold, 0)}
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Source-risk coverage fields">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {SOURCE_RISK_COVERAGE_FIELDS.map(([field, label]) => {
               const coverage = health.sourceRiskCoverage.fields[field];
               const fieldStatus = coverageStatus(coverage, health.sourceRiskCoverage.threshold);

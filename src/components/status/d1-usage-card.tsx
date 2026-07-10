@@ -72,7 +72,7 @@ export function D1UsageCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">D1 Usage</CardTitle>
+          <CardTitle as="h3" className="text-base">D1 Usage</CardTitle>
           <span className="text-xs text-muted-foreground">
             checked {formatElapsedSeconds(checkedAgeSeconds)} ago
           </span>

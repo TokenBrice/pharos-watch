@@ -445,7 +445,7 @@ export function ApiKeysPanel() {
   return (
     <Card className="min-w-0 max-w-full">
       <CardHeader>
-        <CardTitle className="text-base">API Keys</CardTitle>
+        <CardTitle as="h3" className="text-base">API Keys</CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 space-y-5">
         {!isLoading && !error ? <ApiKeyInventorySummary items={keySummary} /> : null}

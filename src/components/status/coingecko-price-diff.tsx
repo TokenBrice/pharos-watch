@@ -58,7 +58,7 @@ export function CoinGeckoPriceDiffCard({
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="space-y-1">
-            <CardTitle className="text-base">CoinGecko Price Drift</CardTitle>
+            <CardTitle as="h3" className="text-base">CoinGecko Price Drift</CardTitle>
             <p className="text-xs text-muted-foreground">
               Tracked coins with a live CoinGecko price more than {summary.thresholdPct}% away from the Pharos reported price.
             </p>

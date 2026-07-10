@@ -93,8 +93,9 @@ function formatTimestamp(timestampSeconds: number | null | undefined): string {
 function formatDurationValue(duration: FormattedCronDuration | null): React.ReactNode {
   if (!duration) return "Unknown";
   return (
-    <span title={duration.exactLabel} aria-label={`${duration.label}; exact ${duration.exactLabel}`}>
+    <span title={duration.exactLabel}>
       {duration.label}
+      <span className="sr-only">; exact {duration.exactLabel}</span>
     </span>
   );
 }
@@ -383,7 +384,9 @@ function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
         </div>
       </dl>
       <details className="mt-3 text-xs">
-        <summary className="cursor-pointer text-muted-foreground">Attempt identifiers and timestamps</summary>
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+          Attempt identifiers and timestamps
+        </summary>
         <dl className="mt-2 grid min-w-0 gap-2 border-y border-border/55 py-2">
           <div className="min-w-0">
             <dt className="text-muted-foreground">Idempotency key</dt>
@@ -420,7 +423,9 @@ function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
       ) : null}
       {attempt.metadata && Object.keys(attempt.metadata).length > 0 ? (
         <details className="mt-3 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Full attempt metadata</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+            Full attempt metadata
+          </summary>
           <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-md bg-muted p-2 text-xs">
             {JSON.stringify(attempt.metadata, null, 2)}
           </pre>
@@ -539,7 +544,9 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
           {row.cron.inFlight.message ? <div className="mt-2 break-words">{row.cron.inFlight.message}</div> : null}
           {row.cron.inFlight.metadata && Object.keys(row.cron.inFlight.metadata).length > 0 ? (
             <details className="mt-3 text-xs">
-              <summary className="cursor-pointer">Full progress metadata</summary>
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md">
+                Full progress metadata
+              </summary>
               <pre className="mt-2 max-h-40 max-w-full overflow-auto rounded-md bg-background/60 p-2 text-xs text-foreground">
                 {JSON.stringify(row.cron.inFlight.metadata, null, 2)}
               </pre>
@@ -553,7 +560,9 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
 
       {lastRun?.error ? (
         <details className="mt-4 text-xs">
-          <summary className="cursor-pointer text-red-800 dark:text-red-300">Latest run error</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-red-800 dark:text-red-300">
+            Latest run error
+          </summary>
           <pre className="mt-2 max-h-40 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-xs">
             {lastRun.error}
           </pre>
@@ -572,7 +581,9 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
 
       {lastRun?.metadata && Object.keys(lastRun.metadata).length > 0 ? (
         <details className="mt-4 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Full run metadata</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+            Full run metadata
+          </summary>
           <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-md bg-muted p-2 text-xs">
             {JSON.stringify(lastRun.metadata, null, 2)}
           </pre>
@@ -581,7 +592,9 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
 
       {row.cron.latestEvent ? (
         <details className="mt-4 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Latest cron event</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+            Latest cron event
+          </summary>
           <div className="mt-2 min-w-0 border-y border-border/55 py-2">
             <div className="font-medium text-foreground">{row.cron.latestEvent.message}</div>
             <div className="mt-1 break-all font-mono text-muted-foreground">
@@ -615,7 +628,7 @@ function CronWorkbenchControls({
   onReset: () => void;
 }) {
   return (
-    <div className="space-y-3 border-y border-border/60 py-3" aria-label="Cron job filters">
+    <div role="group" className="space-y-3 border-y border-border/60 py-3" aria-label="Cron job filters">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="min-w-0 space-y-1 sm:col-span-2">
           <span className="text-xs font-medium text-muted-foreground">Search jobs</span>
@@ -718,7 +731,7 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
     <LazyDetails
       className="group min-w-0 border-t border-border/55 py-3 first:border-t-0"
       summary={
-        <summary className="flex min-w-0 cursor-pointer list-none flex-wrap items-start justify-between gap-3 marker:hidden">
+        <summary className="pharos-focus-ring flex min-h-11 min-w-0 cursor-pointer list-none flex-wrap items-start justify-between gap-3 rounded-md marker:hidden">
           <span className="min-w-0">
             <span className="block break-words text-sm font-medium text-foreground">{row.label}</span>
             <span className="mt-1 block break-all font-mono text-[11px] text-muted-foreground">{row.job}</span>
@@ -786,7 +799,9 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
       ) : null}
       {surface.metadata && Object.keys(surface.metadata).length > 0 ? (
         <details className="mt-3 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Full surface metadata</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+            Full surface metadata
+          </summary>
           <pre className="mt-2 max-h-48 max-w-full overflow-auto rounded-md bg-muted p-2 text-xs">
             {JSON.stringify(surface.metadata, null, 2)}
           </pre>

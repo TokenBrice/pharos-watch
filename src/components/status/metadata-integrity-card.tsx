@@ -26,7 +26,7 @@ export function MetadataIntegrityCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Metadata Integrity Watchlist</CardTitle>
+        <CardTitle as="h3" className="text-base">Metadata Integrity Watchlist</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-3">

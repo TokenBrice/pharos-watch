@@ -119,7 +119,7 @@ export function DiscoveryCandidatesCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Coverage Discovery</CardTitle>
+          <CardTitle as="h3" className="text-base">Coverage Discovery</CardTitle>
           <span className="text-xs text-muted-foreground">{visible.length} candidates</span>
         </div>
       </CardHeader>

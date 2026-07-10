@@ -68,7 +68,7 @@ export function PriceSourceHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Price Source Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Price Source Health</CardTitle>
           <span className="text-xs text-muted-foreground">
             {totalAssets} assets · synced {formatElapsedSeconds(lastSyncAgeSeconds)} ago
           </span>

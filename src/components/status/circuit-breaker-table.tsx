@@ -94,7 +94,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
           <LazyDetails
             className={tripped.length > 0 ? "mt-4" : undefined}
             summary={
-              <summary className="cursor-pointer text-sm text-muted-foreground">
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
                 {healthy.length} healthy breaker{healthy.length !== 1 ? "s" : ""}
               </summary>
             }

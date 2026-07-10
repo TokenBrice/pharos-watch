@@ -66,7 +66,7 @@ export function MintBurnReconciliationCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Mint/Burn Reconciliation</CardTitle>
+        <CardTitle as="h3" className="text-base">Mint/Burn Reconciliation</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

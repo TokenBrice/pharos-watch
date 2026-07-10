@@ -131,7 +131,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
 
 export function ApiKeyInventorySummary({ items }: { items: readonly ApiKeySummaryItem[] }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="API key inventory summary">
+    <div role="group" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="API key inventory summary">
       {items.map((item) => (
         <div key={item.label} className="border-y border-border/60 py-2">
           <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
@@ -169,7 +169,7 @@ export function ApiKeyInventoryControls({
   const ownerValue = query.owner === undefined ? "" : (query.owner ?? "__unassigned__");
 
   return (
-    <div className="space-y-3 border-y border-border/60 py-3" aria-label="API key inventory controls">
+    <div role="group" className="space-y-3 border-y border-border/60 py-3" aria-label="API key inventory controls">
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         <label className="min-w-0 space-y-1 sm:col-span-2">
           <span className="text-xs font-medium text-muted-foreground">Search keys</span>

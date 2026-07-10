@@ -176,7 +176,7 @@ export function ApiKeyRequestsPanel() {
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Self-Serve API Requests</CardTitle>
+          <CardTitle as="h3" className="text-base">Self-Serve API Requests</CardTitle>
           <Button
             type="button"
             size="sm"
@@ -193,7 +193,7 @@ export function ApiKeyRequestsPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         {!isLoading && !error ? (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Request triage summary">
+          <div role="group" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Request triage summary">
             {requestSummary.map((item) => (
               <div key={item.label} className="border-y border-border/60 py-2">
                 <div className="text-xs uppercase text-muted-foreground">{item.label}</div>

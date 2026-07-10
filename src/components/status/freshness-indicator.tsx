@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -91,7 +91,6 @@ export function FreshnessIndicator({
             dateTime={absolute ? new Date(updatedAtMs).toISOString() : undefined}
             data-state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
             data-stale={isStale ? "true" : "false"}
-            aria-label={fullLabel}
             className={cn(
               "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
               compact && "h-5 rounded-md px-2 py-0 leading-none",
@@ -109,11 +108,47 @@ export function FreshnessIndicator({
                 aria-hidden="true"
               />
             )}
-            {visibleLabel}
+            {/* The relative age ticks frequently; screen readers get the stable
+                absolute label instead, and state transitions are announced
+                separately below. `aria-label` is prohibited on the `time` role. */}
+            <span aria-hidden="true">{visibleLabel}</span>
+            <span className="sr-only">{fullLabel}</span>
           </time>
         </TooltipTrigger>
         <TooltipContent className="text-[11px]">{fullLabel}</TooltipContent>
       </Tooltip>
+      <FreshnessTransitionAnnouncer
+        labelPrefix={labelPrefix}
+        state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
+      />
     </TooltipProvider>
+  );
+}
+
+/**
+ * Announces freshness-state transitions only (current <-> stale), never the
+ * ticking relative age. The initial state is not announced.
+ */
+function FreshnessTransitionAnnouncer({
+  labelPrefix,
+  state,
+}: {
+  labelPrefix?: string;
+  state: "current" | "stale" | "unavailable";
+}) {
+  const [announcement, setAnnouncement] = useState("");
+  const previousStateRef = useRef(state);
+
+  useEffect(() => {
+    const previous = previousStateRef.current;
+    previousStateRef.current = state;
+    if (previous === state || state === "unavailable") return;
+    setAnnouncement(`${labelPrefix ?? "Data"} is ${state === "stale" ? "stale" : "current again"}.`);
+  }, [labelPrefix, state]);
+
+  return (
+    <span role="status" aria-live="polite" className="sr-only">
+      {announcement}
+    </span>
   );
 }
