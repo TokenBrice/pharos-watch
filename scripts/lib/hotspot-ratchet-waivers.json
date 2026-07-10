@@ -71,14 +71,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/api/telegram-webhook.ts": {
-    "disposition": "queued-p4",
-    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",

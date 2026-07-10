@@ -47,8 +47,12 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Owner/generation-claim the `update_id`, persist a versioned normalized operation intent, atomically prove replay-safe local mutation, and cross the effect fence only immediately before an irreversible Bot API call. Stale unstarted/planned claims are reclaimable; planned takeover resumes stored normalized parameters instead of mutable pending/setup rows. Once effect-start is durable, duplicates are acknowledged without replay and uncertain rows are exposed for operator reconciliation. Hold the dedupe, pending-disambiguation gate, ingress flood cap, group-admin gate, and per-command cooldown.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
+- `worker/src/api/telegram-webhook.ts` (entrypoint: secret validation, claim/fence bootstrap, and per-update-type routing)
 - `worker/src/api/telegram-webhook-auth.ts` (secret validation, group-admin gating)
+- `worker/src/api/telegram-webhook-update-normalization.ts` (pure update-shape helpers: update-type/chat-id resolution and group-to-supergroup migration extraction; no D1, no Bot API)
+- `worker/src/api/telegram-webhook-effect-fence.ts` (the `update_id` claim bootstrap — duplicate/in-flight answering — plus the request-scoped operation-intent effect fence crossed before irreversible Bot API calls)
+- `worker/src/api/telegram-webhook-update-dispatch.ts` (intent dispatch: routes claimed callback taps and message commands through the ingress policy gates and the pending gate into `COMMAND_HANDLERS` / the callback router)
+- `worker/src/api/telegram-webhook-ingress-policy.ts` (ingress flood cap, per-command cooldown, group-admin gate, channel-mutation refusal predicates, and command-usage attribution)
 - `worker/src/api/telegram-webhook-pending-gate.ts` (the pending-disambiguation / setup-step gate decisions run before dispatch: `handleSetupPendingBeforeDispatch`, `handlePendingActionBeforeDispatch`, and the disambiguation-reply helpers)
 - `worker/src/api/telegram-webhook-group-welcome.ts` (the group lifecycle sub-seam: `handleMyChatMember` plus the bot-added/-removed transition checks, welcome message/markup builders, and the local `TelegramChatMemberUpdated` shape)
 - `worker/src/api/telegram-webhook-shared.ts` (types/constants used by both Ingress and Action handlers — see note below)
@@ -168,16 +172,18 @@ Admin recovery paths preserve the same effect and queue boundaries. Chat diagnos
 **Reserve-drift producer/consumer seam (C123).** The reserve-drift family is the one event source whose state is *not* computed inside the dispatch trigger. `checkCollateralDrift` does live reserve-adapter network I/O (`loadFreshIndependentLiveReserveMap`), so calling it from the 5-minute dispatch trigger would consume the per-trigger 6-connection pool. Instead the four-hourly reserve slot (`worker/src/handlers/scheduled/hourly-live-reserves.ts`) persists a versioned source envelope (`generation`, `publishedAt`, `continuous`, `driftIds`) to `alert:reserve-snapshot` after its own `checkCollateralDrift` call, and dispatch only *diffs* an alertable set against its own baseline `alert:reserve-dispatched-snapshot`. Dispatch never opens a reserve-adapter connection. Coins that fall back to curated reserves are omitted from the producer set so a transient live-fetch failure cannot read as a drift change; the family fires entering-drift only. `worker/src/lib/alert-reserve-source-cache.ts` derives the freshness ceiling from two `sync-live-reserves` intervals (8 hours), rejects missing/corrupt/future/wrong-generation state, and marks the first publish after a continuity gap as `recovering`. That recovery publish cold-seeds the dispatch baseline; only the next continuous expected-generation publish can create reserve transitions.
 
 **Owned files.**
-- `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)
+- `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration: circuit gate, source load, path selection, and the preset-failure hook wiring)
+- `worker/src/cron/dispatch-telegram-source-lifecycle.ts` (fanout-free baseline seed plus recovery of an oldest incomplete source event: baseline-committed-before-manifest backfill and bounded source expiry)
+- `worker/src/cron/dispatch-telegram-queue-paths.ts` (fanout-free queue lifecycle paths: circuit-open drain, the eventless fast path, and the source-recovery queue sidecar)
 - `worker/src/cron/dispatch-telegram-authoritative-path.ts`, `dispatch-telegram-authoritative-planning.ts` (source-resolution, page-scoped routing, manifest handoff, baseline gate)
 - `worker/src/cron/dispatch-telegram-alerts-fanout.ts` (parallel loading of subscriber inputs)
 - `worker/src/cron/dispatch-telegram-fanout-plan.ts` (fan-out plan orchestration: routes all five alert families into per-chat bundles, runs the burst collapse, and builds the overflow-aware plan/format split; owns `buildTelegramFanoutPlan`)
 - `worker/src/cron/dispatch-telegram-events.ts` (DEWS/depeg/safety/launch/reserve-drift snapshot diffing into dispatch events; suppressed-safety-at-seed counting)
 - `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
-- `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets and `DispatchResult` shape)
+- `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets, the `DispatchResult` shape, and the shared pending/safety/reserve result-field mappers used by every dispatch path)
 - `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
 - `worker/src/cron/dispatch-telegram-alerts-observability.ts` (systemic fresh-failure observability)
-- `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
+- `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly, the shared dispatch-state handoff to the five-minute lane, and the preset-failure counter)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
 - `worker/src/cron/dispatch-telegram-overflow.ts` (strict rolling-compatible parser and chat-pruning helpers for the retired overflow cache)

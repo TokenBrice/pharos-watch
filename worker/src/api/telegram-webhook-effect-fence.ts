@@ -1,5 +1,6 @@
 import {
   TELEGRAM_WEBHOOK_INTENT_VERSION,
+  claimTelegramProcessedUpdate,
   markTelegramProcessedUpdateEffectStarted,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateMutationApplied,
@@ -10,6 +11,12 @@ import {
   unixNow,
   type TelegramWebhookOperationIntent,
 } from "./telegram-webhook-store";
+import { logTelegramEvent } from "../lib/telegram-log";
+import {
+  resolveUpdateChatId,
+  resolveUpdateType,
+  type TelegramWebhookUpdateWithChatMember,
+} from "./telegram-webhook-update-normalization";
 
 export interface TelegramWebhookClaimToken {
   owner: string;
@@ -172,4 +179,76 @@ export class TelegramWebhookEffectFence {
       errorClass,
     });
   }
+}
+
+export type TelegramWebhookUpdateClaimOutcome =
+  | { kind: "respond"; response: Response }
+  | { kind: "proceed"; effectFence: TelegramWebhookEffectFence | null };
+
+/**
+ * Owner/generation-claim the update id and construct the request-scoped effect
+ * fence. Duplicate or in-flight updates are answered here without replay;
+ * updates without a usable id proceed fence-less.
+ */
+export async function establishTelegramWebhookEffectFence(
+  db: D1Database,
+  update: TelegramWebhookUpdateWithChatMember,
+  nowSec: number,
+): Promise<TelegramWebhookUpdateClaimOutcome> {
+  const updateId = update.update_id;
+  const claimedUpdateId =
+    typeof updateId === "number" && Number.isFinite(updateId) ? updateId : null;
+  if (claimedUpdateId == null) {
+    return { kind: "proceed", effectFence: null };
+  }
+  const claim = await claimTelegramProcessedUpdate(db, {
+    updateId: claimedUpdateId,
+    nowSec,
+    updateType: resolveUpdateType(update),
+    chatId: resolveUpdateChatId(update),
+  });
+  if (claim.status !== "claimed") {
+    if (claim.status === "in_flight") {
+      logTelegramEvent({
+        level: "warn",
+        message: "duplicate update still in flight",
+        action: "processed-update-dedupe",
+        retryAfterSec: claim.retryAfterSec ?? null,
+      });
+      return {
+        kind: "respond",
+        response: new Response("retry", {
+          status: 503,
+          headers: {
+            "Retry-After": String(Math.max(1, Math.ceil(claim.retryAfterSec ?? 1))),
+          },
+        }),
+      };
+    }
+    if (claim.status === "effect_unknown") {
+      logTelegramEvent({
+        level: "warn",
+        message: "duplicate update suppressed after effect execution started",
+        action: "processed-update-effect-unknown",
+      });
+    }
+    return { kind: "respond", response: new Response("ok", { status: 200 }) };
+  }
+  if (!claim.claimOwner || claim.claimGeneration == null) {
+    throw new Error("Telegram update claim token is missing");
+  }
+  const processedUpdateClaim = {
+    owner: claim.claimOwner,
+    generation: claim.claimGeneration,
+  };
+  return {
+    kind: "proceed",
+    effectFence: new TelegramWebhookEffectFence(
+      db,
+      claimedUpdateId,
+      processedUpdateClaim,
+      claim.storedIntent,
+      claim.mutationAppliedAt,
+    ),
+  };
 }
