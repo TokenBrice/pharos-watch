@@ -23,6 +23,12 @@ interface LongformScrollspyNavProps {
   /** Called whenever the currently-in-view section changes. */
   onActiveChange?: (id: string) => void;
   /**
+   * Complete viewport offset, in pixels, for shells with sticky chrome above
+   * this navigation. The same value drives sticky positioning, hash
+   * alignment, and active-section detection.
+   */
+  stickyOffsetPx?: number;
+  /**
    * `banner` (default) renders a horizontal sticky bar.
    * `rail` renders a thin vertical column intended for a sticky right-rail TOC.
    */
@@ -48,25 +54,26 @@ function readStickySummaryHeight(): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function getRailOffset(railNode: HTMLDivElement | null) {
+function getRailOffset(railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
   const railRect = railNode?.getBoundingClientRect();
   if (!railRect) return 16;
-  return Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
+  const stickyTop = stickyOffsetPx ?? Math.max(railRect.top, 0);
+  return Math.ceil(railRect.height + stickyTop + 16);
 }
 
-function getScrollOffset(railNode: HTMLDivElement | null) {
-  return getRailOffset(railNode) + readStickySummaryHeight();
+function getScrollOffset(railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
+  return getRailOffset(railNode, stickyOffsetPx) + readStickySummaryHeight();
 }
 
 function getHashSectionId() {
   return decodeURIComponent(window.location.hash.replace(/^#/, ""));
 }
 
-function scrollToSection(sectionId: string, railNode: HTMLDivElement | null) {
+function scrollToSection(sectionId: string, railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
   const sectionNode = document.getElementById(sectionId);
   if (!sectionNode) return;
 
-  const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode);
+  const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode, stickyOffsetPx);
   window.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
 }
 
@@ -82,21 +89,42 @@ function scheduleSectionAlignment(
   railNode: HTMLDivElement | null,
   pendingScrollSyncRef: MutableRefObject<number[]>,
   updateHash: boolean,
+  stickyOffsetPx?: number,
 ) {
   clearPendingScrollSync(pendingScrollSyncRef);
   if (updateHash) {
     window.history.pushState(null, "", `#${sectionId}`);
   }
-  scrollToSection(sectionId, railNode);
+  scrollToSection(sectionId, railNode, stickyOffsetPx);
 
   for (const delay of [160, 480, 960]) {
     const timer = window.setTimeout(() => {
       if (getHashSectionId() === sectionId) {
-        scrollToSection(sectionId, railNode);
+        scrollToSection(sectionId, railNode, stickyOffsetPx);
       }
     }, delay);
     pendingScrollSyncRef.current.push(timer);
   }
+}
+
+function centerActivePill(scroller: HTMLElement | null, anchor: HTMLAnchorElement | null) {
+  if (!scroller || !anchor) return;
+
+  const scrollerRect = scroller.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
+  const targetLeft =
+    scroller.scrollLeft + anchorRect.left - scrollerRect.left - (scroller.clientWidth - anchorRect.width) / 2;
+  const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+
+  scroller.scrollTo({
+    left: Math.min(maxLeft, Math.max(0, targetLeft)),
+    behavior: "auto",
+  });
+}
+
+function isDocumentBottom() {
+  const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight ?? 0);
+  return scrollHeight > window.innerHeight && window.scrollY + window.innerHeight >= scrollHeight - 1;
 }
 
 export function LongformScrollspyNav({
@@ -107,11 +135,13 @@ export function LongformScrollspyNav({
   className,
   showDepthHint,
   onActiveChange,
+  stickyOffsetPx,
   variant = "banner",
   emphasis,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
+  const bannerScrollerRef = useRef<HTMLElement | null>(null);
   const activeAnchorRef = useRef<HTMLAnchorElement | null>(null);
   const pendingScrollSyncRef = useRef<number[]>([]);
   const initialHashHandledRef = useRef(false);
@@ -132,7 +162,7 @@ export function LongformScrollspyNav({
       activePillSyncedRef.current = true;
       return;
     }
-    activeAnchorRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+    centerActivePill(bannerScrollerRef.current, activeAnchorRef.current);
   }, [effectiveActiveId, variant]);
 
   useEffect(() => {
@@ -152,7 +182,7 @@ export function LongformScrollspyNav({
       const railRect = railNode.getBoundingClientRect();
       if (railRect.width === 0 && railRect.height === 0) return;
 
-      const railOffset = getRailOffset(railNode);
+      const railOffset = getRailOffset(railNode, stickyOffsetPx);
       // `calc(...)` lets the mobile sticky summary's CSS var feed back into
       // scroll-margin reactively without a separate observer wiring.
       const scrollMarginTop = `calc(${railOffset}px + var(${STICKY_SUMMARY_VAR}, 0px))`;
@@ -171,11 +201,17 @@ export function LongformScrollspyNav({
     const computeActiveSection = () => {
       const railRect = railNode.getBoundingClientRect();
       if (railRect.width === 0 && railRect.height === 0) return; // hidden instance
-      const activationLine = getScrollOffset(railNode) + 8;
       let nextActive = sectionNodes[0];
-      for (const node of sectionNodes) {
-        if (node.getBoundingClientRect().top <= activationLine) {
-          nextActive = node;
+      if (window.scrollY <= 0) {
+        nextActive = sectionNodes[0];
+      } else if (isDocumentBottom()) {
+        nextActive = sectionNodes[sectionNodes.length - 1];
+      } else {
+        const activationLine = getScrollOffset(railNode, stickyOffsetPx) + 8;
+        for (const node of sectionNodes) {
+          if (node.getBoundingClientRect().top <= activationLine) {
+            nextActive = node;
+          }
         }
       }
       if (nextActive) setActiveId(nextActive.id);
@@ -188,7 +224,7 @@ export function LongformScrollspyNav({
       if (emphasis === "watch-rail") {
         const firstTop = sectionNodes[0].getBoundingClientRect().top + window.scrollY;
         const lastBottom = sectionNodes[sectionNodes.length - 1].getBoundingClientRect().bottom + window.scrollY;
-        const start = firstTop - getScrollOffset(railNode);
+        const start = firstTop - getScrollOffset(railNode, stickyOffsetPx);
         const end = lastBottom - window.innerHeight;
         const span = end - start;
         const progress = span > 0 ? (window.scrollY - start) / span : window.scrollY >= start ? 1 : 0;
@@ -228,7 +264,7 @@ export function LongformScrollspyNav({
         requestAnimationFrame(() => {
           applyScrollMargins();
           setActiveId(activeHash);
-          scheduleSectionAlignment(activeHash, railNode, pendingScrollSyncRef, false);
+          scheduleSectionAlignment(activeHash, railNode, pendingScrollSyncRef, false, stickyOffsetPx);
         });
       }
     }
@@ -243,7 +279,7 @@ export function LongformScrollspyNav({
         node.style.scrollMarginTop = "";
       }
     };
-  }, [sectionSignature, emphasis]);
+  }, [sectionSignature, emphasis, stickyOffsetPx]);
 
   if (sections.length === 0) return null;
 
@@ -252,6 +288,7 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn("sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start", className)}
+        style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
       >
         <p className="px-2 pb-3 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {railLabel}
@@ -266,7 +303,7 @@ export function LongformScrollspyNav({
                     href={`#${section.id}`}
                     onClick={(event) => {
                       event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx);
                       setActiveId(section.id);
                     }}
                     aria-current={isActive ? "true" : undefined}
@@ -302,6 +339,7 @@ export function LongformScrollspyNav({
           emphasis === "watch-rail" && "pharos-watch-rail overflow-hidden",
           className,
         )}
+        style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
       >
         <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-3")}>
           {/* Fade mask hints at off-screen pills on narrow viewports */}
@@ -316,6 +354,7 @@ export function LongformScrollspyNav({
             />
           ) : null}
           <nav
+            ref={bannerScrollerRef}
             aria-label={navAriaLabel}
             className={cn(
               "scrollbar-none overflow-x-auto",
@@ -336,7 +375,7 @@ export function LongformScrollspyNav({
                     aria-current={isActive ? "true" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx);
                       setActiveId(section.id);
                     }}
                     className={cn(

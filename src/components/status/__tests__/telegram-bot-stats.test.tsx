@@ -29,6 +29,7 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
     depeg: 4,
     safety: 3,
     launch: 2,
+    reserve: 1,
     allTypes: 1,
   },
   topStablecoins: [],
@@ -52,11 +53,30 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
       depeg: 4,
       safety: 3,
       launch: 2,
+      reserve: 1,
       allTypes: 1,
     },
     quietHoursEnabledChats: 3,
     pendingDeliveries: 7,
   },
+};
+
+const dispatchCron: StatusResponse["crons"][string] = {
+  lastRun: {
+    startedAt: LIFECYCLE_SNAPSHOT_AT + 1_700,
+    durationMs: 1_200,
+    status: "ok",
+    itemCount: 3,
+    metadata: {
+      perAlertType: {
+        dews: { sent: 3, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
+        depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
+      },
+    },
+  },
+  recentRuns: [],
+  expectedIntervalSec: 300,
+  healthy: true,
 };
 
 afterEach(() => {
@@ -108,5 +128,40 @@ describe("TelegramBotStats", () => {
 
     expect(screen.getByText(/Telegram telemetry is partial: pendingDeliveryBacklog/i)).toBeTruthy();
     expect(screen.getByText(/no such table/i)).toBeTruthy();
+  });
+
+  it("constrains card grids and stacks long metric values on narrow screens", () => {
+    render(<TelegramBotStats telegramBot={telegramBot} nowSeconds={LIFECYCLE_SNAPSHOT_AT + 1_800} />);
+
+    expect(screen.getByTestId("telegram-summary-grid").className).toContain("sm:grid-cols-[repeat(2,minmax(0,1fr))]");
+    expect(screen.getByTestId("telegram-detail-grid").className).toContain("xl:grid-cols-[repeat(3,minmax(0,1fr))]");
+
+    const metricLabel = screen.getByText("Snapshot captured");
+    const metricRow = metricLabel.parentElement;
+    const metricValue = screen.getByText(`${new Date(LIFECYCLE_SNAPSHOT_AT * 1000).toLocaleString()} (30m ago)`);
+    expect(metricRow?.className).toContain("grid-cols-1");
+    expect(metricRow?.className).toContain("sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]");
+    expect(metricValue.className).toContain("min-w-0");
+    expect(metricValue.className).toContain("break-words");
+  });
+
+  it("uses a stacked mobile delivery list and a fixed-layout desktop table", () => {
+    const { container } = render(
+      <TelegramBotStats
+        telegramBot={telegramBot}
+        dispatchCron={dispatchCron}
+        nowSeconds={LIFECYCLE_SNAPSHOT_AT + 1_800}
+      />,
+    );
+
+    const mobileDelivery = screen.getByTestId("telegram-delivery-mobile");
+    const desktopDelivery = screen.getByTestId("telegram-delivery-desktop");
+    expect(mobileDelivery.className).toContain("sm:hidden");
+    expect(mobileDelivery.querySelectorAll("dl")).toHaveLength(5);
+    expect(mobileDelivery.textContent).toContain("First send latency");
+    expect(desktopDelivery.className).toContain("overflow-x-auto");
+    expect(desktopDelivery.querySelector("table")?.className).toContain("table-fixed");
+    expect(desktopDelivery.querySelectorAll("tbody tr")).toHaveLength(5);
+    expect(container.innerHTML).not.toContain("grid-cols-[6rem_repeat(4,minmax(0,1fr))");
   });
 });

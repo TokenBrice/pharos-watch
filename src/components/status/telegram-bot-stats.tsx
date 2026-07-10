@@ -24,9 +24,11 @@ interface TelegramBotStatsProps {
 
 function renderMetric(label: string, value: string | number | null | undefined) {
   return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono tabular-nums">{value ?? "—"}</span>
+    <div className="grid min-w-0 grid-cols-1 items-start gap-x-4 gap-y-0.5 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 max-w-full break-words text-left font-mono tabular-nums sm:text-right">
+        {value ?? "—"}
+      </span>
     </div>
   );
 }
@@ -58,15 +60,20 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
         ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
         : "bg-red-500/15 text-red-700 dark:text-red-400";
   const pendingBacklog = telegramBot.pendingDeliveryBacklog;
-  const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {})
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {}).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
   const telemetryQuality = telegramBot.quality;
   const lifecycleSnapshot = telegramBot.lifecycleSnapshot;
-  const lifecycleSnapshotAgeSeconds = lifecycleSnapshot
-    ? Math.max(0, nowSeconds - lifecycleSnapshot.snapshotAt)
-    : null;
-  const isLifecycleSnapshotStale = lifecycleSnapshotAgeSeconds != null
-    && lifecycleSnapshotAgeSeconds > TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS;
+  const lifecycleSnapshotAgeSeconds = lifecycleSnapshot ? Math.max(0, nowSeconds - lifecycleSnapshot.snapshotAt) : null;
+  const isLifecycleSnapshotStale =
+    lifecycleSnapshotAgeSeconds != null && lifecycleSnapshotAgeSeconds > TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS;
+  const perAlertTypeRows = dispatchMeta?.perAlertType
+    ? (Object.keys(PER_ALERT_TYPE_LABELS) as TelegramAlertType[]).flatMap((type) => {
+        const stats = dispatchMeta.perAlertType?.[type];
+        return stats ? [{ type, label: PER_ALERT_TYPE_LABELS[type], stats }] : [];
+      })
+    : [];
 
   const summaryCards = [
     {
@@ -95,37 +102,42 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {telemetryQuality?.status === "partial" ? (
-        <Card className="border-amber-500/35 bg-amber-500/10">
-          <CardContent className="py-3 text-sm text-amber-800 dark:text-amber-200">
+        <Card className="min-w-0 border-amber-500/35 bg-amber-500/10">
+          <CardContent className="min-w-0 break-words py-3 text-sm text-amber-800 dark:text-amber-200">
             Telegram telemetry is partial: {telemetryQuality.unavailableFields.join(", ")}
             {telemetryQuality.errors ? (
-              <span className="block pt-1 font-mono text-xs">
-                {Object.entries(telemetryQuality.errors).map(([field, message]) => `${field}: ${message}`).join(" · ")}
+              <span className="block min-w-0 break-words pt-1 font-mono text-xs">
+                {Object.entries(telemetryQuality.errors)
+                  .map(([field, message]) => `${field}: ${message}`)
+                  .join(" · ")}
               </span>
             ) : null}
           </CardContent>
         </Card>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className="grid min-w-0 gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(4,minmax(0,1fr))]"
+        data-testid="telegram-summary-grid"
+      >
         {summaryCards.map((card) => (
-          <Card key={card.label}>
-            <CardContent className="pt-4">
+          <Card key={card.label} className="min-w-0">
+            <CardContent className="min-w-0 pt-4">
               <div className="text-xs text-muted-foreground">{card.label}</div>
               <div className="font-mono text-2xl font-extrabold tabular-nums text-foreground">{card.value}</div>
-              <div className="text-xs text-muted-foreground">{card.detail}</div>
+              <div className="min-w-0 break-words text-xs text-muted-foreground">{card.detail}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[repeat(3,minmax(0,1fr))]" data-testid="telegram-detail-grid">
+        <Card className="min-w-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Alert Coverage</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="min-w-0 space-y-3">
             {renderMetric("DEWS enabled", telegramBot.alertTypeChats.dews)}
             {renderMetric("Depeg enabled", telegramBot.alertTypeChats.depeg)}
             {renderMetric("Safety enabled", telegramBot.alertTypeChats.safety)}
@@ -138,9 +150,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
               {renderMetric("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
             </div>
             <div className="border-t pt-3">
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Pending delivery telemetry
-              </div>
+              <div className="mb-2 text-xs font-medium text-muted-foreground">Pending delivery telemetry</div>
               {renderMetric(
                 "Oldest pending age",
                 telegramBot.oldestPendingDeliveryAgeSec != null
@@ -157,9 +167,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
             {lifecycleSnapshot ? (
               <div className="border-t pt-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Lifecycle snapshot
-                  </div>
+                  <div className="text-xs font-medium text-muted-foreground">Lifecycle snapshot</div>
                   {isLifecycleSnapshotStale ? (
                     <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400">
                       snapshot stale · {formatElapsedSeconds(lifecycleSnapshotAgeSeconds ?? 0)} old
@@ -179,15 +187,10 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
             ) : null}
             {retryErrorClasses.length > 0 ? (
               <div className="border-t pt-3">
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  Pending retry classes
-                </div>
+                <div className="mb-2 text-xs font-medium text-muted-foreground">Pending retry classes</div>
                 <div className="space-y-1.5">
                   {retryErrorClasses.map(([errorClass, count]) => (
-                    <div key={errorClass} className="flex items-center justify-between gap-4 text-sm">
-                      <span className="text-muted-foreground">{errorClass}</span>
-                      <span className="font-mono tabular-nums">{count}</span>
-                    </div>
+                    <div key={errorClass}>{renderMetric(errorClass, count)}</div>
                   ))}
                 </div>
               </div>
@@ -195,11 +198,11 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Last Dispatch</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="min-w-0 space-y-3">
             {lastDispatch ? (
               <>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -207,15 +210,17 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                   <span className="text-muted-foreground">
                     {formatElapsedSeconds(Math.max(0, nowSeconds - lastDispatch.startedAt))} ago
                   </span>
-                  <span className="text-muted-foreground">{lastDispatch.itemCount ?? 0} messages counted</span>
+                  <span className="min-w-0 break-words text-muted-foreground">
+                    {lastDispatch.itemCount ?? 0} messages counted
+                  </span>
                 </div>
                 {dispatchMeta?.skipped ? (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                  <div className="min-w-0 break-words rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
                     Run skipped: {dispatchMeta.skipped}
                   </div>
                 ) : null}
                 {dispatchMeta?.safetyAlertsSuppressed ? (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                  <div className="min-w-0 break-words rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
                     Safety alerts suppressed: {dispatchMeta.safetyAlertSourceState ?? "missing"}
                     {dispatchMeta.safetyAlertSourceAgeSeconds != null
                       ? ` · source age ${formatElapsedSeconds(dispatchMeta.safetyAlertSourceAgeSeconds)}`
@@ -241,32 +246,89 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 {renderMetric("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
                 {renderMetric("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
                 {renderMetric("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
-                {renderMetric("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
-                {dispatchMeta?.perAlertType ? (
-                  <div className="border-t pt-3">
-                    <div className="mb-2 text-xs font-medium text-muted-foreground">
-                      Per-alert-type delivery
+                {renderMetric(
+                  "Methodology suppressions",
+                  dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null,
+                )}
+                {perAlertTypeRows.length > 0 ? (
+                  <div className="min-w-0 border-t pt-3">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">Per-alert-type delivery</div>
+                    <div className="min-w-0 space-y-2 sm:hidden" data-testid="telegram-delivery-mobile">
+                      {perAlertTypeRows.map(({ type, label, stats }) => (
+                        <div key={type} className="min-w-0 border-t border-border/60 pt-2 first:border-t-0 first:pt-0">
+                          <div className="text-sm font-medium text-foreground">{label}</div>
+                          <dl className="grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] gap-x-3 gap-y-1 pt-1 text-xs">
+                            <div className="min-w-0">
+                              <dt className="text-muted-foreground">Sent</dt>
+                              <dd className="font-mono tabular-nums">{stats.sent}</dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-muted-foreground">Enqueued</dt>
+                              <dd className="font-mono tabular-nums">{stats.enqueued}</dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-muted-foreground">Failed</dt>
+                              <dd className="font-mono tabular-nums">{stats.failed}</dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-muted-foreground">Blocked</dt>
+                              <dd className="font-mono tabular-nums">{stats.blocked}</dd>
+                            </div>
+                            <div className="col-span-2 min-w-0">
+                              <dt className="text-muted-foreground">First send latency</dt>
+                              <dd className="break-words font-mono tabular-nums">
+                                {stats.firstSendLatencyMs != null ? `${stats.firstSendLatencyMs}ms` : "—"}
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+                      ))}
                     </div>
-                    <div className="space-y-1.5 text-xs">
-                      {(Object.keys(PER_ALERT_TYPE_LABELS) as TelegramAlertType[]).map((type) => {
-                        const stats = dispatchMeta.perAlertType?.[type];
-                        if (!stats) return null;
-                        return (
-                          <div
-                            key={type}
-                            className="grid grid-cols-[6rem_repeat(4,minmax(0,1fr))_minmax(0,1.25fr)] items-center gap-2 font-mono tabular-nums"
-                          >
-                            <span className="text-sm font-medium text-foreground">{PER_ALERT_TYPE_LABELS[type]}</span>
-                            <span title="sent">sent {stats.sent}</span>
-                            <span title="enqueued">enq {stats.enqueued}</span>
-                            <span title="failed">fail {stats.failed}</span>
-                            <span title="blocked">blk {stats.blocked}</span>
-                            <span className="text-muted-foreground" title="first send latency">
-                              {stats.firstSendLatencyMs != null ? `${stats.firstSendLatencyMs}ms` : "—"}
-                            </span>
-                          </div>
-                        );
-                      })}
+                    <div
+                      className="hidden min-w-0 max-w-full overflow-x-auto sm:block"
+                      data-testid="telegram-delivery-desktop"
+                    >
+                      <table className="w-full table-fixed border-collapse text-left font-mono text-[11px] tabular-nums">
+                        <caption className="sr-only">Per-alert-type delivery results</caption>
+                        <thead className="text-muted-foreground">
+                          <tr>
+                            <th scope="col" className="w-[28%] pb-1 pr-1 font-medium">
+                              Type
+                            </th>
+                            <th scope="col" className="w-[12%] pb-1 text-right font-medium">
+                              Sent
+                            </th>
+                            <th scope="col" className="w-[12%] pb-1 text-right font-medium" title="Enqueued">
+                              Enq.
+                            </th>
+                            <th scope="col" className="w-[12%] pb-1 text-right font-medium" title="Failed">
+                              Fail
+                            </th>
+                            <th scope="col" className="w-[12%] pb-1 text-right font-medium" title="Blocked">
+                              Blk.
+                            </th>
+                            <th scope="col" className="w-[24%] pb-1 text-right font-medium" title="First send latency">
+                              Latency
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {perAlertTypeRows.map(({ type, label, stats }) => (
+                            <tr key={type} className="border-t border-border/60">
+                              <th scope="row" className="truncate py-1.5 pr-1 text-sm font-medium text-foreground">
+                                {label}
+                              </th>
+                              <td className="py-1.5 text-right">{stats.sent}</td>
+                              <td className="py-1.5 text-right">{stats.enqueued}</td>
+                              <td className="py-1.5 text-right">{stats.failed}</td>
+                              <td className="py-1.5 text-right">{stats.blocked}</td>
+                              <td className="truncate py-1.5 text-right text-muted-foreground">
+                                {stats.firstSendLatencyMs != null ? `${stats.firstSendLatencyMs}ms` : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 ) : null}
@@ -285,25 +347,29 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Top Subscribed Coins</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {telegramBot.topStablecoins.length > 0 ? (
               <div className="space-y-3">
                 {telegramBot.topStablecoins.map((coin) => (
-                  <div key={coin.stablecoinId} className="flex items-center justify-between gap-4 text-sm">
+                  <div key={coin.stablecoinId} className="flex min-w-0 items-center justify-between gap-4 text-sm">
                     <div className="min-w-0">
                       <div className="font-medium text-foreground">{coin.symbol}</div>
                       <div className="truncate text-xs text-muted-foreground">
                         {coin.stablecoinId}
                         {coin.presetImpliedSubscribers ? (
-                          <> · {coin.explicitSubscribers ?? coin.subscribers} explicit + {coin.presetImpliedSubscribers} preset</>
+                          <>
+                            {" "}
+                            · {coin.explicitSubscribers ?? coin.subscribers} explicit + {coin.presetImpliedSubscribers}{" "}
+                            preset
+                          </>
                         ) : null}
                       </div>
                     </div>
-                    <Badge variant="secondary" className="font-mono tabular-nums">
+                    <Badge variant="secondary" className="shrink-0 font-mono tabular-nums">
                       {coin.subscribers}
                     </Badge>
                   </div>
