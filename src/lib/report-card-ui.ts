@@ -93,7 +93,9 @@ const SAFETY_GRADE_RANGE_METADATA: Record<SafetyGradeRange, SafetyGradeRangeMeta
     pulse: {
       ringClassName: "border-red-500/35",
       bgClassName: "bg-red-500/10",
-      accentClassName: "text-red-700 dark:text-red-300",
+      // Unlike the other grades' softened dark accents, F stays a bright alarm
+      // red in dark mode — red-300 reads as pink at display sizes.
+      accentClassName: "text-red-600 dark:text-red-500",
       tagline: "Failure-prone segment is meaningfully outsized.",
     },
     glowColor: "oklch(0.5 0.22 25 / 0.6)",

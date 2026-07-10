@@ -75,7 +75,7 @@ function linkIconFor(label: string) {
   return ExternalLink;
 }
 
-function HeroDesktopIdentityToolbar({
+export function HeroDesktopIdentityToolbar({
   model,
   onOpenFeedback,
 }: {
@@ -89,6 +89,8 @@ function HeroDesktopIdentityToolbar({
 
   // Figma coin template: avatar + mono ticker eyebrow above the H1, and the
   // action cluster grouped as [resource links] · divider · [compare/flag/share].
+  // Rendered by the detail page above the content/rail grid (not inside
+  // HeroCard) so the summary rail top-aligns with the hero card.
   return (
     <div className="hidden items-start justify-between gap-5 lg:flex">
       <div className="min-w-0 flex-1">
@@ -206,26 +208,23 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   };
 
   return (
-    <>
-      <HeroDesktopIdentityToolbar model={model} onOpenFeedback={onOpenFeedback} />
-      <Card className="pharos-card-shell gap-0 py-0">
-        <div className="lg:hidden">
-          <HeroCardHeader
-            coinId={header.coinId}
-            compareHref={header.compareHref}
-            benchmarkSymbol={header.benchmarkSymbol}
-            onOpenFeedback={onOpenFeedback}
-          />
-        </div>
-        <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
-        <HeroCardDesktopSection
-          {...sectionBaseProps}
-          signalRailItems={signalRailItems}
-          tertiaryMetrics={desktopTertiaryMetrics}
+    <Card className="pharos-card-shell gap-0 py-0">
+      <div className="lg:hidden">
+        <HeroCardHeader
+          coinId={header.coinId}
+          compareHref={header.compareHref}
+          benchmarkSymbol={header.benchmarkSymbol}
+          onOpenFeedback={onOpenFeedback}
         />
-        <HeroPassportStrip items={model.passportItems} compactDesktop />
-        {model.caseStudyCallout ? <HeroCaseStudyCallout callout={model.caseStudyCallout} /> : null}
-      </Card>
-    </>
+      </div>
+      <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
+      <HeroCardDesktopSection
+        {...sectionBaseProps}
+        signalRailItems={signalRailItems}
+        tertiaryMetrics={desktopTertiaryMetrics}
+      />
+      <HeroPassportStrip items={model.passportItems} compactDesktop />
+      {model.caseStudyCallout ? <HeroCaseStudyCallout callout={model.caseStudyCallout} /> : null}
+    </Card>
   );
 }

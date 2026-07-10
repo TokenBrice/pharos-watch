@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HeroCard } from "@/components/stablecoin-detail/hero-card";
+import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import type {
   DexLiquidityData,
@@ -269,18 +269,21 @@ function HeroCardUnderTest({
   pegReferenceUnavailable?: HeroBuilderParams["pegReferenceUnavailable"];
   onOpenFeedback: () => void;
 }) {
+  const model = buildStablecoinDetailHeroViewModel({
+    ...props,
+    verdict: testVerdict,
+    resolvedMechanismArchetype,
+    mintAuthority,
+    redemptionBackstop,
+    pegReferenceUnavailable,
+  });
+  // The detail page renders the identity toolbar above the content/rail grid
+  // and the card inside it; render both here to keep covering the pair.
   return (
-    <HeroCard
-      model={buildStablecoinDetailHeroViewModel({
-        ...props,
-        verdict: testVerdict,
-        resolvedMechanismArchetype,
-        mintAuthority,
-        redemptionBackstop,
-        pegReferenceUnavailable,
-      })}
-      onOpenFeedback={onOpenFeedback}
-    />
+    <>
+      <HeroDesktopIdentityToolbar model={model} onOpenFeedback={onOpenFeedback} />
+      <HeroCard model={model} onOpenFeedback={onOpenFeedback} />
+    </>
   );
 }
 

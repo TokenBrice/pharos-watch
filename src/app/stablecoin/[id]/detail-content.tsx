@@ -11,7 +11,7 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
-import { HeroCard } from "@/components/stablecoin-detail/hero-card";
+import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
 import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -83,18 +83,7 @@ function DetailIdentity({
         onRetry={viewModel.handleRetryAll}
         queries={viewModel.staleQueries}
       />
-      <div ref={heroRef} className="space-y-4">
-        <HeroCard model={heroModel} onOpenFeedback={onOpenFeedback} />
-        <ExploitNoticeBanner notices={viewModel.coin.notices} />
-        {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
-          <FrozenStateBanner
-            symbol={viewModel.coin.symbol}
-            frozenAt={viewModel.coin.frozenAt}
-            obituary={viewModel.coin.obituary}
-          />
-        ) : null}
-        <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
-      </div>
+      <HeroDesktopIdentityToolbar model={heroModel} onOpenFeedback={onOpenFeedback} />
       <MobileStickySummary
         coin={viewModel.coin}
         coinData={viewModel.coinData}
@@ -248,8 +237,22 @@ export function DetailContent({
       />
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
         <div className="min-w-0">
-          {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
-          <DetailNavigation onActiveChange={onActiveBannerChange} viewModel={viewModel} />
+          <div ref={heroRef} className="space-y-4">
+            <HeroCard model={heroModel} onOpenFeedback={() => onFeedbackOpenChange(true)} />
+            <ExploitNoticeBanner notices={viewModel.coin.notices} />
+            {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
+              <FrozenStateBanner
+                symbol={viewModel.coin.symbol}
+                frozenAt={viewModel.coin.frozenAt}
+                obituary={viewModel.coin.obituary}
+              />
+            ) : null}
+            <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
+          </div>
+          <div className="mt-4">
+            {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+            <DetailNavigation onActiveChange={onActiveBannerChange} viewModel={viewModel} />
+          </div>
           <div className="mt-4 min-w-0 space-y-6">
             <DetailRiskContextSections
               activeBannerId={activeBannerId}

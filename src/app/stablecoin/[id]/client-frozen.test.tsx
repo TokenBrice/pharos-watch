@@ -51,6 +51,7 @@ vi.mock("@/components/longform-scrollspy-nav", () => ({
 
 vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
+  HeroDesktopIdentityToolbar: () => <div data-testid="hero-identity-toolbar" />,
 }));
 
 vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
