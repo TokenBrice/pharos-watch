@@ -119,7 +119,7 @@ function historyRows(sourceKey: string, count: number, startSec: number, apy = 5
   return Array.from({ length: count }, (_, index) => ({
     stablecoin_id: "coin-a",
     source_key: sourceKey,
-    recorded_at: startSec - (index + 1) * 3600,
+    recorded_at: startSec - (index + 1) * 86400,
     is_best: 1,
     apy,
     source_tvl_usd: 1_000_000,
@@ -614,6 +614,36 @@ describe("evaluateYieldSources", () => {
     expect(result.evaluatedSources[0]?.sourceDepthRatio).toBe(0.25);
     expect(result.evaluatedSources[0]?.observationCount30d).toBe(2);
     expect(result.evaluatedSources[0]?.sourceSwitchCount30d).toBe(2);
+  });
+
+  it("counts distinct UTC history days instead of hourly samples for maturity", () => {
+    const startSec = 1776729600;
+    const historyRows = Array.from({ length: 8 }, (_, index) => ({
+      stablecoin_id: "coin-a",
+      source_key: "defillama:coin-a:base",
+      recorded_at: startSec - (index + 1) * 3600,
+      is_best: 1,
+      apy: 4.8,
+      source_tvl_usd: 2_400_000,
+      data_source: "defillama",
+      yield_source: "Fixture source",
+      yield_type: "lending-vault",
+    }));
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      sevenDaysAgoSec: startSec - 7 * 86400,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({ sourceKey: "defillama:coin-a:base" }),
+        },
+      ],
+      sourceHistory: new Map([[buildHistoryKey("coin-a", "defillama:coin-a:base"), historyRows]]),
+    }));
+
+    expect(result.evaluatedSources[0]?.observationCount30d).toBeLessThan(7);
+    expect(result.evaluatedSources[0]?.sourceRiskPenalty).toBeGreaterThan(1);
   });
 
   it("keeps a fresh direct observation ahead of a deterministic modeled proxy", () => {

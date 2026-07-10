@@ -1,10 +1,18 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.32`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.33`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.33 - Distinct-Day History Maturity (July 11, 2026)
+
+- Defines `sourceRisk.observationCount30d` as distinct UTC observation days from source-specific history plus the current publication day
+- Keeps the limited-history penalty active until seven distinct days exist; repeated hourly samples within one day no longer manufacture maturity
+- Leaves APY7d/APY30d/variance calculations, source ownership, PYS weights, and the penalty magnitude unchanged
+
+---
 
 ## v8.32 - Opportunity-Level Risk for External Opportunities (July 11, 2026)
 

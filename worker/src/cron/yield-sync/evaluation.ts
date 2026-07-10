@@ -14,6 +14,7 @@ import type {
   YieldSafetyReason,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
@@ -340,7 +341,12 @@ function evaluateYieldSourceGroup(
       ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
       : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
     const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
-    const observationCount30d = historySelection.usedLegacyHistory ? null : samples.length;
+    const observationCount30d = historySelection.usedLegacyHistory
+      ? null
+      : new Set([
+          ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
+          Math.floor(input.startSec / DAY_SECONDS),
+        ]).size;
     const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);

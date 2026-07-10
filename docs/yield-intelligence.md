@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.32`
+- **Current methodology version:** `v8.33`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.33 makes history maturity cadence-aware at the day boundary: `sourceRisk.observationCount30d` counts distinct UTC observation days, including the current publication day, rather than raw hourly samples. The existing limited-history penalty remains active until seven distinct days are represented, so a few hours of dense observations cannot appear mature. APY windows, PYS weights, and the penalty magnitude are unchanged.
 
 Yield v8.32 adds opportunity-level risk for external opportunities. Rows whose yield type is `lending-opportunity`, `fixed-yield`, or `structured-tranche` publish a source-keyed `sourceRisk.opportunityRisk` contract (`shared/lib/yield-opportunity-risk.ts`): the underlying stablecoin's Safety Score is one input, and reviewed venue risk (shared 2.0 blue-chip threshold, 5 safety points per weighted point above it), market size, observed utilization, and access/withdrawal constraints adjust it into an opportunity safety score published with `safetyProvenance: opportunity-safety`. Missing critical market evidence — unreviewed venue, unknown market size, or unknown market status for non-Royco structured tranches — produces `pysNullReason: opportunity-evidence-missing` with an NR qualification instead of a neutral exact score. Royco Dawn tranches keep their bespoke market-health model and publish the same contract. Underlying Report Card scores, PYS formula weights, and source-risk calibration are unchanged.
 

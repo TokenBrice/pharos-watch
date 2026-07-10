@@ -256,7 +256,8 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from
                       measured reward share, source depth, freshness, source switching, bootstrap history, and sourced
-                      venue tier where available, then clamps it to 1&ndash;2.5 while treating missing evidence as neutral
+                      venue tier where available. History maturity counts distinct UTC observation days rather than raw
+                      hourly samples, then clamps the combined penalty to 1&ndash;2.5 while treating missing evidence as neutral
                     </li>
                     <li>
                       <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
@@ -289,8 +290,8 @@ export function YieldIntelligenceMethodologySection() {
                   <h3 className="text-foreground font-medium">Limitations</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores
-                      until 7 days of data accumulate
+                      Trailing averages require sufficient history &mdash; newly tracked coins retain a limited-history
+                      penalty until 7 distinct UTC observation days accumulate
                     </li>
                     <li>
                       History before v8.31 lacks the full benchmark, source-risk, and scaling input snapshot and is labeled

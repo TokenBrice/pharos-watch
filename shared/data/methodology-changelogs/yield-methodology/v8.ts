@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.33",
+    title: "Distinct-Day History Maturity",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "Yield history maturity now counts distinct UTC observation days instead of raw hourly samples, preventing a few hours of data from receiving mature-history treatment. PYS weights and the existing limited-history penalty are unchanged.",
+    impact: [
+      "`sourceRisk.observationCount30d` now means distinct UTC days represented by source-specific history plus the current publication day",
+      "The existing limited-history penalty remains active until seven distinct observation days are available; multiple samples within one UTC day no longer advance maturity",
+      "APY7d, APY30d, variance, source-specific history ownership, and the limited-history penalty magnitude are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.32",
     title: "Opportunity-Level Risk for External Opportunities",
     date: "2026-07-11",

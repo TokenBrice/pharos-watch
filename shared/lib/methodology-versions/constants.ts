@@ -48,6 +48,6 @@ export const PSI_METHODOLOGY_VERSION = "3.5";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.32";
+export const YIELD_METHODOLOGY_VERSION = "8.33";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";
