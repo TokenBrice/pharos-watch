@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { setSubscriptionSnooze, unixNow } from "../telegram-webhook-store";
 import {
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   isSnoozeArg,
   runCallbackMutation,
   SNOOZE_SECONDS,
@@ -20,7 +20,7 @@ export const handleCoinSnoozeCallback: CallbackHandler = async ({ db, botToken, 
       const durationToken = parsed.parts[2];
       if (
         !hasExactParts(parsed.parts, 3) ||
-        !isKnownStablecoinId(parsed.arg) ||
+        !isSubscribableStablecoinId(parsed.arg) ||
         !isSnoozeArg(durationToken)
       ) {
         return null;

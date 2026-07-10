@@ -199,7 +199,7 @@ describe("handleTelegramWebhook", () => {
     expect(body.reply_markup).toBeDefined();
   });
 
-  it("counts only registry misses in /import dropped-note copy while deduping tracked ids", async () => {
+  it("counts unavailable ids in /import copy while deduping subscribable ids", async () => {
     const token = encodeWatchlistToken({
       coinIds: ["usdc-circle", "usdc-circle", "retired-stablecoin"],
       alertTypes: ["dews"],
@@ -225,9 +225,47 @@ describe("handleTelegramWebhook", () => {
     const body = sentMessageBody();
     expect(body.text).toContain("Confirm?");
     expect(body.text).toContain("USDC");
-    expect(body.text).toContain("(1 no longer tracked and were skipped.)");
-    expect(body.text).not.toContain("(2 no longer tracked");
+    expect(body.text).toContain("(1 coin is not available for new alerts and was skipped.)");
+    expect(body.text).not.toContain("(2 coins are not available");
     expect(body.reply_markup).toBeDefined();
+  });
+
+  it("filters frozen ids from /import without staging subscription writes", async () => {
+    const frozen = FROZEN_STABLECOINS[0];
+    if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
+    const token = encodeWatchlistToken({
+      coinIds: ["usdc-circle", frozen.id],
+      alertTypes: ["dews"],
+      presetIds: [],
+    });
+    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
+
+    const confirmInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(confirmInsert).toBeDefined();
+    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as { coinIds: string[] };
+    expect(payload.coinIds).toEqual(["usdc-circle"]);
+    expect(sentMessageBody().text).toContain("1 coin is not available for new alerts");
+    expect(sentMessageBody().text).not.toContain(frozen.symbol);
+  });
+
+  it("rejects a frozen-only /import without creating pending state", async () => {
+    const frozen = FROZEN_STABLECOINS[0];
+    if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
+    const token = encodeWatchlistToken({
+      coinIds: [frozen.id],
+      alertTypes: ["dews"],
+      presetIds: [],
+    });
+    const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
+    expect(sentMessageBody().text).toContain("No coins available for new alerts");
   });
 
   it("refuses a maximum-current-registry /export instead of emitting an unimportable token", async () => {

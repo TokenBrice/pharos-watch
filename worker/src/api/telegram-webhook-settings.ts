@@ -41,6 +41,7 @@ import {
 import {
   isGlobalAlertType,
   isKnownStablecoinId,
+  isSubscribableStablecoinId,
 } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { isGroupChatType } from "./telegram-webhook-auth";
@@ -196,7 +197,7 @@ export async function handleSettingsCallback(
       return;
     }
     const [coinId, setting, value] = settingParts;
-    if (!isKnownStablecoinId(coinId) || !setting || value == null) {
+    if (!isSubscribableStablecoinId(coinId) || !setting || value == null) {
       await answerCallbackQuery(cb.id, botToken, { text: "Unknown setting." });
       return;
     }

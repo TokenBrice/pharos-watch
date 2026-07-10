@@ -3,7 +3,7 @@ import { prepareCoinSettingStatements } from "../telegram-webhook-settings-mutat
 import {
   callbackUsername,
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   runCallbackMutation,
   type CallbackHandler,
 } from "./_shared";
@@ -15,7 +15,7 @@ export const handleSafetyDownCallback: CallbackHandler = async ({ db, botToken, 
     cb,
     chatId,
     validate: () =>
-      hasExactParts(parsed.parts, 2) && isKnownStablecoinId(parsed.arg) ? parsed.arg : null,
+      hasExactParts(parsed.parts, 2) && isSubscribableStablecoinId(parsed.arg) ? parsed.arg : null,
     requireAdmin: true,
     eventType: "subscribe",
     actionDetail: "safetydown",

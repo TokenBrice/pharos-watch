@@ -2,6 +2,7 @@ import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { decodeWatchlistToken } from "../../lib/telegram-watchlist-token";
 import { escapeHtml } from "../../lib/telegram";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { PENDING_OWNERSHIP_CONFLICT_MESSAGE, persistPendingConfirmBulk } from "../telegram-webhook-store";
 import type { ConfirmBulkPayload } from "../telegram-webhook-shared";
 import {
@@ -63,10 +64,10 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
 
   const seen = new Set<string>();
   const validIds: string[] = [];
-  let droppedUnknown = 0;
+  let droppedUnavailable = 0;
   for (const id of decoded.state.coinIds) {
-    if (!TRACKED_META_BY_ID.has(id)) {
-      droppedUnknown += 1;
+    if (!isSubscribableCoin(id)) {
+      droppedUnavailable += 1;
       continue;
     }
     if (!seen.has(id)) {
@@ -78,7 +79,7 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
   const presetIds = dedupePresetIds(decoded.state.presetIds);
 
   if (cappedIds.length === 0 && presetIds.length === 0) {
-    await ctx.replyToChat("No currently-tracked coins or presets were found in that token.");
+    await ctx.replyToChat("No coins available for new alerts or known presets were found in that token.");
     await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "import", outcome: "invalid" });
     return;
   }
@@ -109,7 +110,9 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
 
   const symbols = cappedIds.map((id) => TRACKED_META_BY_ID.get(id)?.symbol ?? id);
   const presetLabels = presetIds.map((presetId) => TELEGRAM_PRESET_LABEL_BY_ID.get(presetId) ?? presetId);
-  const droppedNote = droppedUnknown > 0 ? `\n(${droppedUnknown} no longer tracked and were skipped.)` : "";
+  const droppedNote = droppedUnavailable > 0
+    ? `\n(${droppedUnavailable} ${droppedUnavailable === 1 ? "coin is" : "coins are"} not available for new alerts and ${droppedUnavailable === 1 ? "was" : "were"} skipped.)`
+    : "";
   await ctx.replyToChatWithMarkup(
     buildImportConfirmMessage(cappedIds.length, alertTypes, symbols, presetLabels) + droppedNote,
     { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },

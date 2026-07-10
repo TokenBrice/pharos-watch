@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
 const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
@@ -1152,8 +1153,53 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(clearResponse.status).toBe(200);
-    expect(historyHas(clearDb, "INSERT INTO telegram_subscribers", ["42", null, NOW_SEC])).toBe(true);
-    expect(historyHas(clearDb, "INSERT INTO telegram_subscriptions", ["42", "usdc-circle", null])).toBe(true);
+    expect(historyHas(clearDb, "UPDATE telegram_subscriptions", ["42", "usdc-circle"])).toBe(true);
+    expect(historyHas(clearDb, "DELETE FROM telegram_subscriptions", ["42", "usdc-circle"])).toBe(true);
+    expect(historyHas(clearDb, "INSERT INTO telegram_subscriptions", ["42", "usdc-circle"])).toBe(false);
+  });
+
+  it("rejects new frozen-coin state but still permits frozen cleanup", async () => {
+    const frozen = FROZEN_STABLECOINS[0];
+    if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
+    const initData = await privateInitData();
+
+    const setDb = mockD1();
+    const setResponse = await handleTelegramMiniAppMutation(setDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "set-coin",
+        stablecoinId: frozen.id,
+        patch: { alertTypes: { dews: true } },
+      },
+    }), BOT_TOKEN);
+    expect(setResponse.status).toBe(400);
+    expect(await setResponse.json()).toMatchObject({ code: "unknown-coin" });
+    expect(historyHas(setDb, "INSERT INTO telegram_subscriptions", [frozen.id])).toBe(false);
+
+    const snoozeDb = mockD1();
+    const snoozeResponse = await handleTelegramMiniAppMutation(snoozeDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-coin-snooze", stablecoinId: frozen.id, durationToken: "1h" },
+    }), BOT_TOKEN);
+    expect(snoozeResponse.status).toBe(400);
+    expect(await snoozeResponse.json()).toMatchObject({ code: "unknown-coin" });
+    expect(historyHas(snoozeDb, "INSERT INTO telegram_subscriptions", [frozen.id])).toBe(false);
+
+    const clearDb = mockD1(stateReadTables());
+    const clearResponse = await handleTelegramMiniAppMutation(clearDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-coin-snooze", stablecoinId: frozen.id, durationToken: "clear" },
+    }), BOT_TOKEN);
+    expect(clearResponse.status).toBe(200);
+    expect(historyHas(clearDb, "UPDATE telegram_subscriptions", ["42", frozen.id])).toBe(true);
+
+    const removeDb = mockD1(stateReadTables());
+    const removeResponse = await handleTelegramMiniAppMutation(removeDb, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "remove-coin", stablecoinId: frozen.id },
+    }), BOT_TOKEN);
+    expect(removeResponse.status).toBe(200);
+    expect(historyHas(removeDb, "DELETE FROM telegram_subscriptions", ["42", frozen.id])).toBe(true);
   });
 
   it("rejects set-coin-snooze with a stable unknown-coin code on unknown coin", async () => {

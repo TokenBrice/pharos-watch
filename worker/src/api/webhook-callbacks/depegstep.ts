@@ -4,7 +4,7 @@ import { prepareCoinSettingStatements } from "../telegram-webhook-settings-mutat
 import {
   callbackUsername,
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   runCallbackMutation,
   type CallbackHandler,
 } from "./_shared";
@@ -19,7 +19,7 @@ export const handleDepegStepCallback: CallbackHandler = async ({ db, botToken, c
       const step = Number(parsed.parts[2]);
       if (
         !hasExactParts(parsed.parts, 3) ||
-        !isKnownStablecoinId(parsed.arg) ||
+        !isSubscribableStablecoinId(parsed.arg) ||
         !isDepegStepValue(step)
       ) {
         return null;

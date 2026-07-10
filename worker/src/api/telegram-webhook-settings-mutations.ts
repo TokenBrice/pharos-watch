@@ -17,6 +17,7 @@ import {
   type SafetyModeValue,
 } from "./telegram-webhook-settings-shared";
 import { batchExecute } from "../lib/db";
+import { assertSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import {
   buildDepegStepUpsert,
   buildDepegUpsert,
@@ -89,6 +90,7 @@ export function prepareCoinSettingStatements(
   setting: string,
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
+  assertSubscribableCoin(coinId);
   if (setting === "db") return prepareDewsSetting(db, chatId, username, coinId, value);
   if (setting === "sm") return prepareSafetySetting(db, chatId, username, coinId, value);
   if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);

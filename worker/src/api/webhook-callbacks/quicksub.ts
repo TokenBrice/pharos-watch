@@ -9,7 +9,7 @@ import { isGroupChatType } from "../telegram-webhook-auth";
 import {
   callbackChatType,
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   requireAdminForMutatingCallback,
   type CallbackHandler,
 } from "./_shared";
@@ -17,7 +17,7 @@ import { toErrorMessage } from "../../lib/error-utils";
 
 export const handleQuickSubCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
   const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+  if (!hasExactParts(parts, 2) || !isSubscribableStablecoinId(arg)) {
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }

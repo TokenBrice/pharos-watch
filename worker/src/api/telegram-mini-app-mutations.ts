@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { batchExecute } from "../lib/db";
+import { isSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../lib/telegram-constants";
@@ -57,6 +58,10 @@ function assertCoin(stablecoinId: string): void {
   if (!TRACKED_META_BY_ID.has(stablecoinId)) throw new TelegramMiniAppMutationError("unknown-coin");
 }
 
+function assertCoinCanSubscribe(stablecoinId: string): void {
+  if (!isSubscribableCoin(stablecoinId)) throw new TelegramMiniAppMutationError("unknown-coin");
+}
+
 function alertTypeSet(values: readonly string[]): Set<string> {
   return new Set(values);
 }
@@ -75,6 +80,9 @@ async function presetCoins(db: D1Database, presetId: TelegramPresetId): Promise<
   if (resolved.kind !== "ok") throw new TelegramMiniAppMutationError("preset-unavailable", 503);
   const preset = resolved.presets.find((entry) => entry.definition.id === presetId);
   if (!preset) throw new TelegramMiniAppMutationError("unknown-preset");
+  for (const stablecoinId of preset.stablecoinIds) {
+    assertCoinCanSubscribe(stablecoinId);
+  }
   return preset.stablecoinIds;
 }
 
@@ -103,7 +111,7 @@ async function setQuietHours(db: D1Database, chatId: string, username: string | 
 }
 
 async function setCoin(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>): Promise<void> {
-  assertCoin(operation.stablecoinId);
+  assertCoinCanSubscribe(operation.stablecoinId);
   const patch = operation.patch;
   let appliedCount = 0;
   const statements: D1PreparedStatement[] = [];
@@ -192,7 +200,11 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
       return;
     case "set-coin-snooze":
-      assertCoin(operation.stablecoinId);
+      if (operation.durationToken === "clear") {
+        assertCoin(operation.stablecoinId);
+      } else {
+        assertCoinCanSubscribe(operation.stablecoinId);
+      }
       await setSubscriptionSnooze(
         db,
         chatId,
