@@ -1,21 +1,20 @@
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { setLastBlock } from "../lib/db";
 import { materializeBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import { materializeBlacklistSummarySnapshot } from "../api/blacklist-summary";
-import {
-  type RateLimitedFetch,
-  createRateLimiter,
-  getEvmBlockNumber,
-} from "../lib/evm-logs";
+import { type RateLimitedFetch, createRateLimiter, getEvmBlockNumber } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import { fetchEvmEventsIncremental, shouldPreferRpcLogScan } from "./blacklist/evm-source";
-import { fetchTronEventsIncremental } from "./blacklist/tron-source";
-import type { BlacklistRow, BlacklistScanResult } from "./blacklist/shared";
+import {
+  fetchEvmEventsIncremental,
+  shouldPreferRpcLogScan,
+  type FetchEvmEventsIncrementalResult,
+} from "./blacklist/evm-source";
+import { fetchTronEventsIncremental, type FetchTronEventsIncrementalResult } from "./blacklist/tron-source";
+import type { BlacklistScanResult } from "./blacklist/shared";
 import { backfillAmounts } from "./blacklist/amount-recovery";
 import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
 import {
@@ -28,15 +27,21 @@ import {
 import {
   applyTronLedgerMirrorPass,
   deriveSyncBlacklistStatus,
-  getRuntimeBudgetSkippedOkThreshold,
   loadBlacklistConfigStates,
   recordApiErrorConfig,
   recordProcessedRows,
   type SyncBlacklistApiErrorConfig,
 } from "./blacklist/sync-support";
 import { toErrorMessage } from "../lib/error-utils";
+import {
+  claimBlacklistConfigAttempt,
+  finalizeBlacklistConfigAttempt,
+  getOldestBlacklistSuccessAt,
+  orderBlacklistConfigStatesFairly,
+  recordBlacklistConfigSkips,
+  type BlacklistConfigAttempt,
+} from "./blacklist/state";
 
-const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
@@ -46,28 +51,6 @@ type SyncBlacklistResult = {
   metadata: string;
   status: "ok" | "degraded" | "error";
 };
-
-// Safety margin when advancing sync state to chain head (prevents permanent event loss
-// if block explorer indexing lags behind chain tip). 15 minutes in seconds/ms.
-const INDEXING_SAFETY_SEC = 900;
-const TRON_SAFETY_MS = INDEXING_SAFETY_SEC * 1000;
-
-// Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
-const EVM_BLOCK_TIME: Record<number, number> = {
-  1: 12,       // Ethereum
-  42161: 0.25, // Arbitrum
-  8453: 2,     // Base
-  10: 2,       // Optimism
-  137: 2,      // Polygon
-  43114: 2,    // Avalanche
-  56: 3,       // BSC
-  100: 5,      // Gnosis
-};
-
-function evmSafetyMarginBlocks(evmChainId: number): number {
-  const blockTime = EVM_BLOCK_TIME[evmChainId] ?? 2;
-  return Math.ceil(INDEXING_SAFETY_SEC / blockTime);
-}
 
 export interface SyncBlacklistOptions {
   db: D1Database;
@@ -80,15 +63,19 @@ export interface SyncBlacklistOptions {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
-function buildTronScanResult(
-  result: { rows: BlacklistRow[]; maxBlock: number; incomplete: boolean; apiError: boolean },
-  lastCursor: number,
-): BlacklistScanResult {
-  const nextCursor = result.incomplete
-    ? lastCursor
-    : result.rows.length > 0
-      ? result.maxBlock
-      : Math.max(Date.now() - TRON_SAFETY_MS, lastCursor);
+function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCursor: number): BlacklistScanResult {
+  const nextCursor = result.scannedToTimestamp != null ? Math.max(lastCursor, result.scannedToTimestamp) : lastCursor;
+  const coverageOutcome = result.apiError
+    ? result.coveredTopicCount > 0
+      ? "missing_topic"
+      : "provider_error"
+    : result.incomplete
+      ? result.coveredTopicCount > 0
+        ? "missing_topic"
+        : "incomplete"
+      : result.rows.length > 0
+        ? "complete"
+        : "quiet";
 
   return {
     rows: result.rows,
@@ -97,51 +84,22 @@ function buildTronScanResult(
     apiError: result.apiError,
     incomplete: result.incomplete,
     usedRpcLogs: false,
+    scannedToCursor: result.scannedToTimestamp,
+    safeHead: result.safeHead,
+    coverageOutcome,
+    topicCount: result.topicCount,
+    coveredTopicCount: result.coveredTopicCount,
+    providerCalls: result.providerCalls,
+    maxSplitDepth: 0,
   };
 }
 
 function buildEvmScanResult(args: {
-  result: {
-    rows: BlacklistRow[];
-    maxBlock: number;
-    apiError: boolean;
-    chainHead: number | null;
-    usedRpcLogs: boolean;
-    scannedToBlock: number | null;
-    incomplete: boolean;
-  };
+  result: FetchEvmEventsIncrementalResult;
   lastCursor: number;
-  configuredStartBlock: number;
-  wasReset: boolean;
-  evmChainId: number;
-  chainHeadCache: Map<number, number>;
 }): BlacklistScanResult {
-  let nextCursor = args.lastCursor;
   const { result } = args;
-
-  if (result.incomplete) {
-    nextCursor = args.lastCursor;
-  } else if (result.apiError) {
-    const partialAdvance = result.scannedToBlock;
-    nextCursor =
-      partialAdvance != null && partialAdvance > args.lastCursor
-        ? partialAdvance
-        : args.lastCursor;
-  } else if (result.rows.length > 0) {
-    nextCursor = result.maxBlock;
-  } else {
-    const head = args.chainHeadCache.get(args.evmChainId);
-    const margin = evmSafetyMarginBlocks(args.evmChainId);
-    if (result.usedRpcLogs && result.scannedToBlock != null && head != null && result.scannedToBlock < head) {
-      nextCursor = Math.max(result.scannedToBlock, args.lastCursor);
-    } else {
-      nextCursor = head
-        ? Math.max(head - margin, args.lastCursor)
-        : args.wasReset
-          ? args.configuredStartBlock
-          : args.lastCursor;
-    }
-  }
+  const nextCursor = result.scannedToBlock != null ? Math.max(args.lastCursor, result.scannedToBlock) : args.lastCursor;
 
   return {
     rows: result.rows,
@@ -150,6 +108,13 @@ function buildEvmScanResult(args: {
     apiError: result.apiError,
     incomplete: result.incomplete,
     usedRpcLogs: result.usedRpcLogs,
+    scannedToCursor: result.scannedToBlock,
+    safeHead: result.safeHead,
+    coverageOutcome: result.coverageOutcome,
+    topicCount: result.topicCount,
+    coveredTopicCount: result.coveredTopicCount,
+    providerCalls: result.providerCalls,
+    maxSplitDepth: result.maxSplitDepth,
   };
 }
 
@@ -160,6 +125,7 @@ async function scanBlacklistConfig(args: {
   lastBlock: number;
   runBudget: BlacklistRunBudget;
   etherscanApiKey: string | null;
+  etherscanCircuitAllowed: boolean;
   trongridApiKey: string | null;
   etherscanLimiter: RateLimitedFetch;
   tronLimiter: RateLimitedFetch;
@@ -181,16 +147,22 @@ async function scanBlacklistConfig(args: {
   }
 
   const evmChainId = args.config.chain.evmChainId!;
-  const wasReset = args.lastBlock >= EVM_SCANNED_TO_LATEST;
   const configuredStartBlock =
     typeof args.config.startBlock === "number" && Number.isFinite(args.config.startBlock) && args.config.startBlock > 0
       ? Math.floor(args.config.startBlock)
       : 0;
-  const fromBlock = wasReset
-    ? configuredStartBlock
-    : args.lastBlock > 0
-      ? args.lastBlock + 1
-      : configuredStartBlock;
+  const fromBlock = args.lastBlock > 0 ? args.lastBlock + 1 : configuredStartBlock;
+  let knownChainHead = args.chainHeadCache.get(evmChainId) ?? null;
+  if (knownChainHead == null && args.etherscanCircuitAllowed && !shouldPreferRpcLogScan(args.config.chain.chainId)) {
+    knownChainHead = await getEvmBlockNumber(
+      evmChainId,
+      args.etherscanApiKey,
+      args.etherscanLimiter,
+      args.runBudget.subrequestBudget,
+      args.signal,
+    );
+    if (knownChainHead != null) args.chainHeadCache.set(evmChainId, knownChainHead);
+  }
 
   const result = await fetchEvmEventsIncremental(
     args.db,
@@ -202,34 +174,22 @@ async function scanBlacklistConfig(args: {
     args.etherscanLimiter,
     args.signal,
     args.chainRpcs,
+    knownChainHead,
   );
 
   if (result.chainHead != null) {
     args.chainHeadCache.set(evmChainId, result.chainHead);
-  } else if (!args.chainHeadCache.has(evmChainId) && !result.incomplete && !result.apiError && result.rows.length === 0) {
-    const head = await getEvmBlockNumber(
-      evmChainId,
-      args.etherscanApiKey,
-      args.etherscanLimiter,
-      args.runBudget.subrequestBudget,
-      args.signal,
-    );
-    if (head) args.chainHeadCache.set(evmChainId, head);
   }
 
   return buildEvmScanResult({
     result,
     lastCursor: args.lastBlock,
-    configuredStartBlock,
-    wasReset,
-    evmChainId,
-    chainHeadCache: args.chainHeadCache,
   });
 }
 
 export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
   const { db, etherscanApiKey, trongridApiKey, drpcApiKey, externalEtherscanRL, signal, onProgress, chainRpcs } = opts;
-  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
+  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(3);
   const tronLimiter = createRateLimiter(3);
   const runBudget = createBlacklistRunBudget({
     subrequestLimit: 900,
@@ -267,71 +227,75 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     return cache;
   };
   const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db, signal);
-  let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial", { runBudget, signal });
+  const orderedConfigStates = orderBlacklistConfigStatesFairly(configStates);
+  let tronLedgerUpdated = 0;
+  let configsAttempted = 0;
+  let configsSucceeded = 0;
+  let stateConflicts = 0;
+  let blacklistProviderCalls = 0;
+  let maxProviderSplitDepth = 0;
+  const coverageOutcomeCounts: Record<string, number> = {};
   const etherscanCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
-
-  // Backfill NULL amounts first — this has priority over new event scanning
-  // because the worker may time out before completing the full config loop.
-  if (etherscanCircuitAllowed) {
-    try {
-      const backfill = await backfillAmounts(
-        db,
-        etherscanApiKey,
-        drpcApiKey,
-        etherscanLimiter,
-        runBudget,
-        signal,
-        chainRpcs,
-      );
-      runtimeBudgetHit ||= backfill.runtimeBudgetReached;
-    } catch (err) {
-      console.warn("[sync-blacklist] Backfill failed:", err);
-    }
-  } else {
-    providerCircuitSkips++;
-    etherscanCircuitSkips++;
-    console.warn("[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
-  }
-  console.log(`[sync-blacklist] Backfill done, budget: ${budget.count}/${budget.limit}`);
-  await reportCronProgress(onProgress, {
-    stage: "backfill-amounts",
-    itemsDone: 0,
-    itemsTotal: configStates.length,
-    message: `Backfill pass complete; scanning ${configStates.length} blacklist config(s)`,
-  }, budget);
-
-  // Sort by lastBlock ascending so least-synced configs go first
-  configStates.sort((a, b) => a.lastBlock - b.lastBlock);
+  await reportCronProgress(
+    onProgress,
+    {
+      stage: "scan-configs",
+      itemsDone: 0,
+      itemsTotal: orderedConfigStates.length,
+      message: `Scanning ${orderedConfigStates.length} blacklist config(s) before maintenance`,
+    },
+    budget,
+  );
 
   // Cache current block per EVM chain to avoid redundant API calls
   const chainHeadCache = new Map<number, number>();
 
-  for (let ci = 0; ci < configStates.length; ci++) {
+  for (let ci = 0; ci < orderedConfigStates.length; ci++) {
     throwIfAborted(signal);
-    if (blacklistShouldStopBeforeNextConfig(runBudget)) {
+    if (blacklistShouldStopBeforeNextConfig(runBudget) || blacklistSubrequestBudgetReached(runBudget)) {
       runtimeBudgetHit = true;
-      contractsSkipped = configStates.length - ci;
+      const skippedStates = orderedConfigStates.slice(ci);
+      contractsSkipped += skippedStates.length;
+      await recordBlacklistConfigSkips(db, skippedStates, Math.floor(Date.now() / 1000), signal);
+      for (const skippedState of skippedStates) {
+        skippedState.lastSkippedAt = Math.floor(Date.now() / 1000);
+        skippedState.consecutiveSkips++;
+        skippedState.lastOutcome = "budget_skipped";
+      }
       console.warn(`[sync-blacklist] Runtime budget reached, skipping ${contractsSkipped} remaining contracts`);
       break;
     }
-    const { config, configKey, lastBlock } = configStates[ci];
-    await reportCronProgress(onProgress, {
-      stage: "scan-config",
-      itemsDone: ci,
-      itemsTotal: configStates.length,
-      message: `Scanning ${config.stablecoin} on ${config.chain.chainName}`,
-      metadata: {
-        configKey,
-        stablecoin: config.stablecoin,
-        chainId: config.chain.chainId,
+    const state = orderedConfigStates[ci]!;
+    const { config, configKey } = state;
+    const lastBlock = state.cursorValue;
+    await reportCronProgress(
+      onProgress,
+      {
+        stage: "scan-config",
+        itemsDone: ci,
+        itemsTotal: orderedConfigStates.length,
+        message: `Scanning ${config.stablecoin} on ${config.chain.chainName}`,
+        metadata: {
+          configKey,
+          stablecoin: config.stablecoin,
+          chainId: config.chain.chainId,
+        },
       },
-    }, budget);
-    if (blacklistSubrequestBudgetReached(runBudget)) {
-      runtimeBudgetHit = true;
-      contractsSkipped = configStates.length - ci;
-      console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
-      break;
+      budget,
+    );
+
+    const attemptedAt = Math.floor(Date.now() / 1000);
+    const attempt: BlacklistConfigAttempt | null = await claimBlacklistConfigAttempt(db, state, attemptedAt, signal);
+    if (!attempt) {
+      stateConflicts++;
+      contractsSkipped++;
+      recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "state-claim-conflict");
+      continue;
     }
+    configsAttempted++;
+    state.attemptGeneration = attempt.generation;
+    state.lastAttemptedAt = attemptedAt;
+    state.lastOutcome = "running";
 
     // Circuit breaker checks for provider-specific sources
     if (config.chain.type === "tron" && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID))) {
@@ -339,20 +303,28 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       contractsSkipped++;
       providerCircuitSkips++;
       tronGridCircuitSkips++;
-      recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "trongrid-circuit-open");
-      continue;
-    }
-
-    if (
-      config.chain.type !== "tron"
-      && !shouldPreferRpcLogScan(config.chain.chainId)
-      && !etherscanCircuitAllowed
-    ) {
-      console.log(`[sync-blacklist] Etherscan circuit open, skipping ${configKey}`);
-      contractsSkipped++;
-      providerCircuitSkips++;
-      etherscanCircuitSkips++;
-      recordApiErrorConfig(apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "etherscan-circuit-open");
+      coverageOutcomeCounts.provider_skipped = (coverageOutcomeCounts.provider_skipped ?? 0) + 1;
+      recordApiErrorConfig(
+        apiErrorConfigs,
+        configKey,
+        config.stablecoin,
+        config.chain.chainId,
+        "trongrid-circuit-open",
+      );
+      const completedAt = Math.floor(Date.now() / 1000);
+      const finalized = await finalizeBlacklistConfigAttempt(
+        db,
+        attempt,
+        {
+          outcome: "provider_skipped",
+          completedAt,
+        },
+        signal,
+      );
+      if (!finalized) stateConflicts++;
+      state.lastSkippedAt = completedAt;
+      state.consecutiveSkips++;
+      state.lastOutcome = "provider_skipped";
       continue;
     }
 
@@ -364,6 +336,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         lastBlock,
         runBudget,
         etherscanApiKey,
+        etherscanCircuitAllowed,
         trongridApiKey,
         etherscanLimiter,
         tronLimiter,
@@ -404,7 +377,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           );
         }
       } else {
-        if (!shouldPreferRpcLogScan(config.chain.chainId)) {
+        if (!shouldPreferRpcLogScan(config.chain.chainId) && etherscanCircuitAllowed) {
           await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, !result.apiError);
         }
 
@@ -465,8 +438,44 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         }
       }
 
-      if (result.nextCursor != null) {
-        await setLastBlock(db, configKey, result.nextCursor, signal);
+      blacklistProviderCalls += result.providerCalls;
+      maxProviderSplitDepth = Math.max(maxProviderSplitDepth, result.maxSplitDepth);
+      coverageOutcomeCounts[result.coverageOutcome] = (coverageOutcomeCounts[result.coverageOutcome] ?? 0) + 1;
+
+      const completedAt = Math.floor(Date.now() / 1000);
+      const finalized = await finalizeBlacklistConfigAttempt(
+        db,
+        attempt,
+        {
+          outcome: result.coverageOutcome,
+          nextCursor: result.nextCursor,
+          observedSafeHead: result.safeHead,
+          completedAt,
+        },
+        signal,
+      );
+      if (!finalized) {
+        stateConflicts++;
+        apiErrors++;
+        recordApiErrorConfig(
+          apiErrorConfigs,
+          configKey,
+          config.stablecoin,
+          config.chain.chainId,
+          "state-finalize-conflict",
+        );
+      } else {
+        state.cursorValue = Math.max(state.cursorValue, result.nextCursor ?? state.cursorValue);
+        state.lastOutcome = result.coverageOutcome;
+        state.consecutiveSkips = 0;
+        if (result.coverageOutcome === "complete" || result.coverageOutcome === "quiet") {
+          configsSucceeded++;
+          state.lastSucceededAt = completedAt;
+          state.consecutiveFailures = 0;
+        } else {
+          state.lastFailedAt = completedAt;
+          state.consecutiveFailures++;
+        }
       }
 
       totalFetchedEvents += result.rows.length;
@@ -486,30 +495,63 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         `exception:${errorClass}`,
         err,
       );
+      const completedAt = Math.floor(Date.now() / 1000);
+      const finalized = await finalizeBlacklistConfigAttempt(
+        db,
+        attempt,
+        {
+          outcome: "exception",
+          completedAt,
+        },
+        signal,
+      ).catch(() => false);
+      if (!finalized) stateConflicts++;
+      state.lastFailedAt = completedAt;
+      state.consecutiveFailures++;
+      state.consecutiveSkips = 0;
+      state.lastOutcome = "exception";
+      coverageOutcomeCounts.exception = (coverageOutcomeCounts.exception ?? 0) + 1;
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
 
-  tronLedgerUpdated += await applyTronLedgerMirrorPass(db, "post-sync", { runBudget, signal });
+  // Historical amount repair and ledger mirroring are maintenance work. They
+  // run only after every admissible event source has had its turn.
+  if (etherscanCircuitAllowed && !blacklistRuntimeBudgetReached(runBudget)) {
+    try {
+      const backfill = await backfillAmounts(
+        db,
+        etherscanApiKey,
+        drpcApiKey,
+        etherscanLimiter,
+        runBudget,
+        signal,
+        chainRpcs,
+      );
+      runtimeBudgetHit ||= backfill.runtimeBudgetReached;
+    } catch (err) {
+      console.warn("[sync-blacklist] Backfill failed:", err);
+    }
+  } else if (!etherscanCircuitAllowed) {
+    etherscanCircuitSkips++;
+    console.warn("[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
+  }
+  tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "post-sync", { runBudget, signal });
 
-  // Tolerate up to 25% of configs failing (transient upstream timeouts) before
-  // marking the run degraded.  More than 50% is a full error.
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
-  const runtimeBudgetSkippedOkThreshold = getRuntimeBudgetSkippedOkThreshold(configStates.length);
-  const runtimeBudgetSkippedWithinTolerance =
-    runtimeBudgetHit &&
-    contractsSkipped > 0 &&
-    incompleteRuntimeConfigs === 0 &&
-    !subrequestBudgetReached &&
-    contractsSkipped <= runtimeBudgetSkippedOkThreshold;
   const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
     contractsSkipped,
     totalConfigs: configStates.length,
     incompleteRuntimeConfigs,
     subrequestBudgetHit: subrequestBudgetReached,
   });
+  const { oldestSuccessAt, neverSucceeded } = getOldestBlacklistSuccessAt(configStates);
+  const coverageFailures = Math.max(0, configsAttempted - configsSucceeded);
   const status: SyncBlacklistResult["status"] =
-    derivedStatus === "ok" && providerCircuitSkips > 0 ? "degraded" : derivedStatus;
+    derivedStatus === "ok" &&
+    (providerCircuitSkips > 0 || coverageFailures > 0 || stateConflicts > 0 || neverSucceeded > 0)
+      ? "degraded"
+      : derivedStatus;
   const producerSnapshotWindowUnavailable =
     Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= runBudget.deadlineMs;
 
@@ -517,79 +559,99 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     status !== "ok" ||
     blacklistRuntimeBudgetReached(runBudget) ||
     subrequestBudgetReached ||
+    oldestSuccessAt == null ||
     producerSnapshotWindowUnavailable
   ) {
     producerSnapshotSkipped = true;
   } else {
     try {
       const snapshotNow = Math.floor(Date.now() / 1000);
-      const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow);
-      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow);
+      const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
+      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt);
       producerGapMetricSnapshots = gapSnapshot.written;
       producerSummarySnapshot = summarySnapshot.written;
     } catch (err) {
       producerSnapshotError = err instanceof Error ? err.name : "UnknownError";
-      await reportCronProgress(onProgress, {
-        stage: "producer-snapshots",
-        itemsDone: configStates.length,
-        itemsTotal: configStates.length,
-        message: "Failed to materialize blacklist producer snapshots",
-        metadata: {
-          producerSnapshotError,
-          errorMessage: toErrorMessage(err),
+      await reportCronProgress(
+        onProgress,
+        {
+          stage: "producer-snapshots",
+          itemsDone: configStates.length,
+          itemsTotal: configStates.length,
+          message: "Failed to materialize blacklist producer snapshots",
+          metadata: {
+            producerSnapshotError,
+            errorMessage: toErrorMessage(err),
+          },
         },
-      }, budget);
+        budget,
+      );
     }
   }
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
-  await reportCronProgress(onProgress, {
-    stage: "complete",
-    itemsDone: configStates.length,
-    itemsTotal: configStates.length,
-    message: "Completed blacklist sync",
-    metadata: {
-      rowsWritten: counters.totalInsertedRows,
-      eventsFetched: totalFetchedEvents,
-      contractsSkipped,
-      apiErrors,
+  await reportCronProgress(
+    onProgress,
+    {
+      stage: "complete",
+      itemsDone: configStates.length,
+      itemsTotal: configStates.length,
+      message: "Completed blacklist sync",
+      metadata: {
+        rowsWritten: counters.totalInsertedRows,
+        eventsFetched: totalFetchedEvents,
+        contractsSkipped,
+        apiErrors,
+        configsAttempted,
+        configsSucceeded,
+        coverageFailures,
+        stateConflicts,
+      },
     },
-  }, budget);
+    budget,
+  );
   return {
     status,
     itemCount: counters.totalInsertedRows,
-    metadata: JSON.stringify(withBudgetMetadata(budget, {
-      rowsWritten: counters.totalInsertedRows,
-      eventsFetched: totalFetchedEvents,
-      contractsSkipped,
-      apiErrors,
-      apiErrorConfigs,
-      zeroCursorConfigCount: zeroCursorConfigs.length,
-      zeroCursorConfigs: zeroCursorConfigs.slice(0, 10),
-      rpcLogConfigs,
-      providerCircuitSkips,
-      etherscanCircuitSkips,
-      tronGridCircuitSkips,
-      apiErrorClasses,
-      runtimeBudgetReached: runtimeBudgetHit,
-      subrequestBudgetReached,
-      runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
-      runtimeBudgetSkippedOkThreshold,
-      runtimeBudgetSkippedWithinTolerance,
-      incompleteRuntimeConfigs,
-      enrichAttempted: counters.enrichCounters.attempted,
-      enrichSucceeded: counters.enrichCounters.succeeded,
-      enrichFailed: counters.enrichCounters.failed,
-      currentBalanceCacheUpdated: counters.currentBalanceCacheCounters.updated,
-      currentBalanceCacheDeleted: counters.currentBalanceCacheCounters.deleted,
-      currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
-      tronLedgerUpdated,
-      producerGapMetricSnapshots,
-      producerSummarySnapshot,
-      producerSnapshotSkipped,
-      producerSnapshotError,
-      producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
-      producerSnapshotWindowUnavailable,
-    })),
+    metadata: JSON.stringify(
+      withBudgetMetadata(budget, {
+        rowsWritten: counters.totalInsertedRows,
+        eventsFetched: totalFetchedEvents,
+        contractsSkipped,
+        apiErrors,
+        apiErrorConfigs,
+        zeroCursorConfigCount: zeroCursorConfigs.length,
+        zeroCursorConfigs: zeroCursorConfigs.slice(0, 10),
+        rpcLogConfigs,
+        providerCircuitSkips,
+        etherscanCircuitSkips,
+        tronGridCircuitSkips,
+        apiErrorClasses,
+        coverageOutcomeCounts,
+        blacklistProviderCalls,
+        maxProviderSplitDepth,
+        runtimeBudgetReached: runtimeBudgetHit,
+        subrequestBudgetReached,
+        runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+        incompleteRuntimeConfigs,
+        oldestConfigSuccessAt: oldestSuccessAt,
+        oldestConfigSuccessAgeSec:
+          oldestSuccessAt == null ? null : Math.max(0, Math.floor(Date.now() / 1000) - oldestSuccessAt),
+        configsNeverSucceeded: neverSucceeded,
+        enrichAttempted: counters.enrichCounters.attempted,
+        enrichSucceeded: counters.enrichCounters.succeeded,
+        enrichFailed: counters.enrichCounters.failed,
+        currentBalanceCacheUpdated: counters.currentBalanceCacheCounters.updated,
+        currentBalanceCacheDeleted: counters.currentBalanceCacheCounters.deleted,
+        currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
+        tronLedgerUpdated,
+        producerGapMetricSnapshots,
+        producerSummarySnapshot,
+        producerSnapshotSkipped,
+        producerSnapshotError,
+        producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
+        producerSnapshotWindowUnavailable,
+      }),
+    ),
   };
 }

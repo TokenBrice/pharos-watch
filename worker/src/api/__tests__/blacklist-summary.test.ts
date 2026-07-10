@@ -157,7 +157,7 @@ describe("handleBlacklistSummary", () => {
     const now = 1_777_000_000;
     const db = mockD1();
 
-    const result = await materializeBlacklistSummarySnapshot(db, now);
+    const result = await materializeBlacklistSummarySnapshot(db, now, now - 300);
 
     expect(result).toEqual({ written: true });
     const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
@@ -170,7 +170,7 @@ describe("handleBlacklistSummary", () => {
     };
     expect(payload.version).toBe(1);
     expect(payload.materializedAt).toBe(now);
-    expect(payload.freshnessTs).toBe(now);
+    expect(payload.freshnessTs).toBe(now - 300);
     expect(payload.payload.totalEvents).toBe(0);
     expect(Array.isArray(payload.payload.chart)).toBe(true);
     expect(write?.binds[2]).toBe(now);

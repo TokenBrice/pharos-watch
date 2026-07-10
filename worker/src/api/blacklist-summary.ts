@@ -633,8 +633,10 @@ async function buildBlacklistSummaryPayload(
 export async function materializeBlacklistSummarySnapshot(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
+  freshnessTs = now,
 ): Promise<{ written: boolean }> {
-  const built = await buildBlacklistSummaryPayload(db, now, { freshnessTsOverride: now });
+  const boundedFreshnessTs = Math.min(now, Math.max(0, Math.floor(freshnessTs)));
+  const built = await buildBlacklistSummaryPayload(db, now, { freshnessTsOverride: boundedFreshnessTs });
   await writeBlacklistSummarySnapshot(db, {
     version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
     materializedAt: now,

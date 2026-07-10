@@ -5,6 +5,7 @@ import { setCache } from "../lib/db-cache";
 import { jsonResponse } from "../lib/api-utils";
 import { handleDismissCandidate } from "./discovery";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
+import { normalizeBlacklistSyncStateKey } from "../lib/db";
 
 interface TriggerDigestRouteContext extends AdminRouteContext {
   execCtx: ExecutionContext;
@@ -49,10 +50,28 @@ export const handleResetBlacklistSync = makeAdminRoute(
     runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
       const result = await db.batch([
         db.prepare(
-          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'",
+          `UPDATE blacklist_sync_state
+           SET
+             last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
+             cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 50000, 0),
+             attempt_generation = attempt_generation + 1,
+             last_succeeded_at = NULL,
+             consecutive_skips = 0,
+             consecutive_failures = 0,
+             last_outcome = 'admin_rewind'
+           WHERE config_key NOT LIKE 'tron-%'`,
         ),
         db.prepare(
-          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'",
+          `UPDATE blacklist_sync_state
+           SET
+             last_block = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
+             cursor_value = MAX(MAX(last_block, COALESCE(cursor_value, 0)) - 604800000, 0),
+             attempt_generation = attempt_generation + 1,
+             last_succeeded_at = NULL,
+             consecutive_skips = 0,
+             consecutive_failures = 0,
+             last_outcome = 'admin_rewind'
+           WHERE config_key LIKE 'tron-%'`,
         ),
       ]);
       const evmChanged = result[0]?.meta?.changes ?? 0;
@@ -67,8 +86,41 @@ export const handleDebugSyncState = makeAdminRoute(
     const now = Math.floor(Date.now() / 1000);
     const [stateRows, eventRows, latestRun] = await Promise.all([
       db
-        .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
-        .all<{ config_key: string; last_block: number }>(),
+        .prepare(
+          `SELECT
+             config_key,
+             last_block,
+             cursor_kind,
+             cursor_value,
+             attempt_generation,
+             last_attempted_at,
+             last_succeeded_at,
+             last_skipped_at,
+             last_failed_at,
+             consecutive_skips,
+             consecutive_failures,
+             last_outcome,
+             last_observed_safe_head,
+             last_safe_head_observed_at
+           FROM blacklist_sync_state
+           ORDER BY config_key`,
+        )
+        .all<{
+          config_key: string;
+          last_block: number;
+          cursor_kind: string;
+          cursor_value: number | null;
+          attempt_generation: number;
+          last_attempted_at: number | null;
+          last_succeeded_at: number | null;
+          last_skipped_at: number | null;
+          last_failed_at: number | null;
+          consecutive_skips: number;
+          consecutive_failures: number;
+          last_outcome: string | null;
+          last_observed_safe_head: number | null;
+          last_safe_head_observed_at: number | null;
+        }>(),
       db
         .prepare(
           `SELECT
@@ -99,8 +151,14 @@ export const handleDebugSyncState = makeAdminRoute(
         .catch(() => null),
     ]);
 
-    const stateByKey = new Map((stateRows.results ?? []).map((row) => [row.config_key, row]));
-    const eventByKey = new Map((eventRows.results ?? []).map((row) => [row.config_key, row]));
+    const stateByKey = new Map((stateRows.results ?? []).map((row) => [
+      normalizeBlacklistSyncStateKey(row.config_key),
+      row,
+    ]));
+    const eventByKey = new Map((eventRows.results ?? []).map((row) => [
+      normalizeBlacklistSyncStateKey(row.config_key),
+      row,
+    ]));
     const latestRunMetadata = (() => {
       if (!latestRun?.metadata) return null;
       try {
@@ -119,10 +177,11 @@ export const handleDebugSyncState = makeAdminRoute(
     );
 
     const rows = CONTRACT_CONFIGS.map((config) => {
-      const state = stateByKey.get(config.configKey);
-      const event = eventByKey.get(config.configKey);
-      const cursorAgeSec = config.chain.type === "tron" && state?.last_block
-        ? Math.max(0, now - Math.floor(state.last_block / 1000))
+      const state = stateByKey.get(normalizeBlacklistSyncStateKey(config.configKey));
+      const event = eventByKey.get(normalizeBlacklistSyncStateKey(config.configKey));
+      const cursorValue = Math.max(state?.last_block ?? 0, state?.cursor_value ?? 0);
+      const cursorAgeSec = config.chain.type === "tron" && cursorValue > 0
+        ? Math.max(0, now - Math.floor(cursorValue / 1000))
         : null;
       const lastEventAgeSec = event?.last_event_at != null ? Math.max(0, now - event.last_event_at) : null;
       const latestError = latestRunErrorByConfig.get(config.configKey);
@@ -134,8 +193,20 @@ export const handleDebugSyncState = makeAdminRoute(
         chainName: config.chain.chainName,
         contractAddress: config.contractAddress,
         providerSource: config.chain.type === "tron" ? "trongrid" : "evm-logs",
+        cursorKind: state?.cursor_kind ?? (config.chain.type === "tron" ? "tron_timestamp_ms" : "evm_block"),
+        cursorValue,
         lastBlock: state?.last_block ?? 0,
         cursorAgeSec,
+        attemptGeneration: state?.attempt_generation ?? 0,
+        lastAttemptedAt: state?.last_attempted_at ?? null,
+        lastSucceededAt: state?.last_succeeded_at ?? null,
+        lastSkippedAt: state?.last_skipped_at ?? null,
+        lastFailedAt: state?.last_failed_at ?? null,
+        consecutiveSkips: state?.consecutive_skips ?? 0,
+        consecutiveFailures: state?.consecutive_failures ?? 0,
+        lastOutcome: state?.last_outcome ?? null,
+        lastObservedSafeHead: state?.last_observed_safe_head ?? null,
+        lastSafeHeadObservedAt: state?.last_safe_head_observed_at ?? null,
         lastEventAt: event?.last_event_at ?? null,
         lastEventAgeSec,
         lastEventBlock: event?.last_event_block ?? null,

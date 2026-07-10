@@ -33,6 +33,7 @@ type BlacklistGapMetricsCacheKind = "producer" | "request";
 
 interface CachedBlacklistGapMetricsPayload {
   version: typeof BLACKLIST_GAP_METRICS_CACHE_VERSION;
+  materializedAt?: number;
   includeDistributions: boolean;
   recentWindowSec: number;
   metrics: BlacklistGapMetrics;
@@ -90,7 +91,7 @@ function isMetricsPayload(value: unknown): value is BlacklistGapMetrics {
 function parseCachedMetrics(
   value: string,
   options: Required<BlacklistGapMetricsOptions>,
-): BlacklistGapMetrics | null {
+): { metrics: BlacklistGapMetrics; materializedAt: number | null } | null {
   try {
     const payload = JSON.parse(value) as Partial<CachedBlacklistGapMetricsPayload>;
     if (
@@ -101,7 +102,12 @@ function parseCachedMetrics(
     ) {
       return null;
     }
-    return payload.metrics;
+    return {
+      metrics: payload.metrics,
+      materializedAt: typeof payload.materializedAt === "number" && Number.isFinite(payload.materializedAt)
+        ? payload.materializedAt
+        : null,
+    };
   } catch {
     return null;
   }
@@ -128,8 +134,10 @@ async function readCachedMetrics(
     .bind(getCacheKey(options, kind))
     .first<{ value: string; updated_at: number }>();
   if (!row || now - row.updated_at > ttlSec) return null;
-  const metrics = parseCachedMetrics(row.value, options);
-  return metrics ? ageCachedMetrics(metrics, row.updated_at, now) : null;
+  const parsed = parseCachedMetrics(row.value, options);
+  return parsed
+    ? ageCachedMetrics(parsed.metrics, parsed.materializedAt ?? row.updated_at, now)
+    : null;
 }
 
 async function writeCachedMetrics(
@@ -144,20 +152,22 @@ async function writeCachedMetrics(
 
 async function writeMetricsCacheRow(
   db: D1Database,
-  now: number,
+  freshnessAt: number,
   options: Pick<Required<BlacklistGapMetricsOptions>, "recentWindowSec" | "includeDistributions">,
   metrics: BlacklistGapMetrics,
   kind: BlacklistGapMetricsCacheKind,
+  materializedAt = freshnessAt,
 ): Promise<void> {
   const payload: CachedBlacklistGapMetricsPayload = {
     version: BLACKLIST_GAP_METRICS_CACHE_VERSION,
+    materializedAt,
     includeDistributions: options.includeDistributions,
     recentWindowSec: options.recentWindowSec,
     metrics,
   };
   await db
     .prepare("/* blacklist-gap-metrics-cache-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-    .bind(getCacheKey(options, kind), JSON.stringify(payload), now)
+    .bind(getCacheKey(options, kind), JSON.stringify(payload), freshnessAt)
     .run();
 }
 
@@ -324,7 +334,9 @@ export async function materializeBlacklistGapMetrics(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   recentWindowSec = BLACKLIST_RECENT_WINDOW_SEC,
+  producerFreshnessAt = now,
 ): Promise<{ written: number }> {
+  const freshnessAt = Math.min(now, Math.max(0, Math.floor(producerFreshnessAt)));
   const fullOptions = normalizeOptions({
     recentWindowSec,
     includeDistributions: true,
@@ -341,8 +353,8 @@ export async function materializeBlacklistGapMetrics(
   };
 
   await Promise.all([
-    writeMetricsCacheRow(db, now, fullOptions, fullMetrics, "producer"),
-    writeMetricsCacheRow(db, now, coreOptions, coreMetrics, "producer"),
+    writeMetricsCacheRow(db, freshnessAt, fullOptions, fullMetrics, "producer", now),
+    writeMetricsCacheRow(db, freshnessAt, coreOptions, coreMetrics, "producer", now),
   ]);
 
   return { written: 2 };

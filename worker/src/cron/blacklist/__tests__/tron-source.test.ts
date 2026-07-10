@@ -10,16 +10,14 @@ vi.mock("../../../lib/abort", async (importOriginal) => {
   };
 });
 
-import { fetchTronEventsIncremental, parseTronEvent } from "../tron-source";
+import { fetchTronEventsIncremental, parseTronEvent, validateTronPaginationUrl } from "../tron-source";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../run-budget";
 
 function findConfig(stablecoinId: string) {
-  const config = CONTRACT_CONFIGS.find(
-    (c) => c.stablecoinId === stablecoinId && c.chain.chainId === "tron",
-  );
+  const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === stablecoinId && c.chain.chainId === "tron");
   if (!config) throw new Error(`No Tron config for ${stablecoinId}`);
   return config;
 }
@@ -110,6 +108,72 @@ describe("parseTronEvent", () => {
   });
 });
 
+describe("TronGrid pagination validation", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("accepts only the same HTTPS endpoint, contract, and event", () => {
+    const config = findConfig("usdt-tether");
+    const eventName = "AddedBlackList";
+    const valid = `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&fingerprint=abc`;
+
+    expect(validateTronPaginationUrl(valid, config.contractAddress, eventName)).toBe(valid);
+    expect(
+      validateTronPaginationUrl(
+        `https://example.com/v1/contracts/${config.contractAddress}/events?event_name=${eventName}`,
+        config.contractAddress,
+        eventName,
+      ),
+    ).toBeNull();
+    expect(
+      validateTronPaginationUrl(
+        `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=RemovedBlackList`,
+        config.contractAddress,
+        eventName,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects a cyclic next link without issuing another request", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const firstEvent = baseConfig.events[0]!;
+    const config: ContractEventConfig = { ...baseConfig, events: [firstEvent] };
+    const eventName = firstEvent.signature.split("(")[0];
+    const next = `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&fingerprint=repeat`;
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [],
+            meta: { links: { next } },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [],
+            meta: { links: { next } },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+    const result = await fetchTronEventsIncremental(config, "secret", 0, makeRunBudget(), noopLimiter);
+
+    expect(result).toMatchObject({ apiError: true, incomplete: true, providerCalls: 2 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("fetchTronEventsIncremental cursor safety", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
@@ -117,6 +181,25 @@ describe("fetchTronEventsIncremental cursor safety", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("uses confirmed, safe-head-bounded timestamp filters", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const lastTimestampMs = Date.now() - 86_400_000;
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: [], meta: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await fetchTronEventsIncremental(config, null, lastTimestampMs, makeRunBudget(), noopLimiter);
+
+    const requested = new URL(String(vi.mocked(fetch).mock.calls[0]?.[0]));
+    expect(requested.searchParams.get("min_timestamp")).toBe(String(lastTimestampMs));
+    expect(Number(requested.searchParams.get("max_timestamp"))).toBeLessThanOrEqual(Date.now() - 15 * 60_000);
+    expect(requested.searchParams.get("only_confirmed")).toBe("true");
   });
 
   it("marks the scan incomplete when a later event family fails", async () => {
@@ -166,7 +249,11 @@ describe("fetchTronEventsIncremental cursor safety", () => {
         JSON.stringify({
           success: true,
           data: [],
-          meta: { links: { next: "https://api.trongrid.io/v1/contracts/TRX/events?page=2" } },
+          meta: {
+            links: {
+              next: `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${firstEvent.signature.split("(")[0]}&fingerprint=page-2`,
+            },
+          },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
