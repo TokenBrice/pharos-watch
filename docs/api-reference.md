@@ -2716,6 +2716,8 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral. Source-family and benchmark freshness are eligibility rules applied before arbitration. Expired rows remain available as last-known context or retained alternatives, but publish `pharosYieldScore: null` with `pysNullReason: "source-stale"` or `"benchmark-stale"`; provenance exposes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. Row-level and provenance `safetyReason` fields make default/NR inputs explicit.
 
+Set `projection=summary` for the compact workbench contract. It preserves leaderboard, filter, scatter, comparison, benchmark, warning, publication, and evidence-qualification fields while omitting retained alternatives and deep decision/source-risk evidence. The detailed response remains the default. Repeated or unknown `projection` values return a non-cacheable `400`.
+
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
 **Error responses:** `503` when the cached rankings payload is missing, unparseable JSON, or parseable JSON that fails the `YieldRankingsResponseSchema` cache-read validation. Schema-invalid cached objects are not served because the endpoint cannot safely hydrate or trust their row shape.
@@ -2775,8 +2777,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.3",
-    "currentVersion": "8.3",
+    "version": "8.31",
+    "currentVersion": "8.31",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2965,6 +2967,8 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Generation-aware rows are returned only after their publication generation is marked `published`; legacy rows remain readable through the existing cutoff fallback. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
 
+History written under methodology v8.31 or later includes the versioned PYS formula inputs captured at publication. `pysReproducibility: "exact"` means the point can be recomputed from `pysInputsAtPublish`; older rows are labeled `legacy-partial` and do not invent missing benchmark, source-risk, or scaling facts.
+
 For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
@@ -3002,8 +3006,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.13",
-    "currentVersion": "8.13",
+    "version": "8.31",
+    "currentVersion": "8.31",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -3035,7 +3039,22 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "dataSource": "rate-derived",
   "isBest": true,
   "sourceSwitch": false,
-  "publicationGenerationId": "yield-1771500000"
+  "publicationGenerationId": "yield-1771500000",
+  "pysAtPublish": 42.7,
+  "pysInputsAtPublish": {
+    "schemaVersion": 1,
+    "methodologyVersion": "8.31",
+    "apy30d": 12.1,
+    "safetyScore": 81,
+    "varianceScore": 0.18,
+    "benchmarkRate": 4.25,
+    "sourceRiskPenalty": 1.15,
+    "scalingFactor": 16,
+    "scoreQualification": "rated",
+    "benchmarkKey": "USD",
+    "evidenceClass": "direct-onchain"
+  },
+  "pysReproducibility": "exact"
 }
 ```
 
@@ -3057,6 +3076,9 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `sourceSwitch`            | `boolean`                     | True when the historically selected best source changed at this row                                                                               |
 | `publicationGenerationId` | `string \| null \| undefined` | Published generation identifier for generation-aware rows; `null`/omitted on legacy rows                                                          |
 | `sourceRisk`              | `object \| null \| undefined` | Optional nested source-risk payload for historical rows; missing or unknown values are neutral                                                    |
+| `pysAtPublish`            | `number \| null \| undefined` | PYS stored at publication time                                                                                                                    |
+| `pysInputsAtPublish`      | `object \| null \| undefined` | Versioned formula and evidence inputs for exact post-v8.31 recomputation; `null` for legacy or malformed snapshots                                |
+| `pysReproducibility`      | `"exact" \| "legacy-partial"` | Whether the stored point has every input required for exact recomputation                                                                       |
 
 ---
 

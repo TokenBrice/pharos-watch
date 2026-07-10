@@ -1,16 +1,18 @@
-import { YieldRankingsResponseSchema, type YieldPublicDecisionLedger, type YieldSourceInputMeta } from "@shared/types/yield";
+import {
+  YieldRankingsResponseSchema,
+  type YieldPublicDecisionLedger,
+  type YieldSourceInputMeta,
+} from "@shared/types/yield";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
 import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
 import { publishYieldRowsAtomically } from "./publication-atomic-batch";
 import { buildYieldSourceProvenance } from "./provenance";
-import {
-  buildPublicDecisionLedger,
-  deriveRejectionReasonCode,
-  deriveYieldSourceRole,
-} from "./decision-public";
+import { buildPublicDecisionLedger, deriveRejectionReasonCode, deriveYieldSourceRole } from "./decision-public";
 import { resolveApy30dDeltaFromPrevious } from "./publication-ranking-payload";
+import { PYS_SCALING_FACTOR } from "../../lib/constants";
 
 const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
 const MAX_SOURCE_DECISION_ANOMALIES = 6;
@@ -26,7 +28,9 @@ function countYieldRankings(
   }
 
   const rankings = options?.allowedIds
-    ? rankingsPayload.rankings.filter((ranking) => typeof ranking.id === "string" && options.allowedIds?.has(ranking.id))
+    ? rankingsPayload.rankings.filter(
+        (ranking) => typeof ranking.id === "string" && options.allowedIds?.has(ranking.id),
+      )
     : rankingsPayload.rankings.filter((ranking) => typeof ranking.id === "string");
   return { count: rankings.length, malformed: false };
 }
@@ -98,8 +102,7 @@ function buildAlternativeDecisionReason(selected: EvaluatedYieldSource, candidat
     return "retained alternative: lower APY";
   }
   if (
-    (candidate.pharosYieldScore ?? Number.NEGATIVE_INFINITY) <
-    (selected.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
+    (candidate.pharosYieldScore ?? Number.NEGATIVE_INFINITY) < (selected.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
   ) {
     return "retained alternative: lower PYS";
   }
@@ -121,25 +124,21 @@ function serializeBoundedDecisionAlternatives(
     maxAlternatives--
   ) {
     for (let maxAnomalies = MAX_SOURCE_DECISION_ANOMALIES; maxAnomalies >= 0; maxAnomalies--) {
-      const alternatives = alternativeCandidates
-        .slice(0, maxAlternatives)
-        .map((candidate) => ({
-          sourceKey: truncateDecisionText(candidate.sourceKey),
-          selectionRank: candidates.findIndex((entry) => entry.sourceKey === candidate.sourceKey) + 1,
-          confidenceTier: candidate.confidenceTier,
-          sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
-          dataSource: truncateDecisionText(candidate.dataSource, 80),
-          apy30d: candidate.apy30d,
-          pharosYieldScore: candidate.pharosYieldScore,
-          sourceTvlUsd: candidate.sourceTvlUsd,
-          sourceRiskPenalty: candidate.sourceRiskPenalty,
-          rejected: candidate.rejected,
-          rejectionReasonCode: deriveRejectionReasonCode(selected, candidate),
-          reason: buildAlternativeDecisionReason(selected, candidate),
-          anomalies: candidate.anomalies
-            .slice(0, maxAnomalies)
-            .map((anomaly) => truncateDecisionText(anomaly, 80)),
-        }));
+      const alternatives = alternativeCandidates.slice(0, maxAlternatives).map((candidate) => ({
+        sourceKey: truncateDecisionText(candidate.sourceKey),
+        selectionRank: candidates.findIndex((entry) => entry.sourceKey === candidate.sourceKey) + 1,
+        confidenceTier: candidate.confidenceTier,
+        sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
+        dataSource: truncateDecisionText(candidate.dataSource, 80),
+        apy30d: candidate.apy30d,
+        pharosYieldScore: candidate.pharosYieldScore,
+        sourceTvlUsd: candidate.sourceTvlUsd,
+        sourceRiskPenalty: candidate.sourceRiskPenalty,
+        rejected: candidate.rejected,
+        rejectionReasonCode: deriveRejectionReasonCode(selected, candidate),
+        reason: buildAlternativeDecisionReason(selected, candidate),
+        anomalies: candidate.anomalies.slice(0, maxAnomalies).map((anomaly) => truncateDecisionText(anomaly, 80)),
+      }));
       const json = JSON.stringify(alternatives);
       if (getJsonByteLength(json) <= MAX_SOURCE_DECISION_ALTERNATIVES_JSON_BYTES) {
         return json;
@@ -241,7 +240,9 @@ export async function validateYieldRankingsPayloadForPublish(
 
   const previousRankingsState = await readPreviousYieldRankingsCount(db);
   if (previousRankingsState.malformed && currentRankings === 0) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write because malformed previous cache recovery payload is empty");
+    console.warn(
+      "[sync-yield-data] Skipped yield-rankings cache write because malformed previous cache recovery payload is empty",
+    );
     return {
       ok: false,
       validationFailures: 1,
@@ -249,9 +250,7 @@ export async function validateYieldRankingsPayloadForPublish(
     };
   }
   const previousRankings = previousRankingsState.count;
-  const severeShrink =
-    previousRankings >= 5 &&
-    currentRankings < Math.ceil(previousRankings * 0.4);
+  const severeShrink = previousRankings >= 5 && currentRankings < Math.ceil(previousRankings * 0.4);
   if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
     console.warn("[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
     return {
@@ -307,9 +306,7 @@ export async function persistEvaluatedYieldSources(
     const safeStability =
       source.yieldStability != null && Number.isFinite(source.yieldStability) ? source.yieldStability : null;
     const safePharosYieldScore =
-      source.pharosYieldScore != null && Number.isFinite(source.pharosYieldScore)
-        ? source.pharosYieldScore
-        : null;
+      source.pharosYieldScore != null && Number.isFinite(source.pharosYieldScore) ? source.pharosYieldScore : null;
     const safeSafetyScore =
       source.safetyScore != null && Number.isFinite(source.safetyScore) ? source.safetyScore : null;
 
@@ -364,6 +361,19 @@ export async function persistEvaluatedYieldSources(
       pys_at_publish: safePharosYieldScore,
       safety_at_publish: safeSafetyScore,
       variance_at_publish: safeVariance30d,
+      pys_inputs_at_publish: JSON.stringify({
+        schemaVersion: 1,
+        methodologyVersion: YIELD_METHODOLOGY_VERSION,
+        apy30d: source.apy30d,
+        safetyScore: source.safetyScore,
+        varianceScore: source.apyVarianceScore,
+        benchmarkRate: source.benchmarkRate,
+        sourceRiskPenalty: source.sourceRiskPenalty,
+        scalingFactor: PYS_SCALING_FACTOR,
+        scoreQualification: source.scoreQualification,
+        benchmarkKey: source.benchmarkKey,
+        evidenceClass: source.evidenceClass,
+      }),
     });
 
     rankingProvenanceByKey.set(
@@ -416,8 +426,7 @@ export async function persistEvaluatedYieldSources(
           stablecoin_id: source.id,
           alt_source_key: alternative.sourceKey,
           alt_yield_source: alternative.yieldSource,
-          alt_apy30d_delta:
-            Number.isFinite(alternative.apy30dDelta) ? alternative.apy30dDelta : null,
+          alt_apy30d_delta: Number.isFinite(alternative.apy30dDelta) ? alternative.apy30dDelta : null,
           rejection_reason_code: alternative.rejectionReasonCode,
           recorded_at: input.startSec,
         });

@@ -220,6 +220,12 @@ export function YieldIntelligenceMethodologySection() {
                     Fallback benchmarks remain score-bearing but degraded while they are within the 48-hour scoring TTL;
                     expired source or benchmark evidence is retained for audit with an NR PYS and explicit provenance.
                   </p>
+                  <p>
+                    Calculation mode and evidence class are separate. Exchange-rate math can be deterministic while the
+                    product estimate remains a modeled proxy; fresh direct first-party, on-chain, and curated observations
+                    therefore outrank a modeled proxy on evidence quality. Rankings label evidence as rated, estimated,
+                    partial, or NR. Missing critical freshness or Safety evidence cannot produce an exact PYS.
+                  </p>
                 </div>
                 {/* PYS formula */}
                 <div className="space-y-2">
@@ -285,6 +291,10 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores
                       until 7 days of data accumulate
+                    </li>
+                    <li>
+                      History before v8.31 lacks the full benchmark, source-risk, and scaling input snapshot and is labeled
+                      legacy-partial; later points store versioned inputs for exact PYS recomputation
                     </li>
                     <li>
                       Some DeFiLlama and protocol-native surfaces still depend on upstream asset metadata completeness; the

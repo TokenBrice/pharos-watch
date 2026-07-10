@@ -2,12 +2,7 @@ import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 
-export const YIELD_ADAPTER_LIFECYCLE_VALUES = [
-  "active",
-  "quarantined",
-  "intentional-gap",
-  "experimental",
-] as const;
+export const YIELD_ADAPTER_LIFECYCLE_VALUES = ["active", "quarantined", "intentional-gap", "experimental"] as const;
 export type YieldAdapterLifecycle = (typeof YIELD_ADAPTER_LIFECYCLE_VALUES)[number];
 
 export interface YieldAdapterLifecycleReason {
@@ -61,12 +56,7 @@ export type YieldSafetyReason = (typeof YIELD_SAFETY_REASON_VALUES)[number];
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
 export type YieldTrancheSide = "senior" | "junior";
 export type YieldMarketStatus = "normal" | "protected" | "unhealthy" | "critical";
-export const YIELD_SOURCE_CONFIDENCE_TIER_VALUES = [
-  "deterministic",
-  "curated",
-  "discovered",
-  "fallback",
-] as const;
+export const YIELD_SOURCE_CONFIDENCE_TIER_VALUES = ["deterministic", "curated", "discovered", "fallback"] as const;
 export type YieldSourceConfidenceTier = (typeof YIELD_SOURCE_CONFIDENCE_TIER_VALUES)[number];
 export const YIELD_CALCULATION_MODE_VALUES = [
   "direct-read",
@@ -118,8 +108,7 @@ const YIELD_RANK_CHANGE_DRIVER_VALUES = [
   "volatility",
   "tvl-depth",
 ] as const;
-export type YieldRankChangeDriver =
-  (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
+export type YieldRankChangeDriver = (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
 
 export const YIELD_DECISION_REASON_CODES = [
   "best-by-confidence-and-apy",
@@ -231,6 +220,21 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
   return parsed.success ? parsed.data : null;
 }
 
+export const YieldPysInputsAtPublishSchema = z.object({
+  schemaVersion: z.literal(1),
+  methodologyVersion: z.string().min(1),
+  apy30d: z.number(),
+  safetyScore: z.number(),
+  varianceScore: z.number(),
+  benchmarkRate: z.number(),
+  sourceRiskPenalty: z.number().min(1),
+  scalingFactor: z.number().positive(),
+  scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES),
+  benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES),
+  evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES),
+});
+export type YieldPysInputsAtPublish = z.infer<typeof YieldPysInputsAtPublishSchema>;
+
 const YieldHistoryPointSchema = z.object({
   date: z.union([z.number(), z.string()]),
   apy: z.number(),
@@ -251,6 +255,8 @@ const YieldHistoryPointSchema = z.object({
   pysAtPublish: z.number().nullable().optional(),
   safetyAtPublish: z.number().nullable().optional(),
   varianceAtPublish: z.number().nullable().optional(),
+  pysInputsAtPublish: YieldPysInputsAtPublishSchema.nullable().optional(),
+  pysReproducibility: z.enum(["exact", "legacy-partial"]).optional(),
 });
 
 const YieldPublicDecisionAlternativeSchema = z.object({

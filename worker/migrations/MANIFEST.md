@@ -136,6 +136,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0190     | `0190_telegram_authoritative_target_plans.sql`                | Add cursorable Telegram target planning, sendable target payloads, exact job counters, and explicit legacy-overflow import state                      |
 | 0191     | `0191_telegram_transport_outage_control.sql`                  | Add a durable bot-wide Telegram outage circuit, bounded distinct-chat observations, half-open probes, and expiring delivery-mode pauses               |
 | 0192     | `0192_telegram_adoption_analytics.sql`                        | Add aggregate-only adoption funnel and D7/D30 retention telemetry with idempotent subscriber milestones and identifier-free CTA quotas                 |
+| 0193     | `0193_yield_coverage_review_dispositions.sql`                 | Add durable evidence-fingerprinted Yield Intelligence coverage-review dispositions with bounded owner, review, and expiry metadata                      |
+| 0194     | `0194_yield_history_reproducible_pys_inputs.sql`              | Add versioned exact PYS input snapshots to Yield Intelligence history rows                                                                               |
 
 ## Retired Individual Migrations
 
@@ -210,6 +212,8 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0190_telegram_authoritative_target_plans.sql`: roll back row-authoritative target planning by restoring the prior Worker version. Keep additive plan, payload, counter, and legacy-import audit rows; do not delete a reconciled plan or target ledger during rollback.
 - `0191_telegram_transport_outage_control.sql`: roll back outage gating by restoring the prior Worker version. Keep circuit, short-lived observation, and pause rows for forensic inspection; expired pauses are inert and no delivery row requires rewriting.
 - `0192_telegram_adoption_analytics.sql`: roll back adoption reporting by restoring the prior Worker and Pages versions. Keep aggregate funnel/retention rows and nullable subscriber milestone timestamps; they are inert for older code and contain no raw identifiers.
+- `0193_yield_coverage_review_dispositions.sql`: roll back coverage-review suppression by restoring the prior Worker. Keep the additive disposition rows as operator evidence; older Workers ignore the table and no promotion is applied automatically.
+- `0194_yield_history_reproducible_pys_inputs.sql`: roll back exact PYS history snapshots by restoring the prior Worker. Keep the nullable JSON input column; older Workers ignore it and existing history rows remain readable.
 
 ## Rollback Procedure
 

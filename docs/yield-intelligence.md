@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.3`
+- **Current methodology version:** `v8.31`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.31 separates calculation mechanics from evidence quality. Rankings now publish `calculationMode`, `evidenceClass`, `evidenceCompleteness`, and `scoreQualification`; rate-derived products are modeled proxies and cannot outrank fresh direct evidence merely because the proxy math is deterministic. Missing or stale critical freshness, benchmark, or safety evidence produces NR with a null PYS, while modeled/fallback evidence is estimated and noncritical gaps are partial. New history points also persist the exact versioned PYS inputs used at publication and the history API labels them `exact`; older points remain available as `legacy-partial`. Formula weights, benchmark rates, source-risk calibration, and Report Card scores are unchanged.
 
 Yield v8.3 makes freshness an eligibility rule rather than a display-only warning. Source-family and benchmark TTLs are applied before confidence arbitration, so a fresh curated observation beats an expired deterministic or rate-derived candidate. Expired candidates remain auditable as retained alternatives; if no fresh alternative exists, the last-known row remains visible with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`. Ranking provenance now publishes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. Yield Health evaluates every benchmark key used by published rows, preventing a fresh USD benchmark from masking stale GBP or other local-currency evidence. The hard benchmark scoring TTL is 48 hours. PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged.
 
@@ -695,6 +697,7 @@ CREATE TABLE yield_history (
   pys_at_publish    REAL,             -- PYS at publish time (v8.14, migration 0132)
   safety_at_publish REAL,             -- safety score at publish time (v8.14, migration 0132)
   variance_at_publish REAL,           -- APY30d variance at publish time (v8.14, migration 0132)
+  pys_inputs_at_publish TEXT,         -- versioned exact PYS input snapshot JSON (v8.31, migration 0194)
   PRIMARY KEY (stablecoin_id, source_key, recorded_at)
 );
 ```
@@ -1022,6 +1025,9 @@ Each `history` row includes:
 - `dataSource`
 - `isBest`
 - `sourceSwitch`
+- `pysAtPublish`, `safetyAtPublish`, and `varianceAtPublish`
+- `pysInputsAtPublish`: versioned exact formula/evidence inputs on v8.31+ rows, otherwise `null`
+- `pysReproducibility`: `exact` for complete post-migration snapshots or `legacy-partial` for older rows
 
 `warningSignals` type: `string[]`.
 

@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.31",
+    title: "Evidence Qualification and Reproducible History",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence separates deterministic calculation from evidence quality, qualifies incomplete scores, and persists the exact versioned PYS inputs needed to reproduce every new history point. PYS formula weights and source-risk calibration are unchanged.",
+    impact: [
+      "Ranking provenance distinguishes calculation mode, evidence class, evidence completeness, and score qualification instead of treating deterministic math as direct evidence",
+      "Rate-derived benchmark products are modeled proxies, so a fresh direct first-party, on-chain, or curated observation cannot lose solely to the proxy's deterministic calculation path",
+      "Missing or stale source freshness, stale benchmark evidence, and missing or NR safety produce an NR row with a null PYS; modeled/fallback evidence is estimated and noncritical evidence gaps are partial",
+      "Each new yield-history point stores a versioned snapshot of APY30d, safety, variance, benchmark, source-risk, scaling, qualification, benchmark key, evidence class, and methodology version",
+      "The history API marks post-migration points as exactly reproducible and legacy rows as partial rather than implying inputs that were never stored",
+      "PYS formula weights, benchmark rates, source-risk calibration, and stablecoin Report Card scores are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.3",
     title: "Registry-Wide Freshness Eligibility",
     date: "2026-07-10",

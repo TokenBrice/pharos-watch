@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
@@ -33,6 +34,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
+import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
 
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
@@ -143,17 +145,65 @@ describe("runYieldCoverageAudit", () => {
       scores: new Map(),
     } as never);
 
+    const expectedQueue = buildCoverageAuditOperatorQueue({
+      gaps: identifyCoverageGaps(
+        dlPools,
+        new Set(),
+        undefined,
+        new Map([["new-lender", "Lending"]]),
+      ),
+      manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [],
+      staleVenueRiskScores: [],
+    });
+    const reviewedItem = expectedQueue.recommendationCandidates.find(
+      (item) => item.id === "lending-allowlist:new-lender",
+    );
+    expect(reviewedItem).toBeDefined();
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const db = mockD1([{
+      match: "yield_coverage_review_dispositions",
+      rows: reviewedItem ? [{
+        queue_item_id: reviewedItem.id,
+        queue_item_kind: reviewedItem.kind,
+        evidence_fingerprint: buildYieldCoverageEvidenceFingerprint(reviewedItem),
+        disposition: "watch",
+        evidence: "Reviewed protocol category and pool identity.",
+        review_owner: "yield-review",
+        reviewed_at: nowSec - 60,
+        next_review_at: nowSec + 3_600,
+        expires_at: nowSec + 7_200,
+      }] : [],
+    }]);
     const progressUpdates: CronProgressUpdate[] = [];
-    const result = await runYieldCoverageAudit({} as D1Database, undefined, undefined, async (update) => {
+    const result = await runYieldCoverageAudit(db, undefined, undefined, async (update) => {
       progressUpdates.push(update);
     });
 
     expect(result.status).toBe("ok");
     expect(mockSetCache).toHaveBeenCalledWith(
-      {} as D1Database,
+      db,
       "yield-coverage-audit",
       expect.stringContaining('"reportedAt"'),
     );
+    const cachedReport = JSON.parse(String(mockSetCache.mock.calls[0]?.[2])) as {
+      operatorQueue: {
+        persistence: string;
+        promotionMode: string;
+        suppressedItemCount: number;
+        recommendationCandidates: Array<{ id: string }>;
+      };
+      operatorReviewSummary: { suppressedItemCount: number };
+    };
+    expect(cachedReport.operatorQueue).toMatchObject({
+      persistence: "durable",
+      promotionMode: "human-reviewed",
+      suppressedItemCount: 1,
+    });
+    expect(cachedReport.operatorQueue.recommendationCandidates).not.toContainEqual(
+      expect.objectContaining({ id: "lending-allowlist:new-lender" }),
+    );
+    expect(cachedReport.operatorReviewSummary.suppressedItemCount).toBe(1);
     expect(progressUpdates.map((update) => update.stage)).toEqual(
       expect.arrayContaining([
         "pool-load",
@@ -257,7 +307,10 @@ describe("runYieldCoverageAudit", () => {
       scores: new Map(),
     } as never);
 
-    const result = await runYieldCoverageAudit({} as D1Database);
+    const result = await runYieldCoverageAudit(mockD1([{
+      match: "yield_coverage_review_dispositions",
+      rows: [],
+    }]));
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       reason?: string;
       protocolCategoryStatus?: string;

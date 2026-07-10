@@ -1,10 +1,21 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.3`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.31`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.31 - Evidence Qualification and Reproducible History (July 10, 2026)
+
+- Separates deterministic calculation mechanics from evidence quality through typed calculation mode, evidence class, completeness, and score qualification fields
+- Reclassifies rate-derived products as modeled proxies, below fresh direct first-party, on-chain, and curated observations in arbitration
+- Withholds exact PYS for missing or stale critical source, benchmark, or safety evidence; modeled/fallback rows are estimated and noncritical gaps are partial
+- Persists the exact versioned APY30d, safety, variance, benchmark, source-risk, scaling, qualification, benchmark-key, evidence-class, and methodology inputs used by every new PYS history point
+- Marks post-migration history as exactly reproducible and legacy points as partial rather than manufacturing unavailable inputs
+- Leaves PYS formula weights, benchmark rates, source-risk calibration, and Report Card scores unchanged
+
+---
 
 ## v8.3 - Registry-Wide Freshness Eligibility (July 10, 2026)
 
