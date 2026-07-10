@@ -221,7 +221,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/analytics-dataset-json-ld.ts` - PHAROS_PUBLIC_DATA_CATALOG_NAME, PUBLIC_DATASET_JSON_LD_DESCRIPTORS, PublicDatasetDescriptor, buildCoverageDatasetJsonLd, buildPharosDataCatalogReference, buildPublicDatasetMirrorJsonLd
 - `src/lib/analytics.ts` - clearAllTrackingTimers, trackEvent, trackSearch
 - `src/lib/api-artifact-json-ld.ts` - buildApiArtifactCatalogJsonLd
-- `src/lib/api-key-admin-view-model.ts` - API_KEY_INVENTORY_DEFAULT_PAGE_SIZE, API_KEY_INVENTORY_MAX_PAGE_SIZE, API_KEY_INVENTORY_MIN_PAGE_SIZE, API_KEY_INVENTORY_STATUS_PRIORITY, ApiKeyExpiryWindowFilter, ApiKeyInventoryExpiryPreset
+- `src/lib/api-key-admin-view-model.ts` - API_KEY_INVENTORY_DEFAULT_PAGE_SIZE, API_KEY_INVENTORY_MAX_PAGE_SIZE, ApiKeyExpiryWindowFilter, ApiKeyInventoryExpiryPreset, ApiKeyInventoryFilters, ApiKeyInventoryPage
 - `src/lib/api-key-request-admin-view-model.ts` - API_KEY_REQUEST_ACTION_LABELS, API_KEY_REQUEST_STATUS_FILTERS, API_KEY_REQUEST_STATUS_LABELS, ApiKeyRequestAction, ApiKeyRequestCardViewModel, ApiKeyRequestSummaryItem
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
 - `src/lib/api-key-self-serve.ts` - submitApiKeyRequest, verifyApiKeyRequestToken
@@ -304,7 +304,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 408 more files omitted; use `rg --files src/components` for the full list.
+- ... 407 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -635,7 +635,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
 - `worker/src/cron/dex-discovery/crawl-coingecko-tickers.ts` - CoinGeckoTickersStageDependencies, crawlCoinGeckoTickersStage
-- ... 382 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 381 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -654,7 +654,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTopicFilter, AlchemyTransactionContextBatch, AlchemyTransactionEntry, AlchemyTransactionReceipt
 - `worker/src/lib/alert-broker.ts` - AlertBrokerConditionInput, AlertBrokerConditionResult, AlertBrokerEpisodeDelivery, AlertBrokerMode, AlertBrokerSeverity, AlertBrokerSummary
 - `worker/src/lib/alert-marker.ts` - readAlertMarker
-- `worker/src/lib/alert-reserve-source-cache.ts` - ALERT_RESERVE_SOURCE_GENERATION, ALERT_RESERVE_SOURCE_STALE_PRODUCER_INTERVALS, AlertReserveSourceAssessment, AlertReserveSourceEnvelope, assessAlertReserveSourceCache, buildAlertReserveSourceEnvelope
+- `worker/src/lib/alert-reserve-source-cache.ts` - ALERT_RESERVE_SOURCE_GENERATION, AlertReserveSourceAssessment, AlertReserveSourceEnvelope, assessAlertReserveSourceCache, buildAlertReserveSourceEnvelope
 - `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetyDimensionSnapshot, AlertSafetyExplainSnapshot, AlertSafetyRawInputSnapshot, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
 - `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, encodeResponseReadyCacheValue, getCacheJsonParseFailureCountersForTests, getResponseReadyCacheKey, readCachedJson
