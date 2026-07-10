@@ -1,9 +1,4 @@
-import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
-import { answerCallbackQuery, escapeHtml } from "../lib/telegram";
-import {
-  formatAdministratorMentions,
-  getCachedChatAdministrators,
-} from "../lib/telegram-chat-member";
+import { answerCallbackQuery } from "../lib/telegram";
 import {
   SETUP_PENDING_ACTION_TYPE,
   type TelegramWebhookUpdate,
@@ -25,14 +20,10 @@ import {
   type TelegramChatMemberUpdated,
 } from "./telegram-webhook-group-welcome";
 import {
-  acquireTelegramCommandCooldown,
   claimTelegramProcessedUpdate,
   loadPendingDisambiguation,
   migrateTelegramChatId,
-  recordTelegramChatCommandFlood,
-  releaseTelegramCommandCooldown,
   unixNow,
-  type TelegramChatCommandFloodResult,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
@@ -40,7 +31,6 @@ import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import {
   isChannelChatType,
-  isGroupAdminActor,
   isGroupChatType,
   validateTelegramWebhookSecret,
 } from "./telegram-webhook-auth";
@@ -50,12 +40,6 @@ import {
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import {
-  CHAT_COMMAND_FLOOD_LIMIT,
-  CHAT_COMMAND_FLOOD_WINDOW_SEC,
-  GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
-  GROUP_CHAT_COMMAND_FLOOD_LIMIT,
-} from "../lib/telegram-constants";
-import {
   TelegramWebhookEffectFence,
   createTelegramWebhookIntent,
 } from "./telegram-webhook-effect-fence";
@@ -63,6 +47,22 @@ import {
   executeNormalizedPendingSelection,
   parseStoredCommandSelectionIntent,
 } from "./telegram-webhook-disambiguation-selection";
+import {
+  TELEGRAM_GROUP_ADMIN_GATING,
+  callbackActionDetail,
+  callbackMutatesChatState,
+  commandRequiresGroupAdmin,
+  enforceCommandCooldown,
+  enforceIngressFlood,
+  isAddressedToPharosBot,
+  logTelegramWebhookWarning,
+  maybeGateNonAdminGroupActor,
+  recordCommandUsage,
+  releaseCommandCooldownBestEffort,
+  resolveCallbackCooldownCommandKey,
+  type TelegramGroupAdminGating,
+} from "./telegram-webhook-ingress-policy";
+export { TELEGRAM_GROUP_ADMIN_GATING, type TelegramGroupAdminGating } from "./telegram-webhook-ingress-policy";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -71,35 +71,8 @@ import {
  * non-admin and still runs the command. The exported wrapper is mutable so
  * tests can flip the mode; production code should keep the default.
  */
-export type TelegramGroupAdminGating = "soft" | "hard";
-/** @internal Exported for tests only — do not mutate in production code. */
-export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = {
-  mode: "hard",
-};
-
-const GROUP_ADMIN_GATED_COMMANDS = new Set([
-  "/subscribe",
-  "/unsubscribe",
-  "/set",
-  "/mute",
-  "/pause",
-  "/forget",
-  "/unmutehours",
-  "/unsnooze",
-  "/import",
-]);
-
-// `botMention` is lowercased at parse time (telegram-webhook-parsing.ts), so
-// compare against the lowercased canonical handle.
-const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
-
 function logWarn(message: string, action: string, err: unknown): void {
-  logTelegramEvent({
-    level: "warn",
-    message,
-    action,
-    errorClass: classifyTelegramLogError(err),
-  });
+  logTelegramWebhookWarning(message, action, err);
 }
 
 type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
@@ -108,19 +81,6 @@ type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
 
 type FinishOk = (errorClass?: string | null) => Promise<Response>;
 type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
-type FloodScope = "actor" | "chat";
-
-const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
-  "/brief": 30,
-  "/top": 20,
-  "/why": 20,
-  "/status": 20,
-  "/coverage": 20,
-};
-
-const CANONICAL_COMMAND_KEYS: Record<string, string> = {
-  "/market": "/brief",
-};
 
 const RESUMABLE_NORMALIZED_COMMANDS = new Set([
   "/mute",
@@ -891,275 +851,4 @@ function resolveChatMigration(message: TelegramWebhookUpdate["message"] | undefi
 function classifyWebhookError(err: unknown): string {
   if (err instanceof Error && err.name) return err.name;
   return "unknown";
-}
-
-function floodScopesForUpdate(
-  chatId: string,
-  chatType: string,
-  actorUserId: string | null,
-): Array<{ key: string; scope: FloodScope; limit: number }> {
-  if (isGroupChatType(chatType) && actorUserId) {
-    return [
-      { key: `${chatId}:actor:${actorUserId}`, scope: "actor", limit: CHAT_COMMAND_FLOOD_LIMIT },
-      { key: chatId, scope: "chat", limit: GROUP_CHAT_COMMAND_FLOOD_LIMIT },
-    ];
-  }
-  return [{ key: chatId, scope: "chat", limit: CHAT_COMMAND_FLOOD_LIMIT }];
-}
-
-async function enforceIngressFlood(
-  db: D1Database,
-  input: {
-    chatId: string;
-    chatType: string;
-    actorUserId: string | null;
-    nowSec: number;
-    actionDetail: string;
-    noticeMessage: string;
-    reply: ReplyFn;
-  },
-): Promise<boolean> {
-  let blocked:
-    | { flood: TelegramChatCommandFloodResult; scope: FloodScope }
-    | null = null;
-  for (const floodScope of floodScopesForUpdate(input.chatId, input.chatType, input.actorUserId)) {
-    try {
-      const flood = await recordTelegramChatCommandFlood(db, {
-        chatId: floodScope.key,
-        nowSec: input.nowSec,
-        windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
-        limit: floodScope.limit,
-      });
-      if (!flood.allowed) {
-        blocked = { flood, scope: floodScope.scope };
-        break;
-      }
-    } catch (err) {
-      // Availability-first by design: a D1 failure disables only this advisory
-      // ingress guard for the current update, not the bot action itself.
-      logWarn("chat command flood check failed", "command-flood", err);
-    }
-  }
-
-  if (!blocked) return true;
-
-  if (blocked.flood.firstExceeded) {
-    try {
-      await input.reply(input.noticeMessage);
-    } catch (err) {
-      logWarn("chat command flood notice reply failed", "command-flood", err);
-    }
-  }
-
-  try {
-    await recordTelegramUsageEvent(db, {
-      eventType: "command",
-      actionDetail: input.actionDetail,
-      outcome: "rate_limited",
-      failureClass: blocked.scope === "actor" ? "actor-flood" : "chat-flood",
-    });
-  } catch (err) {
-    logWarn("chat command flood usage record failed", "command-flood", err);
-  }
-
-  return false;
-}
-
-async function releaseCommandCooldownBestEffort(
-  db: D1Database,
-  input: {
-    chatId: string;
-    commandKey: string;
-    action: string;
-    command: string;
-  },
-): Promise<void> {
-  try {
-    await releaseTelegramCommandCooldown(db, {
-      chatId: input.chatId,
-      commandKey: input.commandKey,
-    });
-  } catch (err) {
-    logWarn("command cooldown release failed", input.action, err);
-  }
-}
-
-async function enforceCommandCooldown(
-  db: D1Database,
-  chatId: string,
-  command: string,
-  args: string,
-  reply: (message: string) => Promise<void>,
-): Promise<
-  | { allowed: true; commandKey: string | null }
-  | { allowed: false; commandKey: string | null; outcome: "rate_limited" | "failure"; failureClass: string | null }
-> {
-  const commandKey = effectiveCooldownCommandKey(command, args);
-  const cooldownSec = resolveCommandCooldownSec(commandKey, args);
-  if (cooldownSec == null) return { allowed: true, commandKey: null };
-
-  let cooldown;
-  try {
-    cooldown = await acquireTelegramCommandCooldown(db, {
-      chatId,
-      commandKey,
-      nowSec: unixNow(),
-      cooldownSec,
-    });
-  } catch (err) {
-    logWarn("command cooldown check failed", "command-cooldown", err);
-    await reply("Command traffic is busy. Please try again shortly.");
-    return { allowed: false, commandKey, outcome: "failure", failureClass: "cooldown-store-error" };
-  }
-
-  if (cooldown.allowed) return { allowed: true, commandKey };
-  await reply(formatCommandCooldownMessage(commandKey, cooldown.retryAfterSec));
-  return { allowed: false, commandKey, outcome: "rate_limited", failureClass: null };
-}
-
-function canonicalCommandKey(command: string): string {
-  return CANONICAL_COMMAND_KEYS[command] ?? command;
-}
-
-function effectiveCooldownCommandKey(command: string, args: string): string {
-  const commandKey = canonicalCommandKey(command);
-  if (commandKey !== "/start") return commandKey;
-  const payload = parseStartPayload(args);
-  if (payload.kind === "status") return "/status";
-  if (payload.kind === "why") return "/why";
-  if (payload.kind === "coverage") return "/coverage";
-  return commandKey;
-}
-
-function resolveCallbackCooldownCommandKey(data: string): string | null {
-  const action = data.split(":")[0] ?? "";
-  if (action === "status") return "/status";
-  if (action === "why") return "/why";
-  if (action === "coverage") return "/coverage";
-  return null;
-}
-
-function callbackActionDetail(data: string): string {
-  const action = data.split(":")[0] || "unknown";
-  return `callback:${action}`;
-}
-
-function callbackMutatesChatState(data: string): boolean {
-  const [action, subAction] = data.split(":");
-  if (action === "status" || action === "why" || action === "coverage" || action === "help") {
-    return false;
-  }
-  if (action === "settings" && (subAction === "home" || subAction === "o")) {
-    return false;
-  }
-  if (action === "manage") return false;
-  return true;
-}
-
-function resolveCommandCooldownSec(command: string, args: string): number | null {
-  const cooldownSec = COMMAND_COOLDOWNS_SEC[command];
-  if (cooldownSec == null) return null;
-  if ((command === "/top" || command === "/why" || command === "/coverage" || command === "/status") && !args.trim()) {
-    return null;
-  }
-  return cooldownSec;
-}
-
-function formatCommandCooldownMessage(command: string, retryAfterSec: number): string {
-  const retryAfter = Math.max(1, Math.ceil(retryAfterSec));
-  const unit = retryAfter === 1 ? "second" : "seconds";
-  return `That command is doing heavier Pharos reads. Please try ${escapeHtml(command)} again in ${retryAfter} ${unit}.`;
-}
-
-async function recordCommandUsage(
-  db: D1Database,
-  command: string,
-  startedAtMs: number,
-  outcome: string,
-  failureClass: string | null = null,
-): Promise<void> {
-  await recordTelegramUsageEvent(db, {
-    eventType: "command",
-    actionDetail: command,
-    outcome,
-    latencyMs: Math.max(0, Date.now() - startedAtMs),
-    failureClass,
-  });
-}
-
-/**
- * Returns `true` when the command should proceed, `false` when it has been
- * refused (hard gate) and the caller must stop processing the update.
- */
-async function maybeGateNonAdminGroupActor(
-  db: D1Database,
-  botToken: string,
-  chatId: string,
-  actorUserId: string | null,
-  command: string,
-  reply: (message: string) => Promise<void>,
-): Promise<boolean> {
-  if (actorUserId != null) {
-    if (await isGroupAdminActor(botToken, chatId, actorUserId)) {
-      return true;
-    }
-  }
-
-  let cooldown;
-  try {
-    cooldown = await acquireTelegramCommandCooldown(db, {
-      chatId,
-      commandKey: "group-admin-diagnostics",
-      nowSec: unixNow(),
-      cooldownSec: GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
-    });
-  } catch (err) {
-    logWarn("group admin diagnostic cooldown check failed", "group-admin-diagnostics", err);
-    await reply("Group permission checks are busy. Please try again shortly.");
-    return false;
-  }
-  if (!cooldown.allowed) {
-    await reply(
-      `I just checked group permissions for this chat. Please try again in ${cooldown.retryAfterSec} seconds.`,
-    );
-    await recordTelegramUsageEvent(db, {
-      eventType: "group_admin_denial",
-      actionDetail: command,
-      outcome: "rate_limited",
-    });
-    return false;
-  }
-
-  const admins = await getCachedChatAdministrators(db, botToken, chatId);
-  const adminLine = admins ? formatAdminHint(admins) : "";
-  await reply(
-    escapeHtml(
-      `Only group admins can ${command}.${adminLine}`,
-    ),
-  );
-  await recordTelegramUsageEvent(db, {
-    eventType: "group_admin_denial",
-    actionDetail: command,
-    outcome: TELEGRAM_GROUP_ADMIN_GATING.mode === "hard" ? "denied" : "warned",
-  });
-  return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";
-}
-
-function commandRequiresGroupAdmin(command: string, args: string): boolean {
-  if (GROUP_ADMIN_GATED_COMMANDS.has(command)) return true;
-  if (command === "/timezone") return args.trim().length > 0;
-  return false;
-}
-
-function formatAdminHint(admins: Awaited<ReturnType<typeof getCachedChatAdministrators>>): string {
-  if (!admins || admins.length === 0) return "";
-  const adminLabels = formatAdministratorMentions(admins).split(", ").filter(Boolean);
-  if (adminLabels.length === 0) return "";
-  const shown = adminLabels.slice(0, 3);
-  const overflow = adminLabels.length > shown.length ? ` and ${adminLabels.length - shown.length} more` : "";
-  return ` Ask ${shown.join(", ")}${overflow}.`;
-}
-
-function isAddressedToPharosBot(botMention: string | null): boolean {
-  return botMention != null && PHAROS_BOT_USERNAMES.has(botMention);
 }
