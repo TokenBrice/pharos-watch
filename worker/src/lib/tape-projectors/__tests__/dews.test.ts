@@ -5,7 +5,7 @@ import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransition
 const SEC = 1_700_000_000;
 
 const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
-const MATCH_PRIOR_BAND = "MAX(computed_at) as max_at";
+const MATCH_PRIOR_BAND = "pharos:tape:dews-prior-band-seek";
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
   return db
@@ -91,6 +91,10 @@ describe("dews projector", () => {
     const inserts = extractInsertBindsForType(db, "dews.escalated");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("critical"); // DANGER → critical
+    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_BAND));
+    expect(priorQuery?.sql).toContain("ORDER BY candidate.computed_at DESC");
+    expect(priorQuery?.sql).toContain("LIMIT 1");
+    expect(priorQuery?.sql).not.toContain("GROUP BY");
   });
 
   it("emits dews.deescalated with severity=info", async () => {

@@ -461,7 +461,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 MAX(hour_ts) as latest_hour_ts
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
+         FROM mint_burn_hourly INDEXED BY idx_mbh_ts
+         WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(ctx.nowSec - DAY_SECONDS)
       .all<{ stablecoin_id: string; chain_id: string; total_burn: number; total_mint: number; latest_hour_ts: number | null }>();
@@ -474,7 +475,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data,
                 MAX(hour_ts) as latest_hour_ts
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
+         FROM mint_burn_hourly INDEXED BY idx_mbh_ts
+         WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(ctx.nowSec - 30 * DAY_SECONDS)
       .all<{

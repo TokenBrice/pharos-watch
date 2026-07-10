@@ -57,6 +57,80 @@ describe("stress-signal current-row helpers", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
+  it("skips canonical history when the scoped latest generation is complete and fresh", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }),
+      updated_at: completedAt,
+    };
+    const latestRows = [
+      row("usdt-tether", completedAt, 12),
+      row("usdc-circle", completedAt, 30),
+    ];
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: latestRows.map((latestRow) => ({ ...latestRow })),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual(latestRows);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-all"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("keeps the canonical merge when latest rows do not all match the published generation", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }),
+      updated_at: completedAt,
+    };
+    const latest = row("usdt-tether", completedAt - 60, 20);
+    const canonical = row("usdt-tether", completedAt, 22);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...latest }],
+      },
+      {
+        match: "pharos:stress-signals:legacy-latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...canonical }],
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual([canonical]);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
   it("keeps a stale single-coin latest row when no legacy row exists", async () => {
     const staleLatest = {
       score: 25,

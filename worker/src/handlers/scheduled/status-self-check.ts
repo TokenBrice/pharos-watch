@@ -2,6 +2,8 @@ import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
 import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
+import { normalizeAlertBrokerMode } from "../../lib/alert-broker";
+import { resolveCloudflareD1StatusConfig } from "../../lib/env";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 
@@ -31,8 +33,9 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               ctx: runtime.ctx,
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               alertWebhookUrl: runtime.alertWebhookUrl,
-              alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
+              alertBrokerMode: normalizeAlertBrokerMode(runtime.env.ALERT_BROKER_MODE),
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
+              d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
             }),
         },
         {

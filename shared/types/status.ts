@@ -14,6 +14,11 @@ export type {
 } from "./pricing-source-health";
 
 export * from "./status/core";
+export type {
+  D1CapacityAssessment,
+  D1CapacityForecastBasis,
+  D1CapacityThresholdState,
+} from "./status/d1-capacity";
 export * from "./status/cron";
 export * from "./status/telegram";
 export * from "./status/yield-liquidity";

@@ -233,6 +233,16 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(usdai?.netFlow24hUsd).toBe(7_000_000);
     expect(usdai?.mintVolume24hUsd).toBe(7_000_000);
     expect(usdai?.baselineDailyNetUsd).toBe(200_000);
+    const firstHourQuery = scopedDb
+      .getHistory()
+      .find((entry) => entry.sql.includes("pharos:mint-burn-flows:first-hour-seek"));
+    expect(firstHourQuery?.sql).toContain("INDEXED BY idx_mbh_chain_coin_hour");
+    expect(firstHourQuery?.sql).toContain("ORDER BY h.hour_ts ASC");
+    expect(firstHourQuery?.sql).not.toContain("GROUP BY");
+    const recentAggregateQueries = scopedDb
+      .getHistory()
+      .filter((entry) => entry.sql.includes("FROM mint_burn_hourly INDEXED BY idx_mbh_ts"));
+    expect(recentAggregateQueries.length).toBeGreaterThanOrEqual(5);
   });
 
   it("rejects out-of-range hours instead of clamping them", async () => {

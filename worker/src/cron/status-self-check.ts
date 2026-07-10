@@ -24,6 +24,8 @@ import {
 } from "../lib/status-reliability";
 import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
+import type { CloudflareD1StatusConfig } from "../lib/env";
+import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 
 interface ProbeResult {
   path: string;
@@ -83,6 +85,7 @@ export interface StatusSelfCheckOptions {
   alertWebhookUrl?: string | null;
   alertBrokerMode?: string;
   siteApiSharedSecret?: string | null;
+  d1StatusConfig?: CloudflareD1StatusConfig;
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -669,6 +672,12 @@ export async function runStatusSelfCheck(
   options: StatusSelfCheckOptions = {},
 ): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
+  const d1CapacityMonitoring = options.d1StatusConfig
+    ? await refreshD1CapacityMonitoring(db, options.d1StatusConfig, now, {
+        brokerMode: options.alertBrokerMode,
+        webhookUrl: options.alertWebhookUrl,
+      })
+    : null;
   const {
     probeBaseUrl,
     probeMode,
@@ -871,6 +880,7 @@ export async function runStatusSelfCheck(
       probeFailureAlertAttempted: shouldProbeFailureAlert,
       probeFailureAlertSent,
       freshnessDiagnostics: raw.freshnessDiagnostics,
+      d1CapacityMonitoring,
     }),
   };
 }

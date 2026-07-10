@@ -1,0 +1,15 @@
+name = "pharos-d1-read-replication-benchmark"
+main = "d1-read-replication-benchmark.ts"
+compatibility_date = "2026-07-10"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = true
+head_sampling_rate = 1.0
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stablecoin-db"
+database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"

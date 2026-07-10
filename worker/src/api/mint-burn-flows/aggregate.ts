@@ -16,6 +16,7 @@ import {
 } from "../../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import { computeFlowIntensity } from "../../lib/mint-burn-scoring";
+import { buildMintBurnFirstHourSeekStatements } from "../../lib/mint-burn-hourly-queries";
 import {
   aggregateHourlyRowsByStablecoin,
   BASELINE_WINDOW_DAYS,
@@ -160,6 +161,15 @@ export async function fetchAggregateData(
   const trackedChainIds = [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
   const chainInClause = buildInClause(trackedChainIds);
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
+  const firstHourSeekStatements = buildMintBurnFirstHourSeekStatements(
+    db,
+    MINT_BURN_CONFIGS.map((config) => ({
+      stablecoinId: config.stablecoinId,
+      chainId: config.chain.chainId,
+    })),
+    "flows",
+  );
+  const eventResultIndex = 5 + firstHourSeekStatements.length;
 
   const [batchResults, [lastBlocks, latestCronSnapshot]] = await Promise.all([
     db.batch([
@@ -168,7 +178,7 @@ export async function fetchAggregateData(
            `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
                    /* pharos:mint-burn-flows:window-rows */
                    mint_volume_usd, burn_volume_usd, net_flow_usd
-            FROM mint_burn_hourly
+            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
             ORDER BY hour_ts ASC`,
         )
@@ -178,7 +188,7 @@ export async function fetchAggregateData(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-7d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
+           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
@@ -188,7 +198,7 @@ export async function fetchAggregateData(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-30d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
+           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
@@ -198,7 +208,7 @@ export async function fetchAggregateData(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-90d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
+           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
@@ -210,21 +220,12 @@ export async function fetchAggregateData(
                   (hour_ts / 86400) * 86400 as day_ts,
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-           FROM mint_burn_hourly
+           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id, day_ts`,
         )
         .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs),
-      db
-        .prepare(
-          `SELECT stablecoin_id, chain_id,
-                  /* pharos:mint-burn-flows:first-hour */
-                  MIN(hour_ts) as first_hour_ts
-           FROM mint_burn_hourly
-           WHERE chain_id IN (${chainInClause.sql})
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .bind(...chainInClause.binds),
+      ...firstHourSeekStatements,
       db
         .prepare(
           `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
@@ -248,8 +249,17 @@ export async function fetchAggregateData(
   const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart);
   const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h);
   const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
-  const firstSeenRows = filterRowsToTrackedPairs((batchResults[5].results ?? []) as FirstSeenRow[], trackedPairs);
-  const largestEventRows = filterRowsToTrackedPairs((batchResults[6].results ?? []) as EventRow[], trackedPairs);
+  const firstSeenRows = filterRowsToTrackedPairs(
+    batchResults
+      .slice(5, eventResultIndex)
+      .flatMap((result) => (result.results ?? []) as Array<FirstSeenRow & { first_hour_ts: number | null }>)
+      .filter((row): row is FirstSeenRow => row.first_hour_ts != null),
+    trackedPairs,
+  );
+  const largestEventRows = filterRowsToTrackedPairs(
+    (batchResults[eventResultIndex]?.results ?? []) as EventRow[],
+    trackedPairs,
+  );
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
   const fallbackSyncAt =
     latestCronSnapshot.startedAt

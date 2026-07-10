@@ -1,7 +1,14 @@
-import type { D1UsageSummary } from "@shared/types/status";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
+import type { D1CapacityAssessment, D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
 import { cancelResponseBodyQuietly } from "../response-body";
 import { isRecord } from "@shared/lib/type-guards";
+import { logWorkerEvent } from "../structured-log";
+import {
+  D1_CAPACITY_OBSERVATION_INTERVAL_SEC,
+  loadCachedD1CapacityAssessment,
+  refreshD1CapacityAssessment,
+} from "./d1-capacity-store";
 
 interface D1DatabaseInfoResult {
   uuid?: string;
@@ -189,6 +196,49 @@ async function fetchDatabaseInfo(config: CloudflareD1StatusConfig): Promise<D1Da
   return parseDatabaseInfoEnvelope(payload);
 }
 
+async function assessDatabaseCapacity(
+  databaseInfo: D1DatabaseInfoResult,
+  nowSeconds: number,
+  db?: D1Database,
+): Promise<D1CapacityAssessment | null> {
+  const databaseSizeBytes = toNumber(databaseInfo.file_size);
+  if (databaseSizeBytes == null) return null;
+
+  if (!db) {
+    return assessD1Capacity({ observedAt: nowSeconds, databaseSizeBytes });
+  }
+
+  try {
+    const cached = await loadCachedD1CapacityAssessment(
+      db,
+      nowSeconds,
+      D1_CAPACITY_OBSERVATION_INTERVAL_SEC,
+    );
+    if (cached) return cached;
+    return await refreshD1CapacityAssessment(db, databaseSizeBytes, nowSeconds);
+  } catch (error) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "d1_capacity_observation_failed",
+      route: "status",
+      source: "cloudflare-d1-status",
+      message: "D1 capacity observation persistence failed; returning a point-in-time assessment",
+      error,
+    });
+    return assessD1Capacity({ observedAt: nowSeconds, databaseSizeBytes });
+  }
+}
+
+export async function getD1CapacityAssessmentFromCloudflare(
+  config: CloudflareD1StatusConfig,
+  db: D1Database,
+  nowSeconds: number,
+): Promise<D1CapacityAssessment | null> {
+  const databaseInfo = await fetchDatabaseInfo(config);
+  return assessDatabaseCapacity(databaseInfo, nowSeconds, db);
+}
+
 async function fetchAnalytics(
   config: CloudflareD1StatusConfig,
   windowStartIso: string,
@@ -251,6 +301,7 @@ export async function getCacheBlobSizes(db: D1Database): Promise<Record<string, 
 export async function getD1UsageSummary(
   config: CloudflareD1StatusConfig,
   nowSeconds: number,
+  db?: D1Database,
 ): Promise<D1UsageSummary> {
   const checkedAt = nowSeconds;
   const windowEnd = nowSeconds;
@@ -262,6 +313,7 @@ export async function getD1UsageSummary(
     fetchDatabaseInfo(config),
     fetchAnalytics(config, windowStartIso, windowEndIso),
   ]);
+  const capacity = await assessDatabaseCapacity(databaseInfo, nowSeconds, db);
 
   return {
     checkedAt,
@@ -275,6 +327,7 @@ export async function getD1UsageSummary(
     readReplicationMode: typeof databaseInfo.read_replication?.mode === "string"
       ? databaseInfo.read_replication.mode
       : null,
+    capacity,
     ...analytics,
   };
 }

@@ -194,6 +194,15 @@ function areStressSignalRowsStale(
   return newestComputedAt <= 0 || nowSec - newestComputedAt > staleAfterSec;
 }
 
+function isCompleteLatestGeneration<Row extends { computed_at: number }>(
+  rows: readonly Row[],
+  completedAt: number | null,
+): boolean {
+  return completedAt != null
+    && rows.length > 0
+    && rows.every((row) => row.computed_at === completedAt);
+}
+
 export function mergeNewestStressSignalRows<Row extends { stablecoin_id: string; computed_at: number }>(
   legacyRows: readonly Row[],
   latestRows: readonly Row[],
@@ -263,6 +272,17 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   } catch (error) {
     latestRows = [];
     options.onLatestReadError?.(error);
+  }
+
+  // A scoped publication pointer is written only after the latest table has
+  // passed its exact generation-count check. When every returned row belongs
+  // to that generation, canonical history cannot add a newer or legacy-only
+  // row, so avoid the retained-history GROUP BY scan entirely.
+  if (
+    isCompleteLatestGeneration(latestRows, completedAt)
+    && !areStressSignalRowsStale(latestRows, nowSec, options.staleAfterSec)
+  ) {
+    return latestRows;
   }
 
   const legacyStmt = prepareCompletedAtScoped(

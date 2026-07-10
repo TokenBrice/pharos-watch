@@ -1,4 +1,5 @@
 import type { StatusHealthOrUnknown } from "./core";
+import type { D1CapacityAssessment } from "./d1-capacity";
 
 export interface AlertBrokerHealthSummary {
   activeCount: number;
@@ -193,4 +194,6 @@ export interface D1UsageSummary {
   writeQueries24h: number | null;
   rowsRead24h: number | null;
   rowsWritten24h: number | null;
+  /** Optional while an older Worker or a not-yet-initialized observation store is serving status. */
+  capacity?: D1CapacityAssessment | null;
 }

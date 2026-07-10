@@ -20,6 +20,23 @@ function makeSummary(overrides: Partial<D1UsageSummary> = {}): D1UsageSummary {
     writeQueries24h: 543_307,
     rowsRead24h: 3_639_492,
     rowsWritten24h: 98_367_892,
+    capacity: {
+      observedAt: 1_712_600_000,
+      databaseSizeBytes: 6_000_000_000,
+      maximumSizeBytes: 10_000_000_000,
+      utilizationRatio: 0.6,
+      utilizationPercent: 60,
+      thresholdState: "watch",
+      crossedThresholdPercent: 60,
+      nextThresholdPercent: 75,
+      sampleCount: 72,
+      forecastBasis: "linear-30d",
+      forecastSpanHours: 71,
+      growthBytesPerDay: 100_000_000,
+      nextThresholdAt: 1_713_896_000,
+      exhaustionAt: 1_716_056_000,
+      daysUntilExhaustion: 40,
+    },
     ...overrides,
   };
 }
@@ -29,6 +46,9 @@ describe("D1UsageCard", () => {
     const { container } = render(<D1UsageCard summary={makeSummary()} nowSeconds={1_712_600_120} />);
 
     expect(screen.getByText("Database Size")).toBeTruthy();
+    expect(screen.getByText("Capacity Forecast")).toBeTruthy();
+    expect(screen.getByText("40 days")).toBeTruthy();
+    expect(screen.getByText("60% used · watch")).toBeTruthy();
     expect(screen.getByText("Rows Read (24h)")).toBeTruthy();
     expect(screen.getByText("Rows Written (24h)")).toBeTruthy();
     expect(screen.getByText("Replication")).toBeTruthy();

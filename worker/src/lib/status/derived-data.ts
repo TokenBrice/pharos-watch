@@ -15,6 +15,7 @@ import {
 } from "../stablecoins-cache";
 import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
+import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -211,27 +212,27 @@ export async function getMintBurnReconciliation(
   ).filter((asset) => trackedIds.has(asset.id));
 
   let flowRows: D1Result<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>;
-  let firstSeenRows: D1Result<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>;
+  let firstSeenRows: Array<{ stablecoin_id: string; chain_id: string; first_hour_ts: number }>;
   try {
     [flowRows, firstSeenRows] = await Promise.all([
       db
         .prepare(
           `SELECT /* pharos:status-derived:mint-burn-24h */
              stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
+           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
            WHERE hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
         .bind(now - 24 * 3600)
         .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
-      db
-        .prepare(
-          `SELECT /* pharos:status-derived:mint-burn-first-hour */
-             stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
-           FROM mint_burn_hourly
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .all<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>(),
+      loadMintBurnFirstHourRows(
+        db,
+        MINT_BURN_CONFIGS.map((config) => ({
+          stablecoinId: config.stablecoinId,
+          chainId: config.chain.chainId,
+        })),
+        "status",
+      ),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -253,7 +254,7 @@ export async function getMintBurnReconciliation(
     (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
   );
   const firstSeenMap = new Map(
-    (firstSeenRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts ?? null]),
+    firstSeenRows.map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts]),
   );
 
   const rows = assets
