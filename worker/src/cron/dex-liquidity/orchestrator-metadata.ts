@@ -1,5 +1,6 @@
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
+import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
 
 export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
@@ -51,6 +52,7 @@ export function buildDexLiquidityCronMetadata(params: {
       pagesFetched: number;
       cursor: string | null;
       cycleCompleted: boolean;
+      cursorPersistence?: DexPaginationPersistenceSummary;
     }>;
   };
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];

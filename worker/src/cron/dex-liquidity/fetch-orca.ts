@@ -13,8 +13,12 @@ import {
 import { isDexApiRecord } from "./direct-api-json";
 import { toErrorMessage } from "../../lib/error-utils";
 import {
+  describeDexPaginationWriteFailure,
+  isDegradingDexPaginationWriteFailure,
   readDexSourcePaginationState,
+  summarizeDexSourcePaginationWrites,
   writeDexSourcePaginationState,
+  type DexSourcePaginationWriteAttempt,
 } from "./source-pagination-state";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
@@ -87,6 +91,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   let resumeCursor: string | null = storedTailCursor;
   let cycleCompleted = false;
   const seenCursors = new Set<string>();
+  const paginationWriteAttempts: DexSourcePaginationWriteAttempt[] = [];
   let page = 0;
 
   while (url) {
@@ -120,27 +125,34 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
 
     if (!res) {
       errors.push(pageError ?? "request failed");
-      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     if (pageError) {
       errors.push(pageError);
-      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     if (!res.ok) {
-      errors.push(`API returned ${res.status}`);
+      const tailCursorRejected = page > 1 && (res.status === 400 || res.status === 404);
+      errors.push(tailCursorRejected
+        ? `API rejected tail cursor (${res.status}); restarting from refreshed head`
+        : `API returned ${res.status}`);
       await cancelResponseBodyQuietly(res);
-      if (page > 1) resumeCursor = refreshedHeadCursor;
+      if (tailCursorRejected) resumeCursor = refreshedHeadCursor;
       break;
     }
 
-    const json = await res.json() as unknown;
+    let json: unknown;
+    try {
+      json = await res.json() as unknown;
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      errors.push(`returned invalid JSON: ${toErrorMessage(error)}`);
+      break;
+    }
     if (!isOrcaResponse(json)) {
       errors.push("returned malformed body");
-      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
@@ -230,7 +242,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   }
 
   if (successfulPages > 0) {
-    await writeDexSourcePaginationState({
+    const outcome = await writeDexSourcePaginationState({
       db,
       sourceKey: ORCA_SOURCE_KEY,
       cursor: resumeCursor,
@@ -240,6 +252,10 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       pagesFetched: successfulPages,
       diagnostics: [...errors, ...warnings],
     });
+    paginationWriteAttempts.push({ sourceKey: ORCA_SOURCE_KEY, outcome });
+    const persistenceWarning = describeDexPaginationWriteFailure("orca", outcome);
+    if (persistenceWarning) warnings.push(persistenceWarning);
+    if (isDegradingDexPaginationWriteFailure(outcome)) degraded = true;
   }
 
   if (results.length > 0) {
@@ -259,6 +275,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       pagesFetched: successfulPages,
       cursor: resumeCursor,
       cycleCompleted,
+      cursorPersistence: summarizeDexSourcePaginationWrites(paginationWriteAttempts),
     },
   });
 }

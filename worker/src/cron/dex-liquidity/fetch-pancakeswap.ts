@@ -10,8 +10,12 @@ import {
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import {
+  describeDexPaginationWriteFailure,
+  isDegradingDexPaginationWriteFailure,
   readDexSourcePaginationState,
+  summarizeDexSourcePaginationWrites,
   writeDexSourcePaginationState,
+  type DexSourcePaginationWriteAttempt,
 } from "./source-pagination-state";
 
 const PAGE_SIZE = 250;
@@ -158,6 +162,8 @@ export async function fetchPancakeSwapPools(
   let successfulChains = 0;
   let pagesFetched = 0;
   let partialChains = 0;
+  let cursorPersistenceDegraded = false;
+  const paginationWriteAttempts: DexSourcePaginationWriteAttempt[] = [];
   const currentHourStart = Math.floor(Date.now() / 1000 / 3600) * 3600;
   const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
 
@@ -278,7 +284,7 @@ export async function fetchPancakeSwapPools(
           partialChains++;
           warnings.push(`${chain}: pagination partial; resumeFromSkip=${nextCursor}`);
         }
-        await writeDexSourcePaginationState({
+        const outcome = await writeDexSourcePaginationState({
           db,
           sourceKey,
           cursor: String(nextCursor ?? PAGE_SIZE),
@@ -288,6 +294,10 @@ export async function fetchPancakeSwapPools(
           pagesFetched: chainPagesFetched,
           diagnostics: warnings.filter((warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`)),
         });
+        paginationWriteAttempts.push({ sourceKey, outcome });
+        const persistenceWarning = describeDexPaginationWriteFailure(chain, outcome);
+        if (persistenceWarning) warnings.push(persistenceWarning);
+        if (isDegradingDexPaginationWriteFailure(outcome)) cursorPersistenceDegraded = true;
       }
     } catch (error) {
       rethrowIfAborted(error, signal);
@@ -302,7 +312,7 @@ export async function fetchPancakeSwapPools(
 
   return makeDexApiFetchResult(pools, {
     ok: successfulChains > 0,
-    degraded: errors.length > 0,
+    degraded: errors.length > 0 || cursorPersistenceDegraded,
     errors,
     warnings,
     pagination: {
@@ -311,6 +321,7 @@ export async function fetchPancakeSwapPools(
       pagesFetched,
       cursor: partialChains > 0 ? `${partialChains}-chain-tail(s)` : null,
       cycleCompleted: partialChains === 0,
+      cursorPersistence: summarizeDexSourcePaginationWrites(paginationWriteAttempts),
     },
   });
 }

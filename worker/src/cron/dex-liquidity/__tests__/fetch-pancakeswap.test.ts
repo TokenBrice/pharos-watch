@@ -173,4 +173,35 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.errors[0]).toContain("invalid-json");
     expect(result.errors[0]).toContain("GET,HEAD");
   });
+
+  it("degrades successful chain reads when their cursors are not durable", async () => {
+    vi.mocked(fetchTextWithRetry).mockImplementation(async () =>
+      textResult(response({ data: { pools: [] } })));
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => null),
+          run: vi.fn(async () => {
+            throw new Error("pagination state write failed");
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await fetchPancakeSwapPools("graph-key", undefined, db);
+
+    expect(result).toMatchObject({ ok: true, degraded: true });
+    expect(result.pagination?.cursorPersistence).toEqual({
+      attempts: 3,
+      written: 0,
+      failures: [
+        { sourceKey: "pancakeswap-v3:bsc", errorClass: "write-failed" },
+        { sourceKey: "pancakeswap-v3:ethereum", errorClass: "write-failed" },
+        { sourceKey: "pancakeswap-v3:base", errorClass: "write-failed" },
+      ],
+    });
+    expect(result.warnings).toContain(
+      "bsc: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
+    );
+  });
 });

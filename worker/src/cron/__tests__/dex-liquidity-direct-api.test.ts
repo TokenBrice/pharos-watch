@@ -1162,6 +1162,194 @@ describe("fetchOrcaPools", () => {
     expect(writes[0]?.[1]).toBe("fresh-head-tail");
   });
 
+  it("degrades on cursor write failure and retries the stored tail next run", async () => {
+    const makePool = (address: string) => ({
+      address,
+      price: "1",
+      tvlUsdc: "100000",
+      feeRate: 100,
+      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
+      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+      tokenBalanceA: "50000",
+      tokenBalanceB: "50000",
+      stats: { "24h": { volume: "1000" } },
+    });
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("head-1")],
+        meta: { cursor: { next: "fresh-head-tail-1" } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("tail-1")],
+        meta: { cursor: { next: null } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("head-2")],
+        meta: { cursor: { next: "fresh-head-tail-2" } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("tail-2")],
+        meta: { cursor: { next: null } },
+      }));
+
+    let storedCursor = "stored-tail";
+    let writeAttempts = 0;
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn((...binds: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("SELECT cursor")
+            ? {
+                cursor: storedCursor,
+                cycle_started_at: 100,
+                updated_at: 110,
+                completed_at: null,
+                pages_fetched: 4,
+              }
+            : null),
+          run: vi.fn(async () => {
+            writeAttempts++;
+            if (writeAttempts === 1) throw new Error("cursor write unavailable");
+            storedCursor = String(binds[1]);
+            return { success: true, meta: { changes: 1 } };
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const failedWrite = await fetchOrcaPools(undefined, db);
+    const retriedWrite = await fetchOrcaPools(undefined, db);
+
+    expect(failedWrite).toMatchObject({ ok: true, degraded: true });
+    expect(failedWrite.warnings).toContain(
+      "orca: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
+    );
+    expect(failedWrite.pagination?.cursorPersistence).toEqual({
+      attempts: 1,
+      written: 0,
+      failures: [{ sourceKey: "orca:solana", errorClass: "write-failed" }],
+    });
+    expect(retriedWrite).toMatchObject({ ok: true, degraded: false });
+    expect(retriedWrite.pagination?.cursorPersistence).toEqual({
+      attempts: 1,
+      written: 1,
+      failures: [],
+    });
+    expect(String(mockFetch.mock.calls[1]?.[0])).toContain("next=stored-tail");
+    expect(String(mockFetch.mock.calls[3]?.[0])).toContain("next=stored-tail");
+    expect(storedCursor).toBe("fresh-head-tail-2");
+  });
+
+  it("preserves a far-tail cursor across a transient failure and retries it next run", async () => {
+    const makePool = (address: string) => ({
+      address,
+      price: "1",
+      tvlUsdc: "100000",
+      feeRate: 100,
+      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
+      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+      tokenBalanceA: "50000",
+      tokenBalanceB: "50000",
+      stats: { "24h": { volume: "1000" } },
+    });
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("head-1")],
+        meta: { cursor: { next: "fresh-head-tail-1" } },
+      }))
+      .mockResolvedValueOnce(new Response("temporary upstream failure", { status: 503 }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("head-2")],
+        meta: { cursor: { next: "fresh-head-tail-2" } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("far-tail-retry")],
+        meta: { cursor: { next: null } },
+      }));
+
+    let storedCursor = "far-tail-cursor";
+    const persistedCursors: string[] = [];
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn((...binds: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("SELECT cursor")
+            ? {
+                cursor: storedCursor,
+                cycle_started_at: 100,
+                updated_at: 110,
+                completed_at: null,
+                pages_fetched: 4,
+              }
+            : null),
+          run: vi.fn(async () => {
+            storedCursor = String(binds[1]);
+            persistedCursors.push(storedCursor);
+            return { success: true, meta: { changes: 1 } };
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const transientFailure = await fetchOrcaPools(undefined, db);
+    const retriedTail = await fetchOrcaPools(undefined, db);
+
+    expect(transientFailure).toMatchObject({ ok: true, degraded: true });
+    expect(transientFailure.pagination).toMatchObject({
+      state: "partial",
+      cursor: "far-tail-cursor",
+      cycleCompleted: false,
+    });
+    expect(retriedTail).toMatchObject({ ok: true, degraded: false });
+    expect(String(mockFetch.mock.calls[1]?.[0])).toContain("next=far-tail-cursor");
+    expect(String(mockFetch.mock.calls[3]?.[0])).toContain("next=far-tail-cursor");
+    expect(persistedCursors).toEqual(["far-tail-cursor", "fresh-head-tail-2"]);
+  });
+
+  it("resets a tail only when the API explicitly rejects its cursor", async () => {
+    const pool = {
+      address: "head",
+      price: "1",
+      tvlUsdc: "100000",
+      feeRate: 100,
+      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
+      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+      tokenBalanceA: "50000",
+      tokenBalanceB: "50000",
+      stats: { "24h": { volume: "1000" } },
+    };
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [pool],
+        meta: { cursor: { next: "fresh-head-tail" } },
+      }))
+      .mockResolvedValueOnce(new Response("expired cursor", { status: 404 }));
+    const writes: unknown[][] = [];
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn((...binds: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("SELECT cursor")
+            ? {
+                cursor: "expired-tail",
+                cycle_started_at: 100,
+                updated_at: 110,
+                completed_at: null,
+                pages_fetched: 4,
+              }
+            : null),
+          run: vi.fn(async () => {
+            writes.push(binds);
+            return { success: true, meta: { changes: 1 } };
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await fetchOrcaPools(undefined, db);
+
+    expect(result.pagination).toMatchObject({ state: "partial", cursor: "fresh-head-tail" });
+    expect(result.errors).toContain("API rejected tail cursor (404); restarting from refreshed head");
+    expect(writes[0]?.[1]).toBe("fresh-head-tail");
+  });
+
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {
     mockFetch
       .mockResolvedValueOnce(jsonResponse({

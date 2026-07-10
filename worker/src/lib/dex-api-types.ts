@@ -33,6 +33,20 @@ export interface DexApiPool {
   tokenVolumes24h?: number[] | null;
 }
 
+export type DexPaginationPersistenceErrorClass =
+  | "not-configured"
+  | "missing-table"
+  | "write-failed";
+
+export interface DexPaginationPersistenceSummary {
+  attempts: number;
+  written: number;
+  failures: Array<{
+    sourceKey: string;
+    errorClass: DexPaginationPersistenceErrorClass;
+  }>;
+}
+
 export interface DexApiFetchResult {
   pools: DexApiPool[];
   ok: boolean;
@@ -45,5 +59,6 @@ export interface DexApiFetchResult {
     pagesFetched: number;
     cursor: string | null;
     cycleCompleted: boolean;
+    cursorPersistence?: DexPaginationPersistenceSummary;
   };
 }
