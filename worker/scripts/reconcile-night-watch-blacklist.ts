@@ -569,6 +569,7 @@ function loadCursorRows(d1: RemoteD1Client): { tron: CursorRow | null; arbitrum:
 function buildBalanceExpectations(
   events: readonly FrozenManifestEvent[],
   currentAmounts: ReadonlyMap<string, number>,
+  observedAt: number,
 ): { expectations: BalanceExpectation[]; unresolved: string[] } {
   const latest = new Map<string, FrozenManifestEvent>();
   for (const event of sortEvents(events)) latest.set(event.address, event);
@@ -594,7 +595,7 @@ function buildBalanceExpectations(
       address: event.address,
       amountNative: currentAmount,
       source: "reconciliation_current_balance",
-      observedAt: Math.floor(Date.now() / 1000),
+      observedAt,
     });
   }
   return { expectations, unresolved };
@@ -621,15 +622,22 @@ function verifyBalances(
   expectations: readonly BalanceExpectation[],
   stored: readonly StoredBalance[],
 ): BalanceVerification {
-  const byAddress = new Map(
-    stored
-      .filter((row) => row.config_key === manifest.configKey || row.contract_address === manifest.contractAddress)
-      .map((row) => [row.address.toLowerCase(), row]),
-  );
+  const byAddress = new Map<string, StoredBalance[]>();
+  for (const row of stored) {
+    if (row.config_key !== manifest.configKey || row.contract_address !== manifest.contractAddress) continue;
+    const address = row.address.toLowerCase();
+    const matches = byAddress.get(address) ?? [];
+    matches.push(row);
+    byAddress.set(address, matches);
+  }
   const mismatches: string[] = [];
   for (const expectation of expectations) {
-    const row = byAddress.get(expectation.address);
-    if (row?.amount_native == null || Math.abs(row.amount_native - expectation.amountNative) >= 0.0000005) {
+    const rows = byAddress.get(expectation.address.toLowerCase()) ?? [];
+    if (
+      rows.length !== 1
+      || rows[0]!.amount_native == null
+      || Math.abs(rows[0]!.amount_native - expectation.amountNative) >= 0.0000005
+    ) {
       mismatches.push(expectation.address);
     }
   }
@@ -706,7 +714,18 @@ function balanceUpsertStatement(expectation: BalanceExpectation, observedAt: num
      last_error_class = NULL,
      consecutive_failures = 0
    WHERE COALESCE(blacklist_current_balances.observed_at, 0) <= excluded.observed_at
-     AND COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at;`;
+     AND COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at
+     AND (
+       COALESCE(blacklist_current_balances.observed_at, 0) < excluded.observed_at
+       OR COALESCE(blacklist_current_balances.last_attempted_at, 0) < excluded.last_attempted_at
+       OR (
+         blacklist_current_balances.amount_native IS excluded.amount_native
+         AND blacklist_current_balances.amount_usd IS excluded.amount_usd
+         AND blacklist_current_balances.source = excluded.source
+         AND blacklist_current_balances.config_key = excluded.config_key
+         AND blacklist_current_balances.contract_address = excluded.contract_address
+       )
+     );`;
 }
 
 function cursorValue(row: CursorRow | null): number | null {
@@ -825,7 +844,11 @@ export async function runNightWatchBlacklistReconciliation(
     throw new Error(`Live recovery interval omitted ${omittedFrozenIds.length} frozen event(s)`);
   }
   const currentAmounts = await loadBalanceAmounts();
-  const { expectations, unresolved: unresolvedBalanceSources } = buildBalanceExpectations(upstreamTail, currentAmounts);
+  const { expectations, unresolved: unresolvedBalanceSources } = buildBalanceExpectations(
+    upstreamTail,
+    currentAmounts,
+    startedAt,
+  );
   if (unresolvedBalanceSources.length > 0) {
     throw new Error(
       `Balance replay lacks a confirmed amount for ${unresolvedBalanceSources.length} active address(es)`,

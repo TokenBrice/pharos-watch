@@ -64,13 +64,18 @@ function makeD1(initiallyApplied = false): {
       }
       if (sql.includes("FROM blacklist_current_balances")) {
         if (!applied) return [];
-        return [...balances].map(([address, amount]) => ({
-          address,
-          amount_native: amount,
-          source: "reconciliation_current_balance",
-          config_key: frozenManifest.configKey,
-          contract_address: frozenManifest.contractAddress,
-        })) as T[];
+        const requestedAddresses = new Set(
+          [...sql.matchAll(/'(0x[a-f0-9]{40})'/gi)].map((match) => match[1]!.toLowerCase()),
+        );
+        return [...balances]
+          .filter(([address]) => requestedAddresses.has(address.toLowerCase()))
+          .map(([address, amount]) => ({
+            address,
+            amount_native: amount,
+            source: "reconciliation_current_balance",
+            config_key: frozenManifest.configKey,
+            contract_address: frozenManifest.contractAddress,
+          })) as T[];
       }
       if (sql.includes("FROM blacklist_events")) {
         if (!applied) return [];
@@ -241,6 +246,7 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(balanceStatement).toContain(
       "COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at",
     );
+    expect(balanceStatement).toContain("blacklist_current_balances.amount_native IS excluded.amount_native");
 
     const sqlite = new DatabaseSync(":memory:");
     try {
@@ -254,16 +260,13 @@ describe("Night Watch blacklist reconciliation", () => {
       }
       sqlite.exec(balanceStatement!);
       const inserted = sqlite
-        .prepare("SELECT id FROM blacklist_current_balances LIMIT 1")
-        .get() as { id: string };
+        .prepare("SELECT id, observed_at, last_attempted_at FROM blacklist_current_balances LIMIT 1")
+        .get() as { id: string; observed_at: number; last_attempted_at: number };
       sqlite
         .prepare(
           `UPDATE blacklist_current_balances
               SET amount_native = 999,
-                  amount_usd = 999,
-                  observed_at = 2000000000,
-                  last_successful_observed_at = 2000000000,
-                  last_attempted_at = 2000000000
+                  amount_usd = 999
             WHERE id = ?`,
         )
         .run(inserted.id);
@@ -279,8 +282,8 @@ describe("Night Watch blacklist reconciliation", () => {
         .get(inserted.id);
       expect(preserved).toEqual({
         amount_native: 999,
-        observed_at: 2_000_000_000,
-        last_attempted_at: 2_000_000_000,
+        observed_at: inserted.observed_at,
+        last_attempted_at: inserted.last_attempted_at,
       });
     } finally {
       sqlite.close();
@@ -304,6 +307,25 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(summary.status).toBe("failed");
     expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
     expect(summary.unresolvedManifestGapCount).toBeGreaterThan(0);
+    expect(summary.samples.balanceMismatches).not.toEqual([]);
+  });
+
+  it("requires exact contract and config identity for balance replay parity", async () => {
+    const fixture = makeD1();
+    const originalQuery = fixture.d1.query;
+    fixture.d1.query = (<T>(sql: string): T[] => {
+      const rows = originalQuery<T>(sql);
+      if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
+        const balances = rows as Array<Record<string, unknown>>;
+        if (balances[0]) balances[0].contract_address = "wrong-contract";
+      }
+      return rows;
+    }) as RemoteD1Client["query"];
+
+    const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(fixture.d1));
+
+    expect(summary.status).toBe("failed");
+    expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
     expect(summary.samples.balanceMismatches).not.toEqual([]);
   });
 
