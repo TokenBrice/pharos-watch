@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js";
 
@@ -41,10 +42,16 @@ const MINI_APP_STATE = {
   },
 };
 
-function sdkBody(initData: string, platform: string): string {
+function sdkBody(
+  initData: string,
+  platform: string,
+  options: { colorScheme?: "light" | "dark"; themeParams?: Record<string, string> } = {},
+): string {
   return `window.Telegram = { WebApp: {
     initData: ${JSON.stringify(initData)},
     platform: ${JSON.stringify(platform)},
+    colorScheme: ${JSON.stringify(options.colorScheme)},
+    themeParams: ${JSON.stringify(options.themeParams)},
     initDataUnsafe: { user: { username: "watcher" } },
     ready() {}, expand() {}, onEvent() {}, offEvent() {}
   } };`;
@@ -150,6 +157,47 @@ test("the signed Mini App keeps compact controls usable at 320px", async ({ page
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
   }
+});
+
+test("an authenticated 320px Mini App repairs hostile Telegram theme contrast", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await trackSessionRequests(page);
+  await page.route(TELEGRAM_SDK_URL, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: sdkBody("signed-init-data", "tdesktop", {
+        colorScheme: "light",
+        themeParams: {
+          bg_color: "#ffffff",
+          text_color: "#fefefe",
+          secondary_bg_color: "#fdfdfd",
+          section_bg_color: "#fcfcfc",
+          hint_color: "#fafafa",
+          subtitle_text_color: "#fbfbfb",
+          button_color: "#fefefe",
+          button_text_color: "#ffffff",
+          link_color: "#f8f8f8",
+          accent_text_color: "#f7f7f7",
+          section_header_text_color: "#f6f6f6",
+          destructive_text_color: "#f5f5f5",
+        },
+      }),
+    });
+  });
+
+  await page.goto(
+    "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop",
+    { waitUntil: "domcontentloaded" },
+  );
+
+  await expect(page.getByRole("heading", { name: "@watcher" })).toBeVisible({ timeout: 5_000 });
+  const results = await new AxeBuilder({ page })
+    .include(".pharos-mini-app")
+    .withRules(["color-contrast"])
+    .analyze();
+  expect(results.violations).toEqual([]);
+  expect(await page.locator(".pharos-mini-app").evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
 });
 
 test("an unsupported Telegram host receives the non-sensitive preview", async ({ page }) => {

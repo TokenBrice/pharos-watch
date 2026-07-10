@@ -20,6 +20,7 @@ Owned files:
 - `src/app/pharoswatchbot/app/format.ts`
 - `src/app/pharoswatchbot/app/mini-app-api.ts`
 - `src/app/pharoswatchbot/app/telegram-sdk.ts`
+- `src/app/pharoswatchbot/app/telegram-theme.ts`
 - `src/app/pharoswatchbot/app/types.ts`
 - `src/app/pharoswatchbot/app/use-mini-app-mutations.ts`
 - `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
@@ -138,7 +139,9 @@ The embedded `/pharoswatchbot/app` route does not bootstrap Google Analytics and
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 
-The Mini App stylesheet seeds `--telegram-bg`, `--telegram-text`, and `--telegram-color-scheme` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`. Once the Telegram bridge is available, `applyTelegramTheme()` is authoritative: it exports Telegram theme params and `colorScheme`, and `.pharos-mini-app` scopes the Pharos bridge tokens (`--background`, `--card`, `--foreground`, `--muted`, `--border`, `--ring`) to that Telegram palette so internal cards, tabs, selects, and buttons do not mix a dark Telegram shell with light Pharos controls.
+The Mini App stylesheet seeds `--telegram-bg`, `--telegram-text`, and `--telegram-color-scheme` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`. Once the Telegram bridge is available, `applyTelegramTheme()` is authoritative. `telegram-theme.ts` validates Telegram's hex colors, preserves already-compliant host colors, and minimally mixes hostile values toward black or white before exporting semantic surface, text, muted-text, button, border, and focus variables. Normal text and button labels target WCAG AA `4.5:1`; control fills, borders, and focus rings target `3:1`. Secondary, section, and control surfaces are kept in the host palette but pulled toward the base background when necessary so one readable text hierarchy remains valid across the shell.
+
+`.pharos-mini-app` scopes the Pharos bridge tokens (`--background`, `--card`, `--foreground`, `--muted`, `--border`, `--ring`) to the normalized Telegram palette so internal cards, tabs, selects, and buttons do not mix a dark Telegram shell with light Pharos controls. Invalid or absent theme anchors clear stale inline palette values and leave the existing CSS fallback theme authoritative. Viewport height, safe-area insets, color-scheme handling, and focus offsets are independent of color normalization.
 
 ## BotFather Operator Checklist
 
@@ -169,3 +172,5 @@ For incident triage, start at the runbooks rather than DevTools:
 - `shared/lib/__tests__/telegram-mini-app-contract.test.ts` — operation parse parity, compact/legacy response schemas, catalog version, and capability compatibility.
 - `src/app/pharoswatchbot/app/mini-app-api.test.ts` — compact-state hydration, new-client/old-Worker compatibility, capability parameters, and one-shot version refresh.
 - `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.
+- `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
+- `tests/visual/telegram-mini-app-launch.spec.ts` — standalone/signed launch behavior, 320 px control sizing, and an authenticated hostile-theme axe color-contrast fixture.
