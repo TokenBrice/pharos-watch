@@ -247,7 +247,20 @@ async function validateOrResponse(
   db: D1Database,
   initData: string,
   botToken: string,
-  options: { maxAgeSec: number; start: number; cooldownKey: string; cooldownSec: number },
+  options: {
+    maxAgeSec: number;
+    start: number;
+    cooldownKey: string;
+    cooldownSec: number;
+    /**
+     * Usage event emitted on a signed-but-expired launch. Session reads keep
+     * `mini_app_session_invalid`; the mutation surface records
+     * `mini_app_mutation_denied` with a `stale-auth` failure class so TGB-022
+     * stale-auth mutation denials are measurable separately from session-read
+     * expiry in `telegram_usage_daily`.
+     */
+    staleAuthEvent: { eventType: TelegramUsageEventType; actionDetail?: string | null };
+  },
   botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
@@ -280,8 +293,9 @@ async function validateOrResponse(
         // unauthenticated-write gate). Signed stale-auth carries user context,
         // so acquire the per-user cooldown before the analytics write.
         await recordMiniAppEvent(db, {
-          eventType: "mini_app_session_invalid",
+          eventType: options.staleAuthEvent.eventType,
           auth: staleAuth,
+          actionDetail: options.staleAuthEvent.actionDetail,
           outcome: err.code,
           failureClass: err.code,
           latencyMs: Date.now() - options.start,
@@ -364,6 +378,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       start,
       cooldownKey: "mini-app:session",
       cooldownSec: SESSION_COOLDOWN_SEC,
+      staleAuthEvent: { eventType: "mini_app_session_invalid" },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
@@ -432,6 +447,10 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       start,
       cooldownKey: MUTATION_AUTH_FAILURE_COOLDOWN_KEY,
       cooldownSec: MUTATION_AUTH_FAILURE_COOLDOWN_SEC,
+      staleAuthEvent: {
+        eventType: "mini_app_mutation_denied",
+        actionDetail: mutationActionDetail(parsed.operation),
+      },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 

@@ -447,6 +447,38 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
   });
 
+  it("offers a Telegram relaunch that reopens the current panel on stale auth", async () => {
+    const openTelegramLink = vi.fn();
+    const impactOccurred = vi.fn();
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "settings", user: { username: "watcher" } }, ready: vi.fn(), HapticFeedback: { impactOccurred }, openTelegramLink } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => staleState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
+    expect(impactOccurred).toHaveBeenCalledWith("light");
+  });
+
+  it("hides the stale-auth relaunch button when openTelegramLink is unavailable", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => staleState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Relaunch and keep this panel" })).toBeNull();
+  });
+
   it("renders the group settings command as inline code", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const groupState: TelegramMiniAppState = {

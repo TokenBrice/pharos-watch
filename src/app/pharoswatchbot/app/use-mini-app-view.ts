@@ -1,10 +1,40 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
+import {
+  MINI_APP_PAYLOAD_NAMES,
+  formatCoinPayload,
+  formatCoveragePayload,
+  formatWhyPayload,
+  miniAppPayloadIntent,
+  parseMiniAppPayload,
+} from "@shared/lib/telegram-mini-app-payloads";
 import type { CoinInsightTarget, TelegramMiniAppState } from "./types";
 
 export type ViewKey = "home" | "watchlist" | "presets" | "settings";
+
+/**
+ * Inverse of `initialViewFromStartParam`: encode the user's current place as a
+ * `?startapp=` payload so the stale-auth relaunch affordance can reopen a fresh
+ * Telegram launch on the same panel (and coin/insight context) instead of
+ * dropping the user back at Home.
+ */
+export function relaunchPayloadForView(
+  view: ViewKey,
+  insight: CoinInsightTarget | null,
+  coinId: string | null,
+): string {
+  if (view === "watchlist") {
+    if (insight) {
+      return insight.kind === "why" ? formatWhyPayload(insight.coinId) : formatCoveragePayload(insight.coinId);
+    }
+    if (coinId) return formatCoinPayload(coinId);
+    return MINI_APP_PAYLOAD_NAMES.watchlist;
+  }
+  if (view === "presets") return MINI_APP_PAYLOAD_NAMES.presets;
+  if (view === "settings") return MINI_APP_PAYLOAD_NAMES.settings;
+  return MINI_APP_PAYLOAD_NAMES.home;
+}
 
 export function initialViewFromStartParam(startParam: string | null): {
   view: ViewKey;

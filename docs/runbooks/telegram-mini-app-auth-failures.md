@@ -6,8 +6,8 @@
 
 Detection signals:
 
-- `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. The `outcome` column distinguishes `stale-auth` (expired but signature-valid sessions) from `rate_limited` (per-user cooldown exceeded); these are the only two outcomes written as `mini_app_session_invalid` rows. Body-size (`413`) and schema (`400 validation-error`) failures return immediately without a D1 write and are visible only in Worker logs. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
-- The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppSessionsToday` flat or falling. Its `miniAppDeniedToday` counter tracks post-auth mutation denials (`mini_app_mutation_denied`) only and does not move for a session/auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal.
+- `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. Those rows come from the session-read endpoint; the `outcome` column distinguishes `stale-auth` (expired but signature-valid sessions) from `rate_limited` (per-user cooldown exceeded). A stale-but-signed **mutation** attempt is written as `mini_app_mutation_denied` with `failure_class = 'stale-auth'` and the operation kind in `action_detail`, keeping the TGB-022 stale-auth mutation-denial ratio separable from session-read expiry. Body-size (`413`) and schema (`400 validation-error`) failures return immediately without a D1 write and are visible only in Worker logs. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
+- The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppSessionsToday` flat or falling. Its `miniAppDeniedToday` counter tracks post-auth mutation denials (`mini_app_mutation_denied`, including the `stale-auth` failure class) and does not move for a session-read auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal.
 - A high share of `mini_app_mutation_denied` rows with `failure_class = 'rate_limited'` means authenticated users or scripts exhausted the Pharos mutation budget. The server allows 12 mutation attempts per Telegram user in a 30-second window anchored to the first admitted write; this signal is distinct from Telegram Bot API delivery rate limits.
 - Cloudflare logs for `POST /api/telegram-mini-app/mutate` return `401` with `code = "stale-auth"` across many distinct user IDs in a short window.
 - Wrangler tail shows `POST /api/telegram-mini-app/session` or `/mutate` returning `401` for `stale-auth` or `validation-error` repeatedly.
@@ -34,6 +34,21 @@ WHERE event_type = 'mini_app_session_invalid'
   AND day >= date('now', '-7 days')
 GROUP BY day, outcome, failure_class
 ORDER BY day DESC, events DESC;
+```
+
+Measure stale-auth mutation denials by operation kind (TGB-022):
+
+```sql
+SELECT
+  day,
+  action_detail,
+  SUM(count) AS denials
+FROM telegram_usage_daily
+WHERE event_type = 'mini_app_mutation_denied'
+  AND failure_class = 'stale-auth'
+  AND day >= date('now', '-7 days')
+GROUP BY day, action_detail
+ORDER BY day DESC, denials DESC;
 ```
 
 Measure the aggregate Pharos mutation-limit ratio before changing the budget:
@@ -102,7 +117,7 @@ npx wrangler tail stablecoin-api --format pretty
 ## Remediation
 
 1. **Bot-token rotation gap.** Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the prior token and redeploy. Sessions signed by either token will validate during the overlap.
-2. **Stale clients.** No operator action. The Mini App's existing "session expired" UI tells users to relaunch from Telegram, which is the intended recovery path.
+2. **Stale clients.** No operator action. The Mini App's stale-auth banner offers a one-tap "Relaunch and keep this panel" button (a `?startapp=` deep link back to the user's current panel) when `openTelegramLink` is available, and close-and-reopen copy otherwise; relaunching from Telegram is the intended recovery path.
 3. **Invalid signatures or malformed auth.** No mutation lands in D1 before HMAC validation succeeds. If the count persists outside a rotation window, inspect recent launch-link changes and Telegram client reports before changing backend auth rules.
 4. **Worker degradation.** Follow [`telegram-no-delivery.md`](./telegram-no-delivery.md); auth failures should clear once the dispatcher recovers and the Mini App pulse loader returns fresh state.
 

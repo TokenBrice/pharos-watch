@@ -28,7 +28,7 @@ import {
   refreshMiniAppBundleOnce,
   type TelegramMiniAppClientSnapshot,
 } from "./mini-app-api";
-import { useMiniAppView, type ViewKey } from "./use-mini-app-view";
+import { relaunchPayloadForView, useMiniAppView, type ViewKey } from "./use-mini-app-view";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const BOT_URL = "https://t.me/PharosWatchBot";
@@ -221,6 +221,20 @@ export function PharosWatchBotMiniAppClient() {
     };
   }, [webApp]);
 
+  // TGB-022 stale-auth recovery: Telegram never refreshes `initData` for an
+  // open Mini App, so an expired 5-minute mutation window requires a fresh
+  // launch. Deep-link back through `?startapp=` with the current panel (and
+  // coin/insight context) so the relaunch reopens where the user left off.
+  // Undefined when `openTelegramLink` is unavailable so the CTA stays hidden.
+  const handleStaleAuthRelaunch = useMemo(() => {
+    if (!webApp?.openTelegramLink) return undefined;
+    const payload = relaunchPayloadForView(view, coinInsightTarget, visibleCoinTarget);
+    return () => {
+      webApp.HapticFeedback?.impactOccurred?.("light");
+      webApp.openTelegramLink?.(`${BOT_URL}?startapp=${payload}`);
+    };
+  }, [coinInsightTarget, view, visibleCoinTarget, webApp]);
+
   // MainButton — derive `text` and `handler` from the current view/state and
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
@@ -366,6 +380,13 @@ export function PharosWatchBotMiniAppClient() {
               <div>
                 <h2 className="text-sm font-semibold text-foreground">{STALE_AUTH_READ_ONLY_COPY.title}</h2>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{STALE_AUTH_READ_ONLY_COPY.body}</p>
+                {handleStaleAuthRelaunch ? (
+                  <div className="mt-3">
+                    <MiniButton variant="secondary" onClick={handleStaleAuthRelaunch}>
+                      Relaunch and keep this panel
+                    </MiniButton>
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>

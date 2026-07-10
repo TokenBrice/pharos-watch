@@ -633,6 +633,36 @@ describe("handleTelegramMiniAppSession", () => {
     expect(response.status).toBe(429);
     expect(await response.json()).toMatchObject({ code: "rate-limited" });
     expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", [cooldownKey])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied"])).toBe(false);
+  });
+
+  it("emits mini_app_mutation_denied with a stale-auth class on stale mutation auth", async () => {
+    // TGB-022 measurement: stale-auth mutation denials must be separable from
+    // session-read expiry (`mini_app_session_invalid`) in `telegram_usage_daily`.
+    const staleInitData = await signedInitData({
+      auth_date: String(NOW_SEC - 301),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(
+      db,
+      request("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ code: "stale-auth" });
+    const deniedRows = db
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("INSERT INTO telegram_usage_daily")
+        && entry.binds.includes("mini_app_mutation_denied"),
+      );
+    expect(deniedRows).toHaveLength(1);
+    expect(deniedRows[0].binds).toContain("stale-auth");
+    expect(deniedRows[0].binds).toContain(mutationActionDetail({ kind: "clear-snooze" }));
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_session_invalid"])).toBe(false);
   });
 
