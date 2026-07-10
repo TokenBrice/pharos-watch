@@ -42,6 +42,47 @@ function reportCardPayload(updatedAt = NOW - 60) {
   });
 }
 
+function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } = {}) {
+  const recordDate = new Date((NOW - 24 * 3600) * 1000).toISOString().slice(0, 10);
+  const benchmark = (key: "USD" | "GBP", source: string) => ({
+    key,
+    rate: 4.1,
+    recordDate,
+    fetchedAt: NOW - 60,
+    source,
+    isFallback: false,
+    fallbackMode: null,
+    lastMarketRate: 4.1,
+    lastMarketRecordDate: recordDate,
+    lastMarketFetchedAt: NOW - 60,
+    lastMarketSource: source,
+  });
+  return [
+    {
+      key: "risk_free_rates",
+      value: JSON.stringify({
+        version: 1,
+        benchmarks: {
+          USD: benchmark("USD", "fred-dgs3mo"),
+          GBP: {
+            ...benchmark("GBP", "fred-sonia-compounded-index"),
+            isFallback: options.fallback ?? false,
+            fallbackMode: options.fallback ? "gbp-sonia-compounded-index-failed-retained" : null,
+          },
+        },
+      }),
+      updatedAt: NOW - 60,
+      updated_at: NOW - 60,
+    },
+    {
+      key: "fetch-tbill-rate:gbp-retained-fallback-streak",
+      value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      updatedAt: NOW - 60,
+      updated_at: NOW - 60,
+    },
+  ];
+}
+
 function healthyD1(
   dex: {
     rowCount?: number;
@@ -52,6 +93,8 @@ function healthyD1(
     unpublishedRows?: number;
     generationCount?: number;
     stablecoinsActiveCount?: number;
+    gbpFreshRuns?: number;
+    gbpFallback?: boolean;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -107,6 +150,7 @@ function healthyD1(
           updated_at: NOW - 60,
         },
         { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
     },
     {
@@ -147,8 +191,8 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 6,
-      okCount: 6,
+      totalChecks: 7,
+      okCount: 7,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -176,6 +220,28 @@ describe("worker data invariant canaries", () => {
     });
     expect((check?.metadata?.missingActiveIds as string[])).toHaveLength(1);
     expect(check?.error).toContain((check?.metadata?.missingActiveIds as string[])[0]!);
+  });
+
+  it("keeps the GBP benchmark canary degraded until two direct publications", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const oneRun = await runCanaryChecks(healthyD1({ gbpFreshRuns: 1 }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(oneRun.results.find((result) => result.checkId === "yield-gbp-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("1/2 consecutive fresh publications"),
+    });
+
+    const fallback = await runCanaryChecks(healthyD1({ gbpFreshRuns: 0, gbpFallback: true }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(fallback.results.find((result) => result.checkId === "yield-gbp-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("GBP benchmark is fallback"),
+    });
   });
 
   it("accepts retained DEX rows outside the latest published generation", async () => {
@@ -288,6 +354,7 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
           { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+          ...gbpCanaryCacheRows(),
         ],
       },
       {
@@ -331,7 +398,7 @@ describe("worker data invariant canaries", () => {
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO worker_canary_runs"));
-    expect(inserts).toHaveLength(12);
+    expect(inserts).toHaveLength(14);
 
     const status = await loadCanaryStatus(
       mockD1([
@@ -453,6 +520,7 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+          ...gbpCanaryCacheRows(),
         ],
       },
       {
@@ -475,7 +543,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
     expect(summary.skippedCount).toBe(4);
-    expect(summary.okCount).toBe(2);
+    expect(summary.okCount).toBe(3);
     expect(summary.worstStatus).toBe("ok");
   });
 });

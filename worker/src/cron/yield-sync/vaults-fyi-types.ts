@@ -16,6 +16,8 @@ export type VaultsFyiSkipReason =
 export interface VaultsFyiTelemetry {
   enabled: boolean;
   hasKey: boolean;
+  consumptionMode: "disabled" | "probe-only" | "rankable";
+  consumptionReason: "source-disabled" | "rankable-allowlist-empty" | "rankable-allowlist-configured";
   status: VaultsFyiRunStatus;
   skipReason: VaultsFyiSkipReason | null;
   requestCount: number;

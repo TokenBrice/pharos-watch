@@ -52,6 +52,8 @@ vi.mock("../yield-sync/sources", () => ({
     telemetry: {
       enabled: false,
       hasKey: false,
+      consumptionMode: "disabled",
+      consumptionReason: "source-disabled",
       status: "skipped",
       skipReason: "disabled",
       requestCount: 0,
@@ -183,6 +185,8 @@ function emptyVaultsFyiResult(
       budgetExhausted: false,
       dropExamples: [],
       ...overrides,
+      consumptionMode: overrides.consumptionMode ?? "disabled",
+      consumptionReason: overrides.consumptionReason ?? "source-disabled",
     },
   };
 }

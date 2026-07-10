@@ -3,7 +3,7 @@ import { shouldDegradeForRiskFreeRate } from "./evaluation";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 
@@ -19,6 +19,7 @@ export interface YieldComparisonAnchorFreshnessMeta {
     sourceKey: string;
     dataSource: string;
     anchorAgeSeconds: number;
+    maxAgeSeconds: number;
     comparisonAnchorObservedAt: number;
   }>;
   staleAnchorExamplesTruncated: boolean;
@@ -32,6 +33,9 @@ export function buildComparisonAnchorFreshnessMeta(input: {
     .flatMap((source) => {
       if (source.comparisonAnchorObservedAt == null) return [];
       const anchorAgeSeconds = Math.max(0, input.startSec - source.comparisonAnchorObservedAt);
+      const maxAgeSeconds = Math.floor(
+        getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
+      );
       return [
         {
           stablecoinId: source.id,
@@ -39,15 +43,14 @@ export function buildComparisonAnchorFreshnessMeta(input: {
           sourceKey: source.sourceKey,
           dataSource: source.dataSource,
           anchorAgeSeconds,
+          maxAgeSeconds,
           comparisonAnchorObservedAt: source.comparisonAnchorObservedAt,
         },
       ];
     })
     .sort((a, b) => b.anchorAgeSeconds - a.anchorAgeSeconds);
 
-  const staleAnchorRows = anchorRows.filter(
-    (row) => row.anchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  );
+  const staleAnchorRows = anchorRows.filter((row) => row.anchorAgeSeconds > row.maxAgeSeconds);
   const oldest = anchorRows[0] ?? null;
 
   return {

@@ -51,6 +51,7 @@ function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYie
     safetyScore: 80,
     safetyGrade: "A",
     safetyProvenance: "cached-publish",
+    safetyReason: null,
     yieldToRisk: null,
     excessYield: 0,
     benchmarkKey: "USD",

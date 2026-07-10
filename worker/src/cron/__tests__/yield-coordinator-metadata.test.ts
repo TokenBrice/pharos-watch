@@ -61,13 +61,13 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
 
     expect(meta).toMatchObject({
       anchoredRowCount: 3,
-      staleAnchorCount: 2,
+      staleAnchorCount: 1,
       oldestAnchorAgeSeconds: STALE_THRESHOLD_SEC + 100,
       oldestAnchorStablecoinId: "oldest",
       oldestAnchorSourceKey: "price-derived",
       staleAnchorExamplesTruncated: false,
     });
-    expect(meta.staleAnchorExamples.map((row) => row.stablecoinId)).toEqual(["oldest", "stale"]);
+    expect(meta.staleAnchorExamples.map((row) => row.stablecoinId)).toEqual(["stale"]);
   });
 });
 

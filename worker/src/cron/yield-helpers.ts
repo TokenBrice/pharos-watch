@@ -26,8 +26,14 @@ export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
+// Rate-derived rows inherit daily benchmark observations rather than the hourly
+// publisher cadence. Allow one missed daily benchmark refresh before warning.
+export const RATE_DERIVED_STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
 export const COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
+// Price/NAV appreciation sources intentionally select an anchor from a 7-45d
+// window. Their anchor is only stale after the window itself has expired.
+export const LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 45 * 24 * 60 * 60 * 1000;
 
 export {
   computePYS,
@@ -168,10 +174,28 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   if (dataSource === "price-derived") {
     return PRICE_DERIVED_STALE_THRESHOLD_MS;
   }
+  if (dataSource === "rate-derived") {
+    return RATE_DERIVED_STALE_THRESHOLD_MS;
+  }
   if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;
   }
   return STALE_THRESHOLD_MS;
+}
+
+function isLongHorizonNavAnchor(sourceKey: string | null | undefined): boolean {
+  return sourceKey?.includes("protocol-api:ondo-usdy-oracle") === true
+    || sourceKey?.includes("protocol-api:midas-mmev-nav-oracle") === true;
+}
+
+export function getComparisonAnchorStaleThresholdMs(
+  dataSource: string,
+  sourceKey?: string | null,
+): number {
+  if (dataSource === "price-derived" || isLongHorizonNavAnchor(sourceKey)) {
+    return LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
+  }
+  return COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
 }
 
 /**

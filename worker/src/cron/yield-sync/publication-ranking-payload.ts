@@ -16,7 +16,7 @@ import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
 } from "../../lib/yield-history-ownership-handoffs";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS, getRankingStaleThresholdMs } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import {
@@ -57,6 +57,7 @@ function evaluatedSourceToRanking(
     pysNullReason: source.pysNullReason,
     safetyScore: source.safetyScore,
     safetyGrade: source.safetyGrade,
+    safetyReason: source.safetyReason,
     yieldToRisk: source.yieldToRisk,
     excessYield: source.excessYield,
     benchmarkKey: source.benchmarkKey,
@@ -84,6 +85,7 @@ function evaluatedSourceToRanking(
       ? {
           ...provenance,
           safetyProvenance: source.safetyProvenance,
+          safetyReason: source.safetyReason,
         }
       : null,
   };
@@ -315,7 +317,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         : null;
     const staleComparisonAnchor =
       comparisonAnchorAgeSeconds != null &&
-      comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
+      comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey);
     if ((updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) || staleComparisonAnchor) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];

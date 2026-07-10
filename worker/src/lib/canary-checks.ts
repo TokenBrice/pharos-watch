@@ -8,6 +8,8 @@ import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
+import { getCache } from "./db-cache";
+import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 
 export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
 
@@ -118,6 +120,9 @@ const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 90 * 24 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
+const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
+const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
+const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
 export function normalizeWorkerCanaryMode(value: string | undefined): WorkerCanaryMode {
   const normalized = value?.trim().toLowerCase();
@@ -517,6 +522,69 @@ async function checkReportCardCacheMethodology(db: D1Database) {
   return { status: "ok" as const, severity: "info" as const, metadata };
 }
 
+async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
+  try {
+    const ratesCache = await getCache(db, "risk_free_rates");
+    if (!ratesCache) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "risk-free benchmark registry cache is missing",
+        metadata: { requiredFreshPublications: 2 },
+      };
+    }
+    const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
+    const gbp = registry?.GBP ?? null;
+    const streakCache = await getCache(db, GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY);
+    const streak = parseObjectMetadata(streakCache?.value ?? null);
+    const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
+      && Number.isFinite(streak.consecutiveFreshRuns)
+      ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
+      : 0;
+    const fetchedAgeSec = gbp?.fetchedAt != null ? Math.max(0, observedAt - gbp.fetchedAt) : null;
+    const recordDateMs = gbp?.recordDate ? Date.parse(`${gbp.recordDate}T00:00:00Z`) : Number.NaN;
+    const recordAgeSec = Number.isFinite(recordDateMs)
+      ? Math.max(0, observedAt - Math.floor(recordDateMs / 1000))
+      : null;
+    const metadata = {
+      source: gbp?.source ?? null,
+      recordDate: gbp?.recordDate ?? null,
+      fetchedAt: gbp?.fetchedAt ?? null,
+      fetchedAgeSec,
+      recordAgeSec,
+      maxFetchAgeSec: GBP_BENCHMARK_MAX_FETCH_AGE_SEC,
+      maxRecordAgeSec: GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
+      isFallback: gbp?.isFallback ?? null,
+      fallbackMode: gbp?.fallbackMode ?? null,
+      consecutiveFreshRuns,
+      requiredFreshPublications: 2,
+    };
+    const problems: string[] = [];
+    if (!gbp) problems.push("GBP benchmark is missing");
+    if (gbp?.isFallback) problems.push(`GBP benchmark is fallback (${gbp.fallbackMode ?? "unknown"})`);
+    if (fetchedAgeSec == null || fetchedAgeSec > GBP_BENCHMARK_MAX_FETCH_AGE_SEC) {
+      problems.push("GBP benchmark fetch is stale");
+    }
+    if (recordAgeSec == null || recordAgeSec > GBP_BENCHMARK_MAX_RECORD_AGE_SEC) {
+      problems.push("GBP benchmark observation is stale");
+    }
+    if (consecutiveFreshRuns < 2) {
+      problems.push(`GBP benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
+    }
+    if (problems.length > 0) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: problems.join("; "),
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
 const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "dex-liquidity-current-publication",
@@ -553,6 +621,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Report-card cache methodology",
     description: "The report-card score cache is fresh and matches the expected generation/methodology contract.",
     run: checkReportCardCacheMethodology,
+  },
+  {
+    checkId: "yield-gbp-benchmark-current",
+    label: "Yield GBP benchmark current",
+    description: "GBP SONIA is direct, current, and has published successfully in two consecutive daily generations.",
+    run: checkGbpBenchmarkCurrent,
   },
 ] as const;
 
@@ -650,14 +724,15 @@ async function persistCanaryRun(
     db
       .prepare(
         `INSERT INTO worker_canary_runs (
-           id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(idempotency_key) DO UPDATE SET
            status = excluded.status,
            severity = excluded.severity,
            duration_ms = excluded.duration_ms,
            metadata_json = excluded.metadata_json,
-           error = excluded.error`,
+           error = excluded.error,
+           mode = excluded.mode`,
       )
       .bind(
         canaryRunId(result),
@@ -669,6 +744,7 @@ async function persistCanaryRun(
         result.durationMs,
         metadataJson,
         result.error ?? null,
+        options.mode ?? "shadow",
       )
       .run(),
   );
@@ -734,10 +810,12 @@ export async function loadCanaryStatus(db: D1Database, now = nowSec()): Promise<
            INNER JOIN (
              SELECT check_id, MAX(observed_at) AS observed_at
                FROM worker_canary_runs
+              WHERE mode IN ('status', 'alert')
               GROUP BY check_id
            ) latest
              ON latest.check_id = r.check_id
             AND latest.observed_at = r.observed_at
+          WHERE r.mode IN ('status', 'alert')
           ORDER BY r.check_id ASC`,
       )
       .all<WorkerCanaryRunRow>(),

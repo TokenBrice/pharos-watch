@@ -901,7 +901,7 @@ describe("syncYieldData", () => {
     onChainConfigs.length = 0;
   });
 
-  it("reuses pre-migration deterministic history after switching to onchain source keys", async () => {
+  it("reuses legacy rate history without aliasing its source identity", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
       fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS;
@@ -1000,7 +1000,7 @@ describe("syncYieldData", () => {
     expect(onChainRow?.exchange_rate_prev).toBe(1.0);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
-    expect(metadata.sourceSwitches).toBe(0);
+    expect(metadata.sourceSwitches).toBe(1);
   });
 
   it("reuses legacy B.Protocol history after normalizing the LUSD deterministic source key", async () => {

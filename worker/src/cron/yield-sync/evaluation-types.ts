@@ -1,5 +1,5 @@
 import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode, YieldPysNullReason, YieldSafetyProvenance } from "@shared/types/yield";
+import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode, YieldPysNullReason, YieldSafetyProvenance, YieldSafetyReason } from "@shared/types/yield";
 import type { PysSourceRiskPenaltyReason } from "@shared/lib/yield-scoring";
 import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
@@ -38,6 +38,7 @@ export interface EvaluatedYieldSource {
   safetyScore: number;
   safetyGrade: string;
   safetyProvenance: YieldSafetyProvenance;
+  safetyReason: YieldSafetyReason | null;
   yieldToRisk: number | null;
   excessYield: number;
   benchmarkKey: YieldBenchmarkKey;

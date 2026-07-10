@@ -5,6 +5,7 @@ import {
 } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRate,
   parseIsoDateMs,
   parseRate,
@@ -84,6 +85,7 @@ function parseFredSoniaCompoundedIndexCsv(csv: string): { recordDate: string; ra
 
 export async function tryFredSoniaCompoundedIndex(
   signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: FRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
@@ -91,11 +93,13 @@ export async function tryFredSoniaCompoundedIndex(
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "FRED SONIA Compounded Index CSV",
     signal,
+    onDiagnostic,
   });
 }
 
 export async function tryAlfredSoniaCompoundedIndex(
   signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
@@ -103,5 +107,6 @@ export async function tryAlfredSoniaCompoundedIndex(
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "ALFRED SONIA Compounded Index CSV",
     signal,
+    onDiagnostic,
   });
 }

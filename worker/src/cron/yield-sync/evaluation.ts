@@ -7,12 +7,12 @@ import {
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
+import type { YieldSafetyProvenance, YieldSafetyReason, YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import {
-  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  getComparisonAnchorStaleThresholdMs,
   computeApyVarianceScore,
   computePYS,
   computeYieldStability,
@@ -281,6 +281,11 @@ function evaluateYieldSourceGroup(
     let safetyScore = underlyingSafetyScore;
     let safetyGrade = underlyingSafetyGrade;
     let safetyProvenance: YieldSafetyProvenance = usedDefaultSafety ? "default-safety" : "cached-publish";
+    let safetyReason: YieldSafetyReason | null = usedDefaultSafety
+      ? "report-card-score-missing"
+      : underlyingSafetyGrade === "NR"
+        ? "report-card-grade-not-rated"
+        : null;
     let sourceRisk = y.sourceRisk ?? null;
     if (isRoycoDawnTrancheSourceRisk(sourceRisk)) {
       const trancheSafety = computeRoycoDawnTrancheSafetyScore({
@@ -291,6 +296,7 @@ function evaluateYieldSourceGroup(
         safetyScore = trancheSafety.score;
         safetyGrade = scoreToGrade(trancheSafety.score);
         safetyProvenance = "opportunity-safety";
+        safetyReason = usedDefaultSafety ? "underlying-report-card-score-missing" : null;
         sourceRisk = {
           ...sourceRisk,
           underlyingSafetyScore,
@@ -387,9 +393,10 @@ function evaluateYieldSourceGroup(
     if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
     if (historyRows.length > 0 && apy30d > 0 && y.currentApy / apy30d > 2) anomalies.push("source-yield-spike");
     if (historyRows.length > 0 && apy30d > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
+    const comparisonAnchorStaleThresholdMs = getComparisonAnchorStaleThresholdMs(y.dataSource, sourceKey);
     if (
       comparisonAnchorAgeSeconds != null &&
-      comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS
+      comparisonAnchorAgeSeconds * 1000 > comparisonAnchorStaleThresholdMs
     ) {
       anomalies.push("anchor-stale");
     }
@@ -426,6 +433,7 @@ function evaluateYieldSourceGroup(
       safetyScore,
       safetyGrade,
       safetyProvenance,
+      safetyReason,
       yieldToRisk,
       excessYield,
       benchmarkKey: benchmarkSelection.key,

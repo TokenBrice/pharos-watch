@@ -241,6 +241,28 @@ describe("evaluateYieldSources", () => {
     }
   });
 
+  it("explains default and explicitly not-rated safety inputs", () => {
+    const missing = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      safetyScores: new Map(),
+    })).evaluatedSources[0];
+    expect(missing).toMatchObject({
+      safetyGrade: "NR",
+      usedDefaultSafety: true,
+      safetyReason: "report-card-score-missing",
+    });
+
+    const notRated = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      safetyScores: new Map([["coin-a", { score: 40, grade: "NR" }]]),
+    })).evaluatedSources[0];
+    expect(notRated).toMatchObject({
+      safetyGrade: "NR",
+      usedDefaultSafety: false,
+      safetyReason: "report-card-grade-not-rated",
+    });
+  });
+
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [

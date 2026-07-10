@@ -48,6 +48,12 @@ export const YIELD_PYS_NULL_REASONS = [
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety" | "opportunity-safety";
+export const YIELD_SAFETY_REASON_VALUES = [
+  "report-card-score-missing",
+  "report-card-grade-not-rated",
+  "underlying-report-card-score-missing",
+] as const;
+export type YieldSafetyReason = (typeof YIELD_SAFETY_REASON_VALUES)[number];
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
 export type YieldTrancheSide = "senior" | "junior";
 export type YieldMarketStatus = "normal" | "protected" | "unhealthy" | "critical";
@@ -362,6 +368,7 @@ const YieldRankingProvenanceSchema = z.object({
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
   safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety", "opportunity-safety"]).optional(),
+  safetyReason: z.enum(YIELD_SAFETY_REASON_VALUES).nullable().optional(),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
@@ -417,6 +424,7 @@ const YieldRankingSchema = z.object({
   pysNullReason: z.enum(YIELD_PYS_NULL_REASONS).nullable().optional(),
   safetyScore: z.number().nullable(),
   safetyGrade: ReportCardGradeSchema.nullable(),
+  safetyReason: z.enum(YIELD_SAFETY_REASON_VALUES).nullable().optional(),
   yieldToRisk: z.number().nullable(),
   excessYield: z.number().nullable(),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),

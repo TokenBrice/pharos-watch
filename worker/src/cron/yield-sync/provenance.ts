@@ -52,6 +52,7 @@ export function buildYieldSourceProvenance(params: {
         : null,
     usedLegacyHistory: source.usedLegacyHistory,
     usedDefaultSafety: source.usedDefaultSafety,
+    safetyReason: source.safetyReason,
     benchmarkKey: source.benchmarkKey,
     benchmarkLabel: source.benchmarkLabel,
     benchmarkCurrency: source.benchmarkCurrency,

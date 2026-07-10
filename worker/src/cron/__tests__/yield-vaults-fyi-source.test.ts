@@ -237,6 +237,8 @@ describe("fetchVaultsFyiSources", () => {
 
     expect(result.candidates).toEqual([]);
     expect(result.telemetry).toMatchObject({
+      consumptionMode: "probe-only",
+      consumptionReason: "rankable-allowlist-empty",
       status: "ok",
       skipReason: null,
       requestCount: 1,

@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.298`
+- **Current methodology version:** `v8.299`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.299 corrects source-identity and freshness semantics exposed by the July Night Watch. Source-aware history now aliases only null/`legacy-best` rows and the explicit LUSD `bprotocol-lqty-only` legacy key; linked-variant, protocol-specific, and other modern on-chain keys remain distinct. The historical linked-variant false-switch pattern is reclassified only after two consecutive clean published generations. Rate-derived observations now receive a 48-hour freshness window, price-derived observations remain at 36 hours, price-derived and Midas/Ondo NAV anchors remain valid through their configured 45-day lookup window, and ordinary exchange-rate anchors retain the 14-day limit. Rankings now publish explicit default/NR safety reasons, vaults.fyi reports disabled/probe-only/rankable consumption, and GBP SONIA attempts expose bounded response diagnostics plus a canary requiring two consecutive direct current publications. PYS math, source-risk and venue-risk calibration, benchmark derivation/provider order, and confidence-weighted arbitration are unchanged.
 
 Yield v8.298 recalibrates reviewed venue sub-scores against Yearn's newly-published per-protocol risk reports (documentation cross-check, not a runtime feed). Five direct-match RWA/credit venues that scored harsher than Yearn are lowered — `3jane-lending` (also upgraded partial→verified), `cap`, `maple`, `centrifuge`, and `fluid-lending` — so their continuous venue penalties fall and `fluid-lending`'s derived tier moves medium→low (leaving the DEWS medium-venue branch; DEWS thresholds unchanged). The shared Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 for the shared MCD_VAT backing, and `yearn`/`yearn-finance` operational moves 2→1; all three stay below the 2.0 penalty knee so the blue-chip no-op is preserved. Two proxy-only reports (`aave-v3` vs sGHO, `morpho` vs a Gauntlet Aera vault) are held unchanged. It also adds two low-severity (zero-penalty) dependency-concentration entries `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain Pool-Delegate EOA without double-counting the `maple` venue tier. The PYS formula, tier thresholds, and penalty curve are unchanged.
 
@@ -596,13 +598,13 @@ https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2
 | `reward-heavy`     | `apyReward / apy > 0.8`                                                                                                                                                                                                                                                                                            | 80%+ from incentives, not base yield                                                |
 | `tvl-outflow`      | TVL dropped > 20% from prev week                                                                                                                                                                                                                                                                                   | Capital leaving the protocol                                                        |
 | `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                                                                                                                                                                                                                                                                               | Yield dropped to zero but had recent activity                                       |
-| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours; `price-derived` rows are older than 36 hours from their latest `supply_history` snapshot; derived-source comparison anchors are older than 14 days | Yield data or its APY comparison anchor is older than the expected freshness window |
+| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours; `price-derived` rows are older than 36 hours; `rate-derived` rows are older than 48 hours; ordinary comparison anchors are older than 14 days; price-derived and Midas/Ondo NAV anchors are older than 45 days | Yield data or its APY comparison anchor is older than the source's expected cadence/window |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
-At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation exceeds its freshness window or a derived-source comparison anchor is older than 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`). Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use a 6 hour threshold (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`) so the hourly publisher does not flag them stale during a normal 4 hour supplemental cycle, and `price-derived` rows use a 36 hour threshold because their source observations come from daily `supply_history` snapshots (`PRICE_DERIVED_STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
+At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation or its comparison anchor exceeds the source-aware window. Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use 6 hours (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`), price-derived source observations use 36 hours (`PRICE_DERIVED_STALE_THRESHOLD_MS`), and rate-derived rows use 48 hours (`RATE_DERIVED_STALE_THRESHOLD_MS`) because the benchmark producer is daily. Ordinary exchange-rate comparison anchors use 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`); price-derived plus the Midas mMEV and Ondo USDY NAV-oracle rows use 45 days (`LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS`) because those adapters deliberately choose anchors from a 7-45 day window. The signal is included in cached rankings responses but is not written back to `yield_data`.
 
-The sync also records comparison-anchor freshness under `sourceCoverage.comparisonAnchorFreshness`. The summary includes the anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples, and a truncation flag. Publication metadata additionally records `sourceCoverage.previousPublishedRankingCount` and `sourceCoverage.publishedRankingCountDelta`; severe coverage-regression guards emit the same ranking-count fields at top level before normal source coverage is assembled. `/api/status` exposes both shapes as `yieldHealth.previousRankingCount` and `yieldHealth.rankingCountDelta` so operators can see coverage growth or shrinkage without manually comparing payloads. These summaries are observability-only: stale-anchor warnings still follow the read-time `data-stale` rules above, and the freshness/ranking-delta metadata does not change source arbitration or scoring.
+The sync also records comparison-anchor freshness under `sourceCoverage.comparisonAnchorFreshness`. The summary includes the anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples with each source's `maxAgeSeconds`, and a truncation flag. Publication metadata additionally records `sourceCoverage.previousPublishedRankingCount` and `sourceCoverage.publishedRankingCountDelta`; severe coverage-regression guards emit the same ranking-count fields at top level before normal source coverage is assembled. `/api/status` exposes both shapes as `yieldHealth.previousRankingCount` and `yieldHealth.rankingCountDelta` so operators can see coverage growth or shrinkage without manually comparing payloads. These summaries are observability-only: stale-anchor warnings still follow the read-time `data-stale` rules above, and the freshness/ranking-delta metadata does not change source arbitration or scoring.
 
 The sync also performs a confidence-aware cross-source arbitration pass before `is_best` is chosen:
 
@@ -658,7 +660,7 @@ CREATE TABLE yield_data (
 
 **Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
 
-**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Eligible tracked wrapper variants also project linked native/wrapper sources to the active parent with `linked-variant:<variantId>:<sourceKey>` source keys, while third-party lending opportunities stay attached only to the asset that owns the lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately, sorted by the same worker candidate ordering used for arbitration, and attached as `altSources[]` in the cached API response with `sourceRole`, `confidenceTier`, `selectionRank`, and `rejectionReasonCode` metadata. Ranking rows with retained alternates also include `alternateSummary` for the best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus the selected row. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Eligible tracked wrapper variants also project linked native/wrapper sources to the active parent with `linked-variant:<variantId>:<sourceKey>` source keys, while third-party lending opportunities stay attached only to the asset that owns the lending row. These modern linked and protocol-specific keys remain distinct during history normalization; only null/`legacy-best` rows and the explicit LUSD `bprotocol-lqty-only` legacy alias normalize to a deterministic parent identity. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately, sorted by the same worker candidate ordering used for arbitration, and attached as `altSources[]` in the cached API response with `sourceRole`, `confidenceTier`, `selectionRank`, and `rejectionReasonCode` metadata. Ranking rows with retained alternates also include `alternateSummary` for the best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus the selected row. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
 
 Generation-aware publisher fields added by migration `0125_yield_publication_generations.sql` are nullable so old rows and rollback payloads remain readable:
 
@@ -710,7 +712,7 @@ Migration `0125_yield_publication_generations.sql` adds a compact generation led
 - `yield_publication_generations` records `generation_id`, `started_at`, publication `state`, ranking/source row counts, `published_at` or `failed_at`, and failure/debug metadata.
 - `yield_source_decisions` records the selected source per stablecoin for a generation, selected confidence/data-source details, selected 30d APY and score, previous best source, source-changed flag, rejected-candidate count, and a bounded alternatives JSON payload.
 
-The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema.
+The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema. The v8.299 cleanup recognizes the exact historical false-switch pattern where a selected `linked-variant:*` key was compared with `onchain:<stablecoinId>`. It reclassifies those old rows as audit evidence only after the same stablecoin publishes the linked identity with `source_switch = 0` in two consecutive published generations; the normal 30-day audit retention can then remove them.
 
 ---
 
@@ -773,7 +775,7 @@ This best-effort cron owns the heavier optional families that used to run inline
 
 It fetches those families, serializes the resolved candidate set into a cache snapshot, and lets the hourly publisher consume that snapshot. Empty snapshots are treated as degraded and do not overwrite the previous cache.
 
-vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. `sourceFamilyCounts.vaultsFyi` tracks emitted candidates, while `sourceFamilyInventoryCounts.vaultsFyi` and the vaults.fyi provider telemetry track audit inventory volume. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
+vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. Provider telemetry makes this consumability explicit through `consumptionMode` (`disabled`, `probe-only`, or `rankable`) and `consumptionReason`; enabled plus an empty allowlist is always `probe-only` / `rankable-allowlist-empty`. `sourceFamilyCounts.vaultsFyi` tracks emitted candidates, while `sourceFamilyInventoryCounts.vaultsFyi` and the vaults.fyi provider telemetry track audit inventory volume. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
@@ -803,13 +805,15 @@ Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate n
 
 When a fetch fails but a prior benchmark exists, the cache preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded or proxy default.
 
+GBP attempts additionally write bounded cron metadata for every FRED, ALFRED, and BoE response attempted: provider, HTTP status, content type, body byte count, parse success, parsed record date, and a stable failure class. Response bodies and URLs are never included. The `yield-gbp-benchmark-current` Worker canary remains degraded until GBP is non-fallback, fetched within 48 hours, has a record date within 7 days, and has completed two consecutive fresh daily publications.
+
 ---
 
 ## API Endpoints
 
 ### `GET /api/yield-rankings`
 
-Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report-card snapshot, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
 
@@ -835,6 +839,7 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       "pharosYieldScore": 28,
       "safetyScore": 65,
       "safetyGrade": "B",
+      "safetyReason": null,
       "yieldToRisk": 0.33,
       "excessYield": 5.95,
       "benchmarkKey": "USD",
@@ -872,7 +877,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       "provenance": {
         "confidenceTier": "curated",
         "selectionReason": "curated canonical source selected by confidence-weighted arbitration",
-        "sourceSwitch": false
+        "sourceSwitch": false,
+        "safetyReason": null
       },
       "publicationGenerationId": "yield-1772000000",
       "publishedRank": 3,
@@ -955,8 +961,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.298",
-    "currentVersion": "8.298",
+    "version": "8.299",
+    "currentVersion": "8.299",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

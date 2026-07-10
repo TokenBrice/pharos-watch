@@ -14,11 +14,13 @@ import {
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
+  cleanupFalseLinkedVariantSourceSwitches,
   pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
@@ -126,6 +128,7 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     usedLegacyHistory: false,
     usedDefaultSafety: false,
     safetyProvenance: "live-report-card",
+    safetyReason: null,
     previousBestSourceKey: null,
     ...overrides,
   };
@@ -292,6 +295,31 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     const payload = buildPayloadWithObservedAt(nowSec, {
       dataSource: "onchain",
       sourceKey: "onchain:test-coin",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
+    });
+
+    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("keeps intentional price-derived anchors fresh through the 45-day source window", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - 30 * 24 * 60 * 60,
+    });
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+
+  it("marks price-derived anchors stale after their 45-day source window", () => {
+    const thresholdSec = LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
       sourceObservedAt: nowSec,
       comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
     });
@@ -1093,6 +1121,53 @@ describe("publishYieldCoordinatorResults", () => {
 });
 
 describe("pruneYieldTables", () => {
+  it("reclassifies false linked switches only after two clean published generations", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_publication_generations (
+          generation_id TEXT PRIMARY KEY,
+          state TEXT NOT NULL
+        );
+        CREATE TABLE yield_source_decisions (
+          generation_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          selected_source_key TEXT NOT NULL,
+          previous_best_source_key TEXT,
+          source_switch INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          retention_reason TEXT
+        );
+      `);
+      const generation = sqlite.prepare(
+        "INSERT INTO yield_publication_generations (generation_id, state) VALUES (?, 'published')",
+      );
+      const decision = sqlite.prepare(`
+        INSERT INTO yield_source_decisions (
+          generation_id, stablecoin_id, selected_source_key, previous_best_source_key,
+          source_switch, created_at, retention_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const linkedKey = "linked-variant:child:onchain:child";
+      generation.run("old-false");
+      generation.run("clean-1");
+      decision.run("old-false", "verified-parent", linkedKey, "onchain:verified-parent", 1, 100, "trend");
+      decision.run("clean-1", "verified-parent", linkedKey, linkedKey, 0, 200, "audit");
+
+      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(0);
+
+      generation.run("clean-2");
+      decision.run("clean-2", "verified-parent", linkedKey, linkedKey, 0, 300, "audit");
+      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(1);
+      expect(sqlite.prepare(
+        "SELECT source_switch, retention_reason FROM yield_source_decisions WHERE generation_id = 'old-false'",
+      ).get()).toEqual({ source_switch: 0, retention_reason: "audit" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("chunks stale yield_data cleanup below the D1 bind-variable ceiling while preserving frozen rows", async () => {
     const db = mockD1();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);

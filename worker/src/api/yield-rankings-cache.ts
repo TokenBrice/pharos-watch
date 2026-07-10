@@ -6,6 +6,7 @@ import {
   type YieldRankChangeDriver,
   type YieldRanking,
   type YieldRankingsResponse,
+  type YieldSafetyReason,
 } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
@@ -208,6 +209,7 @@ function resolveHydratedSafety(params: {
   sourceRisk: YieldRanking["sourceRisk"];
   provenance: NonNullable<YieldRanking["provenance"]>["safetyProvenance"];
   usedDefaultSafety: boolean;
+  reason: YieldSafetyReason | null;
 } {
   const underlyingSafetyScore = params.card?.overallScore ?? DEFAULT_SAFETY_SCORE;
   const usedDefaultSafety = params.card?.overallScore == null;
@@ -226,6 +228,7 @@ function resolveHydratedSafety(params: {
         sourceRisk: hydratedSourceRisk,
         provenance: "opportunity-safety",
         usedDefaultSafety,
+        reason: usedDefaultSafety ? "underlying-report-card-score-missing" : null,
       };
     }
   }
@@ -236,6 +239,11 @@ function resolveHydratedSafety(params: {
     sourceRisk: hydratedSourceRisk,
     provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
     usedDefaultSafety,
+    reason: usedDefaultSafety
+      ? "report-card-score-missing"
+      : params.card?.overallGrade === "NR"
+        ? "report-card-grade-not-rated"
+        : null,
   };
 }
 
@@ -283,6 +291,7 @@ function hydrateYieldRankingsWithLiveSafety(
           ...row,
           safetyScore: safetyInputScore,
           safetyGrade: hydratedSafety.grade,
+          safetyReason: hydratedSafety.reason,
           pharosYieldScore,
           pysNullReason,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
@@ -293,6 +302,7 @@ function hydrateYieldRankingsWithLiveSafety(
                 ...row.provenance,
                 usedDefaultSafety: hydratedSafety.usedDefaultSafety,
                 safetyProvenance: hydratedSafety.provenance,
+                safetyReason: hydratedSafety.reason,
               }
             : null,
         },

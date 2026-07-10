@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.299",
+    title: "Source Identity and Freshness Correctness",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence preserves modern source identities, aligns freshness warnings with each source's real production and anchor cadence, makes safety fallbacks explainable, and adds verifiable GBP benchmark response diagnostics. PYS math, venue-risk calibration, benchmark derivation, and source arbitration order are unchanged.",
+    impact: [
+      "Source-aware history aliases only pre-source-key rows (`null` / `legacy-best`) and the explicit LUSD `bprotocol-lqty-only` legacy identity; linked-variant, protocol-specific, and other modern on-chain keys remain distinct so they cannot generate false parent-source switches",
+      "Historical linked-variant false-switch decisions are reclassified from trend to audit only after two consecutive published generations preserve the linked identity with no switch; ordinary 30-day audit retention can then remove the corrected noise",
+      "Read-time freshness now gives daily rate-derived observations 48 hours, keeps price-derived source observations at 36 hours, expires price-derived and Midas/Ondo NAV comparison anchors after their configured 45-day window, and retains the 14-day anchor threshold for ordinary exchange-rate sources",
+      "Ranking rows and provenance expose a stable nullable `safetyReason`: `report-card-score-missing`, `report-card-grade-not-rated`, or `underlying-report-card-score-missing`, so every default/NR safety input is attributable",
+      "vaults.fyi telemetry classifies disabled, probe-only, and rankable consumption explicitly; an enabled source with an empty rankable allowlist is a bounded audit probe and cannot be mistaken for a consumable ranking source",
+      "GBP SONIA attempts record bounded status/content-type/body-size/parse diagnostics for FRED, ALFRED, and BoE without response bodies or URLs; a Worker canary remains degraded until a direct, current GBP benchmark has published in two consecutive daily generations",
+      "PYS formula shape, source-risk and venue-risk penalties, benchmark source order and rate derivation, APY sanity limits, and confidence-weighted source arbitration are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.298",
     title: "Yearn-Report Venue-Risk Recalibration",
     date: "2026-07-01",

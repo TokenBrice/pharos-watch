@@ -1414,6 +1414,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `scoreComponents`              | `ScoreComponents \| null`                                                   | Breakdown of the composite liquidity score                                                                                                                              |
 | `lockedLiquidityPct`           | `number \| null`                                                            | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                                   |
 | `methodologyVersion`           | `string`                                                                    | Methodology version attributed to this row                                                                                                                              |
+| `deploymentCoverage`           | `object \| null`                                                            | Exact deployment outcome summary and rows. Each contract is `observed_pools`, `verified_no_pools`, or `provider_inaccessible`; active owned waivers include owner, reason, and expiry. `null` means the additive outcome ledger has not published a row for the coin yet. |
 
 **`ScoreComponents`**
 
@@ -2649,7 +2650,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. Row-level and provenance `safetyReason` fields make default/NR inputs explicit.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2689,8 +2690,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.298",
-    "currentVersion": "8.298",
+    "version": "8.299",
+    "currentVersion": "8.299",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2787,6 +2788,7 @@ Current `v8.291` scoring treats missing source-risk evidence as neutral: omitted
 | `pharosYieldScore`        | `number \| null`                                                                                      | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                                                                                        |
 | `safetyScore`             | `number \| null`                                                                                      | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; Royco structured-tranche rows expose the row-level tranche score; unrated coins use the default NR penalty input (`40`) |
 | `safetyGrade`             | `string \| null`                                                                                      | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`); Royco structured-tranche rows derive the grade from the opportunity-level tranche score                                                          |
+| `safetyReason`            | `"report-card-score-missing" \| "report-card-grade-not-rated" \| "underlying-report-card-score-missing" \| null \| undefined` | Stable reason for a default or explicit-NR safety input; `null` for normally rated rows                                                                                                                               |
 | `yieldToRisk`             | `number \| null`                                                                                      | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                                                                                      |
 | `excessYield`             | `number \| null`                                                                                      | 30-day average APY above the row benchmark (percentage points)                                                                                                                                                        |
 | `benchmarkKey`            | `"USD" \| "EUR" \| "CHF" \| "GBP" \| "JPY" \| "MXN" \| "BRL" \| "AUD" \| "CAD" \| "SGD" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic (v8.13 expanded the set; `SGD` is reserved without a fetcher and routes to USD fallback)                                               |
@@ -2818,6 +2820,7 @@ When present, `YieldRanking.provenance` includes:
 
 - `sourceObservedAt` / `sourceAgeSeconds`: the timestamp and age of the latest observation actually backing the row
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds`: optional prior-anchor timing for APYs derived from two observations, such as price-derived and on-chain exchange-rate rows
+- `safetyReason`: the same stable missing/default/NR reason published on the ranking row, or `null` for a normally rated row
 - `benchmarkKey`, `benchmarkLabel`, `benchmarkRate`, `benchmarkIsFallback`, `benchmarkSelectionMode`, and related fields for the exact benchmark applied to that row
 
 ---
@@ -2832,7 +2835,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.298",
+  "methodologyVersion": "v8.299",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2846,7 +2849,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.298",
+      "methodologyVersion": "v8.299",
       "updatedAt": 1779210000
     }
   ]

@@ -353,9 +353,10 @@ describe("handleYieldRankings", () => {
         id: string;
         safetyGrade: string;
         safetyScore: number;
+        safetyReason?: string | null;
         yieldToRisk: number | null;
         pharosYieldScore: number | null;
-        provenance: { usedDefaultSafety: boolean; safetyProvenance?: string } | null;
+        provenance: { usedDefaultSafety: boolean; safetyProvenance?: string; safetyReason?: string | null } | null;
       }>;
       provenance: {
         safetySnapshot: {
@@ -379,6 +380,7 @@ describe("handleYieldRankings", () => {
 
     expect(orphan?.safetyGrade).toBe("NR");
     expect(orphan?.safetyScore).toBe(40);
+    expect(orphan?.safetyReason).toBe("report-card-score-missing");
     expect(orphan?.provenance?.usedDefaultSafety).toBeUndefined();
 
     expect(rated?.safetyGrade).toBe("B-");
@@ -387,11 +389,14 @@ describe("handleYieldRankings", () => {
     expect(rated?.pharosYieldScore).toBe(12);
     expect(rated?.provenance?.usedDefaultSafety).toBe(false);
     expect(rated?.provenance?.safetyProvenance).toBe("live-report-card");
+    expect(rated?.safetyReason).toBeNull();
 
     expect(unrated?.safetyGrade).toBe("NR");
     expect(unrated?.safetyScore).toBe(40);
     expect(unrated?.provenance?.usedDefaultSafety).toBe(true);
     expect(unrated?.provenance?.safetyProvenance).toBe("default-safety");
+    expect(unrated?.safetyReason).toBe("report-card-score-missing");
+    expect(unrated?.provenance?.safetyReason).toBe("report-card-score-missing");
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",

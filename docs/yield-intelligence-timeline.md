@@ -1,10 +1,22 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.298`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.299`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.299 - Source Identity and Freshness Correctness (July 10, 2026)
+
+- Preserves linked-variant, protocol-specific, and other modern on-chain source keys; only null/`legacy-best` history and the explicit LUSD `bprotocol-lqty-only` legacy identity normalize to the deterministic parent key
+- Reclassifies the historical linked-variant false-switch pattern only after two consecutive clean published generations, then lets the normal 30-day audit retention remove corrected noise
+- Gives rate-derived observations a 48-hour freshness window, price-derived observations 36 hours, price-derived plus Midas/Ondo NAV anchors 45 days, and ordinary exchange-rate anchors 14 days
+- Publishes explicit `safetyReason` values for missing report-card scores, explicit `NR` grades, and Royco rows whose underlying report-card score is missing
+- Marks vaults.fyi operation as `disabled`, `probe-only`, or `rankable`, so an enabled empty allowlist is visibly non-consumable
+- Records bounded FRED/ALFRED/BoE GBP response diagnostics and adds a canary requiring two consecutive direct, current GBP SONIA publications
+- PYS formula, venue/source-risk calibration, benchmark derivation and provider order, and confidence-weighted source arbitration are unchanged
+
+---
 
 ## v8.298 - Yearn-Report Venue-Risk Recalibration (July 1, 2026)
 

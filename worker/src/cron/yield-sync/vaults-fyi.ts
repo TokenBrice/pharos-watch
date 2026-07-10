@@ -47,6 +47,8 @@ function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiT
   return {
     enabled: false,
     hasKey: false,
+    consumptionMode: "disabled",
+    consumptionReason: "source-disabled",
     status: "skipped",
     skipReason: "disabled",
     requestCount: 0,
@@ -500,6 +502,16 @@ export async function fetchVaultsFyiSources({
   const telemetry = emptyTelemetry({
     enabled,
     hasKey: enabled && Boolean(config?.apiKey),
+    consumptionMode: enabled
+      ? config?.rankableVaults.length
+        ? "rankable"
+        : "probe-only"
+      : "disabled",
+    consumptionReason: enabled
+      ? config?.rankableVaults.length
+        ? "rankable-allowlist-configured"
+        : "rankable-allowlist-empty"
+      : "source-disabled",
     status: enabled ? "ok" : "skipped",
     skipReason: enabled ? null : disabledSkipReason,
     creditsCap: config ? getRunCreditsCap(config) : VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN,
