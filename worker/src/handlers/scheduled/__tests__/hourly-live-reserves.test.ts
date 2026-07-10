@@ -26,6 +26,7 @@ vi.mock("../../../lib/alert-broker", () => ({
   })),
 }));
 vi.mock("../../../lib/db-cache", () => ({
+  getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
 }));
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
@@ -74,6 +75,9 @@ import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
 import { reportAlertCondition } from "../../../lib/alert-broker";
+import { getCache, setCache } from "../../../lib/db-cache";
+import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
+import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
 import {
   loadReserveRecoveryFaultInjectionController,
   ReserveRecoveryFaultInjectionTermination,
@@ -430,6 +434,26 @@ describe("runFourHourlyReserveSyncSlot", () => {
       "not_started",
     );
     expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("publishes a timestamped recovering reserve source after a missing producer generation", async () => {
+    vi.mocked(checkCollateralDrift).mockResolvedValue({
+      driftCoins: [{ id: "usdc-circle" }],
+      fallbackCoins: [],
+    } as never);
+    vi.mocked(getCache).mockResolvedValue(null);
+
+    await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+
+    expect(getCache).toHaveBeenCalledWith(expect.anything(), SNAPSHOT_KEYS.reserve);
+    const reserveWrite = vi.mocked(setCache).mock.calls.find(([, key]) => key === SNAPSHOT_KEYS.reserve);
+    expect(reserveWrite).toBeDefined();
+    expect(JSON.parse(reserveWrite?.[2] as string)).toMatchObject({
+      generation: ALERT_RESERVE_SOURCE_GENERATION,
+      continuous: false,
+      driftIds: ["usdc-circle"],
+      publishedAt: expect.any(Number),
+    });
   });
 
   it("keeps a budget-truncated queue and child nonterminal until a suffix attempt exhausts it", async () => {

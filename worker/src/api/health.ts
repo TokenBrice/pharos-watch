@@ -49,10 +49,19 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         safetyAlertSourceAgeSeconds: dispatchMeta?.safetyAlertSourceAgeSeconds ?? null,
         safetyAlertsSuppressed: dispatchMeta?.safetyAlertsSuppressed ?? false,
         safetyAlertSourceGeneration: dispatchMeta?.safetyAlertSourceGeneration ?? null,
+        reserveAlertSourceState: dispatchMeta?.reserveAlertSourceState ?? null,
+        reserveAlertSourceAgeSeconds: dispatchMeta?.reserveAlertSourceAgeSeconds ?? null,
+        reserveAlertsSuppressed: dispatchMeta?.reserveAlertsSuppressed ?? false,
+        reserveAlertSourceGeneration: dispatchMeta?.reserveAlertSourceGeneration ?? null,
       };
       if (dispatchMeta?.safetyAlertsSuppressed) {
         assessment.warnings.push(
           `telegram-safety-alerts-suppressed:${dispatchMeta.safetyAlertSourceState ?? "missing"}`,
+        );
+      }
+      if (dispatchMeta?.reserveAlertsSuppressed) {
+        assessment.warnings.push(
+          `telegram-reserve-alerts-suppressed:${dispatchMeta.reserveAlertSourceState ?? "missing"}`,
         );
       }
     } catch (error) {

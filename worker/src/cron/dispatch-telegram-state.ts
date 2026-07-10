@@ -13,6 +13,11 @@ import {
 import { getCache } from "../lib/db-cache";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import {
+  ALERT_RESERVE_SOURCE_GENERATION,
+  assessAlertReserveSourceCache,
+  type AlertReserveSourceAssessment,
+} from "../lib/alert-reserve-source-cache";
+import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,
   buildDewsAlertableSnapshot,
@@ -50,11 +55,6 @@ function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
   }
 }
 
-/** Parse a LAUNCH-STYLE id-set snapshot (reserve-drift, C123). */
-function parseReserveSnapshotIds(cached: CachedValue): string[] | null {
-  return parseLaunchSnapshotIds(cached);
-}
-
 export interface ActiveDepegRowWithEventId extends ActiveDepegRow {
   event_id: number;
 }
@@ -83,6 +83,7 @@ export interface DispatchSnapshotState {
   previousDepegSnapshot: DepegSnapshot | null;
   previousSafetySnapshot: SafetySnapshot | null;
   safetySourceAssessment: AlertSafetySourceAssessment;
+  reserveSourceAssessment: AlertReserveSourceAssessment;
   currentSafetySnapshot: AlertSafetySourceSnapshot | null;
   safetySnapshotNeedsSeed: boolean;
   currentSnapshots: {
@@ -238,16 +239,22 @@ export function buildDispatchSnapshotState(
   // we still seed with the current pre-launch set (no transition to lose).
   const previousLaunchIds = parseLaunchSnapshotIds(sourceData.launchCache);
 
-  // Reserve-drift (C123): the producer (four-hourly reserve slot) owns the
-  // current drift id-set; the dispatcher diffs it against its own last-acted-on
-  // baseline. When the run is a seed (stale dews/depeg) we preserve the prior
-  // baseline so a drift opening during the seed window is not absorbed and
-  // fires on the next healthy run (mirrors the launch P1.7 pattern). When there
-  // is no parseable baseline we seed with the current producer set (no
-  // transition to lose).
-  const parsedCurrentReserveDriftIds = parseReserveSnapshotIds(sourceData.reserveCache);
-  const reserveSourceUnavailable = parsedCurrentReserveDriftIds == null;
-  const previousReserveDispatchedIds = parseReserveSnapshotIds(sourceData.reserveDispatchedCache);
+  // Reserve-drift (C123): the four-hourly producer owns a versioned source
+  // envelope. A missing, corrupt, stale, or wrong-generation source is never
+  // alertable. The first fresh publish after a gap is marked `recovering`; it
+  // cold-seeds the dispatch baseline so changes accumulated during the blind
+  // interval cannot be misreported as fresh transitions.
+  const reserveSourceAssessment = assessAlertReserveSourceCache(sourceData.reserveCache, {
+    expectedGeneration: ALERT_RESERVE_SOURCE_GENERATION,
+    nowSec,
+    producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+  });
+  const reserveSourceUnavailable = reserveSourceAssessment.state !== "ok";
+  const parsedCurrentReserveDriftIds =
+    reserveSourceAssessment.state === "ok" || reserveSourceAssessment.state === "recovering"
+      ? reserveSourceAssessment.envelope?.driftIds ?? null
+      : null;
+  const previousReserveDispatchedIds = parseLaunchSnapshotIds(sourceData.reserveDispatchedCache);
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
@@ -256,6 +263,15 @@ export function buildDispatchSnapshotState(
     isSnapshotMissingOrStale(sourceData.depegCache, nowSec) ||
     previousDewsSnapshot == null ||
     previousDepegSnapshot == null;
+  const reserveNeedsColdSeed =
+    reserveSourceAssessment.state === "recovering" && parsedCurrentReserveDriftIds != null;
+  const reserveDispatched = reserveNeedsColdSeed
+    ? parsedCurrentReserveDriftIds
+    : parsedCurrentReserveDriftIds == null
+      ? (previousReserveDispatchedIds ?? null)
+      : mustSeedSnapshots && previousReserveDispatchedIds != null
+        ? previousReserveDispatchedIds
+        : parsedCurrentReserveDriftIds;
 
   const currentSnapshots = {
     dews: buildDewsSnapshot(sourceData.dewsRows),
@@ -275,19 +291,14 @@ export function buildDispatchSnapshotState(
       mustSeedSnapshots && previousLaunchIds != null
         ? previousLaunchIds
         : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
-    reserveDispatched:
-      reserveSourceUnavailable
-        ? (previousReserveDispatchedIds ?? null)
-        : (
-            mustSeedSnapshots && previousReserveDispatchedIds != null
-              ? previousReserveDispatchedIds
-              : parsedCurrentReserveDriftIds
-          ),
+    reserveDispatched,
   };
-  const previousReserveDriftIds = reserveSourceUnavailable
-    ? (previousReserveDispatchedIds ?? [])
-    : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
-  const currentReserveDriftIds = reserveSourceUnavailable
+  const previousReserveDriftIds = reserveNeedsColdSeed
+    ? parsedCurrentReserveDriftIds
+    : parsedCurrentReserveDriftIds == null
+      ? (previousReserveDispatchedIds ?? [])
+      : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
+  const currentReserveDriftIds = parsedCurrentReserveDriftIds == null
     ? (previousReserveDispatchedIds ?? [])
     : parsedCurrentReserveDriftIds;
 
@@ -298,6 +309,7 @@ export function buildDispatchSnapshotState(
     previousDepegSnapshot,
     previousSafetySnapshot,
     safetySourceAssessment,
+    reserveSourceAssessment,
     currentSafetySnapshot,
     safetySnapshotNeedsSeed,
     currentSnapshots,

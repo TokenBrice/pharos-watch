@@ -11,7 +11,7 @@ import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { checkCollateralDrift } from "../../lib/collateral-drift";
-import { setCache } from "../../lib/db-cache";
+import { getCache, setCache } from "../../lib/db-cache";
 import { SNAPSHOT_KEYS } from "../../cron/telegram-alert-snapshots";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -37,6 +37,8 @@ import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../../cr
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { reportAlertCondition } from "../../lib/alert-broker";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { buildAlertReserveSourceEnvelope } from "../../lib/alert-reserve-source-cache";
 import {
   isReserveRecoveryFaultInjectionTermination,
   loadReserveRecoveryFaultInjectionController,
@@ -142,8 +144,17 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
     // drift, keeping reserve-adapter network I/O out of the dispatch trigger's
     // 6-connection pool. fallbackCoins (failed live fetch) are intentionally
     // omitted so a transient fetch failure never reads as a drift change.
-    const driftIds = drift.driftCoins.map((d) => d.id).sort();
-    await setCache(runtime.db, SNAPSHOT_KEYS.reserve, JSON.stringify(driftIds), signal);
+    const reservePublishedAt = Math.floor(Date.now() / 1000);
+    const previousReserveSource = await getCache(runtime.db, SNAPSHOT_KEYS.reserve);
+    const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
+      drift.driftCoins.map((d) => d.id),
+      previousReserveSource,
+      {
+        nowSec: reservePublishedAt,
+        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+      },
+    );
+    await setCache(runtime.db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
 
     maxSyncAgeSec = await getMaxSyncAge(
       runtime.db,

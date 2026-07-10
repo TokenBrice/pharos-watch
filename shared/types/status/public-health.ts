@@ -2,7 +2,12 @@ import { z } from "zod";
 import type { CacheStatus, StablecoinPublicationHealth, StatusHealthValue } from "./core";
 import { StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
-import { SAFETY_ALERT_SOURCE_STATE_VALUES, type SafetyAlertFieldsNullable } from "./telegram";
+import {
+  RESERVE_ALERT_SOURCE_STATE_VALUES,
+  SAFETY_ALERT_SOURCE_STATE_VALUES,
+  type ReserveAlertFieldsNullable,
+  type SafetyAlertFieldsNullable,
+} from "./telegram";
 import type { AlertBrokerHealthSummary } from "./operational";
 import { D1CapacityAssessmentSchema, type D1CapacityAssessment } from "./d1-capacity";
 
@@ -11,6 +16,13 @@ const SafetyAlertFieldsNullableSchemaShape = {
   safetyAlertSourceAgeSeconds: z.number().nullable(),
   safetyAlertsSuppressed: z.boolean(),
   safetyAlertSourceGeneration: z.string().nullable(),
+} as const;
+
+const ReserveAlertFieldsNullableSchemaShape = {
+  reserveAlertSourceState: z.enum(RESERVE_ALERT_SOURCE_STATE_VALUES).nullable().optional(),
+  reserveAlertSourceAgeSeconds: z.number().nullable().optional(),
+  reserveAlertsSuppressed: z.boolean().optional(),
+  reserveAlertSourceGeneration: z.string().nullable().optional(),
 } as const;
 
 export interface PublicStatusTransition {
@@ -62,7 +74,7 @@ const CircuitRecordSchema = z.object({
 });
 export type CircuitRecord = z.infer<typeof CircuitRecordSchema>;
 
-export interface TelegramHealthSummary extends SafetyAlertFieldsNullable {
+export interface TelegramHealthSummary extends SafetyAlertFieldsNullable, Partial<ReserveAlertFieldsNullable> {
   totalChats: number;
   pendingDeliveries: number;
   lastDispatchAt: number | null;
@@ -114,6 +126,7 @@ const TelegramHealthSummarySchema = z.object({
   lastDispatchAt: z.number().nullable(),
   lastDispatchStatus: z.string().nullable(),
   ...SafetyAlertFieldsNullableSchemaShape,
+  ...ReserveAlertFieldsNullableSchemaShape,
 });
 
 const MintBurnHealthQueryErrorsSchema: z.ZodType<MintBurnHealthQueryErrors> = z.object({

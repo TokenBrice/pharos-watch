@@ -433,6 +433,10 @@ describe("handleHealth", () => {
             safetyAlertSourceAgeSeconds: 120,
             safetyAlertsSuppressed: false,
             safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
+            reserveAlertSourceState: "ok",
+            reserveAlertSourceAgeSeconds: 240,
+            reserveAlertsSuppressed: false,
+            reserveAlertSourceGeneration: "reserve-alert-source-v1",
           }),
         },
       },
@@ -448,6 +452,10 @@ describe("handleHealth", () => {
         safetyAlertSourceAgeSeconds: number | null;
         safetyAlertsSuppressed: boolean;
         safetyAlertSourceGeneration: string | null;
+        reserveAlertSourceState: string | null;
+        reserveAlertSourceAgeSeconds: number | null;
+        reserveAlertsSuppressed: boolean;
+        reserveAlertSourceGeneration: string | null;
       } | null;
     };
     expect(body.telegramSummary).toEqual({
@@ -459,6 +467,10 @@ describe("handleHealth", () => {
       safetyAlertSourceAgeSeconds: 120,
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
+      reserveAlertSourceState: "ok",
+      reserveAlertSourceAgeSeconds: 240,
+      reserveAlertsSuppressed: false,
+      reserveAlertSourceGeneration: "reserve-alert-source-v1",
     });
   });
 
@@ -491,6 +503,10 @@ describe("handleHealth", () => {
         safetyAlertSourceAgeSeconds: number | null;
         safetyAlertsSuppressed: boolean;
         safetyAlertSourceGeneration: string | null;
+        reserveAlertSourceState: string | null;
+        reserveAlertSourceAgeSeconds: number | null;
+        reserveAlertsSuppressed: boolean;
+        reserveAlertSourceGeneration: string | null;
       } | null;
     };
 
@@ -503,6 +519,10 @@ describe("handleHealth", () => {
       safetyAlertSourceAgeSeconds: null,
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: null,
+      reserveAlertSourceState: null,
+      reserveAlertSourceAgeSeconds: null,
+      reserveAlertsSuppressed: false,
+      reserveAlertSourceGeneration: null,
     });
     expect(warnSpy).toHaveBeenCalled();
   });
@@ -528,6 +548,10 @@ describe("handleHealth", () => {
             safetyAlertSourceAgeSeconds: 120,
             safetyAlertsSuppressed: true,
             safetyAlertSourceGeneration: "legacy-generation",
+            reserveAlertSourceState: "recovering",
+            reserveAlertSourceAgeSeconds: 120,
+            reserveAlertsSuppressed: true,
+            reserveAlertSourceGeneration: "reserve-alert-source-v1",
           }),
         },
       },
@@ -536,6 +560,7 @@ describe("handleHealth", () => {
     const res = await handleHealth(db);
     const body = (await res.json()) as { warnings: string[] };
     expect(body.warnings).toContain("telegram-safety-alerts-suppressed:wrong-generation");
+    expect(body.warnings).toContain("telegram-reserve-alerts-suppressed:recovering");
   });
 
   it("returns null telegramSummary when telegram tables do not exist", async () => {

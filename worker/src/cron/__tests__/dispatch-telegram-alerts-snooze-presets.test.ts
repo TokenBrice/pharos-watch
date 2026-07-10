@@ -15,6 +15,7 @@ import {
   cleanupDispatchTelegramAlertsTest,
   fixtureMockD1,
 } from "./dispatch-telegram-alerts.test-support";
+import { ALERT_RESERVE_SOURCE_GENERATION } from "../../lib/alert-reserve-source-cache";
 
 describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
@@ -1101,7 +1102,12 @@ describe("dispatchTelegramAlerts", () => {
     expect(cycle1Meta.eventsDetected.reserve).toBe(0);
     expect(JSON.parse(cachedReserveDispatched)).toEqual(["usdc-circle"]);
 
-    producerReserveSnapshot = JSON.stringify(["usdc-circle"]);
+    producerReserveSnapshot = JSON.stringify({
+      generation: ALERT_RESERVE_SOURCE_GENERATION,
+      publishedAt: now,
+      continuous: false,
+      driftIds: ["usdc-circle"],
+    });
     const dbCycle2 = fixtureMockD1([
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
@@ -1112,11 +1118,13 @@ describe("dispatchTelegramAlerts", () => {
     const cycle2Meta = JSON.parse(cycle2.metadata) as {
       eventlessFastPath?: boolean;
       reserveSourceUnavailable?: boolean;
+      reserveAlertSourceState?: string;
       eventsDetected: { reserve: number };
     };
 
     expect(cycle2Meta.eventlessFastPath).toBe(true);
-    expect(cycle2Meta.reserveSourceUnavailable).toBe(false);
+    expect(cycle2Meta.reserveSourceUnavailable).toBe(true);
+    expect(cycle2Meta.reserveAlertSourceState).toBe("recovering");
     expect(cycle2Meta.eventsDetected.reserve).toBe(0);
     expect(mockSendToChat).not.toHaveBeenCalled();
   });
@@ -1138,7 +1146,15 @@ describe("dispatchTelegramAlerts", () => {
         return makeSafetySourceCache({}, now - 60);
       }
       if (key === "alert:reserve-snapshot") {
-        return { value: JSON.stringify(["usdc-circle"]), updatedAt: now - 60 };
+        return {
+          value: JSON.stringify({
+            generation: ALERT_RESERVE_SOURCE_GENERATION,
+            publishedAt: now - 60,
+            continuous: true,
+            driftIds: ["usdc-circle"],
+          }),
+          updatedAt: now - 60,
+        };
       }
       if (key === "alert:reserve-dispatched-snapshot") {
         return { value: JSON.stringify([]), updatedAt: now - 60 };

@@ -30,7 +30,7 @@ export interface DispatchCapacityMetadata {
   burstCollapsedChats?: number;
   /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
   burstDeltaSuppressed?: number;
-  /** True when the producer-written reserve drift snapshot was missing or malformed. */
+  /** True when the reserve producer source is not currently alertable. */
   reserveSourceUnavailable: boolean;
 }
 
@@ -129,6 +129,10 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
     safetyAlertSourceAgeSeconds: null,
     safetyAlertsSuppressed: true,
     safetyAlertSourceGeneration: null,
+    reserveAlertSourceState: "missing",
+    reserveAlertSourceAgeSeconds: null,
+    reserveAlertsSuppressed: true,
+    reserveAlertSourceGeneration: null,
     presetQueryFailures: 0,
     presetResolutionFailures: 0,
     presetFailure: false,

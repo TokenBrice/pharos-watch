@@ -178,6 +178,16 @@ export type PerAlertTypeDelivery = Record<TelegramAlertType, PerAlertTypeDeliver
 export const SAFETY_ALERT_SOURCE_STATE_VALUES = ["ok", "missing", "corrupt", "stale", "wrong-generation"] as const;
 export type SafetyAlertSourceState = (typeof SAFETY_ALERT_SOURCE_STATE_VALUES)[number];
 
+export const RESERVE_ALERT_SOURCE_STATE_VALUES = [
+  "ok",
+  "missing",
+  "corrupt",
+  "stale",
+  "wrong-generation",
+  "recovering",
+] as const;
+export type ReserveAlertSourceState = (typeof RESERVE_ALERT_SOURCE_STATE_VALUES)[number];
+
 /**
  * The four nullable safety-alert source fields shared by the Telegram dispatch
  * cron metadata and Telegram health summary surfaces. The cron *result* type
@@ -188,6 +198,13 @@ export interface SafetyAlertFieldsNullable {
   safetyAlertSourceAgeSeconds: number | null;
   safetyAlertsSuppressed: boolean;
   safetyAlertSourceGeneration: string | null;
+}
+
+export interface ReserveAlertFieldsNullable {
+  reserveAlertSourceState: ReserveAlertSourceState | null;
+  reserveAlertSourceAgeSeconds: number | null;
+  reserveAlertsSuppressed: boolean;
+  reserveAlertSourceGeneration: string | null;
 }
 
 export interface TelegramDispatchCronResult {
@@ -224,6 +241,10 @@ export interface TelegramDispatchCronResult {
   safetyAlertSourceAgeSeconds: number | null;
   safetyAlertsSuppressed: boolean;
   safetyAlertSourceGeneration: string | null;
+  reserveAlertSourceState: ReserveAlertSourceState;
+  reserveAlertSourceAgeSeconds: number | null;
+  reserveAlertsSuppressed: boolean;
+  reserveAlertSourceGeneration: string | null;
   presetQueryFailures: number;
   presetResolutionFailures: number;
   presetFailure: boolean;
@@ -243,7 +264,7 @@ export type ParsedTelegramDispatchEventsDetected = {
   [K in keyof TelegramDispatchEventsDetected]: number | null;
 };
 
-export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable {
+export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable, ReserveAlertFieldsNullable {
   subscribersNotified: number | null;
   messagesSent: number | null;
   blockedUsersCleanedUp: number | null;

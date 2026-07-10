@@ -1,5 +1,6 @@
 import { throwIfAborted } from "../lib/abort";
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
+import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportDigestProgress } from "./digest/progress";
@@ -149,6 +150,15 @@ function safetySourceFields(
   };
 }
 
+function reserveSourceFields(assessment: AlertReserveSourceAssessment) {
+  return {
+    reserveAlertSourceState: assessment.state,
+    reserveAlertSourceAgeSeconds: assessment.ageSeconds,
+    reserveAlertsSuppressed: assessment.state !== "ok",
+    reserveAlertSourceGeneration: assessment.generation,
+  };
+}
+
 function isAbortError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -261,6 +271,7 @@ interface SeedPathContext {
   db: D1Database;
   currentSnapshots: DispatchSnapshotState["currentSnapshots"];
   reserveSourceUnavailable: boolean;
+  reserveSourceAssessment: AlertReserveSourceAssessment;
   safetySnapshotNeedsSeed: boolean;
   safetySourceAssessment: AlertSafetySourceAssessment;
   suppressedSafetyChangesAtSeed: number;
@@ -275,6 +286,7 @@ interface EventlessFastPathContext {
   botToken: string;
   currentSnapshots: DispatchSnapshotState["currentSnapshots"];
   reserveSourceUnavailable: boolean;
+  reserveSourceAssessment: AlertReserveSourceAssessment;
   safetySourceAssessment: AlertSafetySourceAssessment;
   suppressedMethodologyChanges: number;
   suppressedSafetyChangesAtSeed: number;
@@ -321,6 +333,7 @@ async function executeSeedPath({
   db,
   currentSnapshots,
   reserveSourceUnavailable,
+  reserveSourceAssessment,
   safetySnapshotNeedsSeed,
   safetySourceAssessment,
   suppressedSafetyChangesAtSeed,
@@ -358,6 +371,7 @@ async function executeSeedPath({
   );
   result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
   result.reserveSourceUnavailable = reserveSourceUnavailable;
+  Object.assign(result, reserveSourceFields(reserveSourceAssessment));
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
   await reportDigestProgress(reportProgress, {
     stage: "complete",
@@ -453,6 +467,7 @@ async function executeEventlessFastPath({
   botToken,
   currentSnapshots,
   reserveSourceUnavailable,
+  reserveSourceAssessment,
   safetySourceAssessment,
   suppressedMethodologyChanges,
   suppressedSafetyChangesAtSeed,
@@ -526,6 +541,7 @@ async function executeEventlessFastPath({
       pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
     }),
     reserveSourceUnavailable,
+    ...reserveSourceFields(reserveSourceAssessment),
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
@@ -874,6 +890,7 @@ async function executeFullFanoutPath({
     pendingCapacityBefore,
     pendingCapacityAfter,
     reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+    ...reserveSourceFields(snapshotState.reserveSourceAssessment),
     freshAttempted,
     freshSent,
     freshRetryQueued,
@@ -1025,6 +1042,9 @@ export async function dispatchTelegramAlerts(
           overflowBacklogChats: overflowBacklog.length,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
+        reserveAlertSourceAgeSeconds: snapshotState.reserveSourceAssessment.ageSeconds,
+        reserveAlertSourceGeneration: snapshotState.reserveSourceAssessment.generation,
         safetyAlertSourceState: safetySourceAssessment.state,
         safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
         deferredTail: pendingTailState(pendingCapacityBefore),
@@ -1046,6 +1066,7 @@ export async function dispatchTelegramAlerts(
         pendingCapacityBefore,
         pendingCapacityAfter: pendingCapacityBefore,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        ...reserveSourceFields(snapshotState.reserveSourceAssessment),
         ...pendingCapacityFields(pendingCapacityBefore),
         ...safetySourceFields(
           safetySourceAssessment,
@@ -1072,6 +1093,7 @@ export async function dispatchTelegramAlerts(
         db,
         currentSnapshots,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveSourceAssessment: snapshotState.reserveSourceAssessment,
         safetySnapshotNeedsSeed,
         safetySourceAssessment,
         suppressedSafetyChangesAtSeed,
@@ -1092,6 +1114,7 @@ export async function dispatchTelegramAlerts(
       metadata: {
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
       },
     });
     const dispatchEvents = sourceEvent?.events ?? await buildTelegramDispatchEvents(
@@ -1159,6 +1182,7 @@ export async function dispatchTelegramAlerts(
           suppressedMethodologyChanges,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
         sourceEventId: sourceEvent?.sourceEventId ?? null,
         resumedSourceEvent,
       },
@@ -1176,6 +1200,7 @@ export async function dispatchTelegramAlerts(
         botToken,
         currentSnapshots,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveSourceAssessment: snapshotState.reserveSourceAssessment,
         safetySourceAssessment,
         suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
