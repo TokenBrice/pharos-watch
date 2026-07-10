@@ -526,7 +526,14 @@ describe("syncStablecoins", () => {
       expect.any(Function),
     );
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(
+      db,
+      expect.any(Array),
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Object),
+    );
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
@@ -2683,7 +2690,14 @@ describe("syncStablecoins", () => {
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(60);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), { peggedUSD: 1 }, undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(
+      db,
+      expect.any(Array),
+      { peggedUSD: 1 },
+      undefined,
+      undefined,
+      undefined,
+    );
 
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
     expect(stablecoinsWrite).toBeDefined();

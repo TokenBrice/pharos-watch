@@ -8,15 +8,20 @@ import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import {
-  DIRECT_API_DEFAULT_MAX_PAGES,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import { isDexApiRecord } from "./direct-api-json";
 import { toErrorMessage } from "../../lib/error-utils";
+import {
+  readDexSourcePaginationState,
+  writeDexSourcePaginationState,
+} from "./source-pagination-state";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
 const ORCA_RATE_LIMIT_RETRIES = 3;
 const ORCA_RATE_LIMIT_BACKOFF_MS = 1_000;
+const ORCA_PAGES_PER_RUN = 4;
+const ORCA_SOURCE_KEY = "orca:solana";
 
 interface OrcaPool {
   address: string;
@@ -68,13 +73,19 @@ function getOrcaNextCursor(meta: unknown): string | null {
   return typeof meta.next === "string" ? meta.next : null;
 }
 
-export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
+export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
   let successfulPages = 0;
   let degraded = false;
   let url: string | null = `${ORCA_API}?sortBy=tvl&sortDirection=desc&minTvl=${DIRECT_API_POOL_MIN_TVL_USD}&size=200`;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const paginationState = await readDexSourcePaginationState(db, ORCA_SOURCE_KEY);
+  const storedTailCursor = paginationState.cursor;
+  let refreshedHeadCursor: string | null = null;
+  let resumeCursor: string | null = storedTailCursor;
+  let cycleCompleted = false;
   const seenCursors = new Set<string>();
   let page = 0;
 
@@ -109,28 +120,36 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
 
     if (!res) {
       errors.push(pageError ?? "request failed");
+      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     if (pageError) {
       errors.push(pageError);
+      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     if (!res.ok) {
       errors.push(`API returned ${res.status}`);
       await cancelResponseBodyQuietly(res);
+      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     const json = await res.json() as unknown;
     if (!isOrcaResponse(json)) {
       errors.push("returned malformed body");
+      if (page > 1) resumeCursor = refreshedHeadCursor;
       break;
     }
 
     successfulPages++;
-    if (json.data.length === 0) break;
+    if (json.data.length === 0) {
+      cycleCompleted = true;
+      resumeCursor = page === 1 ? null : refreshedHeadCursor;
+      break;
+    }
 
     let pageHasEligiblePool = false;
     let malformedRows = 0;
@@ -185,15 +204,42 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
     if (nextCursor && seenCursors.has(nextCursor)) {
       degraded = true;
       errors.push("cursor loop detected");
+      resumeCursor = refreshedHeadCursor;
       break;
     }
     if (nextCursor) seenCursors.add(nextCursor);
-    if (nextCursor && page >= DIRECT_API_DEFAULT_MAX_PAGES) {
-      degraded = true;
-      errors.push(`pagination cap reached at page ${page}; resumeFromCursor=${nextCursor}`);
+    if (page === 1) {
+      refreshedHeadCursor = nextCursor;
+      resumeCursor = nextCursor ? (storedTailCursor ?? nextCursor) : null;
+      url = resumeCursor ? `${ORCA_API}?next=${encodeURIComponent(resumeCursor)}&size=200` : null;
+      if (!url) cycleCompleted = true;
+      continue;
+    }
+    resumeCursor = nextCursor;
+    if (!nextCursor) {
+      cycleCompleted = true;
+      resumeCursor = refreshedHeadCursor;
+      url = null;
+      break;
+    }
+    if (page >= ORCA_PAGES_PER_RUN) {
+      warnings.push(`pagination partial; resumeFromCursor=${nextCursor}`);
       break;
     }
     url = nextCursor ? `${ORCA_API}?next=${encodeURIComponent(nextCursor)}&size=200` : null;
+  }
+
+  if (successfulPages > 0) {
+    await writeDexSourcePaginationState({
+      db,
+      sourceKey: ORCA_SOURCE_KEY,
+      cursor: resumeCursor,
+      cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
+      nowSec,
+      completed: cycleCompleted,
+      pagesFetched: successfulPages,
+      diagnostics: [...errors, ...warnings],
+    });
   }
 
   if (results.length > 0) {
@@ -207,5 +253,12 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
     degraded: degraded || errors.length > 0,
     errors,
     warnings,
+    pagination: {
+      state: cycleCompleted ? "complete" : "partial",
+      headRefreshed: successfulPages > 0,
+      pagesFetched: successfulPages,
+      cursor: resumeCursor,
+      cycleCompleted,
+    },
   });
 }

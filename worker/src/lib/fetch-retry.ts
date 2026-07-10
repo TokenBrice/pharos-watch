@@ -13,6 +13,7 @@ interface FetchWithRetryOptions {
   returnFinalResponse?: boolean;
   timeoutMs?: number;
   maxRetryDelayMs?: number;
+  waitOnPassthrough429?: boolean;
 }
 
 export interface FetchWithRetryBodyResult<TResult> {
@@ -137,7 +138,7 @@ async function fetchWithRetryInternal<TResult>(
         if (res.ok) return await readFinalResponse(res);
         if (passthroughStatuses.has(res.status)) {
           const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
-          if (passthroughDelayMs != null) {
+          if (passthroughDelayMs != null && options?.waitOnPassthrough429 !== false) {
             if (readBody) {
               const body = await readBody(res, perRequestTimeout.signal);
               perRequestTimeout.dispose();

@@ -14,6 +14,7 @@ import {
   type CrawlStageContext,
   toStagedPool,
 } from "./staged-pool";
+import type { DexDeploymentProviderCheck } from "./types";
 
 type GeckoTerminalNewPool = GtNewPool & {
   baseToken: string;
@@ -25,6 +26,10 @@ export interface GeckoTerminalPoolsStageDependencies {
   crawlTokenPools: typeof crawlTokenPools;
   fetchGtTokenPools: typeof fetchGtTokenPools;
   sleepWithSignal: typeof sleepWithSignal;
+}
+
+export interface GeckoTerminalPoolsStageResult {
+  providerChecks: DexDeploymentProviderCheck[];
 }
 
 const defaultGeckoTerminalPoolsStageDependencies: GeckoTerminalPoolsStageDependencies = {
@@ -45,9 +50,10 @@ export async function crawlGeckoTerminalPoolsStage({
   cgPriceObservationTargets,
   context,
   dependencies = defaultGeckoTerminalPoolsStageDependencies,
-}: CrawlGeckoTerminalPoolsStageOptions): Promise<void> {
+}: CrawlGeckoTerminalPoolsStageOptions): Promise<GeckoTerminalPoolsStageResult> {
   const gtTokens: CrawlToken[] = [];
   const gtChainAddressToId = new Map<string, string>();
+  const providerChecks: DexDeploymentProviderCheck[] = [];
 
   for (const { chain, address } of coinTargets) {
     const providers = CHAIN_META[chain]?.providers;
@@ -64,7 +70,7 @@ export async function crawlGeckoTerminalPoolsStage({
   }
 
   if (gtTokens.length === 0 || context.timeExceeded()) {
-    return;
+    return { providerChecks };
   }
 
   const gtNewPools = new Map<string, GeckoTerminalNewPool[]>();
@@ -97,6 +103,14 @@ export async function crawlGeckoTerminalPoolsStage({
         0,
         DISCOVERY_STAGE_TIMEOUT_MS.geckoTerminal,
       ),
+    onRequestResult: (token, status) => {
+      providerChecks.push({
+        chain: token.ourChain,
+        address: token.address,
+        provider: "geckoterminal",
+        status,
+      });
+    },
     parsePool: parseGtPool,
     buildNewPool: ({ parsed, chain, price, cappedTvlUsd, maturityDays }) => ({
       address: parsed.poolAddress,
@@ -150,4 +164,5 @@ export async function crawlGeckoTerminalPoolsStage({
   for (const obs of gtObs) {
     context.addPriceObs({ ...obs, stablecoinId: context.stablecoinId });
   }
+  return { providerChecks };
 }

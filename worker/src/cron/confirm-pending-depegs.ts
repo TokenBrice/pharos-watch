@@ -19,7 +19,11 @@ import {
 } from "../lib/depeg-pending";
 import { throwIfAborted } from "../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
-import { fetchBinancePricesDetailed } from "../lib/cex-tickers";
+import {
+  createBinanceFetchSession,
+  fetchBinancePricesForRun,
+  type BinanceFetchSession,
+} from "../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../lib/fetcher-result";
 import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
 import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
@@ -49,6 +53,7 @@ export async function confirmPendingDepegs(
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  binanceSession?: BinanceFetchSession,
 ): Promise<{ providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
   throwIfAborted(signal);
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -98,12 +103,16 @@ export async function confirmPendingDepegs(
   if (cexAllowed) {
     throwIfAborted(signal);
     try {
-      const outcome = await fetchBinancePricesDetailed(signal);
+      const outcome = await fetchBinancePricesForRun(
+        db,
+        binanceSession ?? createBinanceFetchSession(),
+        signal,
+        now,
+      );
       const { prices, diagnostics } = outcome.value;
       for (const diagnostic of diagnostics) {
-        diagnostic.stage = "depeg-confirmation";
+        providerDiagnostics.push({ ...diagnostic, stage: "depeg-confirmation" });
       }
-      providerDiagnostics.push(...diagnostics);
       cexPrices = prices;
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, isSuccessfulOutcome(outcome));
     } catch (err) {

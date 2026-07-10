@@ -31,6 +31,16 @@ const ADDRESS_PROVIDER_ERROR_BODY_MAX_BYTES = 2_000;
 const ADDRESS_PROVIDER_MAX_RETRIES = 0;
 const PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
 
+function parseRetryAfterSec(response: Response, nowMs = Date.now()): number | undefined {
+  const value = response.headers.get("Retry-After")?.trim();
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const retryAt = Date.parse(value);
+  if (!Number.isFinite(retryAt)) return undefined;
+  return Math.max(0, Math.ceil((retryAt - nowMs) / 1000));
+}
+
 async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
   const timeout = createTimeoutSignal({
     timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
@@ -165,6 +175,7 @@ export async function fetchProviderJson(params: {
       timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
       logUrl: params.fetchLogUrl,
       passthroughStatuses: PASSTHROUGH_STATUSES,
+      waitOnPassthrough429: false,
     },
   );
   if (!response) {
@@ -192,6 +203,7 @@ export async function fetchProviderJson(params: {
         ok: false,
         success: false,
         ...(snippet ? { snippet } : {}),
+        ...(response.status === 429 ? { retryAfterSec: parseRetryAfterSec(response) } : {}),
         rejectionReasonCounts: { "non-ok": 1 },
       },
     };

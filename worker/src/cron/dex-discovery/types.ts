@@ -34,6 +34,15 @@ export interface DiscoveryMeta {
   lastHitAt: number | null;
 }
 
+export type DexDeploymentProviderCheckStatus = "success" | "failure";
+
+export interface DexDeploymentProviderCheck {
+  chain: string;
+  address: string;
+  provider: "coingecko" | "geckoterminal" | "dexscreener";
+  status: DexDeploymentProviderCheckStatus;
+}
+
 /**
  * Max TVL for a staged secondary-source pool. Anything above this is treated as
  * malformed upstream data rather than a valid DEX venue.

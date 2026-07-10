@@ -60,6 +60,61 @@ export interface DexLiquidityCronRow {
   metadata: string | null;
 }
 
+export interface DexDeploymentOutcomeRow {
+  stablecoin_id: string;
+  chain: string;
+  contract_address: string;
+  outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+  provider_set_json: string;
+  reason: string;
+  observed_pool_count: number;
+  observed_at: number;
+  waiver_owner: string | null;
+  waiver_reason: string | null;
+  waiver_expires_at: number | null;
+}
+
+export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRow[], nowSec: number) {
+  const byStablecoin = new Map<string, {
+    observedPools: number;
+    verifiedNoPools: number;
+    providerInaccessible: number;
+    deployments: Array<Record<string, unknown>>;
+  }>();
+  for (const row of rows) {
+    const coverage = byStablecoin.get(row.stablecoin_id) ?? {
+      observedPools: 0,
+      verifiedNoPools: 0,
+      providerInaccessible: 0,
+      deployments: [],
+    };
+    if (row.outcome === "observed_pools") coverage.observedPools++;
+    else if (row.outcome === "verified_no_pools") coverage.verifiedNoPools++;
+    else coverage.providerInaccessible++;
+    const waiverActive = row.waiver_expires_at != null && row.waiver_expires_at > nowSec && !!row.waiver_owner;
+    coverage.deployments.push({
+      chain: row.chain,
+      contractAddress: row.contract_address,
+      outcome: row.outcome,
+      providers: safeJsonParse<string[]>(
+        row.provider_set_json,
+        [],
+        `dex-liquidity:${row.stablecoin_id}:${row.chain}:providers`,
+      ),
+      reason: row.reason,
+      observedPoolCount: row.observed_pool_count,
+      observedAt: row.observed_at,
+      waiver: waiverActive ? {
+        owner: row.waiver_owner,
+        reason: row.waiver_reason,
+        expiresAt: row.waiver_expires_at,
+      } : null,
+    });
+    byStablecoin.set(row.stablecoin_id, coverage);
+  }
+  return byStablecoin;
+}
+
 type DexLiquidityPoolResponse = {
   source?: string;
 } & Record<string, unknown>;

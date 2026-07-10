@@ -24,8 +24,8 @@ vi.mock("../../lib/fetch-retry", () => {
   };
 });
 
-vi.mock("../../lib/cex-tickers", () => ({
-  fetchBinancePricesDetailed: vi.fn(async () => ({
+vi.mock("../../lib/cex-tickers", () => {
+  const fetchBinancePricesDetailed = vi.fn(async () => ({
     kind: "no-data",
     value: {
       prices: new Map<string, number>(),
@@ -39,8 +39,13 @@ vi.mock("../../lib/cex-tickers", () => ({
         matchedCount: 0,
       }],
     },
-  })),
-}));
+  }));
+  return {
+    createBinanceFetchSession: vi.fn(() => ({})),
+    fetchBinancePricesDetailed,
+    fetchBinancePricesForRun: vi.fn(async () => fetchBinancePricesDetailed()),
+  };
+});
 
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),

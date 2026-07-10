@@ -1111,6 +1111,57 @@ describe("fetchOrcaPools", () => {
     expect(secondCallUrl).toContain("next=cursor123");
   });
 
+  it("refreshes the Orca head before resuming a durable tail cursor", async () => {
+    const makePool = (address: string) => ({
+      address,
+      price: "1",
+      tvlUsdc: "100000",
+      feeRate: 100,
+      tokenA: { address: "mintA", symbol: "USDC", decimals: 6 },
+      tokenB: { address: "mintB", symbol: "USDT", decimals: 6 },
+      tokenBalanceA: "50000",
+      tokenBalanceB: "50000",
+      stats: { "24h": { volume: "1000" } },
+    });
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("head")],
+        meta: { cursor: { next: "fresh-head-tail" } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [makePool("stored-tail")],
+        meta: { cursor: { next: null } },
+      }));
+    const writes: unknown[][] = [];
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn((...binds: unknown[]) => ({
+          first: vi.fn(async () => sql.includes("SELECT cursor")
+            ? {
+                cursor: "stored-cursor",
+                cycle_started_at: 100,
+                updated_at: 110,
+                completed_at: null,
+                pages_fetched: 4,
+              }
+            : null),
+          run: vi.fn(async () => {
+            writes.push(binds);
+            return { meta: { changes: 1 } };
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await fetchOrcaPools(undefined, db);
+
+    expect(String(mockFetch.mock.calls[0][0])).toContain("sortBy=tvl");
+    expect(String(mockFetch.mock.calls[1][0])).toContain("next=stored-cursor");
+    expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["head", "stored-tail"]);
+    expect(result.pagination).toMatchObject({ state: "complete", headRefreshed: true, cycleCompleted: true });
+    expect(writes[0]?.[1]).toBe("fresh-head-tail");
+  });
+
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {
     mockFetch
       .mockResolvedValueOnce(jsonResponse({

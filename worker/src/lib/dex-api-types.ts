@@ -39,4 +39,11 @@ export interface DexApiFetchResult {
   degraded: boolean;
   errors: string[];
   warnings?: string[];
+  pagination?: {
+    state: "complete" | "partial";
+    headRefreshed: boolean;
+    pagesFetched: number;
+    cursor: string | null;
+    cycleCompleted: boolean;
+  };
 }

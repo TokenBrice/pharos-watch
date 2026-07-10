@@ -15,11 +15,13 @@ import {
   type CrawlStageContext,
   toStagedPool,
 } from "./staged-pool";
+import type { DexDeploymentProviderCheck } from "./types";
 
 export interface CoinGeckoPoolsStageResult {
   priceObservationTargets: Set<string>;
   unresolvedChains: string[];
   stoppedEarly: boolean;
+  providerChecks: DexDeploymentProviderCheck[];
 }
 
 export interface CoinGeckoPoolsStageDependencies {
@@ -54,6 +56,7 @@ export async function crawlCoinGeckoPoolsStage({
   const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
+  const providerChecks: DexDeploymentProviderCheck[] = [];
 
   if (!apiKey) {
     console.warn(`[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${context.stablecoinId}`);
@@ -68,7 +71,7 @@ export async function crawlCoinGeckoPoolsStage({
   }
 
   if (!apiKey || !cgOnchainAllowed) {
-    return { priceObservationTargets, unresolvedChains, stoppedEarly: false };
+    return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
   }
 
   let cgRequests = 0;
@@ -76,7 +79,7 @@ export async function crawlCoinGeckoPoolsStage({
   for (const { chain, address } of coinTargets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
-      return { priceObservationTargets, unresolvedChains, stoppedEarly: true };
+      return { priceObservationTargets, unresolvedChains, stoppedEarly: true, providerChecks };
     }
 
     const providers = CHAIN_META[chain]?.providers;
@@ -106,6 +109,12 @@ export async function crawlCoinGeckoPoolsStage({
         { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
       );
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, result.ok);
+      providerChecks.push({
+        chain,
+        address,
+        provider: "coingecko",
+        status: result.ok ? "success" : "failure",
+      });
 
       for (const pool of result.pools) {
         const parsed = parseCgPool(pool);
@@ -187,9 +196,10 @@ export async function crawlCoinGeckoPoolsStage({
     } catch (err) {
       if (context.signal?.aborted) throw err;
       console.warn(`[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
+      providerChecks.push({ chain, address, provider: "coingecko", status: "failure" });
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, false);
     }
   }
 
-  return { priceObservationTargets, unresolvedChains, stoppedEarly: false };
+  return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
 }

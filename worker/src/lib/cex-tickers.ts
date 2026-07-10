@@ -22,6 +22,11 @@ import {
   type PricingProviderAttemptDiagnostic,
 } from "./pricing-provider-diagnostics";
 import type { FetcherOutcome } from "./fetcher-result";
+import {
+  readProviderAvailability,
+  recordProviderEnvironmentAvailable,
+  recordProviderEnvironmentBlocked,
+} from "./pricing-provider-runtime-state";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
@@ -30,6 +35,21 @@ const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
 ] as const;
+
+export interface BinancePriceBatch {
+  prices: Map<string, number>;
+  diagnostics: PricingProviderAttemptDiagnostic[];
+}
+
+export type BinancePriceOutcome = FetcherOutcome<BinancePriceBatch>;
+
+export interface BinanceFetchSession {
+  outcome?: Promise<BinancePriceOutcome>;
+}
+
+export function createBinanceFetchSession(): BinanceFetchSession {
+  return {};
+}
 function isAsciiDigit(char: string): boolean {
   return char >= "0" && char <= "9";
 }
@@ -287,9 +307,13 @@ async function fetchBinanceTickerUrl(
 
 export async function fetchBinancePricesDetailed(
   signal?: AbortSignal,
-): Promise<FetcherOutcome<{ prices: Map<string, number>; diagnostics: PricingProviderAttemptDiagnostic[] }>> {
+  options?: { hostLimit?: number },
+): Promise<BinancePriceOutcome> {
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
-  for (const url of BINANCE_TICKER_URLS) {
+  const urls = options?.hostLimit == null
+    ? BINANCE_TICKER_URLS
+    : BINANCE_TICKER_URLS.slice(0, Math.max(1, options.hostLimit));
+  for (const url of urls) {
     const { prices, diagnostic } = await fetchBinanceTickerUrl(url, signal);
     diagnostics.push(diagnostic);
     if (prices.size > 0) {
@@ -308,6 +332,64 @@ export async function fetchBinancePricesDetailed(
   const reason =
     firstError?.errorMessage ?? (firstError?.status != null ? `HTTP ${firstError.status}` : "all Binance hosts failed");
   return { kind: "upstream-error", value: { prices: emptyPrices, diagnostics }, reason };
+}
+
+function suppressedBinanceOutcome(decision: {
+  blockedStatus: number | null;
+  nextProbeAt: number | null;
+}): BinancePriceOutcome {
+  return {
+    kind: "blocked",
+    value: {
+      prices: new Map(),
+      diagnostics: [{
+        source: "binance",
+        stage: "health-probe",
+        endpoint: "binance:environment-ttl",
+        status: decision.blockedStatus,
+        ok: false,
+        success: false,
+        errorClass: "environment-blocked",
+        errorMessage: decision.nextProbeAt == null
+          ? "Binance unavailable from this runtime environment"
+          : `Binance environment probe deferred until ${decision.nextProbeAt}`,
+        rejectionReasonCounts: { blocked: 1 },
+      }],
+    },
+  };
+}
+
+/**
+ * Invocation-scoped Binance access. A shared session prevents the primary
+ * consensus and pending-depeg follow-through from issuing the same request
+ * twice, while durable environment state suppresses predictable 403/451
+ * responses until the next bounded probe.
+ */
+export function fetchBinancePricesForRun(
+  db: D1Database,
+  session: BinanceFetchSession,
+  signal?: AbortSignal,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<BinancePriceOutcome> {
+  if (session.outcome) return session.outcome;
+
+  session.outcome = (async () => {
+    const decision = await readProviderAvailability(db, "binance", nowSec);
+    if (!decision.shouldFetch) return suppressedBinanceOutcome(decision);
+
+    const outcome = await fetchBinancePricesDetailed(signal, decision.probeOnly ? { hostLimit: 1 } : undefined);
+    const blockedStatus = outcome.kind === "blocked"
+      ? outcome.value.diagnostics.find((diagnostic) => diagnostic.status === 403 || diagnostic.status === 451)?.status
+      : null;
+    if (blockedStatus === 403 || blockedStatus === 451) {
+      await recordProviderEnvironmentBlocked(db, "binance", blockedStatus, nowSec);
+    } else if (outcome.kind === "ok" || outcome.kind === "no-data") {
+      await recordProviderEnvironmentAvailable(db, "binance", nowSec);
+    }
+    return outcome;
+  })();
+
+  return session.outcome;
 }
 
 export async function fetchKrakenPrices(

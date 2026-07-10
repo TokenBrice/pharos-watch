@@ -17,6 +17,7 @@ import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 
 export interface MainPublicationInput {
   assets: PeggedAsset[];
@@ -33,6 +34,7 @@ export interface MainPublicationInput {
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
   reportProgress?: CronProgressReporter;
+  binanceSession?: BinanceFetchSession;
 }
 
 export interface MainPublicationResult {
@@ -105,6 +107,7 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     input.abortResult,
     "",
     "",
+    input.binanceSession,
   );
   if (isAbortResult(depegResult)) return depegResult;
   return {

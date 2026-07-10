@@ -1,0 +1,76 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildStaticInaccessibleDeploymentOutcomes,
+  classifyDexDeploymentOutcomes,
+} from "../deployment-outcomes";
+import type { StagedPool } from "../types";
+
+const DEPLOYMENT = {
+  chain: "ethereum",
+  address: "0x0000000000000000000000000000000000000001",
+  decimals: 6,
+};
+
+function poolFor(address: string): StagedPool {
+  return {
+    poolId: "ethereum:0xpool",
+    stablecoinId: "test",
+    source: "dexscreener",
+    chain: "ethereum",
+    protocol: "test",
+    dexId: "test",
+    symbol: "TEST / USDC",
+    tvlUsd: 10_000,
+    volume24h: 1_000,
+    qualityMultiplier: 1,
+    poolType: "amm",
+    feeTier: null,
+    balanceRatio: null,
+    isStable: null,
+    baseToken: address,
+    quoteToken: "0x0000000000000000000000000000000000000002",
+    quoteSymbol: "USDC",
+    priceUsd: 1,
+    lockedLiqPct: null,
+    rawJson: null,
+    discoveredAt: 1,
+    refreshedAt: 1,
+  };
+}
+
+describe("DEX deployment outcomes", () => {
+  it("separates observed, verified empty, and inaccessible outcomes", () => {
+    const observed = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [poolFor(DEPLOYMENT.address)],
+      providerChecks: [],
+      nowSec: 100,
+    });
+    expect(observed[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
+
+    const empty = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [{ ...DEPLOYMENT, provider: "coingecko", status: "success" }],
+      nowSec: 100,
+    });
+    expect(empty[0]).toMatchObject({ outcome: "verified_no_pools", observedPoolCount: 0 });
+
+    const inaccessible = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [{ ...DEPLOYMENT, chain: "cardano" }],
+      pools: [],
+      providerChecks: [],
+      nowSec: 100,
+    });
+    expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: [] });
+  });
+
+  it("materializes every audited unsupported deployment", () => {
+    const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
+    expect(outcomes).toHaveLength(262);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(121);
+  });
+});

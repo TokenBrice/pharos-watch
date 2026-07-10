@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTopPools, selectTrendBaseline } from "../dex-liquidity-response";
+import {
+  buildDexDeploymentCoverage,
+  normalizeTopPools,
+  selectTrendBaseline,
+} from "../dex-liquidity-response";
 
 describe("normalizeTopPools", () => {
   it("strips dead per-pool fields and preserves allowed keys", () => {
@@ -121,5 +125,45 @@ describe("selectTrendBaseline", () => {
     ];
 
     expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toBeNull();
+  });
+});
+
+describe("buildDexDeploymentCoverage", () => {
+  it("keeps verified empty separate from inaccessible and expires waivers", () => {
+    const rows = [
+      {
+        stablecoin_id: "coin",
+        chain: "ethereum",
+        contract_address: "0x1",
+        outcome: "verified_no_pools" as const,
+        provider_set_json: JSON.stringify(["coingecko"]),
+        reason: "verified empty",
+        observed_pool_count: 0,
+        observed_at: 100,
+        waiver_owner: null,
+        waiver_reason: null,
+        waiver_expires_at: null,
+      },
+      {
+        stablecoin_id: "coin",
+        chain: "cardano",
+        contract_address: "asset1",
+        outcome: "provider_inaccessible" as const,
+        provider_set_json: "[]",
+        reason: "unsupported",
+        observed_pool_count: 0,
+        observed_at: 100,
+        waiver_owner: "data-platform",
+        waiver_reason: "adapter pending",
+        waiver_expires_at: 200,
+      },
+    ];
+
+    const active = buildDexDeploymentCoverage(rows, 150).get("coin");
+    expect(active).toMatchObject({ verifiedNoPools: 1, providerInaccessible: 1 });
+    expect(active?.deployments[1]?.waiver).toMatchObject({ owner: "data-platform", expiresAt: 200 });
+
+    const expired = buildDexDeploymentCoverage(rows, 200).get("coin");
+    expect(expired?.deployments[1]?.waiver).toBeNull();
   });
 });

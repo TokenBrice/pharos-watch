@@ -44,6 +44,14 @@ export function buildDexLiquidityCronMetadata(params: {
     excludedByReason: Record<string, number>;
     circuitEvents: Array<{ circuitKey: string; from: string; to: string; at: number | null }>;
     sourceWarnings: string[];
+    pagination: Array<{
+      source: string;
+      state: "complete" | "partial";
+      headRefreshed: boolean;
+      pagesFetched: number;
+      cursor: string | null;
+      cycleCompleted: boolean;
+    }>;
   };
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
   challengerPublication: {
