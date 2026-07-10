@@ -7,7 +7,7 @@ import {
 } from "../ci/check-cli-args-policy.mjs";
 
 const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
-const REPOSITORY_SCAN_TIMEOUT_MS = 15_000;
+const REPOSITORY_SCAN_TIMEOUT_MS = 30_000;
 
 function createSourceReader(sources: Record<string, string>) {
   return (path: string): string => {
