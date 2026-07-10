@@ -1,5 +1,4 @@
-import type { YieldBenchmarkMeta, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { shouldDegradeForRiskFreeRate } from "./evaluation";
+import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
@@ -91,7 +90,7 @@ export function buildYieldSafetySnapshotMeta(input: {
 export function buildYieldDegradationReasons(params: {
   safetySnapshotDegraded: boolean;
   safetySnapshotReason: string | null;
-  riskFreeRateMeta: YieldBenchmarkMeta;
+  selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   allDeterministicFailed: boolean;
   maskedAllDeterministicFailure: boolean;
@@ -107,8 +106,20 @@ export function buildYieldDegradationReasons(params: {
       degradationReasons.push(`safety-snapshot:${params.safetySnapshotReason}`);
     }
   }
-  if (shouldDegradeForRiskFreeRate(params.riskFreeRateMeta)) {
-    degradationReasons.push(`risk-free-rate:${params.riskFreeRateMeta.fallbackMode}`);
+  const benchmarkByKey = new Map(
+    params.selectedSources.map((source) => [source.benchmarkKey, source] as const),
+  );
+  for (const [key, source] of benchmarkByKey) {
+    if (source.benchmarkFreshness === "healthy") continue;
+    const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
+    degradationReasons.push(
+      key === "USD"
+        ? `risk-free-rate:${reason}`
+        : `risk-free-rate:${key}:${reason}`,
+    );
+  }
+  if (params.selectedSources.some((source) => source.sourceFreshness === "stale")) {
+    degradationReasons.push("yield-source:expired-selected");
   }
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);

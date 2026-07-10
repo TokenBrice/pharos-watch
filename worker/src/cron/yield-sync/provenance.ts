@@ -62,6 +62,9 @@ export function buildYieldSourceProvenance(params: {
     benchmarkFallbackMode: source.benchmarkFallbackMode,
     benchmarkSelectionMode: source.benchmarkSelectionMode,
     benchmarkIsProxy: source.benchmarkIsProxy,
+    sourceFreshness: source.sourceFreshness,
+    benchmarkFreshness: source.benchmarkFreshness,
+    scoreQualified: source.scoreQualified,
     anomalies: source.anomalies,
   };
 }

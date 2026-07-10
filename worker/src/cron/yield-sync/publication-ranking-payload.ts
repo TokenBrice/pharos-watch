@@ -26,6 +26,7 @@ import {
 } from "./decision-public";
 import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
+import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 
 function evaluatedSourceToRanking(
   source: EvaluatedYieldSource,
@@ -86,6 +87,9 @@ function evaluatedSourceToRanking(
           ...provenance,
           safetyProvenance: source.safetyProvenance,
           safetyReason: source.safetyReason,
+          sourceFreshness: source.sourceFreshness,
+          benchmarkFreshness: source.benchmarkFreshness,
+          scoreQualified: source.scoreQualified,
         }
       : null,
   };
@@ -258,7 +262,10 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
 ) {
   const bestRows = input.evaluatedSources
     .filter((source) => input.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
-    .sort((a, b) => b.pharosYieldScore - a.pharosYieldScore);
+    .sort((a, b) =>
+      (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) -
+      (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
+    );
 
   const publicationGenerationId = input.publication?.generationId ?? null;
   const rankings = bestRows.map((source, index) => {
@@ -318,10 +325,39 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleComparisonAnchor =
       comparisonAnchorAgeSeconds != null &&
       comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey);
-    if ((updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) || staleComparisonAnchor) {
+    const staleSource =
+      (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
+      staleComparisonAnchor;
+    const benchmarkFreshness = source.benchmarkFreshness ?? classifyYieldBenchmarkFreshness(
+      source.benchmarkMeta,
+      { selectionMode: source.benchmarkSelectionMode },
+    );
+    if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
       }
+      ranking.pharosYieldScore = null;
+      ranking.pysNullReason = "source-stale";
+    }
+    if (benchmarkFreshness === "degraded" && !ranking.warningSignals.includes("benchmark-degraded")) {
+      ranking.warningSignals = [...ranking.warningSignals, "benchmark-degraded"];
+    }
+    if (benchmarkFreshness === "stale") {
+      if (!ranking.warningSignals.includes("benchmark-stale")) {
+        ranking.warningSignals = [...ranking.warningSignals, "benchmark-stale"];
+      }
+      ranking.pharosYieldScore = null;
+      ranking.pysNullReason = ranking.pysNullReason === "source-stale"
+        ? ranking.pysNullReason
+        : "benchmark-stale";
+    }
+    if (ranking.provenance) {
+      ranking.provenance = {
+        ...ranking.provenance,
+        sourceFreshness: staleSource ? "stale" : (source.sourceFreshness ?? "unknown"),
+        benchmarkFreshness,
+        scoreQualified: ranking.pharosYieldScore != null,
+      };
     }
     ranking.sourceRole = deriveYieldSourceRole(
       { ...source, warnings: ranking.warningSignals },

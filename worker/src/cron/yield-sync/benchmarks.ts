@@ -7,6 +7,34 @@ import type {
 } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 
+export const YIELD_BENCHMARK_SCORE_TTL_SEC = 48 * 60 * 60;
+export type YieldBenchmarkFreshness = "healthy" | "degraded" | "stale";
+
+export function classifyYieldBenchmarkFreshness(meta: {
+  ageSeconds: number | null;
+  isFallback: boolean;
+  fallbackMode: string | null;
+}, options?: {
+  selectionMode?: YieldBenchmarkSelectionMode | null;
+}): YieldBenchmarkFreshness {
+  if (
+    meta.ageSeconds == null ||
+    !Number.isFinite(meta.ageSeconds) ||
+    meta.ageSeconds < 0 ||
+    meta.ageSeconds > YIELD_BENCHMARK_SCORE_TTL_SEC
+  ) {
+    return "stale";
+  }
+  if (
+    meta.isFallback ||
+    meta.fallbackMode != null ||
+    options?.selectionMode === "fallback-usd"
+  ) {
+    return "degraded";
+  }
+  return "healthy";
+}
+
 export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastMarketRate: number | null;
   lastMarketRecordDate: string | null;

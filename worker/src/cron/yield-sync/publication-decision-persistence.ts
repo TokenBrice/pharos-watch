@@ -74,6 +74,12 @@ function getJsonByteLength(value: string): number {
 
 function buildAlternativeDecisionReason(selected: EvaluatedYieldSource, candidate: EvaluatedYieldSource): string {
   if (candidate.rejected) {
+    if (candidate.anomalies.includes("source-stale")) {
+      return "rejected: source observation exceeded its eligibility TTL";
+    }
+    if (candidate.anomalies.includes("benchmark-stale")) {
+      return "rejected: selected benchmark exceeded its eligibility TTL";
+    }
     if (candidate.anomalies.includes("source-zero-vs-history")) {
       return "rejected: zero current APY versus source history";
     }
@@ -91,7 +97,10 @@ function buildAlternativeDecisionReason(selected: EvaluatedYieldSource, candidat
   if (candidate.currentApy < selected.currentApy) {
     return "retained alternative: lower APY";
   }
-  if (candidate.pharosYieldScore < selected.pharosYieldScore) {
+  if (
+    (candidate.pharosYieldScore ?? Number.NEGATIVE_INFINITY) <
+    (selected.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
+  ) {
     return "retained alternative: lower PYS";
   }
   if ((candidate.sourceTvlUsd ?? 0) < (selected.sourceTvlUsd ?? 0)) {

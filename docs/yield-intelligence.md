@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.299`
+- **Current methodology version:** `v8.3`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.3 makes freshness an eligibility rule rather than a display-only warning. Source-family and benchmark TTLs are applied before confidence arbitration, so a fresh curated observation beats an expired deterministic or rate-derived candidate. Expired candidates remain auditable as retained alternatives; if no fresh alternative exists, the last-known row remains visible with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`. Ranking provenance now publishes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. Yield Health evaluates every benchmark key used by published rows, preventing a fresh USD benchmark from masking stale GBP or other local-currency evidence. The hard benchmark scoring TTL is 48 hours. PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged.
 
 Yield v8.299 corrects source-identity and freshness semantics exposed by the July Night Watch. Source-aware history now aliases only null/`legacy-best` rows and the explicit LUSD `bprotocol-lqty-only` legacy key; linked-variant, protocol-specific, and other modern on-chain keys remain distinct. The historical linked-variant false-switch pattern is reclassified only after two consecutive clean published generations. Rate-derived observations now receive a 48-hour freshness window, price-derived observations remain at 36 hours, price-derived and Midas/Ondo NAV anchors remain valid through their configured 45-day lookup window, and ordinary exchange-rate anchors retain the 14-day limit. Rankings now publish explicit default/NR safety reasons, vaults.fyi reports disabled/probe-only/rankable consumption, and GBP SONIA attempts expose bounded response diagnostics plus a canary requiring two consecutive direct current publications. PYS math, source-risk and venue-risk calibration, benchmark derivation/provider order, and confidence-weighted arbitration are unchanged.
 
@@ -880,7 +882,10 @@ The two top-level safety provenance fields have different clocks. `provenance.sa
         "confidenceTier": "curated",
         "selectionReason": "curated canonical source selected by confidence-weighted arbitration",
         "sourceSwitch": false,
-        "safetyReason": null
+        "safetyReason": null,
+        "sourceFreshness": "fresh",
+        "benchmarkFreshness": "healthy",
+        "scoreQualified": true
       },
       "publicationGenerationId": "yield-1772000000",
       "publishedRank": 3,

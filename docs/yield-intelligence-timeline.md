@@ -1,10 +1,21 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.299`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.3`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.3 - Registry-Wide Freshness Eligibility (July 10, 2026)
+
+- Applies source-family and benchmark TTLs before confidence arbitration, so fresh curated observations outrank expired deterministic or rate-derived candidates
+- Retains expired candidates as auditable alternatives; a stale-only winner remains visible as last-known context with `pharosYieldScore: null`
+- Publishes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified` provenance plus `source-stale` / `benchmark-stale` PYS null reasons
+- Uses a 48-hour hard benchmark scoring TTL; fallback or retained benchmarks degrade health, while expired benchmarks cannot support an exact PYS
+- Rolls Yield Health up across every benchmark used by published rows, so fresh USD plus stale GBP reports aggregate degraded with GBP identified
+- Leaves PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation unchanged
+
+---
 
 ## v8.299 - Source Identity and Freshness Correctness (July 10, 2026)
 

@@ -1,4 +1,3 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import {
@@ -12,6 +11,7 @@ import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import {
+  classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
   computeApyVarianceScore,
   computePYS,
@@ -22,7 +22,11 @@ import {
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
-import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import {
+  classifyYieldBenchmarkFreshness,
+  resolveBenchmarkForStablecoin,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
 import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
@@ -35,7 +39,6 @@ export type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
-const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
 
 function isResolvedYieldEntryWithYield(
   entry: ResolvedYieldEntry,
@@ -56,9 +59,7 @@ export function shouldDegradeForRiskFreeRate(meta: {
   isFallback: boolean;
   ageSeconds: number | null;
 }): boolean {
-  if (!meta.fallbackMode) return false;
-  if (meta.isFallback) return true;
-  return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
+  return classifyYieldBenchmarkFreshness(meta) !== "healthy";
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -327,6 +328,17 @@ function evaluateYieldSourceGroup(
     const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
+    const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
+    const sourceFreshness = classifyYieldSourceFreshness({
+      dataSource: y.dataSource,
+      sourceKey,
+      sourceAgeSeconds,
+      comparisonAnchorAgeSeconds,
+    });
+    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
+      selectionMode: benchmarkSelection.selectionMode,
+    });
+    const scoreQualified = sourceFreshness !== "stale" && benchmarkFreshness !== "stale";
     // Resolve the reviewed venue config from the same identifier stored as
     // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
     // auto-discovered lending rows — not just native/curated families — pick up
@@ -367,7 +379,7 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const pharosYieldScore = computePYS({
+    const computedPharosYieldScore = computePYS({
       apy30d,
       safetyScore,
       apyVarianceScore,
@@ -375,7 +387,15 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const pysNullReason = pharosYieldScore > 0
+    const freshnessNullReason = sourceFreshness === "stale"
+      ? "source-stale" as const
+      : benchmarkFreshness === "stale"
+        ? "benchmark-stale" as const
+        : null;
+    const pharosYieldScore = freshnessNullReason == null && Number.isFinite(computedPharosYieldScore)
+      ? computedPharosYieldScore
+      : null;
+    const pysNullReason = freshnessNullReason ?? (computedPharosYieldScore > 0
       ? null
       : derivePysNullReason({
           apy30d,
@@ -384,10 +404,9 @@ function evaluateYieldSourceGroup(
           scalingFactor: PYS_SCALING_FACTOR,
           benchmarkRate,
           sourceRiskPenalty: sourceRiskPenaltyInput,
-        });
+        }));
     const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
-    const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
     const anomalies: string[] = [];
     if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
     if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
@@ -400,6 +419,14 @@ function evaluateYieldSourceGroup(
     ) {
       anomalies.push("anchor-stale");
     }
+    if (sourceFreshness === "stale") anomalies.push("source-stale");
+    if (benchmarkFreshness === "degraded") anomalies.push("benchmark-degraded");
+    if (benchmarkFreshness === "stale") anomalies.push("benchmark-stale");
+
+    const freshnessWarnings: string[] = [];
+    if (sourceFreshness === "stale") freshnessWarnings.push("data-stale");
+    if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
+    if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
 
     return {
       id: stablecoinId,
@@ -446,17 +473,20 @@ function evaluateYieldSourceGroup(
       benchmarkSelectionMode: benchmarkSelection.selectionMode,
       benchmarkIsProxy: benchmarkMeta.isProxy ?? false,
       benchmarkMeta,
-      pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
+      pharosYieldScore,
       pysNullReason,
+      sourceFreshness,
+      benchmarkFreshness,
+      scoreQualified,
       prevExchangeRate,
       prevTvlUsd,
       sourceDepthRatio,
       observationCount30d,
       sourceSwitchCount30d: null,
       anomalies,
-      warnings: [],
+      warnings: freshnessWarnings,
       confidenceTier: getConfidenceTier(y.dataSource),
-      rejected: false,
+      rejected: !scoreQualified,
       usedLegacyHistory: historySelection.usedLegacyHistory,
       usedDefaultSafety,
       previousBestSourceKey,
@@ -535,7 +565,7 @@ function evaluateYieldSourceGroup(
 
 function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): EvaluateYieldSourcesResult {
   const bestRows = accumulator.evaluatedSources.filter((source) =>
-    accumulator.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
+    accumulator.bestSourceKeyByCoin.get(source.id) === source.sourceKey && !source.rejected,
   );
   const medianApy = computeTvlWeightedMedianApy(
     bestRows.map((row) => ({
@@ -544,14 +574,14 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
     })),
   );
   for (const source of accumulator.evaluatedSources) {
-    source.warnings = detectWarningSignals({
+    source.warnings = [...new Set([...source.warnings, ...detectWarningSignals({
       currentApy: source.currentApy,
       apy30d: source.apy30d,
       apyReward: source.apyReward,
       medianApy,
       sourceTvlUsd: source.sourceTvlUsd,
       prevTvlUsd: source.prevTvlUsd,
-    });
+    })])];
   }
 
   return {

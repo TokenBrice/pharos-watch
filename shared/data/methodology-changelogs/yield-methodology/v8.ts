@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.3",
+    title: "Registry-Wide Freshness Eligibility",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence applies source-family and benchmark TTLs before arbitration, withholds exact PYS from expired rows, and rolls health up across every benchmark used by published rankings. PYS formula weights and benchmark derivation are unchanged.",
+    impact: [
+      "Source-family freshness is evaluated before confidence arbitration, so a fresh curated observation outranks an expired deterministic or rate-derived candidate",
+      "Expired candidates remain auditable as retained alternatives; a stale-only winner remains visible as last-known context with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`",
+      "Ranking provenance publishes source freshness, benchmark freshness, and score qualification, while row warnings distinguish degraded and stale benchmark evidence",
+      "The benchmark scoring TTL is 48 hours; fallback or retained benchmarks degrade health, while benchmarks beyond the TTL cannot support an exact current PYS",
+      "Yield Health aggregates every benchmark key used by published rows, so a fresh USD benchmark cannot mask a stale GBP, EUR, or other row-bearing benchmark",
+      "PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.299",
     title: "Source Identity and Freshness Correctness",
     date: "2026-07-10",

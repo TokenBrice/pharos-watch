@@ -592,6 +592,41 @@ describe("handleYieldRankings", () => {
     }));
   });
 
+  it("does not requalify a stale published PYS during live safety hydration", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          pharosYieldScore: null,
+          pysNullReason: "source-stale",
+          warningSignals: ["data-stale"],
+          provenance: {
+            ...v748RankingsPayload.rankings[0].provenance,
+            sourceFreshness: "stale",
+            benchmarkFreshness: "healthy",
+            scoreQualified: false,
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(body.rankings[0]).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warningSignals: ["data-stale"],
+    });
+  });
+
   it("hydrates Royco tranche rows with opportunity-level safety instead of raw underlying safety", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const payload = {

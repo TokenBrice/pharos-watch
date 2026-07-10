@@ -28,6 +28,12 @@ export function YieldIntelligenceMethodologySection() {
             changelogClassName="hover:text-violet-700 dark:hover:text-violet-400"
           >
               <p>{YIELD_OVERVIEW_PARAGRAPH}</p>
+              <p>
+                Source-family and benchmark freshness are eligibility rules applied before confidence arbitration.
+                Expired evidence remains visible as NR context, but it cannot carry an exact current PYS. Every benchmark
+                used by a published row is evaluated independently so a healthy USD lane cannot mask a stale local-currency
+                benchmark.
+              </p>
               <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[
@@ -53,7 +59,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive (safety defaults to 40 / NR if live report-card hydration is missing and publishes an explicit missing/default reason; missing source-risk penalty resolves to neutral 1), while degraded benchmark or safety inputs are surfaced in provenance",
+                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score (safety defaults to 40 / NR if live report-card hydration is missing and publishes an explicit missing/default reason; missing source-risk penalty resolves to neutral 1)",
                     },
                   ]}
                 />
@@ -207,6 +213,12 @@ export function YieldIntelligenceMethodologySection() {
                     snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 48 hours
                     for the daily benchmark producer. Ordinary exchange-rate anchors expire after 14 days; price-derived and
                     Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.
+                  </p>
+                  <p>
+                    Freshness eligibility is applied before confidence arbitration. A stale deterministic candidate cannot
+                    beat a fresh curated candidate, and every benchmark used by a published row is evaluated independently.
+                    Fallback benchmarks remain score-bearing but degraded while they are within the 48-hour scoring TTL;
+                    expired source or benchmark evidence is retained for audit with an NR PYS and explicit provenance.
                   </p>
                 </div>
                 {/* PYS formula */}

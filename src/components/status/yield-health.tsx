@@ -46,6 +46,11 @@ function supplementalSubtext(supplemental: YieldHealthSummary["supplemental"]): 
   return ageLabel(supplemental.ageSec);
 }
 
+function benchmarkRegistrySubtext(registry: YieldHealthSummary["benchmarkRegistry"]): string {
+  if (registry.usedBenchmarkCount === 0) return "no published benchmark usage";
+  return `${registry.healthyBenchmarkCount}/${registry.usedBenchmarkCount} healthy · ${registry.degradedBenchmarkCount} degraded · ${registry.staleBenchmarkCount} stale · ${registry.unknownBenchmarkCount} unknown`;
+}
+
 function coverageStatus(
   field: YieldSourceRiskFieldCoverage | undefined,
   threshold: number,
@@ -187,13 +192,13 @@ export function YieldHealthCard({
             subtext={supplementalSubtext(health.supplemental)}
           />
           <StatTile
-            label="Benchmark"
-            value={<span className={statusClassName(health.benchmark.status)}>{health.benchmark.status}</span>}
-            subtext={
-              health.benchmark.isFallback
-                ? `fallback ${health.benchmark.fallbackMode ?? "active"}`
-                : `${health.benchmark.source ?? "source"} · ${ageLabel(health.benchmark.ageSec)}`
+            label="Benchmarks"
+            value={
+              <span className={statusClassName(health.benchmarkRegistry.status)}>
+                {health.benchmarkRegistry.status}
+              </span>
             }
+            subtext={benchmarkRegistrySubtext(health.benchmarkRegistry)}
           />
           <StatTile
             label="Source Risk"
@@ -204,6 +209,22 @@ export function YieldHealthCard({
             }
             subtext={coverageSubtext(health.sourceRiskCoverage)}
           />
+        </div>
+
+        <div className="rounded-lg border border-border/50 p-3">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Published benchmark health</div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Published benchmark health">
+            {Object.values(health.benchmarkRegistry.benchmarks).map((benchmark) => (
+              <div key={benchmark.key} className="flex min-w-0 items-center justify-between gap-3 text-xs">
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {benchmark.key} · {benchmark.rowCount} row{benchmark.rowCount === 1 ? "" : "s"}
+                </span>
+                <span className={`shrink-0 font-mono font-semibold ${statusClassName(benchmark.status)}`}>
+                  {benchmark.status} · {ageLabel(benchmark.ageSec)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="rounded-lg border border-border/50 p-3">

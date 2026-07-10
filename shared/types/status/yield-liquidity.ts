@@ -73,6 +73,31 @@ export interface YieldComparisonAnchorFreshnessSummary {
   staleAnchorExamplesTruncated: boolean;
 }
 
+export interface YieldBenchmarkHealthEntry {
+  key: string;
+  label: string | null;
+  currency: string | null;
+  rowCount: number;
+  fallbackSelectionRowCount: number;
+  fetchedAt: number | null;
+  ageSec: number | null;
+  maxAgeSec: number;
+  source: string | null;
+  isFallback: boolean | null;
+  fallbackMode: string | null;
+  status: YieldHealthFieldStatus;
+}
+
+export interface YieldBenchmarkRegistryHealthSummary {
+  status: YieldHealthFieldStatus;
+  usedBenchmarkCount: number;
+  healthyBenchmarkCount: number;
+  degradedBenchmarkCount: number;
+  staleBenchmarkCount: number;
+  unknownBenchmarkCount: number;
+  benchmarks: Record<string, YieldBenchmarkHealthEntry>;
+}
+
 export type YieldCoverageAuditQueueAction = "accept" | "dismiss" | "intentional-gap" | "watch";
 
 export type YieldCoverageAuditQueueItemKind =
@@ -154,6 +179,7 @@ export interface YieldHealthSummary {
     fallbackMode: string | null;
     status: YieldHealthFieldStatus;
   };
+  benchmarkRegistry: YieldBenchmarkRegistryHealthSummary;
   coverageAudit: {
     updatedAt: number | null;
     ageSec: number | null;

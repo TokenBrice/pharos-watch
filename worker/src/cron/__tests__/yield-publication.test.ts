@@ -116,6 +116,9 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     benchmarkMeta,
     pharosYieldScore: 28,
     pysNullReason: null,
+    sourceFreshness: "fresh",
+    benchmarkFreshness: "healthy",
+    scoreQualified: true,
     prevExchangeRate: null,
     prevTvlUsd: 1_700_000,
     sourceDepthRatio: null,
@@ -222,6 +225,12 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
     expect(payload.rankings[0]?.sourceRole).toBe("degraded-canonical");
+    expect(payload.rankings[0]?.pharosYieldScore).toBeNull();
+    expect(payload.rankings[0]?.pysNullReason).toBe("source-stale");
+    expect(payload.rankings[0]?.provenance).toMatchObject({
+      sourceFreshness: "stale",
+      scoreQualified: false,
+    });
   });
 
   it("does not add data-stale for healthy price-derived daily snapshots", () => {

@@ -282,8 +282,14 @@ function hydrateYieldRankingsWithLiveSafety(
       const hydratedSafety = resolveHydratedSafety({ row, card });
       const safetyInputScore = hydratedSafety.score;
       const underlyingSafetyScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
-      const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
-      const pysNullReason = pharosYieldScore > 0
+      const freshnessNullReason = row.pysNullReason === "source-stale" || row.warningSignals.includes("data-stale")
+        ? "source-stale" as const
+        : row.pysNullReason === "benchmark-stale" || row.warningSignals.includes("benchmark-stale")
+          ? "benchmark-stale" as const
+          : null;
+      const recomputedPharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
+      const pharosYieldScore = freshnessNullReason == null ? recomputedPharosYieldScore : null;
+      const pysNullReason = freshnessNullReason ?? (recomputedPharosYieldScore > 0
         ? null
         : derivePysNullReason({
             apy30d: row.apy30d,
@@ -292,7 +298,7 @@ function hydrateYieldRankingsWithLiveSafety(
             scalingFactor: payload.scalingFactor,
             benchmarkRate: row.benchmarkRate ?? null,
             sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
-          });
+          }));
 
       return {
         originalRow: row,

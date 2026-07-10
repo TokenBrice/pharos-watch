@@ -39,7 +39,9 @@ function hasCanonicalDegradation(source: EvaluatedYieldSource): boolean {
     source.anomalies.includes("canonical-zero-vs-positive") ||
     source.anomalies.includes("anchor-stale") ||
     source.warnings.includes("zero-yield") ||
-    source.warnings.includes("data-stale")
+    source.warnings.includes("data-stale") ||
+    source.warnings.includes("benchmark-degraded") ||
+    source.warnings.includes("benchmark-stale")
   );
 }
 
@@ -69,6 +71,12 @@ export function deriveRejectionReasonCode(
   selected: EvaluatedYieldSource,
   candidate: EvaluatedYieldSource,
 ): YieldDecisionRejectionReasonCode {
+  if (
+    candidate.rejected &&
+    (candidate.anomalies.includes("source-stale") || candidate.anomalies.includes("benchmark-stale"))
+  ) {
+    return "stale";
+  }
   const altDepth = finiteNumber(candidate.sourceDepthRatio);
   const selDepth = finiteNumber(selected.sourceDepthRatio);
   if (altDepth != null && selDepth != null && altDepth > 0 && selDepth >= altDepth * THINNER_RATIO) {

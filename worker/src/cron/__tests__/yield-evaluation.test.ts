@@ -16,7 +16,7 @@ function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {})
     sevenDaysAgoSec: startSec - 7 * 86400,
     safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
     riskFreeRates: {
-      USD: buildHardcodedUsdBenchmark("test"),
+      USD: freshUsdBenchmark(startSec),
       EUR: null,
       CHF: null,
       GBP: null,
@@ -40,6 +40,42 @@ function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {})
     sourceSwitchCount30dByCoin: new Map(),
     stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
     ...overrides,
+  };
+}
+
+function freshUsdBenchmark(observedAt: number, rate = 4.2) {
+  return {
+    ...withYieldBenchmarkStaticMeta("USD", {
+      rate,
+      recordDate: "2026-04-20",
+      fetchedAt: observedAt,
+      ageSeconds: 0,
+      source: "fred-dgs3mo-test",
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: "2026-04-20",
+    lastMarketFetchedAt: observedAt,
+    lastMarketSource: "fred-dgs3mo-test",
+  };
+}
+
+function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
+  return {
+    ...withYieldBenchmarkStaticMeta("GBP", {
+      rate,
+      recordDate: "2026-04-17",
+      fetchedAt: observedAt,
+      ageSeconds,
+      source: "fred-sonia-compounded-index-test",
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: "2026-04-17",
+    lastMarketFetchedAt: observedAt,
+    lastMarketSource: "fred-sonia-compounded-index-test",
   };
 }
 
@@ -599,6 +635,98 @@ describe("evaluateYieldSources", () => {
     }));
 
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
+  });
+
+  it("rejects an expired deterministic source before arbitration and retains it behind a fresh curated source", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "rate-derived:coin-a",
+            dataSource: "rate-derived",
+            currentApy: 12,
+            sourceObservedAt: startSec - 49 * 60 * 60,
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:fresh",
+            currentApy: 5,
+            sourceObservedAt: startSec - 60,
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:fresh");
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
+      rejected: true,
+      sourceFreshness: "stale",
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warnings: expect.arrayContaining(["data-stale"]),
+    });
+  });
+
+  it("publishes stale no-alternative observations only as unscored last-known context", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "rate-derived:coin-a",
+          dataSource: "rate-derived",
+          sourceObservedAt: startSec - 49 * 60 * 60,
+        }),
+      }],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
+    expect(result.evaluatedSources[0]).toMatchObject({
+      rejected: true,
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warnings: expect.arrayContaining(["data-stale"]),
+    });
+  });
+
+  it("marks a fresh GBP source unscored when its native benchmark is stale", () => {
+    const startSec = 1776729600;
+    const staleAgeSeconds = 49 * 60 * 60;
+    const input = baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "tgbp-tokenised",
+        symbol: "TGBP",
+        yield: resolvedYield({
+          sourceKey: "defillama:tgbp:fresh",
+          sourceObservedAt: startSec - 60,
+        }),
+      }],
+      safetyScores: new Map([["tgbp-tokenised", { score: 75, grade: "B" }]]),
+    });
+    input.riskFreeRates.GBP = gbpBenchmark(startSec - staleAgeSeconds, staleAgeSeconds);
+
+    const [source] = evaluateYieldSources(input).evaluatedSources;
+    expect(source).toMatchObject({
+      benchmarkKey: "GBP",
+      sourceFreshness: "fresh",
+      benchmarkFreshness: "stale",
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      warnings: expect.arrayContaining(["benchmark-stale"]),
+    });
   });
 
   it("does not carry old scrvUSD trailing-delta history into the current-rate source", () => {

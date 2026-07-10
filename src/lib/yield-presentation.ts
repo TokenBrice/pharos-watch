@@ -11,6 +11,8 @@ export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark",
   "scaling-invalid": "Scaling factor unavailable",
   "missing-inputs": "Missing inputs",
+  "source-stale": "Source observation stale",
+  "benchmark-stale": "Benchmark stale",
 };
 
 export function formatSignedPysDelta(delta: number): string {

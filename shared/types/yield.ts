@@ -44,6 +44,8 @@ export const YIELD_PYS_NULL_REASONS = [
   "effective-yield-non-positive",
   "scaling-invalid",
   "missing-inputs",
+  "source-stale",
+  "benchmark-stale",
 ] as const;
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
@@ -394,6 +396,9 @@ const YieldRankingProvenanceSchema = z.object({
   benchmarkFallbackMode: z.string().nullable(),
   benchmarkSelectionMode: z.enum(["native", "fallback-usd", "manual-override"]).optional(),
   benchmarkIsProxy: z.boolean().optional(),
+  sourceFreshness: z.enum(["fresh", "stale", "unknown"]).optional(),
+  benchmarkFreshness: z.enum(["healthy", "degraded", "stale"]).optional(),
+  scoreQualified: z.boolean().optional(),
   anomalies: z.array(z.string()),
 });
 

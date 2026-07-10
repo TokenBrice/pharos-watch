@@ -183,6 +183,27 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   return STALE_THRESHOLD_MS;
 }
 
+export type YieldSourceFreshness = "fresh" | "stale" | "unknown";
+
+export function classifyYieldSourceFreshness(input: {
+  dataSource: string;
+  sourceKey?: string | null;
+  sourceAgeSeconds: number | null;
+  comparisonAnchorAgeSeconds?: number | null;
+}): YieldSourceFreshness {
+  const staleThresholdMs = getRankingStaleThresholdMs(input.dataSource, input.sourceKey);
+  if (
+    input.comparisonAnchorAgeSeconds != null &&
+    input.comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(input.dataSource, input.sourceKey)
+  ) {
+    return "stale";
+  }
+  if (input.sourceAgeSeconds == null || !Number.isFinite(input.sourceAgeSeconds)) {
+    return "unknown";
+  }
+  return input.sourceAgeSeconds * 1000 > staleThresholdMs ? "stale" : "fresh";
+}
+
 function isLongHorizonNavAnchor(sourceKey: string | null | undefined): boolean {
   return sourceKey?.includes("protocol-api:ondo-usdy-oracle") === true
     || sourceKey?.includes("protocol-api:midas-mmev-nav-oracle") === true;

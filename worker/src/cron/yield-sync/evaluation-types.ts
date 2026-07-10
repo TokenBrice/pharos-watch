@@ -3,6 +3,8 @@ import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode, YieldPysNullReason
 import type { PysSourceRiskPenaltyReason } from "@shared/lib/yield-scoring";
 import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
+import type { YieldBenchmarkFreshness } from "./benchmarks";
+import type { YieldSourceFreshness } from "../yield-helpers";
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -51,8 +53,11 @@ export interface EvaluatedYieldSource {
   benchmarkSelectionMode: YieldBenchmarkSelectionMode;
   benchmarkIsProxy: boolean;
   benchmarkMeta: ParsedYieldBenchmarkMeta;
-  pharosYieldScore: number;
+  pharosYieldScore: number | null;
   pysNullReason: YieldPysNullReason | null;
+  sourceFreshness: YieldSourceFreshness;
+  benchmarkFreshness: YieldBenchmarkFreshness;
+  scoreQualified: boolean;
   prevExchangeRate: number | null;
   prevTvlUsd: number | null;
   sourceDepthRatio: number | null;
