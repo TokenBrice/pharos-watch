@@ -1,5 +1,12 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { resolveMintBurnResumeConfigKey, resolveRotatedConfigs } from "../mint-burn/run-state";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import {
+  getMintBurnRunState,
+  resolveMintBurnResumeConfigKey,
+  resolveRotatedConfigs,
+  setMintBurnRunState,
+} from "../mint-burn/run-state";
 
 describe("resolveRotatedConfigs", () => {
   const configs = [
@@ -51,5 +58,38 @@ describe("resolveRotatedConfigs", () => {
       ...secondOrder.slice(0, 94).map((config) => config.key),
     ]);
     expect(attempted.size).toBe(127);
+  });
+
+  it("retries from the same durable frontier after a crash before completion", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(`CREATE TABLE mint_burn_run_state (
+      job TEXT PRIMARY KEY,
+      next_config_index INTEGER NOT NULL DEFAULT 0,
+      degraded_streak INTEGER NOT NULL DEFAULT 0,
+      last_config_key TEXT,
+      updated_at INTEGER NOT NULL
+    )`);
+    const db = createSqliteD1(sqlite);
+    const fullSet = Array.from({ length: 127 }, (_, index) => ({ key: `config-${index}` }));
+
+    try {
+      await setMintBurnRunState(db, "sync-mint-burn-extended", 0, "config-94");
+      const beforeCrash = await getMintBurnRunState(db, "sync-mint-burn-extended");
+      expect(resolveRotatedConfigs(beforeCrash.state.resumeConfigKey, fullSet, keyFn)[0]?.key)
+        .toBe("config-94");
+
+      // A killed run never reaches the completion-only state write. Its retry
+      // must therefore observe and attempt the same first deferred config.
+      const retry = await getMintBurnRunState(db, "sync-mint-burn-extended");
+      expect(retry.state.resumeConfigKey).toBe("config-94");
+      expect(resolveRotatedConfigs(retry.state.resumeConfigKey, fullSet, keyFn)[0]?.key)
+        .toBe("config-94");
+
+      await setMintBurnRunState(db, "sync-mint-burn-extended", 0, "config-61");
+      const afterSuccessfulRetry = await getMintBurnRunState(db, "sync-mint-burn-extended");
+      expect(afterSuccessfulRetry.state.resumeConfigKey).toBe("config-61");
+    } finally {
+      sqlite.close();
+    }
   });
 });
