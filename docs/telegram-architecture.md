@@ -182,7 +182,6 @@ Admin recovery paths preserve the same effect and queue boundaries. Chat diagnos
 - `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
 - `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets, the `DispatchResult` shape, and the shared pending/safety/reserve result-field mappers used by every dispatch path)
 - `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
-- `worker/src/cron/dispatch-telegram-alerts-observability.ts` (systemic fresh-failure observability)
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly, the shared dispatch-state handoff to the five-minute lane, and the preset-failure counter)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
