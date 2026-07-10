@@ -51,6 +51,7 @@ export function PipelineModeTabs({
       role="tablist"
       aria-label="Pipeline views"
       className="w-full min-w-0 max-w-full overflow-x-auto border-b border-border/70 pb-2 scrollbar-none"
+      style={{ contain: "paint" }}
     >
       <div className="flex min-w-max gap-1.5">
         {modes.map((mode, index) => {

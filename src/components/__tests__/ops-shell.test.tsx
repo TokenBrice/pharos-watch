@@ -48,6 +48,18 @@ afterEach(() => {
 });
 
 describe("OpsShell", () => {
+  it("contains route-level horizontal overflow while mounted", () => {
+    const view = render(
+      <OpsShell>
+        <div>Workspace body</div>
+      </OpsShell>,
+    );
+
+    expect(document.documentElement.classList.contains("overflow-x-clip")).toBe(true);
+    view.unmount();
+    expect(document.documentElement.classList.contains("overflow-x-clip")).toBe(false);
+  });
+
   it("renders compact production navigation with the current workspace active and visible", () => {
     render(
       <OpsShell>

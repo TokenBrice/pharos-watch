@@ -10,15 +10,7 @@ const STATE_META: Record<PipelineSeverity, { label: string; className: string }>
   unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
 };
 
-function IntegrityTable({
-  caption,
-  label,
-  rows,
-}: {
-  caption: string;
-  label: string;
-  rows: PipelineIntegrityRow[];
-}) {
+function IntegrityTable({ caption, label, rows }: { caption: string; label: string; rows: PipelineIntegrityRow[] }) {
   return (
     <section aria-label={label} className="space-y-2">
       <h3 className="text-sm font-semibold text-foreground">{label}</h3>
@@ -26,6 +18,8 @@ function IntegrityTable({
         tableId={`pipeline-integrity-${label.toLowerCase().replaceAll(" ", "-")}`}
         chrome="content"
         density="compact"
+        viewportClassName="max-w-full"
+        viewportProps={{ style: { contain: "paint" } }}
         tableProps={{ "aria-label": label }}
       >
         <TableCaption className="sr-only">{caption}</TableCaption>

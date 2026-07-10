@@ -85,13 +85,26 @@ async function assertNoDocumentOverflow(
     const viewportWidth = root.clientWidth;
     const documentWidth = Math.max(root.scrollWidth, body?.scrollWidth ?? 0);
     const elements = Array.from(document.querySelectorAll<HTMLElement>("body *"));
+    const initialScroll = { x: window.scrollX, y: window.scrollY };
+    const initialScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(documentWidth, initialScroll.y);
+    const horizontalOverflowPx = window.scrollX;
+    window.scrollTo(initialScroll.x, initialScroll.y);
+    root.style.scrollBehavior = initialScrollBehavior;
 
     return {
       viewport: { width: viewportWidth, height: root.clientHeight },
       document: { width: documentWidth, height: Math.max(root.scrollHeight, body?.scrollHeight ?? 0) },
-      root: { clientWidth: root.clientWidth, scrollWidth: root.scrollWidth },
+      root: {
+        clientWidth: root.clientWidth,
+        scrollWidth: root.scrollWidth,
+        overflowX: getComputedStyle(root).overflowX,
+        className: root.className,
+      },
       body: body ? { clientWidth: body.clientWidth, scrollWidth: body.scrollWidth } : null,
-      horizontalOverflowPx: Math.max(0, documentWidth - viewportWidth),
+      horizontalOverflowPx,
+      rawContentOverflowPx: Math.max(0, documentWidth - viewportWidth),
       pathname: window.location.pathname,
       overflowingElements: elements
         .map((element) => {
@@ -139,6 +152,9 @@ async function assertNoDocumentOverflow(
 
 async function assertWorkspaceVisibleAtCurrentViewport(page: Page, workspaceId: AdminWorkspaceId): Promise<void> {
   await waitForWorkspace(page, workspaceId);
+  await expect
+    .poll(() => page.locator("html").evaluate((element) => element.classList.contains("overflow-x-clip")))
+    .toBe(true);
   await assertOpsNavigation(page, workspaceId);
   await expect(page.locator("main#ops-main-content")).toBeVisible();
 }

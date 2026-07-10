@@ -55,6 +55,12 @@ export function OpsShell({ children }: { children: ReactNode }) {
   const { isDark, label: themeLabel, toggleTheme } = useThemeToggle();
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("overflow-x-clip");
+    return () => root.classList.remove("overflow-x-clip");
+  }, []);
+
+  useEffect(() => {
     if (!opsUiHost) return;
 
     const redirectLegacyHash = () => {
@@ -101,7 +107,10 @@ export function OpsShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ "--ops-sticky-offset": "7rem" } as CSSProperties}>
+    <div
+      className="min-h-screen overflow-x-clip bg-background"
+      style={{ "--ops-sticky-offset": "7rem" } as CSSProperties}
+    >
       <a
         href="#ops-main-content"
         className="pharos-focus-ring fixed left-3 top-3 z-50 -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
@@ -163,6 +172,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
           ref={navScrollerRef}
           aria-label="Operator workspaces"
           className="mx-auto w-full max-w-[96rem] overflow-x-auto px-3 scrollbar-none sm:px-5"
+          style={{ contain: "paint" }}
         >
           <div className="flex min-w-max gap-1 pb-2">
             {ADMIN_WORKSPACES.map((workspace) => {
@@ -174,7 +184,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
                   href={workspace.path}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "pharos-focus-ring inline-flex min-h-11 items-center rounded-md border border-transparent px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
                     active
                       ? "bg-foreground text-background forced-colors:border forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
