@@ -1,4 +1,5 @@
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
@@ -126,31 +127,11 @@ function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition,
   };
 }
 
-const SEARCHABLE_COINS: ReadonlyArray<{ stablecoinId: string; symbol: string; name: string; peg: string; status: string }> = Object.freeze(
-  TRACKED_STABLECOINS
-    .filter((coin) => (coin.status ?? "active") !== "frozen")
-    .map((coin) => Object.freeze({
-      stablecoinId: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      peg: coin.flags.pegCurrency,
-      status: coin.status ?? "active",
-    })),
-);
-
-const RECOMMENDED_PRESETS: ReadonlyArray<Pick<TelegramPresetDefinition, "id" | "label" | "description">> = Object.freeze(
-  listTelegramPresets().map((preset) => Object.freeze({
-    id: preset.id,
-    label: preset.label,
-    description: preset.description,
-  })),
-);
-
 export async function loadTelegramMiniAppState(
   db: D1Database,
   auth: TelegramMiniAppAuthContext,
   options: LoadTelegramMiniAppStateOptions,
-): Promise<Record<string, unknown>> {
+): Promise<TelegramMiniAppMutableState> {
   const chatId = auth.canMutatePrivateChat ? auth.userId : null;
   const mutationAuthExpired = options.nowSec - auth.authDate > options.mutationMaxAgeSec;
   const canMutate = Boolean(chatId && !mutationAuthExpired);
@@ -267,10 +248,6 @@ export async function loadTelegramMiniAppState(
         depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),
       };
     }),
-    catalog: {
-      recommendedPresets: RECOMMENDED_PRESETS,
-      searchableCoins: SEARCHABLE_COINS,
-    },
     health: {
       lastSuccessfulDeliveryAt: health?.lastSuccessfulDeliveryAt ?? null,
       lastSuccessfulReplyAt: health?.lastSuccessfulReplyAt ?? null,

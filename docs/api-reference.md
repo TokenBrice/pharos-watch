@@ -3512,9 +3512,9 @@ Returns the current private-chat Mini App control-panel state for a Telegram use
 }
 ```
 
-The request schema is strict. Launch context such as `start_param` must come from signed Telegram `initData`.
+The request schema is strict. Launch context such as `start_param` must come from signed Telegram `initData`. Current clients also advertise the shared contract and bundled-catalog versions through the non-identifying `mini_app_contract` and `mini_app_catalog` query parameters; older clients may omit both during the rolling-deploy compatibility window.
 
-**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 5-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
+**Response:** matching versioned clients receive `{ contractVersion, catalogVersion, stateRevision, state }`. `state` contains the mutable Mini App projection and excludes the immutable searchable catalog, which is bundled into the fingerprinted static client asset. A legacy request with neither version parameter receives the former full state plus `catalog`; a new client can also parse that full response from an older Worker. Private fresh sessions return `state.viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 5-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
 
 Key fields:
 
@@ -3522,20 +3522,20 @@ Key fields:
 - `subscriber` — global alert flags, quiet-hours settings, and chat-level snooze.
 - `subscriptions` — explicit per-coin follows with alert flags and per-coin thresholds.
 - `presets` — followed preset watchlists.
-- `catalog` — recommended presets and searchable tracked stablecoins for the UI.
+- bundled `catalog` — recommended presets and searchable tracked stablecoins; present in the static client (and temporary legacy responses), not routine versioned API responses.
 - `health` — last successful delivery/reply, recent failure class, and queued alert count.
 
-Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `413` request body above the 16 KiB Mini App cap, `429` cooldown, `500` uncaught handler failure wrapper, `503` missing bot-token configuration.
+Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `409` contract/catalog version mismatch, `413` request body above the 16 KiB Mini App cap, `429` cooldown, `500` uncaught handler failure wrapper, `503` missing bot-token configuration. A version mismatch is rejected before auth cooldown or analytics writes and carries the Worker's current versions.
 
 ### `POST /api/telegram-mini-app/mutate`
 
-Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
+Applies one private-chat Mini App setting mutation, then returns the refreshed mutable-state snapshot and opaque state revision. The immutable catalog is not repeated.
 
 **Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 5 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). The same fresh launch can perform multiple mutations inside that 5-minute window; stale auth returns `401`.
 
 **Site-data lane:** denied.
 
-**Rate limiting:** cache-backed cooldown per Telegram user across all mutation kinds (`mini-app:mutation:any`, 5 seconds).
+**Rate limiting:** an anchored per-user burst budget admits up to 12 signature-valid, schema-valid mutation attempts in 30 seconds. A denial returns the same integer delay in `Retry-After` and `retryAfterSec`; the client counts down without replaying the write.
 
 **Cache:** no-store.
 
@@ -3556,7 +3556,7 @@ Supported `operation.kind` values:
 
 - `recommended-setup` — canonical first-run setup only: `presetId="usd-top25"` and `alertTypes=["dews","depeg"]`.
 - `follow-preset` — follow any supported preset with selected alert types.
-- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`).
+- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`, `reserve`).
 - `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.
 - `clear-snooze` — clear chat-level snooze.
@@ -3569,7 +3569,7 @@ Supported `operation.kind` values:
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `413` request body above the 16 KiB Mini App cap; `429` cooldown; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration.
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `409` contract/catalog version mismatch; `413` request body above the 16 KiB Mini App cap; `429` burst budget; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration. A `409` occurs before burst admission, analytics, or mutation writes; the client refreshes its static bundle at most once and never replays the rejected mutation.
 
 ### `POST /api/telegram-webhook`
 

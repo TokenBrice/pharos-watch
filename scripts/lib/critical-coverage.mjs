@@ -113,7 +113,7 @@ export const CRITICAL_FILES = [
   "worker/src/api/telegram-mini-app.ts",
   "worker/src/api/telegram-mini-app-state.ts",
   "worker/src/api/telegram-mini-app-mutations.ts",
-  "worker/src/api/telegram-mini-app-schemas.ts",
+  "shared/lib/telegram-mini-app-contract.ts",
   "worker/src/lib/telegram-mini-app-auth.ts",
   "worker/src/lib/alerts.ts",
   "worker/src/api/stablecoin-detail.ts",

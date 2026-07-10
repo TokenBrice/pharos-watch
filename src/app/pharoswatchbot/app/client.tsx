@@ -22,7 +22,11 @@ import { PresetsPanel } from "./components/PresetsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
 import { isPausedSentinel } from "./format";
-import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
+import {
+  isMiniAppVersionMismatch,
+  postMiniAppState,
+  refreshMiniAppBundleOnce,
+} from "./mini-app-api";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const BOT_URL = "https://t.me/PharosWatchBot";
@@ -137,10 +141,16 @@ export function PharosWatchBotMiniAppClient() {
   const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
     setStatus("loading");
     try {
-      setState(await postMiniAppJson(SESSION_ENDPOINT, { initData: nextInitData }, TelegramMiniAppStateSchema));
+      setState(await postMiniAppState(SESSION_ENDPOINT, { initData: nextInitData }));
       setStatus("ready");
       if (options.clearMessage !== false) setMessage(null);
     } catch (err) {
+      if (isMiniAppVersionMismatch(err) && refreshMiniAppBundleOnce({
+        contractVersion: err.serverContractVersion,
+        catalogVersion: err.serverCatalogVersion,
+      })) {
+        return;
+      }
       setStatus("error");
       setMessage(miniAppErrorMessage(err, "session"));
     }

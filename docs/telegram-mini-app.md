@@ -28,8 +28,11 @@ Owned files:
 - `worker/src/api/telegram-mini-app-rate-limit.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/api/telegram-mini-app-schemas.ts`
 - `worker/src/lib/telegram-mini-app-auth.ts`
+- `shared/lib/telegram-mini-app-contract.ts`
+- `shared/lib/telegram-mini-app-catalog.ts`
+- `shared/lib/telegram-presets.ts`
+- `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
 
 ## Launch Surfaces
 
@@ -65,7 +68,7 @@ Recognized payloads:
 
 Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. In practice every payload we emit stays well under 64. No spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is in the Mini App catalog but not already followed render a launch-target card with Follow / Why / Coverage / View actions; ids no longer in the catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`. Signed `initData.start_param` values outside the Mini App payload envelope are ignored as `null` rather than rejecting the whole session.
 
-The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. The schema literals in `worker/src/api/telegram-mini-app-schemas.ts` and `src/app/pharoswatchbot/app/types.ts` must be edited in lockstep if that default changes; broader preset follows use the separate `follow-preset` mutation.
+The `recommended-setup` mutation is a single canonical, fail-closed preset: `usd-top25` with `dews` and `depeg`. Its operation schema and type live once in `shared/lib/telegram-mini-app-contract.ts`; broader preset follows use the separate `follow-preset` mutation.
 
 For an already-followed preset, the Presets panel allows DEWS, depeg, and safety-family edits but keeps at least one family enabled. When only one remains, its toggle is disabled and the panel directs the user to **Unfollow** to stop the preset entirely. This keeps the client from offering an all-disabled preset state that the mutation schema rejects.
 
@@ -88,6 +91,16 @@ The load-bearing rules:
 - Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
 The Mini App seam does not receive Telegram webhook updates and does not call the Telegram Bot API. Its only inbound surfaces are `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`.
+
+## Contract And Catalog Versioning
+
+`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
+
+The searchable coin catalog is projected by `scripts/build-data/build-client-registry.mjs` into `shared/data/stablecoins/coins.telegram-mini-app.generated.json`. `shared/lib/telegram-mini-app-catalog.ts` combines that slim asset with the shared preset definitions and derives a content version. The catalog is bundled into the fingerprinted static Mini App JavaScript, so its roughly 42 KB minified payload is cached with the Pages asset instead of being returned by every signed API call.
+
+New clients advertise `mini_app_contract` and `mini_app_catalog` query parameters. A matching Worker returns `{ contractVersion, catalogVersion, stateRevision, state }`; `state` contains only viewer/subscriber/preset/subscription/health data and never the immutable catalog. A request with neither parameter is treated as a legacy client and receives the former full-catalog state shape during the rolling-deploy compatibility window. Conversely, an older Worker ignores the new query parameters and returns its full state, which the new client can still parse. Query negotiation avoids adding custom request headers, so cached new clients remain CORS-compatible with an older Worker.
+
+Version skew returns `409 contract-version-mismatch` or `409 catalog-version-mismatch` before auth cooldown, mutation burst, analytics, or persistence writes. The client does not replay a rejected mutation. It stores only the non-identifying target-version pair in `sessionStorage` and reloads the fingerprinted static bundle at most once for that target; a repeated mismatch asks the user to close and reopen the Mini App.
 
 ## Effective Alert Source
 
@@ -121,6 +134,8 @@ The burst counter is independent of operation semantics and webhook replay prote
 
 Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, analytics, or rate-limit writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures intentionally perform no D1 writes before auth so unauthenticated clients cannot amplify writes or pollute usage counters.
 
+The embedded `/pharoswatchbot/app` route does not bootstrap Google Analytics and does not send Google page views, custom events, or Web Vitals. Its route-specific CSP allows the Telegram bridge but omits Google Analytics and Tag Manager script, image, and connection origins. This exclusion is exact to the Mini App route and descendants; the public `/pharoswatchbot` product page keeps normal site analytics when GA4 is configured. Required adoption and error visibility comes from the existing first-party `telegram_usage_daily` counters after signed `initData` authentication. Those rows contain low-cardinality event, outcome, chat-type, action-detail, and latency buckets, never a chat ID; rejected pre-auth requests write no counters.
+
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 
 The Mini App stylesheet seeds `--telegram-bg`, `--telegram-text`, and `--telegram-color-scheme` from `prefers-color-scheme: dark` when the document contains `.pharos-mini-app`. Once the Telegram bridge is available, `applyTelegramTheme()` is authoritative: it exports Telegram theme params and `colorScheme`, and `.pharos-mini-app` scopes the Pharos bridge tokens (`--background`, `--card`, `--foreground`, `--muted`, `--border`, `--ring`) to that Telegram palette so internal cards, tabs, selects, and buttons do not mix a dark Telegram shell with light Pharos controls.
@@ -151,4 +166,6 @@ For incident triage, start at the runbooks rather than DevTools:
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
 - `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.
+- `shared/lib/__tests__/telegram-mini-app-contract.test.ts` — operation parse parity, compact/legacy response schemas, catalog version, and capability compatibility.
+- `src/app/pharoswatchbot/app/mini-app-api.test.ts` — compact-state hydration, new-client/old-Worker compatibility, capability parameters, and one-shot version refresh.
 - `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.

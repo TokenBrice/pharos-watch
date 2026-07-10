@@ -66,7 +66,8 @@ BotFather-owned release checklist:
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/api/telegram-mini-app-schemas.ts`
+- `shared/lib/telegram-mini-app-contract.ts`
+- `shared/lib/telegram-mini-app-catalog.ts`
 - `worker/src/lib/telegram-usage-analytics.ts`
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`

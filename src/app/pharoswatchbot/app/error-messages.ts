@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  TELEGRAM_MINI_APP_ERROR_CODES,
+  isTelegramMiniAppErrorCode,
+  type TelegramMiniAppErrorCode,
+} from "@shared/lib/telegram-mini-app-contract";
+
 /**
  * Unified Mini App error-message formatter.
  *
@@ -9,42 +15,34 @@
  * fallback and expose mutation-specific codes only where they apply.
  */
 
-export const MINI_APP_ERROR_CODES = [
-  "stale-auth",
-  "not-private",
-  "rate-limited",
-  "validation-error",
-  "body-too-large",
-  "internal",
-  "not-configured",
-  "preset-unavailable",
-  "unknown-coin",
-  "unknown-preset",
-  "invalid-coin-patch",
-  "invalid-alert-types",
-  "invalid-timezone",
-] as const;
-
-export type MiniAppErrorCode = (typeof MINI_APP_ERROR_CODES)[number];
-
-const MINI_APP_ERROR_CODE_SET: ReadonlySet<string> = new Set(MINI_APP_ERROR_CODES);
+export const MINI_APP_ERROR_CODES = TELEGRAM_MINI_APP_ERROR_CODES;
+export type MiniAppErrorCode = TelegramMiniAppErrorCode;
 
 export class MiniAppRequestError extends Error {
   readonly status: number;
   readonly code: MiniAppErrorCode | null;
   readonly retryAfterSec: number | null;
+  readonly serverContractVersion: string | null;
+  readonly serverCatalogVersion: string | null;
 
-  constructor(status: number, code: MiniAppErrorCode | null = null, retryAfterSec: number | null = null) {
+  constructor(
+    status: number,
+    code: MiniAppErrorCode | null = null,
+    retryAfterSec: number | null = null,
+    versions: { contractVersion?: string | null; catalogVersion?: string | null } = {},
+  ) {
     super(`Request failed with ${status}`);
     this.name = "MiniAppRequestError";
     this.status = status;
     this.code = code;
     this.retryAfterSec = retryAfterSec;
+    this.serverContractVersion = versions.contractVersion ?? null;
+    this.serverCatalogVersion = versions.catalogVersion ?? null;
   }
 }
 
 export function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
-  return typeof value === "string" && MINI_APP_ERROR_CODE_SET.has(value);
+  return isTelegramMiniAppErrorCode(value);
 }
 
 export type MiniAppErrorContext = "session" | "mutation";
@@ -54,6 +52,9 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
     // Shared arm: stale auth produces the same copy in both surfaces.
     if (err.code === "stale-auth") {
       return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
+    }
+    if (err.code === "contract-version-mismatch" || err.code === "catalog-version-mismatch") {
+      return "Mini App was updated. Close and reopen it from PharosWatchBot.";
     }
 
     if (context === "session") {

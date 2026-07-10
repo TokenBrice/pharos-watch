@@ -2,6 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  TELEGRAM_MINI_APP_CATALOG_VERSION,
+  TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TelegramMiniAppSnapshotSchema,
+} from "@shared/lib/telegram-mini-app-contract";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
 const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
@@ -33,6 +40,26 @@ async function signedInitData(fields: Record<string, string>, token = BOT_TOKEN)
 
 function request(path: string, body: unknown): Request {
   return new Request(`https://api.pharos.watch${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function versionedRequest(path: string, body: unknown, versions: {
+  contractVersion?: string;
+  catalogVersion?: string;
+} = {}): Request {
+  const url = new URL(path, "https://api.pharos.watch");
+  url.searchParams.set(
+    TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+    versions.contractVersion ?? TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  );
+  url.searchParams.set(
+    TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+    versions.catalogVersion ?? TELEGRAM_MINI_APP_CATALOG_VERSION,
+  );
+  return new Request(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -131,6 +158,56 @@ afterEach(() => {
 });
 
 describe("handleTelegramMiniAppSession", () => {
+  it("returns a compact versioned snapshot while legacy clients retain the full catalog", async () => {
+    const initData = await privateInitData();
+    const versionedDb = mockD1(stateReadTables());
+    const legacyDb = mockD1(stateReadTables());
+
+    const compactResponse = await handleTelegramMiniAppSession(
+      versionedDb,
+      versionedRequest("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+    const compactText = await compactResponse.text();
+    const compact = TelegramMiniAppSnapshotSchema.parse(JSON.parse(compactText));
+
+    const legacyResponse = await handleTelegramMiniAppSession(
+      legacyDb,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+    const legacyText = await legacyResponse.text();
+    const legacy = JSON.parse(legacyText) as { catalog?: { searchableCoins?: unknown[] } };
+
+    expect(compactResponse.status).toBe(200);
+    expect(compact.contractVersion).toBe(TELEGRAM_MINI_APP_CONTRACT_VERSION);
+    expect(compact.catalogVersion).toBe(TELEGRAM_MINI_APP_CATALOG_VERSION);
+    expect(compact.stateRevision).toMatch(/^state-v1-/);
+    expect(compact).not.toHaveProperty("catalog");
+    expect(compact.state).not.toHaveProperty("catalog");
+    expect(legacy.catalog?.searchableCoins?.length).toBeGreaterThan(300);
+    expect(compactText.length).toBeLessThan(legacyText.length / 10);
+  });
+
+  it("rejects version skew before auth, cooldown, or analytics writes", async () => {
+    const db = mockD1();
+    const response = await handleTelegramMiniAppSession(
+      db,
+      versionedRequest("/api/telegram-mini-app/session", { initData: "not-signed" }, {
+        catalogVersion: "catalog-v0-stale",
+      }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: "catalog-version-mismatch",
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+    });
+    expect(db.getHistory()).toEqual([]);
+  });
+
   it("returns private-chat state", async () => {
     const initData = await privateInitData();
     const db = mockD1([
@@ -584,6 +661,42 @@ describe("handleTelegramMiniAppSession", () => {
 });
 
 describe("handleTelegramMiniAppMutation", () => {
+  it("returns only mutable state and revision for a routine versioned mutation", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, versionedRequest("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-global", alertType: "safety", enabled: true },
+    }), BOT_TOKEN);
+    const responseText = await response.text();
+    const body = TelegramMiniAppSnapshotSchema.parse(JSON.parse(responseText));
+
+    expect(response.status).toBe(200);
+    expect(body.stateRevision).toMatch(/^state-v1-/);
+    expect(body).not.toHaveProperty("catalog");
+    expect(body.state).not.toHaveProperty("catalog");
+    expect(responseText.length).toBeLessThan(8 * 1024);
+  });
+
+  it("rejects version skew before burst admission, analytics, or mutation writes", async () => {
+    const db = mockD1();
+    const response = await handleTelegramMiniAppMutation(db, versionedRequest("/api/telegram-mini-app/mutate", {
+      initData: "not-signed",
+      operation: { kind: "set-global", alertType: "safety", enabled: true },
+    }, {
+      contractVersion: "1",
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: "contract-version-mismatch",
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+    });
+    expect(db.getHistory()).toEqual([]);
+  });
+
   it("uses semantic action details for timezone and unsubscribe-all mutations", () => {
     expect(mutationActionDetail({ kind: "set-timezone", timezone: "Europe/Paris" })).toBe("timezone");
     expect(mutationActionDetail({ kind: "unsubscribe-all" })).toBe("all");

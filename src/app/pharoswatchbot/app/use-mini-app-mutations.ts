@@ -7,7 +7,11 @@ import {
   miniAppErrorMessage,
   MiniAppRequestError,
 } from "./error-messages";
-import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
+import {
+  isMiniAppVersionMismatch,
+  postMiniAppState,
+  refreshMiniAppBundleOnce,
+} from "./mini-app-api";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type {
   FollowedPreset,
@@ -285,7 +289,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     setPendingOperation(operation);
     webApp?.enableClosingConfirmation?.();
     try {
-      const next = await postMiniAppJson(MUTATE_ENDPOINT, { initData, operation }, TelegramMiniAppStateSchema);
+      const next = await postMiniAppState(MUTATE_ENDPOINT, { initData, operation });
       if (operation.kind === "forget-me") {
         // Render the terminal screen instead of swapping state.
         setForgottenView(true);
@@ -332,7 +336,13 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       }
       return next;
     } catch (err) {
-      if (err instanceof MiniAppRequestError && err.status === 429 && err.code === "rate-limited") {
+      if (isMiniAppVersionMismatch(err)) {
+        refreshMiniAppBundleOnce({
+          contractVersion: err.serverContractVersion,
+          catalogVersion: err.serverCatalogVersion,
+        });
+        setMessage(miniAppErrorMessage(err, "mutation"));
+      } else if (err instanceof MiniAppRequestError && err.status === 429 && err.code === "rate-limited") {
         const retryAfterSec = err.retryAfterSec ?? 1;
         setMutationRetryAfterSec((current) => Math.max(current, retryAfterSec));
         setMessage(null);

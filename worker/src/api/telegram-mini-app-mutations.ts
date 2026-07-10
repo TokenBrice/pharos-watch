@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
 import { batchExecute } from "../lib/db";
 import { isSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
@@ -27,7 +28,6 @@ import {
   unixNow,
   type UpsertSubscriberInput,
 } from "./telegram-webhook-store";
-import type { TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"

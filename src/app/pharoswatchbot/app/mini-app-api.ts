@@ -1,91 +1,20 @@
 import { SchemaValidationError, apiRequest } from "@/lib/api";
-import { z, type ZodType } from "zod";
 import {
-  isMiniAppErrorCode,
-  MiniAppRequestError,
-  type MiniAppErrorCode,
-} from "./error-messages";
-import type { TelegramMiniAppState } from "./types";
+  TELEGRAM_MINI_APP_CATALOG_VERSION,
+  TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TelegramMiniAppErrorResponseSchema,
+  TelegramMiniAppResponseSchema,
+  TelegramMiniAppStateSchema as SharedTelegramMiniAppStateSchema,
+  type TelegramMiniAppResponse,
+  type TelegramMiniAppState,
+} from "@shared/lib/telegram-mini-app-contract";
+import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
+import type { ZodType } from "zod";
+import { isMiniAppErrorCode, MiniAppRequestError, type MiniAppErrorCode } from "./error-messages";
 
-const TelegramAlertTypesSchema = z.object({
-  dews: z.boolean(),
-  depeg: z.boolean(),
-  safety: z.boolean(),
-  launch: z.boolean(),
-  reserve: z.boolean(),
-}).passthrough();
-
-const PresetAlertTypesSchema = z.object({
-  dews: z.boolean(),
-  depeg: z.boolean(),
-  safety: z.boolean(),
-}).passthrough();
-
-const TelegramDepegStepBpsSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]);
-
-export const TelegramMiniAppStateSchema: ZodType<TelegramMiniAppState> = z.object({
-  viewer: z.object({
-    userId: z.string(),
-    username: z.string().nullable(),
-    firstName: z.string().nullable().optional(),
-    chatId: z.string().nullable(),
-    chatType: z.string().nullable(),
-    startParam: z.string().nullable().optional(),
-    canMutate: z.boolean(),
-    mutationBlockReason: z.enum(["not-private", "stale-auth"]).nullable(),
-  }).passthrough(),
-  subscriber: z.object({
-    exists: z.boolean(),
-    globalAlerts: TelegramAlertTypesSchema.extend({
-      depegStepBps: TelegramDepegStepBpsSchema.nullable(),
-    }).passthrough(),
-    quietHours: z.object({
-      enabled: z.boolean(),
-      startHourUtc: z.number().nullable(),
-      endHourUtc: z.number().nullable(),
-      timezone: z.string().nullable(),
-    }).passthrough(),
-    snoozeUntilTs: z.number().nullable(),
-  }).passthrough(),
-  presets: z.array(z.object({
-    id: z.string(),
-    label: z.string(),
-    description: z.string().optional(),
-    alertTypes: PresetAlertTypesSchema,
-    depegStepBps: TelegramDepegStepBpsSchema.nullable(),
-  }).passthrough()),
-  subscriptions: z.array(z.object({
-    stablecoinId: z.string(),
-    symbol: z.string(),
-    name: z.string(),
-    alertTypes: TelegramAlertTypesSchema,
-    alertOverrides: TelegramAlertTypesSchema.optional(),
-    dewsMinBand: z.enum(["ALERT", "WARNING", "DANGER"]).nullable(),
-    depegStepBps: TelegramDepegStepBpsSchema.nullable(),
-    safetyMode: z.enum(["all", "downgrade-only", "upgrade-only"]).nullable(),
-    snoozeUntilTs: z.number().nullable(),
-  }).passthrough()),
-  catalog: z.object({
-    recommendedPresets: z.array(z.object({
-      id: z.string(),
-      label: z.string(),
-      description: z.string().nullable().optional(),
-    }).passthrough()),
-    searchableCoins: z.array(z.object({
-      stablecoinId: z.string(),
-      symbol: z.string(),
-      name: z.string(),
-      peg: z.string().nullable().optional(),
-      status: z.string().nullable().optional(),
-    }).passthrough()),
-  }).passthrough(),
-  health: z.object({
-    lastSuccessfulDeliveryAt: z.number().nullable(),
-    lastSuccessfulReplyAt: z.number().nullable(),
-    queuedAlerts: z.number(),
-    recentFailureClass: z.string().nullable(),
-  }).passthrough(),
-}).passthrough();
+export const TelegramMiniAppStateSchema = SharedTelegramMiniAppStateSchema;
 
 function formatZodIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
   return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
@@ -106,15 +35,29 @@ export async function postMiniAppJson<T>(path: string, body: unknown, schema: Zo
   if (!response.ok) {
     let code: MiniAppErrorCode | null = null;
     let retryAfterSec: number | null = null;
+    let contractVersion: string | null = null;
+    let catalogVersion: string | null = null;
     try {
-      const payload = await response.json() as { code?: unknown; retryAfterSec?: unknown };
-      if (isMiniAppErrorCode(payload?.code)) code = payload.code;
-      retryAfterSec = parseRetryAfterSec(payload?.retryAfterSec);
+      const payload: unknown = await response.json();
+      const parsed = TelegramMiniAppErrorResponseSchema.safeParse(payload);
+      if (parsed.success) {
+        code = parsed.data.code;
+        retryAfterSec = parseRetryAfterSec(parsed.data.retryAfterSec);
+        contractVersion = parsed.data.contractVersion ?? null;
+        catalogVersion = parsed.data.catalogVersion ?? null;
+      } else if (payload && typeof payload === "object") {
+        const loose = payload as { code?: unknown; retryAfterSec?: unknown };
+        if (isMiniAppErrorCode(loose.code)) code = loose.code;
+        retryAfterSec = parseRetryAfterSec(loose.retryAfterSec);
+      }
     } catch {
-      // body wasn't JSON or was empty - leave code null
+      // Body was not JSON or was empty. Status still selects the fallback copy.
     }
     retryAfterSec ??= parseRetryAfterSec(response.headers?.get?.("Retry-After"));
-    throw new MiniAppRequestError(response.status, code, retryAfterSec);
+    throw new MiniAppRequestError(response.status, code, retryAfterSec, {
+      contractVersion,
+      catalogVersion,
+    });
   }
 
   const payload: unknown = await response.json();
@@ -123,4 +66,78 @@ export async function postMiniAppJson<T>(path: string, body: unknown, schema: Zo
     throw new SchemaValidationError(path, formatZodIssues(result.error.issues));
   }
   return result.data;
+}
+
+function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMiniAppState {
+  if (!("state" in response)) {
+    // Rolling deploy: a new static client can still consume an older Worker's
+    // full-catalog response. The next matching Worker response becomes compact.
+    return response;
+  }
+  if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
+    throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
+      contractVersion: response.contractVersion,
+      catalogVersion: response.catalogVersion,
+    });
+  }
+  if (response.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
+    throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
+      contractVersion: response.contractVersion,
+      catalogVersion: response.catalogVersion,
+    });
+  }
+  return {
+    ...response.state,
+    catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
+  };
+}
+
+export async function postMiniAppState(path: string, body: unknown): Promise<TelegramMiniAppState> {
+  const query = new URLSearchParams({
+    [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+    [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
+  });
+  const separator = path.includes("?") ? "&" : "?";
+  const response = await postMiniAppJson(`${path}${separator}${query}`, body, TelegramMiniAppResponseSchema);
+  return hydrateMiniAppResponse(response);
+}
+
+const VERSION_REFRESH_STORAGE_KEY = "pharos-mini-app-version-refresh";
+
+interface VersionRefreshStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+export function refreshMiniAppBundleOnce(
+  versions: { contractVersion?: string | null; catalogVersion?: string | null },
+  dependencies: { storage?: VersionRefreshStorage | null; refresh?: () => void } = {},
+): boolean {
+  const target = `${versions.contractVersion ?? "unknown"}:${versions.catalogVersion ?? "unknown"}`;
+  let storage = dependencies.storage;
+  if (storage === undefined && typeof window !== "undefined") {
+    try {
+      storage = window.sessionStorage;
+    } catch {
+      return false;
+    }
+  }
+  if (!storage) return false;
+  const refresh = dependencies.refresh ?? (() => window.location.reload());
+
+  try {
+    if (storage.getItem(VERSION_REFRESH_STORAGE_KEY) === target) return false;
+    storage.setItem(VERSION_REFRESH_STORAGE_KEY, target);
+  } catch {
+    return false;
+  }
+  refresh();
+  return true;
+}
+
+export function isMiniAppVersionMismatch(error: unknown): error is MiniAppRequestError {
+  return (
+    error instanceof MiniAppRequestError &&
+    (error.code === "contract-version-mismatch" || error.code === "catalog-version-mismatch")
+  );
 }
