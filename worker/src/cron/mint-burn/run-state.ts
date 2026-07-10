@@ -1,6 +1,7 @@
 import { normalizeStringSet } from "../../lib/normalizers";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { getCache, setCache } from "../../lib/db-cache";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export interface MintBurnRunStateRow {
   degradedStreak: number;
@@ -210,7 +211,15 @@ export async function updateMintBurnAttemptState(input: {
     state = parseAttemptState(cached?.value) ?? state;
   } catch (error) {
     persistenceFailed = true;
-    console.warn("[sync-mint-burn] Failed to load attempt state:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync_mint_burn.attempt_state_load_failed",
+      job: input.jobName,
+      message: "Failed to load mint/burn attempt state; using an empty state",
+      error,
+      metadata: { stateCacheKey },
+    });
   }
 
   const enabledKeySet = new Set(input.enabledConfigKeys);
@@ -264,7 +273,15 @@ export async function updateMintBurnAttemptState(input: {
     await setCache(input.db, stateCacheKey, JSON.stringify(state));
   } catch (error) {
     persistenceFailed = true;
-    console.warn("[sync-mint-burn] Failed to persist attempt state:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync_mint_burn.attempt_state_persist_failed",
+      job: input.jobName,
+      message: "Failed to persist mint/burn attempt state",
+      error,
+      metadata: { stateCacheKey },
+    });
   }
 
   return {
@@ -318,7 +335,15 @@ export async function persistMintBurnRunDrilldown(input: {
     await setCache(input.db, cacheKey, JSON.stringify({ observedAt: input.observedAt, configs }));
     return { cacheKey, persistenceFailed: false };
   } catch (error) {
-    console.warn("[sync-mint-burn] Failed to persist run drilldown:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync_mint_burn.run_drilldown_persist_failed",
+      job: input.jobName,
+      message: "Failed to persist mint/burn run drilldown",
+      error,
+      metadata: { cacheKey },
+    });
     return { cacheKey, persistenceFailed: true };
   }
 }

@@ -1,4 +1,5 @@
 import { isMissingTableError } from "../../lib/db";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export interface DexSourcePaginationState {
   cursor: string | null;
@@ -10,7 +11,14 @@ export interface DexSourcePaginationState {
 
 function warnStateFailure(error: unknown): void {
   if (!isMissingTableError(error)) {
-    console.warn("[dex-pagination] durable cursor unavailable; using head fallback");
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_liquidity.pagination_state_unavailable",
+      job: "sync-dex-liquidity",
+      message: "Durable DEX pagination cursor unavailable; using head fallback",
+      error,
+    });
   }
 }
 

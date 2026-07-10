@@ -29,6 +29,7 @@ import {
   loadFrankfurterPayload,
   loadSecondaryCurrencyCandidate,
 } from "./sync-fx-rates-sources";
+import { logWorkerEvent } from "../lib/structured-log";
 
 /**
  * Fetches live FX rates from the European Central Bank (via api.frankfurter.dev)
@@ -113,7 +114,15 @@ export async function syncFxRates(
     try {
       await failCadenceBucket(db, claimResult.claim);
     } catch (transitionError) {
-      console.warn("[sync-fx-rates] Failed to release cadence claim:", transitionError);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync_fx_rates.cadence_claim_release_failed",
+        job: "sync-fx-rates",
+        message: "Failed to release FX cadence claim after publication failure",
+        error: transitionError,
+        metadata: { bucket },
+      });
     }
     throw error;
   }

@@ -10,6 +10,7 @@ import {
   type DetailCacheGenerationClaim,
 } from "../../lib/detail-cache-generation";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -164,9 +165,17 @@ export function createDetailResponseHelpers(config: {
           }
           const write = await publishDetailCacheGeneration(config.db, cacheKey, body, claimed.claim);
           if (!write.written) {
-            console.log(
-              `[detail] cache write skipped stablecoin=${config.stablecoinId} generation=${write.generation} because a newer refresh owns publication`,
-            );
+            logWorkerEvent({
+              scope: "api",
+              level: "info",
+              event: "stablecoin_detail.cache_write_superseded",
+              route: "stablecoin-detail",
+              message: "Skipped detail cache write because a newer refresh owns publication",
+              metadata: {
+                stablecoinId: config.stablecoinId,
+                generation: write.generation,
+              },
+            });
           }
         } catch (err) {
           console.error(

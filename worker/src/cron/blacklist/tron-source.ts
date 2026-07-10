@@ -7,6 +7,7 @@ import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
 import { buildBlacklistRow, type BlacklistRow } from "./shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 interface TronEventResult {
   block_number: number;
@@ -172,7 +173,20 @@ export async function fetchTronEventsIncremental(
         break;
       }
       if (pageCount >= MAX_TRON_PAGES_PER_EVENT || seenUrls.has(url)) {
-        console.warn(`[blacklist] TronGrid pagination did not terminate for ${config.configKey}/${eventName}`);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "sync_blacklist.trongrid_pagination_non_terminal",
+          job: "sync-blacklist",
+          provider: "trongrid",
+          message: "TronGrid pagination did not terminate within its bounded page frontier",
+          metadata: {
+            configKey: config.configKey,
+            eventName,
+            pageCount,
+            repeatedUrl: seenUrls.has(url),
+          },
+        });
         apiError = true;
         incomplete = true;
         break;
@@ -216,14 +230,30 @@ export async function fetchTronEventsIncremental(
       if (nextUrl) {
         const validated = validateTronPaginationUrl(nextUrl, config.contractAddress, eventName);
         if (!validated) {
-          console.warn(`[blacklist] Rejected invalid TronGrid pagination URL for ${config.configKey}/${eventName}`);
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "sync_blacklist.trongrid_pagination_url_rejected",
+            job: "sync-blacklist",
+            provider: "trongrid",
+            message: "Rejected invalid TronGrid pagination URL",
+            metadata: { configKey: config.configKey, eventName, reason: "invalid-url" },
+          });
           apiError = true;
           incomplete = true;
           break;
         }
         const fingerprint = new URL(validated).searchParams.get("fingerprint");
         if (!fingerprint) {
-          console.warn(`[blacklist] Rejected TronGrid pagination URL without fingerprint for ${config.configKey}/${eventName}`);
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "sync_blacklist.trongrid_pagination_url_rejected",
+            job: "sync-blacklist",
+            provider: "trongrid",
+            message: "Rejected TronGrid pagination URL without a continuation fingerprint",
+            metadata: { configKey: config.configKey, eventName, reason: "missing-fingerprint" },
+          });
           apiError = true;
           incomplete = true;
           break;

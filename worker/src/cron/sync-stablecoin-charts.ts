@@ -15,6 +15,7 @@ import {
   completeCadenceBucket,
   failCadenceBucket,
 } from "../lib/cadence-bucket";
+import { logWorkerEvent } from "../lib/structured-log";
 
 // D1 caps bound parameters per query at 100; keep headroom for non-IN binds.
 const SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE = 90;
@@ -145,7 +146,15 @@ export async function syncStablecoinCharts(
     try {
       await failCadenceBucket(db, claimResult.claim);
     } catch (transitionError) {
-      console.warn("[sync-charts] Failed to release cadence claim:", transitionError);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync_stablecoin_charts.cadence_claim_release_failed",
+        job: "sync-stablecoin-charts",
+        message: "Failed to release chart cadence claim after publication failure",
+        error: transitionError,
+        metadata: { bucket },
+      });
     }
     throw error;
   }
