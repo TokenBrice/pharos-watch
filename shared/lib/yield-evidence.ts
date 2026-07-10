@@ -1,4 +1,4 @@
-import type { YieldEvidenceClass, YieldScoreQualification } from "@shared/types/yield";
+import type { YieldEvidenceClass, YieldScoreQualification } from "../types/yield";
 
 export interface YieldEvidenceAssessmentInput {
   evidenceClass: YieldEvidenceClass;

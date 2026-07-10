@@ -2,11 +2,12 @@ import { isTelegramAlertType, type TelegramAlertType } from "@shared/types/statu
 import { isRecord } from "@shared/lib/type-guards";
 import type { ConsolidatedAlerts } from "./telegram-alerts-formatting";
 import type { LinkPreviewOptions } from "./telegram";
+import { parseJson } from "./json-parse";
 
-export const MAX_PENDING_ALERT_SCOPE_ITEMS = 1_024;
-export const MAX_PENDING_ALERT_SCOPE_JSON_CHARS = 65_536;
-export const MAX_PENDING_MARKUP_POLICY_JSON_CHARS = 16_384;
-export const MAX_PENDING_SOURCE_EVENT_ID_CHARS = 200;
+const MAX_PENDING_ALERT_SCOPE_ITEMS = 1_024;
+const MAX_PENDING_ALERT_SCOPE_JSON_CHARS = 65_536;
+const MAX_PENDING_MARKUP_POLICY_JSON_CHARS = 16_384;
+const MAX_PENDING_SOURCE_EVENT_ID_CHARS = 200;
 
 const STABLECOIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
 
@@ -31,7 +32,7 @@ function scopeKey(item: PendingAlertScopeItem): string {
   return `${item.family}\0${item.stablecoinId}`;
 }
 
-export function normalizePendingAlertScope(
+function normalizePendingAlertScope(
   items: readonly PendingAlertScopeItem[],
 ): PendingAlertScopeItem[] {
   const unique = new Map<string, PendingAlertScopeItem>();
@@ -62,12 +63,9 @@ export function parsePendingAlertScope(value: string | null): ParsedPendingJson<
   if (value.length === 0 || value.length > MAX_PENDING_ALERT_SCOPE_JSON_CHARS) {
     return { kind: "invalid", reason: "preference_scope_size_invalid" };
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return { kind: "invalid", reason: "preference_scope_json_invalid" };
-  }
+  const parsedResult = parseJson(value);
+  if (!parsedResult.ok) return { kind: "invalid", reason: "preference_scope_json_invalid" };
+  const parsed = parsedResult.value;
   if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > MAX_PENDING_ALERT_SCOPE_ITEMS) {
     return { kind: "invalid", reason: "preference_scope_shape_invalid" };
   }
@@ -181,12 +179,9 @@ export function parsePendingMarkupPolicy(value: string | null): ParsedPendingJso
   if (value.length === 0 || value.length > MAX_PENDING_MARKUP_POLICY_JSON_CHARS) {
     return { kind: "invalid", reason: "preference_markup_size_invalid" };
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return { kind: "invalid", reason: "preference_markup_json_invalid" };
-  }
+  const parsedResult = parseJson(value);
+  if (!parsedResult.ok) return { kind: "invalid", reason: "preference_markup_json_invalid" };
+  const parsed = parsedResult.value;
   if (
     !isRecord(parsed) ||
     parsed.version !== 1 ||

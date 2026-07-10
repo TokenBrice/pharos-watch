@@ -9,6 +9,7 @@ import {
 import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { toErrorMessage } from "../lib/error-utils";
+import { logWorkerEvent } from "../lib/structured-log";
 import {
   coerceCount,
   computeTelegramCurrentLifecycleSnapshot,
@@ -335,23 +336,23 @@ async function buildTelegramPulseSnapshot(
     : await (async () => {
         const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation, fallbackHistory] = await Promise.all([
           loadTelegramTopFollowedCoins(db, 5).catch((error) => {
-            console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse top followed coin telemetry unavailable", error });
             unavailableFields.add("topCoins");
             return [];
           }),
           loadTelegramLifecycleHistory(db),
           loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-            console.warn("[telegram-pulse] mini-app daily aggregate unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app daily aggregate unavailable", error });
             unavailableFields.add("miniAppDailyAggregate");
             return null;
           }),
           loadTelegramFirstMutationP50(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-            console.warn("[telegram-pulse] mini-app first-mutation latency unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app first-mutation latency unavailable", error });
             unavailableFields.add("miniAppOpenToFirstMutationP50Sec");
             return null;
           }),
           loadFallbackWatcherHistory(db).catch((error) => {
-            console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse fallback watcher history unavailable", error });
             unavailableFields.add("watcherHistory");
             return [];
           }),
@@ -471,7 +472,12 @@ export async function publishTelegramPulseSnapshotWithOutcome(
       await refreshTelegramAdoptionRetention(db, nowSec);
     } catch (error) {
       throwIfAborted(options.signal);
-      console.warn("[telegram-adoption] retention refresh failed:", toErrorMessage(error));
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        message: "Telegram adoption retention refresh failed",
+        error,
+      });
     }
   }
 

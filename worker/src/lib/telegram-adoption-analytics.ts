@@ -7,10 +7,11 @@ import {
   type TelegramAdoptionFeature,
   type TelegramAdoptionPlacement,
 } from "@shared/lib/telegram-adoption-analytics";
+import { parseJsonObject } from "./json-parse";
 
 const MINI_APP_SESSION_CACHE_PREFIX = "telegram:adoption-mini-app-session:";
 export const TELEGRAM_ADOPTION_SESSION_TTL_SEC = 30 * 60;
-export const TELEGRAM_ADOPTION_RETENTION_CATCHUP_DAYS = 7;
+const TELEGRAM_ADOPTION_RETENTION_CATCHUP_DAYS = 7;
 const RETENTION_WINDOWS = [7, 30] as const;
 const RETENTION_FEATURES = ["any", "direct", "preset", "global"] as const;
 // July 10 is the partial rollout/backfill day. July 11 is the first complete
@@ -223,7 +224,7 @@ export async function recordTelegramMiniAppAdoptionSession(
   }
 }
 
-export function bucketTelegramFirstMutationLatency(seconds: number | null): MutationLatencyBucket {
+function bucketTelegramFirstMutationLatency(seconds: number | null): MutationLatencyBucket {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "unknown";
   if (seconds < 30) return "lt_30s";
   if (seconds < 120) return "30s_2m";
@@ -261,7 +262,8 @@ export async function loadTelegramFirstMutationP50(
 function parseSessionCache(raw: string | null, nowSec: number): MiniAppSessionCacheValue | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<MiniAppSessionCacheValue>;
+    const parsed = parseJsonObject<Partial<MiniAppSessionCacheValue>>(raw);
+    if (!parsed) return null;
     const featureCampaign = parsed.campaign === "landing" || parsed.campaign === "organic";
     const placement = typeof parsed.placement === "string"
       && (["hero", "setup", "miniapp_setup", "miniapp_home", "miniapp_watchlist", "menu", "unknown"] as string[])

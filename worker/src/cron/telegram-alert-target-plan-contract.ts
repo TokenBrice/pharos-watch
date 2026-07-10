@@ -3,6 +3,7 @@ import { isTelegramAlertType, type TelegramAlertType } from "@shared/types/statu
 import { D1_BATCH_SIZE } from "../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
+import { parseJson } from "../lib/json-parse";
 import type { BatchMessage } from "../lib/telegram";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../lib/telegram-constants";
 import {
@@ -17,11 +18,11 @@ import { expandSubscriberChunks, type RoutedSubscriberAlert } from "./dispatch-t
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
 import { buildDedupeKey } from "./telegram-pending";
 
-export const TELEGRAM_TARGET_PLAN_SCHEMA_VERSION = 1;
-export const TELEGRAM_TARGET_PLAN_MAX_JSON_CHARS = 262_144;
+const TELEGRAM_TARGET_PLAN_SCHEMA_VERSION = 1;
+const TELEGRAM_TARGET_PLAN_MAX_JSON_CHARS = 262_144;
 export const TELEGRAM_TARGET_PLAN_MAX_CHUNKS = 64;
 export const TELEGRAM_TARGET_PLAN_MAX_ITEMS = 512;
-export const TELEGRAM_TARGET_PLAN_MAX_CANONICAL_HTML_CHARS = 200_000;
+const TELEGRAM_TARGET_PLAN_MAX_CANONICAL_HTML_CHARS = 200_000;
 
 interface PersistedTelegramTargetMessageV1 {
   targetKey: string;
@@ -158,12 +159,9 @@ export async function parseTelegramTargetPlan(
     }
   }
 
-  let value: unknown;
-  try {
-    value = JSON.parse(payloadJson);
-  } catch {
-    return { kind: "invalid", reason: "target_plan_json_invalid" };
-  }
+  const parsed = parseJson(payloadJson);
+  if (!parsed.ok) return { kind: "invalid", reason: "target_plan_json_invalid" };
+  const value = parsed.value;
   if (
     !isRecord(value) ||
     value.schemaVersion !== TELEGRAM_TARGET_PLAN_SCHEMA_VERSION ||

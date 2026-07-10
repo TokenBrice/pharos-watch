@@ -1,3 +1,4 @@
+import { throwIfAborted } from "../lib/abort";
 import { executeAtomicBatch } from "../lib/db";
 import { D1_BATCH_SIZE } from "../lib/constants";
 import type { BatchMessage } from "../lib/telegram";
@@ -301,6 +302,7 @@ export async function handoffFreshTelegramAlertTargetsToPending(
   if (handoffs.length === 0) return;
   const handoffsPerBatch = Math.max(1, Math.floor(D1_BATCH_SIZE / 2));
   for (let offset = 0; offset < handoffs.length; offset += handoffsPerBatch) {
+    throwIfAborted(signal);
     const chunk = handoffs.slice(offset, offset + handoffsPerBatch);
     const statements = chunk.flatMap((handoff) => {
       const ownerGuard = {

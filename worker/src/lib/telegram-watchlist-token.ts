@@ -15,6 +15,7 @@ import {
   bytesToBase64Url,
   stringToBase64Url,
 } from "./base64url";
+import { parseJson } from "./json-parse";
 
 const V1_TOKEN_VERSION = 1;
 const V2_TOKEN_VERSION = 2;
@@ -372,12 +373,15 @@ function asStringArray(value: unknown): string[] {
 }
 
 function decodeV1(cleaned: string): WatchlistTokenDecodeResult {
-  let parsed: unknown;
+  let decoded: string;
   try {
-    parsed = JSON.parse(base64UrlToString(cleaned));
+    decoded = base64UrlToString(cleaned);
   } catch {
     return { ok: false, error: "malformed" };
   }
+  const parsedResult = parseJson(decoded);
+  if (!parsedResult.ok) return { ok: false, error: "malformed" };
+  const parsed = parsedResult.value;
   if (!parsed || typeof parsed !== "object") return { ok: false, error: "malformed" };
   const body = parsed as Record<string, unknown>;
   if (body.v !== V1_TOKEN_VERSION) return { ok: false, error: "unsupported-version" };
@@ -402,12 +406,15 @@ async function decodeV2(cleaned: string): Promise<WatchlistTokenDecodeResult> {
   if (suppliedDigest.byteLength !== V2_DIGEST_BYTES) return { ok: false, error: "malformed" };
   if (!equalBytes(suppliedDigest, await digest96(compressed))) return { ok: false, error: "integrity" };
 
-  let parsed: unknown;
+  let decoded: string;
   try {
-    parsed = JSON.parse(new TextDecoder().decode(await gunzipBounded(compressed)));
+    decoded = new TextDecoder().decode(await gunzipBounded(compressed));
   } catch {
     return { ok: false, error: "malformed" };
   }
+  const parsedResult = parseJson(decoded);
+  if (!parsedResult.ok) return { ok: false, error: "malformed" };
+  const parsed = parsedResult.value;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { ok: false, error: "malformed" };
   const body = parsed as Partial<WatchlistTokenV2Body>;
   if (body.v !== V2_TOKEN_VERSION) return { ok: false, error: "unsupported-version" };

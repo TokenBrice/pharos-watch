@@ -1,7 +1,8 @@
 import type { ReserveAlertSourceState } from "@shared/types/status";
+import { tryParseJson } from "./json-parse";
 
 export const ALERT_RESERVE_SOURCE_GENERATION = "reserve-alert-source-v1";
-export const ALERT_RESERVE_SOURCE_STALE_PRODUCER_INTERVALS = 2;
+const ALERT_RESERVE_SOURCE_STALE_PRODUCER_INTERVALS = 2;
 
 type CachedValue = { value: string; updatedAt: number } | null;
 
@@ -22,12 +23,7 @@ export interface AlertReserveSourceAssessment {
 function parseEnvelope(cached: CachedValue): AlertReserveSourceEnvelope | null {
   if (!cached) return null;
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cached.value);
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(cached.value);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
 
   const record = parsed as Record<string, unknown>;

@@ -82,6 +82,10 @@ const EXPORT_ALLOWLIST = new Set([
   // export generation outside this runtime source graph.
   "shared/lib/methodology-versions/registry.ts::METHODOLOGY_CHANGELOG_MARKDOWN_KEYS",
   "shared/lib/methodology-versions/registry.ts::getMethodologyChangelogEntryByMarkdownKey",
+  // Consumed by scripts/lib/telegram-load-scenarios.ts. The load gate stays
+  // coupled to the production policy module even though scripts are outside
+  // this runtime-only import graph.
+  "shared/lib/telegram-delivery-policy.ts::TELEGRAM_LOAD_GUARD_ASSUMPTIONS",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
   "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX",
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",

@@ -1,6 +1,7 @@
 import { jsonResponse } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 import { PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC } from "../lib/telegram-constants";
+import { parseJson } from "../lib/json-parse";
 import { runAdminRoute } from "../lib/route-wrappers";
 
 interface SubscriberRow {
@@ -67,12 +68,10 @@ function count(value: number | string | null | undefined): number {
 }
 
 function redactedJsonArray(value: string): { count: number; valid: boolean } {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? { count: parsed.length, valid: true } : { count: 0, valid: false };
-  } catch {
-    return { count: 0, valid: false };
-  }
+  const parsed = parseJson(value);
+  return parsed.ok && Array.isArray(parsed.value)
+    ? { count: parsed.value.length, valid: true }
+    : { count: 0, valid: false };
 }
 
 export function handleAdminTelegramChat(

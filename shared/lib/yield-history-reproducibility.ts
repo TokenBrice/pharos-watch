@@ -1,5 +1,5 @@
-import { computePYS } from "@shared/lib/yield-scoring";
-import type { YieldPysInputsAtPublish } from "@shared/types/yield";
+import type { YieldPysInputsAtPublish } from "../types/yield";
+import { computePYS } from "./yield-scoring";
 
 export function recomputePublishedPys(inputs: YieldPysInputsAtPublish): number {
   return computePYS({

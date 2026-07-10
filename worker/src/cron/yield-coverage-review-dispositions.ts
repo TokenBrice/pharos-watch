@@ -338,6 +338,7 @@ export async function upsertYieldCoverageReviewDisposition<
   );
   const evidenceFingerprint = buildYieldCoverageEvidenceFingerprint(input.item);
 
+  // SAFETY: DISPOSITION_TABLE is a module-private string literal constant, never request-derived.
   await db.prepare(
     `INSERT INTO ${DISPOSITION_TABLE} (
        queue_item_id, queue_item_kind, evidence_fingerprint, disposition,

@@ -1,4 +1,5 @@
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { parseJson } from "../../lib/json-parse";
 import {
   TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC,
   TELEGRAM_PROCESSING_STALE_SEC,
@@ -216,7 +217,9 @@ function parseStoredIntent(row: ProcessedUpdateRow): TelegramWebhookOperationInt
     return null;
   }
   try {
-    const parsed = JSON.parse(row.intent_payload) as unknown;
+    const parsedResult = parseJson(row.intent_payload);
+    if (!parsedResult.ok) return null;
+    const parsed = parsedResult.value;
     if (typeof parsed !== "object" || parsed == null || Array.isArray(parsed)) return null;
     const envelope = parsed as Partial<TelegramWebhookOperationIntent>;
     if (

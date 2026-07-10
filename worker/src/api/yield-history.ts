@@ -12,6 +12,7 @@ import { isMissingColumnError } from "../lib/db";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { parseJson } from "../lib/json-parse";
 import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
 import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -63,7 +64,9 @@ function buildYieldHistorySourceRiskLookup(cached: { value: string } | null): Ma
   if (!cached) return lookup;
 
   try {
-    const payload = JSON.parse(cached.value) as unknown;
+    const parsed = parseJson(cached.value);
+    if (!parsed.ok) return lookup;
+    const payload = parsed.value;
     if (!isRecord(payload) || !Array.isArray(payload.rankings)) return lookup;
     const rootPublication = isRecord(payload.publication) ? payload.publication : null;
     const rootGenerationId = typeof rootPublication?.generationId === "string" ? rootPublication.generationId : null;
@@ -103,7 +106,9 @@ function parseYieldPublicationMetadata(
 ): YieldPublicationMetadata | null {
   if (!cached) return null;
   try {
-    const payload = JSON.parse(cached.value) as unknown;
+    const parsed = parseJson(cached.value);
+    if (!parsed.ok) return null;
+    const payload = parsed.value;
     if (!isRecord(payload) || !isRecord(payload.publication)) return null;
     const publication = payload.publication;
     const generationId = typeof publication.generationId === "string" ? publication.generationId : null;
@@ -298,12 +303,11 @@ export const handleYieldHistory = withErrorHandler(
               : undefined;
         let pysInputsAtPublish = null;
         if (row.pys_inputs_at_publish) {
-          try {
-            const parsedInputs = YieldPysInputsAtPublishSchema.safeParse(JSON.parse(row.pys_inputs_at_publish));
-            pysInputsAtPublish = parsedInputs.success ? parsedInputs.data : null;
-          } catch {
-            pysInputsAtPublish = null;
-          }
+          const parsedJson = parseJson(row.pys_inputs_at_publish);
+          const parsedInputs = parsedJson.ok
+            ? YieldPysInputsAtPublishSchema.safeParse(parsedJson.value)
+            : null;
+          pysInputsAtPublish = parsedInputs?.success ? parsedInputs.data : null;
         }
 
         return {

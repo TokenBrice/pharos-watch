@@ -10,6 +10,7 @@ import {
   parseOptionalRequestJsonObject,
 } from "../lib/api-utils";
 import { runIdempotentAdminAction } from "../lib/idempotency";
+import { parseJsonObject } from "../lib/json-parse";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 
 interface ApiKeysRouteContext extends AdminRouteContext {
@@ -29,8 +30,8 @@ function redactOneTimeTokenForReplay(responseBody: string, responseStatus: numbe
     });
   }
   try {
-    const parsed = JSON.parse(responseBody) as { key?: unknown };
-    if (!parsed.key || typeof parsed.key !== "object") {
+    const parsed = parseJsonObject<{ key?: unknown }>(responseBody);
+    if (!parsed?.key || typeof parsed.key !== "object") {
       return JSON.stringify({
         tokenUnavailableOnReplay: true,
         recovery: "The response identity was unavailable. Inspect API-key inventory before rotating the affected key.",

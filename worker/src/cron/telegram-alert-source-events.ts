@@ -9,6 +9,7 @@ import {
 } from "../lib/telegram-presets";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
+import { parseJson } from "../lib/json-parse";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
 import type { TelegramDispatchEvents } from "./dispatch-telegram-events";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
@@ -111,7 +112,9 @@ export interface TelegramAlertSourceResolution {
 }
 
 function parseEvents(payload: string): TelegramDispatchEvents {
-  const value = JSON.parse(payload) as Partial<Record<keyof TelegramDispatchEvents, unknown>> | null;
+  const parsed = parseJson(payload);
+  if (!parsed.ok) throw new Error("Telegram source event payload is invalid JSON");
+  const value = parsed.value as Partial<Record<keyof TelegramDispatchEvents, unknown>> | null;
   if (!value || typeof value !== "object") throw new Error("Telegram source event payload is not an object");
   const arrayKeys: Array<keyof TelegramDispatchEvents> = [
     "dewsChanges",
@@ -137,7 +140,9 @@ function parseEvents(payload: string): TelegramDispatchEvents {
 }
 
 function parseBaseline(payload: string): TelegramAlertSnapshots {
-  const value = JSON.parse(payload) as TelegramAlertSnapshots | null;
+  const parsed = parseJson(payload);
+  if (!parsed.ok) throw new Error("Telegram source event baseline is invalid JSON");
+  const value = parsed.value as TelegramAlertSnapshots | null;
   if (!value || typeof value !== "object") throw new Error("Telegram source event baseline is not an object");
   if (
     !value.dews ||

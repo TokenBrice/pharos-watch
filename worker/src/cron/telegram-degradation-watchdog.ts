@@ -20,6 +20,7 @@ import {
   type PendingCapacitySnapshot,
 } from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
+import { parseJson } from "../lib/json-parse";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -116,13 +117,15 @@ async function readLatestDispatchMetadata(db: D1Database) {
       )
       .first<{ id: number | string; metadata: string | null }>();
     if (!row?.metadata) return null;
-    const metadata = parseTelegramDispatchCronMetadata(JSON.parse(row.metadata));
+    const parsed = parseJson(row.metadata);
+    if (!parsed.ok) return null;
+    const metadata = parseTelegramDispatchCronMetadata(parsed.value);
     if (!metadata) return null;
     return {
       runIdentity: String(row.id),
       metadata,
     };
-  } catch (err) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "dispatch metadata unavailable",
@@ -149,7 +152,9 @@ async function readZeroSendState(db: D1Database): Promise<ZeroSendState> {
   const cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
   if (!cached) return { streak: 0, lastRunIdentity: null };
   try {
-    const parsed = JSON.parse(cached.value) as unknown;
+    const parsedResult = parseJson(cached.value);
+    if (!parsedResult.ok) throw new Error("legacy zero-send state");
+    const parsed = parsedResult.value;
     if (typeof parsed !== "object" || parsed == null) throw new Error("legacy zero-send state");
     const state = parsed as Partial<ZeroSendState>;
     const streak = Number(state.streak);

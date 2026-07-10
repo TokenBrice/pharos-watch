@@ -2,12 +2,13 @@ import { throwIfAborted } from "./abort";
 import { executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 import { toErrorMessage } from "./error-utils";
+import { parseJson } from "./json-parse";
 import { buildTelegramMessage, sendToChat, type TelegramCreds } from "./telegram";
 import { splitMessage } from "./telegram-alerts";
 import type { TelegramDigestSuccessAction } from "./telegram-digest-appendices";
 
 export const TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC = 120;
-export const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
+const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
 const TELEGRAM_DIGEST_OUTBOX_SENT_RETENTION_SEC = 90 * 86_400;
 const TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS = 20;
 const TELEGRAM_DIGEST_OUTBOX_MAX_BACKOFF_SEC = 60 * 60;
@@ -93,7 +94,9 @@ export interface TelegramDigestOutboxDrainSummary {
 }
 
 function parseStringArray(raw: string, label: string): string[] {
-  const parsed = JSON.parse(raw) as unknown;
+  const result = parseJson(raw);
+  if (!result.ok) throw new Error(`${label} must be valid JSON`);
+  const parsed = result.value;
   if (!Array.isArray(parsed) || !parsed.every((value) => typeof value === "string")) {
     throw new Error(`${label} must be an array of strings`);
   }
@@ -101,7 +104,9 @@ function parseStringArray(raw: string, label: string): string[] {
 }
 
 function parseSuccessActions(raw: string): TelegramDigestSuccessAction[] {
-  const parsed = JSON.parse(raw) as unknown;
+  const result = parseJson(raw);
+  if (!result.ok) throw new Error("Telegram digest success actions must be valid JSON");
+  const parsed = result.value;
   if (
     !Array.isArray(parsed)
     || parsed.length > TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS
@@ -626,6 +631,7 @@ export async function deliverTelegramDigestEdition(
 
   let chunksSent = 0;
   for (let chunkIndex = claim.row.next_chunk_index; chunkIndex < claim.chunks.length; chunkIndex++) {
+    throwIfAborted(signal);
     const result = await sendToChat(
       claim.row.target_chat_id,
       claim.chunks[chunkIndex]!,

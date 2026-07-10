@@ -46,11 +46,12 @@ function parseTelegramErrorPayload(responseBody: string): TelegramErrorPayload {
     return { description: null, retryAfterSec: null, migrateToChatId: null };
   }
   try {
-    const parsed = JSON.parse(responseBody) as {
+    const parsed = parseJsonObject<{
       description?: unknown;
       parameters?: { retry_after?: unknown; migrate_to_chat_id?: unknown };
       response_parameters?: { retry_after?: unknown; migrate_to_chat_id?: unknown };
-    };
+    }>(responseBody);
+    if (!parsed) return { description: null, retryAfterSec: null, migrateToChatId: null };
     const parameters = parsed.parameters ?? parsed.response_parameters;
     return {
       description: typeof parsed.description === "string" ? parsed.description : null,
@@ -163,3 +164,4 @@ export function isTransientTelegramOutageFailure(
     || result.errorClass === "network"
     || result.errorClass === "unknown";
 }
+import { parseJsonObject } from "./json-parse";
