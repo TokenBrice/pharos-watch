@@ -151,7 +151,7 @@ async function executeConfirmedBulk(
       chatId,
       username,
       alertTypes,
-      stablecoinIds: payload.coinIds,
+      directStablecoinIds: payload.coinIds,
       presetIds: payload.presetIds,
       clearPending: true,
       depegWorseningBpsStep: payload.depegWorseningBpsStep,
@@ -188,7 +188,7 @@ async function executeConfirmedBulk(
   }
   await applyUnsubscribeIntent(db, {
     chatId,
-    stablecoinIds: payload.coinIds,
+    directStablecoinIds: payload.coinIds,
     presetIds: payload.presetIds,
     clearPending: true,
   });

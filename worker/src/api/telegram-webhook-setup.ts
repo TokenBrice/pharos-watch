@@ -20,6 +20,7 @@ import {
 import { resolveTicker } from "../lib/telegram-alerts";
 import {
   buildNotFoundMessage,
+  buildPresetSubscriptionSummaryMessage,
   buildPresetUnavailableMessage,
   buildStatusAmbiguousMessage,
   buildSubscriptionSummaryMessage,
@@ -552,12 +553,11 @@ export async function handleSetupConfirm(
       return { text: "Preset data unavailable." };
     }
     const coins = result.presets.flatMap((preset) => preset.coins);
-    const coinIds = coins.map((coin) => coin.id);
     await applySubscribeIntent(context.db, {
       chatId: context.chatId,
       username: context.username,
       alertTypes,
-      stablecoinIds: coinIds,
+      directStablecoinIds: [],
       presetIds: [state.target.presetId as TelegramPresetId],
       clearPending: true,
     });
@@ -572,11 +572,13 @@ export async function handleSetupConfirm(
       actionDetail: "setup",
       outcome: "success",
     });
-    const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
-    const intro = `Subscribed via ${TELEGRAM_PRESET_LABEL_BY_ID.get(state.target.presetId as TelegramPresetId) ?? state.target.presetId} (${coins.length} coins). Use /list anytime.`;
     await sendSetupReply(
       context,
-      buildSubscriptionSummaryMessage(intro, subscriptions),
+      buildPresetSubscriptionSummaryMessage([], {
+        presetIds: [state.target.presetId as TelegramPresetId],
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: coins.length,
+      }),
     );
     return { text: "Subscribed." };
   }
@@ -586,7 +588,7 @@ export async function handleSetupConfirm(
     chatId: context.chatId,
     username: context.username,
     alertTypes,
-    stablecoinIds: [state.target.coinId],
+    directStablecoinIds: [state.target.coinId],
     clearPending: true,
   });
   await recordTelegramUsageEvent(context.db, {

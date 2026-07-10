@@ -33,6 +33,7 @@ export interface TelegramMiniAppState {
     symbol: string;
     name: string;
     alertTypes: Record<TelegramAlertType, boolean>;
+    alertOverrides?: Record<TelegramAlertType, boolean>;
     dewsMinBand: TelegramDewsBand | null;
     depegStepBps: TelegramDepegStepBps | null;
     safetyMode: TelegramSafetyMode | null;

@@ -39,7 +39,9 @@ const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
 const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
 const VALID_ALERT_OVERRIDE_COLUMNS = new Set(Object.values(ALERT_OVERRIDE_COLUMN_BY_TYPE));
 
-type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal"> & { stablecoin_id: string };
+type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal" | "hasLocalOverride"> & {
+  stablecoin_id: string;
+};
 
 export async function loadSubscriberRowsBatch(
   db: D1Database,
@@ -96,6 +98,7 @@ export async function loadSubscriberRowsBatch(
         quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
         timezone: row.timezone ?? null,
         isGlobal: false,
+        hasLocalOverride: true,
       });
       map.set(row.stablecoin_id, existing);
     }
@@ -224,17 +227,42 @@ export async function loadPerCoinExplicitlyOffMap(
   return map;
 }
 
+function mergeDepegWorseningStep(
+  existing: number | null,
+  additional: number | null,
+): number | null {
+  if (existing == null) return additional;
+  if (additional == null) return existing;
+  return Math.min(existing, additional);
+}
+
+function mergeSubscriberRows(existing: SubscriberRow, additional: SubscriberRow): SubscriberRow {
+  if (existing.hasLocalOverride) return existing;
+  if (additional.hasLocalOverride) return additional;
+  return {
+    ...existing,
+    depeg_worsening_bps_step: mergeDepegWorseningStep(
+      existing.depeg_worsening_bps_step,
+      additional.depeg_worsening_bps_step,
+    ),
+  };
+}
+
 export function mergeSubscriberMaps(
   base: Map<string, SubscriberRow[]>,
   additional: Map<string, SubscriberRow[]>,
 ): Map<string, SubscriberRow[]> {
   for (const [stablecoinId, rows] of additional) {
     const existing = base.get(stablecoinId) ?? [];
-    const seenChats = new Set(existing.map((row) => row.chat_id));
+    const indexByChat = new Map(existing.map((row, index) => [row.chat_id, index] as const));
     for (const row of rows) {
-      if (seenChats.has(row.chat_id)) continue;
-      seenChats.add(row.chat_id);
-      existing.push(row);
+      const existingIndex = indexByChat.get(row.chat_id);
+      if (existingIndex == null) {
+        indexByChat.set(row.chat_id, existing.length);
+        existing.push(row);
+        continue;
+      }
+      existing[existingIndex] = mergeSubscriberRows(existing[existingIndex], row);
     }
     base.set(stablecoinId, existing);
   }
@@ -389,6 +417,7 @@ export async function loadPresetSubscriberRowsBatch(
         quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
         timezone: row.timezone ?? null,
         isGlobal: false,
+        hasLocalOverride: false,
       });
       map.set(stablecoinId, existing);
     }

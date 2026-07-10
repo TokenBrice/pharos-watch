@@ -79,6 +79,11 @@ function openSqlite(): DatabaseSync {
       alert_safety INTEGER NOT NULL DEFAULT 0,
       alert_launch INTEGER NOT NULL DEFAULT 0,
       alert_reserve INTEGER NOT NULL DEFAULT 0,
+      alert_dews_override INTEGER NOT NULL DEFAULT 0,
+      alert_depeg_override INTEGER NOT NULL DEFAULT 0,
+      alert_safety_override INTEGER NOT NULL DEFAULT 0,
+      alert_launch_override INTEGER NOT NULL DEFAULT 0,
+      alert_reserve_override INTEGER NOT NULL DEFAULT 0,
       depeg_worsening_bps_step INTEGER,
       PRIMARY KEY (chat_id, stablecoin_id)
     );
@@ -126,7 +131,7 @@ function stateSnapshot(sqlite: DatabaseSync): unknown {
 const subscribeInput = {
   chatId: CHAT_ID,
   username: "alice",
-  stablecoinIds: ["usdc-circle", "usdt-tether"],
+  directStablecoinIds: ["usdc-circle", "usdt-tether"],
   presetIds: ["usd-top25"],
   alertTypes: new Set(["dews", "depeg"]),
   clearPending: true,
@@ -229,7 +234,7 @@ describe("atomic Telegram unsubscribe intent", () => {
 
       await applyUnsubscribeIntent(createFaultInjectingD1(sqlite, { batchSizes }), {
         chatId: CHAT_ID,
-        stablecoinIds: subscribeInput.stablecoinIds,
+        directStablecoinIds: subscribeInput.directStablecoinIds,
         presetIds: subscribeInput.presetIds,
         clearPending: true,
       });
@@ -253,7 +258,7 @@ describe("atomic Telegram unsubscribe intent", () => {
     vi.setSystemTime(NOW_MS);
     const input = {
       chatId: CHAT_ID,
-      stablecoinIds: subscribeInput.stablecoinIds,
+      directStablecoinIds: subscribeInput.directStablecoinIds,
       presetIds: subscribeInput.presetIds,
       clearPending: true,
     };
@@ -298,7 +303,7 @@ describe("atomic Telegram unsubscribe intent", () => {
       await applySubscribeIntent(db, {
         chatId: CHAT_ID,
         username: null,
-        stablecoinIds,
+        directStablecoinIds: stablecoinIds,
         presetIds,
         alertTypes: new Set(["dews"]),
         clearPending: true,
@@ -310,7 +315,7 @@ describe("atomic Telegram unsubscribe intent", () => {
 
       await applyUnsubscribeIntent(db, {
         chatId: CHAT_ID,
-        stablecoinIds,
+        directStablecoinIds: stablecoinIds,
         presetIds,
         clearPending: true,
       });

@@ -25,7 +25,7 @@ export interface BuiltSubscriptionUpsert {
   binds: unknown[];
 }
 
-const SUBSCRIPTION_FOLLOW_BIND_COUNT = 8;
+const SUBSCRIPTION_FOLLOW_BIND_COUNT = 13;
 const SUBSCRIPTION_FOLLOWS_PER_STATEMENT = Math.floor(
   D1_MAX_BOUND_PARAMETERS / SUBSCRIPTION_FOLLOW_BIND_COUNT,
 );
@@ -224,10 +224,15 @@ export function prepareSubscriberAndSubscriptionStatements(
       alertSafety,
       alertLaunch,
       alertReserve,
+      alertDews,
+      alertDepeg,
+      alertSafety,
+      alertLaunch,
+      alertReserve,
       options?.depegWorseningBpsStep ?? null,
     ]);
     const values = stablecoinIdChunk
-      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?)")
+      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
     statements.push(
       db.prepare(`
@@ -239,6 +244,11 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_safety,
           alert_launch,
           alert_reserve,
+          alert_dews_override,
+          alert_depeg_override,
+          alert_safety_override,
+          alert_launch_override,
+          alert_reserve_override,
           depeg_worsening_bps_step
         )
         VALUES ${values}
@@ -248,6 +258,11 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
           alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
           alert_reserve = MAX(telegram_subscriptions.alert_reserve, excluded.alert_reserve),
+          alert_dews_override = MAX(telegram_subscriptions.alert_dews_override, excluded.alert_dews_override),
+          alert_depeg_override = MAX(telegram_subscriptions.alert_depeg_override, excluded.alert_depeg_override),
+          alert_safety_override = MAX(telegram_subscriptions.alert_safety_override, excluded.alert_safety_override),
+          alert_launch_override = MAX(telegram_subscriptions.alert_launch_override, excluded.alert_launch_override),
+          alert_reserve_override = MAX(telegram_subscriptions.alert_reserve_override, excluded.alert_reserve_override),
           ${depegStepUpdate}
       `).bind(...binds),
     );

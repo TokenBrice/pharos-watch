@@ -90,13 +90,13 @@ The Mini App seam does not receive Telegram webhook updates and does not call th
 
 ## Effective Alert Source
 
-Each followed coin's `CoinCard` renders a compact source chip derived purely from already-projected session state (`computeEffectiveSource(coin, globalAlerts, presets)` in `src/app/pharoswatchbot/app/format.ts`), so it adds no extra reads. The helper mirrors the `/list` precedence model (**per-coin > preset > all-stablecoins**, see [`telegram-alerts.md`](./telegram-alerts.md)), while the current chip copy collapses preset/global coverage into override-oriented labels because the session payload does not expand preset membership per coin:
+Each direct/local coin row's `CoinCard` renders a compact source chip derived purely from already-projected session state (`computeEffectiveSource(coin, globalAlerts, presets)` in `src/app/pharoswatchbot/app/format.ts`), so it adds no extra reads. The session payload includes the five `alertOverrides` markers alongside the five alert flags; the client must use those markers rather than interpreting every zero flag as an opt-out. The helper mirrors the `/list` precedence model (**per-coin > preset > all-stablecoins**, see [`telegram-alerts.md`](./telegram-alerts.md)), while the current chip copy collapses preset/global coverage into inherited-default labels because the session payload does not expand preset membership per coin:
 
 - **Per-coin** — the coin has at least one explicit per-coin alert flag enabled; that lane wins over preset/global.
-- **Muted override** — the coin row exists with every flag off, so it actively suppresses any preset/global default for the coin (the C02 per-coin `off` precedence).
+- **Muted override** — at least one inherited family is off with its matching explicit override marker set, so that family suppresses the preset/global default.
 - **All-stablecoins** — fallback chip for displayed snooze-only/off rows that have no enabled per-coin flag and no preset/global coverage.
 
-`computeEffectiveSource` returns the source per alert type; the chip shows the dominant display lane. Followed preset coverage without an explicit per-coin flag resolves to `off-override` for display purposes, not a positive `Preset` chip. `PresetsPanel` labels preset coverage at the preset level only — it does not expand presets into member coins, because preset→coin membership is not in the session payload and client-side expansion would be cache-dependent. The chip is display-only and changes no fan-out behavior.
+`computeEffectiveSource` returns the source per alert type; the chip shows the dominant display lane. An unmarked off flag inherits preset/global coverage and never renders as an opt-out. `PresetsPanel` labels preset coverage at the preset level only; it does not expand presets into member coins because preset-to-coin membership is dynamic, absent from the session payload, and authoritative only when resolved against the current cache. Following and unfollowing a preset changes only `telegram_preset_subscriptions`; direct/local coin rows remain unchanged.
 
 ## Auth Model
 

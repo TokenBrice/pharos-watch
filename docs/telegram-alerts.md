@@ -315,7 +315,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a depeg severity gate plus worsening-step threshold (`100`, `250`, `500`, or `off`) |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins (always gated; see below) |
-| `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
+| `/unsubscribe <targets>` | Removes the named direct coin preferences and/or preset follows independently; unfollowing a preset preserves direct preferences and overlapping presets |
 | `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step (always gated; see below) |
 
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
@@ -362,15 +362,17 @@ Telegram only delivers `?start=` deep links in private chats, but the dispatcher
 
 ### Preset Watchlists
 
-Preset watchlists are persistent dynamic follows on top of the existing per-coin subscription model.
+Preset watchlists are persistent dynamic sources independent of the direct per-coin preference model.
 
 - Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
 - Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `non-usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
-- Resolution happens at command and dispatch/list time inside `worker/src/lib/telegram-presets.ts`
+- Resolution happens for command/setup previews and at dispatch time inside `worker/src/lib/telegram-presets.ts`; dispatch-time resolution is authoritative
 - The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs; `non-usd-top*` includes active tracked coins whose `flags.pegCurrency` is not `USD`
-- `/subscribe ... <preset>` stores a persistent row in `telegram_preset_subscriptions` and also updates the currently resolved coin rows for backwards-compatible list/explicit-row behavior
-- `/unsubscribe <preset>` deletes the persistent preset row and removes the currently resolved coin rows for that chat
-- `/list` shows both dynamic preset rows and explicit coin rows
+- `/subscribe ... <preset>` stores only a persistent row in `telegram_preset_subscriptions`; resolved members are preview data and are not copied into `telegram_subscriptions`
+- `/unsubscribe <preset>` deletes only the named persistent preset row, preserving direct coin preferences and overlapping preset follows; removal does not require a successful dynamic-membership preview
+- `/list` shows dynamic preset rows and direct/local coin rows as separate sources without expanding preset membership
+- Mixed commands keep the sources separate: explicit ticker targets mutate direct rows while preset targets mutate preset rows in the same atomic intent
+- Legacy rollout is conservative: every pre-existing `telegram_subscriptions` row is retained as direct/local intent because old preset-materialized rows cannot be distinguished reliably from user-created direct preferences. No backfill deletes or reclassifies a row.
 - Preset DEWS follows use the default `ALERT` floor, and preset safety follows use the default all-changes mode, matching per-coin rows without custom tuning. Preset-level DEWS/safety tuning does not exist yet.
 - `launch` does not accept presets; launch alerts support explicit ticker/coin-id targets and the special `all` target
 - `reserve` does not accept presets either; reserve alerts support explicit ticker/coin-id targets and the special `all` target
@@ -393,7 +395,7 @@ Additional alert controls:
 Quiet-hours windows must have different start and end hours. Use `/unmutehours`, alert toggles, or unsubscribes for all-day silence rather than encoding `0-0`.
 If a configured timezone cannot be resolved by the Worker runtime ICU tables, quiet-hours evaluation falls back to UTC and emits a rate-limited structured Telegram warning keyed by the zone (`quietHoursTzFallback`).
 
-Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair, and a marker-backed per-coin `off` suppresses matching preset/global fan-out for that coin and alert type. The dispatcher requires both `alert_<type> = 0` and `alert_<type>_override = 1` before treating a per-coin row as an explicit opt-out; default zeroes created by partial subscribe writes do not suppress global or preset fan-out.
+Global and preset subscriptions are additive, but an enabled direct per-coin row takes precedence for that coin and alert type. That means a direct DEWS threshold, safety mode, or depeg worsening step overrides inherited fan-out for the same chat/coin pair. A marker-backed per-coin `off` suppresses matching preset/global fan-out for that family. The dispatcher requires both `alert_<type> = 0` and `alert_<type>_override = 1` before treating a per-coin row as an explicit opt-out; unmarked zeroes created by partial or legacy writes do not suppress global or preset fan-out. When multiple presets cover the same coin, their independent rows remain intact and the most inclusive positive depeg worsening step is selected deterministically unless a direct row owns the local tuning.
 
 The effective precedence is **per-coin > preset > all-stablecoins**. `/list` surfaces this with one precedence note ("Precedence: per-coin > preset > all-stablecoins. A per-coin Muted overrides the rest.") and renders a per-coin row with marker-backed off flags as "Muted (overrides defaults)" rather than a bare "Muted", because that row actively suppresses the preset/global default for the coin (the per-coin `off` precedence above). Per-coin rows with at least one flag enabled are tagged "· per-coin" so the active override lane is legible. `/list` does not expand presets into their member coins; preset coverage is shown at the preset level only. This is a display change; which alerts fire is unchanged.
 

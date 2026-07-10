@@ -2,7 +2,6 @@ import { parseTargetArgs, resolveTicker } from "../../lib/telegram-alerts";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
   buildNotFoundMessage,
-  buildPresetUnavailableMessage,
 } from "../telegram-webhook-messages";
 import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
@@ -14,7 +13,6 @@ import {
   buildBulkConfirmMessage,
   dedupePresetIds,
   makeActionRunner,
-  resolvePresetCoins,
   subscribableCoinCount,
 } from "./action-runner";
 
@@ -80,18 +78,6 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   }
 
   const presetIds = dedupePresetIds(parsed.presetIds);
-  const presetCoins = await resolvePresetCoins(db, presetIds);
-  if (presetCoins == null) {
-    await ctx.replyToChat(buildPresetUnavailableMessage());
-    await recordTelegramUsageEvent(db, {
-      eventType: "unsubscribe",
-      actionDetail: "preset",
-      outcome: "failure",
-      failureClass: "preset_unavailable",
-    });
-    return;
-  }
-
   const runAction = makeActionRunner(
     { db, chatId, username: null, initiatorUserId: actorUserId },
     ctx.botToken,
@@ -99,7 +85,6 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
   );
   await runAction({
     tickers: parsed.tickers,
-    initialCoins: presetCoins,
     actionType: "unsubscribe",
     actionPayload: { presetIds },
     resolutionScope: "tracked",

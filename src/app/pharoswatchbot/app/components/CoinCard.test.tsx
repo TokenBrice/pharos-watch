@@ -9,12 +9,16 @@ type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
 
 const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
 
-function makeCoin(alertTypes: Partial<SubscribedCoin["alertTypes"]>): SubscribedCoin {
+function makeCoin(
+  alertTypes: Partial<SubscribedCoin["alertTypes"]>,
+  alertOverrides: Partial<NonNullable<SubscribedCoin["alertOverrides"]>> = {},
+): SubscribedCoin {
   return {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     name: "USD Coin",
     alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertTypes },
+    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertOverrides },
     dewsMinBand: null,
     depegStepBps: null,
     safetyMode: null,
@@ -56,7 +60,7 @@ describe("CoinCard source chip (C74)", () => {
 
   it("renders a Muted override chip for an all-off row that suppresses a global default", () => {
     const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
-    renderCard({ coin: makeCoin({}), globalAlerts: global });
+    renderCard({ coin: makeCoin({}, { dews: true }), globalAlerts: global });
     expect(screen.getByText("Muted override")).toBeTruthy();
   });
 

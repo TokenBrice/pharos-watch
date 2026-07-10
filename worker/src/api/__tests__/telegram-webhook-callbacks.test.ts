@@ -627,7 +627,7 @@ describe("handleCallbackQuery", () => {
       expect(body.text).toContain("DEWS, Safety");
     });
 
-    it("setup:confirm on recommended path writes preset + per-coin subscriptions", async () => {
+    it("setup:confirm on recommended path writes preset provenance without direct coin rows", async () => {
       const db = mockD1([
         {
           match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
@@ -655,7 +655,7 @@ describe("handleCallbackQuery", () => {
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscribers"))).toBe(true);
-      expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
+      expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
       expect(history.some((h) => h.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(true);
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
     });
@@ -813,6 +813,75 @@ describe("handleCallbackQuery", () => {
     expect(ackCall).toBeDefined();
     const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
     expect(body.text).toMatch(/only the user who started/i);
+  });
+
+  it("confirm:bulk keeps preset-only follow provenance out of direct coin rows", async () => {
+    const db = mockD1([{
+      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+      rows: [],
+      first: {
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "subscribe",
+          alertTypes: ["dews"],
+          presetIds: ["usd-top25"],
+          coinIds: [],
+          subscribeAll: false,
+        }),
+        alert_types: JSON.stringify([]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "",
+        candidates: JSON.stringify([]),
+        remaining_tickers: JSON.stringify([]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      },
+    }]);
+
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-preset-follow",
+      data: "confirm:bulk",
+      from: { id: 999, username: "requester" },
+      message: { chat: { id: 123, type: "private" }, message_id: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+  });
+
+  it("confirm:bulk preset unfollow preserves direct coin rows", async () => {
+    const db = mockD1([{
+      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+      rows: [],
+      first: {
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "unsubscribe",
+          presetIds: ["usd-top25"],
+          coinIds: [],
+          unsubscribeAll: false,
+        }),
+        alert_types: JSON.stringify([]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "",
+        candidates: JSON.stringify([]),
+        remaining_tickers: JSON.stringify([]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      },
+    }]);
+
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-preset-unfollow",
+      data: "confirm:bulk",
+      from: { id: 999, username: "requester" },
+      message: { chat: { id: 123, type: "private" }, message_id: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(false);
   });
 
   describe("forget confirmation callbacks", () => {

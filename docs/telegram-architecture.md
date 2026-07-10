@@ -219,7 +219,11 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload, the setup-wizard state, and expired-row cleanup), the processed-update idempotency claim, the command-cooldown gate and best-effort cooldown release for transient/throwing handlers, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
-Per-coin subscription writes have two deliberate modes: subscribe-style follows bump alert flags with `MAX(...)`, while settings-style overrides replace exactly one setting and mark the matching `alert_*_override` column. Dispatch treats a per-coin row as an explicit off only when both the alert flag is `0` and the marker is `1`, so default zeroes from partial follow writes do not suppress preset/global fan-out. Settings-style depeg writes share one rule: `depeg on` preserves an existing worsening step, `depeg off` clears it, and `depeg-step <bps>` enables depeg while setting that step. `/subscribe ... depeg-step off` is still a follow with depeg enabled and no worsening-step threshold.
+Per-coin and preset facts are independent. `telegram_subscriptions` owns direct/local per-coin preferences; `telegram_preset_subscriptions` owns dynamic source membership and never materializes its resolved coins into the direct table. Store intent inputs name direct coin IDs separately from preset IDs so command, callback, setup, import, and Mini App callers cannot conflate the two sources. Following or unfollowing a preset changes only its preset row; current preset membership is resolved from the stablecoin cache at dispatch.
+
+Direct subscribe-style follows bump alert flags with `MAX(...)` and mark the matching selected families as local preferences, while settings-style overrides replace exactly one setting and mark its matching `alert_*_override` column. Every enabled direct row is authoritative over preset tuning. Dispatch treats a per-coin row as an explicit off only when both the alert flag is `0` and the marker is `1`, so default zeroes from partial or legacy writes do not suppress preset/global fan-out. Settings-style depeg writes share one rule: `depeg on` preserves an existing worsening step, `depeg off` clears it, and `depeg-step <bps>` enables depeg while setting that step. `/subscribe ... depeg-step off` is still a direct follow with depeg enabled and no worsening-step threshold.
+
+The provenance correction required no D1 migration because these two tables and keys already represented the target model. Existing `telegram_subscriptions` rows may have been created either directly or by the former preset-materialization behavior, so rollout classifies every existing row conservatively as direct/local intent and deletes none. Rolling back to an older Worker can resume materialization, but the corrected Worker remains compatible with those rows and will again retain them as direct intent.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.
@@ -228,8 +232,8 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 - `worker/src/lib/telegram-webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
 - D1 schemas — owned by the migrations themselves (see [`telegram-alerts.md`](./telegram-alerts.md#d1-schema)):
   - `telegram_subscribers` — per-chat state and defaults
-  - `telegram_subscriptions` — per-chat per-coin alert prefs
-  - `telegram_preset_subscriptions` — persistent dynamic preset follows
+  - `telegram_subscriptions` — per-chat direct/local per-coin alert preferences and explicit-off markers
+  - `telegram_preset_subscriptions` — independent persistent dynamic preset follows
   - `telegram_pending_disambiguation` — short-lived disambiguation, bulk-confirm, and setup-wizard state
   - `telegram_pending_alerts` — overflow + retry queue (owned by Queue, but the schema lives here)
   - `telegram_alert_jobs` / `telegram_alert_job_targets` — discovery + delivery audit (Dispatch)

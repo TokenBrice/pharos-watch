@@ -59,6 +59,7 @@ export const TelegramMiniAppStateSchema: ZodType<TelegramMiniAppState> = z.objec
     symbol: z.string(),
     name: z.string(),
     alertTypes: TelegramAlertTypesSchema,
+    alertOverrides: TelegramAlertTypesSchema.optional(),
     dewsMinBand: z.enum(["ALERT", "WARNING", "DANGER"]).nullable(),
     depegStepBps: TelegramDepegStepBpsSchema.nullable(),
     safetyMode: z.enum(["all", "downgrade-only", "upgrade-only"]).nullable(),

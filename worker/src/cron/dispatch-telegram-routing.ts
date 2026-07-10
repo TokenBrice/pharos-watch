@@ -76,6 +76,8 @@ export interface SubscriberRow {
   quiet_hours_end_utc: number | null;
   timezone: string | null;
   isGlobal: boolean;
+  /** A settings/direct write explicitly owns this alert family's local policy. */
+  hasLocalOverride?: boolean;
 }
 
 export interface AlertsByChatEntry {

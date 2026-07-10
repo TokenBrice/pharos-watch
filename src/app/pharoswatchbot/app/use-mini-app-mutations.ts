@@ -207,9 +207,21 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       const nextAlertTypes = patch.alertTypes
         ? { ...coin.alertTypes, ...patch.alertTypes }
         : coin.alertTypes;
+      const nextAlertOverrides = patch.alertTypes
+        ? {
+            dews: false,
+            depeg: false,
+            safety: false,
+            launch: false,
+            reserve: false,
+            ...coin.alertOverrides,
+            ...Object.fromEntries(Object.keys(patch.alertTypes).map((type) => [type, true])),
+          }
+        : coin.alertOverrides;
       return {
         ...coin,
         alertTypes: nextAlertTypes,
+        alertOverrides: nextAlertOverrides,
         dewsMinBand: patch.dewsMinBand !== undefined ? patch.dewsMinBand : coin.dewsMinBand,
         depegStepBps: patch.depegStepBps !== undefined ? patch.depegStepBps : coin.depegStepBps,
         safetyMode: patch.safetyMode !== undefined ? patch.safetyMode : coin.safetyMode,
@@ -351,8 +363,13 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     const captured = pendingUndo;
     if (!captured) return;
     clearUndoToast();
+    const restoredAlertTypes = Object.fromEntries(
+      (Object.keys(captured.alertTypes) as TelegramAlertType[])
+        .filter((type) => captured.alertTypes[type] || captured.alertOverrides?.[type])
+        .map((type) => [type, captured.alertTypes[type]]),
+    ) as Partial<Record<TelegramAlertType, boolean>>;
     const patch: { alertTypes: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: typeof captured.dewsMinBand; depegStepBps?: typeof captured.depegStepBps; safetyMode?: typeof captured.safetyMode } = {
-      alertTypes: { ...captured.alertTypes },
+      alertTypes: restoredAlertTypes,
     };
     if (captured.dewsMinBand !== null) patch.dewsMinBand = captured.dewsMinBand;
     if (captured.depegStepBps !== null) patch.depegStepBps = captured.depegStepBps;
@@ -363,7 +380,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const unfollowPreset = useCallback((preset: FollowedPreset) => {
     // Presets aren't joined to subscribed coins in the current state payload, so we
     // always show the confirm sheet when the Telegram bridge exposes one (T-48).
-    confirmThenFire(showConfirm, `Unfollow ${preset.label}? This also removes explicit coin rows covered by this preset.`, () => {
+    confirmThenFire(showConfirm, `Unfollow ${preset.label}? Direct coin settings and overlapping presets will stay unchanged.`, () => {
       void performMutation({ kind: "unfollow-preset", presetId: preset.id });
     });
   }, [performMutation, showConfirm]);

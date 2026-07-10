@@ -29,6 +29,11 @@ interface SubscriptionRow {
   alert_safety: number | null;
   alert_launch: number | null;
   alert_reserve: number | null;
+  alert_dews_override: number | null;
+  alert_depeg_override: number | null;
+  alert_safety_override: number | null;
+  alert_launch_override: number | null;
+  alert_reserve_override: number | null;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -94,7 +99,22 @@ function shouldProjectSubscription(row: SubscriptionRow): boolean {
     alerts.safety ||
     alerts.launch ||
     alerts.reserve ||
+    boolFlag(row.alert_dews_override) ||
+    boolFlag(row.alert_depeg_override) ||
+    boolFlag(row.alert_safety_override) ||
+    boolFlag(row.alert_launch_override) ||
+    boolFlag(row.alert_reserve_override) ||
     row.alert_snooze_until_ts != null;
+}
+
+function alertOverrideTypes(row: SubscriptionRow): Record<"dews" | "depeg" | "safety" | "launch" | "reserve", boolean> {
+  return {
+    dews: boolFlag(row.alert_dews_override),
+    depeg: boolFlag(row.alert_depeg_override),
+    safety: boolFlag(row.alert_safety_override),
+    launch: boolFlag(row.alert_launch_override),
+    reserve: boolFlag(row.alert_reserve_override),
+  };
 }
 
 function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition, "id" | "label" | "description"> {
@@ -151,6 +171,8 @@ export async function loadTelegramMiniAppState(
           ).bind(chatId),
           db.prepare(
             `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+                    alert_dews_override, alert_depeg_override, alert_safety_override,
+                    alert_launch_override, alert_reserve_override,
                     dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
                FROM telegram_subscriptions
               WHERE chat_id = ?
@@ -224,6 +246,7 @@ export async function loadTelegramMiniAppState(
         symbol: meta.symbol,
         name: meta.name,
         alertTypes: alertTypes(row),
+        alertOverrides: alertOverrideTypes(row),
         dewsMinBand: normalizeDewsBand(row.dews_min_band),
         safetyMode: normalizeSafetyMode(row.safety_mode),
         depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),

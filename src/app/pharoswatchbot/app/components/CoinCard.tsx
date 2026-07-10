@@ -29,7 +29,7 @@ type SourceChip = { label: string; className: string };
 
 // C74: collapse the per-type effective-source map into the single dominant lane
 // the chip should advertise. Precedence for the displayed lane mirrors the model:
-// an enabled per-coin flag wins; otherwise an all-off row is a muted override;
+// an enabled per-coin flag wins; otherwise a marked local-off row is a muted override;
 // otherwise the coin rides the inherited default lane.
 function deriveSourceChip(
   coin: SubscribedCoin,

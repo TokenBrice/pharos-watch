@@ -768,7 +768,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unfollow USD Top 25" }));
 
     expect(showConfirm).toHaveBeenCalledTimes(1);
-    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/also removes explicit coin rows covered by this preset/i);
+    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/direct coin settings and overlapping presets will stay unchanged/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

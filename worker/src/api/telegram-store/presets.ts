@@ -9,7 +9,7 @@ import {
 export interface SubscribeIntentInput {
   chatId: string;
   username: string | null;
-  stablecoinIds: readonly string[];
+  directStablecoinIds: readonly string[];
   presetIds?: readonly string[];
   alertTypes: Set<string>;
   clearPending?: boolean;
@@ -18,7 +18,7 @@ export interface SubscribeIntentInput {
 
 export interface UnsubscribeIntentInput {
   chatId: string;
-  stablecoinIds: readonly string[];
+  directStablecoinIds: readonly string[];
   presetIds?: readonly string[];
   clearPending?: boolean;
 }
@@ -86,12 +86,12 @@ export function prepareSubscriberAndPresetStatements(
   chatId: string,
   username: string | null,
   presetIds: readonly string[],
-  stablecoinIds: string[],
+  directStablecoinIds: string[],
   alertTypes: Set<string>,
   options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   return [
-    ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, stablecoinIds, options),
+    ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, directStablecoinIds, options),
     ...preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options),
   ];
 }
@@ -105,7 +105,7 @@ function prepareSubscribeIntentStatements(
     input.chatId,
     input.username,
     input.presetIds ?? [],
-    [...input.stablecoinIds],
+    [...input.directStablecoinIds],
     input.alertTypes,
     {
       clearPending: input.clearPending,
@@ -139,12 +139,12 @@ function prepareUnsubscribeIntentStatements(
   db: D1Database,
   input: UnsubscribeIntentInput,
 ): D1PreparedStatement[] {
-  const stablecoinIds = Array.from(new Set(input.stablecoinIds));
+  const directStablecoinIds = Array.from(new Set(input.directStablecoinIds));
   const presetIds = Array.from(new Set(input.presetIds ?? []));
-  if (stablecoinIds.length === 0 && presetIds.length === 0) return [];
+  if (directStablecoinIds.length === 0 && presetIds.length === 0) return [];
 
   const statements = [
-    ...prepareRemoveSubscriptionStatements(db, input.chatId, stablecoinIds, { touchSubscriber: false }),
+    ...prepareRemoveSubscriptionStatements(db, input.chatId, directStablecoinIds, { touchSubscriber: false }),
     ...prepareRemovePresetSubscriptionStatements(db, input.chatId, presetIds),
     db
       .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")

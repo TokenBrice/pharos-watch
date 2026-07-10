@@ -95,6 +95,9 @@ describe("handleTelegramWebhook", () => {
     const confirmInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(confirmInsert).toBeDefined();
     expect(confirmInsert!.binds).toContain("confirm-bulk");
+    const pending = JSON.parse(confirmInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
+    expect(pending.coinIds).toEqual([]);
+    expect(pending.presetIds).toEqual([]);
     const body = sentMessageBody();
     expect(body.text).toContain("Confirm?");
     expect(body.text).toMatch(/subscribe \d+ coins/);
@@ -165,6 +168,9 @@ describe("handleTelegramWebhook", () => {
     const confirmInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(confirmInsert).toBeDefined();
     expect(confirmInsert!.binds).toContain("confirm-bulk");
+    const pending = JSON.parse(confirmInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
+    expect(pending.coinIds).toEqual([]);
+    expect(pending.presetIds).toEqual(["usd-top25"]);
     const body = sentMessageBody();
     expect(body.text).toContain("Confirm?");
     expect(body.reply_markup).toBeDefined();
@@ -368,9 +374,11 @@ describe("handleTelegramWebhook", () => {
     const payload = JSON.parse(confirmInsert!.binds[2] as string) as {
       kind: string;
       depegWorseningBpsStep: number;
+      coinIds: string[];
     };
     expect(payload.kind).toBe("subscribe");
     expect(payload.depegWorseningBpsStep).toBe(250);
+    expect(payload.coinIds).toEqual([]);
     expect(sentMessageBody().text).toContain("Confirm?");
   });
 
@@ -400,8 +408,9 @@ describe("handleTelegramWebhook", () => {
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(confirmInsert).toBeDefined();
-    const payload = JSON.parse(confirmInsert!.binds[2] as string) as { presetIds: string[] };
+    const payload = JSON.parse(confirmInsert!.binds[2] as string) as { presetIds: string[]; coinIds: string[] };
     expect(payload.presetIds).toEqual(["usd-top25"]);
+    expect(payload.coinIds).toEqual([]);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
   });
 
@@ -1291,7 +1300,11 @@ describe("handleTelegramWebhook", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(true);
+    const confirmInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(confirmInsert).toBeDefined();
+    const pending = JSON.parse(confirmInsert!.binds[2] as string) as { coinIds: string[]; presetIds: string[] };
+    expect(pending.coinIds).toEqual([]);
+    expect(pending.presetIds).toEqual(["usd-top25"]);
     expect(sentMessageBody().text).toContain("Confirm?");
   });
 
@@ -1498,6 +1511,25 @@ describe("handleTelegramWebhook", () => {
     );
     expect(res.status).toBe(200);
     expect(sentMessageBody().text).toContain("temporarily unavailable");
+  });
+
+  it("allows preset unfollow when dynamic membership preview is unavailable", async () => {
+    const db = fixtureMockD1([
+      { match: "SELECT action_type, action_payload", rows: [], first: null },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
+    ]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(42, "/unsubscribe usd-top25"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(false);
+    expect(sentMessageBody().text).toContain("current membership was unavailable for preview");
   });
 
   it("executes /subscribe with a small explicit ticker set without confirmation", async () => {

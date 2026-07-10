@@ -136,7 +136,7 @@ describe("handleTelegramMiniAppSession", () => {
     const db = mockD1([
       ...stateReadTables({
         subscriber: { global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0, global_depeg_worsening_bps_step: 250, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null, timezone: null, alert_snooze_until_ts: null },
-        subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 1, alert_safety: 0, alert_launch: 0, dews_min_band: "ALERT", safety_mode: null, depeg_worsening_bps_step: 250, alert_snooze_until_ts: null }],
+        subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 1, alert_safety: 0, alert_launch: 0, alert_dews_override: 1, alert_depeg_override: 1, dews_min_band: "ALERT", safety_mode: null, depeg_worsening_bps_step: 250, alert_snooze_until_ts: null }],
       }),
     ]);
 
@@ -144,7 +144,7 @@ describe("handleTelegramMiniAppSession", () => {
     const body = await response.json() as {
       viewer: { canMutate: boolean; chatId: string | null };
       subscriber: { exists: boolean; snoozeUntilTs: number | null };
-      subscriptions: Array<{ stablecoinId: string; symbol: string; alertTypes: { dews: boolean; depeg: boolean } }>;
+      subscriptions: Array<{ stablecoinId: string; symbol: string; alertTypes: { dews: boolean; depeg: boolean }; alertOverrides: { dews: boolean; depeg: boolean } }>;
       catalog: { searchableCoins: Array<{ stablecoinId: string }> };
     };
 
@@ -154,7 +154,12 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.viewer.chatId).toBe("42");
     expect(body.subscriber.exists).toBe(true);
     expect(body.subscriber.snoozeUntilTs).toBeNull();
-    expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "usdc-circle", symbol: "USDC", alertTypes: { dews: true, depeg: true } });
+    expect(body.subscriptions[0]).toMatchObject({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      alertTypes: { dews: true, depeg: true },
+      alertOverrides: { dews: true, depeg: true },
+    });
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
@@ -172,12 +177,13 @@ describe("handleTelegramMiniAppSession", () => {
     expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
   });
 
-  it("hides all-disabled subscription rows but keeps snooze-only rows", async () => {
+  it("hides inert rows but keeps marker-backed local-off and snooze-only rows", async () => {
     const initData = await privateInitData();
     const db = mockD1([
       ...stateReadTables({
         subscriptions: [
           { stablecoin_id: "usdt-tether", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null },
+          { stablecoin_id: "pyusd-paypal", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_dews_override: 1, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null },
           { stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: NOW_SEC + 3600 },
           { stablecoin_id: "eurc-circle", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: "ALERT", safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null },
         ],
@@ -186,12 +192,13 @@ describe("handleTelegramMiniAppSession", () => {
 
     const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
     const body = await response.json() as {
-      subscriptions: Array<{ stablecoinId: string; snoozeUntilTs: number | null }>;
+      subscriptions: Array<{ stablecoinId: string; snoozeUntilTs: number | null; alertOverrides: { dews: boolean } }>;
     };
 
     expect(response.status).toBe(200);
-    expect(body.subscriptions.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "eurc-circle"]);
-    expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "usdc-circle", snoozeUntilTs: NOW_SEC + 3600 });
+    expect(body.subscriptions.map((row) => row.stablecoinId)).toEqual(["pyusd-paypal", "usdc-circle", "eurc-circle"]);
+    expect(body.subscriptions[0]).toMatchObject({ stablecoinId: "pyusd-paypal", alertOverrides: { dews: true } });
+    expect(body.subscriptions[1]).toMatchObject({ stablecoinId: "usdc-circle", snoozeUntilTs: NOW_SEC + 3600 });
   });
 
   it("accepts Telegram session initData with the Ed25519 signature field", async () => {
@@ -720,10 +727,10 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(disableDb, "alert_reserve = excluded.alert_reserve", ["42", "usdc-circle", 1])).toBe(false);
   });
 
-  it("does not return a watchlist coin after disabling its last alert", async () => {
+  it("returns a marker-backed local opt-out after disabling the last alert", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables({
-      subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
+      subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_depeg_override: 1, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
     }));
 
     const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
@@ -734,11 +741,13 @@ describe("handleTelegramMiniAppMutation", () => {
         patch: { alertTypes: { depeg: false } },
       },
     }), BOT_TOKEN);
-    const body = await response.json() as { subscriptions: Array<{ stablecoinId: string }> };
+    const body = await response.json() as { subscriptions: Array<{ stablecoinId: string; alertOverrides: { depeg: boolean } }> };
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "alert_depeg = 0", ["42", "usdc-circle"])).toBe(true);
-    expect(body.subscriptions).toEqual([]);
+    expect(body.subscriptions).toEqual([
+      expect.objectContaining({ stablecoinId: "usdc-circle", alertOverrides: expect.objectContaining({ depeg: true }) }),
+    ]);
   });
 
   it("removes explicit coin subscriptions", async () => {
@@ -755,7 +764,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?", ["42"])).toBe(true);
   });
 
-  it("writes recommended setup preset and subscription rows", async () => {
+  it("writes recommended setup as preset provenance without materializing coin rows", async () => {
     const initData = await privateInitData();
     const db = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
 
@@ -765,7 +774,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(historyHas(db, "INSERT INTO telegram_subscriptions", ["42", "usdt-tether", 1, 1])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_subscriptions", ["42"])).toBe(false);
     expect(historyHas(db, "INSERT INTO telegram_preset_subscriptions", ["42", "usd-top25", 1, 1, 0])).toBe(true);
   });
 
@@ -799,17 +808,17 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(followResponse.status).toBe(200);
-    expect(historyHas(followDb, "INSERT INTO telegram_subscriptions", ["42", "usdt-tether", 1, 1, 0, 0, 250])).toBe(true);
+    expect(historyHas(followDb, "INSERT INTO telegram_subscriptions", ["42"])).toBe(false);
     expect(historyHas(followDb, "INSERT INTO telegram_preset_subscriptions", ["42", "usd-top10", 1, 1, 0, 250])).toBe(true);
 
-    const unfollowDb = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
+    const unfollowDb = mockD1(stateReadTables());
     const unfollowResponse = await handleTelegramMiniAppMutation(unfollowDb, request("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "unfollow-preset", presetId: "usd-top10" },
     }), BOT_TOKEN);
 
     expect(unfollowResponse.status).toBe(200);
-    expect(historyHas(unfollowDb, "DELETE FROM telegram_subscriptions", ["42", "usdt-tether"])).toBe(true);
+    expect(historyHas(unfollowDb, "DELETE FROM telegram_subscriptions", ["42"])).toBe(false);
     expect(historyHas(unfollowDb, "DELETE FROM telegram_preset_subscriptions", ["42", "usd-top10"])).toBe(true);
   });
 
@@ -823,7 +832,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(historyHas(db, "INSERT INTO telegram_subscriptions", ["42", "eurc-circle", 1, 0, 0, 0])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_subscriptions", ["42"])).toBe(false);
     expect(historyHas(db, "INSERT INTO telegram_preset_subscriptions", ["42", "non-usd-top10", 1, 0, 0])).toBe(true);
   });
 
@@ -857,7 +866,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(500);
-    expect(stagedStatements.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
+    expect(stagedStatements.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
     expect(stagedStatements.some((entry) => entry.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(true);
     expect(committedStatements.some((entry) => entry.sql.includes("telegram_subscriptions"))).toBe(false);
     expect(committedStatements.some((entry) => entry.sql.includes("telegram_preset_subscriptions"))).toBe(false);

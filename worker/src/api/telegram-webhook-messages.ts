@@ -213,13 +213,25 @@ export function buildPresetSubscriptionSummaryMessage(
   options: {
     presetIds: readonly TelegramPresetId[];
     presetLabelById: ReadonlyMap<string, string>;
+    presetCoinCount: number;
   },
 ): string {
-  return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions, {
-    introLines: [`Preset watchlists: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`],
-    maxRows: 12,
-    footerLine: "Use /list to review the full set and per-coin settings.",
-  });
+  const sorted = sortSubscriptions(subscriptions);
+  const shown = sorted.slice(0, 12);
+  const lines = [
+    `Preset watchlists followed: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`,
+    `Current dynamic coverage: ${options.presetCoinCount} coin${options.presetCoinCount === 1 ? "" : "s"}.`,
+  ];
+  if (sorted.length > 0) {
+    lines.push(`Direct coin preferences updated (${sorted.length}):`);
+    for (const row of shown) {
+      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row)}`);
+    }
+    appendTruncationLine(lines, sorted.length, shown.length);
+  }
+  lines.push("Preset membership updates automatically; direct coin preferences stay independent.");
+  lines.push("Use /list to review both sources and per-coin settings.");
+  return escapeHtml(lines.join("\n"));
 }
 
 export function buildPresetUnsubscribeSummaryMessage(
@@ -227,17 +239,23 @@ export function buildPresetUnsubscribeSummaryMessage(
   options: {
     presetIds: readonly TelegramPresetId[];
     presetLabelById: ReadonlyMap<string, string>;
+    presetCoinCount: number | null;
   },
 ): string {
-  const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
-  const shownCoins = sortedCoins.slice(0, 12);
   const lines = [
     `Preset watchlists removed: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`,
-    `Removed ${coins.length} coin subscription${coins.length === 1 ? "" : "s"}.`,
-    "Coins:",
-    formatCoinLines(shownCoins),
+    options.presetCoinCount == null
+      ? "Stopped dynamic coverage; current membership was unavailable for preview."
+      : `Stopped dynamic coverage for ${options.presetCoinCount} current coin${options.presetCoinCount === 1 ? "" : "s"}.`,
+    "Direct coin preferences and overlapping preset follows were preserved.",
   ];
-  appendTruncationLine(lines, sortedCoins.length, shownCoins.length, "Use /list to confirm the remaining subscriptions.");
+  if (coins.length > 0) {
+    const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
+    const shownCoins = sortedCoins.slice(0, 12);
+    lines.push(`Explicitly removed direct coin preferences (${coins.length}):`, formatCoinLines(shownCoins));
+    appendTruncationLine(lines, sortedCoins.length, shownCoins.length);
+  }
+  lines.push("Use /list to confirm the remaining subscriptions.");
   return escapeHtml(lines.join("\n"));
 }
 

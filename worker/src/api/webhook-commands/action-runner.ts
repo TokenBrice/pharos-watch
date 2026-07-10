@@ -18,6 +18,7 @@ import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registr
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
+  buildPresetUnavailableMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
 } from "../telegram-webhook-messages";
@@ -129,7 +130,11 @@ type CompletionHandlerMap = {
     context: TelegramActionContext,
     coins: ResolvedCoin[],
     payload: ActionPayloadMap[K],
-    options: { clearPending: boolean },
+    options: {
+      clearPending: boolean;
+      presetCoins: ResolvedCoin[];
+      presetResolutionAvailable: boolean;
+    },
   ) => Promise<string>;
 };
 
@@ -141,7 +146,7 @@ const completionHandlers: CompletionHandlerMap = {
       chatId: context.chatId,
       username: context.username,
       alertTypes,
-      stablecoinIds: coins.map((coin) => coin.id),
+      directStablecoinIds: coins.map((coin) => coin.id),
       presetIds,
       clearPending: options.clearPending,
       depegWorseningBpsStep: payload.depegWorseningBpsStep,
@@ -167,6 +172,7 @@ const completionHandlers: CompletionHandlerMap = {
       return buildPresetSubscriptionSummaryMessage(subscriptions, {
         presetIds,
         presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: options.presetCoins.length,
       });
     }
     return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
@@ -175,7 +181,7 @@ const completionHandlers: CompletionHandlerMap = {
     const presetIds = dedupePresetIds(payload.presetIds ?? []);
     await applyUnsubscribeIntent(context.db, {
       chatId: context.chatId,
-      stablecoinIds: coins.map((coin) => coin.id),
+      directStablecoinIds: coins.map((coin) => coin.id),
       presetIds,
       clearPending: options.clearPending,
     });
@@ -195,6 +201,7 @@ const completionHandlers: CompletionHandlerMap = {
       return buildPresetUnsubscribeSummaryMessage(coins, {
         presetIds,
         presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: options.presetResolutionAvailable ? options.presetCoins.length : null,
       });
     }
     return buildUnsubscribeSuccessMessage(coins);
@@ -257,14 +264,15 @@ async function persistAndPromptBulkConfirm(
   context: TelegramActionContext,
   botToken: string,
   gate: BulkGate,
-  coins: ResolvedCoin[],
+  directCoins: ResolvedCoin[],
+  previewCoins: ResolvedCoin[],
   clearPending: boolean,
 ): Promise<CoinResolutionCompletion> {
   if (clearPending) {
     await clearPendingDisambiguation(context.db, context.chatId);
   }
-  const coinIds = coins.map((coin) => coin.id);
-  const symbols = coins.map((coin) => coin.symbol);
+  const coinIds = directCoins.map((coin) => coin.id);
+  const symbols = previewCoins.map((coin) => coin.symbol);
   const payload: ConfirmBulkPayload =
     gate.kind === "subscribe"
       ? {
@@ -295,7 +303,7 @@ async function persistAndPromptBulkConfirm(
     context.chatId,
     buildBulkConfirmMessage(
       gate.kind,
-      coinIds.length,
+      previewCoins.length,
       gate.kind === "subscribe" ? gate.alertTypes : [],
       symbols,
     ),
@@ -345,10 +353,38 @@ export function makeActionRunner(
         );
       },
       onComplete: async (coins, resolutionOptions) => {
-        if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
+        const presetIds = actionType === "set"
+          ? []
+          : dedupePresetIds(
+              (actionPayload as SubscribeActionPayload | UnsubscribeActionPayload).presetIds ?? [],
+            );
+        const resolvedPresetCoins = await resolvePresetCoins(context.db, presetIds);
+        if (resolvedPresetCoins == null && actionType !== "unsubscribe") {
+          await recordTelegramUsageEvent(context.db, {
+            eventType: actionType === "unsubscribe" ? "unsubscribe" : "subscribe",
+            actionDetail: "preset",
+            outcome: "failure",
+            failureClass: "preset_unavailable",
+          });
+          return { kind: "message", text: buildPresetUnavailableMessage() };
         }
-        const text = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
+        const presetCoins = resolvedPresetCoins ?? [];
+        const previewCoins = dedupeCoins([...coins, ...presetCoins]);
+        if (gate && shouldGateBulk(previewCoins.length) && (gate.kind === actionType)) {
+          return persistAndPromptBulkConfirm(
+            context,
+            botToken,
+            gate,
+            coins,
+            previewCoins,
+            resolutionOptions.clearPending,
+          );
+        }
+        const text = await completionHandlers[actionType](context, coins, actionPayload, {
+          ...resolutionOptions,
+          presetCoins,
+          presetResolutionAvailable: resolvedPresetCoins != null,
+        });
         const replyMarkup = runnerOptions.replyMarkupForCompletion?.({
           actionType,
           coins,
