@@ -393,6 +393,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
   });
 
   afterEach(() => {
+    (yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS).length = 0;
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -452,7 +453,7 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     });
   });
 
-  it("prefers deterministic rate-derived source over curated DeFiLlama when both available", async () => {
+  it("prefers fresh curated evidence over a deterministic modeled proxy", async () => {
     // Inject a rate-derived config to produce a deterministic-tier source alongside curated DL
     const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
     configs.push({
@@ -505,13 +506,10 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     expect(rateDerivedRow).toBeDefined();
     expect(dlRow).toBeDefined();
 
-    // rate-derived has deterministic confidence tier which outranks curated DL
-    // rate-derived APY = max(0, 5.0 - 0.25) = 4.75 (also higher than DL's 4.5)
-    expect(rateDerivedRow?.boundValues?.[25]).toBe(1); // is_best = 1
-    expect(dlRow?.boundValues?.[25]).toBe(0); // is_best = 0
-
-    // Clean up
-    configs.length = 0;
+    // Deterministic calculation is not direct evidence. The fresh curated
+    // observation remains selected even though the modeled APY is higher.
+    expect(rateDerivedRow?.boundValues?.[25]).toBe(0); // is_best = 0
+    expect(dlRow?.boundValues?.[25]).toBe(1); // is_best = 1
   });
 
   it("rejects discovered source that diverges >35% from canonical reference", async () => {
@@ -862,6 +860,7 @@ describe("warning signal generation in yield sync", () => {
 
     // Current APY jumps to 10% (>2x average of ~3%)
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
@@ -975,6 +974,7 @@ describe("warning signal generation in yield sync", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
@@ -1031,6 +1031,7 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") return { value: "4.25", updatedAt: nowSec };
       if (key === "dl-stablecoin-pools") {
         return {
           value: JSON.stringify([
