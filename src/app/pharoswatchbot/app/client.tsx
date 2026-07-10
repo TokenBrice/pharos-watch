@@ -5,8 +5,7 @@ import { ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
-import type { CoinInsightTarget, TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
+import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
@@ -20,6 +19,7 @@ import { WatchlistPanel } from "./components/WatchlistPanel";
 import { CoinInsightPanel } from "./components/CoinInsightPanel";
 import { PresetsPanel } from "./components/PresetsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { MiniAppTabs } from "./components/MiniAppTabs";
 import { ALERT_LABELS, RECOMMENDED_OPERATION } from "./constants";
 import { isPausedSentinel } from "./format";
 import {
@@ -28,6 +28,7 @@ import {
   refreshMiniAppBundleOnce,
   type TelegramMiniAppClientSnapshot,
 } from "./mini-app-api";
+import { useMiniAppView, type ViewKey } from "./use-mini-app-view";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const BOT_URL = "https://t.me/PharosWatchBot";
@@ -36,46 +37,21 @@ const BOT_DM_SAMPLE_LINK = "https://t.me/PharosWatchBot?start=sample";
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 
-type ViewKey = "home" | "watchlist" | "presets" | "settings";
-
-const ORDERED_VIEWS: ViewKey[] = ["home", "watchlist", "presets", "settings"];
-
-// Roving tabindex needs the arrow-key half of the ARIA tabs contract,
-// otherwise inactive tabs are unreachable by keyboard.
-function nextTabViewForKey(view: ViewKey, key: string): ViewKey | null {
-  const currentIndex = ORDERED_VIEWS.indexOf(view);
-  if (key === "ArrowRight") return ORDERED_VIEWS[(currentIndex + 1) % ORDERED_VIEWS.length];
-  if (key === "ArrowLeft") return ORDERED_VIEWS[(currentIndex - 1 + ORDERED_VIEWS.length) % ORDERED_VIEWS.length];
-  if (key === "Home") return ORDERED_VIEWS[0];
-  if (key === "End") return ORDERED_VIEWS[ORDERED_VIEWS.length - 1];
-  return null;
-}
-
-function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null; insight: CoinInsightTarget | null } {
-  const payload = parseMiniAppPayload(startParam);
-  if (!payload) return { view: "home", coinId: null, insight: null };
-  const intent = miniAppPayloadIntent(payload);
-  if (intent === "settings" || intent === "presets") return { view: intent, coinId: null, insight: null };
-  if (intent === "quiet-hours" || intent === "forget") return { view: "settings", coinId: null, insight: null };
-  if (intent === "coin") return { view: "watchlist", coinId: payload.kind === "coin" ? payload.coinId : null, insight: null };
-  if (intent === "why" || intent === "coverage") {
-    return {
-      view: "watchlist",
-      coinId: payload.kind === "why" || payload.kind === "coverage" ? payload.coinId : null,
-      insight: payload.kind === "why" || payload.kind === "coverage" ? { kind: payload.kind, coinId: payload.coinId } : null,
-    };
-  }
-  if (intent === "watchlist") return { view: "watchlist", coinId: null, insight: null };
-  return { view: "home", coinId: null, insight: null };
-}
-
 export function PharosWatchBotMiniAppClient() {
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
-  const [view, setView] = useState<ViewKey>("home");
-  const [coinTarget, setCoinTarget] = useState<string | null>(null);
-  const [visibleCoinTarget, setVisibleCoinTarget] = useState<string | null>(null);
-  const [coinInsightTarget, setCoinInsightTarget] = useState<CoinInsightTarget | null>(null);
-  const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
+  const {
+    view,
+    coinInsightTarget,
+    highlightedCoinId,
+    visibleCoinTarget,
+    backButtonVisible,
+    initializeFromStartParam,
+    handleBack: handleTelegramBack,
+    showSettings: handleTelegramSettings,
+    activateView: setActiveView,
+    setCoinInsightTarget,
+    setCoinTarget,
+  } = useMiniAppView(state);
   // Session network status. The bridge hook owns the Telegram probe lifecycle; this state only
   // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
   const [status, setStatus] = useState<"preview" | "loading" | "ready" | "stale" | "error">("loading");
@@ -83,23 +59,10 @@ export function PharosWatchBotMiniAppClient() {
   const stateRef = useRef<TelegramMiniAppState | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
   const mainButtonInFlightRef = useRef(false);
-  const hasInitialisedFromStartParamRef = useRef(false);
   // Forward-ref to `loadSession` so the mutations hook can call back for stale-auth recovery
   // even though `loadSession` is defined later (it depends on the hook's `setMessage`).
   const loadSessionRef = useRef<((nextInitData: string, options?: { clearMessage?: boolean }) => Promise<void>) | null>(null);
 
-  // BackButton handler reacts to the current view/insight target.
-  const handleTelegramBack = useCallback(() => {
-    if (coinInsightTarget) {
-      setCoinInsightTarget(null);
-      return;
-    }
-    setView("home");
-  }, [coinInsightTarget]);
-
-  const handleTelegramSettings = useCallback(() => setView("settings"), []);
-
-  const backButtonVisible = view !== "home" || coinInsightTarget != null;
   const { webApp, initData, startParam, previewName, status: bridgeStatus } = useTelegramBridge({
     onBack: handleTelegramBack,
     backButtonVisible,
@@ -179,14 +142,7 @@ export function PharosWatchBotMiniAppClient() {
   // Runs once per bridge-status transition; downstream session reloads go through `loadSession`.
   useEffect(() => {
     if (bridgeStatus === "loading") return;
-    if (!hasInitialisedFromStartParamRef.current) {
-      hasInitialisedFromStartParamRef.current = true;
-      const initial = initialViewFromStartParam(startParam);
-      setView(initial.view);
-      setCoinTarget(initial.coinId);
-      setVisibleCoinTarget(initial.insight ? null : initial.coinId);
-      setCoinInsightTarget(initial.insight);
-    }
+    initializeFromStartParam(startParam);
     if (bridgeStatus === "preview") {
       setStatus("preview");
       return;
@@ -198,7 +154,7 @@ export function PharosWatchBotMiniAppClient() {
     }
     // bridgeStatus === "ready"
     if (initData) void loadSession(initData);
-  }, [bridgeStatus, initData, loadSession, setMessage, startParam]);
+  }, [bridgeStatus, initData, initializeFromStartParam, loadSession, setMessage, startParam]);
 
   // Eruda debug toggle (?debug=eruda) — dev-only; the production short-circuit and
   // dynamic-import-from-string pattern below keep the CDN URL out of the production bundle.
@@ -265,36 +221,6 @@ export function PharosWatchBotMiniAppClient() {
     };
   }, [webApp]);
 
-  // Scroll-to-coin: when launched with `coin_<id>`, scroll the matching row
-  // into view and apply a temporary highlight. Runs once per coin target.
-  useEffect(() => {
-    if (!coinTarget) return;
-    if (view !== "watchlist") return;
-    if (!state) return;
-    const exists = state.subscriptions.some((coin) => coin.stablecoinId === coinTarget)
-      || state.catalog.searchableCoins.some((coin) => coin.stablecoinId === coinTarget)
-      || visibleCoinTarget === coinTarget;
-    if (!exists) return;
-    const targetId = coinTarget;
-    setHighlightedCoinId(targetId);
-    // Defer one tick so the highlighted-row re-render commits before scroll.
-    const scrollTimer = setTimeout(() => {
-      const node = typeof document === "undefined" ? null : document.getElementById(`coin-row-${targetId}`);
-      const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      node?.focus({ preventScroll: true });
-      node?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
-    }, 0);
-    const clearTimer = setTimeout(() => {
-      setHighlightedCoinId((current) => (current === targetId ? null : current));
-      setCoinTarget((current) => (current === targetId ? null : current));
-    }, 2_000);
-    return () => {
-      clearTimeout(scrollTimer);
-      clearTimeout(clearTimer);
-      setHighlightedCoinId((current) => (current === targetId ? null : current));
-    };
-  }, [coinTarget, state, view, visibleCoinTarget]);
-
   // MainButton — derive `text` and `handler` from the current view/state and
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
@@ -346,21 +272,8 @@ export function PharosWatchBotMiniAppClient() {
   };
 
   const activateView = (key: ViewKey) => {
-    setView(key);
-    if (key !== "watchlist") {
-      setCoinInsightTarget(null);
-      setCoinTarget(null);
-      setHighlightedCoinId(null);
-    }
+    setActiveView(key);
     webApp?.HapticFeedback?.selectionChanged?.();
-  };
-
-  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    const nextKey = nextTabViewForKey(view, event.key);
-    if (!nextKey) return;
-    event.preventDefault();
-    activateView(nextKey);
-    document.getElementById(`pharos-mini-app-tab-${nextKey}`)?.focus();
   };
 
   return (
@@ -380,27 +293,7 @@ export function PharosWatchBotMiniAppClient() {
             </button>
           </header>
           {displayState ? (
-            <nav className="grid grid-cols-4 gap-1 rounded-xl border border-border/65 bg-background/60 p-1" role="tablist" aria-label="Mini App sections">
-              {ORDERED_VIEWS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  id={`pharos-mini-app-tab-${key}`}
-                  aria-controls={`pharos-mini-app-panel-${key}`}
-                  aria-selected={view === key}
-                  tabIndex={view === key ? 0 : -1}
-                  onClick={() => activateView(key)}
-                  onKeyDown={handleTabKeyDown}
-                  className={cn(
-                    "pharos-focus-ring min-h-11 min-w-0 break-words rounded-lg px-1 text-xs font-semibold capitalize leading-tight transition-colors",
-                    view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  {key}
-                </button>
-              ))}
-            </nav>
+            <MiniAppTabs view={view} onActivate={activateView} />
           ) : null}
         </div>
         <span className="sr-only" aria-live="polite">{announcement}</span>

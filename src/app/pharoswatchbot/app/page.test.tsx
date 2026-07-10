@@ -925,7 +925,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "settings" }));
 
-    const compactPicker = screen.getByLabelText("Timezone") as HTMLSelectElement;
+    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
     const fullPicker = screen.getByLabelText("Timezone name") as HTMLInputElement;
     const datalist = document.getElementById("telegram-mini-app-timezone-options");
     expect(compactPicker.options.length).toBeLessThan(20);
@@ -1414,7 +1414,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       ...baseState,
       subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
     };
-    let resolveMutation: ((value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void) | null = null;
+    let resolveMutation!: (value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void;
     const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
       resolveMutation = resolve;
     });
@@ -1434,7 +1434,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    resolveMutation?.({ ok: true, json: async () => baseState });
+    resolveMutation({ ok: true, json: async () => baseState });
     await waitFor(() => expect(screen.getByText("Recommended setup applied.")).toBeTruthy());
   });
 
