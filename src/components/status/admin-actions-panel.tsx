@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { getStatusPageActions } from "@shared/lib/api-endpoints";
 import type { StatusPageActionGroup } from "@shared/lib/api-endpoints";
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
-import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
+import { useAdminActionExecutions } from "./admin-action-execution-provider";
+import { AdminActionButton } from "./admin-action-button";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { SeverityPill, StatusPill } from "./severity-pill";
 
@@ -43,29 +44,25 @@ export function AdminActionsPanel({
   onActionFinished,
   showRecommendations = true,
 }: AdminActionsPanelProps) {
-  const [executions, setExecutions] = useState<AdminActionExecution[]>([]);
+  const executions = useAdminActionExecutions()
+    .filter((execution) => execution.status !== "ready")
+    .slice(0, 6);
 
-  const recommendations = useMemo(
-    () => deriveStatusActionRecommendations(status),
-    [status],
-  );
+  const recommendations = useMemo(() => deriveStatusActionRecommendations(status), [status]);
   const groupedActions = useMemo(() => {
     const groups = new Map<StatusPageActionGroup, AdminAction[]>();
     for (const action of ADMIN_ACTIONS) {
       const group = action.group;
       groups.set(group, [...(groups.get(group) ?? []), action]);
     }
-    return ACTION_GROUP_ORDER
-      .map((group) => ({
-        key: group,
-        ...ACTION_GROUP_COPY[group],
-        actions: groups.get(group) ?? [],
-      }))
-      .filter((group) => group.actions.length > 0);
+    return ACTION_GROUP_ORDER.map((group) => ({
+      key: group,
+      ...ACTION_GROUP_COPY[group],
+      actions: groups.get(group) ?? [],
+    })).filter((group) => group.actions.length > 0);
   }, []);
 
-  const handleFinished = (execution: AdminActionExecution) => {
-    setExecutions((prev) => [execution, ...prev].slice(0, 6));
+  const handleFinished = () => {
     onActionFinished?.();
   };
 
@@ -94,10 +91,7 @@ export function AdminActionsPanel({
                     <SeverityPill severity={recommendation.severity} />
                   </div>
                   <div className="mt-3">
-                    <AdminActionButton
-                      action={recommendation.action}
-                      onFinished={handleFinished}
-                    />
+                    <AdminActionButton action={recommendation.action} onFinished={handleFinished} />
                   </div>
                 </div>
               ))}
@@ -121,11 +115,7 @@ export function AdminActionsPanel({
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {group.actions.map((action) => (
-                    <AdminActionButton
-                      key={action.path}
-                      action={action}
-                      onFinished={handleFinished}
-                    />
+                    <AdminActionButton key={action.path} action={action} onFinished={handleFinished} />
                   ))}
                 </div>
               </div>
@@ -137,31 +127,35 @@ export function AdminActionsPanel({
           <div className="space-y-3">
             <div>
               <h3 className="text-sm font-medium">Recent results</h3>
-              <p className="text-xs text-muted-foreground">
-                Latest action outcomes from this browser session.
-              </p>
+              <p className="text-xs text-muted-foreground">Latest action outcomes from this browser session.</p>
             </div>
             <div className="space-y-2">
               {executions.map((execution) => (
-                <div key={`${execution.action.path}-${execution.executedAt}`} className="rounded-md border border-border/60 p-3">
+                <div key={execution.intentId} className="rounded-md border border-border/60 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-sm font-medium">{execution.action.label}</div>
                     <StatusPill
                       className={
-                        execution.ok
-                          ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                          : "bg-red-500/15 text-red-700 dark:text-red-400"
+                        execution.status === "unknown"
+                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                          : execution.ok
+                            ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                            : "bg-red-500/15 text-red-700 dark:text-red-400"
                       }
                     >
-                      {execution.ok ? "ok" : "error"}
+                      {execution.status}
                     </StatusPill>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {formatElapsedSeconds(Math.max(0, nowSeconds - execution.executedAt))} ago
+                    {execution.executedAt == null
+                      ? "Not started"
+                      : `${formatElapsedSeconds(Math.max(0, nowSeconds - execution.executedAt))} ago`}{" "}
+                    · {execution.scopeLabel}
+                    {execution.idempotentReplay === true ? " · replayed" : ""}
                   </div>
-                  <pre className="mt-2 max-h-32 overflow-auto rounded bg-muted p-2 text-xs">
-                    {execution.output}
-                  </pre>
+                  {execution.output && (
+                    <pre className="mt-2 max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{execution.output}</pre>
+                  )}
                 </div>
               ))}
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { OpsHostGateShell } from "@/components/ops-host-gate-shell";
+import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
 import { StatusDashboard } from "./status-dashboard";
 
 const ADMIN_SHELL_PROPS = {
@@ -27,12 +28,14 @@ export default function StatusClient() {
       publicTitle="Operator tooling is no longer available on the public host."
       publicDescription={
         <>
-          Operator actions, credentials, messaging telemetry, and deep status evidence now run behind the Access-protected ops host.
-          The public `/status/` page is read-only.
+          Operator actions, credentials, messaging telemetry, and deep status evidence now run behind the
+          Access-protected ops host. The public `/status/` page is read-only.
         </>
       }
     >
-      <StatusDashboard onSignOut={handleOpsSignOut} />
+      <AdminActionExecutionProvider>
+        <StatusDashboard onSignOut={handleOpsSignOut} />
+      </AdminActionExecutionProvider>
     </OpsHostGateShell>
   );
 }
