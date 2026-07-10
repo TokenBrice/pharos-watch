@@ -73,6 +73,11 @@ function baseProps() {
     setHistoryWindow: vi.fn(),
     setHistoryFilters: vi.fn(),
     historyLoading: false,
+    historyEvidence: {
+      source: "history" as const,
+      state: "ready" as const,
+      message: "Showing persisted transitions for the selected history window.",
+    },
   };
 }
 
@@ -126,5 +131,27 @@ describe("HistorySection", () => {
     );
 
     expect(screen.getByText(/Pages transition correlation is Unknown/i)).toBeTruthy();
+  });
+
+  it("labels a failed history query as partial fallback and avoids negative deployment conclusions", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        allTransitions={[]}
+        latestTransition={null}
+        historyEvidence={{
+          source: "status-fallback",
+          state: "error",
+          message: "History query failed; showing recent status transitions only.",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("alert").textContent).toContain("History query failed");
+    expect(screen.getByText("Recent fallback")).toBeTruthy();
+    expect(screen.getByText(/selected history window is unavailable/i)).toBeTruthy();
+    expect(screen.getByText(/correlation is Unknown because only recent status fallback/i)).toBeTruthy();
+    expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
   });
 });

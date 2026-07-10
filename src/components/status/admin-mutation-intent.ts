@@ -11,6 +11,7 @@ export interface AdminMutationIntentRequest {
   path: string;
   body?: unknown;
   method?: string;
+  idempotencyKeyPrefix?: string;
 }
 
 export interface AdminMutationIntentExecution {
@@ -117,7 +118,10 @@ export function useAdminMutationIntents() {
   }
 
   function createIntent(request: AdminMutationIntentRequest): AdminMutationIntentExecution {
-    const idempotencyKey = createIdempotencyKey();
+    const generatedKey = createIdempotencyKey();
+    const idempotencyKey = request.idempotencyKeyPrefix
+      ? `${request.idempotencyKeyPrefix}:${generatedKey}`
+      : generatedKey;
     return {
       laneKey: request.laneKey,
       intentId: idempotencyKey,

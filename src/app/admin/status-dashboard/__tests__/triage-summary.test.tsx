@@ -83,6 +83,10 @@ describe("TriageSummary workspace links", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Triage" }).closest("section")?.getAttribute("aria-labelledby"),
     ).toBe("triage-title");
+    const overviewHeading = screen.getByRole("heading", { level: 2, name: "Operational overview" });
+    const issuesHeading = screen.getByRole("heading", { level: 3, name: "Current issues" });
+    expect(overviewHeading.className).toContain("sr-only");
+    expect(overviewHeading.compareDocumentPosition(issuesHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("diagnostics")).toBeNull();
     expect(screen.getByText("State machine, probe, and discrepancy diagnostics").className).toContain("min-h-11");
     expect(screen.getByRole("link", { name: /pipeline health/i }).getAttribute("href")).toBe("/admin/pipeline/");

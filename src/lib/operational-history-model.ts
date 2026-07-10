@@ -11,7 +11,7 @@ export interface OperationalActivityEntry {
   actionCode: string;
   actionLabel: string;
   target: string;
-  outcome: "ok" | "error" | "recorded";
+  outcome: "ok" | "error" | "unknown" | "recorded";
   httpStatus: number | null;
   detail: unknown;
   lifecycleIdentity: { verb: string; apiKeyId: number } | null;
@@ -162,6 +162,17 @@ function readKeyName(detail: unknown): string | null {
   return null;
 }
 
+function adminActionOutcome(entry: AdminActionAuditEntry): OperationalActivityEntry["outcome"] {
+  const details = readRecord(entry.details);
+  const statusCandidates = [details?.status, details?.outcome, details?.executionCertainty];
+  const statuses = statusCandidates
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase());
+  if (statuses.includes("unknown")) return "unknown";
+  if (statuses.includes("failed") || statuses.includes("error")) return "error";
+  return entry.result;
+}
+
 function buildAdminActivity(entry: AdminActionAuditEntry): OperationalActivityEntry {
   return {
     id: `admin-action:${entry.id}`,
@@ -171,7 +182,7 @@ function buildAdminActivity(entry: AdminActionAuditEntry): OperationalActivityEn
     actionCode: entry.action,
     actionLabel: humanizeAction(entry.action),
     target: entry.target?.trim() || "Unknown target",
-    outcome: entry.result,
+    outcome: adminActionOutcome(entry),
     httpStatus: entry.httpStatus,
     detail: sanitizeOperationalDetail(entry.details),
     lifecycleIdentity: adminLifecycleIdentity(entry),

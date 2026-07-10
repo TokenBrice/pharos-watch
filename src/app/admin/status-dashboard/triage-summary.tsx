@@ -213,6 +213,7 @@ export function TriageSummary({
           </div>
         </div>
 
+        <h2 className="sr-only">Operational overview</h2>
         <p className="max-w-4xl text-sm font-medium leading-relaxed text-foreground">{resolvedDecision.summary}</p>
 
         {/* Tier 1: the numbers that decide "do I act?" */}

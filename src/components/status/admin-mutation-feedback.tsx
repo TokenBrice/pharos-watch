@@ -3,6 +3,24 @@
 import type { AdminMutationIntentExecution } from "./admin-mutation-intent";
 import { Button } from "@/components/ui/button";
 
+export interface AdminMutationReceiptMetadata {
+  httpStatus: number | null;
+  idempotentReplay: boolean | null;
+  executionCertainty: string | null;
+  idempotencyKey: string;
+}
+
+export function buildAdminMutationReceiptMetadata(
+  execution: AdminMutationIntentExecution,
+): AdminMutationReceiptMetadata {
+  return {
+    httpStatus: execution.httpStatus,
+    idempotentReplay: execution.idempotentReplay,
+    executionCertainty: execution.executionCertainty,
+    idempotencyKey: execution.idempotencyKey,
+  };
+}
+
 export function AdminMutationFeedback({
   execution,
   onRetrySame,
@@ -67,13 +85,13 @@ export function AdminMutationFeedback({
 }
 
 export function AdminMutationReceipt({
-  execution,
+  receipt,
   message,
 }: {
-  execution: AdminMutationIntentExecution | null;
+  receipt: AdminMutationReceiptMetadata | null;
   message: string | null;
 }) {
-  if (!execution || execution.status !== "succeeded" || !message) return null;
+  if (!receipt || !message) return null;
   return (
     <div
       role="status"
@@ -82,8 +100,9 @@ export function AdminMutationReceipt({
     >
       <p>{message}</p>
       <p className="mt-1 font-mono text-[11px]">
-        HTTP {execution.httpStatus ?? "unknown"} · replay {execution.idempotentReplay ? "yes" : "no"} · certainty{" "}
-        {execution.executionCertainty ?? "confirmed"} · intent {execution.idempotencyKey}
+        HTTP {receipt.httpStatus ?? "unknown"} · replay{" "}
+        {receipt.idempotentReplay == null ? "unknown" : receipt.idempotentReplay ? "yes" : "no"} · certainty{" "}
+        {receipt.executionCertainty ?? "confirmed"} · intent {receipt.idempotencyKey}
       </p>
     </div>
   );

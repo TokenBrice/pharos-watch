@@ -101,12 +101,12 @@ export function ApiKeyRequestCard({
         </summary>
         <div className="mt-3 space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {request.intendedEndpoints.length > 0 ? (
               request.intendedEndpoints.map((endpoint) => (
                 <span
                   key={endpoint}
-                  className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground"
+                  className="max-w-full break-all whitespace-normal rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground"
                 >
                   {endpoint}
                 </span>
@@ -141,7 +141,9 @@ export function ApiKeyRequestCard({
           </div>
           <div>Name: {request.requesterName ?? "not provided"}</div>
           <div>Organization: {request.organization ?? "not provided"}</div>
-          <div>Project: {request.projectUrl ?? "not provided"}</div>
+          <div className="min-w-0">
+            Project: <span className="break-all">{request.projectUrl ?? "not provided"}</span>
+          </div>
           <div>Terms: {request.acceptedTerms ? "accepted" : "missing"}</div>
           <div>Email verified: {request.emailVerified ? "yes" : "no"}</div>
         </div>

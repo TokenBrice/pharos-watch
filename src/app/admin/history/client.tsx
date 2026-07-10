@@ -66,7 +66,32 @@ export default function HistoryClient() {
       onRetry={handleRefresh}
     >
       {(data) => {
-        const allTransitions = historyQuery.data?.transitions ?? data.timeline;
+        const hasHistoryData = historyQuery.data != null;
+        const historyError = historyQuery.error instanceof Error ? historyQuery.error : null;
+        const allTransitions = hasHistoryData ? historyQuery.data.transitions : data.timeline;
+        const historyEvidence = hasHistoryData
+          ? historyError
+            ? {
+                source: "history" as const,
+                state: "stale" as const,
+                message: `History refresh failed; showing retained history data. ${historyError.message}`,
+              }
+            : {
+                source: "history" as const,
+                state: "ready" as const,
+                message: "Showing persisted transitions for the selected history window.",
+              }
+          : historyError
+            ? {
+                source: "status-fallback" as const,
+                state: "error" as const,
+                message: `History query failed; showing only transitions included in the current status response. ${historyError.message}`,
+              }
+            : {
+                source: "status-fallback" as const,
+                state: "loading" as const,
+                message: "History is loading; showing only transitions included in the current status response.",
+              };
         const workerVersionEvidence = deriveWorkerVersionEvidence(data);
         return (
           <HistorySection
@@ -96,6 +121,7 @@ export default function HistoryClient() {
             setHistoryWindow={setHistoryWindow}
             setHistoryFilters={setHistoryFilters}
             historyLoading={historyQuery.isLoading}
+            historyEvidence={historyEvidence}
           />
         );
       }}

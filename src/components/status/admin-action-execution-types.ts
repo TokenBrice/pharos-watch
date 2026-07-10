@@ -44,10 +44,16 @@ export interface AdminActionRunResult {
   didStart: boolean;
 }
 
+export interface AdminActionReadinessSource {
+  getSnapshot: () => readonly ActionReadinessCheck[];
+  subscribe: (listener: () => void) => () => void;
+}
+
 export interface AdminActionDialogRequest {
   action: StatusPageAction;
   initialDryRun?: boolean;
   readinessChecks?: readonly ActionReadinessCheck[];
+  readinessSource?: AdminActionReadinessSource;
   onFinished?: (execution: AdminActionExecution) => void;
   returnFocus?: HTMLElement | null;
 }

@@ -543,7 +543,7 @@ describe("ApiKeysPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
     expect(screen.getByText("Standard Site")).toBeTruthy();
     expect(screen.getByText("Unassigned")).toBeTruthy();
-    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("attention");
+    expect((screen.getByLabelText("Status") as unknown as HTMLSelectElement).value).toBe("attention");
   });
 
   it("sorts deterministically and paginates inventories larger than 25 rows", () => {
@@ -632,6 +632,28 @@ describe("ApiKeysPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close details" }));
     await waitFor(() => expect(document.activeElement).toBe(digestEdit));
+  });
+
+  it("returns focus to the inventory when an edit removes the selected key from the active view", async () => {
+    const updatedKey = makeKey({ expiresAt: GENERATED_AT + 30 * 24 * 60 * 60 });
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ key: updatedKey }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderPanel([makeKey()]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Ops Key" })));
+    fireEvent.change(screen.getByLabelText("Expires At"), { target: { value: "2023-12-14T22:13" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
+
+    expect(await screen.findByText("Updated Ops Key.")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Ops Key" })).toBeNull();
+    const inventory = screen.getByRole("region", { name: "Key inventory" });
+    expect(inventory.getAttribute("tabindex")).toBe("-1");
+    await waitFor(() => expect(document.activeElement).toBe(inventory));
   });
 
   it("shows audit loading and unavailable states with a local retry", async () => {

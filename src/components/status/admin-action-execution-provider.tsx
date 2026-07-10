@@ -21,6 +21,7 @@ export type {
   AdminActionExecutionController,
   AdminActionExecutionRequest,
   AdminActionExecutionStatus,
+  AdminActionReadinessSource,
   AdminActionRunResult,
 } from "@/components/status/admin-action-execution-types";
 

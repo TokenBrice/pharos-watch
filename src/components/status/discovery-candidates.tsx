@@ -16,12 +16,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
-import { AdminMutationFeedback, AdminMutationReceipt } from "./admin-mutation-feedback";
 import {
-  type AdminMutationIntentExecution,
-  type AdminMutationIntentRequest,
-  useAdminMutationIntents,
-} from "./admin-mutation-intent";
+  AdminMutationFeedback,
+  AdminMutationReceipt,
+  buildAdminMutationReceiptMetadata,
+  type AdminMutationReceiptMetadata,
+} from "./admin-mutation-feedback";
+import { type AdminMutationIntentRequest, useAdminMutationIntents } from "./admin-mutation-intent";
 
 function SourceBadge({ source }: { source: string }) {
   const colors: Record<string, string> = {
@@ -58,7 +59,7 @@ export function DiscoveryCandidatesCard({
   const { executions, execute, retrySame, executeNew } = useAdminMutationIntents();
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [pendingCandidate, setPendingCandidate] = useState<DiscoveryCandidate | null>(null);
-  const [receipt, setReceipt] = useState<{ execution: AdminMutationIntentExecution; message: string } | null>(null);
+  const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
   const originRef = useRef<HTMLElement | null>(null);
 
   if (!candidates || candidates.length === 0) {
@@ -107,7 +108,7 @@ export function DiscoveryCandidatesCard({
     const candidate = pendingCandidate;
     setDismissed((previous) => new Set([...previous, candidate.id]));
     setReceipt({
-      execution: result.execution,
+      receipt: buildAdminMutationReceiptMetadata(result.execution),
       message: `Dismissed ${candidate.symbol} (${candidate.name}, candidate ID ${candidate.id}) from the active discovery queue.`,
     });
     setPendingCandidate(null);
@@ -123,7 +124,7 @@ export function DiscoveryCandidatesCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <AdminMutationReceipt execution={receipt?.execution ?? null} message={receipt?.message ?? null} />
+        <AdminMutationReceipt receipt={receipt?.receipt ?? null} message={receipt?.message ?? null} />
         {visible.map((candidate) => (
           <div
             key={candidate.id}

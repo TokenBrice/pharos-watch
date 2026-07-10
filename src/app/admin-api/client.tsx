@@ -17,6 +17,7 @@ export default function AdminApiClient() {
             operational status workspaces.
           </p>
         </div>
+        <h2 className="sr-only">API credential operations</h2>
         <ApiKeyRequestsPanel />
         <ApiKeysPanel />
       </section>

@@ -109,6 +109,41 @@ describe("actions workbench model", () => {
     expect(activities[0]).toMatchObject({ source: "session", actionPath: action().path });
   });
 
+  it("preserves canonical unknown outcomes from persisted audit details", () => {
+    const activities = reconcileActionActivity(
+      [action()],
+      [],
+      [
+        {
+          ...auditEntry,
+          result: "error",
+          details: { status: "unknown", outcome: "unknown", executionCertainty: "unknown" },
+        },
+      ],
+    );
+
+    expect(activities[0]?.status).toBe("unknown");
+  });
+
+  it("preserves distinct same-source executions while reconciling one cross-source counterpart", () => {
+    const session = (intentId: string): SessionActionExecutionLike => ({
+      action: { path: action().path, label: action().label },
+      intentId,
+      scopeLabel: "usdc-circle",
+      status: "succeeded",
+      ok: true,
+      createdAt: 99_000,
+      startedAt: 99_500,
+      completedAt: 100_000,
+      httpStatus: 200,
+    });
+
+    const activities = reconcileActionActivity([action()], [session("intent-1"), session("intent-2")], [auditEntry]);
+
+    expect(activities).toHaveLength(2);
+    expect(activities.map((activity) => activity.id)).toEqual(["session:intent-1", "session:intent-2"]);
+  });
+
   it("blocks stale or unhealthy evidence only for live writes and exposes no override", () => {
     const checks: ActionReadinessCheck[] = [
       { id: "fresh-status-view", label: "Dashboard data", state: "watch", detail: "Refresh first." },

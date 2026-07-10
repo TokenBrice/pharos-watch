@@ -47,6 +47,7 @@ interface TransitionTimelineProps {
   onWindowChange: (window: StatusHistoryWindow) => void;
   onFiltersChange: (patch: Partial<IncidentHistoryFilters>) => void;
   isLoading: boolean;
+  evidenceScope?: "loaded-window" | "recent-status-fallback";
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -140,6 +141,7 @@ export function TransitionTimeline({
   onWindowChange,
   onFiltersChange,
   isLoading,
+  evidenceScope = "loaded-window",
 }: TransitionTimelineProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const view = useMemo(
@@ -169,7 +171,8 @@ export function TransitionTimeline({
             Incident timeline
           </h3>
           <p className="mt-1 text-xs text-muted-foreground" aria-live="polite" aria-atomic="true">
-            {view.visibleTransitions} of {view.totalTransitions} transitions in the loaded window
+            {view.visibleTransitions} of {view.totalTransitions} transitions in the{" "}
+            {evidenceScope === "loaded-window" ? "loaded window" : "recent status fallback"}
           </p>
         </div>
         <div
@@ -288,7 +291,9 @@ export function TransitionTimeline({
         </p>
       ) : transitions.length === 0 ? (
         <p className="border-y border-border/60 py-8 text-center text-sm text-muted-foreground">
-          No status transitions recorded in this window.
+          {evidenceScope === "loaded-window"
+            ? "No status transitions recorded in this window."
+            : "No recent transitions are included in the status fallback; the selected history window is unavailable."}
         </p>
       ) : view.rows.length === 0 ? (
         <div className="border-y border-border/60 py-8 text-center">

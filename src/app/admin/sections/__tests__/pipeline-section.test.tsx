@@ -70,6 +70,7 @@ describe("PipelineSection", () => {
     const marketsTab = screen.getByRole("tab", { name: /^Markets/ });
     expect(screen.getByText("Quality panel mounted")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "Pipeline Health" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Quality pipeline view" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Pipeline view: Quality");
     expect(screen.queryByText("Price source panel mounted")).toBeNull();
     expect(qualityTab.getAttribute("aria-controls")).toBe("pipeline-panel-quality");
@@ -80,6 +81,7 @@ describe("PipelineSection", () => {
     await waitFor(() => expect(screen.getByText("Price source panel mounted")).toBeTruthy());
     expect(screen.getByText("Liquidity panel mounted")).toBeTruthy();
     expect(screen.getByText("CoinGecko panel mounted")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Markets pipeline view" })).toBeTruthy();
     expect(screen.queryByText("Quality panel mounted")).toBeNull();
     expect(window.location.search).toContain("view=markets");
     expect(screen.getByRole("status").textContent).toContain("Pipeline view: Markets");

@@ -407,6 +407,41 @@ describe("status dashboard model", () => {
     expect(JSON.stringify(buildModel(healthyWithEmptyFailureMetadata))).toBe(JSON.stringify(buildModel(healthy)));
   });
 
+  it("keeps a nonzero Comms queue out of attention while shared delivery policy is healthy", () => {
+    const healthy = makeHealthyStatusResponse();
+    const data = {
+      ...healthy,
+      telegramBot: {
+        ...healthy.telegramBot!,
+        pendingDeliveries: 2,
+        oldestPendingDeliveryAgeSec: 60,
+        oldestDuePendingAgeSec: 60,
+        estimatedDrainTimeSec: 60,
+        pendingDeliveryBacklog: {
+          ...healthy.telegramBot!.pendingDeliveryBacklog!,
+          claimable: 2,
+          due: 2,
+        },
+      },
+    };
+
+    const model = buildModel(data);
+    const comms = model.sections.find((section) => section.id === "comms");
+
+    expect(model.attentionSections.some((section) => section.id === "comms")).toBe(false);
+    expect(comms).toMatchObject({ value: "2 pending", valueClassName: "text-green-700 dark:text-green-400" });
+  });
+
+  it("surfaces missing Comms telemetry as Unknown attention", () => {
+    const data = { ...makeHealthyStatusResponse(), telegramBot: null };
+    const model = buildModel(data);
+    const comms = model.sections.find((section) => section.id === "comms");
+
+    expect(model.attentionSections.some((section) => section.id === "comms")).toBe(true);
+    expect(comms).toMatchObject({ value: "Unknown", valueClassName: "text-muted-foreground" });
+    expect(comms?.summary).toContain("Telegram delivery telemetry is unavailable");
+  });
+
   it("surfaces publication surface failures as watch-level operator notices", () => {
     const model = buildModel(makePublicationFailureStatusResponse());
 

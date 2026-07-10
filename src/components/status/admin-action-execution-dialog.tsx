@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import type {
   AdminActionDialogState,
@@ -62,6 +62,8 @@ const RESULT_MODE_LABEL = {
 } as const;
 
 const PHAROS_REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
+const EMPTY_READINESS_CHECKS = [] as const;
+const NOOP_SUBSCRIBE = () => () => {};
 
 function getRunbookUrl(runbookPath: string): string {
   return `${PHAROS_REPOSITORY_BLOB_URL}/${runbookPath}`;
@@ -181,6 +183,12 @@ export function AdminActionExecutionDialog({
   const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
   const [broadScopeAcknowledged, setBroadScopeAcknowledged] = useState(false);
   const trimmedAssetFilter = assetFilter.trim();
+  const capturedReadinessChecks = dialogRequest.readinessChecks ?? EMPTY_READINESS_CHECKS;
+  const currentReadinessChecks = useSyncExternalStore(
+    dialogRequest.readinessSource?.subscribe ?? NOOP_SUBSCRIBE,
+    dialogRequest.readinessSource?.getSnapshot ?? (() => capturedReadinessChecks),
+    () => capturedReadinessChecks,
+  );
 
   let requestPath = action.path;
   if (assetScope && scopeMode === "single" && trimmedAssetFilter) {
@@ -222,7 +230,7 @@ export function AdminActionExecutionDialog({
   const hasValidAssetScope = !assetScope || scopeMode === "batch" || trimmedAssetFilter.length > 0;
   const isLiveMutation = !dryRun && action.risk !== "read-only";
   const requiresBroadScopeAcknowledgement = isLiveMutation && (!assetScope || scopeMode === "batch");
-  const readiness = buildActionReadiness(action, dialogRequest.readinessChecks ?? [], dryRun ? "dry-run" : "live");
+  const readiness = buildActionReadiness(action, currentReadinessChecks, dryRun ? "dry-run" : "live");
   const canConfirm =
     hasValidAssetScope && !readiness.blocked && (!requiresBroadScopeAcknowledgement || broadScopeAcknowledged);
   const highRiskLiveMutation = isLiveMutation && action.risk === "high";
@@ -234,12 +242,17 @@ export function AdminActionExecutionDialog({
   };
 
   const handleConfirm = () => {
-    if (!canConfirm) return;
+    const latestChecks = dialogRequest.readinessSource?.getSnapshot() ?? currentReadinessChecks;
+    const latestReadiness = buildActionReadiness(action, latestChecks, dryRun ? "dry-run" : "live");
+    if (!canConfirm || latestReadiness.blocked) return;
     void notifyWhenFinished(controller.execute(request));
   };
 
   const handleRetry = () => {
     if (!execution) return;
+    const latestChecks = dialogRequest.readinessSource?.getSnapshot() ?? currentReadinessChecks;
+    const latestReadiness = buildActionReadiness(action, latestChecks, dryRun ? "dry-run" : "live");
+    if (latestReadiness.blocked) return;
     void notifyWhenFinished(controller.retry(execution.executionKey));
   };
 
@@ -525,7 +538,7 @@ export function AdminActionExecutionDialog({
             </Button>
           )}
           {(execution?.status === "failed" || execution?.status === "unknown") && (
-            <Button className="min-h-11" variant={confirmVariant} onClick={handleRetry}>
+            <Button className="min-h-11" variant={confirmVariant} onClick={handleRetry} disabled={readiness.blocked}>
               Retry same execution
             </Button>
           )}

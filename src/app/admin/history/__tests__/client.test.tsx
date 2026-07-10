@@ -159,4 +159,45 @@ describe("HistoryClient", () => {
     expect(props.adminActionLog.error?.message).toBe("action log unavailable");
     expect(props.credentialAudit.error).toBeNull();
   });
+
+  it("reports a history query failure and labels status timeline data as fallback", async () => {
+    useStatusHistoryMock.mockReturnValue({
+      data: undefined,
+      error: new Error("history unavailable"),
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<HistoryClient />);
+    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+
+    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
+      allTransitions: unknown[];
+      historyEvidence: { source: string; state: string; message: string };
+    };
+    expect(props.allTransitions).toEqual(status.timeline);
+    expect(props.historyEvidence).toMatchObject({ source: "status-fallback", state: "error" });
+    expect(props.historyEvidence.message).toContain("history unavailable");
+  });
+
+  it("retains cached history while exposing a refresh failure", async () => {
+    const retainedTransitions = [{ ...status.timeline[0], id: 999 }].filter(Boolean);
+    useStatusHistoryMock.mockReturnValue({
+      data: { transitions: retainedTransitions },
+      error: new Error("refresh failed"),
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(<HistoryClient />);
+    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+
+    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
+      allTransitions: unknown[];
+      historyEvidence: { source: string; state: string; message: string };
+    };
+    expect(props.allTransitions).toEqual(retainedTransitions);
+    expect(props.historyEvidence).toMatchObject({ source: "history", state: "stale" });
+    expect(props.historyEvidence.message).toContain("refresh failed");
+  });
 });

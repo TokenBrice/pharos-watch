@@ -14,12 +14,26 @@ interface WorkspaceStatusBoundaryProps {
 
 export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, children }: WorkspaceStatusBoundaryProps) {
   if (!data && isLoading) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading workspace data...</div>;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="py-20 text-center text-sm text-muted-foreground"
+      >
+        Loading workspace data...
+      </div>
+    );
   }
 
   if (!data && error) {
     return (
-      <div className="border border-red-500/30 bg-red-500/10 p-5 text-red-800 dark:text-red-200">
+      <div
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        className="border border-red-500/30 bg-red-500/10 p-5 text-red-800 dark:text-red-200"
+      >
         <h2 className="text-base font-semibold">Status data failed to load</h2>
         <p className="mt-2 text-sm">{error.message}</p>
         <button
@@ -35,13 +49,27 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
   }
 
   if (!data) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Status data is unavailable.</div>;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="py-20 text-center text-sm text-muted-foreground"
+      >
+        Status data is unavailable.
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {error ? (
-        <div className="border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200"
+        >
           <span className="font-medium">Status refresh failed.</span> Showing the last successful response.{" "}
           {error.message}
         </div>

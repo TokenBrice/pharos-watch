@@ -62,6 +62,21 @@ describe("operational history model", () => {
     expect(view.deduplicatedCount).toBe(0);
   });
 
+  it("preserves canonical unknown outcomes instead of flattening them to errors", () => {
+    const view = buildOperationalActivityView(
+      [
+        {
+          ...adminLifecycle,
+          result: "error",
+          details: { status: "unknown", executionCertainty: "unknown" },
+        },
+      ],
+      [],
+    );
+
+    expect(view.entries[0]?.outcome).toBe("unknown");
+  });
+
   it("redacts credential-bearing keys and token-like strings while preserving safe structure", () => {
     expect(
       sanitizeOperationalDetail({

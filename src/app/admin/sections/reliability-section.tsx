@@ -201,6 +201,9 @@ export function ReliabilitySection({
         tabIndex={0}
         className="min-w-0"
       >
+        <h2 className="sr-only">
+          {model.modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Impact"} reliability view
+        </h2>
         {renderActiveMode()}
       </div>
     </section>

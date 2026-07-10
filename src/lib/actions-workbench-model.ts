@@ -174,12 +174,18 @@ export function auditEntryMatchesAction(entry: AdminActionAuditEntry, action: Pi
 }
 
 function persistedStatus(entry: AdminActionAuditEntry): ActionActivity["status"] {
-  if (entry.result === "error") return "error";
   const details = readRecord(entry.details);
-  const status = typeof details?.status === "string" ? details.status.toLowerCase() : "";
+  const statusCandidates = [details?.status, details?.outcome, details?.executionCertainty];
+  const statuses = statusCandidates
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase());
+  if (statuses.includes("unknown")) return "unknown";
+  if (statuses.includes("failed") || statuses.includes("error")) return "error";
+  const status = statuses[0] ?? "";
   if (status === "accepted" || status === "queued" || status === "running" || status === "succeeded") {
     return status;
   }
+  if (entry.result === "error") return "error";
   return "succeeded";
 }
 
@@ -231,15 +237,24 @@ export function reconcileActionActivity(
     };
   });
 
-  const seen = new Set<string>();
-  return [...session, ...persisted]
-    .sort((a, b) => b.at - a.at || (a.source === "session" ? -1 : 1))
-    .filter((activity) => {
-      const fingerprint = activityFingerprint(activity);
-      if (seen.has(fingerprint)) return false;
-      seen.add(fingerprint);
-      return true;
-    });
+  const unmatchedSessionByFingerprint = new Map<string, number>();
+  for (const activity of session) {
+    const fingerprint = activityFingerprint(activity);
+    unmatchedSessionByFingerprint.set(fingerprint, (unmatchedSessionByFingerprint.get(fingerprint) ?? 0) + 1);
+  }
+  const unmatchedPersisted = persisted.filter((activity) => {
+    const fingerprint = activityFingerprint(activity);
+    const matchingSessions = unmatchedSessionByFingerprint.get(fingerprint) ?? 0;
+    if (matchingSessions === 0) return true;
+    unmatchedSessionByFingerprint.set(fingerprint, matchingSessions - 1);
+    return false;
+  });
+
+  return [...session, ...unmatchedPersisted].sort((a, b) => {
+    if (a.at !== b.at) return b.at - a.at;
+    if (a.source !== b.source) return a.source === "session" ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 export function getLastActionActivity(

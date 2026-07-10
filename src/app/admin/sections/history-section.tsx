@@ -28,16 +28,23 @@ export interface HistorySectionProps {
   setHistoryWindow: (window: StatusHistoryWindow) => void;
   setHistoryFilters: (patch: Partial<IncidentHistoryFilters>) => void;
   historyLoading: boolean;
+  historyEvidence: {
+    source: "history" | "status-fallback";
+    state: "loading" | "ready" | "stale" | "error";
+    message: string;
+  };
 }
 
 function PagesReleaseCorrelation({
   transitions,
   releaseMetadataState,
   nowSeconds,
+  historyComplete,
 }: {
   transitions: StatusResponse["timeline"];
   releaseMetadataState: ReleaseMetadataState;
   nowSeconds: number;
+  historyComplete: boolean;
 }) {
   const release = releaseMetadataState.metadata;
   const firstDegrade = findFirstDegradationAfter(transitions, release?.createdAtSec ?? null);
@@ -89,6 +96,10 @@ function PagesReleaseCorrelation({
                 </span>
                 <span className="font-mono text-xs tabular-nums">{formatTransitionLabel(firstDegrade)}</span>{" "}
                 <span className="text-muted-foreground">at {formatTimestampSeconds(firstDegrade.at)}</span>
+              </p>
+            ) : !historyComplete ? (
+              <p className="text-muted-foreground">
+                Pages transition correlation is Unknown because only recent status fallback transitions are available.
               </p>
             ) : (
               <p className="text-muted-foreground">
@@ -155,11 +166,13 @@ function ReleaseCorrelationPanel({
   releaseMetadataState,
   workerVersionEvidence,
   nowSeconds,
+  historyComplete,
 }: {
   transitions: StatusResponse["timeline"];
   releaseMetadataState: ReleaseMetadataState;
   workerVersionEvidence: WorkerVersionEvidence;
   nowSeconds: number;
+  historyComplete: boolean;
 }) {
   return (
     <section aria-labelledby="deployment-correlation-title" className="space-y-4 border-y border-border/60 py-4">
@@ -176,6 +189,7 @@ function ReleaseCorrelationPanel({
           transitions={transitions}
           releaseMetadataState={releaseMetadataState}
           nowSeconds={nowSeconds}
+          historyComplete={historyComplete}
         />
         <WorkerReleaseCorrelation evidence={workerVersionEvidence} />
       </div>
@@ -198,6 +212,7 @@ export function HistorySection({
   setHistoryWindow,
   setHistoryFilters,
   historyLoading,
+  historyEvidence,
 }: HistorySectionProps) {
   const isFlapping = transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD;
 
@@ -213,6 +228,21 @@ export function HistorySection({
         <>
           <SummaryBadge label="Window" value={historyWindow} />
           <SummaryBadge label="Loaded" value={String(allTransitions.length)} />
+          <SummaryBadge
+            label="Evidence"
+            value={
+              historyEvidence.source === "status-fallback"
+                ? "Recent fallback"
+                : historyEvidence.state === "stale"
+                  ? "Retained history"
+                  : "Full history"
+            }
+            className={
+              historyEvidence.state === "error" || historyEvidence.state === "stale"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                : undefined
+            }
+          />
           <SummaryBadge
             label="Transitions 24h"
             value={String(transitionsLast24h)}
@@ -231,6 +261,17 @@ export function HistorySection({
         </>
       }
     >
+      {historyEvidence.state !== "ready" ? (
+        <div
+          role={historyEvidence.state === "error" ? "alert" : "status"}
+          className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100"
+        >
+          <p className="font-medium">
+            {historyEvidence.source === "history" ? "Retained history evidence" : "Partial history evidence"}
+          </p>
+          <p>{historyEvidence.message}</p>
+        </div>
+      ) : null}
       <TransitionTimeline
         transitions={allTransitions}
         nowSeconds={nowSeconds}
@@ -240,6 +281,7 @@ export function HistorySection({
         onWindowChange={setHistoryWindow}
         onFiltersChange={setHistoryFilters}
         isLoading={historyLoading}
+        evidenceScope={historyEvidence.source === "history" ? "loaded-window" : "recent-status-fallback"}
       />
       <OperationalActivity adminActions={adminActionLog} credentialAudit={credentialAudit} nowSeconds={nowSeconds} />
       <ReleaseCorrelationPanel
@@ -247,6 +289,7 @@ export function HistorySection({
         releaseMetadataState={releaseMetadataState}
         workerVersionEvidence={workerVersionEvidence}
         nowSeconds={nowSeconds}
+        historyComplete={historyEvidence.source === "history"}
       />
       {reserveComposition.runBudgetTruncated ? (
         <div className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100">

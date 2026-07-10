@@ -50,11 +50,7 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
         setActiveMode(urlMode);
         return;
       }
-      window.history.replaceState(
-        window.history.state,
-        "",
-        buildPipelineModeUrl(window.location, defaultMode),
-      );
+      window.history.replaceState(window.history.state, "", buildPipelineModeUrl(window.location, defaultMode));
       setActiveMode(defaultMode);
     };
 
@@ -157,11 +153,7 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          <SummaryBadge
-            label="Data quality"
-            value={qualityTone.label}
-            className={qualityTone.badgeClassName}
-          />
+          <SummaryBadge label="Data quality" value={qualityTone.label} className={qualityTone.badgeClassName} />
           <SummaryBadge label="Loader issues" value={String(loaderErrors.length)} />
           <SummaryBadge
             label="Selected view"
@@ -183,6 +175,9 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
         tabIndex={0}
         className="min-w-0"
       >
+        <h2 className="sr-only">
+          {modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Quality"} pipeline view
+        </h2>
         {renderActiveMode()}
       </div>
     </section>

@@ -39,6 +39,7 @@ function sourceLabel(sources: readonly OperationalActivitySource[]): string {
 
 function outcomeClassName(outcome: OperationalActivityEntry["outcome"]): string {
   if (outcome === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
+  if (outcome === "unknown") return "bg-amber-500/15 text-amber-800 dark:text-amber-200";
   if (outcome === "ok") return "bg-green-500/12 text-green-700 dark:text-green-300";
   return "bg-muted text-muted-foreground";
 }
@@ -89,7 +90,9 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{entry.actionLabel}</span>
-            <StatusPill className={outcomeClassName(entry.outcome)}>{entry.outcome}</StatusPill>
+            <StatusPill className={outcomeClassName(entry.outcome)}>
+              {entry.outcome === "unknown" ? "Unknown" : entry.outcome}
+            </StatusPill>
             <StatusPill className="bg-muted text-muted-foreground">{sourceLabel(entry.sources)}</StatusPill>
           </div>
           <dl className="grid min-w-0 gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">

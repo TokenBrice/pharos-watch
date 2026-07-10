@@ -8,15 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export function SummaryBadge({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
+export function SummaryBadge({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div
       className={cn(
@@ -43,13 +35,7 @@ export function StatusSummaryBadge({
 }) {
   const tone = getStatusTone(status);
 
-  return (
-    <SummaryBadge
-      label={label}
-      value={value ?? tone.label}
-      className={cn(tone.badgeClassName, className)}
-    />
-  );
+  return <SummaryBadge label={label} value={value ?? tone.label} className={cn(tone.badgeClassName, className)} />;
 }
 
 export function StatusSection({
@@ -101,18 +87,15 @@ export function StatusSection({
         </div>
         {summary ? <div className="flex flex-wrap gap-2 lg:justify-end">{summary}</div> : null}
       </div>
-      <div className="mt-5 space-y-5">{children}</div>
+      <div className="mt-5 space-y-5">
+        {headingLevel === "h1" ? <h2 className="sr-only">{title} workspace content</h2> : null}
+        {children}
+      </div>
     </section>
   );
 }
 
-export function StatusCardEmptyState({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function StatusCardEmptyState({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card>
       <CardHeader className="pb-2">

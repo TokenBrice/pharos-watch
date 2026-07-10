@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
+import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
 const ASSET_SCOPE: StatusPageAction["scope"] = {
   type: "asset-or-batch",
@@ -209,6 +210,37 @@ describe("AdminActionButton", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/admin/audit-depeg-history?dry-run=false");
     expect(init?.method).toBe("POST");
+  });
+
+  it("rechecks live readiness while the confirmation dialog is open", async () => {
+    const action = makeAction({ risk: "moderate" });
+    const readyChecks: readonly ActionReadinessCheck[] = [
+      { id: "d1-writes", label: "D1 writes", state: "ready", detail: "Write probe passed." },
+    ];
+    const blockedChecks: readonly ActionReadinessCheck[] = [
+      { id: "d1-writes", label: "D1 writes", state: "blocked", detail: "Write probe is failing." },
+    ];
+    const view = render(
+      <AdminActionExecutionProvider>
+        <AdminActionButton action={action} readinessChecks={readyChecks} />
+      </AdminActionExecutionProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByLabelText(/I acknowledge this live action affects/i));
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(false);
+
+    view.rerender(
+      <AdminActionExecutionProvider>
+        <AdminActionButton action={action} readinessChecks={blockedChecks} />
+      </AdminActionExecutionProvider>,
+    );
+
+    expect(await screen.findByText("Live execution blocked")).toBeTruthy();
+    const confirm = screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.click(confirm);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("resets broad acknowledgement when scope or execution mode changes", () => {

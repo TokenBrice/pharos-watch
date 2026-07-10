@@ -32,7 +32,12 @@ import type {
   CreateKeyState,
   EditableKeyState,
 } from "@/lib/api-key-admin-view-model";
-import { AdminMutationFeedback, AdminMutationReceipt } from "./admin-mutation-feedback";
+import {
+  AdminMutationFeedback,
+  AdminMutationReceipt,
+  buildAdminMutationReceiptMetadata,
+  type AdminMutationReceiptMetadata,
+} from "./admin-mutation-feedback";
 import {
   type AdminMutationIntentExecution,
   type AdminMutationIntentRequest,
@@ -101,13 +106,14 @@ export function ApiKeysPanel() {
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<{ execution: AdminMutationIntentExecution; message: string } | null>(null);
+  const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
   const [pendingLifecycle, setPendingLifecycle] = useState<PendingLifecycleAction | null>(null);
   const [revealedToken, setRevealedToken] = useState<RevealedToken | null>(null);
   const [tokenRecovery, setTokenRecovery] = useState<TokenRecovery | null>(null);
   const [mountedAtSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const createTriggerRef = useRef<HTMLButtonElement>(null);
   const detailPanelRef = useRef<HTMLElement>(null);
+  const inventoryWorkbenchRef = useRef<HTMLDivElement>(null);
   const selectionOriginRef = useRef<HTMLButtonElement | null>(null);
   const lifecycleOriginRef = useRef<HTMLElement | null>(null);
   const tokenOriginRef = useRef<HTMLElement | null>(null);
@@ -315,10 +321,26 @@ export function ApiKeysPanel() {
     if (result.execution.status !== "succeeded") return;
 
     const response = result.execution.data as ApiKeyMutationResponse;
+    const updatedKeyMatchesActiveView =
+      buildApiKeyInventoryView([response.key], nowSeconds, {
+        ...inventoryQuery,
+        expiryWindow: buildApiKeyExpiryWindow(expiryPreset, nowSeconds),
+      }).totalItems > 0;
     setDrafts((previous) => ({ ...previous, [apiKey.id]: buildEditableKeyState(response.key) }));
-    setReceipt({ execution: result.execution, message: `Updated ${response.key.name}.` });
+    setReceipt({
+      receipt: buildAdminMutationReceiptMetadata(result.execution),
+      message: `Updated ${response.key.name}.`,
+    });
     await refreshInventory();
-    if (selectedKeyId === apiKey.id) await auditQuery.refetch();
+    if (selectedKeyId === apiKey.id) {
+      if (!updatedKeyMatchesActiveView) {
+        setSelectedKeyId(null);
+        selectionOriginRef.current = null;
+        focusElement(inventoryWorkbenchRef.current);
+      } else {
+        await auditQuery.refetch();
+      }
+    }
   }
 
   function requestLifecycle(action: LifecycleAction, apiKey: ApiKeySummary, origin: HTMLElement) {
@@ -370,7 +392,10 @@ export function ApiKeysPanel() {
       }
     } else {
       const response = result.execution.data as ApiKeyMutationResponse;
-      setReceipt({ execution: result.execution, message: `Deactivated ${response.key.name}.` });
+      setReceipt({
+        receipt: buildAdminMutationReceiptMetadata(result.execution),
+        message: `Deactivated ${response.key.name}.`,
+      });
     }
     setPendingLifecycle(null);
     await refreshInventory();
@@ -380,7 +405,10 @@ export function ApiKeysPanel() {
   function closeTokenDialog() {
     if (!revealedToken) return;
     const origin = tokenOriginRef.current;
-    setReceipt({ execution: revealedToken.execution, message: `${revealedToken.label}; one-time token closed.` });
+    setReceipt({
+      receipt: buildAdminMutationReceiptMetadata(revealedToken.execution),
+      message: `${revealedToken.label}; one-time token closed.`,
+    });
     clear(revealedToken.laneKey);
     setRevealedToken(null);
     focusElement(origin);
@@ -390,7 +418,7 @@ export function ApiKeysPanel() {
     if (!tokenRecovery) return;
     const origin = tokenRecovery.origin;
     setReceipt({
-      execution: tokenRecovery.execution,
+      receipt: buildAdminMutationReceiptMetadata(tokenRecovery.execution),
       message: `${tokenRecovery.label}; one-time token was unavailable on replay.`,
     });
     clear(tokenRecovery.execution.laneKey);
@@ -421,7 +449,9 @@ export function ApiKeysPanel() {
         {!isLoading && !error ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/35 px-3 py-2">
             <div>
-              <h3 className="text-sm font-medium text-foreground">Key inventory</h3>
+              <h3 id="api-key-inventory-heading" className="text-sm font-medium text-foreground">
+                Key inventory
+              </h3>
               <p className="text-xs text-muted-foreground">
                 Scan keys first; open create or edit only when you need to mutate credentials.
               </p>
@@ -455,7 +485,7 @@ export function ApiKeysPanel() {
           </div>
         ) : null}
 
-        <AdminMutationReceipt execution={receipt?.execution ?? null} message={receipt?.message ?? null} />
+        <AdminMutationReceipt receipt={receipt?.receipt ?? null} message={receipt?.message ?? null} />
 
         {errorMessage ? (
           <div
@@ -493,7 +523,13 @@ export function ApiKeysPanel() {
         ) : null}
 
         {!isLoading && !error ? (
-          <div className="space-y-3">
+          <div
+            ref={inventoryWorkbenchRef}
+            role="region"
+            tabIndex={-1}
+            aria-labelledby="api-key-inventory-heading"
+            className="space-y-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
             <ApiKeyInventoryControls
               query={inventoryQuery}
               expiryPreset={expiryPreset}

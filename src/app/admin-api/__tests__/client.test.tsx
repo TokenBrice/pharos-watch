@@ -26,10 +26,14 @@ describe("AdminApiClient", () => {
 
     const shell = screen.getByTestId("ops-shell");
     const heading = screen.getByRole("heading", { level: 1, name: "API Management" });
+    const contentHeading = screen.getByRole("heading", { level: 2, name: "API credential operations" });
     const requests = screen.getByTestId("api-key-requests");
     const inventory = screen.getByTestId("api-key-inventory");
 
     expect(shell.contains(heading)).toBe(true);
+    expect(contentHeading.className).toContain("sr-only");
+    expect(heading.compareDocumentPosition(contentHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(contentHeading.compareDocumentPosition(requests) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(shell.contains(requests)).toBe(true);
     expect(shell.contains(inventory)).toBe(true);
     expect(requests.compareDocumentPosition(inventory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

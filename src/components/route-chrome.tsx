@@ -37,13 +37,14 @@ export function GlobalFooterChrome({ children }: { children: ReactNode }) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  if (isOpsPath(pathname)) return children;
+
   const chromeless = isChromelessPath(pathname);
-  const className =
-    chromeless || isOpsPath(pathname)
-      ? "flex-1 min-w-0"
-      : pathname === "/"
-        ? "flex-1 w-full px-4 pt-6 pb-2 md:pt-7 md:pb-3 lg:px-5 xl:px-9"
-        : "pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9";
+  const className = chromeless
+    ? "flex-1 min-w-0"
+    : pathname === "/"
+      ? "flex-1 w-full px-4 pt-6 pb-2 md:pt-7 md:pb-3 lg:px-5 xl:px-9"
+      : "pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9";
 
   return (
     <main id="main-content" className={className}>

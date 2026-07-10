@@ -6,6 +6,7 @@ import type {
   StatusResponse,
 } from "@shared/types";
 import { getPollingWindow } from "@/hooks/use-api-query";
+import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
@@ -683,6 +684,7 @@ function buildSectionPriority({
   issueGroups,
   evidence,
   recommendedActions,
+  commsModel,
 }: {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
@@ -690,6 +692,7 @@ function buildSectionPriority({
   issueGroups: DashboardIssueGroups;
   evidence: DashboardEvidence;
   recommendedActions: readonly StatusActionRecommendation[];
+  commsModel: CommsWorkbenchModel;
 }): Record<DashboardSectionId, number> {
   const evidencePriority =
     evidence.state === "stale" || evidence.state === "unavailable" ? 2 : evidence.state === "partial" ? 1 : 0;
@@ -709,11 +712,7 @@ function buildSectionPriority({
           ? 1
           : 0;
   const actionsStatus = recommendedActions.length > 0 ? 2 : 0;
-  const telegramDispatch = data.crons["dispatch-telegram-alerts"]?.lastRun ?? null;
-  const commsStatus =
-    (data.telegramBot?.pendingDeliveries ?? 0) > 0 || (telegramDispatch != null && telegramDispatch.status !== "ok")
-      ? 1
-      : 0;
+  const commsStatus = commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "healthy" ? 0 : 1;
 
   return {
     overview: 999,
@@ -730,7 +729,7 @@ function buildSectionPriority({
       reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
     actions: actionsStatus * 100 + recommendedActions.length,
     credentials: 0,
-    comms: commsStatus * 100 + (data.telegramBot?.pendingDeliveries ?? 0),
+    comms: commsStatus === 0 ? 0 : commsStatus * 100 + (commsModel.delivery.pendingDeliveries ?? 0),
     history: -1,
   };
 }
@@ -774,6 +773,7 @@ function buildDashboardSections({
   cronGroups,
   runningCrons,
   recommendedActions,
+  commsModel,
 }: {
   data: StatusResponse;
   allTransitions: StatusResponse["timeline"];
@@ -788,6 +788,7 @@ function buildDashboardSections({
   cronGroups: DashboardCronGroup[];
   runningCrons: number;
   recommendedActions: readonly StatusActionRecommendation[];
+  commsModel: CommsWorkbenchModel;
 }): DashboardSection[] {
   return [
     {
@@ -870,16 +871,25 @@ function buildDashboardSections({
       title: "Comms",
       description: "Telegram delivery, pending queues, alert-ready audiences, and outbound operator messaging.",
       accentClassName: "border-l-teal-500",
-      value: data.telegramBot ? `${data.telegramBot.pendingDeliveries} pending` : "Unknown",
+      value:
+        commsModel.delivery.health === "unknown"
+          ? "Unknown"
+          : commsModel.delivery.health === "failed"
+            ? "Failed"
+            : `${commsModel.delivery.pendingDeliveries ?? 0} pending`,
       valueClassName:
-        data.telegramBot && data.telegramBot.pendingDeliveries > 0
-          ? "text-amber-700 dark:text-amber-400"
-          : data.telegramBot
-            ? "text-green-700 dark:text-green-400"
-            : "text-muted-foreground",
-      summary: data.telegramBot
-        ? `${data.telegramBot.deliverableChats} alert-ready chats, ${data.telegramBot.pendingDeliveries} pending deliveries`
-        : "Telegram delivery telemetry unavailable",
+        commsModel.delivery.health === "failed"
+          ? "text-red-700 dark:text-red-400"
+          : commsModel.delivery.health === "degraded"
+            ? "text-amber-700 dark:text-amber-400"
+            : commsModel.delivery.health === "healthy"
+              ? "text-green-700 dark:text-green-400"
+              : "text-muted-foreground",
+      summary: `${commsModel.delivery.healthReason} ${
+        commsModel.audience.deliverableChats == null
+          ? "Alert-ready audience Unknown."
+          : `${commsModel.audience.deliverableChats} alert-ready chats.`
+      }`,
     },
     {
       id: "history",
@@ -1026,6 +1036,12 @@ export function buildStatusDashboardData({
     scheduledSlotRunningQueryFailed: data.summary.scheduledSlotRunningQueryFailed,
     scheduledSlotEventMarkerQueryFailed: data.summary.scheduledSlotEventMarkerQueryFailed,
   });
+  const commsModel = buildCommsWorkbenchModel({
+    telegramBot: data.telegramBot,
+    dispatchCron: data.crons["dispatch-telegram-alerts"],
+    sectionError: data.sectionErrors.telegramBot,
+    nowSeconds: data.timestamp,
+  });
   const sectionPriority = buildSectionPriority({
     data,
     healthData,
@@ -1033,6 +1049,7 @@ export function buildStatusDashboardData({
     issueGroups,
     evidence,
     recommendedActions,
+    commsModel,
   });
   const baseSections = buildDashboardSections({
     data,
@@ -1048,6 +1065,7 @@ export function buildStatusDashboardData({
     cronGroups,
     runningCrons,
     recommendedActions,
+    commsModel,
   });
   const attentionSections = buildAttentionSections(baseSections, sectionPriority);
 
