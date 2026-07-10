@@ -164,6 +164,17 @@ export function makeHealthyStatusResponse(): StatusResponse {
       },
       retryErrorClassCounts: {},
       webhookEffectUnknown: 0,
+      deliverySli: {
+        availability: "unavailable",
+        quality: "unavailable",
+        freshness: "unknown",
+        acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+        rollup: null,
+        error: {
+          code: "telegram_delivery_sli_query_failed",
+          message: "Telegram delivery SLI telemetry unavailable.",
+        },
+      },
       quality: { status: "complete", unavailableFields: [] },
       lastSubscriberActivityAt: 1_699_999_000,
       customPreferenceChats: 1,

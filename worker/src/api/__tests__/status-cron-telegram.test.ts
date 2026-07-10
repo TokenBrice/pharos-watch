@@ -75,6 +75,7 @@ describe("handleStatus", () => {
         matchBinds: [
           "cron:budget-surface:telegram-registration-reconciliation",
           "cron:budget-surface:alert-broker-delivery-drain",
+          "cron:budget-surface:telegram-digest-outbox-drain",
           "cron:budget-surface:digest-trigger-poll",
         ],
         rows: [
@@ -132,14 +133,19 @@ describe("handleStatus", () => {
         outcome: "unknown",
       }),
       expect.objectContaining({
+        job: "telegram-digest-outbox-drain",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
         job: "digest-trigger-poll",
         telemetryStatus: "fresh",
         outcome: "skipped",
         skippedReason: "no-pending-request",
       }),
     ]);
-    expect(body.summary.budgetOnlySurfaceCount).toBe(3);
-    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(2);
+    expect(body.summary.budgetOnlySurfaceCount).toBe(4);
+    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(3);
   });
 
   it("includes in-flight cron progress when a leased job is still running", async () => {
@@ -426,6 +432,11 @@ describe("handleStatus", () => {
         first: { pending_count: 3 },
       },
       {
+        match: "AS due_count",
+        rows: [],
+        first: { pending_count: 4, due_count: 4, deferred_count: 0 },
+      },
+      {
         match: "FROM telegram_pending_alerts",
         rows: [],
         first: { pending_count: 4 },
@@ -448,6 +459,13 @@ describe("handleStatus", () => {
         totalSubscriptions: number;
         pendingDisambiguations: number;
         pendingDeliveries: number;
+        deliverySli: {
+          availability: string;
+          quality: string;
+          freshness: string;
+          acceptanceDefinition: string;
+          rollup: { evidence: { freshness: string } } | null;
+        };
         customPreferenceChats: number;
         quietHoursEnabledChats: number;
         alertTypeChats: {
@@ -474,6 +492,13 @@ describe("handleStatus", () => {
     expect(body.telegramBot?.totalSubscriptions).toBe(37);
     expect(body.telegramBot?.pendingDisambiguations).toBe(3);
     expect(body.telegramBot?.pendingDeliveries).toBe(4);
+    expect(body.telegramBot?.deliverySli).toMatchObject({
+      availability: "available",
+      quality: "empty",
+      freshness: "empty",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup: { evidence: { freshness: "empty" } },
+    });
     expect(body.telegramBot?.customPreferenceChats).toBe(0);
     expect(body.telegramBot?.quietHoursEnabledChats).toBe(0);
     expect(body.telegramBot?.alertTypeChats).toEqual({

@@ -2,11 +2,27 @@ import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildTelegramDeliverySliStatus,
   getTelegramBotStats,
   loadTelegramMiniAppDailyAggregate,
   mapTelegramBotStats,
   TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL,
 } from "../status/telegram-bot-stats";
+import type { TelegramDeliverySliStatus } from "@shared/types/status";
+
+function unavailableDeliverySli(): TelegramDeliverySliStatus {
+  return {
+    availability: "unavailable",
+    quality: "unavailable",
+    freshness: "unknown",
+    acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+    rollup: null,
+    error: {
+      code: "telegram_delivery_sli_query_failed",
+      message: "Telegram delivery SLI telemetry unavailable.",
+    },
+  };
+}
 
 describe("Telegram delivery telemetry SQL", () => {
   it("counts a fresh execution-unknown target when the pending table is empty", () => {
@@ -126,6 +142,7 @@ describe("mapTelegramBotStats", () => {
         quietHoursEnabledChats: 2,
         pendingDeliveries: 12,
       },
+      deliverySli: unavailableDeliverySli(),
     });
 
     expect(result).toEqual({
@@ -227,6 +244,7 @@ describe("mapTelegramBotStats", () => {
         sampleLimit: 5001,
         lowerBound: false,
       },
+      deliverySli: unavailableDeliverySli(),
     });
   });
 
@@ -255,6 +273,7 @@ describe("mapTelegramBotStats", () => {
       pendingDisambiguations: null,
       pendingDeliveries: { pending_count: "bad" },
       topStablecoins: [{ stablecoin_id: "usdt-tether", subscribers: "bad" }],
+      deliverySli: unavailableDeliverySli(),
     });
 
     expect(result).toEqual({
@@ -295,6 +314,26 @@ describe("mapTelegramBotStats", () => {
           presetImpliedSubscribers: 0,
         },
       ],
+      deliverySli: unavailableDeliverySli(),
+    });
+  });
+
+  it("keeps delivery SLI failure and evidence quality visible", () => {
+    expect(buildTelegramDeliverySliStatus({ value: null, error: "database unavailable" }))
+      .toEqual(unavailableDeliverySli());
+
+    const rollup = {
+      evidence: { freshness: "stale" },
+      detectionToPlan: { quality: "complete" },
+      planToTelegramAcceptance: { quality: "partial" },
+      telegramAcceptanceBeforeTtl: { quality: "complete" },
+    } as Parameters<typeof buildTelegramDeliverySliStatus>[0]["value"];
+    expect(buildTelegramDeliverySliStatus({ value: rollup })).toMatchObject({
+      availability: "available",
+      quality: "partial",
+      freshness: "stale",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup,
     });
   });
 });

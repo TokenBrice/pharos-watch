@@ -55,6 +55,115 @@ export interface TelegramWebhookEffectLifecycle {
   lowerBound: boolean;
 }
 
+export type TelegramDeliverySliEvidenceQuality = "complete" | "partial" | "empty";
+export type TelegramDeliverySliEvidenceFreshness = "fresh" | "stale" | "empty";
+
+export interface TelegramDeliveryLatencySli {
+  eligibleCount: number;
+  observedCount: number;
+  averageSec: number | null;
+  maximumSec: number | null;
+  quality: TelegramDeliverySliEvidenceQuality;
+}
+
+export interface TelegramDeliverySliReasonCount {
+  reason: string;
+  count: number;
+}
+
+export interface TelegramDeliverySliBacklogBucket {
+  priority: number;
+  ageBucket: "lt_5m" | "5m_15m" | "15m_1h" | "1h_6h" | "gte_6h";
+  count: number;
+  oldestAgeSec: number;
+  nearestTtlSec: number | null;
+}
+
+export interface TelegramDeliverySliRollup {
+  window: {
+    generatedAt: number;
+    startsAt: number;
+    endsAt: number;
+    lookbackSec: number;
+    bounded: true;
+  };
+  evidence: {
+    latestAt: number | null;
+    ageSec: number | null;
+    freshness: TelegramDeliverySliEvidenceFreshness;
+    freshnessThresholdSec: number;
+  };
+  detectionToPlan: TelegramDeliveryLatencySli;
+  planToTelegramAcceptance: TelegramDeliveryLatencySli;
+  telegramAcceptanceBeforeTtl: {
+    telegramAcceptedCount: number;
+    knownTtlCount: number;
+    acceptedBeforeTtlCount: number;
+    acceptedAfterTtlCount: number;
+    rate: number | null;
+    quality: TelegramDeliverySliEvidenceQuality;
+  };
+  authoritativeTargetOutcomes: {
+    total: number;
+    telegramAccepted: number;
+    failed: number;
+    cancelled: number;
+    expired: number;
+    executionUnknown: number;
+    unresolved: number;
+    telegramAcceptanceRate: number | null;
+  };
+  preferenceChangeCancellations: {
+    count: number;
+    reasons: TelegramDeliverySliReasonCount[];
+    reasonsTruncated: boolean;
+  };
+  backlog: {
+    windowStartsAt: number;
+    windowBounded: true;
+    count: number;
+    oldestAgeSec: number | null;
+    buckets: TelegramDeliverySliBacklogBucket[];
+  };
+  observedTargetErrorReasons: {
+    reasons: TelegramDeliverySliReasonCount[];
+    truncated: boolean;
+  };
+  executionUnknown: {
+    count: number;
+    oldestAgeSec: number | null;
+    olderThan15mCount: number;
+  };
+  deadLetters: {
+    count: number;
+    totalAttempts: number;
+    reasons: TelegramDeliverySliReasonCount[];
+    reasonsTruncated: boolean;
+    lastErrorReasons: TelegramDeliverySliReasonCount[];
+    lastErrorReasonsTruncated: boolean;
+  };
+}
+
+export type TelegramDeliverySliStatus =
+  | {
+      availability: "available";
+      quality: TelegramDeliverySliEvidenceQuality;
+      freshness: TelegramDeliverySliEvidenceFreshness;
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt";
+      rollup: TelegramDeliverySliRollup;
+    }
+  | {
+      availability: "unavailable";
+      quality: "unavailable";
+      freshness: "unknown";
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt";
+      rollup: null;
+      error: {
+        code: "telegram_delivery_sli_query_failed";
+        message: string;
+      };
+    };
+
 export interface TelegramBotStats {
   totalChats: number;
   alertEnabledChats: number;
@@ -81,6 +190,7 @@ export interface TelegramBotStats {
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
   webhookEffectUnknown?: number;
   webhookEffectLifecycle?: TelegramWebhookEffectLifecycle;
+  deliverySli: TelegramDeliverySliStatus;
   presetQueryFailures?: number;
   /**
    * Number of inactive subscribers cleaned up in the trailing 7-day window

@@ -1,5 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { TelegramBotStats } from "@shared/types/status";
+import type {
+  TelegramBotStats,
+  TelegramDeliverySliRollup,
+  TelegramDeliverySliStatus,
+} from "@shared/types/status";
 import { formatIsoDate } from "@shared/lib/format";
 import { toErrorMessage } from "../error-utils";
 import {
@@ -17,6 +21,9 @@ import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "../telegram-constants";
 import { EXECUTION_UNKNOWN_SAMPLE_LIMIT } from "../../cron/telegram-pending";
+import { loadTelegramDeliverySliRollup } from "../telegram-delivery-sli";
+
+const TELEGRAM_DELIVERY_ACCEPTANCE_DEFINITION = "telegram_bot_api_accepted_not_user_receipt" as const;
 
 interface TelegramBotAggregateRow {
   total_chats: number | string | null;
@@ -561,6 +568,7 @@ export function mapTelegramBotStats(input: {
   lifecycleSnapshot?: TelegramCurrentLifecycleSnapshot | null;
   unavailableFields?: string[];
   telemetryErrors?: Record<string, string>;
+  deliverySli: TelegramDeliverySliStatus;
 }): TelegramBotStats {
   const {
     aggregate,
@@ -628,6 +636,7 @@ export function mapTelegramBotStats(input: {
       explicitSubscribers: coerceCount(row.explicit_subscribers ?? row.subscribers),
       presetImpliedSubscribers: coerceCount(row.preset_implied_subscribers),
     })),
+    deliverySli: input.deliverySli,
   };
 
   if (lifecycleSnapshot) {
@@ -734,6 +743,43 @@ export function mapTelegramBotStats(input: {
   return stats;
 }
 
+export function buildTelegramDeliverySliStatus(
+  result: OptionalTelegramTelemetry<TelegramDeliverySliRollup>,
+): TelegramDeliverySliStatus {
+  if (result.error || !result.value) {
+    return {
+      availability: "unavailable",
+      quality: "unavailable",
+      freshness: "unknown",
+      acceptanceDefinition: TELEGRAM_DELIVERY_ACCEPTANCE_DEFINITION,
+      rollup: null,
+      error: {
+        code: "telegram_delivery_sli_query_failed",
+        message: "Telegram delivery SLI telemetry unavailable.",
+      },
+    };
+  }
+
+  const rollup = result.value;
+  const qualityValues = [
+    rollup.detectionToPlan.quality,
+    rollup.planToTelegramAcceptance.quality,
+    rollup.telegramAcceptanceBeforeTtl.quality,
+  ];
+  const quality = qualityValues.includes("partial")
+    ? "partial"
+    : qualityValues.includes("empty")
+      ? "empty"
+      : "complete";
+  return {
+    availability: "available",
+    quality,
+    freshness: rollup.evidence.freshness,
+    acceptanceDefinition: TELEGRAM_DELIVERY_ACCEPTANCE_DEFINITION,
+    rollup,
+  };
+}
+
 export async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats> {
   const [
     aggregate,
@@ -746,6 +792,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     presetQueryFailuresResult,
     inactiveCleanupResult,
     lifecycleSnapshotResult,
+    deliverySliResult,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
@@ -757,6 +804,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
     loadOptionalTelegramTelemetry(loadInactiveSubscribersCleanedThisWeek(db, now)),
     loadOptionalTelegramTelemetry(refreshTelegramLifecycleSnapshotIfStale(db, now)),
+    loadOptionalTelegramTelemetry(loadTelegramDeliverySliRollup(db, { nowSec: now })),
   ]);
   const optionalResults = {
     pendingDeliveryBacklog: pendingDeliveryTelemetryResult,
@@ -787,6 +835,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,
     lifecycleSnapshot: lifecycleSnapshotResult.value,
+    deliverySli: buildTelegramDeliverySliStatus(deliverySliResult),
     unavailableFields,
     telemetryErrors,
   });

@@ -1,4 +1,11 @@
 import { TELEGRAM_PENDING_PRIORITY } from "@shared/lib/telegram-delivery-policy";
+import type {
+  TelegramDeliverySliBacklogBucket,
+  TelegramDeliverySliEvidenceQuality,
+  TelegramDeliveryLatencySli,
+  TelegramDeliverySliReasonCount,
+  TelegramDeliverySliRollup,
+} from "@shared/types/status";
 
 const MIN_LOOKBACK_SEC = 5 * 60;
 const MAX_LOOKBACK_SEC = 7 * 24 * 60 * 60;
@@ -7,100 +14,11 @@ const DEFAULT_FRESHNESS_SEC = 15 * 60;
 const DEFAULT_REASON_LIMIT = 12;
 const MAX_REASON_LIMIT = 25;
 
-type EvidenceQuality = "complete" | "partial" | "empty";
-type EvidenceFreshness = "fresh" | "stale" | "empty";
-
 export interface TelegramDeliverySliOptions {
   nowSec: number;
   lookbackSec?: number;
   freshnessSec?: number;
   reasonLimit?: number;
-}
-
-export interface TelegramLatencySli {
-  eligibleCount: number;
-  observedCount: number;
-  averageSec: number | null;
-  maximumSec: number | null;
-  quality: EvidenceQuality;
-}
-
-export interface TelegramReasonCount {
-  reason: string;
-  count: number;
-}
-
-export interface TelegramDeliveryBacklogBucket {
-  priority: number;
-  ageBucket: "lt_5m" | "5m_15m" | "15m_1h" | "1h_6h" | "gte_6h";
-  count: number;
-  oldestAgeSec: number;
-  nearestTtlSec: number | null;
-}
-
-export interface TelegramDeliverySliRollup {
-  window: {
-    generatedAt: number;
-    startsAt: number;
-    endsAt: number;
-    lookbackSec: number;
-    bounded: true;
-  };
-  evidence: {
-    latestAt: number | null;
-    ageSec: number | null;
-    freshness: EvidenceFreshness;
-    freshnessThresholdSec: number;
-  };
-  detectionToPlan: TelegramLatencySli;
-  planToTelegramAcceptance: TelegramLatencySli;
-  telegramAcceptanceBeforeTtl: {
-    telegramAcceptedCount: number;
-    knownTtlCount: number;
-    acceptedBeforeTtlCount: number;
-    acceptedAfterTtlCount: number;
-    rate: number | null;
-    quality: EvidenceQuality;
-  };
-  authoritativeTargetOutcomes: {
-    total: number;
-    telegramAccepted: number;
-    failed: number;
-    cancelled: number;
-    expired: number;
-    executionUnknown: number;
-    unresolved: number;
-    telegramAcceptanceRate: number | null;
-  };
-  preferenceChangeCancellations: {
-    count: number;
-    reasons: TelegramReasonCount[];
-    reasonsTruncated: boolean;
-  };
-  backlog: {
-    windowStartsAt: number;
-    windowBounded: true;
-    count: number;
-    oldestAgeSec: number | null;
-    buckets: TelegramDeliveryBacklogBucket[];
-  };
-  observedTargetErrorReasons: {
-    reasons: TelegramReasonCount[];
-    truncated: boolean;
-  };
-  executionUnknown: {
-    count: number;
-    oldestAgeSec: number | null;
-    olderThan15mCount: number;
-  };
-  deadLetters: {
-    count: number;
-    totalAttempts: number;
-    reasons: TelegramReasonCount[];
-    reasonsTruncated: boolean;
-    lastErrorReasons: TelegramReasonCount[];
-    lastErrorReasonsTruncated: boolean;
-  };
 }
 
 interface CoreRow {
@@ -127,7 +45,7 @@ interface CoreRow {
 
 interface BacklogRow {
   priority: number | string;
-  age_bucket: TelegramDeliveryBacklogBucket["ageBucket"];
+  age_bucket: TelegramDeliverySliBacklogBucket["ageBucket"];
   count: number | string;
   oldest_created_at: number | string;
   nearest_expires_at: number | string | null;
@@ -171,7 +89,7 @@ function ratio(numerator: number, denominator: number): number | null {
   return denominator > 0 ? numerator / denominator : null;
 }
 
-function quality(observed: number, eligible: number): EvidenceQuality {
+function quality(observed: number, eligible: number): TelegramDeliverySliEvidenceQuality {
   if (eligible === 0) return "empty";
   return observed === eligible ? "complete" : "partial";
 }
@@ -181,7 +99,7 @@ function latency(
   observedCount: number,
   sumSec: unknown,
   maximumSec: unknown,
-): TelegramLatencySli {
+): TelegramDeliveryLatencySli {
   const sum = nullableInteger(sumSec);
   return {
     eligibleCount,
@@ -193,7 +111,7 @@ function latency(
 }
 
 function reasons(rows: readonly ReasonRow[], limit: number): {
-  values: TelegramReasonCount[];
+  values: TelegramDeliverySliReasonCount[];
   truncated: boolean;
 } {
   return {
@@ -375,7 +293,7 @@ export async function loadTelegramDeliverySliRollup(
   );
   const evidenceAt = latestAt >= 0 ? latestAt : null;
   const evidenceAgeSec = evidenceAt == null ? null : Math.max(0, nowSec - evidenceAt);
-  const backlog = (backlogRows.results ?? []).map((item): TelegramDeliveryBacklogBucket => ({
+  const backlog = (backlogRows.results ?? []).map((item): TelegramDeliverySliBacklogBucket => ({
     priority: integer(item.priority),
     ageBucket: item.age_bucket,
     count: integer(item.count),

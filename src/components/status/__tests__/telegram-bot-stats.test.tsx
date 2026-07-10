@@ -60,6 +60,17 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
     presetQueryFailures: 0,
     inactiveSubscribersCleanedThisWeek: 6,
     webhookEffectUnknown: 0,
+    deliverySli: {
+      availability: "unavailable",
+      quality: "unavailable",
+      freshness: "unknown",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup: null,
+      error: {
+        code: "telegram_delivery_sli_query_failed",
+        message: "Telegram delivery SLI telemetry unavailable.",
+      },
+    },
     lifecycleSnapshot: {
       date: "2026-02-24",
       snapshotAt: LIFECYCLE_SNAPSHOT_AT,
