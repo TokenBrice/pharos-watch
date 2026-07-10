@@ -25,6 +25,7 @@ import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/cl
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../db";
+import { reconcileDewsPublishedGenerationLedger } from "../dews-publication-pointer";
 import {
   getProjectorWatermark,
   insertTapeEvents,
@@ -65,7 +66,11 @@ async function fetchSamplesSince(
 ): Promise<StressSignalRow[]> {
   return fetchRowsWithTieExpansion<StressSignalRow>(db, {
     selectSql: "SELECT stablecoin_id, computed_at, score, band",
-    fromSql: "stress_signals",
+    fromSql: `stress_signals
+      JOIN surface_publication_generations publication
+        ON publication.surface = 'dews'
+       AND publication.generation_id = 'dews:' || CAST(stress_signals.computed_at AS TEXT)
+       AND publication.state = 'published'`,
     timeColumn: "computed_at",
     orderBySql: "computed_at ASC, stablecoin_id ASC",
     since,
@@ -102,6 +107,13 @@ async function fetchPriorBands(
                  FROM stress_signals candidate
                 WHERE candidate.stablecoin_id = requested.stablecoin_id
                   AND candidate.computed_at <= ?
+                  AND EXISTS (
+                    SELECT 1
+                      FROM surface_publication_generations publication
+                     WHERE publication.surface = 'dews'
+                       AND publication.generation_id = 'dews:' || CAST(candidate.computed_at AS TEXT)
+                       AND publication.state = 'published'
+                  )
                 ORDER BY candidate.computed_at DESC
                 LIMIT 1
              )`,
@@ -210,6 +222,9 @@ async function projectDewsByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = variant === "escalated" ? "dews.escalated" : "dews.deescalated";
+  if (options?.dryRun !== true) {
+    await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
+  }
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchSamplesSince(db, since, until, limit);
@@ -274,6 +289,9 @@ export async function projectDewsBandTransitions(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
+  if (options?.dryRun !== true) {
+    await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
+  }
   // Seed from the older of the two cursors so neither variant skips a window.
   const escWatermark = await getProjectorWatermark(db, "dews.escalated");
   const deescWatermark = await getProjectorWatermark(db, "dews.deescalated");

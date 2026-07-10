@@ -174,9 +174,10 @@ Structured evidence is additive with warning-string evidence and the final Yield
 | ----------------------- | -------- | -------------------------------------- |
 | `stress_signals`        | 7 days   | 30-minute rolling samples              |
 | `stress_signals_latest` | current  | Latest-row materialization for hot readers |
-| `stress_signal_history` | 365 days | Daily snapshots (first run of UTC day) |
+| `stress_signal_history` | 365 days | Daily snapshots (first exact-coverage run of UTC day) |
+| `surface_publication_generations` (`surface = "dews"`) | durable | Successfully published generations consumed by Tape and publication health |
 
-`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after current/latest rows have been written, retention work has completed, and generation row counts match the computed result count. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
+`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after current/latest rows have been written, retention work has completed, and generation row counts match the computed result count. That pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
 
 ### Cron Schedule
 
@@ -199,10 +200,10 @@ Structured evidence is additive with warning-string evidence and the final Yield
 7. Compute DEWS per PSI-eligible coin
 8. Batch write to `stress_signals` and `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
 9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
-10. Daily snapshot to `stress_signal_history` (first run of UTC day)
+10. Seal the producer-owned daily `stress_signal_history` rows to the exact computed stablecoin ID set in one atomic replacement; frozen historical rows remain outside that ownership boundary
 11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 12. Prune old data
-13. Validate row counts and advance `dews:published-generation`; healthy runs also advance `freshness:dews`
+13. Validate row counts, then atomically advance `dews:published-generation` and its durable published-generation ledger row; healthy runs also advance `freshness:dews`
 
 ---
 

@@ -178,6 +178,7 @@ interface MakeDbOptions {
   yieldRankingsPayload?: unknown;
   signalIds?: string[];
   historyIds?: string[];
+  historySnapshotIds?: string[];
   currentGenerationRows?: number;
   latestGenerationRows?: number;
   dexPublicationLatest?: {
@@ -201,9 +202,16 @@ interface MakeDbOptions {
 }
 
 function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
+  const computedSnapshotIds = new Set<string>();
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
     const all = async <T>() => {
+      if (sql.includes("pharos:dews:stress-history-daily-ids")) {
+        return {
+          results: (opts.historySnapshotIds ?? [...computedSnapshotIds])
+            .map((stablecoin_id) => ({ stablecoin_id })) as T[],
+        };
+      }
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
         return {
           results: (opts.signalIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
@@ -335,6 +343,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
 
     return {
       bind: (...args: unknown[]) => {
+        if (
+          sql.includes("pharos:dews:stress-current-upsert")
+          && typeof args[0] === "string"
+        ) {
+          computedSnapshotIds.add(args[0]);
+        }
         opts.onBind?.(sql, args);
         return { all, first, run };
       },
@@ -346,7 +360,9 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
 
   return {
     prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
+    batch: async (statements: D1PreparedStatement[]) => Promise.all(
+      statements.map((statement) => statement.run()),
+    ),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;

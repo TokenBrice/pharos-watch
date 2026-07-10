@@ -125,6 +125,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0179     | `0179_measured_hot_query_indexes.sql`                    | Add measured global cron-time, blacklist chain-ID pagination, and yield-decision time-order indexes                                                  |
 | 0180     | `0180_d1_capacity_observations.sql`                      | Add bounded hourly D1 file-size observations for 60/75/90 percent thresholding and exhaustion forecasting                                           |
 | 0181     | `0181_blacklist_reconciliation_and_efficiency.sql`       | Add guarded blacklist reconciliation evidence, event provenance, amount-repair queueing, and bounded provider scan telemetry                        |
+| 0182     | `0182_dews_published_generation_bootstrap.sql`            | Bootstrap the current validated DEWS pointer into the durable generation ledger before tape projection requires published-generation proof          |
 
 ## Retired Individual Migrations
 
@@ -188,6 +189,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0179_measured_hot_query_indexes.sql`: roll back query hints and seek readers by restoring the prior Worker version. Keep the additive indexes until a separately measured cleanup release proves their storage/write cost outweighs the observed read reduction.
 - `0180_d1_capacity_observations.sql`: roll back capacity publication by restoring the prior Worker version. Keep the small bounded observation table and cached assessment for forensic trend review; no existing reader depends on it.
 - `0181_blacklist_reconciliation_and_efficiency.sql`: roll back guarded recovery and efficiency writers by restoring the prior Worker version. Keep reconciliation provenance, run evidence, repair queue, and scan telemetry for forensic inspection; do not delete a verified recovery run during rollback.
+- `0182_dews_published_generation_bootstrap.sql`: roll back ledger-gated DEWS tape projection by restoring the prior Worker version. Keep the bootstrapped publication row; it records a generation already proven published by the canonical pointer and is safe for older Workers to ignore.
 
 ## Rollback Procedure
 

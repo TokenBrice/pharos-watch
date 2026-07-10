@@ -1,10 +1,28 @@
-import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
+import { getCache, type CacheWriteResult } from "./db-cache";
 import { sha256Hex } from "@shared/lib/sha256";
+import { throwIfAborted } from "./abort";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 
 const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
 const DEWS_PUBLICATION_POINTER_STATUS = "published";
 const DEWS_PUBLICATION_POINTER_COVERAGE_VERSION = 2;
+const DEWS_PUBLICATION_SURFACE = "dews";
+
+const UPSERT_DEWS_PUBLICATION_LEDGER_SQL = `
+  ON CONFLICT(surface, generation_id) DO UPDATE SET
+    validated_at = excluded.validated_at,
+    published_at = excluded.published_at,
+    state = 'published',
+    candidate_rows = COALESCE(excluded.candidate_rows, surface_publication_generations.candidate_rows),
+    published_rows = COALESCE(excluded.published_rows, surface_publication_generations.published_rows),
+    expected_rows = COALESCE(excluded.expected_rows, surface_publication_generations.expected_rows),
+    validation_summary_json = COALESCE(
+      excluded.validation_summary_json,
+      surface_publication_generations.validation_summary_json
+    ),
+    artifact_checksum = COALESCE(excluded.artifact_checksum, surface_publication_generations.artifact_checksum),
+    artifact_cache_key = COALESCE(excluded.artifact_cache_key, surface_publication_generations.artifact_cache_key)`;
 
 interface DewsPublicationPointerPayload {
   updatedAt: number;
@@ -42,6 +60,98 @@ function buildDewsPublicationPointerPayload(
     expectedRowCount: stablecoinIds.length,
     stablecoinIdsDigest: buildDewsStablecoinIdsDigest(stablecoinIds),
   };
+}
+
+function dewsGenerationId(computedAt: number): string {
+  return `dews:${computedAt}`;
+}
+
+function buildDewsPublicationValidationSummary(
+  expectedRowCount: number | null,
+  stablecoinIdsDigest: string | null,
+): string | null {
+  return expectedRowCount == null || stablecoinIdsDigest == null
+    ? null
+    : JSON.stringify({
+        coverageVersion: DEWS_PUBLICATION_POINTER_COVERAGE_VERSION,
+        expectedRowCount,
+        stablecoinIdsDigest,
+      });
+}
+
+function prepareDewsPublicationLedgerUpsert(
+  db: D1Database,
+  publication: {
+    computedAt: number;
+    expectedRowCount: number | null;
+    stablecoinIdsDigest: string | null;
+  },
+): D1PreparedStatement {
+  return db.prepare(
+    `INSERT INTO surface_publication_generations (
+       surface, generation_id, started_at, validated_at, published_at, state,
+       candidate_rows, published_rows, expected_rows, validation_summary_json,
+       artifact_checksum, artifact_cache_key
+     ) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)
+     ${UPSERT_DEWS_PUBLICATION_LEDGER_SQL}`,
+  ).bind(
+    DEWS_PUBLICATION_SURFACE,
+    dewsGenerationId(publication.computedAt),
+    publication.computedAt,
+    publication.computedAt,
+    publication.computedAt,
+    publication.expectedRowCount,
+    publication.expectedRowCount,
+    publication.expectedRowCount,
+    buildDewsPublicationValidationSummary(
+      publication.expectedRowCount,
+      publication.stablecoinIdsDigest,
+    ),
+    publication.stablecoinIdsDigest,
+    DEWS_PUBLICATION_POINTER_CACHE_KEY,
+  );
+}
+
+function prepareGatedDewsPublicationLedgerUpsert(
+  db: D1Database,
+  publication: {
+    computedAt: number;
+    expectedRowCount: number;
+    stablecoinIdsDigest: string;
+    pointerValue: string;
+  },
+): D1PreparedStatement {
+  return db.prepare(
+    `INSERT INTO surface_publication_generations (
+       surface, generation_id, started_at, validated_at, published_at, state,
+       candidate_rows, published_rows, expected_rows, validation_summary_json,
+       artifact_checksum, artifact_cache_key
+     )
+     SELECT ?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?
+      WHERE EXISTS (
+        SELECT 1 FROM cache
+         WHERE key = ? AND updated_at = ? AND value = ?
+      )
+     ${UPSERT_DEWS_PUBLICATION_LEDGER_SQL}`,
+  ).bind(
+    DEWS_PUBLICATION_SURFACE,
+    dewsGenerationId(publication.computedAt),
+    publication.computedAt,
+    publication.computedAt,
+    publication.computedAt,
+    publication.expectedRowCount,
+    publication.expectedRowCount,
+    publication.expectedRowCount,
+    buildDewsPublicationValidationSummary(
+      publication.expectedRowCount,
+      publication.stablecoinIdsDigest,
+    ),
+    publication.stablecoinIdsDigest,
+    DEWS_PUBLICATION_POINTER_CACHE_KEY,
+    DEWS_PUBLICATION_POINTER_CACHE_KEY,
+    publication.computedAt,
+    publication.pointerValue,
+  );
 }
 
 function errorToMessage(error: unknown): string {
@@ -128,17 +238,62 @@ export async function readDewsPublishedGeneration(db: D1Database, nowSec: number
   return result.status === "ok" ? result.computedAt : null;
 }
 
+/**
+ * Backfill/reconcile the current validated cache pointer into the durable
+ * generation ledger. This closes the migration-to-deploy window where the old
+ * Worker may advance the pointer after migration 0182 has run.
+ */
+export async function reconcileDewsPublishedGenerationLedger(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<DewsPublishedGenerationResult> {
+  const published = await readDewsPublishedGenerationResult(db, nowSec);
+  if (published.status !== "ok") return published;
+  throwIfAborted(signal);
+  await runWithOverloadRetry(
+    () => prepareDewsPublicationLedgerUpsert(db, {
+      computedAt: published.computedAt,
+      expectedRowCount: published.expectedRowCount,
+      stablecoinIdsDigest: published.stablecoinIdsDigest,
+    }).run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return published;
+}
+
 export async function writeDewsPublishedGeneration(
   db: D1Database,
   updatedAt: number,
   stablecoinIds: readonly string[],
   signal?: AbortSignal,
 ): Promise<CacheWriteResult> {
-  return setCacheIfNewer(
-    db,
-    DEWS_PUBLICATION_POINTER_CACHE_KEY,
-    JSON.stringify(buildDewsPublicationPointerPayload(updatedAt, stablecoinIds)),
-    updatedAt,
+  const payload = buildDewsPublicationPointerPayload(updatedAt, stablecoinIds);
+  const pointerValue = JSON.stringify(payload);
+  throwIfAborted(signal);
+  const [pointerResult] = await runWithOverloadRetry(
+    () => db.batch([
+      db.prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE cache.updated_at <= excluded.updated_at`,
+      ).bind(DEWS_PUBLICATION_POINTER_CACHE_KEY, pointerValue, updatedAt),
+      prepareGatedDewsPublicationLedgerUpsert(db, {
+        computedAt: updatedAt,
+        expectedRowCount: payload.expectedRowCount,
+        stablecoinIdsDigest: payload.stablecoinIdsDigest,
+        pointerValue,
+      }),
+    ]),
+    3,
     signal,
   );
+  throwIfAborted(signal);
+  const written = Number(pointerResult?.meta?.changes ?? 0) > 0;
+  if (!written) {
+    console.log(`[cache] Skipped write for "${DEWS_PUBLICATION_POINTER_CACHE_KEY}" — existing data is newer (started_at > ${updatedAt})`);
+  }
+  return { written, skippedBecauseNewer: !written };
 }
