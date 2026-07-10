@@ -386,8 +386,8 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
       value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
       updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
     });
-    // 5,401 active pending rows at a 900/run drain budget estimates to 35 min.
-    const db = makeDb({ pendingCount: 5_401 });
+    // 10,801 active pending rows at the shared 1,800/run drain budget estimate to 35 min.
+    const db = makeDb({ pendingCount: 10_801 });
 
     const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
     const meta = JSON.parse(result.metadata ?? "{}");

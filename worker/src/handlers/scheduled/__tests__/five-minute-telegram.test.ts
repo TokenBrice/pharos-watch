@@ -182,6 +182,25 @@ describe("runFiveMinuteTelegramSlot", () => {
     }));
   });
 
+  it("degrades the telegram-pulse-snapshot sidecar when the snapshot write fails", async () => {
+    vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockResolvedValue({
+      pulse: { quality: { status: "partial", unavailableFields: ["watcherHistory"] } },
+      status: "error",
+      snapshotPublished: false,
+      heavySectionsRecomputed: true,
+      heavyMarkerAdvanced: false,
+      error: "simulated D1 cache write failure",
+    } as never);
+
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
+
+    const pulseJob = summary.jobs.find((job) => job.job === "telegram-pulse-snapshot");
+    expect(pulseJob?.outcome).toBe("error");
+    expect(pulseJob?.itemCount).toBe(0);
+    expect(pulseJob?.error).toContain("simulated D1 cache write failure");
+    expect(summary.jobsErrored).toBeGreaterThanOrEqual(1);
+  });
+
   it("records a failed registration unit without blocking the remaining units or broker drain", async () => {
     vi.mocked(reconcileTelegramCommandRegistration).mockRejectedValue(new Error("registration failed"));
     await runFiveMinuteTelegramSlot(buildRuntime("token"));

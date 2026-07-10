@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { handleTelegramPulse, publishTelegramPulseSnapshot } from "../telegram-pulse";
+import { mockD1, type MockD1Database, type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
+import {
+  handleTelegramPulse,
+  publishTelegramPulseSnapshot,
+  publishTelegramPulseSnapshotWithOutcome,
+} from "../telegram-pulse";
 
 describe("handleTelegramPulse", () => {
   it("serves a fresh materialized pulse snapshot without live aggregate reads", async () => {
@@ -994,5 +998,119 @@ describe("publishTelegramPulseSnapshot", () => {
     expect(pulse.miniAppDeniedToday).toBe(2);
     expect(pulse.miniAppReplayClaimsToday).toBe(1);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_usage_daily"))).toBe(true);
+  });
+});
+
+describe("publishTelegramPulseSnapshotWithOutcome", () => {
+  const PULSE_SNAPSHOT_KEY = "telegram:pulse:snapshot";
+  const HEAVY_MARKER_KEY = "telegram:pulse:heavy-sections-updated-at";
+
+  /** Fail only cache writes for one key so publication ordering stays observable. */
+  function failCacheWritesForKey(inner: MockD1Database, failKey: string): MockD1Database {
+    return {
+      ...inner,
+      prepare: (sql: string) => {
+        const statement = inner.prepare(sql) as MockPreparedStatement;
+        if (!sql.includes("INSERT OR REPLACE INTO cache")) return statement;
+        return {
+          ...statement,
+          bind: (...binds: unknown[]) => {
+            const bound = statement.bind(...binds) as MockPreparedStatement;
+            if (binds[0] !== failKey) return bound;
+            return {
+              ...bound,
+              run: async () => {
+                throw new Error(`simulated D1 cache write failure for ${failKey}`);
+              },
+            } as MockPreparedStatement;
+          },
+        } as MockPreparedStatement;
+      },
+    } as MockD1Database;
+  }
+
+  function buildRebuildSourceDb(): MockD1Database {
+    return mockD1([
+      {
+        match: "FROM telegram_watcher_lifecycle_daily",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 12,
+          new_watchers: 0,
+          explicit_coin_follows: 12,
+          active_preset_followers: 0,
+          active_dews_opt_ins: 12,
+          active_depeg_opt_ins: 8,
+          active_safety_opt_ins: 7,
+          active_launch_opt_ins: 6,
+          active_all_types_opt_ins: 6,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_pending_alerts",
+        first: { pending_count: 0 },
+        rows: [],
+      },
+      {
+        match: "FROM telegram_usage_daily",
+        first: {
+          mini_app_sessions: 0,
+          mini_app_mutations: 0,
+          mini_app_denied: 0,
+          mini_app_replay_claimed: 0,
+        },
+        rows: [],
+      },
+    ]);
+  }
+
+  it("reports a failed snapshot write and does not advance the heavy-section marker", async () => {
+    const inner = buildRebuildSourceDb();
+    const db = failCacheWritesForKey(inner, PULSE_SNAPSHOT_KEY);
+
+    const outcome = await publishTelegramPulseSnapshotWithOutcome(db);
+
+    expect(outcome.status).toBe("error");
+    expect(outcome.snapshotPublished).toBe(false);
+    expect(outcome.heavySectionsRecomputed).toBe(true);
+    expect(outcome.heavyMarkerAdvanced).toBe(false);
+    expect(outcome.error).toContain("simulated D1 cache write failure");
+    expect(outcome.pulse.activeWatchers).toBe(12);
+
+    const markerWrites = inner.getHistory().filter(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === HEAVY_MARKER_KEY,
+    );
+    expect(markerWrites).toEqual([]);
+  });
+
+  it("publishes the snapshot but degrades when the heavy-marker write fails", async () => {
+    const inner = buildRebuildSourceDb();
+    const db = failCacheWritesForKey(inner, HEAVY_MARKER_KEY);
+
+    const outcome = await publishTelegramPulseSnapshotWithOutcome(db);
+
+    expect(outcome.status).toBe("degraded");
+    expect(outcome.snapshotPublished).toBe(true);
+    expect(outcome.heavySectionsRecomputed).toBe(true);
+    expect(outcome.heavyMarkerAdvanced).toBe(false);
+    expect(outcome.error).toContain("simulated D1 cache write failure");
+
+    const snapshotWrites = inner.getHistory().filter(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === PULSE_SNAPSHOT_KEY,
+    );
+    expect(snapshotWrites).toHaveLength(1);
   });
 });
