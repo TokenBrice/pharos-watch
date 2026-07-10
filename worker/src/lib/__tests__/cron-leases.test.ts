@@ -31,6 +31,8 @@ type SlotExecutionRow = {
   result_status: string | null;
   execution_owner: string;
   execution_generation?: number;
+  invocation_id?: string | null;
+  worker_version?: string | null;
   started_at: number;
   finished_at: number | null;
   updated_at: number;
@@ -226,15 +228,14 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, error, metadata")) {
-            const [job, startedAt, durationMs, status, error, metadata, slotStartedAt] = args as [
-              string,
-              number,
-              number,
-              string,
-              string | null,
-              string | null,
-              number | null,
-            ];
+            const literalErrorStatus = sql.includes("VALUES (?, ?, ?, 'error'");
+            const job = args[0] as string;
+            const startedAt = args[1] as number;
+            const durationMs = args[2] as number;
+            const status = literalErrorStatus ? "error" : args[3] as string;
+            const error = args[literalErrorStatus ? 3 : 4] as string | null;
+            const metadata = args[literalErrorStatus ? 4 : 5] as string | null;
+            const slotStartedAt = args[literalErrorStatus ? 5 : 6] as number | null;
             cronRuns.push({
               job,
               started_at: startedAt,
@@ -342,10 +343,12 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("INSERT OR IGNORE INTO cron_slot_executions")) {
-            const [slotKey, slotStartedAt, owner, startedAt, updatedAt] = args as [
+            const [slotKey, slotStartedAt, owner, invocationId, workerVersion, startedAt, updatedAt] = args as [
               string,
               number,
               string,
+              string | null,
+              string | null,
               number,
               number,
             ];
@@ -360,6 +363,8 @@ function makeLeaseDb(seed?: {
               result_status: null,
               execution_owner: owner,
               execution_generation: 1,
+              invocation_id: invocationId,
+              worker_version: workerVersion,
               started_at: startedAt,
               finished_at: null,
               updated_at: updatedAt,
@@ -440,6 +445,8 @@ function makeLeaseDb(seed?: {
           if (sql.includes("UPDATE cron_slot_executions") && sql.includes("SET execution_owner = ?")) {
             const [
               owner,
+              invocationId,
+              workerVersion,
               startedAt,
               updatedAt,
               metadata,
@@ -451,6 +458,8 @@ function makeLeaseDb(seed?: {
               staleBefore,
             ] = args as [
               string,
+              string | null,
+              string | null,
               number,
               number,
               string,
@@ -478,6 +487,8 @@ function makeLeaseDb(seed?: {
               ...existing,
               execution_owner: owner,
               execution_generation: (existing.execution_generation ?? 0) + 1,
+              invocation_id: invocationId,
+              worker_version: workerVersion,
               started_at: startedAt,
               updated_at: updatedAt,
               finished_at: null,
@@ -583,7 +594,7 @@ function makeLeaseDb(seed?: {
             });
             return active ? { active: 1 } : null;
           }
-          if (sql.includes("SELECT state, execution_owner, execution_generation, started_at, updated_at")) {
+          if (sql.includes("SELECT state, execution_owner, execution_generation") && sql.includes("FROM cron_slot_executions")) {
             const [slotKey, slotStartedAt] = args as [string, number];
             const row = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
             if (!row) return null;
@@ -591,6 +602,8 @@ function makeLeaseDb(seed?: {
               state: row.state,
               execution_owner: row.execution_owner,
               execution_generation: row.execution_generation ?? 1,
+              invocation_id: row.invocation_id ?? null,
+              worker_version: row.worker_version ?? null,
               started_at: row.started_at,
               updated_at: row.updated_at,
             };

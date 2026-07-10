@@ -13,7 +13,50 @@ interface MintBurnSlotOptions {
   lane: MintBurnLane;
   jobName: string;
   skipMessage: string;
-  onSettledSuccess?: (runtime: ScheduledRuntimeContext, result: CronResult | void) => Promise<void>;
+  runSidecar?: (runtime: ScheduledRuntimeContext, signal: AbortSignal) => Promise<MintBurnSidecarOutcome>;
+}
+
+export interface MintBurnSidecarOutcome {
+  name: string;
+  status: "ok" | "degraded" | "error";
+  itemCount: number;
+  error?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+function appendSidecarOutcome(result: CronResult, sidecar: MintBurnSidecarOutcome): CronResult {
+  let metadata: Record<string, unknown> = {};
+  if (result.metadata) {
+    try {
+      const parsed = JSON.parse(result.metadata) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        metadata = parsed as Record<string, unknown>;
+      } else {
+        metadata.rawMetadata = result.metadata;
+      }
+    } catch {
+      metadata.rawMetadata = result.metadata;
+    }
+  }
+  const status = sidecar.status === "ok"
+    ? result.status
+    : result.status === "error"
+      ? "error"
+      : "degraded";
+  return {
+    ...result,
+    status,
+    metadata: JSON.stringify({
+      ...metadata,
+      sidecars: [{
+        name: sidecar.name,
+        status: sidecar.status,
+        itemCount: sidecar.itemCount,
+        error: sidecar.error ?? null,
+        ...(sidecar.metadata ?? {}),
+      }],
+    }),
+  };
 }
 
 export async function runMintBurnSlot(
@@ -25,16 +68,21 @@ export async function runMintBurnSlot(
     outcomeLabel: "Alchemy",
     skipMessage: options.skipMessage,
     job: options.jobName,
-    fn: (signal, reportProgress) =>
-      syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
+    fn: async (signal, reportProgress) => {
+      const primary = await syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
         signal,
         disabledConfigIds: runtime.mintBurnDisabledIds,
         disabledSymbols: runtime.mintBurnDisabledSymbols,
         lane: options.lane,
         jobName: options.jobName,
         onProgress: reportProgress,
-    }),
-    onSettledSuccess: options.onSettledSuccess,
+      });
+      if (!options.runSidecar || (primary.status !== undefined && primary.status !== "ok" && primary.status !== "degraded")) {
+        return primary;
+      }
+      const sidecar = await options.runSidecar(runtime, signal);
+      return appendSidecarOutcome(primary, sidecar);
+    },
   });
   return buildScheduledSlotSummary([
     result === null

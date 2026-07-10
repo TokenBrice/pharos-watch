@@ -100,6 +100,21 @@ function buildUnknownScheduleError(cron: string): Error {
   return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
 }
 
+export class ScheduledSlotAggregateError extends Error {
+  readonly scheduleKey: string;
+  readonly slotStartedAt: number;
+  readonly metadata: unknown;
+
+  constructor(scheduleKey: string, slotStartedAt: number, metadata: unknown, cause?: unknown) {
+    super(`Scheduled slot ${scheduleKey}@${slotStartedAt} completed with one or more child errors`);
+    if (cause !== undefined) (this as Error & { cause?: unknown }).cause = cause;
+    this.name = "ScheduledSlotAggregateError";
+    this.scheduleKey = scheduleKey;
+    this.slotStartedAt = slotStartedAt;
+    this.metadata = metadata;
+  }
+}
+
 export async function handleScheduledEvent(
   event: ScheduledEvent,
   env: Env,
@@ -125,19 +140,34 @@ export async function handleScheduledEvent(
     slotBudgetStartedAtMs,
   });
 
-  const slotResult = await runScheduledSlotWithFence(
-    env.DB,
-    scheduleKey,
-    (slotSignal) => {
-      runtime.slotSignal = slotSignal;
-      return Promise.resolve(runner(runtime));
-    },
-    {
-      slotStartedAt,
-      deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
-      ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
-    },
-  );
+  let slotResult;
+  try {
+    slotResult = await runScheduledSlotWithFence(
+      env.DB,
+      scheduleKey,
+      async (slotSignal) => {
+        runtime.slotSignal = slotSignal;
+        const summary = await runner(runtime);
+        if (!summary) return;
+        return {
+          ...summary,
+          fetchBudget: runtime.fetchBudget?.snapshot() ?? null,
+          invocationId: runtime.invocationId ?? null,
+          workerVersion: runtime.workerVersion ?? null,
+        };
+      },
+      {
+        slotStartedAt,
+        invocationId: runtime.invocationId ?? null,
+        workerVersion: runtime.workerVersion ?? null,
+        deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
+        ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
+      },
+    );
+  } catch (error) {
+    if (error instanceof ScheduledSlotAggregateError) throw error;
+    throw new ScheduledSlotAggregateError(scheduleKey, slotStartedAt, null, error);
+  }
 
   if (slotResult.status === "skipped_duplicate") {
     console.info(`[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
@@ -146,5 +176,8 @@ export async function handleScheduledEvent(
   if (slotResult.status === "skipped_running") {
     console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
     return;
+  }
+  if (slotResult.resultStatus === "error") {
+    throw new ScheduledSlotAggregateError(scheduleKey, slotStartedAt, slotResult.metadata);
   }
 }

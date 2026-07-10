@@ -85,7 +85,10 @@ export interface WorkerJobAttemptStatus {
   scheduleKey: string;
   job: string;
   slotStartedAt: number | null;
+  producerPath: string | null;
   producerKind: string;
+  invocationId: string | null;
+  workerVersion: string | null;
   state: WorkerJobAttemptState;
   statusClass: WorkerJobAttemptStatusClass | null;
   attemptNo: number;

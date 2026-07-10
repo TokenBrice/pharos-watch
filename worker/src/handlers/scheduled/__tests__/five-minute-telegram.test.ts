@@ -5,7 +5,7 @@ vi.mock("../../../cron/dispatch-telegram-alerts", () => ({
   dispatchTelegramAlerts: vi.fn(),
 }));
 vi.mock("../../../api/telegram-pulse", () => ({
-  publishTelegramPulseSnapshot: vi.fn(),
+  publishTelegramPulseSnapshotWithOutcome: vi.fn(),
 }));
 vi.mock("../../../cron/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: vi.fn(),
@@ -30,7 +30,7 @@ import { logSkippedCronRun } from "../preflight-skip";
 import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
-import { publishTelegramPulseSnapshot } from "../../../api/telegram-pulse";
+import { publishTelegramPulseSnapshotWithOutcome } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../../api/telegram-store/disambiguation";
 import {
@@ -116,9 +116,16 @@ describe("runFiveMinuteTelegramSlot", () => {
       order.push("cleanup");
       return { status: "ok", itemCount: 0 };
     });
-    vi.mocked(publishTelegramPulseSnapshot).mockImplementation(async () => {
+    vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockImplementation(async () => {
       order.push("pulse");
-      return {} as Awaited<ReturnType<typeof publishTelegramPulseSnapshot>>;
+      return {
+        pulse: { quality: { status: "complete", unavailableFields: [] } },
+        status: "ok",
+        snapshotPublished: true,
+        heavySectionsRecomputed: false,
+        heavyMarkerAdvanced: true,
+        error: null,
+      } as unknown as Awaited<ReturnType<typeof publishTelegramPulseSnapshotWithOutcome>>;
     });
 
     const runtime = buildRuntime();

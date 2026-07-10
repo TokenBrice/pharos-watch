@@ -9,6 +9,7 @@ import {
   type ScheduledSlotJobSummary,
   type ScheduledSlotSummary,
 } from "./slot-summary";
+import { logSkippedCronRun } from "./preflight-skip";
 
 export type ScheduledSlotGroupMode = "serial" | "parallel";
 
@@ -71,6 +72,13 @@ async function runSerialScheduledJobs(
     outcomes.push(summary);
     if (options.stopOnFailure && summary.outcome === "error") {
       const skippedTasks = tasks.slice(index + 1);
+      for (const skippedTask of skippedTasks) {
+        await logSkippedCronRun(runtime, {
+          job: skippedTask.job,
+          reason: `upstream-failure:${task.job}`,
+          message: `${skippedTask.job} did not start because ${task.job} failed`,
+        });
+      }
       outcomes.push(
         ...skippedTasks.map((skippedTask) =>
           summarizeSkippedScheduledJob(skippedTask.job, `upstream-failure:${task.job}`),

@@ -1,4 +1,5 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
+import { getScheduledTaskDescriptor } from "@shared/lib/scheduled-runner-registry";
 import {
   createLeaseOwner,
   getCronTimeoutBudgetMetadata,
@@ -27,6 +28,8 @@ import {
 } from "../../lib/mint-burn-health-config";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
+import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
+import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
@@ -82,6 +85,7 @@ export interface ScheduledRuntimeContext {
   workerVersion?: string | null;
   jobAttemptNo?: number;
   producerKind?: string;
+  fetchBudget?: ScheduledFetchBudget;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
@@ -93,6 +97,41 @@ export interface ScheduledRuntimeContext {
     job: string,
     fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
   ) => Promise<CronResult | void>;
+  runBudgetOnlyTask?: <T>(
+    job: string,
+    fn: (signal: AbortSignal | undefined) => Promise<T>,
+  ) => Promise<T>;
+  getProducerIdentity?: (job: string) => ProducerIdentity;
+}
+
+export function getRuntimeProducerIdentity(
+  runtime: ScheduledRuntimeContext,
+  job: string,
+): ProducerIdentity {
+  if (runtime.getProducerIdentity) return runtime.getProducerIdentity(job);
+  const descriptor = getScheduledTaskDescriptor(runtime.scheduleKey, job);
+  return {
+    scheduleKey: runtime.scheduleKey,
+    job,
+    producerPath: descriptor.producerPath,
+    producerKind: runtime.producerKind ?? descriptor.producerKind,
+    invocationId: runtime.invocationId ?? `scheduled:${runtime.scheduleKey}:${runtime.slotStartedAt}`,
+    workerVersion: runtime.workerVersion ?? null,
+    slotStartedAt: runtime.slotStartedAt,
+    calendarPeriod: descriptor.calendarIdentity === "utc-month"
+      ? utcCalendarMonth(runtime.slotStartedAt)
+      : null,
+  };
+}
+
+export function runRuntimeBudgetOnlyTask<T>(
+  runtime: ScheduledRuntimeContext,
+  job: string,
+  fn: (signal: AbortSignal | undefined) => Promise<T>,
+): Promise<T> {
+  return runtime.runBudgetOnlyTask
+    ? runtime.runBudgetOnlyTask(job, fn)
+    : fn(runtime.slotSignal);
 }
 
 export function parseStablecoinsCapabilities(
@@ -155,7 +194,24 @@ export function createScheduledRuntimeContext(
   const invocationId = createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
   const workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
   const jobAttemptNo = scheduled.jobAttemptNo ?? 1;
-  const producerKind = scheduled.producerKind ?? "scheduled-slot";
+  const producerKind = scheduled.producerKind ?? "scheduled-job";
+  const fetchBudget = new ScheduledFetchBudget();
+  const slotAbortSignal = scheduled.parentSignal;
+  const getProducerIdentity = (job: string): ProducerIdentity => {
+    const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
+    return {
+      scheduleKey: scheduled.scheduleKey,
+      job,
+      producerPath: descriptor.producerPath,
+      producerKind: scheduled.producerKind ?? descriptor.producerKind,
+      invocationId,
+      workerVersion,
+      slotStartedAt: scheduled.slotStartedAt,
+      calendarPeriod: descriptor.calendarIdentity === "utc-month"
+        ? utcCalendarMonth(scheduled.slotStartedAt)
+        : null,
+    };
+  };
 
   const runtime: ScheduledRuntimeContext = {
     db,
@@ -170,6 +226,7 @@ export function createScheduledRuntimeContext(
     workerVersion,
     jobAttemptNo,
     producerKind,
+    fetchBudget,
     ...(scheduled.recoveryCheckpoint ? { recoveryCheckpoint: scheduled.recoveryCheckpoint } : {}),
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
@@ -178,6 +235,10 @@ export function createScheduledRuntimeContext(
     alertWebhookUrl,
     chainRpcs,
     runLeasedCron: async (job, fn) => {
+      const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
+      if (!descriptor.statusTracked) {
+        throw new Error(`${scheduled.scheduleKey}/${job} is budget-only and cannot use runLeasedCron`);
+      }
       const timeoutBudget = resolveCronTimeoutBudget(job, { slotBudgetStartedAtMs });
       const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
       const ledgerEnabled = shouldRecordWorkerJobAttempt({
@@ -187,55 +248,73 @@ export function createScheduledRuntimeContext(
       });
       const ledgerStartedAtMs = Date.now();
       let ledgerIdentity: WorkerJobAttemptIdentity | null = null;
+      let ledgerBootstrapError: unknown = null;
       if (ledgerEnabled) {
         try {
           ledgerIdentity = await createWorkerJobAttempt(db, {
             scheduleKey: scheduled.scheduleKey,
             job,
             slotStartedAt: scheduled.slotStartedAt,
+            producerPath: descriptor.producerPath,
             attemptNo: jobAttemptNo,
             producerKind,
+            invocationId,
+            workerVersion,
           });
         } catch (err) {
           logJobLedgerWriteFailure(job, "worker_job_attempt_create_failed", err);
+          if (workerJobLedgerMode === "write") ledgerBootstrapError = err;
         }
       }
 
-      try {
-        const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+      const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
+        ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
+        : runtime.slotSignal ?? slotAbortSignal;
+
+      return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
+        try {
+          const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+          if (ledgerBootstrapError) throw ledgerBootstrapError;
           const slotMeta = {
             slotStartedAt: scheduled.slotStartedAt,
             scheduleKey: scheduled.scheduleKey,
+            producerPath: descriptor.producerPath,
             invocationId,
             workerVersion,
             attemptNo: jobAttemptNo,
             producerKind,
           };
           const leaseOwner = createLeaseOwner(job);
-          const reportProgressWithLedger: CronProgressReporter = async (update) => {
-            await reportProgress(update);
-            if (!ledgerIdentity) return;
-            try {
-              await heartbeatWorkerJobAttempt(db, {
-                attemptId: ledgerIdentity.attemptId,
+          let ledgerWriteTail = Promise.resolve();
+          const enqueueLedgerWrite = (write: () => Promise<void>, event: string): Promise<void> => {
+            const next = ledgerWriteTail.then(write);
+            ledgerWriteTail = next.catch((err) => {
+              logJobLedgerWriteFailure(job, event, err);
+            });
+            return workerJobLedgerMode === "write" ? next : ledgerWriteTail;
+          };
+          const reportProgressWithLedger: CronProgressReporter = (update) => {
+            const progressWrite = reportProgress(update);
+            if (!ledgerIdentity) return progressWrite;
+            return progressWrite.then(() => enqueueLedgerWrite(
+              () => heartbeatWorkerJobAttempt(db, {
+                attemptId: ledgerIdentity!.attemptId,
                 progress: update,
-              });
-            } catch (err) {
-              logJobLedgerWriteFailure(job, "worker_job_attempt_heartbeat_failed", err);
-            }
+              }),
+              "worker_job_attempt_heartbeat_failed",
+            ));
           };
           const currentLedgerIdentity = ledgerIdentity;
           const recordLeaseState: CronLeaseOptions["onLeaseState"] | undefined = currentLedgerIdentity
             ? async (leaseState) => {
-                try {
-                  await recordWorkerJobAttemptLease(db, {
+                await enqueueLedgerWrite(
+                  () => recordWorkerJobAttemptLease(db, {
                     attemptId: currentLedgerIdentity.attemptId,
                     owner: leaseState.leaseOwner,
                     leaseUntil: leaseState.leaseUntil,
-                  });
-                } catch (err) {
-                  logJobLedgerWriteFailure(job, "worker_job_attempt_lease_state_failed", err);
-                }
+                  }),
+                  "worker_job_attempt_lease_state_failed",
+                );
               }
             : undefined;
           await reportProgressWithLedger({
@@ -318,9 +397,10 @@ export function createScheduledRuntimeContext(
         }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
-          abortSignal: runtime.slotSignal && scheduled.parentSignal
-            ? AbortSignal.any([runtime.slotSignal, scheduled.parentSignal])
-            : runtime.slotSignal ?? scheduled.parentSignal,
+          abortSignal: combinedSlotSignal,
+          producer: {
+            ...getProducerIdentity(job),
+          },
         });
         if (ledgerIdentity) {
           try {
@@ -334,21 +414,33 @@ export function createScheduledRuntimeContext(
           }
         }
         return result;
-      } catch (err) {
-        if (ledgerIdentity) {
-          try {
-            await finishWorkerJobAttempt(db, {
-              attemptId: ledgerIdentity.attemptId,
-              startedAtMs: ledgerStartedAtMs,
-              error: err,
-            });
-          } catch (finishErr) {
-            logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", finishErr);
+        } catch (err) {
+          if (ledgerIdentity) {
+            try {
+              await finishWorkerJobAttempt(db, {
+                attemptId: ledgerIdentity.attemptId,
+                startedAtMs: ledgerStartedAtMs,
+                error: err,
+              });
+            } catch (finishErr) {
+              logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", finishErr);
+            }
           }
+          throw err;
         }
-        throw err;
-      }
+      });
     },
+    runBudgetOnlyTask: (job, fn) => {
+      const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
+      if (descriptor.statusTracked) {
+        throw new Error(`${scheduled.scheduleKey}/${job} is status-tracked and cannot use runBudgetOnlyTask`);
+      }
+      const combinedSignal = runtime.slotSignal && slotAbortSignal
+        ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
+        : runtime.slotSignal ?? slotAbortSignal;
+      return fetchBudget.run(descriptor.maxConnections, combinedSignal, () => fn(combinedSignal));
+    },
+    getProducerIdentity,
   };
   return runtime;
 }

@@ -22,6 +22,7 @@ import {
   summarizeSkippedScheduledJob,
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
+import { logSkippedCronRun } from "./preflight-skip";
 
 export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   const outcomes: ScheduledSlotJobSummary[] = [];
@@ -76,6 +77,11 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     if (stablecoinsCacheSafe) {
       outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn)).summary);
     } else {
+      await logSkippedCronRun(runtime, {
+        job,
+        reason: "stablecoins-cache-unsafe",
+        message: `${job} did not start because the stablecoins cache capability was unavailable`,
+      });
       outcomes.push(summarizeSkippedScheduledJob(job, "stablecoins-cache-unsafe"));
     }
   };

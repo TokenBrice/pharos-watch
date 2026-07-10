@@ -1,11 +1,13 @@
 import {
   flattenScheduledSlotPlanJobs,
+  getScheduledTaskDescriptor,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { markWorkerJobAttemptsAbandonedForSlot } from "./job-ledger";
 import { prepareScheduledCheckpointRecoveryForSlot } from "./scheduled-recovery-checkpoint";
+import { recordProducerOutcome } from "./producer-history";
 
 export interface StaleSlotExecutionArtifact {
   slot_key: string;
@@ -13,6 +15,8 @@ export interface StaleSlotExecutionArtifact {
   state: "running" | "reconciling";
   execution_owner: string;
   execution_generation: number;
+  invocation_id?: string | null;
+  worker_version?: string | null;
   started_at: number;
   updated_at: number;
 }
@@ -160,18 +164,51 @@ async function insertSyntheticStaleCronRun(
     progress.job,
     startedAt,
   ].join(":");
+  const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, progress.job);
+  const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
 
   await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key)
-         VALUES (?, ?, ?, 'error', ?, NULL, ?, ?, ?)
+           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
+            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
+            productive, publication_count, calendar_period)
+         VALUES (?, ?, ?, 'error', ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL)
          ON CONFLICT DO NOTHING`,
       )
-      .bind(progress.job, startedAt, durationMs, error, metadata, slot.slot_started_at, idempotencyKey)
+      .bind(
+        progress.job,
+        startedAt,
+        durationMs,
+        error,
+        metadata,
+        slot.slot_started_at,
+        idempotencyKey,
+        slot.slot_key,
+        descriptor.producerPath,
+        invocationId,
+        slot.worker_version ?? null,
+      )
       .run(),
   );
+  await recordProducerOutcome(db, {
+    scheduleKey: slot.slot_key,
+    job: progress.job,
+    producerPath: descriptor.producerPath,
+    producerKind: "scheduled-job",
+    invocationId,
+    workerVersion: slot.worker_version ?? null,
+    slotStartedAt: slot.slot_started_at,
+    idempotencyKey,
+    invokedAt: startedAt,
+    completedAt: nowSec,
+    outcome: "abandoned",
+    itemCount: null,
+    metadata,
+    error,
+    productivity: { productive: false, reason: "platform-abandoned" },
+  });
 }
 
 async function insertSyntheticNotStartedCronRun(
@@ -181,12 +218,26 @@ async function insertSyntheticNotStartedCronRun(
   nowSec: number,
 ): Promise<boolean> {
   const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
+  const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, job);
+  const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
+  const error = "scheduled slot abandoned before child job started";
+  const metadata = JSON.stringify({
+    reason: "stale-slot-reconciled",
+    failureCategory: "platform-abandoned",
+    childDisposition: "not_started",
+    slotKey: slot.slot_key,
+    slotStartedAt: slot.slot_started_at,
+    slotOwner: slot.execution_owner,
+    reconciledAt: nowSec,
+  });
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key)
-         SELECT ?, ?, 0, 'error', ?, 0, ?, ?, ?
+           (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
+            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
+            productive, publication_count, calendar_period)
+         SELECT ?, ?, 0, 'error', ?, 0, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
           WHERE NOT EXISTS (
             SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
           )
@@ -195,23 +246,36 @@ async function insertSyntheticNotStartedCronRun(
       .bind(
         job,
         nowSec,
-        "scheduled slot abandoned before child job started",
-        JSON.stringify({
-          reason: "stale-slot-reconciled",
-          failureCategory: "platform-abandoned",
-          childDisposition: "not_started",
-          slotKey: slot.slot_key,
-          slotStartedAt: slot.slot_started_at,
-          slotOwner: slot.execution_owner,
-          reconciledAt: nowSec,
-        }),
+        error,
+        metadata,
         slot.slot_started_at,
         idempotencyKey,
+        slot.slot_key,
+        descriptor.producerPath,
+        invocationId,
+        slot.worker_version ?? null,
         job,
         slot.slot_started_at,
       )
       .run(),
   );
+  await recordProducerOutcome(db, {
+    scheduleKey: slot.slot_key,
+    job,
+    producerPath: descriptor.producerPath,
+    producerKind: "scheduled-job",
+    invocationId,
+    workerVersion: slot.worker_version ?? null,
+    slotStartedAt: slot.slot_started_at,
+    idempotencyKey,
+    invokedAt: nowSec,
+    completedAt: nowSec,
+    outcome: "not_started",
+    itemCount: 0,
+    metadata,
+    error,
+    productivity: { productive: false, reason: "platform-abandoned-before-start" },
+  });
   return (result.meta.changes ?? 0) === 1;
 }
 

@@ -111,7 +111,6 @@ async function takeOverAbandonedUnstartedReservation(
             AND response_status = ?
             AND execution_started_at IS NULL
             AND reservation_generation = ?
-            AND reservation_generation > 0
             AND created_at < ?`,
       )
       .bind(

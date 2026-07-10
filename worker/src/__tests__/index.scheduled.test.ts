@@ -26,7 +26,14 @@ const cronMocks = vi.hoisted(() => ({
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramDegradationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   cleanExpiredDisambiguations: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  publishTelegramPulseSnapshot: vi.fn(async () => undefined),
+  publishTelegramPulseSnapshotWithOutcome: vi.fn(async () => ({
+    pulse: { quality: { status: "complete", unavailableFields: [] } },
+    status: "ok",
+    snapshotPublished: true,
+    heavySectionsRecomputed: false,
+    heavyMarkerAdvanced: true,
+    error: null,
+  })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -153,7 +160,49 @@ vi.mock("../cron/telegram-degradation-watchdog", () => ({
 vi.mock("../api/telegram-store/disambiguation", () => ({
   cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
-vi.mock("../api/telegram-pulse", () => ({ publishTelegramPulseSnapshot: cronMocks.publishTelegramPulseSnapshot }));
+vi.mock("../api/telegram-pulse", () => ({
+  publishTelegramPulseSnapshotWithOutcome: cronMocks.publishTelegramPulseSnapshotWithOutcome,
+}));
+vi.mock("../handlers/scheduled/preflight-skip", () => ({
+  logSkippedCronRun: vi.fn(async () => undefined),
+}));
+vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/budget-surface-telemetry")>();
+  return { ...actual, recordBudgetSurfaceTelemetry: vi.fn(async () => undefined) };
+});
+vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
+  return {
+    ...actual,
+    beginScheduledCheckpoint: vi.fn(async (db: D1Database, input: Record<string, unknown>) => ({
+      scheduleKey: input.scheduleKey,
+      slotStartedAt: input.slotStartedAt,
+      job: input.job,
+      attemptNo: 1,
+      executionGeneration: 1,
+      invocationId: input.invocationId,
+      workerVersion: input.workerVersion ?? null,
+      queueHash: input.queueHash,
+      state: "running",
+      nextItemKey: input.nextItemKey ?? null,
+      currentItemKey: null,
+      currentDomainAttemptId: null,
+      itemsDone: 0,
+      itemsTotal: input.itemsTotal ?? 0,
+      childDispositions: {},
+      recoveryOwner: null,
+      recoveryLeaseUntil: null,
+      sourceAttemptNo: null,
+      error: null,
+      createdAt: 0,
+      updatedAt: 0,
+      completedAt: null,
+    })),
+    setScheduledCheckpointChildDisposition: vi.fn(async () => undefined),
+    finishScheduledCheckpoint: vi.fn(async () => undefined),
+    claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
+  };
+});
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
@@ -473,7 +522,7 @@ describe("worker.scheduled", () => {
     const leaseUpdate = db.getHistory().find((entry) => entry.sql.includes("lease_until = ?"));
     expect(leaseUpdate?.binds[1]).toBe(1_777_777_900);
     expect(leaseUpdate?.binds[6]).toBe(
-      "attempt|scheduled-slot|quarterHourly|1775002500|sync-fx-rates|1",
+      "attempt|scheduled-job|quarterHourly|quarterHourly|1775002500|sync-fx-rates|1",
     );
   });
 

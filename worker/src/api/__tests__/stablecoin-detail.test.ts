@@ -421,7 +421,10 @@ describe("handleStablecoinDetail", () => {
 
   it("calls ctx.waitUntil to cache the response", async () => {
     const dlBody = makeDLDetailBody();
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "RETURNING generation", rows: [], first: { generation: 1 } },
+      { match: "cache", rows: [] },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
 
@@ -434,7 +437,8 @@ describe("handleStablecoinDetail", () => {
       entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "detail:usdt-tether"
     );
     expect(detailWrite?.sql).toContain("ON CONFLICT(key) DO UPDATE");
-    expect(detailWrite?.sql).toContain("WHERE cache.updated_at <= excluded.updated_at");
+    expect(detailWrite?.sql).toContain("detail_cache_write_generations");
+    expect(detailWrite?.sql).toContain("generation = ?");
   });
 
   it("passes the CoinGecko API key through the commodity detail path", async () => {

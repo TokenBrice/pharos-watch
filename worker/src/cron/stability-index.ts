@@ -327,6 +327,19 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   console.log(`[stability-index] score=${result.score} band=${result.band}`);
   return {
     itemCount: 1,
+    productivity: {
+      productive: true,
+      reason: "psi-sample-published",
+      publications: [{
+        surface: "psi",
+        generationId: `psi:${now}`,
+        publishedAt: now,
+        candidateRows: 1,
+        publishedRows: 1,
+        expectedRows: 1,
+        validationSummary: { methodologyVersion: PSI_METHODOLOGY_VERSION },
+      }],
+    },
     metadata: JSON.stringify({
       score: result.score,
       band: result.band,

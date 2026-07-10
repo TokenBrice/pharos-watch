@@ -9,7 +9,7 @@ import { toErrorMessage } from "../../lib/error-utils";
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
-import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
+import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { logTelegramEvent } from "../../lib/telegram-log";
@@ -20,7 +20,11 @@ import {
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
 } from "../../lib/telegram-webhook-registration";
-import type { ScheduledRuntimeContext } from "./context";
+import {
+  getRuntimeProducerIdentity,
+  runRuntimeBudgetOnlyTask,
+  type ScheduledRuntimeContext,
+} from "./context";
 import { logSkippedCronRun } from "./preflight-skip";
 import {
   flattenScheduledSlotGroupTasks,
@@ -132,10 +136,29 @@ function buildTelegramSlotGroups(
         {
           job: "telegram-pulse-snapshot",
           errorMessage: "[cron] telegram-pulse-snapshot failed:",
-          run: () =>
-            publishTelegramPulseSnapshot(runtime.db, undefined, {
+          run: async (signal) => {
+            const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
               pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
-            }).then(() => undefined),
+              signal,
+            });
+            return {
+              status: outcome.status,
+              itemCount: outcome.snapshotPublished ? 1 : 0,
+              error: outcome.error ?? undefined,
+              metadata: JSON.stringify({
+                sidecar: "telegram-pulse-snapshot",
+                snapshotPublished: outcome.snapshotPublished,
+                heavySectionsRecomputed: outcome.heavySectionsRecomputed,
+                heavyMarkerAdvanced: outcome.heavyMarkerAdvanced,
+                qualityStatus: outcome.pulse.quality.status,
+                unavailableFields: outcome.pulse.quality.unavailableFields,
+              }),
+              productivity: {
+                productive: outcome.snapshotPublished,
+                reason: outcome.snapshotPublished ? "pulse-snapshot-published" : "pulse-snapshot-write-failed",
+              },
+            };
+          },
         },
       ],
     },
@@ -171,44 +194,49 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       outcome: "skipped",
       skippedReason: "missing-telegram-bot-token",
       metadata: { botTokenConfigured: false },
+      producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
     });
     return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 1 });
   }
 
-  const reconciliationResults = [
-    await runTelegramReconciliation("reconcile-commands", () =>
-      reconcileTelegramCommandRegistration(runtime.db, {
-        botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-        signal: runtime.slotSignal,
-      }),
-    ),
-    await runTelegramReconciliation("reconcile-profile", () =>
-      reconcileTelegramProfileRegistration(runtime.db, {
-        botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-        signal: runtime.slotSignal,
-      }),
-    ),
-    await runTelegramReconciliation(
-      "reconcile-menu",
-      () =>
-        reconcileTelegramMenuButton(runtime.db, {
+  const reconciliationResults = await runRuntimeBudgetOnlyTask(
+    runtime,
+    "telegram-registration-reconciliation",
+    async (signal) => [
+      await runTelegramReconciliation("reconcile-commands", () =>
+        reconcileTelegramCommandRegistration(runtime.db, {
           botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal: runtime.slotSignal,
+          signal,
         }),
-      (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
-    ),
-    await runTelegramReconciliation(
-      "reconcile-webhook",
-      () =>
-        reconcileTelegramWebhookRegistration(runtime.db, {
+      ),
+      await runTelegramReconciliation("reconcile-profile", () =>
+        reconcileTelegramProfileRegistration(runtime.db, {
           botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-          selfUrl: runtime.env.SELF_URL,
-          signal: runtime.slotSignal,
+          signal,
         }),
-      (result) => ({ expectedUrl: result.expectedUrl }),
-    ),
-  ];
+      ),
+      await runTelegramReconciliation(
+        "reconcile-menu",
+        () =>
+          reconcileTelegramMenuButton(runtime.db, {
+            botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+            signal,
+          }),
+        (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
+      ),
+      await runTelegramReconciliation(
+        "reconcile-webhook",
+        () =>
+          reconcileTelegramWebhookRegistration(runtime.db, {
+            botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+            webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+            selfUrl: runtime.env.SELF_URL,
+            signal,
+          }),
+        (result) => ({ expectedUrl: result.expectedUrl }),
+      ),
+    ],
+  );
   const failedReconciliations = reconciliationResults.filter((result) => !result.success);
   await recordBudgetSurfaceTelemetry(runtime.db, {
     surface: "telegram-registration-reconciliation",
@@ -232,6 +260,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         success: result.success,
       })),
     },
+    producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
   });
 
   const summary = await runScheduledSlotGroups(

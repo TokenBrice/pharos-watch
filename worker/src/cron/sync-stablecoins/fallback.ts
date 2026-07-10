@@ -190,5 +190,21 @@ export async function syncViaCoingeckoFallback(
       status: result.status ?? "ok",
     },
   });
-  return result;
+  return {
+    ...result,
+    productivity: {
+      productive: true,
+      reason: "stablecoins-fallback-cache-published",
+      publications: [{
+        surface: "stablecoins",
+        generationId: `stablecoins:${cacheResult.syncStartSec}`,
+        publishedAt: cacheResult.syncStartSec,
+        candidateRows: assets.length,
+        publishedRows: assets.length,
+        expectedRows: assets.length,
+        artifactCacheKey: cacheResult.cacheKey,
+        validationSummary: { publicationPath: "coingecko-fallback" },
+      }],
+    },
+  };
 }

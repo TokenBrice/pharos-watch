@@ -15,7 +15,7 @@ import { generateDailyDigest } from "../../cron/daily-digest";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
-import type { ScheduledRuntimeContext } from "./context";
+import { getRuntimeProducerIdentity, type ScheduledRuntimeContext } from "./context";
 import type { CronResult } from "../../lib/cron-logger";
 import { recordBudgetSurfaceTelemetry, type BudgetSurfaceOutcome } from "../../lib/budget-surface-telemetry";
 import {
@@ -57,6 +57,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       outcome: "skipped",
       skippedReason: "no-pending-request",
       metadata: { pending: false },
+      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
@@ -77,6 +78,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       outcome: "error",
       error: "malformed-payload",
       metadata: { pending: true, cleared: true },
+      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
@@ -172,6 +174,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       dailyDigestOutcome: outcome,
       flagCleared: !leaseLocked,
     },
+    producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
   });
 
   // Do not re-throw: logCronRun (inside runLeasedCron) already wrote the

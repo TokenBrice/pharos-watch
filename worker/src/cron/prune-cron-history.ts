@@ -7,6 +7,7 @@ import { pruneWorkerJobAttempts } from "../lib/job-ledger";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-checks";
 import { pruneScheduledRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
+import { pruneProducerHistory } from "../lib/producer-history";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -77,6 +78,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   const jobAttemptsDeleted = await pruneWorkerJobAttempts(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
+  const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
+  throwIfAborted(signal);
   const repairTasksDeleted = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
   const canaryRunsDeleted = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
@@ -126,6 +129,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     itemCount:
       cronRunsDeleted +
       jobAttemptsDeleted +
+      producerHistoryDeleted +
       repairTasksDeleted +
       canaryRunsDeleted +
       recoveryCheckpointsDeleted +
@@ -135,6 +139,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     metadata: {
       cronRunsDeleted,
       jobAttemptsDeleted,
+      producerHistoryDeleted,
       repairTasksDeleted,
       canaryRunsDeleted,
       recoveryCheckpointsDeleted,

@@ -28,9 +28,7 @@ describe("logSkippedCronRun", () => {
 
   it("records skipped preflight runs as degraded by default", async () => {
     const run = vi.fn(async () => ({ meta: { changes: 1 } }));
-    let boundArgs: unknown[] = [];
-    const bind = vi.fn((...args: unknown[]) => {
-      boundArgs = args;
+    const bind = vi.fn((..._args: unknown[]) => {
       return { run };
     });
     const prepare = vi.fn(() => ({ bind })) as unknown as D1Database["prepare"];
@@ -45,14 +43,19 @@ describe("logSkippedCronRun", () => {
     expect(bind).toHaveBeenCalledWith(
       "sync-dex-liquidity",
       expect.any(Number),
-      0,
       "degraded",
-      0,
       expect.any(String),
       1_772_000_000,
       "scheduled-preflight:halfHourlyOffset:1772000000:sync-dex-liquidity:circuit-open",
+      "halfHourlyOffset",
+      "halfHourlyOffset",
+      "scheduled-job",
+      "scheduled:halfHourlyOffset:1772000000",
+      null,
+      null,
     );
-    const metadata = JSON.parse(String(boundArgs[5])) as Record<string, unknown>;
+    const cronRunBinds = bind.mock.calls[0];
+    const metadata = JSON.parse(String(cronRunBinds[3])) as Record<string, unknown>;
     expect(metadata).toMatchObject({
       circuitSource: "dex-liquidity",
       skippedReason: "circuit-open",
@@ -65,19 +68,17 @@ describe("logSkippedCronRun", () => {
 
   it("allows explicitly benign skip rows", async () => {
     const run = vi.fn(async () => ({ meta: { changes: 1 } }));
-    let boundArgs: unknown[] = [];
-    const bind = vi.fn((...args: unknown[]) => {
-      boundArgs = args;
+    const bind = vi.fn((..._args: unknown[]) => {
       return { run };
     });
     const prepare = vi.fn(() => ({ bind })) as unknown as D1Database["prepare"];
 
     await logSkippedCronRun(buildRuntime(prepare), {
-      job: "telegram-pulse-snapshot",
+      job: "sync-dex-liquidity",
       reason: "manually-disabled",
       status: "ok",
     });
 
-    expect(boundArgs[3]).toBe("ok");
+    expect(bind.mock.calls[0][2]).toBe("ok");
   });
 });

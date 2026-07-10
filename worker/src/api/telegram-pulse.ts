@@ -7,6 +7,8 @@ import {
   type TelegramWatcherHistoryPoint,
 } from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
+import { throwIfAborted } from "../lib/abort";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   coerceCount,
   computeTelegramCurrentLifecycleSnapshot,
@@ -28,6 +30,21 @@ const PUBLIC_LOW_CARDINALITY_THRESHOLD = 5;
 
 interface TelegramPulseSnapshotOptions {
   pendingCapacitySnapshot?: { active: number } | null;
+  signal?: AbortSignal;
+}
+
+interface BuiltTelegramPulseSnapshot {
+  pulse: TelegramPulse;
+  heavySectionsRecomputed: boolean;
+}
+
+export interface TelegramPulsePublicationOutcome {
+  pulse: TelegramPulse;
+  status: "ok" | "degraded" | "error";
+  snapshotPublished: boolean;
+  heavySectionsRecomputed: boolean;
+  heavyMarkerAdvanced: boolean;
+  error: string | null;
 }
 
 interface CachedTelegramPulse {
@@ -258,12 +275,12 @@ async function loadPulseHeavySectionsUpdatedAt(
   return cachedPulse?.updatedAt ?? null;
 }
 
-async function recordPulseHeavySectionsUpdatedAt(db: D1Database, nowSec: number): Promise<void> {
-  try {
-    await setCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY, String(nowSec));
-  } catch {
-    // Heavy-section freshness is an optimization marker, not a response dependency.
-  }
+async function recordPulseHeavySectionsUpdatedAt(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  await setCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY, String(nowSec), signal);
 }
 
 async function loadFreshTelegramPulseSnapshot(
@@ -279,7 +296,8 @@ async function buildTelegramPulseSnapshot(
   db: D1Database,
   nowSec: number,
   options: TelegramPulseSnapshotOptions = {},
-): Promise<TelegramPulse> {
+): Promise<BuiltTelegramPulseSnapshot> {
+  throwIfAborted(options.signal);
   const cachedPulse = await loadCachedTelegramPulseSnapshot(db);
   const heavySectionsUpdatedAt = await loadPulseHeavySectionsUpdatedAt(db, cachedPulse);
   const reusablePulse =
@@ -351,9 +369,6 @@ async function buildTelegramPulseSnapshot(
             : null,
         };
       })();
-  if (!reusablePulse) {
-    await recordPulseHeavySectionsUpdatedAt(db, nowSec);
-  }
   if (reusablePulse) {
     for (const field of reusablePulse.quality.unavailableFields) {
       if (field !== "pendingDeliveries") unavailableFields.add(field);
@@ -361,7 +376,7 @@ async function buildTelegramPulseSnapshot(
   }
   const qualityUnavailableFields = [...unavailableFields].sort();
 
-  return {
+  const pulse: TelegramPulse = {
     activeWatchers: currentSnapshot.activeWatchers,
     coinSubscriptions: currentSnapshot.explicitCoinFollows + currentSnapshot.presetImpliedCoinFollows,
     explicitCoinSubscriptions: currentSnapshot.explicitCoinFollows,
@@ -402,6 +417,50 @@ async function buildTelegramPulseSnapshot(
     updatedAt: nowSec,
     updatedEverySeconds: TELEGRAM_PULSE_CACHE_SECONDS,
   };
+  return { pulse, heavySectionsRecomputed: !reusablePulse };
+}
+
+export async function publishTelegramPulseSnapshotWithOutcome(
+  db: D1Database,
+  nowSec = Math.floor(Date.now() / 1000),
+  options: TelegramPulseSnapshotOptions = {},
+): Promise<TelegramPulsePublicationOutcome> {
+  const built = await buildTelegramPulseSnapshot(db, nowSec, options);
+  throwIfAborted(options.signal);
+  try {
+    await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(built.pulse), options.signal);
+  } catch (error) {
+    throwIfAborted(options.signal);
+    return {
+      pulse: built.pulse,
+      status: "error",
+      snapshotPublished: false,
+      heavySectionsRecomputed: built.heavySectionsRecomputed,
+      heavyMarkerAdvanced: false,
+      error: toErrorMessage(error),
+    };
+  }
+
+  let heavyMarkerAdvanced = !built.heavySectionsRecomputed;
+  let markerError: string | null = null;
+  if (built.heavySectionsRecomputed) {
+    try {
+      await recordPulseHeavySectionsUpdatedAt(db, nowSec, options.signal);
+      heavyMarkerAdvanced = true;
+    } catch (error) {
+      throwIfAborted(options.signal);
+      markerError = toErrorMessage(error);
+    }
+  }
+
+  return {
+    pulse: built.pulse,
+    status: markerError || built.pulse.quality.status !== "complete" ? "degraded" : "ok",
+    snapshotPublished: true,
+    heavySectionsRecomputed: built.heavySectionsRecomputed,
+    heavyMarkerAdvanced,
+    error: markerError,
+  };
 }
 
 export async function publishTelegramPulseSnapshot(
@@ -409,13 +468,7 @@ export async function publishTelegramPulseSnapshot(
   nowSec = Math.floor(Date.now() / 1000),
   options: TelegramPulseSnapshotOptions = {},
 ): Promise<TelegramPulse> {
-  const pulse = await buildTelegramPulseSnapshot(db, nowSec, options);
-  try {
-    await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(pulse));
-  } catch {
-    // Snapshot cache writes must not block status/pulse responses or cron sidecars.
-  }
-  return pulse;
+  return (await publishTelegramPulseSnapshotWithOutcome(db, nowSec, options)).pulse;
 }
 
 /**

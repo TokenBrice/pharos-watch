@@ -22,6 +22,8 @@ export interface ScheduledSlotExecutionOptions {
   preSweepStale?: boolean;
   preSweepLimit?: number;
   deadlineMs?: number;
+  invocationId?: string | null;
+  workerVersion?: string | null;
 }
 
 export interface ScheduledSlotExecutionResult {
@@ -49,6 +51,8 @@ type SlotExecutionRow = {
   state: string;
   execution_owner: string;
   execution_generation: number;
+  invocation_id: string | null;
+  worker_version: string | null;
   started_at: number;
   updated_at: number;
 };
@@ -114,7 +118,7 @@ async function getScheduledSlotExecution(
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state, execution_owner, execution_generation, started_at, updated_at
+        `SELECT state, execution_owner, execution_generation, invocation_id, worker_version, started_at, updated_at
            FROM cron_slot_executions
            WHERE slot_key = ? AND slot_started_at = ?`,
       )
@@ -145,7 +149,8 @@ async function listStaleScheduledSlotExecutions(
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at
+        `SELECT slot_key, slot_started_at, state, execution_owner, execution_generation,
+                invocation_id, worker_version, started_at, updated_at
            FROM cron_slot_executions
            WHERE ${predicates.join("\n             AND ")}
            ORDER BY updated_at ASC, slot_started_at ASC
@@ -321,6 +326,8 @@ async function claimScheduledSlotExecution(
   slotStartedAt: number,
   owner: string,
   staleAfterSec: number,
+  invocationId: string | null,
+  workerVersion: string | null,
 ): Promise<ScheduledSlotClaimResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
@@ -329,10 +336,10 @@ async function claimScheduledSlotExecution(
       .prepare(
         `INSERT OR IGNORE INTO cron_slot_executions
            (slot_key, slot_started_at, state, result_status, execution_owner, execution_generation,
-            started_at, finished_at, updated_at, metadata)
-         VALUES (?, ?, 'running', NULL, ?, 1, ?, NULL, ?, NULL)`,
+            invocation_id, worker_version, started_at, finished_at, updated_at, metadata)
+         VALUES (?, ?, 'running', NULL, ?, 1, ?, ?, ?, NULL, ?, NULL)`,
       )
-      .bind(slotKey, slotStartedAt, owner, nowSec, nowSec)
+      .bind(slotKey, slotStartedAt, owner, invocationId, workerVersion, nowSec, nowSec)
       .run(),
   );
   if ((inserted.meta.changes ?? 0) > 0) {
@@ -357,6 +364,8 @@ async function claimScheduledSlotExecution(
       state: "running",
       execution_owner: existing.execution_owner,
       execution_generation: existing.execution_generation,
+      invocation_id: existing.invocation_id,
+      worker_version: existing.worker_version,
       started_at: existing.started_at,
       updated_at: existing.updated_at,
     };
@@ -376,6 +385,8 @@ async function claimScheduledSlotExecution(
           `UPDATE cron_slot_executions
            SET execution_owner = ?,
                execution_generation = execution_generation + 1,
+               invocation_id = ?,
+               worker_version = ?,
                started_at = ?,
                updated_at = ?,
                finished_at = NULL,
@@ -391,6 +402,8 @@ async function claimScheduledSlotExecution(
         )
         .bind(
           owner,
+          invocationId,
+          workerVersion,
           nowSec,
           nowSec,
           JSON.stringify({ staleSlotTakeover }),
@@ -553,7 +566,15 @@ export async function runScheduledSlotWithFence(
       console.warn(`[cron-slot] Failed to pre-sweep stale slots for ${slotKey}:`, err);
     }
   }
-  const claimResult = await claimScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, staleAfterSec);
+  const claimResult = await claimScheduledSlotExecution(
+    db,
+    slotKey,
+    opts.slotStartedAt,
+    owner,
+    staleAfterSec,
+    opts.invocationId ?? null,
+    opts.workerVersion ?? null,
+  );
 
   if (claimResult.status === "duplicate") {
     return {

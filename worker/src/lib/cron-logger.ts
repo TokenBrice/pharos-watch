@@ -10,7 +10,14 @@ import {
   type ResolvedCronTimeoutBudget,
 } from "./cron-lease";
 import { setCache } from "./db-cache";
+import {
+  recordProducerOutcome,
+  type CronProductivity,
+  type ProducerIdentity,
+  type ProducerOutcome,
+} from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
+import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -234,6 +241,8 @@ export interface CronResult {
    * other stage result shapes.
    */
   aborted?: true;
+  /** Explicit productive-output/publication contract for durable producer history. */
+  productivity?: CronProductivity;
 }
 
 export interface CronProgressUpdate {
@@ -251,6 +260,64 @@ export interface CronRunLoggerOptions {
   slotStartedAt?: number | null;
   timeoutBudget?: ResolvedCronTimeoutBudget;
   abortSignal?: AbortSignal;
+  producer?: Omit<ProducerIdentity, "job">;
+}
+
+const NON_PRODUCTIVE_REASONS = new Set([
+  "already_written_today",
+  "already_written_today_before_freshness_gate",
+  "cadence_bucket_completed",
+  "cadence_bucket_in_progress",
+  "circuit-open",
+  "no-pending-request",
+  "not-due-today",
+]);
+
+export function inferCronProductivity(result: CronResult | null | void): CronProductivity {
+  if (result?.productivity) return result.productivity;
+  const status = result?.status ?? "ok";
+  if (status === "error" || status === "skipped_locked" || status === "skipped_neutral") {
+    return { productive: false, reason: status };
+  }
+  const metadata = result?.metadata ? (() => {
+    try {
+      const parsed = JSON.parse(result.metadata) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : null;
+    } catch {
+      return null;
+    }
+  })() : null;
+  const reason = typeof metadata?.reason === "string" ? metadata.reason : null;
+  if (reason && NON_PRODUCTIVE_REASONS.has(reason)) {
+    return { productive: false, reason };
+  }
+  if (
+    metadata?.cacheWriteMode === "skipped-newer"
+    || metadata?.cacheWriteSucceeded === false
+    || metadata?.lastWriteAdvanced === false
+  ) {
+    return { productive: false, reason: "canonical-write-not-advanced" };
+  }
+  if (metadata?.lastWriteAdvanced === true) {
+    return { productive: true, reason: "canonical-write-advanced" };
+  }
+  if (metadata?.published === true || metadata?.publicationPointerWritten === true) {
+    return { productive: true, reason: "publication-confirmed" };
+  }
+  if (typeof result?.itemCount === "number" && result.itemCount > 0) {
+    return { productive: true, reason: "positive-item-count" };
+  }
+  return { productive: false, reason: reason ?? "no-productive-output" };
+}
+
+function producerOutcomeForResult(result: CronResult | null | void): ProducerOutcome {
+  return result?.status ?? "ok";
+}
+
+function producerOutcomeForError(error: unknown): ProducerOutcome {
+  return error instanceof CronJobAbandonedError ? "abandoned" : "error";
 }
 
 // --- Internal helpers ---
@@ -341,7 +408,8 @@ export async function logCronRun(
     leaseOwner: null,
     metadata: null,
   };
-  const reportProgress: CronProgressReporter = async (update) => {
+  let progressWriteTail = Promise.resolve();
+  const reportProgress: CronProgressReporter = (update) => {
     progressActivated = true;
     progressState = {
       stage: update.stage === undefined ? progressState.stage : (update.stage ?? null),
@@ -351,11 +419,15 @@ export async function logCronRun(
       leaseOwner: update.leaseOwner === undefined ? progressState.leaseOwner : (update.leaseOwner ?? null),
       metadata: update.metadata === undefined ? progressState.metadata : (update.metadata ?? null),
     };
-    try {
-      await upsertCronProgress(db, job, startSec, slotStartedAt, progressState);
-    } catch (err) {
-      console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
-    }
+    const snapshot = { ...progressState };
+    progressWriteTail = progressWriteTail.then(async () => {
+      try {
+        await upsertCronProgress(db, job, startSec, slotStartedAt, snapshot);
+      } catch (err) {
+        console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
+      }
+    });
+    return progressWriteTail;
   };
   try {
     if (timeoutBudget.exhausted) {
@@ -409,65 +481,163 @@ export async function logCronRun(
 
     resolvedResult = race.outcome.value;
     const resultStatus = resolvedResult?.status ?? "ok";
-    await runWithOverloadRetry(() =>
-      db
-        .prepare(
+    const completedAt = Math.floor(Date.now() / 1000);
+    const productivity = inferCronProductivity(resolvedResult);
+    const publicationCount = productivity.publications?.length ?? 0;
+    const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata).metadata;
+    const producer = options?.producer;
+    if (producer) {
+      await runWithOverloadRetry(() =>
+        db.prepare(
           `INSERT INTO cron_runs
-             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key,
+              schedule_key, producer_path, producer_kind, invocation_id, worker_version,
+              productive, publication_count, calendar_period)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT DO NOTHING`,
-        )
-        .bind(
+        ).bind(
           job,
           startSec,
           Date.now() - startMs,
           resultStatus,
           resolvedResult?.itemCount ?? null,
-          resolvedResult?.metadata ?? null,
+          persistedMetadata,
           slotStartedAt,
           resolvedResult?.error ?? null,
           cronRunIdempotencyKey,
-        )
-        .run(),
-    );
-    if (resultStatus === "error" && alertFn) {
-      await Promise.resolve(
-        alertFn(`Cron ${job} returned error status`, resolvedResult?.error ?? resolvedResult?.metadata ?? ""),
-      ).catch(() => {});
-    }
-  } catch (e) {
-    const terminalMetadata = serializeTerminalCronMetadata(e);
-    try {
+          producer.scheduleKey,
+          producer.producerPath,
+          producer.producerKind,
+          producer.invocationId,
+          producer.workerVersion ?? null,
+          productivity.productive ? 1 : 0,
+          publicationCount,
+          producer.calendarPeriod ?? null,
+        ).run(),
+      );
+      await recordProducerOutcome(db, {
+        ...producer,
+        job,
+        idempotencyKey: cronRunIdempotencyKey,
+        invokedAt: startSec,
+        completedAt,
+        outcome: producerOutcomeForResult(resolvedResult),
+        itemCount: resolvedResult?.itemCount ?? null,
+        metadata: persistedMetadata,
+        error: resolvedResult?.error ?? null,
+        productivity,
+      });
+    } else {
       await runWithOverloadRetry(() =>
         db
           .prepare(
             `INSERT INTO cron_runs
-               (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT DO NOTHING`,
           )
           .bind(
             job,
             startSec,
             Date.now() - startMs,
-            "error",
-            String(e),
-            terminalMetadata,
+            resultStatus,
+            resolvedResult?.itemCount ?? null,
+            persistedMetadata,
             slotStartedAt,
+            resolvedResult?.error ?? null,
             cronRunIdempotencyKey,
           )
           .run(),
       );
+    }
+    if (resultStatus === "error" && alertFn) {
+      await Promise.resolve(
+        alertFn(`Cron ${job} returned error status`, resolvedResult?.error ?? resolvedResult?.metadata ?? ""),
+      ).catch(() => {});
+    }
+  } catch (e) {
+    const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
+    try {
+      const completedAt = Math.floor(Date.now() / 1000);
+      const producer = options?.producer;
+      if (producer) {
+        await runWithOverloadRetry(() =>
+          db.prepare(
+            `INSERT INTO cron_runs
+               (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key,
+                schedule_key, producer_path, producer_kind, invocation_id, worker_version,
+                productive, publication_count, calendar_period)
+             VALUES (?, ?, ?, 'error', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+             ON CONFLICT(idempotency_key) DO UPDATE SET
+               status = 'error',
+               error = excluded.error,
+               metadata = COALESCE(excluded.metadata, cron_runs.metadata),
+               productive = 0,
+               publication_count = 0`,
+          ).bind(
+            job,
+            startSec,
+            Date.now() - startMs,
+            String(e),
+            terminalMetadata,
+            slotStartedAt,
+            cronRunIdempotencyKey,
+            producer.scheduleKey,
+            producer.producerPath,
+            producer.producerKind,
+            producer.invocationId,
+            producer.workerVersion ?? null,
+            producer.calendarPeriod ?? null,
+          ).run(),
+        );
+        await recordProducerOutcome(db, {
+          ...producer,
+          job,
+          idempotencyKey: cronRunIdempotencyKey,
+          invokedAt: startSec,
+          completedAt,
+          outcome: producerOutcomeForError(e),
+          itemCount: null,
+          metadata: terminalMetadata,
+          error: String(e),
+          productivity: { productive: false, reason: producerOutcomeForError(e) },
+        });
+      } else {
+        await runWithOverloadRetry(() =>
+          db
+            .prepare(
+              `INSERT INTO cron_runs
+                 (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT DO NOTHING`,
+            )
+            .bind(
+              job,
+              startSec,
+              Date.now() - startMs,
+              "error",
+              String(e),
+              terminalMetadata,
+              slotStartedAt,
+              cronRunIdempotencyKey,
+            )
+            .run(),
+        );
+      }
     } catch (logErr) {
       console.error(`[db] Failed to log cron error for ${job}:`, logErr);
     }
-    // Alert on cron failure (non-blocking)
+    // Durable brokers and delivery adapters must settle before the scheduled
+    // invocation exits so a platform stop cannot lose the terminal alert.
     if (alertFn) {
-      void Promise.resolve(alertFn(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`)).catch(() => {});
+      await Promise.resolve(
+        alertFn(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`),
+      ).catch(() => {});
     }
     throw e;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);
+    await progressWriteTail;
     if (progressActivated) {
       try {
         await clearCronProgress(db, job);

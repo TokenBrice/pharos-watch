@@ -73,7 +73,6 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
             record.response_status !== expectedStatus ||
             record.execution_started_at != null ||
             record.reservation_generation !== expectedGeneration ||
-            record.reservation_generation <= 0 ||
             record.created_at >= cutoff
           ) {
             return { success: true, meta: { changes: 0 } };
@@ -245,6 +244,36 @@ describe("runIdempotentAdminAction", () => {
     expect(recovered.status).toBe(202);
     expect(calls).toBe(1);
     expect(pending.reservation_generation).toBe(2);
+    expect(pending.response_status).toBe(202);
+    vi.restoreAllMocks();
+  });
+
+  it("compatibly takes over a stranded legacy generation-zero reservation", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = makeIdempotencyDb({ failBeginOnce: true });
+    await runIdempotentAdminAction(
+      db,
+      "reset-blacklist-sync",
+      request("legacy-generation-zero"),
+      async () => Response.json({ impossible: true }),
+    );
+    const pending = db.getRecord("reset-blacklist-sync", "legacy-generation-zero")!;
+    pending.reservation_generation = 0;
+    pending.reservation_owner = null;
+    pending.created_at = now - 20 * 60 - 1;
+
+    let calls = 0;
+    const recovered = await runIdempotentAdminAction(
+      db,
+      "reset-blacklist-sync",
+      request("legacy-generation-zero"),
+      async () => Response.json({ calls: ++calls }, { status: 202 }),
+    );
+
+    expect(recovered.status).toBe(202);
+    expect(calls).toBe(1);
+    expect(pending.reservation_generation).toBe(1);
     expect(pending.response_status).toBe(202);
     vi.restoreAllMocks();
   });
