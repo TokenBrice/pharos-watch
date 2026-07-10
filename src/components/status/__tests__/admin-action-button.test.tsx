@@ -52,6 +52,12 @@ function requestIdempotencyKey(callIndex: number): string | null {
   return new Headers(init?.headers).get("Idempotency-Key");
 }
 
+function selectAsset(search: string, optionName: RegExp): void {
+  fireEvent.click(screen.getByRole("button", { name: "Add stablecoin..." }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Search coins" }), { target: { value: search } });
+  fireEvent.click(screen.getByRole("option", { name: optionName }));
+}
+
 const fetchMock = vi.fn<typeof fetch>();
 
 describe("AdminActionButton", () => {
@@ -76,9 +82,7 @@ describe("AdminActionButton", () => {
     renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" })]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
-    fireEvent.change(screen.getByLabelText("Stablecoin ID"), {
-      target: { value: "cadd-cad-digital" },
-    });
+    selectAsset("CAD Digital", /CAD Digital.*CADD/i);
     fireEvent.click(screen.getByLabelText(/Allow constant-price fallback for non-USD backfill/i));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -91,6 +95,38 @@ describe("AdminActionButton", () => {
       "/api/admin/backfill-supply-history?stablecoin=cadd-cad-digital&allow-constant-price-fallback=true",
     );
     expect(init?.method).toBe("POST");
+  });
+
+  it("derives symbol-scoped requests from a tracked stablecoin selection", async () => {
+    renderActions([
+      makeAction({
+        label: "Repair Symbol Rows",
+        path: "/api/repair-symbol-rows",
+        acceptsStablecoinFilter: true,
+        scope: { ...ASSET_SCOPE, assetIdentifier: "symbol", queryParam: "symbol" },
+        risk: "moderate",
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Repair Symbol Rows" }));
+    selectAsset("Tether", /Tether.*USDT/i);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/repair-symbol-rows?symbol=USDT");
+  });
+
+  it("locks the selected asset after an execution settles", async () => {
+    renderActions([
+      makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    selectAsset("CAD Digital", /CAD Digital.*CADD/i);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect((screen.getByRole("button", { name: "Remove CAD Digital" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("does not show non-USD fallback toggle for non-supply actions", () => {

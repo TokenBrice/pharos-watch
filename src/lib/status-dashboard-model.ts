@@ -677,13 +677,30 @@ function buildDashboardNotices({
   return notices;
 }
 
+interface DashboardSectionPriority {
+  active: boolean;
+  severity: number;
+  publicImpact: number;
+  evidenceRisk: number;
+  persistence: number;
+  count: number;
+}
+
+const NO_SECTION_PRIORITY: DashboardSectionPriority = {
+  active: false,
+  severity: 0,
+  publicImpact: 0,
+  evidenceRisk: 0,
+  persistence: 0,
+  count: 0,
+};
+
 function buildSectionPriority({
   data,
   healthData,
   browserProbeSummary,
   issueGroups,
   evidence,
-  recommendedActions,
   commsModel,
 }: {
   data: StatusResponse;
@@ -691,9 +708,8 @@ function buildSectionPriority({
   browserProbeSummary: BrowserProbeSummary | null;
   issueGroups: DashboardIssueGroups;
   evidence: DashboardEvidence;
-  recommendedActions: readonly StatusActionRecommendation[];
   commsModel: CommsWorkbenchModel;
-}): Record<DashboardSectionId, number> {
+}): Record<DashboardSectionId, DashboardSectionPriority> {
   const evidencePriority =
     evidence.state === "stale" || evidence.state === "unavailable" ? 2 : evidence.state === "partial" ? 1 : 0;
   const reliabilityStatus = Math.max(
@@ -701,7 +717,6 @@ function buildSectionPriority({
     healthData ? STATUS_PRIORITY[healthData.status] : 0,
     browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
     data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
-    evidencePriority,
   );
   const cronStatus =
     data.summary.availabilityImpactingConsecutiveCronErrors > 0
@@ -711,32 +726,80 @@ function buildSectionPriority({
         : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0
           ? 1
           : 0;
-  const actionsStatus = recommendedActions.length > 0 ? 2 : 0;
-  const commsStatus = commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "healthy" ? 0 : 1;
+  const commsStatus =
+    commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "degraded" ? 1 : 0;
+  const pipelineIssues = [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance].filter(
+    (issue) => issue.layer === "data-quality",
+  );
+  const pipelinePublicImpact = pipelineIssues.some((issue) => issue.publicImpacting) ? 1 : 0;
+  const reliabilityPublicImpact =
+    data.availabilityStatus !== "healthy" ||
+    (healthData != null && healthData.status !== "healthy") ||
+    (browserProbeSummary?.failCount ?? 0) > 0
+      ? 1
+      : 0;
+  const commsCount = commsModel.delivery.pendingDeliveries ?? 0;
 
   return {
-    overview: 999,
-    pipeline:
-      STATUS_PRIORITY[data.dataQualityStatus] * 100 +
-      [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance].filter(
-        (issue) => issue.layer === "data-quality",
-      ).length,
-    crons:
-      cronStatus * 100 +
-      data.summary.availabilityImpactingUnhealthyCrons * 10 +
-      data.summary.availabilityImpactingCronErrors,
-    reliability:
-      reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
-    actions: actionsStatus * 100 + recommendedActions.length,
-    credentials: 0,
-    comms: commsStatus === 0 ? 0 : commsStatus * 100 + (commsModel.delivery.pendingDeliveries ?? 0),
-    history: -1,
+    overview: NO_SECTION_PRIORITY,
+    pipeline: {
+      active: STATUS_PRIORITY[data.dataQualityStatus] > 0 || pipelineIssues.length > 0,
+      severity: STATUS_PRIORITY[data.dataQualityStatus],
+      publicImpact: pipelinePublicImpact,
+      evidenceRisk: 0,
+      persistence: 0,
+      count: pipelineIssues.length,
+    },
+    crons: {
+      active: cronStatus > 0,
+      severity: cronStatus,
+      publicImpact:
+        data.summary.availabilityImpactingUnhealthyCrons > 0 || data.summary.availabilityImpactingCronErrors > 0 ? 1 : 0,
+      evidenceRisk: 0,
+      persistence: data.summary.availabilityImpactingConsecutiveCronErrors,
+      count:
+        data.summary.availabilityImpactingUnhealthyCrons +
+        data.summary.availabilityImpactingCronErrors +
+        data.summary.degradedCrons +
+        data.summary.watchUnhealthyCrons,
+    },
+    reliability: {
+      active: reliabilityStatus > 0 || evidencePriority > 0,
+      severity: reliabilityStatus,
+      publicImpact: reliabilityPublicImpact,
+      evidenceRisk: evidencePriority,
+      persistence: 0,
+      count: (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
+    },
+    // Recommendations are attached to their causal lane in Triage. The
+    // catalog remains directly reachable, but it is not a duplicate cause.
+    actions: NO_SECTION_PRIORITY,
+    credentials: NO_SECTION_PRIORITY,
+    comms: {
+      active: commsModel.delivery.health !== "healthy",
+      severity: commsStatus,
+      publicImpact: commsModel.delivery.health === "failed" ? 1 : 0,
+      evidenceRisk: commsModel.delivery.health === "unknown" ? 2 : 0,
+      persistence: commsModel.delivery.oldestBacklogAgeSec ?? 0,
+      count: commsCount,
+    },
+    history: NO_SECTION_PRIORITY,
   };
+}
+
+function compareSectionPriority(left: DashboardSectionPriority, right: DashboardSectionPriority): number {
+  const leftTuple = [left.severity, left.publicImpact, left.evidenceRisk, left.persistence, left.count];
+  const rightTuple = [right.severity, right.publicImpact, right.evidenceRisk, right.persistence, right.count];
+  for (let index = 0; index < leftTuple.length; index += 1) {
+    const delta = (rightTuple[index] ?? 0) - (leftTuple[index] ?? 0);
+    if (delta !== 0) return delta;
+  }
+  return 0;
 }
 
 function buildAttentionSections(
   sections: readonly DashboardSection[],
-  sectionPriority: Record<DashboardSectionId, number>,
+  sectionPriority: Record<DashboardSectionId, DashboardSectionPriority>,
 ): DashboardSection[] {
   const sectionOrder: DashboardSectionId[] = [
     "overview",
@@ -750,9 +813,9 @@ function buildAttentionSections(
   ];
   return sections
     .filter((section) => section.id !== "overview" && section.id !== "credentials" && section.id !== "history")
-    .filter((section) => sectionPriority[section.id] > 0)
+    .filter((section) => sectionPriority[section.id].active)
     .sort((a, b) => {
-      const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
+      const priorityDelta = compareSectionPriority(sectionPriority[a.id], sectionPriority[b.id]);
       if (priorityDelta !== 0) return priorityDelta;
 
       return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
@@ -1048,7 +1111,6 @@ export function buildStatusDashboardData({
     browserProbeSummary,
     issueGroups,
     evidence,
-    recommendedActions,
     commsModel,
   });
   const baseSections = buildDashboardSections({

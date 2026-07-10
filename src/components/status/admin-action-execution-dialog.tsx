@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CoinSelector } from "@/components/coin-selector";
 import type {
   AdminActionDialogState,
   AdminActionExecution,
@@ -22,6 +24,7 @@ import {
   extractStructuredActionOutcome,
   getSafeActionFollowUpHref,
 } from "@/lib/actions-workbench-model";
+import type { CoinOption } from "@/lib/compare-types";
 
 const STATUS_LABEL: Record<AdminActionExecution["status"], string> = {
   ready: "Ready",
@@ -64,6 +67,12 @@ const RESULT_MODE_LABEL = {
 const PHAROS_REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
 const EMPTY_READINESS_CHECKS = [] as const;
 const NOOP_SUBSCRIBE = () => () => {};
+const ADMIN_ASSET_OPTIONS: CoinOption[] = CLIENT_TRACKED_STABLECOINS.map(({ id, name, symbol, status }) => ({
+  id,
+  name,
+  symbol,
+  frozen: status === "frozen",
+}));
 
 function getRunbookUrl(runbookPath: string): string {
   return `${PHAROS_REPOSITORY_BLOB_URL}/${runbookPath}`;
@@ -178,11 +187,15 @@ export function AdminActionExecutionDialog({
       : true
     : false;
   const [scopeMode, setScopeMode] = useState<"single" | "batch">("single");
-  const [assetFilter, setAssetFilter] = useState("");
+  const [selectedAsset, setSelectedAsset] = useState<CoinOption | null>(null);
   const [dryRun, setDryRun] = useState(initialDryRun);
   const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
   const [broadScopeAcknowledged, setBroadScopeAcknowledged] = useState(false);
-  const trimmedAssetFilter = assetFilter.trim();
+  const assetFilter = selectedAsset
+    ? assetScope?.assetIdentifier === "symbol"
+      ? selectedAsset.symbol
+      : selectedAsset.id
+    : "";
   const capturedReadinessChecks = dialogRequest.readinessChecks ?? EMPTY_READINESS_CHECKS;
   const currentReadinessChecks = useSyncExternalStore(
     dialogRequest.readinessSource?.subscribe ?? NOOP_SUBSCRIBE,
@@ -191,8 +204,8 @@ export function AdminActionExecutionDialog({
   );
 
   let requestPath = action.path;
-  if (assetScope && scopeMode === "single" && trimmedAssetFilter) {
-    requestPath = setQueryParameter(requestPath, assetScope.queryParam, trimmedAssetFilter);
+  if (assetScope && scopeMode === "single" && assetFilter) {
+    requestPath = setQueryParameter(requestPath, assetScope.queryParam, assetFilter);
   }
   if (dryRunConfig) {
     requestPath = setQueryParameter(requestPath, dryRunConfig.queryParam, dryRun ? "true" : "false");
@@ -208,7 +221,7 @@ export function AdminActionExecutionDialog({
     : action.method;
   const baseScopeKey = assetScope
     ? scopeMode === "single"
-      ? `${assetScope.queryParam}:${trimmedAssetFilter || "missing"}`
+      ? `${assetScope.queryParam}:${assetFilter || "missing"}`
       : "batch"
     : action.scope.type;
   const executionModeKey = dryRunConfig ? (dryRun ? "dry-run" : "live") : "execute";
@@ -218,7 +231,9 @@ export function AdminActionExecutionDialog({
   const scopeKey = `${baseScopeKey}|mode:${executionModeKey}${fallbackScopeKey}`;
   const baseScopeLabel = assetScope
     ? scopeMode === "single"
-      ? `${assetScope.assetLabel.toLowerCase()} ${trimmedAssetFilter || "not selected"}`
+      ? selectedAsset
+        ? `${selectedAsset.name} (${assetFilter})`
+        : `${assetScope.assetLabel.toLowerCase()} not selected`
       : assetScope.batchLabel
     : (fixedScopeLabel ?? "Unknown scope");
   const scopeLabel = dryRunConfig && dryRun ? `${baseScopeLabel} (dry run)` : baseScopeLabel;
@@ -227,7 +242,7 @@ export function AdminActionExecutionDialog({
   const loading = execution?.requestInFlight === true;
   const hasTerminalResult = Boolean(execution && execution.status !== "ready" && !execution.requestInFlight);
   const inputsLocked = Boolean(execution && execution.status !== "ready");
-  const hasValidAssetScope = !assetScope || scopeMode === "batch" || trimmedAssetFilter.length > 0;
+  const hasValidAssetScope = !assetScope || scopeMode === "batch" || selectedAsset != null;
   const isLiveMutation = !dryRun && action.risk !== "read-only";
   const requiresBroadScopeAcknowledgement = isLiveMutation && (!assetScope || scopeMode === "batch");
   const readiness = buildActionReadiness(action, currentReadinessChecks, dryRun ? "dry-run" : "live");
@@ -350,22 +365,21 @@ export function AdminActionExecutionDialog({
               </label>
             </div>
             {scopeMode === "single" ? (
-              <div className="space-y-1">
-                <label htmlFor={assetInputId} className="text-xs font-medium text-muted-foreground">
+              <div className="space-y-1" role="group" aria-labelledby={assetInputId}>
+                <div id={assetInputId} className="text-xs font-medium text-muted-foreground">
                   {assetScope.assetLabel}
-                </label>
-                <input
-                  id={assetInputId}
-                  type="text"
-                  value={assetFilter}
-                  onChange={(event) => setAssetFilter(event.target.value)}
-                  placeholder={assetScope.assetPlaceholder}
-                  className="min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                </div>
+                <CoinSelector
+                  coins={ADMIN_ASSET_OPTIONS}
+                  selected={selectedAsset}
                   disabled={inputsLocked}
-                  required
+                  onSelect={setSelectedAsset}
+                  onRemove={() => setSelectedAsset(null)}
                 />
-                {!trimmedAssetFilter && (
-                  <p className="text-xs text-amber-700 dark:text-amber-300">Required for single-asset scope.</p>
+                {!selectedAsset && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Select a tracked stablecoin for single-asset scope.
+                  </p>
                 )}
               </div>
             ) : (

@@ -88,12 +88,13 @@ export function FreshnessIndicator({
       <Tooltip>
         <TooltipTrigger asChild>
           <time
+            tabIndex={0}
             dateTime={absolute ? new Date(updatedAtMs).toISOString() : undefined}
             data-state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
             data-stale={isStale ? "true" : "false"}
             className={cn(
               "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
-              compact && "h-5 rounded-md px-2 py-0 leading-none",
+              compact && "min-h-6 rounded-md px-2 py-0 leading-none",
               isStale || isUnavailable
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                 : "border-border/60 bg-background/60 text-muted-foreground",

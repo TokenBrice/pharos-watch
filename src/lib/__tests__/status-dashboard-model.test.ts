@@ -3,6 +3,7 @@ import type { EndpointProbeResult, StatusCause } from "@shared/types";
 import {
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
+  makeActionRecommendedStatusResponse,
   makePublicationFailureStatusResponse,
   makeScheduledSlotEventMarkerQueryFailedStatusResponse,
   makeScheduledSlotRunningQueryFailedStatusResponse,
@@ -515,10 +516,34 @@ describe("status dashboard model", () => {
       historyTransitions: undefined,
     });
 
-    expect(model.attentionSections.map((section) => section.id).slice(0, 3)).toEqual([
-      "pipeline",
-      "crons",
-      "reliability",
-    ]);
+    expect(model.attentionSections.map((section) => section.id).slice(0, 2)).toEqual(["pipeline", "crons"]);
+  });
+
+  it("orders severity before issue volume and keeps Actions out of the causal queue", () => {
+    const warnings = Array.from({ length: 150 }, (_, index) => ({
+      code: `fixture-warning-${index}`,
+      layer: "data-quality" as const,
+      severity: "warning" as const,
+      message: `Fixture warning ${index}`,
+    }));
+    const base = makeActionRecommendedStatusResponse();
+    const data = {
+      ...base,
+      dataQualityStatus: "degraded" as const,
+      causes: { availability: [], overall: warnings, dataQuality: warnings },
+      summary: {
+        ...base.summary,
+        availabilityImpactingConsecutiveCronErrors: 1,
+        availabilityImpactingUnhealthyCrons: 1,
+        availabilityImpactingCronErrors: 1,
+      },
+    };
+
+    const model = buildModel(data);
+    expect(model.attentionSections.map((section) => section.id).slice(0, 2)).toEqual(["crons", "pipeline"]);
+
+    const actionModel = buildModel(makeActionRecommendedStatusResponse());
+    expect(actionModel.recommendedActions.length).toBeGreaterThan(0);
+    expect(actionModel.attentionSections.some((section) => section.id === "actions")).toBe(false);
   });
 });

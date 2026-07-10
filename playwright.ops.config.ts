@@ -8,6 +8,7 @@ const phase6MatrixTag = /@phase6/;
 
 const viewports = [
   { name: "chromium-320", width: 320, height: 568 },
+  { name: "chromium-375", width: 375, height: 812 },
   { name: "chromium-390", width: 390, height: 844 },
   { name: "chromium-768", width: 768, height: 1024 },
   { name: "chromium-1024", width: 1024, height: 768 },

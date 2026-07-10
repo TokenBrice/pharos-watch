@@ -14,6 +14,15 @@ afterEach(() => {
 });
 
 describe("FreshnessIndicator", () => {
+  it("makes exact timestamp help keyboard focusable", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000} staleAfterMs={60_000} compact />);
+
+    const timestamp = screen.getByRole("time");
+    expect(timestamp.getAttribute("tabindex")).toBe("0");
+    expect(timestamp.className).toContain("min-h-6");
+  });
+
   it("renders 'just now' when updatedAt is within 5s", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 2000} staleAfterMs={120_000} />);

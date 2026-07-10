@@ -59,7 +59,7 @@ The active frontend operator mode is now:
 - The `/admin/` Triage workspace provides the command-center top fold:
   - a compact triage header with the three independent verdict axes (`Service`, `Evidence`, and `Intervention`), recovery-hold context, `FreshnessIndicator`, and `RefreshCountdown`
   - blocker, cron-error, public-health, watch, reserve-drift, and classification-warning summary badges
-  - deduplicated blockers and a `Needs attention` queue ordered by severity, public impact, age, and stable registry order
+  - deduplicated blockers and a `Needs attention` queue ordered lexicographically by severity, public impact, evidence risk, persistence, count, and stable workspace order; recommended actions stay attached to their causal lane instead of adding a duplicate Actions entry
   - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open; it auto-expands only on the first evaluated signal after evidence loads, and later signals surface a `New signal` badge on the collapsed summary instead of forcing the section open (`src/app/admin/use-auto-expand.ts`)
   - a promoted `Recommended Now` action strip derived from blocking causes and unhealthy cron lanes
   - explicit stale-client, public-health divergence, and background-fetch notices that preserve the last good payload
@@ -558,7 +558,7 @@ The UI uses these actions in two ways:
 - a searchable intent/risk catalog in the `Actions` workspace
 - contextual recommendations derived from blocking causes and availability-impacting cron lanes (`Recommended now`)
 
-The catalog groups inspect, dry-run, recovery, communication, and destructive behavior. Shared endpoint metadata is canonical for risk, scope, prerequisites, expected duration, dry-run support, result mode, and audit ownership. One provider-owned execution dialog handles confirmation, readiness, direct dry run, structured results, raw debugging output, and focus restoration.
+The catalog groups inspect, dry-run, recovery, communication, and destructive behavior. Shared endpoint metadata is canonical for risk, scope, prerequisites, expected duration, dry-run support, result mode, and audit ownership. Single-asset execution uses the tracked client registry picker and derives the endpoint's canonical stablecoin ID or symbol from that selection; arbitrary free-form targets are not accepted. One provider-owned execution dialog handles confirmation, readiness, direct dry run, structured results, raw debugging output, and focus restoration.
 
 Mutations use one stable `Idempotency-Key` per operator intent. Double submission coalesces, known replay reuses the same result, and an uncertain response keeps the same key available for a safe retry; starting a genuinely new intent creates a new key. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`, so the browser can distinguish confirmed, replayed, and unknown outcomes.
 

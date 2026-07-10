@@ -15,7 +15,7 @@ describe("WorkspaceStatusBoundary announcements", () => {
       </WorkspaceStatusBoundary>,
     );
 
-    const loading = screen.getByRole("status");
+    const loading = screen.getByRole("status", { name: "Loading workspace data" });
     expect(loading.textContent).toContain("Loading workspace data");
     expect(loading.getAttribute("aria-live")).toBe("polite");
     expect(loading.getAttribute("aria-atomic")).toBe("true");
@@ -41,6 +41,10 @@ describe("WorkspaceStatusBoundary announcements", () => {
     expect(alert.textContent).toContain("status timeout");
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByRole("link", { name: "Reauthenticate" }).getAttribute("href")).toBe(
+      "/cdn-cgi/access/login",
+    );
+    expect(screen.getByRole("button", { name: "Retry" }).className).toContain("min-h-11");
   });
 
   it("announces a background refresh failure without replacing last-good content", () => {
