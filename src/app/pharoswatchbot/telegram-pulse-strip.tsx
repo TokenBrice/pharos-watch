@@ -9,7 +9,6 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { clampScore } from "@shared/lib/math";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
@@ -31,17 +30,9 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
-/**
- * Rough manual estimate of how many active Telegram chats the bot can serve
- * before delivery/rate-limit headroom becomes a concern. Drives the capacity
- * gauge on the public /pharoswatchbot page (Math: activeWatchers / this * 100).
- *
- * Not sourced from an authoritative limit — revisit and bump (or replace with a
- * server-reported value) once `activeWatchers` exceeds ~80% of this number, or
- * the gauge will trend toward a misleading 100%.
- * Last reviewed: 2026-06-16 — o1-08.
- */
-const TELEGRAM_ESTIMATED_CAPACITY_WATCHERS = 5_000;
+// Scenario size enforced by `npm run check:telegram-load`; this is evidence from
+// selected modeled workloads, not a fixed subscriber capacity.
+const TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS = 5_000;
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);
@@ -71,14 +62,6 @@ function formatUpdatedAt(value: number | undefined): string {
 function formatSnapshotAt(value: number | null | undefined): string | null {
   if (!value) return null;
   return PULSE_UPDATED_FORMATTER.format(new Date(value * 1000));
-}
-
-function formatCapacityUsage(activeWatchers: number): string {
-  return `${capacityUsagePercent(activeWatchers)}% used`;
-}
-
-function capacityUsagePercent(activeWatchers: number): number {
-  return clampScore(Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100));
 }
 
 function formatShare(value: number, total: number): string {
@@ -224,9 +207,9 @@ export function TelegramPulseStrip() {
         <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
         <span className="text-muted-foreground">
           <span className="font-semibold text-foreground pharos-numeric">
-            {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
+            {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)}
           </span>{" "}
-          estimated capacity
+          watcher load scenarios tested
         </span>
         <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
         <span className="text-muted-foreground">
@@ -312,7 +295,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const watcherHistory = data.watcherHistory ?? [];
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
   const latestHistoryLabel = formatSnapshotAt(data.lifecycleHistoryUpdatedAt);
-  const capacityPercent = capacityUsagePercent(data.activeWatchers);
   const explicitFollows = data.explicitCoinSubscriptions ?? data.coinSubscriptions;
   const presetImpliedFollows = data.presetImpliedCoinSubscriptions ?? 0;
   const followStats = [
@@ -372,21 +354,16 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       <div className="grid gap-5 pt-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-6">
         <div className="rounded-2xl bg-background/60 p-4 sm:p-5">
           <p className="pharos-kicker">
-            Active / estimated capacity
+            Active Telegram chats
           </p>
-          <p className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1 pharos-numeric leading-none text-foreground">
+          <p className="mt-4 pharos-numeric leading-none text-foreground">
             <span className="text-[3.5rem] font-semibold tracking-normal sm:text-[4.5rem] lg:text-[6rem]">
               {formatCount(data.activeWatchers)}
             </span>
-            <span className="pb-2 text-2xl font-semibold text-muted-foreground sm:pb-3 sm:text-4xl">
-              / {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
-            </span>
           </p>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-background/80 ring-1 ring-border/45">
-            <div className="h-full rounded-full bg-[var(--brand-accent)]" style={{ width: `${capacityPercent}%` }} />
-          </div>
-          <p className="mt-3 pharos-numeric text-xs font-semibold text-muted-foreground">
-            {formatCapacityUsage(data.activeWatchers)}
+          <p className="mt-4 max-w-[48ch] text-xs leading-relaxed text-muted-foreground">
+            Selected load scenarios are tested at {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)} watchers. This is
+            not a fixed capacity limit.
           </p>
         </div>
 

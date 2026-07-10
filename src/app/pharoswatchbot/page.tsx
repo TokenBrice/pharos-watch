@@ -322,9 +322,10 @@ export default function PharosWatchBotPage() {
                 </h2>
                 <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
                   <TelegramLink href={PHAROSWATCHBOT_BOT_URL}>@PharosWatchBot</TelegramLink> watches depegs, DEWS
-                  threat bands, safety-grade changes, and launch promotions across the tracked universe. Start with one
-                  low-noise preset, then tune thresholds as your watchlist grows. Safety alerts include a reason line so
-                  you know whether to look at liquidity, peg pressure, active-depeg caps, or parent caps first.
+                  threat bands, safety-grade changes, launch promotions, and live reserve-mix drift across the tracked
+                  universe. Start with one low-noise preset, then tune thresholds as your watchlist grows. Safety alerts
+                  include a reason line so you know whether to look at liquidity, peg pressure, active-depeg caps, or
+                  parent caps first.
                 </p>
               </div>
 
@@ -495,7 +496,7 @@ export default function PharosWatchBotPage() {
               What the bot actually sends
             </h2>
             <p className="pharos-lead">
-              Four alert families, each tied to a stablecoin signal Pharos already computes. Safety changes include the
+              Five alert families, each tied to a stablecoin signal Pharos already computes. Safety changes include the
               driver so an alert points to the part of the risk stack that moved.
             </p>
           </div>

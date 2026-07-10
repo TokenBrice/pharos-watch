@@ -23,6 +23,7 @@ const TELEGRAM_FEATURE_LIST = [
   "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
   "Safety grade alerts with reason lines for live score drivers",
   "Pre-launch stablecoin launch alerts",
+  "Live reserve-mix drift alerts for covered stablecoins",
   "On-demand market brief, top rankings, Safety Score explanations, and coverage checks",
   "Dynamic preset watchlists that keep tracking current cohorts",
   "Per-coin thresholds, timezone-aware quiet hours, and inline snooze",
@@ -38,7 +39,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       "@type": "HowTo",
       name: "Set up Pharos stablecoin alerts on Telegram",
       description:
-        "Subscribe to depeg, DEWS threat-level, safety-grade, and launch alerts for tracked stablecoins from the Pharos Telegram bot.",
+        "Subscribe to depeg, DEWS threat-level, safety-grade, launch, and reserve-drift alerts for tracked stablecoins from the Pharos Telegram bot.",
       totalTime: "PT2M",
       tool: [{ "@type": "HowToTool", name: "Telegram" }],
       step: TELEGRAM_HOW_TO_STEPS.map((step) => ({
@@ -56,7 +57,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: `${siteUrl}/pharoswatchbot/`,
       installUrl: "https://t.me/PharosWatchBot",
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, and launch alerts.",
+      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, launch, and reserve-drift alerts.",
       featureList: TELEGRAM_FEATURE_LIST,
       publisher: { "@id": `${siteUrl}#organization` },
     },

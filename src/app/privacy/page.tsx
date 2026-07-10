@@ -29,7 +29,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: June 2026"]}
+      leadParagraphs={["Last updated: July 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -101,14 +101,18 @@ export default function PrivacyPage() {
               confirmations): 5-minute TTL.
             </li>
             <li>
-              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 1-hour TTL for depeg, DEWS, and
-              safety; 30-minute TTL for launch and admin broadcasts.
+              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 1-hour TTL for depeg, DEWS,
+              safety, and reserve; 30-minute TTL for launch and admin broadcasts.
             </li>
             <li>
-              <strong>Alert job manifests and per-target audit</strong>: 90-day retention.
+              <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
+              rows; aggregate job manifests remain until their normal prune.
             </li>
             <li>
-              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention.
+              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,
+              or immediate removal for that chat through{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>.
             </li>
             <li>
               <strong>Processed-update idempotency claims</strong>: 7-day prune.
@@ -118,7 +122,8 @@ export default function PrivacyPage() {
               retention.
             </li>
             <li>
-              <strong>Daily watcher lifecycle snapshots</strong>: aggregate-only public pulse history.
+              <strong>Daily watcher lifecycle snapshots</strong>: aggregate-only public pulse history with 400-day
+              retention.
             </li>
             <li>
               <strong>Per-chat delivery diagnostics</strong> used by{" "}

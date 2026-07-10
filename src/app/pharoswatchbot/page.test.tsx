@@ -4,7 +4,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PharosWatchBotPage, { metadata } from "./page";
-import { TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
+import {
+  GROWTH_SUPPORT,
+  TELEGRAM_ALERT_EXAMPLES,
+  TELEGRAM_COMMAND_GROUPS,
+  TELEGRAM_FAQ,
+  TELEGRAM_PAGE_DESCRIPTION,
+} from "./telegram-content";
 import {
   PHAROSWATCHBOT_BOT_URL,
   RECOMMENDED_SETUP,
@@ -17,6 +23,11 @@ import {
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import {
+  TELEGRAM_BOT_COMMANDS,
+  TELEGRAM_BOT_DESCRIPTION,
+  TELEGRAM_BOT_SHORT_DESCRIPTION,
+} from "@shared/lib/telegram-bot-registration";
 
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: { alt: string; src: string; width: number; height: number; className?: string }) => (
@@ -78,8 +89,25 @@ describe("PharosWatchBotPage", () => {
   it("keeps public metadata and copy current", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
     expect(TELEGRAM_PAGE_DESCRIPTION).toContain("reasoned safety-grade shifts");
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("pre-launch assets going live");
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("live reserve-mix drift");
     expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
+    expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
+    expect(TELEGRAM_BOT_DESCRIPTION).toContain("live reserve-mix drift");
+  });
+
+  it("keeps the public alert and command contracts complete", () => {
+    expect(TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.key)).toEqual(["dews", "depeg", "safety", "launch", "reserve"]);
+
+    const publicCommands = new Set(
+      TELEGRAM_COMMAND_GROUPS.flatMap((group) =>
+        group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
+      ),
+    );
+    expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
+
+    const retryContract = GROWTH_SUPPORT.find((entry) => entry.title === "Bounded retry queue");
+    expect(retryContract?.detail).toContain("retried within family-specific TTLs");
+    expect(JSON.stringify(GROWTH_SUPPORT)).not.toMatch(/no dropped alerts|arrive in order/i);
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {
@@ -127,6 +155,12 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Bot sync")).toBeTruthy();
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
+    expect(screen.getByText("Reserve Drift")).toBeTruthy();
+    expect(screen.getAllByText(/Five alert families/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
 
     const jsonLd = parseJsonLd(container);
@@ -144,12 +178,13 @@ describe("PharosWatchBotPage", () => {
       operatingSystem: "Telegram",
       url: "https://pharos.watch/pharoswatchbot/",
       installUrl: PHAROSWATCHBOT_BOT_URL,
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, and launch alerts.",
+      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, launch, and reserve-drift alerts.",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": "https://pharos.watch#organization" },
     });
-    expect(application.featureList).toHaveLength(8);
+    expect(application.featureList).toHaveLength(9);
     expect(application.featureList).toContain("Safety grade alerts with reason lines for live score drivers");
+    expect(application.featureList).toContain("Live reserve-mix drift alerts for covered stablecoins");
     expect(application.featureList).toContain(
       "Telegram Mini App for visual watchlist, settings, and presets management",
     );

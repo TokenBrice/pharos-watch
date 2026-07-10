@@ -11,9 +11,9 @@ export const TELEGRAM_BOT_USERNAME = "PharosWatchBot";
 // scripts use the same reviewed payloads.
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
-  "Track 380+ stablecoins. Tap the menu button for the alert control panel.";
+  "Stablecoin risk alerts and a visual control panel for watchlists, quiet hours, and tuning.";
 export const TELEGRAM_BOT_DESCRIPTION =
-  "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/";
+  "Pharos Watch pushes alerts across the tracked stablecoin universe: DEWS stress bands, depeg events, safety grade changes, new launches, and live reserve-mix drift. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/";
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },

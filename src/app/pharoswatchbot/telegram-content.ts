@@ -11,7 +11,7 @@ import {
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot sends stablecoin Telegram alerts for DEWS threat bands, depegs, reasoned safety-grade shifts, and pre-launch assets going live.";
+  "PharosWatchBot sends stablecoin Telegram alerts for DEWS threat bands, depegs, reasoned safety-grade shifts, launches, and live reserve-mix drift.";
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -20,7 +20,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@PharosWatchBot",
     href: "https://t.me/PharosWatchBot",
     description:
-      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, and pre-launch assets going live. Tune thresholds, set quiet hours, snooze on the fly.",
+      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, launches, and live reserve-mix drift. Tune thresholds, set quiet hours, snooze on the fly.",
     cardButtonLabel: "Open Bot",
     finalButtonLabel: "Start Bot",
     showArchiveLink: false,
@@ -56,8 +56,8 @@ export type TelegramActionKey = (typeof TELEGRAM_ACTIONS)[number]["key"];
 
 export const MINI_APP_FEATURES = [
   { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
-  { title: "Global alerts", detail: "DEWS, depeg, safety, and launches in one panel." },
-  { title: "Per-coin tuning", detail: "DEWS bands, depeg steps, safety modes." },
+  { title: "Global alerts", detail: "DEWS, depeg, safety, launch, and reserve in one panel." },
+  { title: "Per-coin tuning", detail: "DEWS bands, depeg steps, safety modes, and reserve switches." },
   { title: "Presets", detail: "One-tap cohorts like USD Top 25." },
   { title: "Quiet hours", detail: "Mute nights, snooze bursts, resume cleanly." },
   { title: "Delivery health", detail: "See whether Telegram can still reach you." },
@@ -144,9 +144,10 @@ export const GROWTH_SUPPORT = [
     icon: Users,
   },
   {
-    title: "No dropped alerts",
-    detail: "Overflow gets queued, not silently dropped. Even when Telegram throttles, alerts arrive in order.",
-    signal: "pending queue",
+    title: "Bounded retry queue",
+    detail:
+      "Overflow and retryable failures are prioritized and retried within family-specific TTLs. Terminal failures remain visible to operators.",
+    signal: "1h / 30m TTL",
     icon: Radio,
   },
 ] as const satisfies readonly {
@@ -206,6 +207,18 @@ USDPT — US Dollar Payment Token has launched and is now tracked by Pharos
 View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
     time: "09:47",
   },
+  {
+    key: "reserve",
+    label: "Reserve Drift",
+    tagline:
+      "Fires when a live-reserve-tracked coin newly diverges from its curated reserve profile. Entering drift only.",
+    content: `Reserve Drift
+
+USDC — Circle USD Coin live reserve mix has drifted from its curated profile
+
+View on Pharos: pharos.watch/stablecoin/usdc-circle`,
+    time: "09:49",
+  },
 ] as const;
 
 export const TELEGRAM_COMMAND_GROUPS = [
@@ -261,13 +274,13 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/set <ticker> <setting> <value>",
         description:
-          "Tune one coin. <setting> is dews <band> (WARNING/ALERT/DANGER/off), depeg on|off, depeg-step <bps> (100/250/500), safety <mode> (downgrade-only/upgrade-only/all/off), or launch on|off.",
+          "Tune one coin. <setting> is dews <band> (WARNING/ALERT/DANGER/off), depeg on|off, depeg-step <bps> (100/250/500), safety <mode> (downgrade-only/upgrade-only/all/off), launch on|off, or reserve on|off.",
         example: "/set USDT dews WARNING",
       },
       {
         command: "/set all <setting> <value>",
         description:
-          "Global toggle for dews, depeg, safety, or launch. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
+          "Global toggle for dews, depeg, safety, launch, or reserve. safety globally supports all/off only (downgrades, 3-point filter when scored). depeg-step <bps> sets the global severity gate and worsening step.",
         example: "/set all depeg-step 250",
       },
       {
@@ -285,8 +298,13 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/settings",
         description:
-          "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, and launch toggle.",
+          "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch/reserve toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, launch, and reserve toggles.",
         example: "/settings USDC",
+      },
+      {
+        command: "/pause [off|1h|4h|24h]",
+        description: "Pause all alerts indefinitely, resume with off, or apply a timed 1h, 4h, or 24h snooze.",
+        example: "/pause 4h",
       },
       {
         command: "/unmutehours",
@@ -345,6 +363,11 @@ export const TELEGRAM_COMMAND_GROUPS = [
     label: "Meta",
     commands: [
       {
+        command: "/start",
+        description: "Open the guided setup flow or process a supported Telegram deep-link payload.",
+        example: "/start",
+      },
+      {
         command: "/list",
         description:
           "Audit your state: global alerts, dynamic preset follows, per-coin subscriptions with settings, quiet hours, and active snooze.",
@@ -369,8 +392,20 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/forget",
         description:
-          "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, and live delivery diagnostics.",
+          "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, live delivery diagnostics, and chat-linked delivery audit rows.",
         example: null,
+      },
+      {
+        command: "/export",
+        description:
+          "Create a portable watchlist token containing explicit follows, alert types, and followed presets. Quiet hours and snooze are excluded.",
+        example: "/export",
+      },
+      {
+        command: "/import <token>",
+        description:
+          "Validate a token from /export and stage its watchlist behind a confirmation. Group imports require an admin.",
+        example: "/import eyJ2IjoxLC4uLn0",
       },
     ],
   },
@@ -382,7 +417,7 @@ export const TELEGRAM_COMMAND_COUNT = TELEGRAM_COMMAND_GROUPS.reduce(
 );
 
 export const TELEGRAM_PARAM_LEGEND = [
-  { token: "<types>", meaning: "Comma-separated: dews, depeg, safety, launch" },
+  { token: "<types>", meaning: "Comma-separated: dews, depeg, safety, launch, reserve" },
   { token: "<targets>", meaning: "Space-separated tickers, coin-ids, or presets" },
   { token: "<ticker>", meaning: "Symbol (USDC) or coin-id (usdc-circle)" },
   { token: "<value>", meaning: "Setting-specific — see the /set rows" },
@@ -405,7 +440,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What alerts does Pharos send on Telegram?",
     answer:
-      "DEWS threat-level band crossings, depeg detections and worsening milestones, safety-grade changes with reason lines, and pre-launch assets going live.",
+      "DEWS threat-level band crossings, depeg detections and worsening milestones, safety-grade changes with reason lines, pre-launch assets going live, and entering live reserve-mix drift.",
   },
   {
     question: "Can I get alerts for all tracked stablecoins at once?",
@@ -448,7 +483,7 @@ export const TELEGRAM_HOW_IT_WORKS_CARDS = [
   {
     title: "Cadence",
     description:
-      "The dispatcher runs every 5 minutes. DEWS, depeg, and launch alerts arrive within one cycle. Safety alerts ride the live report-card publish path — you see the grade change, plus the driver line, the same moment the site does.",
+      "The dispatcher checks every 5 minutes. Eligible alerts can send immediately or enter the bounded retry queue. Safety uses the live report-card publish path; reserve drift uses the four-hour live-reserve producer.",
     unsubscribeCommand: null,
     descriptionAfterCommand: null,
   },
@@ -471,7 +506,7 @@ export const TELEGRAM_HOW_IT_WORKS_CARDS = [
 
 export const TELEGRAM_COMMAND_REFERENCE_TIPS = [
   "Tickers are case-insensitive. Use the exact Pharos coin-id (e.g. usdc-circle) when a symbol is ambiguous.",
-  "all is a reserved target for every tracked stablecoin. Launch alerts are the exception — they require explicit tickers or coin-ids.",
+  "all is a reserved target for every tracked stablecoin. Launch and reserve alerts do not use preset watchlists; choose explicit tickers, coin-ids, or all.",
   "In Telegram groups, address commands to the bot: /subscribe@PharosWatchBot dews usd-top25. Pending ticker selections only complete for the user who started them.",
   "Typing / inside Telegram opens an inline command picker once the bot is registered.",
 ] as const;

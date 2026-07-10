@@ -110,7 +110,8 @@ describe("TelegramPulseStrip", () => {
     const strip = screen.getByText("1,842").closest("div");
     expect(strip?.getAttribute("aria-live")).toBe("polite");
     expect(strip?.getAttribute("aria-busy")).toBe("false");
-    expect(screen.getByText(/estimated capacity/i)).toBeTruthy();
+    expect(screen.getByText(/watcher load scenarios tested/i)).toBeTruthy();
+    expect(screen.queryByText(/estimated capacity/i)).toBeNull();
     expect(screen.getByText("5,621")).toBeTruthy();
     expect(screen.getByText(/alert links \(incl\. presets\)/i)).toBeTruthy();
     expect(screen.getByText(/updated every 5m/i)).toBeTruthy();
@@ -136,14 +137,16 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    const capacity = screen.getByText("Active / estimated capacity");
+    const activeChats = screen.getByText("Active Telegram chats");
     const board = screen.getByLabelText("Live Telegram adoption metrics");
     expect(board.getAttribute("aria-live")).toBe("polite");
     expect(board.getAttribute("aria-busy")).toBe("false");
     const alertFollows = screen.getByText("Alert follows");
     const topFollowed = screen.getByText("Most followed");
-    expect(capacity).toBeTruthy();
-    expect(screen.getByText(/37% used/i)).toBeTruthy();
+    expect(activeChats).toBeTruthy();
+    expect(screen.getByText(/Selected load scenarios are tested at 5,000 watchers/i)).toBeTruthy();
+    expect(screen.queryByText(/% used/i)).toBeNull();
+    expect(screen.queryByText(/estimated capacity/i)).toBeNull();
     expect(alertFollows).toBeTruthy();
     expect(topFollowed).toBeTruthy();
     const lifecycle = screen.getByText("Telegram chat lifecycle");
@@ -156,7 +159,7 @@ describe("TelegramPulseBoard", () => {
     const details = summary?.closest("details") as HTMLDetailsElement | null;
     expect(details).toBeTruthy();
     expect(details?.open).toBe(false);
-    expect(Boolean(capacity.compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(activeChats.compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(Boolean(lifecycle.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
       true,
     );
@@ -165,7 +168,7 @@ describe("TelegramPulseBoard", () => {
 
     expect(details?.open).toBe(true);
     const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
-    expect(within(pulseDetails).queryByText("Active / estimated capacity")).toBeNull();
+    expect(within(pulseDetails).queryByText("Active Telegram chats")).toBeNull();
     expect(within(pulseDetails).queryByText("Alert follows")).toBeNull();
     expect(within(pulseDetails).queryByText("Most followed")).toBeNull();
     expect(within(pulseDetails).getByText("Follow composition")).toBeTruthy();
@@ -183,7 +186,7 @@ describe("TelegramPulseBoard", () => {
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });
 
-  it("clamps estimated capacity usage copy at the same bound as the bar", () => {
+  it("does not turn the load-test scenario into a capacity-utilization claim", () => {
     mockUseTelegramPulse.mockReturnValue({
       data: { ...pulse, activeWatchers: 6_000 },
       isLoading: false,
@@ -192,8 +195,10 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    expect(screen.getByText(/100% used/i)).toBeTruthy();
-    expect(screen.queryByText(/120% used/i)).toBeNull();
+    expect(screen.getByText("6,000")).toBeTruthy();
+    expect(screen.getByText(/This is not a fixed capacity limit/i)).toBeTruthy();
+    expect(screen.queryByText(/% used/i)).toBeNull();
+    expect(screen.queryByText(/estimated capacity/i)).toBeNull();
   });
 
   it("does not surface replay-protected Mini App counts without a producer", () => {
