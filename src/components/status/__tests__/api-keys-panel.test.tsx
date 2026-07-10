@@ -656,6 +656,48 @@ describe("ApiKeysPanel", () => {
     await waitFor(() => expect(document.activeElement).toBe(inventory));
   });
 
+  it("returns focus to the inventory when an edit sorts the selected key off the current page", async () => {
+    const keys = Array.from({ length: 26 }, (_, index) =>
+      makeKey({
+        id: index + 1,
+        name: `Key ${String(index + 1).padStart(2, "0")}`,
+        keyPrefix: `prefix-${index + 1}`,
+        maskedToken: `ph_live_prefix-${index + 1}_********`,
+      }),
+    );
+    const updatedKey = makeKey({
+      id: 1,
+      name: "ZZZ",
+      keyPrefix: "prefix-1",
+      maskedToken: "ph_live_prefix-1_********",
+    });
+    const refetch = vi.fn().mockResolvedValue({
+      data: {
+        generatedAt: GENERATED_AT,
+        keys: [updatedKey, ...keys.slice(1)],
+      },
+    });
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ key: updatedKey }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderPanel(keys, refetch);
+
+    fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "name" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Key 01/ }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Key 01" })));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "ZZZ" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save changes to Key 01/ }));
+
+    expect(await screen.findByText("Updated ZZZ.")).toBeTruthy();
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("region", { name: "Key 01" })).toBeNull();
+    const inventory = screen.getByRole("region", { name: "Key inventory" });
+    await waitFor(() => expect(document.activeElement).toBe(inventory));
+  });
+
   it("shows audit loading and unavailable states with a local retry", async () => {
     const retryAudit = vi.fn().mockResolvedValue(undefined);
     useApiKeyAuditLogMock.mockReturnValue({

@@ -206,7 +206,8 @@ export function ApiKeysPanel() {
   }
 
   async function refreshInventory() {
-    await refetch();
+    const result = await refetch();
+    return result?.data;
   }
 
   function revealToken(
@@ -321,19 +322,22 @@ export function ApiKeysPanel() {
     if (result.execution.status !== "succeeded") return;
 
     const response = result.execution.data as ApiKeyMutationResponse;
-    const updatedKeyMatchesActiveView =
-      buildApiKeyInventoryView([response.key], nowSeconds, {
-        ...inventoryQuery,
-        expiryWindow: buildApiKeyExpiryWindow(expiryPreset, nowSeconds),
-      }).totalItems > 0;
     setDrafts((previous) => ({ ...previous, [apiKey.id]: buildEditableKeyState(response.key) }));
     setReceipt({
       receipt: buildAdminMutationReceiptMetadata(result.execution),
       message: `Updated ${response.key.name}.`,
     });
-    await refreshInventory();
+    const refreshedInventory = await refreshInventory();
+    const reconciledKeys =
+      refreshedInventory?.keys ?? keys.map((key) => (key.id === response.key.id ? response.key : key));
+    const refreshedNowSeconds = refreshedInventory?.generatedAt ?? nowSeconds;
+    const refreshedView = buildApiKeyInventoryView(reconciledKeys, refreshedNowSeconds, {
+      ...inventoryQuery,
+      expiryWindow: buildApiKeyExpiryWindow(expiryPreset, refreshedNowSeconds),
+    });
+    const selectedKeyIsRendered = refreshedView.keys.some((key) => key.id === apiKey.id);
     if (selectedKeyId === apiKey.id) {
-      if (!updatedKeyMatchesActiveView) {
+      if (!selectedKeyIsRendered) {
         setSelectedKeyId(null);
         selectionOriginRef.current = null;
         focusElement(inventoryWorkbenchRef.current);
