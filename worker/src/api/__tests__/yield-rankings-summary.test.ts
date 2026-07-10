@@ -137,7 +137,9 @@ describe("handleYieldRankings summary projection", () => {
         {
           id: "usdc-circle",
           alternateSourceCount: 1,
+          decisionReasonCode: "curated-over-discovered",
           provenance: {
+            sourceKey: "selected-source",
             calculationMode: "market-api",
             evidenceClass: "direct-first-party",
           },

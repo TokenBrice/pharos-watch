@@ -36,27 +36,22 @@ import {
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type {
-  PegCurrency,
-  ReportCardGrade,
-  YieldBenchmarkKey,
-  YieldRanking,
-  YieldType,
-} from "@shared/types";
+import type { PegCurrency, ReportCardGrade, YieldBenchmarkKey, YieldType } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
 }
 
-function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all"> {
+function getOpportunity(row: YieldWorkbenchRanking): Exclude<YieldOpportunityFilter, "all"> {
   return EXTERNAL_OPPORTUNITY_YIELD_TYPES.has(row.yieldType) ? "lending-opportunity" : "holder-yield";
 }
 
-function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
+function getSourceDepthLens(row: YieldWorkbenchRanking): YieldSourceDepthLens {
   return classifyYieldSourceDepth({ sourceRisk: row.sourceRisk, sourceTvlUsd: row.sourceTvlUsd });
 }
 
-function getSourcePosture(row: YieldRanking, sourceDepthLens: YieldSourceDepthLens): YieldSourcePosture {
+function getSourcePosture(row: YieldWorkbenchRanking, sourceDepthLens: YieldSourceDepthLens): YieldSourcePosture {
   return classifyYieldSourcePosture({
     sourceRisk: row.sourceRisk,
     sourceTvlUsd: row.sourceTvlUsd,
@@ -66,7 +61,7 @@ function getSourcePosture(row: YieldRanking, sourceDepthLens: YieldSourceDepthLe
   });
 }
 
-function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
+function buildYieldRowFacet(row: YieldWorkbenchRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
   const sourceDepthLens = getSourceDepthLens(row);
   const inWatchlist = watchlistIds?.has(row.id) ?? false;
   const sourceChanged = row.provenance?.sourceSwitch === true;
@@ -89,7 +84,7 @@ function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string>
 }
 
 export function buildYieldRowFacets(
-  rows: readonly YieldRanking[],
+  rows: readonly YieldWorkbenchRanking[],
   watchlistIds: ReadonlySet<string> | null,
 ): YieldRowFacet[] {
   return rows.map((row) => buildYieldRowFacet(row, watchlistIds));
@@ -106,7 +101,7 @@ function countPegs(facets: readonly YieldRowFacet[]): Map<PegCurrency, number> {
 function buildPegOptions(facets: readonly YieldRowFacet[]): YieldFilterOption<YieldPegFilter>[] {
   const counts = countPegs(facets);
   const pegs = Array.from(counts.keys()).sort(compareYieldPegs);
-  const nonUsdCount = pegs.reduce((sum, peg) => sum + (peg !== "USD" ? counts.get(peg) ?? 0 : 0), 0);
+  const nonUsdCount = pegs.reduce((sum, peg) => sum + (peg !== "USD" ? (counts.get(peg) ?? 0) : 0), 0);
   const options: YieldFilterOption<YieldPegFilter>[] = [{ value: "all", label: "All", count: facets.length }];
   if (nonUsdCount > 0) options.push({ value: "non-usd", label: "Non-USD", count: nonUsdCount });
   if (counts.has("USD")) options.push({ value: "USD", label: "USD", count: counts.get("USD") ?? 0 });
@@ -195,11 +190,19 @@ export function buildYieldOptions(facets: readonly YieldRowFacet[]): YieldViewMo
     ],
     minSafety: [
       { value: "all", label: "Any safety", count: facets.length },
-      ...MIN_SAFETY_OPTIONS.map((value) => ({ value: String(value), label: `${value}+ safety`, count: safetyCounts.get(value) ?? 0 })),
+      ...MIN_SAFETY_OPTIONS.map((value) => ({
+        value: String(value),
+        label: `${value}+ safety`,
+        count: safetyCounts.get(value) ?? 0,
+      })),
     ],
     minTvl: [
       { value: "all", label: "Any TVL", count: facets.length },
-      ...MIN_TVL_OPTIONS.map((value) => ({ value: String(value), label: formatTvlOption(value), count: tvlCounts.get(value) ?? 0 })),
+      ...MIN_TVL_OPTIONS.map((value) => ({
+        value: String(value),
+        label: formatTvlOption(value),
+        count: tvlCounts.get(value) ?? 0,
+      })),
     ],
     sourceConfidence: [
       { value: "all", label: "All confidence", count: facets.length },
@@ -241,7 +244,11 @@ export function buildYieldOptions(facets: readonly YieldRowFacet[]): YieldViewMo
       { value: "clean", label: YIELD_SOURCE_POSTURE_DEFINITIONS.clean.label, count: cleanCount },
       { value: "watch", label: "Clean + watch", count: cleanCount + watchCount },
       { value: "watch-only", label: "Watch only", count: watchCount },
-      { value: "speculative", label: YIELD_SOURCE_POSTURE_DEFINITIONS.speculative.label, count: postureCounts.get("speculative") ?? 0 },
+      {
+        value: "speculative",
+        label: YIELD_SOURCE_POSTURE_DEFINITIONS.speculative.label,
+        count: postureCounts.get("speculative") ?? 0,
+      },
     ],
     watchlist: [
       { value: "all", label: "All rows", count: facets.length },
@@ -258,10 +265,7 @@ export function rowMatchesYieldFilters(facet: YieldRowFacet, filters: YieldViewM
   return YIELD_FILTER_AXIS_REGISTRY.every((axis) => axis.matches(facet, filters));
 }
 
-export function countRowsMatchingFilters(
-  facets: readonly YieldRowFacet[],
-  filters: YieldViewModelFilters,
-): number {
+export function countRowsMatchingFilters(facets: readonly YieldRowFacet[], filters: YieldViewModelFilters): number {
   let count = 0;
   for (const facet of facets) {
     if (rowMatchesYieldFilters(facet, filters)) count += 1;
@@ -297,21 +301,31 @@ export function getYieldComparisonLabel(filters: YieldViewModelFilters): string 
 }
 
 const COHORT_GRADE_BAND: Readonly<Record<ReportCardGrade, string>> = {
-  "A+": "A", A: "A", "A-": "A",
-  "B+": "B", B: "B", "B-": "B",
-  "C+": "C", C: "C", "C-": "C",
-  D: "D", F: "F", NR: "F",
+  "A+": "A",
+  A: "A",
+  "A-": "A",
+  "B+": "B",
+  B: "B",
+  "B-": "B",
+  "C+": "C",
+  C: "C",
+  "C-": "C",
+  D: "D",
+  F: "F",
+  NR: "F",
 };
 const COHORT_MIN_SIZE = 8;
-interface CohortBucket { scoresDescending: number[] }
+interface CohortBucket {
+  scoresDescending: number[];
+}
 
-function cohortKey(row: YieldRanking): string | null {
+function cohortKey(row: YieldWorkbenchRanking): string | null {
   if (row.safetyGrade === null || row.pharosYieldScore === null) return null;
   const band = COHORT_GRADE_BAND[row.safetyGrade];
   return band === undefined ? null : `${row.yieldType}::${band}`;
 }
 
-export function buildYieldCohortIndex(rows: readonly YieldRanking[]): Map<string, CohortBucket> {
+export function buildYieldCohortIndex(rows: readonly YieldWorkbenchRanking[]): Map<string, CohortBucket> {
   const buckets = new Map<string, CohortBucket>();
   for (const row of rows) {
     if (row.pharosYieldScore === null) continue;
@@ -326,7 +340,7 @@ export function buildYieldCohortIndex(rows: readonly YieldRanking[]): Map<string
 }
 
 function computeRowCohortPercentile(
-  row: YieldRanking,
+  row: YieldWorkbenchRanking,
   cohortIndex: ReadonlyMap<string, CohortBucket>,
 ): YieldCohortPercentile | null {
   const key = cohortKey(row);

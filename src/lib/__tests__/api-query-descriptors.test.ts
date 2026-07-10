@@ -1,16 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  FRONTEND_API_QUERY_DESCRIPTORS,
-  type FrontendApiQueryDescriptorRegistry,
-} from "../api-query-descriptors";
+import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { FRONTEND_API_QUERY_BASE_REGISTRY } from "../api-query-base-registry";
 import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "../api-query-runtime-registry";
 import { FRONTEND_API_QUERY_REGISTRY } from "../api-query-registry";
-import {
-  toBaseApiQueryDescriptor,
-  type FrontendAnyApiQueryDescriptor,
-} from "../api-query-contract";
+import { toBaseApiQueryDescriptor, type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "../schema-like";
 import {
   StabilityIndexLightResponseSchema,
@@ -48,6 +42,7 @@ const EXPECTED_RESPONSE_MODES: {
   telegramPulse: "plain",
   yieldHistory: "meta",
   yieldRankings: "meta",
+  yieldRankingsSummary: "meta",
   yieldAdapterManifest: "meta",
   stressSignals: "meta",
   stressSignalDetail: "meta",
@@ -77,6 +72,20 @@ function resolveEntry(entry: unknown, key: string): FrontendAnyApiQueryDescripto
 }
 
 describe("frontend API query descriptors", () => {
+  it("keeps the summary projection isolated from the detailed rankings cache", () => {
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings).toMatchObject({
+      queryKey: ["yield-rankings"],
+      path: "/api/yield-rankings",
+    });
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary).toMatchObject({
+      queryKey: ["yield-rankings", "summary"],
+      path: "/api/yield-rankings?projection=summary",
+    });
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary.queryKey).not.toEqual(
+      FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings.queryKey,
+    );
+  });
+
   it("derives every compatibility registry from the one descriptor table", () => {
     expect(FRONTEND_API_QUERY_RUNTIME_REGISTRY).toBe(FRONTEND_API_QUERY_DESCRIPTORS);
     expect(FRONTEND_API_QUERY_REGISTRY).toBe(FRONTEND_API_QUERY_DESCRIPTORS);
@@ -89,7 +98,9 @@ describe("frontend API query descriptors", () => {
       const baseDescriptor = resolveEntry(baseEntry, key);
 
       expect(baseDescriptor, key).toEqual(toBaseApiQueryDescriptor(runtimeDescriptor));
-      expect(runtimeDescriptor.responseMode, key).toBe(EXPECTED_RESPONSE_MODES[key as keyof typeof EXPECTED_RESPONSE_MODES]);
+      expect(runtimeDescriptor.responseMode, key).toBe(
+        EXPECTED_RESPONSE_MODES[key as keyof typeof EXPECTED_RESPONSE_MODES],
+      );
     }
   });
 

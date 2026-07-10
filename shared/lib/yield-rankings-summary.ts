@@ -1,15 +1,16 @@
-import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
+import type { YieldRanking, YieldRankingsResponse } from "../types/yield";
 import {
   YIELD_RANKINGS_SUMMARY_PROJECTION,
   type YieldRankingSummary,
   type YieldRankingSummaryProvenance,
   type YieldRankingSummarySourceRisk,
   type YieldRankingsSummaryResponse,
-} from "@shared/types/yield-summary";
+} from "../types/yield-summary";
 
 function projectProvenance(provenance: YieldRanking["provenance"]): YieldRankingSummaryProvenance | null | undefined {
   if (provenance == null) return provenance;
   return {
+    sourceKey: provenance.sourceKey,
     confidenceTier: provenance.confidenceTier,
     calculationMode: provenance.calculationMode,
     evidenceClass: provenance.evidenceClass,
@@ -52,17 +53,19 @@ function projectRanking(row: YieldRanking): YieldRankingSummary {
     pysNullReason: row.pysNullReason,
     safetyScore: row.safetyScore,
     safetyGrade: row.safetyGrade,
-    excessYield: row.excessYield,
     benchmarkKey: row.benchmarkKey,
     benchmarkLabel: row.benchmarkLabel,
     benchmarkRate: row.benchmarkRate,
-    benchmarkIsFallback: row.benchmarkIsFallback,
-    benchmarkSelectionMode: row.benchmarkSelectionMode,
+    benchmarkIsFallback: row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback ? true : undefined,
     yieldStability: row.yieldStability,
     apyMin30d: row.apyMin30d,
     apyMax30d: row.apyMax30d,
     warningSignals: row.warningSignals,
     alternateSourceCount: row.altSources.length,
+    decisionReasonCode: row.decisionLedger?.selectedReasonCode,
+    rankDelta: row.rankChangeAttribution?.rankDelta,
+    rankChangeDriver: row.rankChangeAttribution?.primaryDriver,
+    rankPysDelta: row.rankChangeAttribution?.pysDelta,
     provenance: projectProvenance(row.provenance),
     sourceRisk: projectSourceRisk(row.sourceRisk),
   };

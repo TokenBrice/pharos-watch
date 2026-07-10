@@ -20,7 +20,7 @@ import type {
   YieldViewModelUrlParams,
 } from "@/lib/yield-view-model-types";
 import { normalizeFilters } from "@/lib/yield-view-url";
-import type { YieldRanking } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 export type {
   BuildYieldViewModelOptions,
@@ -52,16 +52,12 @@ export type {
   YieldWatchlistFilter,
 } from "@/lib/yield-view-model-types";
 
-export {
-  YIELD_PRESET_SPECS,
-  YIELD_RISK_BUDGET_MIN_SAFETY,
-  YIELD_RISK_BUDGET_SPECS,
-} from "@/lib/yield-view-config";
+export { YIELD_PRESET_SPECS, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS } from "@/lib/yield-view-config";
 export { YIELD_FILTER_AXIS_REGISTRY } from "@/lib/yield-view-model-filter-axes";
 export { RISK_BUDGET_FILTER_KEYS } from "@/lib/yield-view-model-presentation";
 
 export function buildYieldViewModel(
-  rows: readonly YieldRanking[],
+  rows: readonly YieldWorkbenchRanking[],
   params: YieldViewModelUrlParams,
   buildOptions: BuildYieldViewModelOptions = {},
 ): YieldViewModel {

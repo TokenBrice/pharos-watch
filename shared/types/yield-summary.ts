@@ -6,8 +6,11 @@ export const YIELD_RANKINGS_SUMMARY_PROJECTION = "summary" as const;
 const DetailedYieldRankingSchema = YieldRankingsResponseSchema.shape.rankings.element;
 const DetailedYieldRankingProvenanceSchema = DetailedYieldRankingSchema.shape.provenance.unwrap().unwrap();
 const DetailedYieldSourceRiskSchema = DetailedYieldRankingSchema.shape.sourceRisk.unwrap().unwrap();
+const DetailedYieldRankChangeSchema = DetailedYieldRankingSchema.shape.rankChangeAttribution.unwrap().unwrap();
+const DetailedYieldDecisionLedgerSchema = DetailedYieldRankingSchema.shape.decisionLedger.unwrap().unwrap();
 
 export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanceSchema.pick({
+  sourceKey: true,
   confidenceTier: true,
   calculationMode: true,
   evidenceClass: true,
@@ -45,12 +48,10 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   pysNullReason: true,
   safetyScore: true,
   safetyGrade: true,
-  excessYield: true,
   benchmarkKey: true,
   benchmarkLabel: true,
   benchmarkRate: true,
   benchmarkIsFallback: true,
-  benchmarkSelectionMode: true,
   yieldStability: true,
   apyMin30d: true,
   apyMax30d: true,
@@ -58,6 +59,10 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
 })
   .extend({
     alternateSourceCount: z.number().int().nonnegative(),
+    decisionReasonCode: DetailedYieldDecisionLedgerSchema.shape.selectedReasonCode.optional(),
+    rankDelta: DetailedYieldRankChangeSchema.shape.rankDelta,
+    rankChangeDriver: DetailedYieldRankChangeSchema.shape.primaryDriver,
+    rankPysDelta: DetailedYieldRankChangeSchema.shape.pysDelta,
     provenance: YieldRankingSummaryProvenanceSchema.nullable().optional(),
     sourceRisk: YieldRankingSummarySourceRiskSchema.nullable().optional(),
   })

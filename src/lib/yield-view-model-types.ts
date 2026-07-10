@@ -20,9 +20,9 @@ import type {
   YieldBenchmarkKey,
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
-  YieldRanking,
   YieldType,
 } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 export type {
   YieldAttentionFilter,
@@ -58,12 +58,7 @@ export interface YieldViewModelOptions {
   attention: YieldFilterOption<YieldAttentionFilter>[];
 }
 
-export type YieldPresetKey =
-  | "treasury-grade"
-  | "best-dollar"
-  | "non-usd"
-  | "new-rising"
-  | "watchlist-warnings";
+export type YieldPresetKey = "treasury-grade" | "best-dollar" | "non-usd" | "new-rising" | "watchlist-warnings";
 
 export interface YieldPresetState {
   key: YieldPresetKey;
@@ -103,7 +98,7 @@ export interface YieldCohortPercentile {
   cohortKey: string;
 }
 
-export type YieldViewModelRow = YieldRanking & {
+export type YieldViewModelRow = YieldWorkbenchRanking & {
   peg: PegCurrency | null;
   viewRank: number;
   rankLabel: string;
@@ -114,7 +109,7 @@ export type YieldViewModelRow = YieldRanking & {
 };
 
 export interface YieldRowFacet {
-  row: YieldRanking;
+  row: YieldWorkbenchRanking;
   peg: PegCurrency | null;
   benchmarkKey: YieldBenchmarkKey;
   opportunity: Exclude<YieldOpportunityFilter, "all">;

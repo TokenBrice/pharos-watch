@@ -19,6 +19,7 @@ import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useYieldRankings } from "@/hooks/api-hooks";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
@@ -40,6 +41,12 @@ import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
 import { trackEvent } from "@/lib/analytics";
+import {
+  getYieldAlternateSourceCount,
+  getYieldAvailableSources,
+  getYieldRankChangeAttribution,
+  isYieldBenchmarkFallback,
+} from "@/lib/yield-workbench-row";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -222,9 +229,10 @@ export function YieldLeaderboard({
   const initialCompareDeepLink = useRef(compare.ids.length >= 2);
   const initialCompareProcessed = useRef(false);
   const rowsById = useMemo(() => new Map(comparisonRows.map((row) => [row.id, row] as const)), [comparisonRows]);
+  const detailedRankings = useYieldRankings({ enabled: sheetRankingId !== null });
   const sheetRanking = useMemo(
-    () => (sheetRankingId ? (rows.find((r) => r.id === sheetRankingId) ?? null) : null),
-    [rows, sheetRankingId],
+    () => (sheetRankingId ? (detailedRankings.data?.rankings.find((row) => row.id === sheetRankingId) ?? null) : null),
+    [detailedRankings.data?.rankings, sheetRankingId],
   );
 
   const {
@@ -457,14 +465,8 @@ export function YieldMobileCard({
   const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
   const warningCount = row.warningSignals.length;
   const benchmarkReferenceText = getYieldBenchmarkReferenceText(row);
-  const altSourceCount = row.altSources?.length ?? 0;
-  const availableSources = [
-    ...(row.provenance?.sourceKey ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }] : []),
-    ...(row.altSources ?? []).map((source) => ({
-      sourceKey: source.sourceKey,
-      yieldSource: source.yieldSource,
-    })),
-  ];
+  const altSourceCount = getYieldAlternateSourceCount(row);
+  const availableSources = getYieldAvailableSources(row);
   const confidenceTier = row.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
   const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
@@ -475,7 +477,7 @@ export function YieldMobileCard({
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
   const pysNullReasonText =
     row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
-  const rankChip = buildRankChangeChipDisplay(row.rankChangeAttribution);
+  const rankChip = buildRankChangeChipDisplay(getYieldRankChangeAttribution(row));
 
   // WHY: only used when expanded with a non-null PYS; cheap to compute inline rather than extracting a helper.
   const { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult } = computePysBreakdown(
@@ -732,7 +734,7 @@ export function YieldMobileCard({
             stablecoinId={row.id}
             benchmarkRate={row.benchmarkRate ?? riskFreeRate}
             benchmarkLabel={row.benchmarkLabel}
-            benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
+            benchmarkIsFallback={isYieldBenchmarkFallback(row)}
             medianApy={medianApy}
             compact
             availableSources={availableSources}

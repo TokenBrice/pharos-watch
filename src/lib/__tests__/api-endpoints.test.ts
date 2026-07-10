@@ -7,6 +7,7 @@ import {
   DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS,
   getEndpointDefinitionByKey,
+  API_PATHS,
   getSiteDataAccess,
   getPublicApiAccess,
   getEndpointProbeDescriptors,
@@ -542,6 +543,10 @@ describe("api endpoint registry", () => {
   });
 
   it("validates endpoint methods from shared definitions", () => {
+    expect(API_PATHS.yieldRankingsSummary()).toBe("/api/yield-rankings?projection=summary");
+    expect(
+      validateEndpointMethod(new URL(`https://api.pharos.watch${API_PATHS.yieldRankingsSummary()}`), "GET"),
+    ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "POST")).toBeNull();

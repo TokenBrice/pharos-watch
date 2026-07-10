@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { useYieldAdapterManifest, useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -38,7 +38,7 @@ import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
-import type { YieldRankingsResponse } from "@shared/types";
+import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
 interface YieldFreshnessBannerProps {
   dataUpdatedAt: number;
@@ -129,7 +129,7 @@ function selectDefaultScatterRows(rows: readonly YieldViewModelRow[]): YieldView
   return [...selected.values()];
 }
 
-function YieldApiWarnings({ warnings }: { warnings: YieldRankingsResponse["warnings"] }) {
+function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryResponse["warnings"] }) {
   if (!warnings || warnings.length === 0) return null;
 
   return (
@@ -228,7 +228,7 @@ function YieldEmptyStateNotice({
 }
 
 export function YieldClient() {
-  const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
+  const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankingsSummary();
   const { data: logos } = useLogos();
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const router = useRouter();
@@ -434,7 +434,7 @@ export function YieldClient() {
         }
       });
     },
-    [replaceParams, viewModel.matchingPreset],
+    [replaceParams, viewModel.matchingPreset, viewModel.presets, viewModel.totalRows],
   );
 
   const handleApplyRiskBudget = useCallback(

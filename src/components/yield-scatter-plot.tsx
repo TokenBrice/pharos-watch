@@ -22,7 +22,8 @@ import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
-import type { YieldRanking, YieldType } from "@shared/types";
+import type { YieldType } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 interface ScatterDataPoint {
   x: number; // safety score (original, for tooltip)
@@ -46,7 +47,7 @@ interface ScatterDataPoint {
 }
 
 interface YieldScatterPlotProps {
-  rankings: YieldRanking[];
+  rankings: YieldWorkbenchRanking[];
   benchmarkRate: number;
   benchmarkLabel?: string;
   showBenchmarkReference?: boolean;
@@ -300,7 +301,7 @@ export function YieldScatterPlot({
           benchmarkIsFallback: r.benchmarkIsFallback,
         }),
         benchmarkRate: r.benchmarkRate ?? benchmarkRate,
-        excessYield: r.excessYield,
+        excessYield: r.benchmarkRate != null ? r.apy30d - r.benchmarkRate : null,
         tvl: r.sourceTvlUsd,
         logoSrc: resolveCompactLogoSrc(logos?.[r.id], compactMarker ? 14 : 16),
       }));

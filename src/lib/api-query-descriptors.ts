@@ -1,17 +1,10 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import {
-  DATA_SURFACE_DESCRIPTORS,
-  type YieldHistoryMode,
-} from "@shared/lib/data-surface-descriptors";
+import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
-import type {
-  DailyDigestResponse,
-  DigestArchiveResponse,
-  DigestSnapshotResponse,
-} from "@shared/types/digest";
+import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
 import type {
   BlacklistResponse,
   BlacklistSummaryResponse,
@@ -25,29 +18,20 @@ import type {
   StressSignalsAllResponse,
   SupplyHistoryPoint,
 } from "@shared/types/market";
-import type {
-  MintBurnEventsResponse,
-  MintBurnFlowsResponse,
-  MintBurnPerCoinResponse,
-} from "@shared/types/mint-burn";
+import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { ReportCardsResponse, SafetyScoreHistoryResponse } from "@shared/types/report-cards";
 import type { HealthResponse } from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
 import type { UsdsStatusResponse } from "@shared/types/stability";
-import type {
-  YieldAdapterManifestResponse,
-  YieldHistoryResponse,
-  YieldRankingsResponse,
-} from "@shared/types/yield";
+import type { YieldAdapterManifestResponse, YieldHistoryResponse, YieldRankingsResponse } from "@shared/types/yield";
+import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import {
   defineApiQuery,
   defineParameterizedApiQuery,
   defineParameterizedStaticApiQuery,
 } from "@/lib/api-query-contract";
-import {
-  STABILITY_INDEX_QUERY_DESCRIPTOR,
-} from "@/lib/api-query-domains/stability-light";
+import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-light";
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_1H,
@@ -103,8 +87,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<StablecoinListResponse>(async () =>
-      (await import("@shared/types/market")).StablecoinListResponseSchema
+    createLazySchema<StablecoinListResponse>(
+      async () => (await import("@shared/types/market")).StablecoinListResponseSchema,
     ),
   ),
   chains: defineApiQuery(
@@ -125,9 +109,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
     },
     "meta",
-    createLazySchema<BluechipRatingsMap>(async () =>
-      (await import("@shared/types/market")).BluechipRatingsMapSchema
-    ),
+    createLazySchema<BluechipRatingsMap>(async () => (await import("@shared/types/market")).BluechipRatingsMapSchema),
   ),
   dailyDigest: defineApiQuery(
     {
@@ -136,9 +118,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_24H,
     },
     "plain",
-    createLazySchema<DailyDigestResponse>(async () =>
-      (await import("@shared/types/digest")).DailyDigestResponseSchema
-    ),
+    createLazySchema<DailyDigestResponse>(async () => (await import("@shared/types/digest")).DailyDigestResponseSchema),
   ),
   dexLiquidity: defineApiQuery(
     {
@@ -148,14 +128,12 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<DexLiquidityMap>(async () =>
-      (await import("@shared/types/market")).DexLiquidityMapSchema
-    ),
+    createLazySchema<DexLiquidityMap>(async () => (await import("@shared/types/market")).DexLiquidityMapSchema),
   ),
   dexLiquidityHistory: defineParameterizedApiQuery(
     "plain",
-    createLazySchema<DexLiquidityHistoryPoint[]>(async () =>
-      (await import("@shared/types/market")).DexLiquidityHistoryResponseSchema
+    createLazySchema<DexLiquidityHistoryPoint[]>(
+      async () => (await import("@shared/types/market")).DexLiquidityHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 90) => ({
       queryKey: ["dex-liquidity-history", stablecoinId, days] as const,
@@ -171,13 +149,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
     },
     "meta",
-    createLazySchema<DigestArchiveResponse>(async () =>
-      (await import("@shared/types/digest")).DigestArchiveResponseSchema
+    createLazySchema<DigestArchiveResponse>(
+      async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema,
     ),
   ),
   digestSnapshot: defineParameterizedStaticApiQuery(
-    createLazySchema<DigestSnapshotResponse>(async () =>
-      (await import("@shared/types/digest")).DigestSnapshotResponseSchema
+    createLazySchema<DigestSnapshotResponse>(
+      async () => (await import("@shared/types/digest")).DigestSnapshotResponseSchema,
     ),
     (date: string) => ({
       queryKey: ["digest-snapshot", date] as const,
@@ -191,8 +169,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.publicHealth,
     },
     "plain",
-    createLazySchema<HealthResponse>(async () =>
-      (await import("@shared/types/status/public-health")).HealthResponseSchema
+    createLazySchema<HealthResponse>(
+      async () => (await import("@shared/types/status/public-health")).HealthResponseSchema,
     ),
   ),
   blacklistSummary: defineApiQuery(
@@ -203,15 +181,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
     },
     "meta",
-    createLazySchema<BlacklistSummaryResponse>(async () =>
-      (await import("@shared/types/market")).BlacklistSummaryResponseSchema
+    createLazySchema<BlacklistSummaryResponse>(
+      async () => (await import("@shared/types/market")).BlacklistSummaryResponseSchema,
     ),
   ),
   blacklistEvents: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<BlacklistResponse>(async () =>
-      (await import("@shared/types/market")).BlacklistResponseSchema
-    ),
+    createLazySchema<BlacklistResponse>(async () => (await import("@shared/types/market")).BlacklistResponseSchema),
     ({ queryKey, path }: BlacklistEventsDescriptorInput) => ({
       queryKey,
       path,
@@ -221,8 +197,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   mintBurnFlows: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<MintBurnFlowsResponse>(async () =>
-      (await import("@shared/types/mint-burn")).MintBurnFlowsResponseSchema
+    createLazySchema<MintBurnFlowsResponse>(
+      async () => (await import("@shared/types/mint-burn")).MintBurnFlowsResponseSchema,
     ),
     (hours: number = 24) => ({
       queryKey: ["mint-burn-flows", "all", hours] as const,
@@ -233,8 +209,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   mintBurnFlowsCoin: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<MintBurnPerCoinResponse>(async () =>
-      (await import("@shared/types/mint-burn")).MintBurnPerCoinResponseSchema
+    createLazySchema<MintBurnPerCoinResponse>(
+      async () => (await import("@shared/types/mint-burn")).MintBurnPerCoinResponseSchema,
     ),
     (stablecoinId: string, hours: number = 24) => ({
       queryKey: ["mint-burn-flows", stablecoinId, hours] as const,
@@ -248,8 +224,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   mintBurnEvents: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<MintBurnEventsResponse>(async () =>
-      (await import("@shared/types/mint-burn")).MintBurnEventsResponseSchema
+    createLazySchema<MintBurnEventsResponse>(
+      async () => (await import("@shared/types/mint-burn")).MintBurnEventsResponseSchema,
     ),
     (stablecoinId: string, opts?: MintBurnEventsDescriptorOptions) => {
       const params = new URLSearchParams({ stablecoin: stablecoinId });
@@ -283,9 +259,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
     },
     "meta",
-    createLazySchema<PegSummaryResponse>(async () =>
-      (await import("@shared/types/market")).PegSummaryResponseSchema
-    ),
+    createLazySchema<PegSummaryResponse>(async () => (await import("@shared/types/market")).PegSummaryResponseSchema),
   ),
   reportCards: defineApiQuery(
     {
@@ -295,8 +269,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<ReportCardsResponse>(async () =>
-      (await import("@shared/types/report-cards")).ReportCardsResponseSchema
+    createLazySchema<ReportCardsResponse>(
+      async () => (await import("@shared/types/report-cards")).ReportCardsResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(
@@ -307,9 +281,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
     },
     "meta",
-    createLazySchema<DdrResponse>(async () =>
-      (await import("@shared/types/depeg-resolver")).DdrResponseSchema
-    ),
+    createLazySchema<DdrResponse>(async () => (await import("@shared/types/depeg-resolver")).DdrResponseSchema),
   ),
   depegResolverReview: defineApiQuery(
     {
@@ -319,8 +291,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
     },
     "meta",
-    createLazySchema<DdrrResponse>(async () =>
-      (await import("@shared/types/depeg-resolver-review")).DdrrResponseSchema
+    createLazySchema<DdrrResponse>(
+      async () => (await import("@shared/types/depeg-resolver-review")).DdrrResponseSchema,
     ),
   ),
   redemptionBackstops: defineApiQuery(
@@ -331,14 +303,14 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
     },
     "meta",
-    createLazySchema<RedemptionBackstopsResponse>(async () =>
-      (await import("@shared/types/redemption")).RedemptionBackstopsResponseSchema
+    createLazySchema<RedemptionBackstopsResponse>(
+      async () => (await import("@shared/types/redemption")).RedemptionBackstopsResponseSchema,
     ),
   ),
   safetyScoreHistory: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<SafetyScoreHistoryResponse>(async () =>
-      (await import("@shared/types/report-cards")).SafetyScoreHistoryResponseSchema
+    createLazySchema<SafetyScoreHistoryResponse>(
+      async () => (await import("@shared/types/report-cards")).SafetyScoreHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 3650) => ({
       queryKey: ["safety-score-history", stablecoinId, days] as const,
@@ -354,8 +326,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_1H,
     },
     "plain",
-    createLazySchema<StablecoinChartPoint[]>(async () =>
-      (await import("@shared/types/market")).StablecoinChartResponseSchema
+    createLazySchema<StablecoinChartPoint[]>(
+      async () => (await import("@shared/types/market")).StablecoinChartResponseSchema,
     ),
   ),
   nonUsdShare: defineApiQuery(
@@ -365,8 +337,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_24H,
     },
     "plain",
-    createLazySchema<NonUsdSharePoint[]>(async () =>
-      (await import("@/lib/non-usd-share-schema")).NonUsdShareResponseSchema
+    createLazySchema<NonUsdSharePoint[]>(
+      async () => (await import("@/lib/non-usd-share-schema")).NonUsdShareResponseSchema,
     ),
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,
@@ -378,8 +350,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_15MIN,
     },
     "plain",
-    createLazySchema<UsdsStatusResponse>(async () =>
-      (await import("@shared/types/stability")).UsdsStatusResponseSchema
+    createLazySchema<UsdsStatusResponse>(
+      async () => (await import("@shared/types/stability")).UsdsStatusResponseSchema,
     ),
   ),
   telegramPulse: defineApiQuery(
@@ -389,14 +361,12 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_TELEGRAM_PULSE,
     },
     "plain",
-    createLazySchema<TelegramPulse>(async () =>
-      (await import("@shared/types/status/telegram")).TelegramPulseSchema
-    ),
+    createLazySchema<TelegramPulse>(async () => (await import("@shared/types/status/telegram")).TelegramPulseSchema),
   ),
   yieldHistory: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<YieldHistoryResponse>(async () =>
-      (await import("@shared/types/yield")).YieldHistoryResponseSchema
+    createLazySchema<YieldHistoryResponse>(
+      async () => (await import("@shared/types/yield")).YieldHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number, mode: YieldHistoryMode, sourceKey?: string | null) => ({
       queryKey: DATA_SURFACE_DESCRIPTORS.yieldHistory.buildQueryKey(stablecoinId, days, mode, sourceKey),
@@ -413,8 +383,20 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<YieldRankingsResponse>(async () =>
-      (await import("@shared/types/yield")).YieldRankingsResponseSchema
+    createLazySchema<YieldRankingsResponse>(
+      async () => (await import("@shared/types/yield")).YieldRankingsResponseSchema,
+    ),
+  ),
+  yieldRankingsSummary: defineApiQuery(
+    {
+      queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryQueryKey,
+      path: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryApiPath,
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldRankings,
+      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
+    },
+    "meta",
+    createLazySchema<YieldRankingsSummaryResponse>(
+      async () => (await import("@shared/types/yield-summary")).YieldRankingsSummaryResponseSchema,
     ),
   ),
   yieldAdapterManifest: defineApiQuery(
@@ -425,8 +407,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
     },
     "meta",
-    createLazySchema<YieldAdapterManifestResponse>(async () =>
-      (await import("@shared/types/yield")).YieldAdapterManifestResponseSchema
+    createLazySchema<YieldAdapterManifestResponse>(
+      async () => (await import("@shared/types/yield")).YieldAdapterManifestResponseSchema,
     ),
   ),
   stressSignals: defineApiQuery(
@@ -437,14 +419,14 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<StressSignalsAllResponse>(async () =>
-      (await import("@shared/types/market")).StressSignalsAllResponseSchema
+    createLazySchema<StressSignalsAllResponse>(
+      async () => (await import("@shared/types/market")).StressSignalsAllResponseSchema,
     ),
   ),
   stressSignalDetail: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<StressSignalDetailResponse>(async () =>
-      (await import("@shared/types/market")).StressSignalDetailResponseSchema
+    createLazySchema<StressSignalDetailResponse>(
+      async () => (await import("@shared/types/market")).StressSignalDetailResponseSchema,
     ),
     (stablecoinId: string, days: number = 30) => ({
       queryKey: ["stress-signals", stablecoinId, days] as const,
@@ -455,8 +437,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   supplyHistory: defineParameterizedApiQuery(
     "plain",
-    createLazySchema<SupplyHistoryPoint[]>(async () =>
-      (await import("@shared/types/market")).SupplyHistoryResponseSchema
+    createLazySchema<SupplyHistoryPoint[]>(
+      async () => (await import("@shared/types/market")).SupplyHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 1825) => ({
       queryKey: ["supply-history", stablecoinId, days] as const,

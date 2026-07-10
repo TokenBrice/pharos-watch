@@ -358,7 +358,7 @@ Total documented public operations: **38**.
 | GET | `/api/usds-status` | USDS freeze status | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-adapter-manifest` | Yield adapter manifest | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-history` | Yield history | Yield, History | X-API-Key | `stablecoin`, `days?`, `mode?`, `sourceKey?` | 200, 400, 401, 429, 503 |
-| GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | `projection?` | 200, 400, 401, 429, 503 |
 
 <!-- GENERATED-END: public-endpoints-quick-reference -->
 

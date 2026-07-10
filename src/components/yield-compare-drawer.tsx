@@ -13,7 +13,7 @@ import {
   formatYieldSourceRiskSummary,
 } from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
-import { formatYieldDecisionReasonLine } from "@/lib/yield-decision-ledger";
+import { getYieldDecisionReasonLine } from "@/lib/yield-workbench-row";
 import { trackEvent } from "@/lib/analytics";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
@@ -112,7 +112,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "decisionReason",
     label: "Decision reason",
     align: "left",
-    render: (row) => formatYieldDecisionReasonLine(row.decisionLedger) ?? "—",
+    render: (row) => getYieldDecisionReasonLine(row) ?? "—",
   },
   {
     key: "depth",

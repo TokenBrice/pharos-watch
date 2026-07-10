@@ -220,7 +220,12 @@ describe("projectYieldRankingsSummary", () => {
     expect(summary.rankings[0]).toMatchObject({
       id: detailed.rankings[0].id,
       alternateSourceCount: 3,
+      decisionReasonCode: "curated-over-discovered",
+      rankDelta: 1,
+      rankChangeDriver: "apy",
+      rankPysDelta: 0.5,
       provenance: {
+        sourceKey: detailed.rankings[0].provenance?.sourceKey,
         calculationMode: "market-api",
         evidenceClass: "direct-first-party",
         evidenceCompleteness: 0.92,

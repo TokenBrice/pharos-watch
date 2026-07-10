@@ -30,6 +30,12 @@ import {
 } from "@/lib/yield-source-risk";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
 import { trackEvent } from "@/lib/analytics";
+import {
+  getYieldAlternateSourceCount,
+  getYieldAvailableSources,
+  getYieldRankChangeAttribution,
+  getYieldBenchmarkSelectionMode,
+} from "@/lib/yield-workbench-row";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -242,7 +248,8 @@ function YieldInstrumentRowBase({
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
   const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
-  const rankChip = useMemo(() => buildRankChangeChipDisplay(row.rankChangeAttribution), [row.rankChangeAttribution]);
+  const rankAttribution = getYieldRankChangeAttribution(row);
+  const rankChip = useMemo(() => buildRankChangeChipDisplay(rankAttribution), [rankAttribution]);
   const pysNullReasonText =
     row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
@@ -254,18 +261,12 @@ function YieldInstrumentRowBase({
       }),
     [row.provenance?.sourceSwitch, row.sourceRisk],
   );
-  const availableSources = useMemo(
-    () => [
-      ...(row.provenance?.sourceKey ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }] : []),
-      ...(row.altSources ?? []).map((source) => ({ sourceKey: source.sourceKey, yieldSource: source.yieldSource })),
-    ],
-    [row],
-  );
+  const availableSources = useMemo(() => getYieldAvailableSources(row), [row]);
 
   // WHY: USD-fallback benchmark on a non-USD peg yields a currency-mismatched score; surface a caveat.
   const isCurrencyMismatchedBenchmark =
-    row.benchmarkSelectionMode === "fallback-usd" && row.peg !== null && row.peg !== "USD";
-  const altSourceCount = row.altSources?.length ?? 0;
+    getYieldBenchmarkSelectionMode(row) === "fallback-usd" && row.peg !== null && row.peg !== "USD";
+  const altSourceCount = getYieldAlternateSourceCount(row);
   const totalSourceCount = 1 + altSourceCount;
   const warningCount = row.warningSignals.length;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;

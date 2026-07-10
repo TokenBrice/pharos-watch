@@ -9,6 +9,11 @@ import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
+import {
+  getYieldBenchmarkSelectionMode,
+  isYieldBenchmarkFallback,
+  isYieldRankingSummary,
+} from "@/lib/yield-workbench-row";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -164,7 +169,7 @@ export function YieldPysValue({
               benchmarkAdjustment={breakdown.benchmarkAdjustment}
               benchmarkSpread={breakdown.benchmarkSpread}
               benchmarkLabel={row.benchmarkLabel}
-              benchmarkSelectionMode={row.benchmarkSelectionMode}
+              benchmarkSelectionMode={getYieldBenchmarkSelectionMode(row)}
               sourceRiskPenalty={breakdown.sourceRiskPenalty}
               adjustedRiskPenalty={breakdown.adjustedRiskPenalty}
               sustainabilityMult={breakdown.sustainabilityMult}
@@ -252,8 +257,11 @@ export function YieldSourceDetails({
 }) {
   const depth = YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens];
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
+  const selectionReason = isYieldRankingSummary(row)
+    ? row.yieldSource
+    : (row.provenance?.selectionReason ?? row.yieldSource);
   return (
-    <div className="min-w-0 text-sm text-muted-foreground" title={row.provenance?.selectionReason ?? row.yieldSource}>
+    <div className="min-w-0 text-sm text-muted-foreground" title={selectionReason}>
       {/* Line 1: confidence dot · source name · source-changed chip · compact risk bar */}
       <div className="flex min-w-0 items-center gap-1.5">
         {confidenceStyle && confidenceLabel ? (
@@ -437,7 +445,7 @@ export function YieldExpandedDetails({
             stablecoinId={row.id}
             benchmarkRate={row.benchmarkRate ?? riskFreeRate}
             benchmarkLabel={row.benchmarkLabel}
-            benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
+            benchmarkIsFallback={isYieldBenchmarkFallback(row)}
             medianApy={medianApy}
             compact
             availableSources={availableSources}
@@ -477,7 +485,9 @@ export function YieldExpandedDetails({
                 {totalSourceCount} {totalSourceCount === 1 ? "source" : "sources"} tracked
               </p>
             </ExpandedMetricSection>
-            <YieldAccessStructure sourceRisk={row.sourceRisk} compact />
+            {!isYieldRankingSummary(row) ? (
+              <YieldAccessStructure sourceRisk={row.sourceRisk} compact />
+            ) : null}
             {row.warningSignals.length > 0 ? (
               <ExpandedMetricSection title="Signals">
                 <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
@@ -504,7 +514,9 @@ export function YieldExpandedDetails({
               </button>
             ) : null}
           </div>
-          <YieldDecisionLedgerCard ledger={row.decisionLedger} showAlternatives={false} />
+          {!isYieldRankingSummary(row) ? (
+            <YieldDecisionLedgerCard ledger={row.decisionLedger} showAlternatives={false} />
+          ) : null}
         </div>
       </div>
     </div>

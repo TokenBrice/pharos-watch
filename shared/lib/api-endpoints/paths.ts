@@ -60,6 +60,7 @@ export const API_PATHS = {
   snapshotCoin: (date: string, stablecoinId: string) =>
     `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
   yieldRankings: () => "/api/yield-rankings",
+  yieldRankingsSummary: () => buildQueryPath("/api/yield-rankings", { projection: "summary" }),
   yieldAdapterManifest: () => "/api/yield-adapter-manifest",
   yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
@@ -69,8 +70,7 @@ export const API_PATHS = {
       mode,
       sourceKey,
     }),
-  yieldHistoryProbe: (stablecoinId: string) =>
-    buildQueryPath("/api/yield-history", { stablecoin: stablecoinId }),
+  yieldHistoryProbe: (stablecoinId: string) => buildQueryPath("/api/yield-history", { stablecoin: stablecoinId }),
   safetyScoreHistoryBase: () => "/api/safety-score-history",
   safetyScoreHistory: (stablecoinId: string, days = 3650) =>
     buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId, days }),
@@ -169,8 +169,7 @@ export const API_PATHS = {
   backfillDews: () => "/api/backfill-dews",
   discoveryCandidates: () => "/api/discovery-candidates",
   discoveryCandidateDismiss: (id: number) => `/api/discovery-candidates/${id}/dismiss`,
-  resetCronLease: (params?: { job?: string }) =>
-    buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
+  resetCronLease: (params?: { job?: string }) => buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
   resetCircuitBreaker: (params?: { circuit?: string }) =>
     buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
   killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
