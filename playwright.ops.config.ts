@@ -4,6 +4,7 @@ const staticExportHost = "127.0.0.1";
 const staticExportPort = process.env.OPS_PLAYWRIGHT_PORT ?? "4174";
 const staticExportServerUrl = `http://${staticExportHost}:${staticExportPort}`;
 const opsBaseUrl = `http://ops.pharos.watch:${staticExportPort}`;
+const phase6MatrixTag = /@phase6/;
 
 const viewports = [
   { name: "chromium-320", width: 320, height: 568 },
@@ -34,6 +35,7 @@ export default defineConfig({
   },
   projects: viewports.map(({ name, width, height }) => ({
     name,
+    ...(name === "chromium-390" ? {} : { grepInvert: phase6MatrixTag }),
     use: { viewport: { width, height } },
   })),
   webServer: {

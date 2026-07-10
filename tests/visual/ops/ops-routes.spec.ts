@@ -37,7 +37,7 @@ async function attachJson(testInfo: TestInfo, name: string, value: unknown): Pro
 }
 
 async function waitForWorkspace(page: Page, workspaceId: AdminWorkspaceId): Promise<void> {
-  await expect(page.getByRole("heading", { level: 2, name: WORKSPACE_HEADINGS[workspaceId], exact: true })).toBeVisible(
+  await expect(page.getByRole("heading", { level: 1, name: WORKSPACE_HEADINGS[workspaceId], exact: true })).toBeVisible(
     { timeout: HYDRATION_TIMEOUT_MS },
   );
 
@@ -74,7 +74,11 @@ async function assertPublicChromeAbsent(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "Feedback", exact: true })).toHaveCount(0);
 }
 
-async function assertNoDocumentOverflow(page: Page, testInfo: TestInfo): Promise<void> {
+async function assertNoDocumentOverflow(
+  page: Page,
+  testInfo: TestInfo,
+  artifactName = "layout-measurements",
+): Promise<void> {
   const measurements = await page.evaluate((overflowTolerancePx) => {
     const root = document.documentElement;
     const body = document.body;
@@ -127,10 +131,24 @@ async function assertNoDocumentOverflow(page: Page, testInfo: TestInfo): Promise
     };
   }, DOCUMENT_OVERFLOW_TOLERANCE_PX);
 
-  await attachJson(testInfo, "layout-measurements", measurements);
+  await attachJson(testInfo, artifactName, measurements);
   expect
     .soft(measurements.horizontalOverflowPx, "document-level horizontal overflow in CSS pixels")
     .toBeLessThanOrEqual(DOCUMENT_OVERFLOW_TOLERANCE_PX);
+}
+
+async function assertWorkspaceVisibleAtCurrentViewport(page: Page, workspaceId: AdminWorkspaceId): Promise<void> {
+  await waitForWorkspace(page, workspaceId);
+  await assertOpsNavigation(page, workspaceId);
+  await expect(page.locator("main#ops-main-content")).toBeVisible();
+}
+
+function parseCssDurations(values: string): number[] {
+  return values.split(",").map((value) => {
+    const normalized = value.trim();
+    const duration = Number.parseFloat(normalized) || 0;
+    return normalized.endsWith("ms") ? duration / 1000 : duration;
+  });
 }
 
 async function assertTriageScope(page: Page): Promise<void> {
@@ -220,3 +238,105 @@ for (const route of [
     expect(violations, `axe-core violations for ${route.path}`).toEqual([]);
   });
 }
+
+test.describe("Phase 6 media and reflow matrix", () => {
+  test("@phase6 200% text zoom preserves workspace reflow and navigation", async ({ page }, testInfo) => {
+    await page.goto("/admin/", { waitUntil: "domcontentloaded" });
+    await assertWorkspaceVisibleAtCurrentViewport(page, "triage");
+    const baselineFontSize = await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+    );
+
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+
+    await expect
+      .poll(() => page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).fontSize)))
+      .toBeGreaterThanOrEqual(baselineFontSize * 1.99);
+    await assertWorkspaceVisibleAtCurrentViewport(page, "triage");
+    await assertNoDocumentOverflow(page, testInfo, "layout-200-percent-text-zoom");
+  });
+
+  test("@phase6 light and dark schemes retain readable workspace chrome", async ({ page }, testInfo) => {
+    const samples: Record<string, { backgroundColor: string; color: string; darkClass: boolean }> = {};
+
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("/admin/", { waitUntil: "domcontentloaded" });
+      await page.evaluate((selectedTheme) => localStorage.setItem("theme", selectedTheme), theme);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await assertWorkspaceVisibleAtCurrentViewport(page, "triage");
+
+      const sample = await page.evaluate(() => {
+        const style = getComputedStyle(document.body);
+        return {
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+          darkClass: document.documentElement.classList.contains("dark"),
+          mediaDark: matchMedia("(prefers-color-scheme: dark)").matches,
+        };
+      });
+      expect(sample.darkClass).toBe(theme === "dark");
+      expect(sample.mediaDark).toBe(theme === "dark");
+      expect(sample.backgroundColor).not.toBe(sample.color);
+      samples[theme] = sample;
+      await assertNoDocumentOverflow(page, testInfo, `layout-${theme}-scheme`);
+    }
+
+    expect(samples.light?.backgroundColor).not.toBe(samples.dark?.backgroundColor);
+    expect(samples.light?.color).not.toBe(samples.dark?.color);
+    await attachJson(testInfo, "theme-computed-colors", samples);
+  });
+
+  test("@phase6 forced colors preserves current navigation and selected workspace controls", async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ forcedColors: "active", colorScheme: "light" });
+
+    await page.goto("/admin/pipeline/", { waitUntil: "domcontentloaded" });
+    await assertWorkspaceVisibleAtCurrentViewport(page, "pipeline");
+    expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
+
+    const activeWorkspace = page
+      .getByRole("navigation", { name: "Operator workspaces" })
+      .getByRole("link", { name: "Pipeline", exact: true });
+    const selectedTab = page.getByRole("tab", { selected: true }).first();
+    await expect(activeWorkspace).toBeVisible();
+    await expect(selectedTab).toBeVisible();
+    await expect(selectedTab).toHaveAttribute("aria-controls", /.+/);
+
+    const activeBorder = await activeWorkspace.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { style: style.borderTopStyle, width: Number.parseFloat(style.borderTopWidth) || 0 };
+    });
+    expect(activeBorder.style).not.toBe("none");
+    expect(activeBorder.width).toBeGreaterThanOrEqual(1);
+    await assertNoDocumentOverflow(page, testInfo, "layout-forced-colors");
+  });
+
+  test("@phase6 reduced motion disables key ops navigation and workspace transitions", async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    await page.goto("/admin/pipeline/", { waitUntil: "domcontentloaded" });
+    await assertWorkspaceVisibleAtCurrentViewport(page, "pipeline");
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+
+    const activeWorkspace = page
+      .getByRole("navigation", { name: "Operator workspaces" })
+      .getByRole("link", { name: "Pipeline", exact: true });
+    const selectedTab = page.getByRole("tab", { selected: true }).first();
+    const workspaceTransitionDuration = await activeWorkspace.evaluate(
+      (element) => getComputedStyle(element).transitionDuration,
+    );
+    const tabTransitionDuration = await selectedTab.evaluate((element) => getComputedStyle(element).transitionDuration);
+    const transitionDurations = [
+      ...parseCssDurations(workspaceTransitionDuration),
+      ...parseCssDurations(tabTransitionDuration),
+    ];
+
+    expect(Math.max(...transitionDurations)).toBeLessThanOrEqual(0.01);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior)).toBe("auto");
+    await assertNoDocumentOverflow(page, testInfo, "layout-reduced-motion");
+  });
+});
