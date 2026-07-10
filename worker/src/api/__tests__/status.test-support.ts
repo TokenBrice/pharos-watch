@@ -34,6 +34,22 @@ function makeCronRow(job: string, status = "ok", ageSec = 300) {
   };
 }
 
+function makeDewsPublicationPointerRow(now: number, ageSec = 300) {
+  const updatedAt = now - ageSec;
+  return {
+    key: "dews:published-generation",
+    updated_at: updatedAt,
+    value: JSON.stringify({
+      updatedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: 1,
+      stablecoinIdsDigest: "a".repeat(64),
+    }),
+  };
+}
+
 function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown> = {}) {
   return {
     dbHealthy: true,
@@ -205,7 +221,21 @@ function fixtureMockD1(
       }),
     },
   };
-  return mockD1(hasPublicationFixture ? tables : [publicationFixture, ...tables], options);
+  const hasDewsPointerFixture = tables.some((table) =>
+    table.matchBinds?.includes("dews:published-generation")
+  );
+  const dewsPointer = makeDewsPublicationPointerRow(Math.floor(Date.now() / 1000));
+  const dewsPointerFixture = {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["dews:published-generation"],
+    rows: [dewsPointer],
+    first: dewsPointer,
+  };
+  return mockD1([
+    ...(hasPublicationFixture ? [] : [publicationFixture]),
+    ...(hasDewsPointerFixture ? [] : [dewsPointerFixture]),
+    ...tables,
+  ], options);
 }
 const fixtureMakeApiRequest = makeApiRequest;
 const fixtureMockFetch = mockFetch;

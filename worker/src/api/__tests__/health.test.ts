@@ -34,6 +34,28 @@ function completePublicationEntry(now: number): MockTableConfig {
   };
 }
 
+function dewsPublicationEntry(now: number): MockTableConfig {
+  const updatedAt = now - 60;
+  const row = {
+    key: "dews:published-generation",
+    updated_at: updatedAt,
+    value: JSON.stringify({
+      updatedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: 1,
+      stablecoinIdsDigest: "a".repeat(64),
+    }),
+  };
+  return {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["dews:published-generation"],
+    rows: [row],
+    first: row,
+  };
+}
+
 function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
   const {
     extraCacheRows = [],
@@ -46,6 +68,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 
   return mockD1([
     completePublicationEntry(now),
+    dewsPublicationEntry(now),
     {
       match: "cache WHERE key IN",
       rows: [
@@ -76,6 +99,7 @@ describe("handleHealth", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       completePublicationEntry(now),
+      dewsPublicationEntry(now),
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
