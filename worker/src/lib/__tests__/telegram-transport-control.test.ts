@@ -7,6 +7,7 @@ import {
   claimTelegramTransportPermit,
   pruneTelegramTransportObservations,
   readTelegramDeliveryPause,
+  readTelegramFreshHandoffAllowance,
   readTelegramTransportCircuit,
   recordTelegramTransportOutcomes,
   resumeTelegramDelivery,
@@ -68,6 +69,26 @@ describe("Telegram transport outage control", () => {
     const permit = await closedPermit(db);
     expect(permit).toMatchObject({ allowed: true, reason: "closed", maxDistinctChats: 6 });
     expect(await readTelegramTransportCircuit(db)).toMatchObject({ state: "closed", generation: 0 });
+  });
+
+  it("holds fresh handoff while open and seeds at most four targets when a probe is due", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    sqlite.prepare(
+      `UPDATE telegram_transport_circuit
+          SET state = 'open', generation = 1, next_probe_at = ?, updated_at = ?
+        WHERE singleton_id = 1`,
+    ).run(NOW + 60, NOW);
+    await expect(readTelegramFreshHandoffAllowance(db, NOW, 90)).resolves.toMatchObject({
+      allowed: false,
+      maxTargets: 0,
+      reason: "outage_open",
+    });
+    sqlite.prepare("UPDATE telegram_transport_circuit SET next_probe_at = ? WHERE singleton_id = 1").run(NOW);
+    await expect(readTelegramFreshHandoffAllowance(db, NOW, 90)).resolves.toMatchObject({
+      allowed: true,
+      maxTargets: 4,
+      reason: "probe_seed",
+    });
   });
 
   it("opens immediately on auth failure and denies the untouched tail", async () => {

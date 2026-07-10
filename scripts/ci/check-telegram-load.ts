@@ -2,9 +2,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
+  estimateTelegramTargetPlanCoordinatorBound,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
+  TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   TELEGRAM_DISPATCH_TIMEOUT_MS,
@@ -17,7 +19,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "admin-broadcast" | "telegram-429-storm";
-type SloStatus = "ok" | "slow" | "breach" | "exploratory";
+type SloStatus = "ok" | "slow" | "breach" | "outage-unavailable" | "exploratory";
 type QueryPlanStatus = "ok" | "review" | "fail";
 
 interface AlertFlags {
@@ -99,7 +101,13 @@ export interface LoadScenarioResult {
   initialFreshAttempts: number;
   pendingEnqueued: number;
   pendingDrainRuns: number;
+  planningDelaySeconds: number;
+  outageUnavailableSeconds: number;
+  postRecoveryDrainSeconds: number;
   estimatedDrainSeconds: number;
+  ttlSeconds: number;
+  ttlMarginSeconds: number;
+  ttlMarginFraction: number;
   /** Modelled per-invocation CPU after the C102 budget-before-format reorder. */
   estimatedCpuMs: number;
   d1Operations: D1OperationEstimate;
@@ -146,6 +154,9 @@ export interface TelegramLoadCheckReport {
     effectiveSendMessagesPerSecond: number;
     d1WriteMsPerMessage: number;
     pendingTtlSeconds: number;
+    adminPendingTtlSeconds: number;
+    worstCasePlanningDelaySeconds: number;
+    minimumTtlMarginFraction: number;
     normalSloSeconds: number;
     spikeMaxSeconds: number;
     dispatchCpuMs: number;
@@ -169,6 +180,7 @@ const {
   normalSloSeconds: NORMAL_SLO_SECONDS,
   spikeMaxSeconds: SPIKE_MAX_SECONDS,
   telegram429StormSeconds: TELEGRAM_429_STORM_SECONDS,
+  minimumTtlMarginFraction: MINIMUM_TTL_MARGIN_FRACTION,
   defaultDispatchCpuMs: DEFAULT_DISPATCH_CPU_MS,
   cpuBudgetSafetyFraction: CPU_BUDGET_SAFETY_FRACTION,
   formatCpuMsPerChat: FORMAT_CPU_MS_PER_CHAT,
@@ -183,6 +195,7 @@ const RISK_ALERT_PRIORITY = TELEGRAM_PENDING_PRIORITY.riskAlert;
 const LEGACY_PENDING_PRIORITY = TELEGRAM_PENDING_PRIORITY.legacy;
 const CRON_INTERVAL_SECONDS = TELEGRAM_DISPATCH_INTERVAL_SEC;
 const PENDING_TTL_SECONDS = PENDING_TTL_SEC;
+const ADMIN_PENDING_TTL_SECONDS = TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
 const ALERTS_PER_MESSAGE_CHUNK = TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE;
 
 // ---------- C102: per-invocation CPU budget modelling ----------
@@ -230,6 +243,15 @@ export function findCpuBudgetBreaches(report: TelegramLoadCheckReport): LoadScen
     (scenario) =>
       scenario.targetActiveWatchers === REQUIRED_TARGET &&
       scenario.estimatedCpuMs > report.assumptions.cpuBudgetCeilingMs,
+  );
+}
+
+export function findTtlMarginBreaches(report: TelegramLoadCheckReport): LoadScenarioResult[] {
+  return report.scenarios.filter(
+    (scenario) =>
+      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      !scenario.exploratory &&
+      scenario.ttlMarginFraction < report.assumptions.minimumTtlMarginFraction,
   );
 }
 const EFFECTIVE_SEND_MESSAGES_PER_SECOND = Math.min(
@@ -529,12 +551,20 @@ function estimateRiskD1Ops(args: {
   };
 }
 
-function classifySlo(targetActiveWatchers: number, scenarioId: ScenarioId, seconds: number): SloStatus {
+function classifySlo(
+  targetActiveWatchers: number,
+  scenarioId: ScenarioId,
+  postRecoverySeconds: number,
+  outageUnavailableSeconds: number,
+): SloStatus {
   if (targetActiveWatchers === EXPLORATORY_TARGET) return "exploratory";
+  if (outageUnavailableSeconds > 0) return "outage-unavailable";
   if (scenarioId === "market-wide-burst" || scenarioId === "telegram-429-storm") {
-    return seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
+    return postRecoverySeconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
   }
-  return seconds <= NORMAL_SLO_SECONDS ? "ok" : seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
+  return postRecoverySeconds <= NORMAL_SLO_SECONDS
+    ? "ok"
+    : postRecoverySeconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
 }
 
 function estimateSendSeconds(messageCount: number): number {
@@ -563,19 +593,27 @@ function buildScenarioResult(args: {
     ),
   ).size;
   const blockedAttempts = countBlockedMessageChunks(args.hitsByChat);
-  const initialFreshAttempts = args.adminPendingOnly || args.stormSeconds ? 0 : Math.min(messageChunks, FRESH_ATTEMPTS_PER_RUN);
-  const pendingEnqueued = args.adminPendingOnly || args.stormSeconds
-    ? messageChunks
-    : Math.max(0, messageChunks - initialFreshAttempts);
+  // Production target manifests hand every delivery through the authoritative
+  // pending lifecycle; the legacy direct-fresh sender is rollback-only.
+  const initialFreshAttempts = 0;
+  const pendingEnqueued = messageChunks;
   const pendingDrainRuns = Math.ceil(pendingEnqueued / PENDING_DRAIN_ATTEMPTS_PER_RUN);
-  const stormRuns = args.stormSeconds ? Math.ceil(args.stormSeconds / CRON_INTERVAL_SECONDS) : 0;
-  const initialFreshSeconds = estimateSendSeconds(initialFreshAttempts);
   const pendingScheduleSeconds = pendingDrainRuns * CRON_INTERVAL_SECONDS;
   const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
-  const estimatedDrainSeconds = initialFreshSeconds +
-    Math.max(pendingScheduleSeconds, pendingSendSeconds) +
-    stormRuns * CRON_INTERVAL_SECONDS;
-  const stormRetryWrites = args.stormSeconds ? Math.min(messageChunks, stormRuns * PENDING_DRAIN_ATTEMPTS_PER_RUN) : 0;
+  const postRecoveryDrainSeconds = Math.max(pendingScheduleSeconds, pendingSendSeconds);
+  const planningDelaySeconds = args.adminPendingOnly
+    ? 0
+    : estimateTelegramTargetPlanCoordinatorBound({
+      subscriberCount: args.fixture.activeWatchers,
+      targetCount: messageChunks,
+    }).runs * CRON_INTERVAL_SECONDS;
+  const outageUnavailableSeconds = args.stormSeconds ?? 0;
+  const estimatedDrainSeconds = planningDelaySeconds + outageUnavailableSeconds + postRecoveryDrainSeconds;
+  const ttlSeconds = args.adminPendingOnly ? ADMIN_PENDING_TTL_SECONDS : PENDING_TTL_SECONDS;
+  const ttlMarginSeconds = ttlSeconds - estimatedDrainSeconds;
+  const ttlMarginFraction = ttlMarginSeconds / ttlSeconds;
+  const stormRuns = args.stormSeconds ? Math.ceil(args.stormSeconds / CRON_INTERVAL_SECONDS) : 0;
+  const stormRetryWrites = args.stormSeconds ? Math.min(messageChunks, stormRuns * 4) : 0;
   const d1Operations = args.adminPendingOnly
     ? {
         reads: 1 + pendingDrainRuns,
@@ -607,10 +645,21 @@ function buildScenarioResult(args: {
     initialFreshAttempts,
     pendingEnqueued,
     pendingDrainRuns,
+    planningDelaySeconds,
+    outageUnavailableSeconds,
+    postRecoveryDrainSeconds,
     estimatedDrainSeconds,
+    ttlSeconds,
+    ttlMarginSeconds,
+    ttlMarginFraction,
     estimatedCpuMs: estimateCpuMs({ messageChunks, initialFreshAttempts }),
     d1Operations,
-    sloStatus: classifySlo(args.fixture.activeWatchers, args.scenarioId, estimatedDrainSeconds),
+    sloStatus: classifySlo(
+      args.fixture.activeWatchers,
+      args.scenarioId,
+      postRecoveryDrainSeconds,
+      outageUnavailableSeconds,
+    ),
     exploratory: args.fixture.activeWatchers === EXPLORATORY_TARGET,
   };
 }
@@ -974,6 +1023,15 @@ export function buildTelegramLoadCheckReport(options: {
 } = {}): TelegramLoadCheckReport {
   const targets = options.targets ?? WATCHER_TARGETS;
   const fixtures = targets.map((target) => buildSyntheticTelegramFixture(target));
+  const scenarios = fixtures.flatMap((fixture) => simulateLoadScenarios(fixture));
+  const requiredPlanningScenarios = scenarios.filter(
+    (scenario) => scenario.targetActiveWatchers === REQUIRED_TARGET,
+  );
+  const worstCasePlanningDelaySeconds = Math.max(
+    0,
+    ...(requiredPlanningScenarios.length > 0 ? requiredPlanningScenarios : scenarios)
+      .map((scenario) => scenario.planningDelaySeconds),
+  );
   return {
     assumptions: {
       freshAttemptsPerRun: FRESH_ATTEMPTS_PER_RUN,
@@ -986,6 +1044,9 @@ export function buildTelegramLoadCheckReport(options: {
       effectiveSendMessagesPerSecond: Math.round(EFFECTIVE_SEND_MESSAGES_PER_SECOND * 10) / 10,
       d1WriteMsPerMessage: D1_WRITE_MS_PER_MESSAGE,
       pendingTtlSeconds: PENDING_TTL_SECONDS,
+      adminPendingTtlSeconds: ADMIN_PENDING_TTL_SECONDS,
+      worstCasePlanningDelaySeconds,
+      minimumTtlMarginFraction: MINIMUM_TTL_MARGIN_FRACTION,
       normalSloSeconds: NORMAL_SLO_SECONDS,
       spikeMaxSeconds: SPIKE_MAX_SECONDS,
       dispatchCpuMs: DISPATCH_CPU_MS,
@@ -995,7 +1056,7 @@ export function buildTelegramLoadCheckReport(options: {
       sendCpuMsPerMessage: SEND_CPU_MS_PER_MESSAGE,
     },
     fixtureSummaries: fixtures.map(summarizeFixture),
-    scenarios: fixtures.flatMap((fixture) => simulateLoadScenarios(fixture)),
+    scenarios,
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
   };
 }
@@ -1024,7 +1085,7 @@ function parseTargets(args: string[]): number[] | null {
 function printReport(report: TelegramLoadCheckReport): void {
   console.log("Synthetic Telegram load simulation");
   console.log(
-    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.sendLoopSoftDeadlineSeconds / 60}m send-loop soft deadline, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
+    `Assumptions: authoritative pending delivery at ${report.assumptions.pendingDrainAttemptsPerRun} attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.worstCasePlanningDelaySeconds / 60}m worst-case planning, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk TTL, ${report.assumptions.adminPendingTtlSeconds / 60}m admin TTL, ${(report.assumptions.minimumTtlMarginFraction * 100).toFixed(0)}% minimum margin.`,
   );
   console.log(
     `CPU budget: ${report.assumptions.dispatchCpuMs.toLocaleString()}ms cap, ceiling ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms (${report.assumptions.cpuBudgetSafetyFraction}x), ${report.assumptions.formatCpuMsPerChat}ms/format-chat, ${report.assumptions.sendCpuMsPerMessage}ms/sent-chunk (format-count capped at fresh budget post-C102).`,
@@ -1045,7 +1106,7 @@ function printReport(report: TelegramLoadCheckReport): void {
   for (const result of report.scenarios) {
     const slo = result.sloStatus.toUpperCase();
     console.log(
-      `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, ${result.pendingEnqueued.toLocaleString()} pending, drain ${formatDuration(result.estimatedDrainSeconds)}, CPU ~${result.estimatedCpuMs.toLocaleString()}ms, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
+      `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, planning ${formatDuration(result.planningDelaySeconds)}, unavailable ${formatDuration(result.outageUnavailableSeconds)}, post-recovery ${formatDuration(result.postRecoveryDrainSeconds)}, TTL margin ${(result.ttlMarginFraction * 100).toFixed(1)}%, CPU ~${result.estimatedCpuMs.toLocaleString()}ms, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
     );
   }
 
@@ -1091,12 +1152,14 @@ function main(): void {
   // C102 gate: the required-target burst must stay under the CPU safety fraction
   // of the per-invocation cap. Always enforced (not gated on --enforce-target-slo).
   const cpuBudgetBreaches = findCpuBudgetBreaches(report);
+  const ttlMarginBreaches = enforceTargetSlo ? findTtlMarginBreaches(report) : [];
 
   if (
     failedPlans.length > 0 ||
     normalTargetSloFailures.length > 0 ||
     spikeTargetSloBreaches.length > 0 ||
-    cpuBudgetBreaches.length > 0
+    cpuBudgetBreaches.length > 0 ||
+    ttlMarginBreaches.length > 0
   ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
@@ -1115,6 +1178,13 @@ function main(): void {
       console.error(
         `\n${cpuBudgetBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) exceeded the ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms CPU budget ceiling: ${cpuBudgetBreaches
           .map((scenario) => `${scenario.scenarioId} ~${scenario.estimatedCpuMs.toLocaleString()}ms`)
+          .join(", ")}.`,
+      );
+    }
+    if (ttlMarginBreaches.length > 0) {
+      console.error(
+        `\n${ttlMarginBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) missed the ${(MINIMUM_TTL_MARGIN_FRACTION * 100).toFixed(0)}% TTL margin: ${ttlMarginBreaches
+          .map((scenario) => `${scenario.scenarioId} ${(scenario.ttlMarginFraction * 100).toFixed(1)}%`)
           .join(", ")}.`,
       );
     }

@@ -5469,7 +5469,7 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 }
 ```
 
-`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 30-minute admin TTL window. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 45-minute admin TTL window. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities.
 
 **Dry-run response (`dryRun: true`)**
 
@@ -5488,18 +5488,18 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
     "oldestPendingAgeSec": null,
     "oldestDuePendingAgeSec": null,
     "estimatedDrainTimeSec": 0,
-    "drainBudgetPerRun": 900,
+    "drainBudgetPerRun": 1800,
     "dispatchIntervalSec": 300
   },
   "deliveryEstimate": {
     "currentPendingActive": 0,
     "projectedPendingMessages": 1247,
-    "drainBudgetPerRun": 900,
-    "adminBroadcastTtlSec": 1800,
-    "estimatedDrainTimeSec": 600,
+    "drainBudgetPerRun": 1800,
+    "adminBroadcastTtlSec": 2700,
+    "estimatedDrainTimeSec": 300,
     "requiresAcknowledgement": false,
     "fitsWithinMinutes": {
-      "5": false,
+      "5": true,
       "15": true,
       "30": true,
       "60": true

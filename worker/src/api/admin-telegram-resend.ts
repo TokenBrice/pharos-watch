@@ -24,6 +24,10 @@ import { emptyAlerts } from "../cron/dispatch-telegram-routing";
 import { extractTopSignals } from "../cron/telegram-alert-snapshots";
 import { z } from "zod";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
+import {
+  claimTelegramTransportPermit,
+  recordTelegramTransportOutcomes as recordTelegramBotWideTransportOutcomes,
+} from "../lib/telegram-transport-control";
 
 const ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
 type AlertType = (typeof ALERT_TYPES)[number];
@@ -250,13 +254,59 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
     const canonicalHtml = formatConsolidatedMessage(alerts);
     const chunks = splitMessage(canonicalHtml);
     const sendResults: SendToChatResult[] = [];
+    const transportOwner = `admin-resend:${crypto.randomUUID()}`;
     for (const [chunkIndex, chunk] of chunks.entries()) {
+      const permitNowSec = Math.floor(Date.now() / 1000);
+      const permit = await claimTelegramTransportPermit(db, {
+        mode: "admin",
+        owner: transportOwner,
+        nowSec: permitNowSec,
+        requestedDistinctChats: 1,
+      });
+      if (!permit.allowed) {
+        const httpStatus = permit.reason === "operator_pause" ? 409 : 503;
+        await logAdminAction(
+          db,
+          {
+            action: "admin-telegram-resend",
+            target: chatId,
+            result: "error",
+            httpStatus,
+            details: {
+              chatId,
+              alertType,
+              stablecoinId,
+              reason: permit.reason,
+              chunksAttempted: sendResults.length,
+              deferUntil: permit.deferUntil,
+            },
+          },
+          request,
+        );
+        return adminJsonResponse(
+          {
+            ok: false,
+            error: "Telegram delivery is temporarily unavailable",
+            reason: permit.reason,
+            chunkCount: chunks.length,
+            chunksAttempted: sendResults.length,
+            deferUntil: permit.deferUntil,
+          },
+          { status: httpStatus },
+        );
+      }
       const result = await sendToChat(chatId, chunk, telegramBotToken, {
         disableWebPagePreview: true,
         disableNotification: false,
         replyMarkup: buildAlertReplyMarkup(alerts, chunkIndex),
       });
       sendResults.push(result);
+      await recordTelegramBotWideTransportOutcomes(
+        db,
+        permit,
+        [{ chatId, result }],
+        Math.floor(Date.now() / 1000),
+      );
       if (!result.ok) break;
     }
     const firstFailure = sendResults.find((result) => !result.ok);

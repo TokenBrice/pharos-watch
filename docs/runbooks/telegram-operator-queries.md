@@ -59,20 +59,72 @@ SELECT
   j.created_at,
   j.status,
   j.target_count,
-  SUM(CASE WHEN t.status = 'planned' THEN 1 ELSE 0 END) AS planned,
-  SUM(CASE WHEN t.status = 'queued' THEN 1 ELSE 0 END) AS queued,
-  SUM(CASE WHEN t.status = 'sent' THEN 1 ELSE 0 END) AS sent,
-  SUM(CASE WHEN t.status = 'failed' THEN 1 ELSE 0 END) AS failed,
-  SUM(CASE WHEN t.status = 'expired' THEN 1 ELSE 0 END) AS expired,
-  SUM(CASE WHEN t.effect_state = 'sending' THEN 1 ELSE 0 END) AS effect_sending,
-  SUM(CASE WHEN t.effect_state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown
+  j.planned_count,
+  j.accepted_count,
+  j.enqueued_count,
+  j.failed_count,
+  j.cancelled_count,
+  j.expired_count,
+  j.execution_unknown_count,
+  j.metadata
 FROM telegram_alert_jobs j
-LEFT JOIN telegram_alert_job_targets t ON t.job_id = j.job_id
 WHERE j.created_at >= ? - 86400
-GROUP BY j.job_id
 ORDER BY j.created_at DESC
 LIMIT 50;
 ```
+
+These counters are reconciled from mutually exclusive target buckets. `metadata.countersSource` should be `authoritative-target-rows`.
+
+## Source Target Planning
+
+Oldest nonterminal source events and their frozen cohort:
+
+```sql
+SELECT
+  source_event_id,
+  status,
+  detected_at,
+  expires_at,
+  target_plan_state,
+  target_plan_generation,
+  target_plan_owner,
+  target_plan_claim_expires_at,
+  subscriber_horizon_at,
+  subscriber_high_water_chat_id,
+  subscriber_cursor_chat_id,
+  planning_cursor_chat_id,
+  target_plan_count,
+  target_materialized_count,
+  last_error_class
+FROM telegram_alert_source_events
+WHERE status IN ('resolving', 'planned', 'baseline_committed')
+ORDER BY detected_at, source_event_id
+LIMIT 25;
+```
+
+Planning outcomes for one source generation:
+
+```sql
+SELECT planning_outcome, COUNT(*) AS chats
+FROM telegram_alert_planning_subscribers
+WHERE source_event_id = '<source_event_id>'
+  AND plan_generation = <generation>
+GROUP BY planning_outcome
+ORDER BY chats DESC;
+```
+
+Bounded expiry debt and legacy cache import state:
+
+```sql
+SELECT *
+FROM telegram_alert_target_expiry_progress
+WHERE state = 'running'
+ORDER BY updated_at, source_event_id;
+
+SELECT * FROM telegram_legacy_overflow_state WHERE singleton = 1;
+```
+
+Do not manually advance a baseline while expiry debt remains, reset a plan generation, or route a `telegram-source:legacy-overflow:v1:*` source through the normal planner. The legacy importer owns that namespace.
 
 Targets that missed one alert:
 

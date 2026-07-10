@@ -6,16 +6,16 @@
  * capacity model cannot silently drift from production delivery behavior.
  */
 
-/** Default stale-row TTL for the pending alert queue (one hour). */
-export const PENDING_TTL_SEC = 60 * 60;
+/** Default source/queue TTL leaves 20% headroom after bounded planning and drain. */
+export const PENDING_TTL_SEC = 2 * 60 * 60;
 
 export const TELEGRAM_ALERT_TTL_SEC = {
   depeg: PENDING_TTL_SEC,
   dews: PENDING_TTL_SEC,
   safety: PENDING_TTL_SEC,
-  launch: 30 * 60,
+  launch: 90 * 60,
   reserve: PENDING_TTL_SEC,
-  adminBroadcast: 30 * 60,
+  adminBroadcast: 45 * 60,
   legacy: PENDING_TTL_SEC,
 } as const;
 
@@ -32,7 +32,35 @@ export const TELEGRAM_DISPATCH_SOFT_DEADLINE_MS = 4 * 60_000;
 export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3_600;
 
 /** Pending-drain share reserved from the per-run send budget. */
-export const TELEGRAM_PENDING_DRAIN_BUDGET = Math.floor(TELEGRAM_MAX_MESSAGES_PER_RUN / 4);
+export const TELEGRAM_PENDING_DRAIN_BUDGET = 1_800;
+
+/** Subscribers captured and planned per durable target-plan transition. */
+export const TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE = 90;
+
+/** Planned target rows handed to the pending queue per transition. */
+export const TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE = 45;
+
+/** Durable target-plan transitions permitted in one dispatch invocation. */
+export const TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN = 32;
+
+export function estimateTelegramTargetPlanCoordinatorBound(input: {
+  subscriberCount: number;
+  targetCount: number;
+  maxSteps?: number;
+}): { steps: number; runs: number } {
+  const subscribers = Math.max(0, Math.floor(input.subscriberCount));
+  const targets = Math.max(0, Math.floor(input.targetCount));
+  const maxSteps = Math.max(
+    1,
+    Math.floor(input.maxSteps ?? TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN),
+  );
+  const captureSteps = Math.floor(subscribers / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) + 1;
+  const planningSteps = Math.ceil(subscribers / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) + 1;
+  const openDeliverySteps = 1;
+  const enqueueSteps = Math.max(1, Math.ceil(targets / TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE));
+  const steps = captureSteps + planningSteps + openDeliverySteps + enqueueSteps;
+  return { steps, runs: Math.ceil(steps / maxSteps) };
+}
 
 /** Cheap pre-format estimate of alert lines per delivered message chunk. */
 export const TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16;
@@ -86,6 +114,7 @@ export const TELEGRAM_LOAD_GUARD_ASSUMPTIONS = {
   normalSloSeconds: 15 * 60,
   spikeMaxSeconds: 60 * 60,
   telegram429StormSeconds: 15 * 60,
+  minimumTtlMarginFraction: 0.2,
   defaultDispatchCpuMs: 30_000,
   cpuBudgetSafetyFraction: 0.5,
   formatCpuMsPerChat: 1.5,

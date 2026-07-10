@@ -44,6 +44,12 @@ import {
   buildPendingAlertScope,
   type PendingAlertScopeItem,
 } from "../lib/telegram-pending-provenance";
+import {
+  claimTelegramTransportPermit,
+  recordTelegramTransportOutcomes as recordTelegramBotWideTransportOutcomes,
+  telegramTransportPermitSkip,
+  type TelegramTransportPermit,
+} from "../lib/telegram-transport-control";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 
@@ -559,12 +565,27 @@ export async function deliverFreshAlerts(
 ): Promise<FreshSendOutcome> {
   const softDeadlineAtMs = dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS;
   const freshEffectOwner = createTelegramFreshTargetOwner();
+  const transportOwner = `fresh-transport:${freshEffectOwner}`;
+  let waveTransportPermit: TelegramTransportPermit | null = null;
   const freshTargetClaimsByKey = new Map<string, TelegramFreshTargetClaim>();
   const sendResults = sendList.length > 0
     ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, {
         softDeadlineAtMs,
         beforeSendBatch: async (entries) => {
           throwIfAborted(signal);
+          const permitNowSec = Math.floor(Date.now() / 1000);
+          waveTransportPermit = await claimTelegramTransportPermit(db, {
+            mode: "fresh",
+            owner: transportOwner,
+            nowSec: permitNowSec,
+            requestedDistinctChats: entries.length,
+          });
+          if (!waveTransportPermit.allowed) {
+            const skipped = new Map<number, PreSendBatchResult>();
+            const skip = telegramTransportPermitSkip(waveTransportPermit, permitNowSec);
+            for (const entry of entries) skipped.set(entry.index, skip);
+            return skipped;
+          }
           const identities = entries.map(({ item }) => {
             const targetKey = buildDedupeKey(item);
             const jobId = freshTargetJobIds.get(targetKey);
@@ -640,6 +661,21 @@ export async function deliverFreshAlerts(
             await handoffRetryableFreshEffects(retryHandoffs);
           }
           await finalizeFreshTelegramAlertTargetEffects(db, outcomes, signal);
+          const transportPermit = waveTransportPermit;
+          waveTransportPermit = null;
+          if (transportPermit?.allowed) {
+            const attemptedOutcomes = results
+              .filter((result) => result.attempted !== false)
+              .map((result) => ({ chatId: result.chatId, result }));
+            if (attemptedOutcomes.length > 0) {
+              await recordTelegramBotWideTransportOutcomes(
+                db,
+                transportPermit,
+                attemptedOutcomes,
+                completedAt,
+              );
+            }
+          }
         },
       })
     : [];

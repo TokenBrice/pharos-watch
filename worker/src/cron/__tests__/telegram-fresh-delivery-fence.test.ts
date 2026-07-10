@@ -10,6 +10,7 @@ import {
 import { pruneAlreadyTerminalSubscribers } from "../dispatch-telegram-terminal-targets";
 import { TELEGRAM_FRESH_TARGET_CLAIM_TTL_SEC } from "../telegram-alert-target-effects";
 import { deliverTelegramSubscriberQueue } from "../dispatch-telegram-delivery";
+import { applyTelegramTransportControlSchema } from "../../test-helpers/telegram-transport-control-schema";
 
 interface StoredTarget {
   status: string;
@@ -123,6 +124,7 @@ function createHarness(): {
     );
     INSERT INTO telegram_subscribers (chat_id) VALUES ('42');
   `);
+  applyTelegramTransportControlSchema(sqlite);
   const routed = subscriber();
   const [message] = expandSubscriberChunks([routed]);
   const targetKey = buildDedupeKey(message);

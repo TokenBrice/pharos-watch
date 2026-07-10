@@ -29,6 +29,7 @@ import {
   expireTelegramAlertSourceEvent,
   loadTelegramAlertSourceEvent,
 } from "../telegram-alert-source-events";
+import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
@@ -619,7 +620,7 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     ).get(sourceEventId)).toEqual({
       not_before_at: NOW + 300,
       priority: 20,
-      expires_at: NOW + 3_600,
+      expires_at: NOW + PENDING_TTL_SEC,
     });
   });
 

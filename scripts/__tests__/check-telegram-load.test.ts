@@ -6,6 +6,7 @@ import {
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
   findCpuBudgetBreaches,
+  findTtlMarginBreaches,
   simulateLoadScenarios,
   summarizeFixture,
   type QueryPlanCheckDefinition,
@@ -67,9 +68,14 @@ describe("Telegram load simulation", () => {
     );
 
     expect(report.assumptions.freshAttemptsPerRun).toBe(3_600);
-    expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(900);
+    expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(1_800);
     expect(report.assumptions.sendLoopSoftDeadlineSeconds).toBe(4 * 60);
     expect(requiredScenarios.every((scenario) => scenario.sloStatus !== "breach")).toBe(true);
+    expect(requiredScenarios.every((scenario) => scenario.initialFreshAttempts === 0)).toBe(true);
+    expect(requiredScenarios.every((scenario) => scenario.ttlMarginFraction >= 0.2)).toBe(true);
+    expect(findTtlMarginBreaches(report)).toEqual([]);
+    expect(requiredScenarios.find((scenario) => scenario.scenarioId === "telegram-429-storm"))
+      .toMatchObject({ sloStatus: "outage-unavailable", outageUnavailableSeconds: 15 * 60 });
   });
 
   it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 function adminRequest(body: unknown, opts: { admin?: boolean } = {}): Request {
   const headers = new Headers();
@@ -57,6 +58,34 @@ function pendingCapacityRow(active: number) {
     },
     rows: [],
   };
+}
+
+function transportControlRows() {
+  return [
+    { match: "FROM telegram_delivery_pauses", rows: [] },
+    {
+      match: "FROM telegram_transport_circuit",
+      first: {
+        state: "closed",
+        generation: 0,
+        cause_class: null,
+        cause_scope: null,
+        distinct_failure_count: 0,
+        first_failure_at: null,
+        last_failure_at: null,
+        last_success_at: null,
+        opened_at: null,
+        next_probe_at: null,
+        probe_owner: null,
+        probe_generation: null,
+        probe_expires_at: null,
+        probe_limit: null,
+        probe_attempted: 0,
+        updated_at: 0,
+      },
+      rows: [],
+    },
+  ];
 }
 
 describe("handleAdminTelegramBroadcast", () => {
@@ -283,7 +312,15 @@ describe("handleAdminTelegramBroadcast", () => {
           chat_id TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           expires_at INTEGER,
-          not_before_at INTEGER
+          not_before_at INTEGER,
+          delivery_state TEXT NOT NULL DEFAULT 'pending',
+          delivery_started_at INTEGER
+        );
+        CREATE TABLE telegram_alert_job_targets (
+          effect_state TEXT NOT NULL DEFAULT 'unstarted',
+          effect_started_at INTEGER,
+          effect_completed_at INTEGER,
+          created_at INTEGER NOT NULL
         );
       `);
       sqlite.prepare(
@@ -315,7 +352,7 @@ describe("handleAdminTelegramBroadcast", () => {
 
   it("live mode enqueues one pending row per chat and audits the action", async () => {
     const chatIds = ["10", "20", "30"];
-    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), pendingInsertRow(), auditRow()]);
+    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), ...transportControlRows(), pendingInsertRow(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -342,7 +379,12 @@ describe("handleAdminTelegramBroadcast", () => {
   });
 
   it("blocks live broadcasts projected to outlive the admin broadcast TTL without acknowledgement", async () => {
-    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000), auditRow()]);
+    const db = mockD1([
+      allSubscriberRows(["10"]),
+      pendingCapacityRow(20_000),
+      ...transportControlRows(),
+      auditRow(),
+    ]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -357,7 +399,7 @@ describe("handleAdminTelegramBroadcast", () => {
       deliveryEstimate: { requiresAcknowledgement: boolean; adminBroadcastTtlSec: number };
     };
     expect(body.deliveryEstimate.requiresAcknowledgement).toBe(true);
-    expect(body.deliveryEstimate.adminBroadcastTtlSec).toBe(30 * 60);
+    expect(body.deliveryEstimate.adminBroadcastTtlSec).toBe(TELEGRAM_ALERT_TTL_SEC.adminBroadcast);
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
@@ -370,7 +412,7 @@ describe("handleAdminTelegramBroadcast", () => {
   });
 
   it("allows acknowledged live broadcasts with backlog risk and records short admin TTL", async () => {
-    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(6_000), pendingInsertRow(), auditRow()]);
+    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(20_000), ...transportControlRows(), pendingInsertRow(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -386,11 +428,13 @@ describe("handleAdminTelegramBroadcast", () => {
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(insert?.binds).toContain("admin_broadcast");
     expect(insert?.binds).toContain(90);
-    expect(Number(insert?.binds[13]) - Number(insert?.binds[3])).toBe(30 * 60);
+    expect(Number(insert?.binds[13]) - Number(insert?.binds[3])).toBe(
+      TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
+    );
   });
 
   it("live mode with global-subscribers scope only enqueues filtered chats", async () => {
-    const db = mockD1([globalSubscriberRows(["77"]), pendingCapacityRow(0), pendingInsertRow(), auditRow()]);
+    const db = mockD1([globalSubscriberRows(["77"]), pendingCapacityRow(0), ...transportControlRows(), pendingInsertRow(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({
@@ -414,7 +458,7 @@ describe("handleAdminTelegramBroadcast", () => {
   });
 
   it("live mode with no target chats returns enqueued: 0 and still audits", async () => {
-    const db = mockD1([allSubscriberRows([]), pendingCapacityRow(0), auditRow()]);
+    const db = mockD1([allSubscriberRows([]), pendingCapacityRow(0), ...transportControlRows(), auditRow()]);
     const res = await handleAdminTelegramBroadcast({
       db,
       request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: false }),
@@ -427,5 +471,37 @@ describe("handleAdminTelegramBroadcast", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(true);
+  });
+
+  it("refuses a live broadcast while admin delivery is paused", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      allSubscriberRows(["10"]),
+      pendingCapacityRow(0),
+      {
+        match: "FROM telegram_delivery_pauses",
+        first: {
+          mode: "admin",
+          generation: 1,
+          expires_at: now + 300,
+          reason: "incident",
+          actor: "operator",
+          created_at: now,
+          updated_at: now,
+        },
+        rows: [],
+      },
+      transportControlRows()[1],
+      auditRow(),
+    ]);
+
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: false }),
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(409);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
   });
 });

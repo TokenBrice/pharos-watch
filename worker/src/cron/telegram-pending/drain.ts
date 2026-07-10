@@ -59,6 +59,14 @@ import {
   recordTelegramJobTargetFinalDelivery,
   resolveTelegramJobTargetIdentityForPending,
 } from "../telegram-alert-job-target-outcomes";
+import {
+  claimTelegramTransportPermit,
+  readTelegramDeliveryPause,
+  recordTelegramTransportOutcomes as recordTelegramBotWideTransportOutcomes,
+  telegramDeliveryPauseSkip,
+  telegramTransportPermitSkip,
+  type TelegramTransportPermit,
+} from "../../lib/telegram-transport-control";
 
 export const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
@@ -855,7 +863,26 @@ export async function drainPendingQueue(
   }
   const maxPriority = options.maxPriority ?? null;
   const claimOwner = createPendingClaimOwner();
-  const pending = await claimDuePendingRows(db, nowSec, limit, claimOwner, maxPriority);
+  const transportOwner = `pending-transport:${claimOwner}`;
+  let nextTransportPermit: TelegramTransportPermit | null = await claimTelegramTransportPermit(db, {
+    mode: "pending",
+    owner: transportOwner,
+    nowSec,
+    requestedDistinctChats: Math.min(SEND_BATCH_SIZE, limit),
+  });
+  if (!nextTransportPermit.allowed) {
+    return {
+      ...emptyDrainResult(),
+      retryAfterSec: nextTransportPermit.deferUntil == null
+        ? null
+        : Math.max(1, nextTransportPermit.deferUntil - nowSec),
+      notBeforeAt: nextTransportPermit.deferUntil,
+    };
+  }
+  const claimLimit = nextTransportPermit.reason === "half_open_probe"
+    ? Math.min(limit, nextTransportPermit.maxDistinctChats)
+    : limit;
+  const pending = await claimDuePendingRows(db, nowSec, claimLimit, claimOwner, maxPriority);
   if (pending.length === 0) {
     return emptyDrainResult();
   }
@@ -894,6 +921,7 @@ export async function drainPendingQueue(
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
+  let waveTransportPermit: TelegramTransportPermit | null = null;
 
   let revalidations: PendingPreferenceRevalidation[];
   try {
@@ -991,9 +1019,30 @@ export async function drainPendingQueue(
       signal,
       softDeadlineAtMs,
       beforeSendBatch: async (entries) => {
+        const permitNowSec = Math.floor(Date.now() / 1000);
+        waveTransportPermit = nextTransportPermit ?? await claimTelegramTransportPermit(db, {
+          mode: "pending",
+          owner: transportOwner,
+          nowSec: permitNowSec,
+          requestedDistinctChats: entries.length,
+        });
+        nextTransportPermit = null;
+        if (!waveTransportPermit.allowed) {
+          const skipped = new Map<number, PreSendBatchResult>();
+          const skip = telegramTransportPermitSkip(waveTransportPermit, permitNowSec);
+          for (const entry of entries) skipped.set(entry.index, skip);
+          return skipped;
+        }
+        const adminEntries = entries.filter((entry) => entry.item.row.source_type === "admin_broadcast");
+        const adminPause = adminEntries.length > 0
+          ? await readTelegramDeliveryPause(db, "admin", permitNowSec)
+          : null;
+        const pausedAdminIndexes = new Set(
+          adminPause?.active ? adminEntries.map((entry) => entry.index) : [],
+        );
         const marked = await markPendingRowsSending(
           db,
-          entries.map(({ item }) => ({
+          entries.filter((entry) => !pausedAdminIndexes.has(entry.index)).map(({ item }) => ({
             id: item.row.id,
             validatedPreferenceGeneration: item.validatedPreferenceGeneration,
             deliveryGeneration: item.row.delivery_generation,
@@ -1006,11 +1055,30 @@ export async function drainPendingQueue(
         if (marked.size === entries.length) return;
         const skipped = new Map<number, PreSendBatchResult>();
         for (const entry of entries) {
+          if (adminPause?.active && pausedAdminIndexes.has(entry.index)) {
+            skipped.set(entry.index, telegramDeliveryPauseSkip(adminPause, permitNowSec));
+            continue;
+          }
           if (!marked.has(entry.item.row.id)) {
             skipped.set(entry.index, buildPendingPreSendSkip());
           }
         }
         return skipped;
+      },
+      afterSendBatch: async (_entries, results) => {
+        const transportPermit = waveTransportPermit;
+        waveTransportPermit = null;
+        if (!transportPermit?.allowed) return;
+        const attemptedOutcomes = results
+          .filter((result) => result.attempted !== false)
+          .map((result) => ({ chatId: result.chatId, result }));
+        if (attemptedOutcomes.length === 0) return;
+        await recordTelegramBotWideTransportOutcomes(
+          db,
+          transportPermit,
+          attemptedOutcomes,
+          Math.floor(Date.now() / 1000),
+        );
       },
     },
   );
@@ -1033,6 +1101,9 @@ export async function drainPendingQueue(
     ) => appendPendingTargetStatus(targetStatusUpdates, pendingRow, status, nowSec, errorClass);
 
     if (result.attempted === false) {
+      if (result.skippedReason === "transport_control" || result.skippedReason === "delivery_mode_pause") {
+        continue;
+      }
       if (result.skippedReason === "pre_send") {
         deferred++;
         deferUpdates.push({

@@ -5,8 +5,14 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
+import { applyTelegramTransportControlSchema } from "../../test-helpers/telegram-transport-control-schema";
 
 const mockSendToChat = vi.fn();
+const transportMocks = vi.hoisted(() => ({
+  claim: vi.fn(),
+  readPause: vi.fn(),
+  record: vi.fn(),
+}));
 
 function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
   return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
@@ -196,6 +202,7 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       final_delivery_error TEXT
     );
   `);
+  applyTelegramTransportControlSchema(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -330,6 +337,15 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();
   return { ...actual, sendToChat: mockSendToChat };
 });
+vi.mock("../../lib/telegram-transport-control", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/telegram-transport-control")>();
+  return {
+    ...actual,
+    claimTelegramTransportPermit: transportMocks.claim,
+    readTelegramDeliveryPause: transportMocks.readPause,
+    recordTelegramTransportOutcomes: transportMocks.record,
+  };
+});
 
 const {
   disableBlockedSubscriber,
@@ -362,6 +378,19 @@ const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
   mockSendToChat.mockReset();
+  transportMocks.claim.mockReset().mockResolvedValue({
+    allowed: true,
+    mode: "pending",
+    maxDistinctChats: SEND_BATCH_SIZE,
+    reason: "closed",
+    circuitGeneration: 0,
+    probeOwner: null,
+    probeGeneration: null,
+    pauseGeneration: null,
+    deferUntil: null,
+  });
+  transportMocks.readPause.mockReset().mockResolvedValue(null);
+  transportMocks.record.mockReset().mockResolvedValue({ state: "closed", generation: 0 });
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
 });
@@ -2832,7 +2861,7 @@ describe("enqueuePendingAlerts", () => {
       expect(JSON.parse(String(live.alert_scope_json))).toEqual(first.alertScope);
       expect(JSON.parse(String(live.markup_policy_json))).toMatchObject({ replyMarkup: null });
 
-      await enqueuePendingAlerts(db, [laterGeneration], 5_000);
+      await enqueuePendingAlerts(db, [laterGeneration], 9_000);
       const refreshed = sqlite.prepare(
         `SELECT preference_generation, markup_policy_json FROM telegram_pending_alerts`,
       ).get() as Record<string, unknown>;

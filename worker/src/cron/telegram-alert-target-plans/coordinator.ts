@@ -7,9 +7,10 @@ import {
 } from "./materialization";
 import { claimTelegramTargetPlanning, releaseTelegramTargetPlanningClaim } from "./source-state";
 import {
+  estimateTelegramTargetPlanCoordinatorBound,
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
-  TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
-} from "./types";
+  TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
+} from "@shared/lib/telegram-delivery-policy";
 import type {
   TelegramPlanningDecision,
   TelegramPlanningSubscriber,
@@ -35,21 +36,7 @@ export interface TelegramTargetPlanCoordinatorResult {
   expiryComplete: boolean;
 }
 
-export function estimateTelegramTargetPlanCoordinatorBound(input: {
-  subscriberCount: number;
-  targetCount: number;
-  maxSteps: number;
-}): { steps: number; runs: number } {
-  const subscribers = Math.max(0, Math.floor(input.subscriberCount));
-  const targets = Math.max(0, Math.floor(input.targetCount));
-  const maxSteps = Math.max(1, Math.floor(input.maxSteps));
-  const captureSteps = Math.floor(subscribers / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) + 1;
-  const planningSteps = Math.ceil(subscribers / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) + 1;
-  const openDeliverySteps = 1;
-  const enqueueSteps = Math.max(1, Math.ceil(targets / TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE));
-  const steps = captureSteps + planningSteps + openDeliverySteps + enqueueSteps;
-  return { steps, runs: Math.ceil(steps / maxSteps) };
-}
+export { estimateTelegramTargetPlanCoordinatorBound };
 
 async function nextPageIndex(
   db: D1Database,
@@ -76,9 +63,14 @@ export async function runTelegramTargetPlanCoordinator(args: {
   nowSec: number;
   callbacks: TelegramTargetPlanCoordinatorCallbacks;
   maxSteps?: number;
+  /** Total target rows this run may hand off to pending; zero holds delivery-open targets untouched. */
+  deliveryHandoffLimit?: number;
   signal?: AbortSignal;
 }): Promise<TelegramTargetPlanCoordinatorResult> {
-  const maxSteps = Math.max(1, Math.min(32, Math.floor(args.maxSteps ?? 16)));
+  const maxSteps = Math.max(
+    1,
+    Math.min(TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN, Math.floor(args.maxSteps ?? 16)),
+  );
   let claim = await claimTelegramTargetPlanning(args.db, args.sourceEventId, args.nowSec);
   if (!claim) {
     const source = await args.db
@@ -112,6 +104,9 @@ export async function runTelegramTargetPlanCoordinator(args: {
   let enqueued = 0;
   let remainingTargets = 0;
   let steps = 0;
+  let remainingHandoffBudget = args.deliveryHandoffLimit == null
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, Math.floor(args.deliveryHandoffLimit));
 
   while (steps < maxSteps) {
     throwIfAborted(args.signal);
@@ -168,15 +163,18 @@ export async function runTelegramTargetPlanCoordinator(args: {
         throw new Error("Telegram target plan delivery-open CAS was not confirmed");
       }
     } else if (claim.state === "delivery_open") {
+      if (remainingHandoffBudget <= 0) break;
       const result = await enqueueTelegramAuthoritativeTargets(
         args.db,
         claim.sourceEventId,
         claim.generation,
         args.nowSec,
+        Math.min(TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE, remainingHandoffBudget),
       );
       enqueued += result.enqueued;
+      remainingHandoffBudget -= result.enqueued;
       remainingTargets = result.remaining;
-      if (result.remaining === 0) break;
+      if (result.remaining === 0 || remainingHandoffBudget <= 0) break;
     }
 
     const refreshed = await claimTelegramTargetPlanning(

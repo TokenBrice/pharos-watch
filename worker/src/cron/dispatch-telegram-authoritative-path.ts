@@ -31,8 +31,10 @@ import {
 import {
   loadTelegramTargetPlanProgress,
   runTelegramTargetPlanCoordinator,
+  TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
 } from "./telegram-alert-target-plans";
 import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
+import { readTelegramFreshHandoffAllowance } from "../lib/telegram-transport-control";
 
 type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
@@ -152,13 +154,19 @@ export async function executeAuthoritativeFanoutPath(
 
   let planner: Awaited<ReturnType<typeof runTelegramTargetPlanCoordinator>> | null = null;
   if (sourceResolution.allComplete) {
+    const handoffAllowance = await readTelegramFreshHandoffAllowance(
+      db,
+      nowSec,
+      Number.MAX_SAFE_INTEGER,
+    );
     await markTelegramAlertSourceEventPlanned(db, sourceEvent.sourceEventId, nowSec);
     planner = await runTelegramTargetPlanCoordinator({
       db,
       sourceEventId: sourceEvent.sourceEventId,
       nowSec,
       signal: context.signal,
-      maxSteps: 32,
+      maxSteps: TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
+      deliveryHandoffLimit: handoffAllowance.maxTargets,
       callbacks: createTelegramAuthoritativePlanningCallbacks({
         db,
         sourceEventId: sourceEvent.sourceEventId,

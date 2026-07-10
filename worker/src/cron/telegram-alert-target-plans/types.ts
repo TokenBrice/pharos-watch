@@ -1,8 +1,11 @@
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
+export {
+  TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
+  TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
+  TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
+} from "@shared/lib/telegram-delivery-policy";
 
 export const TELEGRAM_TARGET_PLAN_CLAIM_TTL_SEC = 120;
-export const TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE = 90;
-export const TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE = 45;
 
 export type TelegramPlanningOutcome =
   | "target_planned"

@@ -17,6 +17,10 @@ import { splitMessage } from "../lib/telegram-alerts";
 import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../cron/dispatch-telegram-subscribers";
 import type { BatchMessage } from "../lib/telegram";
 import { z } from "zod";
+import {
+  readTelegramDeliveryPause,
+  readTelegramTransportCircuit,
+} from "../lib/telegram-transport-control";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = TelegramBroadcastScope;
@@ -253,6 +257,41 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
           targetMessageCount,
           pendingCapacity,
           deliveryEstimate,
+        },
+        { status: 409 },
+      );
+    }
+
+    const [adminPause, transportCircuit] = await Promise.all([
+      readTelegramDeliveryPause(db, "admin", nowSec),
+      readTelegramTransportCircuit(db),
+    ]);
+    if (adminPause?.active || transportCircuit.state !== "closed") {
+      const rejectedReason = adminPause?.active ? "admin-delivery-paused" : "transport-outage";
+      const deferUntil = adminPause?.active ? adminPause.expiresAt : transportCircuit.nextProbeAt;
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "error",
+          httpStatus: 409,
+          details: {
+            scope,
+            dryRun: false,
+            targetChatCount: chatIds.length,
+            targetMessageCount,
+            rejectedReason,
+            deferUntil,
+          },
+        },
+        request,
+      );
+      return adminJsonResponse(
+        {
+          error: "Telegram admin delivery is temporarily unavailable",
+          reason: rejectedReason,
+          deferUntil,
         },
         { status: 409 },
       );

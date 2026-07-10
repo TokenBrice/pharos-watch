@@ -1,4 +1,4 @@
-import type { SendToChatResult } from "./telegram";
+import type { PreSendBatchResult, SendToChatResult } from "./telegram";
 import {
   isBotWideTelegramFailure,
   isTransientTelegramOutageFailure,
@@ -83,6 +83,13 @@ export interface TelegramTransportPermit {
   probeOwner: string | null;
   probeGeneration: number | null;
   pauseGeneration: number | null;
+  deferUntil: number | null;
+}
+
+export interface TelegramFreshHandoffAllowance {
+  allowed: boolean;
+  maxTargets: number;
+  reason: "closed" | "probe_seed" | "operator_pause" | "outage_open" | "half_open";
   deferUntil: number | null;
 }
 
@@ -172,6 +179,83 @@ export async function readTelegramDeliveryPause(
     .bind(mode)
     .first<PauseRow>();
   return row ? rowToPause(row, nowSec) : null;
+}
+
+/**
+ * Gate durable fresh-target handoff without consuming half-open send capacity.
+ * A due open circuit may seed at most four pending targets so the pending
+ * effect owner can claim the actual probe; all other open states hold targets
+ * in their authoritative planned lifecycle.
+ */
+export async function readTelegramFreshHandoffAllowance(
+  db: D1Database,
+  nowSec: number,
+  requestedTargets: number,
+): Promise<TelegramFreshHandoffAllowance> {
+  const requested = Math.max(0, Math.floor(requestedTargets));
+  const [pause, circuit] = await Promise.all([
+    readTelegramDeliveryPause(db, "fresh", nowSec),
+    readTelegramTransportCircuit(db),
+  ]);
+  if (pause?.active) {
+    return {
+      allowed: false,
+      maxTargets: 0,
+      reason: "operator_pause",
+      deferUntil: pause.expiresAt,
+    };
+  }
+  if (circuit.state === "closed") {
+    return { allowed: true, maxTargets: requested, reason: "closed", deferUntil: null };
+  }
+  if (circuit.state === "open" && (circuit.nextProbeAt == null || circuit.nextProbeAt <= nowSec)) {
+    return {
+      allowed: requested > 0,
+      maxTargets: Math.min(4, requested),
+      reason: "probe_seed",
+      deferUntil: null,
+    };
+  }
+  return {
+    allowed: false,
+    maxTargets: 0,
+    reason: circuit.state === "half_open" ? "half_open" : "outage_open",
+    deferUntil: circuit.probeExpiresAt ?? circuit.nextProbeAt,
+  };
+}
+
+export function telegramTransportPermitSkip(
+  permit: TelegramTransportPermit,
+  nowSec: number,
+): PreSendBatchResult {
+  return {
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: null,
+    errorClass: "unknown",
+    delivery: "retryable_failure",
+    retryAfterSec: permit.deferUntil == null ? null : Math.max(1, permit.deferUntil - nowSec),
+    skippedReason: permit.reason === "operator_pause" ? "delivery_mode_pause" : "transport_control",
+  };
+}
+
+export function telegramDeliveryPauseSkip(
+  pause: TelegramDeliveryPauseSnapshot,
+  nowSec: number,
+): PreSendBatchResult {
+  return {
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: null,
+    errorClass: "unknown",
+    delivery: "retryable_failure",
+    retryAfterSec: Math.max(1, pause.expiresAt - nowSec),
+    skippedReason: "delivery_mode_pause",
+  };
 }
 
 export async function claimTelegramTransportPermit(
