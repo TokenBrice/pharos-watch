@@ -7,7 +7,7 @@ import { ApiKeyRequestsPanel } from "@/components/status/api-key-requests-panel"
 export default function AdminApiClient() {
   return (
     <OpsShell>
-      <section aria-labelledby="api-management-title" className="space-y-5">
+      <section aria-labelledby="api-management-title" className="min-w-0 max-w-full space-y-5">
         <div className="space-y-1">
           <h2 id="api-management-title" className="text-xl font-semibold text-foreground">
             API Management

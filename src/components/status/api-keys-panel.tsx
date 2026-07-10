@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ApiKeyCreateResponse, ApiKeyMutationResponse, ApiKeyRotateResponse, ApiKeySummary } from "@shared/types";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { RefreshCw } from "lucide-react";
@@ -15,14 +15,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useApiKeys } from "@/hooks/use-api-keys";
+import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
 import {
+  buildApiKeyExpiryWindow,
   buildApiKeyInventorySummary,
+  buildApiKeyInventoryView,
   buildCreateApiKeyPayload,
   buildEditableKeyState,
   buildUpdateApiKeyPayload,
+  DEFAULT_API_KEY_INVENTORY_QUERY,
   DEFAULT_CREATE_KEY_STATE,
 } from "@/lib/api-key-admin-view-model";
-import type { CreateKeyState, EditableKeyState } from "@/lib/api-key-admin-view-model";
+import type {
+  ApiKeyInventoryExpiryPreset,
+  ApiKeyInventoryQuery,
+  CreateKeyState,
+  EditableKeyState,
+} from "@/lib/api-key-admin-view-model";
 import { AdminMutationFeedback, AdminMutationReceipt } from "./admin-mutation-feedback";
 import {
   type AdminMutationIntentExecution,
@@ -30,9 +39,11 @@ import {
   useAdminMutationIntents,
 } from "./admin-mutation-intent";
 import {
+  ApiKeyDetailEditor,
+  ApiKeyInventoryControls,
+  ApiKeyInventoryPagination,
   ApiKeyInventorySummary,
   ApiKeyTable,
-  ApiKeyRowEditor,
   CreateApiKeyForm,
   TokenRevealDialog,
   TokenUnavailableReplayDialog,
@@ -80,7 +91,12 @@ export function ApiKeysPanel() {
   const { executions, execute, retrySame, executeNew, clear } = useAdminMutationIntents();
   const [createState, setCreateState] = useState<CreateKeyState>(DEFAULT_CREATE_KEY_STATE);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingKeyId, setEditingKeyId] = useState<number | null>(null);
+  const [inventoryQuery, setInventoryQuery] = useState<ApiKeyInventoryQuery>(() => ({
+    ...DEFAULT_API_KEY_INVENTORY_QUERY,
+    sort: { ...DEFAULT_API_KEY_INVENTORY_QUERY.sort! },
+  }));
+  const [expiryPreset, setExpiryPreset] = useState<ApiKeyInventoryExpiryPreset>("any");
+  const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
@@ -91,12 +107,39 @@ export function ApiKeysPanel() {
   const [tokenRecovery, setTokenRecovery] = useState<TokenRecovery | null>(null);
   const [mountedAtSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const createTriggerRef = useRef<HTMLButtonElement>(null);
+  const detailPanelRef = useRef<HTMLElement>(null);
+  const selectionOriginRef = useRef<HTMLButtonElement | null>(null);
   const lifecycleOriginRef = useRef<HTMLElement | null>(null);
   const tokenOriginRef = useRef<HTMLElement | null>(null);
 
   const keys = data?.keys ?? EMPTY_KEYS;
   const nowSeconds = data?.generatedAt ?? mountedAtSeconds;
   const keySummary = useMemo(() => buildApiKeyInventorySummary(keys, nowSeconds), [keys, nowSeconds]);
+  const inventoryView = useMemo(
+    () =>
+      buildApiKeyInventoryView(keys, nowSeconds, {
+        ...inventoryQuery,
+        expiryWindow: buildApiKeyExpiryWindow(expiryPreset, nowSeconds),
+      }),
+    [expiryPreset, inventoryQuery, keys, nowSeconds],
+  );
+  const filterOptions = useMemo(() => {
+    const owners = new Set<string>();
+    const tiers = new Set<string>();
+    let hasUnassignedOwner = false;
+    for (const key of keys) {
+      if (key.ownerEmail == null) hasUnassignedOwner = true;
+      else owners.add(key.ownerEmail);
+      tiers.add(key.tier);
+    }
+    return {
+      owners: [...owners].sort((left, right) => left.localeCompare(right)),
+      hasUnassignedOwner,
+      tiers: [...tiers].sort((left, right) => left.localeCompare(right)),
+    };
+  }, [keys]);
+  const selectedKey = inventoryView.keys.find((key) => key.id === selectedKeyId) ?? null;
+  const auditQuery = useApiKeyAuditLog(selectedKey?.id ?? null);
   const draftState = useMemo(() => {
     const next: Record<number, EditableKeyState> = {};
     for (const key of keys) {
@@ -104,6 +147,57 @@ export function ApiKeysPanel() {
     }
     return next;
   }, [drafts, keys]);
+  const selectedDraft = selectedKey ? (draftState[selectedKey.id] ?? buildEditableKeyState(selectedKey)) : null;
+  const selectedKeyIdOnPage = selectedKey?.id ?? null;
+
+  useEffect(() => {
+    if (selectedKeyIdOnPage != null) detailPanelRef.current?.focus();
+  }, [selectedKeyIdOnPage]);
+
+  function updateInventoryQuery(patch: Partial<ApiKeyInventoryQuery>) {
+    setInventoryQuery((previous) => ({ ...previous, ...patch, page: 1 }));
+    setSelectedKeyId(null);
+  }
+
+  function changeInventoryPage(page: number) {
+    setInventoryQuery((previous) => ({ ...previous, page }));
+    setSelectedKeyId(null);
+  }
+
+  function changeInventoryPageSize(pageSize: number) {
+    setInventoryQuery((previous) => ({ ...previous, page: 1, pageSize }));
+    setSelectedKeyId(null);
+  }
+
+  function changeExpiryPreset(preset: ApiKeyInventoryExpiryPreset) {
+    setExpiryPreset(preset);
+    setInventoryQuery((previous) => ({ ...previous, page: 1 }));
+    setSelectedKeyId(null);
+  }
+
+  function resetInventoryView() {
+    setInventoryQuery({
+      ...DEFAULT_API_KEY_INVENTORY_QUERY,
+      sort: { ...DEFAULT_API_KEY_INVENTORY_QUERY.sort! },
+    });
+    setExpiryPreset("any");
+    setSelectedKeyId(null);
+  }
+
+  function selectKey(apiKey: ApiKeySummary, origin: HTMLButtonElement) {
+    if (selectedKeyId === apiKey.id) {
+      setSelectedKeyId(null);
+      return;
+    }
+    selectionOriginRef.current = origin;
+    setSelectedKeyId(apiKey.id);
+  }
+
+  function closeKeyDetails() {
+    const origin = selectionOriginRef.current;
+    setSelectedKeyId(null);
+    focusElement(origin);
+  }
 
   async function refreshInventory() {
     await refetch();
@@ -222,9 +316,9 @@ export function ApiKeysPanel() {
 
     const response = result.execution.data as ApiKeyMutationResponse;
     setDrafts((previous) => ({ ...previous, [apiKey.id]: buildEditableKeyState(response.key) }));
-    setEditingKeyId(null);
     setReceipt({ execution: result.execution, message: `Updated ${response.key.name}.` });
     await refreshInventory();
+    if (selectedKeyId === apiKey.id) await auditQuery.refetch();
   }
 
   function requestLifecycle(action: LifecycleAction, apiKey: ApiKeySummary, origin: HTMLElement) {
@@ -280,6 +374,7 @@ export function ApiKeysPanel() {
     }
     setPendingLifecycle(null);
     await refreshInventory();
+    if (selectedKeyId === apiKey.id) await auditQuery.refetch();
   }
 
   function closeTokenDialog() {
@@ -316,11 +411,11 @@ export function ApiKeysPanel() {
   const pendingBusy = pendingExecution?.requestInFlight === true;
 
   return (
-    <Card>
+    <Card className="min-w-0 max-w-full">
       <CardHeader>
         <CardTitle className="text-base">API Keys</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="min-w-0 space-y-5">
         {!isLoading && !error ? <ApiKeyInventorySummary items={keySummary} /> : null}
 
         {!isLoading && !error ? (
@@ -393,48 +488,75 @@ export function ApiKeysPanel() {
 
         {!isLoading && !error ? (
           <div className="space-y-3">
+            <ApiKeyInventoryControls
+              query={inventoryQuery}
+              expiryPreset={expiryPreset}
+              options={filterOptions}
+              onQueryChange={updateInventoryQuery}
+              onExpiryPresetChange={changeExpiryPreset}
+              onReset={resetInventoryView}
+            />
             <ApiKeyTable
-              keys={keys}
+              keys={inventoryView.keys}
               nowSeconds={nowSeconds}
               busyKeyId={busyKeyId}
-              editingKeyId={editingKeyId}
-              onEdit={(keyId) => setEditingKeyId((current) => (current === keyId ? null : keyId))}
+              selectedKeyId={selectedKeyId}
+              emptyMessage={keys.length === 0 ? "No API keys created yet." : "No keys match the current view."}
+              onSelect={selectKey}
               onDeactivate={(apiKey) => requestLifecycle("deactivate", apiKey, document.activeElement as HTMLElement)}
               onRotate={(apiKey) => requestLifecycle("rotate", apiKey, document.activeElement as HTMLElement)}
             />
+            <ApiKeyInventoryPagination
+              page={inventoryView.page}
+              pageSize={inventoryView.pageSize}
+              totalPages={inventoryView.totalPages}
+              totalItems={inventoryView.totalItems}
+              totalInventoryItems={inventoryView.totalInventoryItems}
+              firstItemNumber={inventoryView.firstItemNumber}
+              lastItemNumber={inventoryView.lastItemNumber}
+              onPageChange={changeInventoryPage}
+              onPageSizeChange={changeInventoryPageSize}
+            />
 
-            {keys.map((key) => {
-              if (editingKeyId !== key.id) return null;
-              const draft = draftState[key.id] ?? buildEditableKeyState(key);
-              const isBusy = busyKeyId === key.id;
-              const laneKey = updateLane(key.id);
-
-              return (
-                <div key={key.id} className="space-y-3">
-                  <ApiKeyRowEditor
-                    apiKey={key}
-                    draft={draft}
-                    nowSeconds={nowSeconds}
-                    isBusy={isBusy}
-                    onDraftChange={(patch) =>
-                      setDrafts((previous) => ({
-                        ...previous,
-                        [key.id]: { ...draft, ...patch },
-                      }))
-                    }
-                    onSave={() => void runUpdate(key, draft, "start")}
-                    onDeactivate={() => requestLifecycle("deactivate", key, document.activeElement as HTMLElement)}
-                    onRotate={() => requestLifecycle("rotate", key, document.activeElement as HTMLElement)}
-                  />
-                  <AdminMutationFeedback
-                    execution={executions[laneKey]}
-                    onRetrySame={() => void runUpdate(key, draft, "retry")}
-                    onStartNew={() => void runUpdate(key, draft, "new")}
-                    newIntentLabel="Start new update intent"
-                  />
-                </div>
-              );
-            })}
+            {selectedKey && selectedDraft ? (
+              <section
+                id={`api-key-detail-panel-${selectedKey.id}`}
+                ref={detailPanelRef}
+                tabIndex={-1}
+                aria-labelledby={`api-key-detail-${selectedKey.id}`}
+                className="min-w-0 space-y-3 border-t border-border pt-5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              >
+                <ApiKeyDetailEditor
+                  apiKey={selectedKey}
+                  draft={selectedDraft}
+                  nowSeconds={nowSeconds}
+                  isBusy={busyKeyId === selectedKey.id}
+                  auditEntries={auditQuery.data?.entries ?? []}
+                  auditError={auditQuery.error}
+                  auditLoading={auditQuery.isLoading}
+                  auditFetching={auditQuery.isFetching}
+                  onDraftChange={(patch) =>
+                    setDrafts((previous) => ({
+                      ...previous,
+                      [selectedKey.id]: { ...selectedDraft, ...patch },
+                    }))
+                  }
+                  onSave={() => void runUpdate(selectedKey, selectedDraft, "start")}
+                  onDeactivate={() =>
+                    requestLifecycle("deactivate", selectedKey, document.activeElement as HTMLElement)
+                  }
+                  onRotate={() => requestLifecycle("rotate", selectedKey, document.activeElement as HTMLElement)}
+                  onClose={closeKeyDetails}
+                  onRetryAudit={() => void auditQuery.refetch()}
+                />
+                <AdminMutationFeedback
+                  execution={executions[updateLane(selectedKey.id)]}
+                  onRetrySame={() => void runUpdate(selectedKey, selectedDraft, "retry")}
+                  onStartNew={() => void runUpdate(selectedKey, selectedDraft, "new")}
+                  newIntentLabel="Start new update intent"
+                />
+              </section>
+            ) : null}
           </div>
         ) : null}
 

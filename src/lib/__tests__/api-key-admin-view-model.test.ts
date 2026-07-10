@@ -4,6 +4,7 @@ import {
   API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
   API_KEY_INVENTORY_MAX_PAGE_SIZE,
   DEFAULT_API_KEY_INVENTORY_SORT,
+  buildApiKeyExpiryWindow,
   buildApiKeyInventoryView,
   filterApiKeys,
   getApiKeyInventoryStatus,
@@ -172,6 +173,22 @@ describe("API key inventory workbench model", () => {
     expect(nextWeekWithExceptions.filter((key) => key.expiresAt == null)).toEqual(
       keys.filter((key) => key.expiresAt == null),
     );
+  });
+
+  it("maps expiration presets to explicit rolling windows", () => {
+    expect(buildApiKeyExpiryWindow("any", NOW_SECONDS)).toBeNull();
+    expect(buildApiKeyExpiryWindow("expired", NOW_SECONDS)).toEqual({ expiresThrough: NOW_SECONDS });
+    expect(buildApiKeyExpiryWindow("next-7-days", NOW_SECONDS)).toEqual({
+      expiresFrom: NOW_SECONDS,
+      expiresThrough: NOW_SECONDS + 7 * DAY_SECONDS,
+    });
+    expect(buildApiKeyExpiryWindow("next-30-days", NOW_SECONDS)).toEqual({
+      expiresFrom: NOW_SECONDS,
+      expiresThrough: NOW_SECONDS + 30 * DAY_SECONDS,
+    });
+    expect(buildApiKeyExpiryWindow("after-30-days", NOW_SECONDS)).toEqual({
+      expiresFrom: NOW_SECONDS + 30 * DAY_SECONDS,
+    });
   });
 
   it("combines null-owner, owner, tier, and traffic-class filters without fuzzy matches", () => {

@@ -4,12 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ApiKeyListResponse, ApiKeySummary } from "@shared/types";
 
-const { useApiKeysMock } = vi.hoisted(() => ({
+const { useApiKeysMock, useApiKeyAuditLogMock } = vi.hoisted(() => ({
   useApiKeysMock: vi.fn(),
+  useApiKeyAuditLogMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-api-keys", () => ({
   useApiKeys: useApiKeysMock,
+}));
+
+vi.mock("@/hooks/use-api-key-audit-log", () => ({
+  useApiKeyAuditLog: useApiKeyAuditLogMock,
 }));
 
 const { ApiKeysPanel } = await import("../api-keys-panel");
@@ -27,7 +32,7 @@ function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
     trafficClass: overrides.trafficClass ?? "external",
     rateLimitPerMinute: overrides.rateLimitPerMinute ?? 120,
     isActive: overrides.isActive ?? true,
-    expiresAt: overrides.expiresAt === undefined ? GENERATED_AT + (14 * 24 * 60 * 60) : overrides.expiresAt,
+    expiresAt: overrides.expiresAt === undefined ? GENERATED_AT + (2 * 24 * 60 * 60) : overrides.expiresAt,
     createdAt: overrides.createdAt ?? GENERATED_AT - 100,
     updatedAt: overrides.updatedAt ?? GENERATED_AT - 50,
     lastUsedAt: overrides.lastUsedAt ?? null,
@@ -58,6 +63,13 @@ function requestIdempotencyKey(callIndex: number): string | null {
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
+  useApiKeyAuditLogMock.mockReturnValue({
+    data: { entries: [] },
+    error: null,
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn().mockResolvedValue(undefined),
+  });
 });
 
 afterEach(() => {
@@ -440,5 +452,186 @@ describe("ApiKeysPanel", () => {
     expect(screen.getByText("inactive")).toBeTruthy();
     expect(screen.getAllByText("non-expiring exception").length).toBeGreaterThan(0);
     expect(screen.getByText(/Expired 1h ago at/i)).toBeTruthy();
+  });
+
+  it("defaults to the attention queue and searches every operator-facing identity field", () => {
+    renderPanel([
+      makeKey({ id: 1, name: "Routine Active", expiresAt: GENERATED_AT + 30 * 24 * 60 * 60 }),
+      makeKey({
+        id: 2,
+        name: "Route Beacon",
+        ownerEmail: "beacon@example.invalid",
+        keyPrefix: "beacon-prefix",
+        maskedToken: "ph_live_beacon-prefix_********",
+        tier: "priority",
+        lastUsedRoute: "/api/beacon/latest",
+      }),
+    ]);
+
+    expect(screen.queryByText("Routine Active")).toBeNull();
+    expect(screen.getByText("Route Beacon")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "beacon@example.invalid latest" } });
+    expect(screen.getByText("Route Beacon")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "beacon-prefix priority" } });
+    expect(screen.getByText("Route Beacon")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "all" } });
+    fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "" } });
+    expect(screen.getByText("Routine Active")).toBeTruthy();
+  });
+
+  it("combines expiration, owner, tier, and traffic filters and resets to attention", () => {
+    renderPanel([
+      makeKey({
+        id: 1,
+        name: "Priority External",
+        ownerEmail: "priority@example.invalid",
+        tier: "priority",
+        trafficClass: "external",
+      }),
+      makeKey({
+        id: 2,
+        name: "Standard Site",
+        ownerEmail: "site@example.invalid",
+        tier: "standard",
+        trafficClass: "site",
+        expiresAt: GENERATED_AT + 20 * 24 * 60 * 60,
+        isActive: false,
+      }),
+      makeKey({ id: 3, name: "Unassigned", ownerEmail: null, expiresAt: null }),
+    ]);
+
+    fireEvent.change(screen.getByLabelText("Expiration"), { target: { value: "next-7-days" } });
+    expect(screen.getByText("Priority External")).toBeTruthy();
+    expect(screen.queryByText("Standard Site")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Owner filter"), { target: { value: "priority@example.invalid" } });
+    fireEvent.change(screen.getByLabelText("Tier filter"), { target: { value: "priority" } });
+    fireEvent.change(screen.getByLabelText("Traffic filter"), { target: { value: "external" } });
+    expect(screen.getByText("Priority External")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
+    expect(screen.getByText("Standard Site")).toBeTruthy();
+    expect(screen.getByText("Unassigned")).toBeTruthy();
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("attention");
+  });
+
+  it("sorts deterministically and paginates inventories larger than 25 rows", () => {
+    const keys = Array.from({ length: 30 }, (_, index) =>
+      makeKey({
+        id: index + 1,
+        name: `Key ${String(index + 1).padStart(2, "0")}`,
+        isActive: false,
+        keyPrefix: `prefix-${index + 1}`,
+        maskedToken: `ph_live_prefix-${index + 1}_********`,
+      }),
+    );
+    renderPanel(keys);
+
+    expect(screen.getByText("Key 01")).toBeTruthy();
+    expect(screen.queryByText("Key 26")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "API key inventory pagination" }).textContent).toContain(
+      "Showing 1-25 of 30 matching keys",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to next API key page" }));
+    expect(screen.getByText("Key 26")).toBeTruthy();
+    expect(screen.queryByText("Key 01")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "50" } });
+    expect(screen.getByText("Key 01")).toBeTruthy();
+    expect(screen.getByText("Key 30")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "name" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sort descending" }));
+    const tableRows = within(screen.getByRole("table", { name: "API key inventory" }))
+      .getAllByRole("row")
+      .slice(1);
+    expect(within(tableRows[0]).getByText("Key 30")).toBeTruthy();
+  });
+
+  it("mounts one focused selected-key editor with selected disclosure semantics and audit history", async () => {
+    useApiKeyAuditLogMock.mockReturnValue({
+      data: {
+        entries: [
+          {
+            id: 91,
+            apiKeyId: 1,
+            action: "rotated",
+            actor: "admin",
+            detail: { source: "operator" },
+            createdAt: GENERATED_AT - 60,
+          },
+        ],
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    renderPanel([
+      makeKey(),
+      makeKey({ id: 2, name: "Digest Key", keyPrefix: "digest", maskedToken: "ph_live_digest_********" }),
+    ]);
+
+    const inventoryShell = screen.getByTestId("api-keys-table");
+    expect(inventoryShell.className).toContain("table-header-sticky");
+    const viewport = inventoryShell.querySelector('[data-slot="table-viewport"]');
+    expect(viewport?.className).toContain("overflow-x-auto");
+    expect(viewport?.className).toContain("overflow-y-auto");
+    expect(screen.getByRole("columnheader", { name: "Actions" }).className).toContain("sticky");
+
+    const opsEdit = screen.getByRole("button", { name: /^Edit Ops Key/ });
+    expect(opsEdit.hasAttribute("aria-controls")).toBe(false);
+    fireEvent.click(opsEdit);
+    const opsRegion = screen.getByRole("region", { name: "Ops Key" });
+    await waitFor(() => expect(document.activeElement).toBe(opsRegion));
+    expect(opsEdit.getAttribute("aria-expanded")).toBe("true");
+    expect(opsEdit.getAttribute("aria-controls")).toBe("api-key-detail-panel-1");
+    expect(opsEdit.closest("tr")?.getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("heading", { name: "Audit history" })).toBeTruthy();
+    expect(screen.getByText("Rotated")).toBeTruthy();
+    expect(screen.getByText("Actor: admin")).toBeTruthy();
+
+    const digestEdit = screen.getByRole("button", { name: /^Edit Digest Key/ });
+    fireEvent.click(digestEdit);
+    expect(screen.queryByRole("heading", { name: "Ops Key" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Digest Key" })).toBeTruthy();
+    expect(screen.getAllByLabelText("Tier")).toHaveLength(1);
+    expect(useApiKeyAuditLogMock).toHaveBeenLastCalledWith(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Close details" }));
+    await waitFor(() => expect(document.activeElement).toBe(digestEdit));
+  });
+
+  it("shows audit loading and unavailable states with a local retry", async () => {
+    const retryAudit = vi.fn().mockResolvedValue(undefined);
+    useApiKeyAuditLogMock.mockReturnValue({
+      data: undefined,
+      error: new Error("audit store unavailable"),
+      isLoading: false,
+      isFetching: false,
+      refetch: retryAudit,
+    });
+    renderPanel([makeKey()]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
+    expect(screen.getByText("Audit history unavailable")).toBeTruthy();
+    expect(screen.getByText("audit store unavailable")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry audit history" }));
+    expect(retryAudit).toHaveBeenCalledOnce();
+
+    cleanup();
+    useApiKeyAuditLogMock.mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+      isFetching: true,
+      refetch: retryAudit,
+    });
+    renderPanel([makeKey({ id: 2, name: "Loading Key" })]);
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Loading Key/ }));
+    expect(screen.getByText("Loading audit history...")).toBeTruthy();
   });
 });

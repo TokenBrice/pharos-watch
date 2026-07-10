@@ -4,7 +4,7 @@ import {
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
-import { WEEK_SECONDS } from "@shared/lib/time-constants";
+import { THIRTY_DAYS_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
 import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
 
 export interface EditableKeyState {
@@ -39,6 +39,7 @@ export type ApiKeyInventoryStatus = "expired" | "expiring-soon" | "inactive" | "
 export type ApiKeyInventoryStatusFilter = "all" | "attention" | ApiKeyInventoryStatus;
 export type ApiKeyInventorySortField = "expiry" | "last-use" | "rate-limit" | "name" | "status";
 export type ApiKeyInventorySortDirection = "asc" | "desc";
+export type ApiKeyInventoryExpiryPreset = "any" | "expired" | "next-7-days" | "next-30-days" | "after-30-days";
 
 export interface ApiKeyExpiryWindowFilter {
   expiresFrom?: number | null;
@@ -117,6 +118,24 @@ export const DEFAULT_API_KEY_INVENTORY_QUERY: ApiKeyInventoryQuery = {
   page: 1,
   pageSize: API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
 };
+
+export function buildApiKeyExpiryWindow(
+  preset: ApiKeyInventoryExpiryPreset,
+  nowSeconds: number,
+): ApiKeyExpiryWindowFilter | null {
+  switch (preset) {
+    case "expired":
+      return { expiresThrough: nowSeconds };
+    case "next-7-days":
+      return { expiresFrom: nowSeconds, expiresThrough: nowSeconds + WEEK_SECONDS };
+    case "next-30-days":
+      return { expiresFrom: nowSeconds, expiresThrough: nowSeconds + THIRTY_DAYS_SECONDS };
+    case "after-30-days":
+      return { expiresFrom: nowSeconds + THIRTY_DAYS_SECONDS };
+    case "any":
+      return null;
+  }
+}
 
 export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   name: "",
