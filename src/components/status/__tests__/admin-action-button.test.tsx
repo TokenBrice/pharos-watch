@@ -431,6 +431,7 @@ describe("AdminActionButton", () => {
     renderActions([action, action]);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Backfill Supply" })[0]);
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(document.querySelectorAll('[data-execution-status="running"]')).toHaveLength(2);
@@ -450,6 +451,50 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Backfill Supply" })[1]);
     expect(await screen.findByText(/shared-result/)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("presents structured execution identity before the raw JSON disclosure", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: "queued",
+          jobId: "job-42",
+          queueId: "queue-a",
+          nextCursor: "cursor-9",
+          followUpUrl: "/admin/crons",
+        }),
+        { status: 202, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    renderActions([makeAction()]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    expect(await screen.findByRole("heading", { name: "Action queued" })).toBeTruthy();
+    expect(screen.getByText("job-42")).toBeTruthy();
+    expect(screen.getByText("queue-a")).toBeTruthy();
+    expect(screen.getByText("cursor-9")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "/admin/crons" }).getAttribute("href")).toBe("/admin/crons");
+    const raw = screen.getByText("Raw JSON response").closest("details");
+    expect(raw?.hasAttribute("open")).toBe(false);
+    expect(screen.getByText(/"jobId": "job-42"/)).toBeTruthy();
+  });
+
+  it("renders an unsafe follow-up value as inert text", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: "succeeded", followUpUrl: "//evil.example/jobs/42" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderActions([makeAction()]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    const followUp = await screen.findByText("//evil.example/jobs/42");
+    expect(followUp.closest("a")).toBeNull();
   });
 
   it("does not offer another confirmation after a successful execution", async () => {

@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import type { EndpointMethod, StatusPageAction } from "@shared/lib/api-endpoints";
+import { AdminActionExecutionDialog } from "@/components/status/admin-action-execution-dialog";
 import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
+import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { RequestFailure } from "@/lib/request";
 
 export type AdminActionExecutionStatus =
@@ -29,6 +31,7 @@ export interface AdminActionExecution {
   requestInFlight: boolean;
   ok: boolean;
   output: string;
+  resultData: unknown;
   error: string | null;
   attempts: number;
   createdAt: number;
@@ -42,17 +45,32 @@ export interface AdminActionExecution {
   warning: string | null;
 }
 
-interface AdminActionRunResult {
+export interface AdminActionRunResult {
   execution: AdminActionExecution;
   didStart: boolean;
 }
 
-interface AdminActionExecutionContextValue {
+export interface AdminActionDialogRequest {
+  action: StatusPageAction;
+  initialDryRun?: boolean;
+  readinessChecks?: readonly ActionReadinessCheck[];
+  onFinished?: (execution: AdminActionExecution) => void;
+}
+
+export interface AdminActionDialogState extends AdminActionDialogRequest {
+  dialogId: number;
+}
+
+export interface AdminActionExecutionController {
   current: Readonly<Record<string, AdminActionExecution>>;
   executions: readonly AdminActionExecution[];
   execute: (request: AdminActionExecutionRequest) => Promise<AdminActionRunResult>;
   retry: (executionKey: string) => Promise<AdminActionRunResult>;
   startNew: (request: AdminActionExecutionRequest) => AdminActionExecution;
+}
+
+interface AdminActionExecutionContextValue extends AdminActionExecutionController {
+  openDialog: (request: AdminActionDialogRequest) => void;
 }
 
 interface ExecutionStore {
@@ -152,6 +170,7 @@ function executionFromFailure(
       requestInFlight: false,
       ok: false,
       output: error.result.formattedBody || error.message,
+      resultData: error.result.data,
       error: error.message,
       completedAt,
       httpStatus: error.result.status,
@@ -173,6 +192,7 @@ function executionFromFailure(
     requestInFlight: false,
     ok: false,
     output: message,
+    resultData: null,
     error: message,
     completedAt,
     executionCertainty: status,
@@ -206,7 +226,9 @@ export function AdminActionExecutionProvider({
     records: new Map(),
   });
   const inFlightRef = useRef(new Set<string>());
+  const nextDialogIdRef = useRef(0);
   const [snapshot, setSnapshot] = useState<ExecutionSnapshot>({ current: {}, executions: [] });
+  const [dialogRequest, setDialogRequest] = useState<AdminActionDialogState | null>(null);
 
   const publish = useCallback(() => {
     setSnapshot(buildSnapshot(storeRef.current));
@@ -230,6 +252,7 @@ export function AdminActionExecutionProvider({
         requestInFlight: false,
         ok: false,
         output: "",
+        resultData: null,
         error: null,
         attempts: 0,
         createdAt,
@@ -292,6 +315,7 @@ export function AdminActionExecutionProvider({
           requestInFlight: false,
           ok: status !== "failed" && status !== "unknown",
           output: response.formattedBody,
+          resultData: response.data,
           error: status === "failed" || status === "unknown" ? response.formattedBody : null,
           completedAt: Date.now(),
           httpStatus: response.status,
@@ -357,12 +381,29 @@ export function AdminActionExecutionProvider({
     [createIntent],
   );
 
+  const openDialog = useCallback((request: AdminActionDialogRequest) => {
+    nextDialogIdRef.current += 1;
+    setDialogRequest({ ...request, dialogId: nextDialogIdRef.current });
+  }, []);
+
   const value = useMemo<AdminActionExecutionContextValue>(
-    () => ({ ...snapshot, execute, retry, startNew }),
-    [execute, retry, snapshot, startNew],
+    () => ({ ...snapshot, execute, retry, startNew, openDialog }),
+    [execute, openDialog, retry, snapshot, startNew],
   );
 
-  return <AdminActionExecutionContext.Provider value={value}>{children}</AdminActionExecutionContext.Provider>;
+  return (
+    <AdminActionExecutionContext.Provider value={value}>
+      {children}
+      {dialogRequest && (
+        <AdminActionExecutionDialog
+          key={dialogRequest.dialogId}
+          request={dialogRequest}
+          controller={value}
+          onClose={() => setDialogRequest(null)}
+        />
+      )}
+    </AdminActionExecutionContext.Provider>
+  );
 }
 
 function useAdminActionExecutionContext(): AdminActionExecutionContextValue {
@@ -385,4 +426,12 @@ export function useAdminActionExecution(actionPath: string, scopeKey: string) {
 
 export function useAdminActionExecutions(): readonly AdminActionExecution[] {
   return useAdminActionExecutionContext().executions;
+}
+
+export function useAdminActionDialog(actionPath: string) {
+  const context = useAdminActionExecutionContext();
+  return {
+    execution: context.executions.find((candidate) => candidate.action.path === actionPath),
+    openDialog: context.openDialog,
+  };
 }

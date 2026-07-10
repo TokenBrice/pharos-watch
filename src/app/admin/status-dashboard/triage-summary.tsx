@@ -9,7 +9,11 @@ import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { buildReserveRecoveryForecast, formatNextRunWindow } from "@/lib/status/admin-ops-insights";
+import {
+  buildActionReadinessChecks,
+  buildReserveRecoveryForecast,
+  formatNextRunWindow,
+} from "@/lib/status/admin-ops-insights";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import { getAdminWorkspacePathForLegacyHash } from "@/lib/admin-workspaces";
 import {
@@ -122,6 +126,12 @@ export function TriageSummary({
     data.reserveComposition.runBudgetTruncated ||
     data.reserveComposition.writeTimeoutUncertain > 0;
   const reserveForecast = buildReserveRecoveryForecast(data);
+  const actionReadinessChecks = buildActionReadinessChecks({
+    data,
+    healthData,
+    clientDataStale,
+    recommendedActions,
+  });
   const reserveForecastTone =
     reserveForecast.state === "blocked"
       ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-200"
@@ -407,7 +417,11 @@ export function TriageSummary({
               </Button>
             </div>
           ) : resolvedDecision.nextStep === "manual-action" ? (
-            <RecommendedActionStrip recommendations={recommendedActions} onActionFinished={handleRefresh} />
+            <RecommendedActionStrip
+              recommendations={recommendedActions}
+              readinessChecks={actionReadinessChecks}
+              onActionFinished={handleRefresh}
+            />
           ) : (
             <div className="rounded-xl border border-border/60 bg-background/35 p-4">
               <p className="pharos-kicker">Recommended now</p>

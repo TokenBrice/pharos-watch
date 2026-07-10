@@ -1,4 +1,5 @@
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
+import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { SeverityPill } from "@/components/status/severity-pill";
 
@@ -7,9 +8,11 @@ const RECOMMENDED_ACTION_STRIP_CLASS =
 
 export function RecommendedActionStrip({
   recommendations,
+  readinessChecks,
   onActionFinished,
 }: {
   recommendations: StatusActionRecommendation[];
+  readinessChecks: readonly ActionReadinessCheck[];
   onActionFinished: () => void;
 }) {
   if (recommendations.length === 0) {
@@ -55,6 +58,7 @@ export function RecommendedActionStrip({
                 action={recommendation.action}
                 fullWidth={false}
                 buttonClassName="min-w-[10rem]"
+                readinessChecks={readinessChecks}
                 onFinished={() => onActionFinished()}
               />
             </div>
