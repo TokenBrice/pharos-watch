@@ -1,5 +1,6 @@
 "use client";
 
+import { CredentialSummaryCard } from "@/components/status/credential-summary-card";
 import { NoticeRail } from "@/components/status/page-primitives";
 import { useCriticalOpsModel } from "@/hooks/use-critical-ops-model";
 import { TriageSummary } from "./status-dashboard/triage-summary";
@@ -45,6 +46,7 @@ export default function TriageClient() {
               showSignOut={false}
             />
             <NoticeRail notices={model.notices} />
+            <CredentialSummaryCard />
           </div>
         );
       }}

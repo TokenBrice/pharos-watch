@@ -2,19 +2,35 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
-const { useCriticalOpsModelMock, useStatusHistoryMock, useRequestSourceStatsMock, useReleaseMetadataMock } = vi.hoisted(
-  () => ({
-    useCriticalOpsModelMock: vi.fn(),
-    useStatusHistoryMock: vi.fn(),
-    useRequestSourceStatsMock: vi.fn(),
-    useReleaseMetadataMock: vi.fn(),
-  }),
-);
+const {
+  useCriticalOpsModelMock,
+  useStatusHistoryMock,
+  useRequestSourceStatsMock,
+  useReleaseMetadataMock,
+  useApiKeysMock,
+  useApiKeyAuditLogMock,
+} = vi.hoisted(() => ({
+  useCriticalOpsModelMock: vi.fn(),
+  useStatusHistoryMock: vi.fn(),
+  useRequestSourceStatsMock: vi.fn(),
+  useReleaseMetadataMock: vi.fn(),
+  useApiKeysMock: vi.fn(),
+  useApiKeyAuditLogMock: vi.fn(),
+}));
 
 vi.mock("@/hooks/use-critical-ops-model", () => ({
   useCriticalOpsModel: useCriticalOpsModelMock,
+}));
+
+vi.mock("@/hooks/use-api-keys", () => ({
+  useApiKeys: useApiKeysMock,
+}));
+
+vi.mock("@/hooks/use-api-key-audit-log", () => ({
+  useApiKeyAuditLog: useApiKeyAuditLogMock,
 }));
 
 vi.mock("@/hooks/use-status-history", () => ({
@@ -94,6 +110,13 @@ beforeEach(() => {
     lastUpdated: 1_700_000_000_000,
     model: makeCriticalModel(),
   });
+  useApiKeysMock.mockReturnValue({
+    data: makeLargeApiKeyInventory(4),
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+  useApiKeyAuditLogMock.mockReturnValue({ data: { entries: [] }, isLoading: false, isError: false });
 });
 
 afterEach(() => {
@@ -110,6 +133,15 @@ describe("admin triage client", () => {
     expect(useStatusHistoryMock).not.toHaveBeenCalled();
     expect(useRequestSourceStatsMock).not.toHaveBeenCalled();
     expect(useReleaseMetadataMock).not.toHaveBeenCalled();
+  });
+
+  it("summarizes credential lifecycle counts and routes lifecycle work to API Management", () => {
+    render(<TriageClient />);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Credentials" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Open API Management/ }).getAttribute("href")).toMatch(/^\/admin-api\/?$/);
+    // Summary only: the credential inventory table stays on /admin-api/.
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("shows an initial status failure instead of mounting triage", () => {

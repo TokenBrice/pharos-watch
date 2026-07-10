@@ -63,6 +63,7 @@ The active frontend operator mode is now:
   - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open; it auto-expands only on the first evaluated signal after evidence loads, and later signals surface a `New signal` badge on the collapsed summary instead of forcing the section open (`src/app/admin/use-auto-expand.ts`)
   - a promoted `Recommended Now` action strip derived from blocking causes and unhealthy cron lanes
   - explicit stale-client, public-health divergence, and background-fetch notices that preserve the last good payload
+  - a compact `Credentials` lifecycle summary (`src/components/status/credential-summary-card.tsx`): active, expiring-soon, expired, and non-expiring counts plus a 7-day rotate/deactivate audit-anomaly count, derived from the existing `/api/api-keys` inventory and global audit-log reads with the same predicates as the API Management summary. It renders counts only — no rows, editors, or mutations — and links lifecycle work to `/admin-api/`. Missing evidence renders as `Unknown`, never zero.
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
 - The public `/status/` top fold uses `PublicStatusHero`: a headline row, conditional warning paragraph, four-metric strip, and compact metadata footer with browser-sync timing and refresh control.
@@ -122,7 +123,7 @@ The active frontend operator mode is now:
   - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; after signature verification, it injects the normalized human email from the UI Access JWT for audit attribution and ignores browser-supplied actor headers
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
-- Workspace clients own only the queries their route requires. Triage does not mount credential inventory, endpoint matrices, cache tables, or healthy cron rows; Reliability owns endpoint/demand reads, History owns transition and audit reads, and API Management owns credential inventory and audit reads.
+- Workspace clients own only the queries their route requires. Triage does not mount credential inventory rows, endpoint matrices, cache tables, or healthy cron rows; Reliability owns endpoint/demand reads, History owns transition and audit reads, and API Management owns credential lifecycle mutations. Triage additionally reads the credential inventory and global audit log for its counts-only lifecycle summary.
 - `src/lib/status-dashboard-model.ts`
   - Provides pure status derivations and cron group construction without owning React polling or a root five-second clock
 - `src/hooks/use-critical-ops-model.ts`
@@ -155,7 +156,7 @@ The active frontend operator mode is now:
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` and clamped in the row/details split
 - The operator UI uses fixed route workspaces instead of a single scrolling lane stack:
-  - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, and raw diagnostics
+  - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, raw diagnostics, and a counts-only credential lifecycle summary linking to API Management
   - `Pipeline`: URL-backed tab inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, `Integrity`, and `Discovery`; inactive modes are not mounted
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
   - `Reliability`: URL-backed `Impact`, `Endpoints`, `Dependencies`, `Demand`, and `Cache` modes; manual mutation routes are excluded from default probe noise
