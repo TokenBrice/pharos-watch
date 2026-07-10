@@ -287,6 +287,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/alert-broker-canary` for live execution (`execute=true`); dry-run previews bypass idempotency
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
+- `POST /api/admin-telegram-delivery-control` (GET inspection bypasses idempotency)
 - `POST /api/api-key-requests-admin/:requestId/reject`
 - `POST /api/api-key-requests-admin/:requestId/release-claim`
 
@@ -5441,7 +5442,7 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 }
 ```
 
-`mode` is always `synthetic_current_state`: the endpoint rebuilds the alert from current source data and does not replay exact historical message HTML. `chunkCount` is the number of rendered Telegram chunks, and `chunksAttempted` stops at the first failed chunk. `errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
+`mode` is always `synthetic_current_state`: the endpoint rebuilds the alert from current source data and does not replay exact historical message HTML. `chunkCount` is the number of rendered Telegram chunks, and `chunksAttempted` stops at the first failed chunk. `errorClass` is one of `blocked`, `chat_not_found`, `chat_migrated`, `formatting_error`, `payload_too_large`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. A `chat_migrated` result also carries the numeric `migrateToChatId`. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header or JSON `parameters.retry_after` value.
 
 **Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.
 
@@ -5521,3 +5522,61 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 `enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
 **Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `422` for malformed or unsupported Telegram HTML, with the response body carrying the offending character position. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set; the response includes `targetChatCount`, `chunkCount`, `targetMessageCount`, `pendingCapacity`, and `deliveryEstimate` so operators can rerun as a dry-run or explicitly acknowledge the backlog risk.
+
+### `GET|POST /api/admin-telegram-delivery-control`
+
+Reads the authoritative Telegram transport circuit and the independent `fresh`, `pending`, and `admin` operator-pause rows. `GET` is read-only. `POST` creates, replaces, or resumes one expiring pause and writes a handler-owned row to `admin_action_audit`. Webhook command replies are not an admin-delivery mode and are outside these pause controls.
+
+**Authentication:** admin. Mutating requests require `X-Pharos-Admin: 1`; an optional `Idempotency-Key` protects a POST retry.
+
+**Pause body**
+
+```json
+{
+  "action": "pause",
+  "mode": "pending",
+  "expectedGeneration": 0,
+  "durationSec": 900,
+  "reason": "Telegram transport incident"
+}
+```
+
+`durationSec` is 60-86,400. `expectedGeneration` is `0` when the mode has no row and otherwise must equal the current row generation. Pauses become inactive automatically when `expiresAt <= now`; no cleanup job is needed for expiry.
+
+**Resume body**
+
+```json
+{
+  "action": "resume",
+  "mode": "pending",
+  "expectedGeneration": 1
+}
+```
+
+Resume is also generation-fenced. It retains the row as inert audit state, advances its generation, and sets `expiresAt` to the current time. A stale generation returns `409` and does not mutate the active control.
+
+**Response**
+
+```json
+{
+  "now": 1800000000,
+  "circuit": {
+    "state": "closed",
+    "generation": 4,
+    "causeClass": null,
+    "causeScope": null,
+    "nextProbeAt": null
+  },
+  "pauses": [
+    {
+      "mode": "pending",
+      "generation": 2,
+      "active": false,
+      "expiresAt": 1800000000,
+      "reason": "operator resume"
+    }
+  ]
+}
+```
+
+The full circuit response also includes bounded distinct-failure counts, first/last failure and success timestamps, and the owner/generation/expiry fence for any half-open probe. Operator pause rows include actor and created/updated timestamps.

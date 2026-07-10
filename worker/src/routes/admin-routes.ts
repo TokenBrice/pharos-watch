@@ -18,6 +18,7 @@ import { handleBulkDismissDiscoveryCandidates } from "../api/admin-bulk-dismiss-
 import { handleClearTelegramPending } from "../api/admin-telegram-pending";
 import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
 import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
+import { handleAdminTelegramDeliveryControl } from "../api/admin-telegram-delivery-control";
 import { handleAlertBrokerCanary } from "../api/admin-alert-broker-canary";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { handleArmReserveRecoveryFaultInjection } from "../api/admin-reserve-recovery-fault-injection";
@@ -95,5 +96,6 @@ export const ADMIN_STATIC_ROUTES = [
   ),
   defineStaticRoute("admin-telegram-resend", handleAdminTelegramResend),
   defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
+  defineStaticRoute("admin-telegram-delivery-control", handleAdminTelegramDeliveryControl),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),
 ] as const satisfies readonly StaticRouteDefinition[];

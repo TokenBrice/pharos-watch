@@ -6,9 +6,13 @@ export type TelegramLogErrorClass =
   | "auth_error"
   | "bad_request"
   | "blocked"
+  | "chat_migrated"
+  | "chat_not_found"
   | "d1"
   | "execution_unknown"
+  | "formatting_error"
   | "network"
+  | "payload_too_large"
   | "rate_limit"
   | "server_error"
   | "timeout"
@@ -114,9 +118,13 @@ const ERROR_CLASS_VALUES = new Set<TelegramLogErrorClass>([
   "auth_error",
   "bad_request",
   "blocked",
+  "chat_migrated",
+  "chat_not_found",
   "d1",
   "execution_unknown",
+  "formatting_error",
   "network",
+  "payload_too_large",
   "rate_limit",
   "server_error",
   "timeout",

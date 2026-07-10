@@ -1085,6 +1085,11 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.adminTelegramBroadcast(),
     probeGroup: "manual",
   }),
+  adminDualModeMutation({
+    key: "admin-telegram-delivery-control",
+    path: API_PATHS.adminTelegramDeliveryControl(),
+    probeGroup: "manual",
+  }),
   adminGet({
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),

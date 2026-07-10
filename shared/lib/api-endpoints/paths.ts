@@ -186,6 +186,7 @@ export const API_PATHS = {
   alertBrokerCanary: () => "/api/alert-broker-canary",
   adminTelegramResend: () => "/api/admin-telegram-resend",
   adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
+  adminTelegramDeliveryControl: () => "/api/admin-telegram-delivery-control",
   statusProbeHistory: (params?: { path?: string; days?: number }) =>
     buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
   adminTelegramChat: (chatId: string) => `/api/admin-telegram-chat/${encodeURIComponent(chatId)}`,

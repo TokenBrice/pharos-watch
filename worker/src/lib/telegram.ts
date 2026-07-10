@@ -1,10 +1,11 @@
-import { drainResponseBody } from "./response-body";
+import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { logTelegramEvent } from "./telegram-log";
-import {
-  TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
-  TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC,
-} from "./telegram-constants";
 import type { PendingAlertScopeItem } from "./telegram-pending-provenance";
+import {
+  classifyTelegramCaughtFailure,
+  classifyTelegramResponseFailure,
+  type TelegramTransportErrorClass,
+} from "./telegram-transport-errors";
 
 export interface TelegramCreds {
   botToken: string;
@@ -134,15 +135,7 @@ export interface SendToChatOpts {
   signal?: AbortSignal;
 }
 
-export type TelegramSendErrorClass =
-  | "blocked"
-  | "rate_limit"
-  | "server_error"
-  | "bad_request"
-  | "auth_error"
-  | "timeout"
-  | "network"
-  | "unknown";
+export type TelegramSendErrorClass = TelegramTransportErrorClass;
 
 export interface SendToChatResult {
   ok: boolean;
@@ -154,6 +147,7 @@ export interface SendToChatResult {
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
+  migrateToChatId?: string;
 }
 
 export interface SendBatchOptions {
@@ -165,135 +159,6 @@ export interface SendBatchOptions {
     entries: readonly ScheduledBatchEntry<BatchMessage>[],
     results: readonly BatchResult[],
   ) => Promise<void>;
-}
-
-function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
-  const lower = responseBody.toLowerCase();
-  if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
-    return "global";
-  }
-  if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
-    return "chat";
-  }
-  if (retryAfterSec != null && retryAfterSec >= TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC) {
-    return "global";
-  }
-  return "chat";
-}
-
-function parseTelegramRetryAfter(responseBody: string): number | null {
-  if (!responseBody.trim()) return null;
-  try {
-    const parsed = JSON.parse(responseBody) as {
-      parameters?: { retry_after?: unknown };
-      response_parameters?: { retry_after?: unknown };
-    };
-    const raw = parsed.parameters?.retry_after ?? parsed.response_parameters?.retry_after;
-    const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : null;
-    return value != null && Number.isFinite(value) && value >= 0 ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function buildResponseFailure(statusCode: number, responseBody = "", retryAfterSec: number | null = null): SendToChatResult {
-  if (statusCode === 403) {
-    return {
-      ok: false,
-      blocked: true,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "blocked",
-      delivery: "blocked",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 429) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode,
-      errorClass: "rate_limit",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
-    };
-  }
-  if (statusCode >= 500) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode,
-      errorClass: "server_error",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 400 || statusCode === 404 || statusCode === 413) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "bad_request",
-      delivery: "permanent_failure",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 401) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "auth_error",
-      delivery: "permanent_failure",
-      retryAfterSec: null,
-    };
-  }
-  return {
-    ok: false,
-    blocked: false,
-    retryable: true,
-    permanentFailure: false,
-    statusCode,
-    errorClass: "unknown",
-    delivery: "retryable_failure",
-    retryAfterSec: null,
-  };
-}
-
-function buildCaughtFailure(error: unknown): SendToChatResult {
-  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode: null,
-      errorClass: "timeout",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    };
-  }
-
-  return {
-    ok: false,
-    blocked: false,
-    retryable: true,
-    permanentFailure: false,
-    statusCode: null,
-    errorClass: "network",
-    delivery: "retryable_failure",
-    retryAfterSec: null,
-  };
 }
 
 function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
@@ -338,13 +203,16 @@ export async function sendToChat(
     if (!res.ok) {
       const retryAfterRaw = res.headers.get("Retry-After");
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
-      const body = await res.text().catch(() => "");
-      const telegramRetryAfterSec = parseTelegramRetryAfter(body);
-      const resolvedRetryAfterSec = telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null);
-      const failure = buildResponseFailure(res.status, body, resolvedRetryAfterSec);
+      const body = await readResponseTextBoundedWithSignal(res, 16_384, signal).catch(() => "");
+      const failure = classifyTelegramResponseFailure(
+        res.status,
+        body,
+        Number.isFinite(retryAfterSec) ? retryAfterSec : null,
+      );
       return {
+        ok: false,
         ...failure,
-        retryAfterSec: resolvedRetryAfterSec,
+        statusCode: res.status,
       };
     }
     await drainResponseBody(res);
@@ -359,7 +227,11 @@ export async function sendToChat(
       retryAfterSec: null,
     };
   } catch (error) {
-    return buildCaughtFailure(error);
+    return {
+      ok: false,
+      ...classifyTelegramCaughtFailure(error),
+      statusCode: null,
+    };
   }
 }
 
@@ -410,6 +282,7 @@ export interface BatchResult {
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
+  migrateToChatId?: string;
   attempted?: boolean;
   skippedReason?: "predecessor_failure" | "global_rate_limit" | "aborted" | "soft_deadline" | "pre_send";
 }
@@ -503,7 +376,6 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
     queue.indexes.push(index);
   }
 
-  const distinctRateLimitedChats = new Set<string>();
   const fillQueueTail = (queue: PerChatQueue, buildResult: (item: T) => BatchResult): void => {
     while (queue.nextIndex < queue.indexes.length) {
       const index = queue.indexes[queue.nextIndex++];
@@ -552,29 +424,10 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
     }
     await options.afterSendBatch?.(entries, waveResults);
 
-    let globalRateLimitedResult = waveResults.find(
+    const globalRateLimitedResult = waveResults.find(
       (result) =>
         result.attempted !== false && result.errorClass === "rate_limit" && result.rateLimitScope === "global",
     );
-    if (!globalRateLimitedResult) {
-      for (const result of waveResults) {
-        if (result.attempted === false) continue;
-        if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-          distinctRateLimitedChats.add(result.chatId);
-        }
-      }
-      if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
-        globalRateLimitedResult = waveResults.find(
-          (result) => result.errorClass === "rate_limit" && result.rateLimitScope !== "global",
-        );
-        for (const result of waveResults) {
-          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-            result.rateLimitScope = "global";
-          }
-        }
-      }
-    }
-
     if (globalRateLimitedResult) {
       const buildGlobalResult = (item: T) =>
         buildUnsentRetryResult(

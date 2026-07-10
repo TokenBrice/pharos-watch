@@ -34,12 +34,6 @@ export const TELEGRAM_MAX_MESSAGES_PER_RUN = 3_600;
 /** Pending-drain share reserved from the per-run send budget. */
 export const TELEGRAM_PENDING_DRAIN_BUDGET = Math.floor(TELEGRAM_MAX_MESSAGES_PER_RUN / 4);
 
-/** A long retry_after is treated as a bot-wide flood limit. */
-export const TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC = 30;
-
-/** Distinct chat-scoped 429s that imply a bot-wide flood limit. */
-export const TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD = 3;
-
 /** Cheap pre-format estimate of alert lines per delivered message chunk. */
 export const TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16;
 
