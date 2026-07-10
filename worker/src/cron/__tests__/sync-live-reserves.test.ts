@@ -4,7 +4,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
-import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 
 const getReserveAdapterMock = vi.fn();
@@ -259,6 +259,122 @@ describe("syncLiveReserves", () => {
       });
 
     expect(missingRpc).toEqual([]);
+  });
+
+  it("refuses a recovery suffix when the configured queue hash changed", async () => {
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "recovery-owner",
+    };
+    const db = mockD1([{
+      match: "FROM worker_scheduled_checkpoints",
+      rows: [{
+        schedule_key: checkpointIdentity.scheduleKey,
+        slot_started_at: checkpointIdentity.slotStartedAt,
+        job: checkpointIdentity.job,
+        attempt_no: checkpointIdentity.attemptNo,
+        execution_generation: checkpointIdentity.executionGeneration,
+        invocation_id: checkpointIdentity.invocationId,
+        worker_version: "version-a",
+        queue_hash: "stale-queue-hash",
+        state: "recovering",
+        next_item_key: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
+        current_item_key: null,
+        current_domain_attempt_id: null,
+        items_done: 0,
+        items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
+        child_dispositions_json: "{}",
+        recovery_owner: checkpointIdentity.invocationId,
+        recovery_lease_until: 2_000,
+        source_attempt_no: 1,
+        error: null,
+        created_at: 1_000,
+        updated_at: 1_100,
+        completed_at: null,
+      }],
+    }]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toThrow("refusing unsafe suffix replay");
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+  });
+
+  it("advances past an authoritative item after interruption without replaying its adapter", async () => {
+    const lastCoin = SYNC_ORDERED_CONFIGURED_COINS.at(-1);
+    expect(lastCoin).toBeDefined();
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 2_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "recovery-owner",
+    };
+    const db = mockD1([
+      {
+        match: "FROM worker_scheduled_checkpoints",
+        rows: [{
+          schedule_key: checkpointIdentity.scheduleKey,
+          slot_started_at: checkpointIdentity.slotStartedAt,
+          job: checkpointIdentity.job,
+          attempt_no: checkpointIdentity.attemptNo,
+          execution_generation: checkpointIdentity.executionGeneration,
+          invocation_id: checkpointIdentity.invocationId,
+          worker_version: "version-a",
+          queue_hash: LIVE_RESERVE_QUEUE_HASH,
+          state: "recovering",
+          next_item_key: lastCoin!.id,
+          current_item_key: lastCoin!.id,
+          current_domain_attempt_id: "authoritative-attempt",
+          items_done: SYNC_ORDERED_CONFIGURED_COINS.length - 1,
+          items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
+          child_dispositions_json: "{}",
+          recovery_owner: checkpointIdentity.invocationId,
+          recovery_lease_until: 3_000,
+          source_attempt_no: 1,
+          error: null,
+          created_at: 2_000,
+          updated_at: 2_100,
+          completed_at: null,
+        }],
+      },
+      {
+        match: "FROM reserve_composition c",
+        rows: [{ finalized: 1 }],
+      },
+    ]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    );
+
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+    expect(result?.itemCount).toBe(0);
+    const checkpointAdvance = db.getHistory().find((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    expect(checkpointAdvance?.binds.slice(0, 2)).toEqual([
+      null,
+      SYNC_ORDERED_CONFIGURED_COINS.length,
+    ]);
   });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
