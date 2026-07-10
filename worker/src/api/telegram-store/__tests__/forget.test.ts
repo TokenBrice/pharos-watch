@@ -234,6 +234,28 @@ describe("forgetSubscriber", () => {
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
   });
 
+  it("deletes chat-prefixed job-target item lineage while preserving other chats", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const chatId = "42";
+    const insertItem = sqlite.prepare(`
+      INSERT INTO telegram_alert_job_target_items (
+        job_id, target_key, source_event_id, item_key, created_at
+      ) VALUES (?, ?, ?, ?, ?)
+    `);
+    // target_key is chat-prefixed: `<chatId>:v<split>:<chunk>:<hash>`.
+    insertItem.run("job-1", `${chatId}:v3:0:abc`, "evt-1", "item-1", 100);
+    insertItem.run("job-1", `${chatId}:v3:1:def`, "evt-1", "item-2", 100);
+    // Neighbor whose chat id shares the forgotten chat's digits as a prefix.
+    insertItem.run("job-1", "420:v3:0:ghi", "evt-1", "item-3", 100);
+
+    await forgetSubscriber(db, chatId);
+
+    const remaining = sqlite
+      .prepare("SELECT target_key FROM telegram_alert_job_target_items ORDER BY target_key")
+      .all();
+    expect(remaining).toEqual([{ target_key: "420:v3:0:ghi" }]);
+  });
+
   it("deletes exact and actor-scoped command-flood keys", async () => {
     const chatId = "42";
     const db = mockD1();

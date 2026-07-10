@@ -75,6 +75,13 @@ export async function forgetSubscriber(
         )`,
     ).bind(chatId),
     db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
+    // Job-target item lineage has no chat_id column, but its target_key is
+    // chat-prefixed (`<chatId>:v<split>:<chunk>:<hash>`), so the rows are
+    // chat-owned audit data and must not survive /forget.
+    db.prepare(
+      `DELETE FROM telegram_alert_job_target_items
+        WHERE ${dedupePrefixPredicate("target_key")}`,
+    ).bind(chatId, chatId, chatId),
     db.prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(chatId),
