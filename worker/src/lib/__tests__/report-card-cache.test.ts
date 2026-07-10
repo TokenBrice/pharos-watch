@@ -238,6 +238,14 @@ describe("writeReportCardCache", () => {
     ] as never, 1_777_000_000, {
       liquidityStale: true,
       redemptionStale: false,
+      completeness: {
+        generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: 2,
+        scoredCount: 1,
+        notRatedCount: 1,
+        notRatedIds: ["nr"],
+      },
     });
 
     expect(result.writtenCount).toBe(1);
@@ -252,6 +260,15 @@ describe("writeReportCardCache", () => {
         },
         updatedAt: 1_777_000_000,
         methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+        completeness: {
+          generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: 2,
+          scoredCount: 1,
+          notRatedCount: 1,
+          notRatedIds: ["nr"],
+        },
         degradedInputs: {
           inputsStale: true,
           liquidityStale: true,

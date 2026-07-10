@@ -2324,6 +2324,14 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
   },
   "collateralDriftCoins": [{ "id": "jupusd-jupiter", "liveScore": 80, "curatedScore": 65, "delta": 15 }],
   "liveToFallbackCoins": ["usdaf-asymmetry"],
+  "publication": {
+    "generationId": "report-cards:8.11:1771977600",
+    "methodologyVersion": "8.11",
+    "expectedCount": 364,
+    "scoredCount": 308,
+    "notRatedCount": 56,
+    "notRatedIds": ["example-not-rated-id"]
+  },
   "updatedAt": 1771977600
 }
 ```
@@ -2338,7 +2346,7 @@ For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskSco
 
 For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore` are populated only when a coin has a reviewed `bridgeRouteRisk` profile. Missing route reviews return `null` and stay neutral. Since Safety Score v8.12, cards can also carry an optional display-only `bridgeRouteRisk` object with the reviewed summary, source links, protocol evidence, review provenance, and confidence. L2BEAT Interop is used only as static review evidence and candidate-queue material; the report-card API does not fetch L2BEAT live.
 
-`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. The published envelope is also the preferred Safety Score source for yield hydration, while the smaller `report_card_cache` score map remains available for lightweight Chain Health/OG consumers and is rejected when its compact `methodologyVersion` does not match the current Safety Score methodology.
+`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. Published payloads also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot used for yield hydration, the smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and the Telegram safety source all carry the same publication generation and methodology and are committed in one D1 batch.
 
 Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 

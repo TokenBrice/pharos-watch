@@ -2,12 +2,13 @@ import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/typ
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   loadVersionedSnapshotCache,
+  buildVersionedSnapshotCacheValue,
   writeVersionedSnapshotCache,
   type VersionedSnapshotCacheLoadResult,
   type VersionedSnapshotCacheOptions,
 } from "./versioned-snapshot-cache";
 
-const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
+export const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
 export const REPORT_CARDS_SNAPSHOT_CACHE_GENERATION = 3;
 
 export type ReportCardsSnapshotCacheFailureReason =
@@ -62,4 +63,13 @@ export async function writePublishedReportCardsSnapshot(
   snapshot: ReportCardsResponse,
 ): Promise<void> {
   await writeVersionedSnapshotCache(db, snapshot, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS);
+}
+
+export function buildPublishedReportCardsSnapshotCacheEntry(
+  snapshot: ReportCardsResponse,
+): { key: string; value: string } {
+  return {
+    key: REPORT_CARDS_SNAPSHOT_CACHE_KEY,
+    value: buildVersionedSnapshotCacheValue(snapshot, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS),
+  };
 }

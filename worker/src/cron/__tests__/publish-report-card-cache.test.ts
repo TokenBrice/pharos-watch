@@ -8,19 +8,20 @@ import {
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 
 const mockBuildReportCardsSnapshot = vi.fn();
-const mockWriteReportCardCache = vi.fn();
-const mockSetCache = vi.fn();
+const mockSetCacheMany = vi.fn();
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
   buildReportCardsSnapshot: mockBuildReportCardsSnapshot,
 }));
 
-vi.mock("../../lib/report-card-cache", () => ({
-  writeReportCardCache: mockWriteReportCardCache,
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(),
+  setCache: vi.fn(),
+  setCacheMany: mockSetCacheMany,
 }));
 
-vi.mock("../../lib/db-cache", () => ({
-  setCache: mockSetCache,
+vi.mock("@shared/lib/stablecoins/registry", () => ({
+  ACTIVE_IDS: new Set(["usdc-circle"]),
 }));
 
 const { publishReportCardCache } = await import("../publish-report-card-cache");
@@ -28,8 +29,7 @@ const { publishReportCardCache } = await import("../publish-report-card-cache");
 describe("publishReportCardCache", () => {
   beforeEach(() => {
     mockBuildReportCardsSnapshot.mockReset();
-    mockWriteReportCardCache.mockReset();
-    mockSetCache.mockReset();
+    mockSetCacheMany.mockReset();
   });
 
   it("writes a generation-aware alert safety source cache from the live cards", async () => {
@@ -70,8 +70,7 @@ describe("publishReportCardCache", () => {
         redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
       },
     });
-    mockWriteReportCardCache.mockResolvedValue({ writtenCount: 1 });
-    mockSetCache.mockResolvedValue(undefined);
+    mockSetCacheMany.mockResolvedValue(undefined);
 
     const result = await publishReportCardCache({} as D1Database);
 
@@ -82,25 +81,47 @@ describe("publishReportCardCache", () => {
       expect.anything(),
       { publishPegAnalytics: true },
     );
-    expect(mockWriteReportCardCache).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.arrayContaining([expect.objectContaining({ id: "usdc-circle" })]),
-      1_700_000_000,
-      {
-        liquidityStale: false,
-        redemptionStale: false,
-        inputFreshness: {
-          dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
-          redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
-        },
-      },
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
+    expect(entries.map((entry) => entry.key)).toEqual([
+      "report-cards:snapshot",
+      "report_card_cache",
+      "alert:safety-source-cache",
+    ]);
+    const parsed = entries.map((entry) => JSON.parse(entry.value));
+    expect(parsed[0].payload.publication.generationId).toBe(
+      `report-cards:${METHODOLOGY_VERSION}:1700000000`,
     );
-    expect(mockSetCache).toHaveBeenCalledTimes(2);
-    expect(mockSetCache.mock.calls[0]?.[1]).toBe("report-cards:snapshot");
-    expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"cards\"");
-    expect(mockSetCache.mock.calls[1]?.[1]).toBe("alert:safety-source-cache");
-    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"generation\"");
-    expect(mockSetCache.mock.calls[1]?.[2]).toContain(`"methodologyVersion":"${METHODOLOGY_VERSION}"`);
-    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"usdc-circle\"");
+    expect(parsed[1].payload.publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
+    expect(parsed[2].publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
+    expect(parsed[0].payload.publication).toMatchObject({
+      expectedCount: 1,
+      scoredCount: 1,
+      notRatedCount: 0,
+    });
+    expect(entries[2]?.value).toContain("\"usdc-circle\"");
+  });
+
+  it("rejects a shrunken active set before publishing any projection", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue({
+      cards: [],
+      methodology: {
+        version: METHODOLOGY_VERSION,
+        weights: DIMENSION_WEIGHTS,
+        pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
+        thresholds: GRADE_THRESHOLDS,
+      },
+      dependencyGraph: { edges: [] },
+      updatedAt: 1_700_000_000,
+      liquidityStale: false,
+      redemptionStale: false,
+      inputFreshness: {
+        dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+        redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+      },
+    });
+
+    await expect(publishReportCardCache({} as D1Database)).rejects.toThrow("report-card-active-set-mismatch");
+    expect(mockSetCacheMany).not.toHaveBeenCalled();
   });
 });

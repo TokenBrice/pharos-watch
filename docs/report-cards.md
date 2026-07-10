@@ -415,7 +415,7 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
 
-The common read path uses the cron-published `report-cards:snapshot` cache row. That D1 value is a private generation/methodology-pinned envelope carrying the public response payload; if the cache generation or Safety Score methodology version no longer matches the deployed worker, the API rejects the row and computes the same public response shape on read until the cron republishes.
+The common read path uses the cron-published `report-cards:snapshot` cache row. That D1 value is a private generation/methodology-pinned envelope carrying the public response payload; if the cache generation or Safety Score methodology version no longer matches the deployed worker, the API rejects the row and computes the same public response shape on read until the cron republishes. A publication manifest inside the response names the shared generation and exact active-set completeness counts used by all downstream projections.
 
 `GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
 
@@ -427,8 +427,9 @@ Implementation notes:
 
 - Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed with identical logic in both endpoints. The quarter-hourly `publish-report-card-cache` pass is the only writer of the producer-published `peg-analytics` D1 cache row; `/api/peg-summary` accepts it for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale row.
 - Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
-- The compact `report_card_cache` score map includes `methodologyVersion` plus `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`) so lightweight consumers such as Chain Health reject stale-methodology scores and degrade freshness when cached scores were computed from stale report-card inputs.
-- `snapshot-safety-grade-history` still writes the compact report-card cache during degraded-input runs, but suppresses `safety_grade_history` seed and grade-transition inserts when `liquidityStale`, `redemptionStale`, or the corresponding `inputFreshness.*.stale` flags are active.
+- `publish-report-card-cache` validates the exact active registry set before writing. Missing, duplicate, defunct-active, or unexpected live IDs reject the whole publication; expected coverage must equal scored plus NR rows.
+- The full snapshot, compact `report_card_cache` score map used by lightweight and yield-safety consumers, and Telegram `alert:safety-source-cache` are written in one D1 batch. Each carries the same `publicationGenerationId`, methodology version, and completeness manifest. The compact cache also carries `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`).
+- `snapshot-safety-grade-history` owns only append-only grade history. It no longer overwrites the compact cache independently, and still suppresses `safety_grade_history` seed and grade-transition inserts when report-card inputs are degraded.
 
 Key types:
 

@@ -104,6 +104,13 @@ export async function writeVersionedSnapshotCache<TPayload, TReason extends stri
   snapshot: TPayload,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): Promise<void> {
+  await setCache(db, options.cacheKey, buildVersionedSnapshotCacheValue(snapshot, options));
+}
+
+export function buildVersionedSnapshotCacheValue<TPayload, TReason extends string>(
+  snapshot: TPayload,
+  options: VersionedSnapshotCacheOptions<TPayload, TReason>,
+): string {
   const result = options.schema.safeParse(snapshot);
   if (!result.success) {
     throw new Error(`Invalid ${options.label} snapshot payload: ${result.error.message}`);
@@ -120,5 +127,5 @@ export async function writeVersionedSnapshotCache<TPayload, TReason extends stri
     ...(options.envelopeExtras?.(result.data) ?? {}),
     payload: result.data,
   };
-  await setCache(db, options.cacheKey, JSON.stringify(envelope));
+  return JSON.stringify(envelope);
 }
