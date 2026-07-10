@@ -93,8 +93,11 @@ export default function PrivacyPage() {
               last-active timestamp): auto-purged after 180 days of inactivity once no follows or pending state remain.
             </li>
             <li>
-              <strong>Per-coin and preset subscriptions</strong>: kept while the subscriber exists, cleared by{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or the inactivity prune.
+              <strong>Per-coin and preset subscriptions</strong>: live settings are retained until{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>. Inactivity cleanup removes only
+              inert per-coin rows after 180 days; preset follows and meaningful per-coin settings do not expire for
+              inactivity.
             </li>
             <li>
               <strong>Pending disambiguation</strong> (ambiguous ticker prompts, setup wizard state, bulk-action
