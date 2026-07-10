@@ -674,26 +674,32 @@ export async function runScheduledSlotWithFence(
   } catch (err) {
     clearInterval(timer);
     await heartbeatInFlight;
-    await finishScheduledSlotExecution(
-      db,
-      slotKey,
-      opts.slotStartedAt,
-      owner,
-      executionGeneration,
-      "error",
-      JSON.stringify({
-        error: toErrorMessage(err),
-        ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
-        ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
-        ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
-      }),
-    ).then((finished) => {
+    try {
+      const finished = await finishScheduledSlotExecution(
+        db,
+        slotKey,
+        opts.slotStartedAt,
+        owner,
+        executionGeneration,
+        "error",
+        JSON.stringify({
+          error: toErrorMessage(err),
+          ...(heartbeatFailures > 0 ? { slotHeartbeatFailures: heartbeatFailures } : {}),
+          ...(staleSlotPreSweep ? { staleSlotPreSweep } : {}),
+          ...(staleSlotTakeover ? { staleSlotTakeover } : {}),
+        }),
+      );
       if (!finished) {
         throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
       }
-    }).catch((finishErr) => {
+    } catch (finishErr) {
       console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
-    });
+      throw new AggregateError(
+        [err, finishErr],
+        `Scheduled slot ${slotKey}@${opts.slotStartedAt} failed (${toErrorMessage(err)}) and its terminal state ` +
+          `could not be persisted (${toErrorMessage(finishErr)})`,
+      );
+    }
     throw err;
   } finally {
     slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} finished`));

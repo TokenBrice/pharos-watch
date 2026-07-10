@@ -352,6 +352,19 @@ export function createScheduledRuntimeContext(
                 );
               }
             : undefined;
+          const finishLedgerResult = async (result: CronResult): Promise<void> => {
+            if (!ledgerIdentity) return;
+            try {
+              await finishWorkerJobAttempt(db, {
+                attemptId: ledgerIdentity.attemptId,
+                startedAtMs: ledgerStartedAtMs,
+                result,
+              });
+            } catch (err) {
+              logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", err);
+              if (workerJobLedgerMode === "write") throw err;
+            }
+          };
           await reportProgressWithLedger({
             stage: "started",
             message: `Starting ${job}`,
@@ -376,7 +389,12 @@ export function createScheduledRuntimeContext(
             owner: leaseOwner,
             abortSignal: signal,
             timeoutBudget,
-            ...(recordLeaseState ? { onLeaseState: recordLeaseState } : {}),
+            ...(recordLeaseState
+              ? {
+                  onLeaseState: recordLeaseState,
+                  leaseStateObserverMode: workerJobLedgerMode === "write" ? "required" as const : "best-effort" as const,
+                }
+              : {}),
             ...perJobLeaseOptions,
           };
           const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
@@ -396,22 +414,26 @@ export function createScheduledRuntimeContext(
               leaseOwner: lease.leaseOwner,
               metadata: slotMeta,
             });
-            return {
+            const terminalResult: CronResult = {
               status: "skipped_locked",
               metadata: JSON.stringify({
                 reason: "lease-locked",
                 ...buildLeaseMeta(lease),
               }),
             };
+            await finishLedgerResult(terminalResult);
+            return terminalResult;
           }
 
           const result = lease.result;
           if (!result) {
-            return {
+            const terminalResult: CronResult = {
               metadata: JSON.stringify({
                 ...buildLeaseMeta(lease),
               }),
             };
+            await finishLedgerResult(terminalResult);
+            return terminalResult;
           }
 
           const leaseMeta = buildLeaseMeta(lease);
@@ -428,7 +450,9 @@ export function createScheduledRuntimeContext(
             metadata: slotMeta,
           });
 
-          return { ...result, metadata };
+          const terminalResult = { ...result, metadata };
+          await finishLedgerResult(terminalResult);
+          return terminalResult;
         }, (title, message) => reportCronFailureCondition(true, title, message), {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
@@ -453,17 +477,6 @@ export function createScheduledRuntimeContext(
             if (alertBrokerMode === "status" || alertBrokerMode === "alert") throw error;
           }
         }
-        if (ledgerIdentity) {
-          try {
-            await finishWorkerJobAttempt(db, {
-              attemptId: ledgerIdentity.attemptId,
-              startedAtMs: ledgerStartedAtMs,
-              result,
-            });
-          } catch (err) {
-            logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", err);
-          }
-        }
         return result;
         } catch (err) {
           if (ledgerIdentity) {
@@ -475,6 +488,12 @@ export function createScheduledRuntimeContext(
               });
             } catch (finishErr) {
               logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", finishErr);
+              if (workerJobLedgerMode === "write") {
+                throw new AggregateError(
+                  [err, finishErr],
+                  `Cron ${job} failed and its terminal worker-job attempt could not be persisted`,
+                );
+              }
             }
           }
           throw err;

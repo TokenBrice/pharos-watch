@@ -4,6 +4,7 @@ import {
   CRON_ABANDONED_JOB_GRACE_MS,
   CronJobAbandonedError,
   CronLeaseLostError,
+  CronLeaseStateObserverError,
   CronTimeoutError,
   SCHEDULED_SLOT_JOB_BUDGET_MS,
   isRetriableD1OverloadError,
@@ -98,6 +99,7 @@ function makeLeaseDb(seed?: {
   cache?: CacheRow[];
   attempts?: JobAttemptRow[];
   failSlotHeartbeatRuns?: number;
+  failSlotFinishRuns?: number;
   failSlotProgressReads?: number;
   beforeSlotTakeover?: (slots: Map<string, SlotExecutionRow>) => void;
   beforeSlotReconciliationClaim?: (slots: Map<string, SlotExecutionRow>) => void;
@@ -109,6 +111,7 @@ function makeLeaseDb(seed?: {
   const cacheRows = new Map<string, CacheRow>();
   const jobAttempts = new Map<string, JobAttemptRow>();
   let failSlotHeartbeatRuns = seed?.failSlotHeartbeatRuns ?? 0;
+  let failSlotFinishRuns = seed?.failSlotFinishRuns ?? 0;
   let failSlotProgressReads = seed?.failSlotProgressReads ?? 0;
   const beforeSlotTakeover = seed?.beforeSlotTakeover;
   const beforeSlotReconciliationClaim = seed?.beforeSlotReconciliationClaim;
@@ -547,6 +550,10 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("UPDATE cron_slot_executions") && sql.includes("SET state = 'finished'")) {
+            if (failSlotFinishRuns > 0) {
+              failSlotFinishRuns--;
+              throw new Error("slot terminal write failed");
+            }
             const [resultStatus, finishedAt, updatedAt, metadata, slotKey, slotStartedAt, owner, generation] = args as [
               string,
               number,
@@ -927,6 +934,34 @@ describe("runCronWithLease", () => {
     }
   });
 
+  it("fails before job execution and releases the lease when a required acquisition observer fails", async () => {
+    const db = makeLeaseDb();
+    const runJob = vi.fn(async () => "done");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      await expect(runCronWithLease(
+        db,
+        "sync-stablecoins",
+        runJob,
+        {
+          owner: "owner-z",
+          ttlSec: 120,
+          heartbeatSec: 30,
+          leaseStateObserverMode: "required",
+          onLeaseState: () => {
+            throw new Error("ledger lease write failed");
+          },
+        },
+      )).rejects.toBeInstanceOf(CronLeaseStateObserverError);
+
+      expect(runJob).not.toHaveBeenCalled();
+      await expect(acquireCronLease(db, "sync-stablecoins", "owner-next", 120)).resolves.toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("isolates renewal observer failures from lease health", async () => {
     const db = makeLeaseDb();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -961,6 +996,43 @@ describe("runCronWithLease", () => {
         "[cron-lease] Lease state observer failed for sync-stablecoins (renewed):",
         expect.any(Error),
       );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("aborts without overlapping heartbeats when a required renewal observer fails", async () => {
+    const db = makeLeaseDb();
+    const events: string[] = [];
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const runPromise = runCronWithLease(
+        db,
+        "sync-stablecoins",
+        async ({ signal }) => new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        }),
+        {
+          owner: "owner-z",
+          ttlSec: 120,
+          heartbeatSec: 1,
+          leaseStateObserverMode: "required",
+          onLeaseState: (state) => {
+            events.push(state.event);
+            if (state.event === "renewed") throw new Error("ledger renewal write failed");
+          },
+        },
+      );
+
+      const expectation = expect(runPromise).rejects.toBeInstanceOf(CronLeaseStateObserverError);
+      await vi.advanceTimersByTimeAsync(1_100);
+      await expectation;
+
+      expect(events).toEqual(["acquired", "renewed"]);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(events).toEqual(["acquired", "renewed"]);
+      await expect(acquireCronLease(db, "sync-stablecoins", "owner-next", 120)).resolves.toBe(true);
     } finally {
       consoleError.mockRestore();
     }
@@ -1478,6 +1550,36 @@ describe("runScheduledSlotWithFence", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("preserves both the primary failure and a terminal slot-write failure", async () => {
+    const db = makeLeaseDb({ failSlotFinishRuns: 1 });
+    const primaryError = new Error("slot work failed");
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const run = runScheduledSlotWithFence(
+        db,
+        "quarterHourly",
+        async () => {
+          throw primaryError;
+        },
+        {
+          slotStartedAt: Math.floor(Date.now() / 1000),
+          owner: "slot-owner",
+          preSweepStale: false,
+        },
+      );
+
+      await expect(run).rejects.toSatisfy((error: unknown) => (
+        error instanceof AggregateError
+        && error.errors[0] === primaryError
+        && error.errors[1] instanceof Error
+        && error.errors[1].message === "slot terminal write failed"
+      ));
+    } finally {
+      consoleWarn.mockRestore();
+    }
   });
 
   it("skips a slot that already finished", async () => {
