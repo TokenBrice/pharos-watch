@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
 import type { YieldRankingsResponse } from "@shared/types/yield";
-import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "../../../../src/test/fixtures/yield";
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/lib/__tests__/yield-ranking-fixtures";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const loadPublishedReportCardsSnapshotMock = vi.hoisted(() => vi.fn());
