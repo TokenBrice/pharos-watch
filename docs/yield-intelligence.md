@@ -813,7 +813,9 @@ GBP attempts additionally write bounded cron metadata for every FRED, ALFRED, an
 
 ### `GET /api/yield-rankings`
 
-Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report-card snapshot, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from current report-card data at API read time. The API first uses the exact published `report-cards:snapshot` and computes a report-card fallback when that snapshot is unavailable. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report card, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
+
+The two top-level safety provenance fields have different clocks. `provenance.safetySnapshot` is immutable publish-time evidence: it names the exact compact report-card generation used by the hourly cron to compute the cached rankings. Read-time hydration never overwrites it. Optional `provenance.liveSafetyHydration` instead reports the current hydration `kind`, row coverage counts/ratio, reason, source (`report-cards:snapshot` or `computed-report-cards`), publication generation, methodology, and publish time. Hydration is marked degraded when DEX-liquidity/redemption inputs are stale, the full report-card snapshot is over age, or live row coverage is below 0.75; the API appends the `yield-safety-hydration-degraded` body warning and emits HTTP `Warning: 199`. A hydration exception returns the cached published safety fields with the same warning code/header.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
 
@@ -969,7 +971,7 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
 }
 ```
 
-Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics. Generation-aware payloads include top-level `publication` and optional row-level `publicationGenerationId`; legacy rows remain valid when those fields are omitted. Rankings payloads may also include the standard Yield Intelligence `methodology` envelope.
+Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics. Generation-aware payloads include top-level `publication` and optional row-level `publicationGenerationId`; legacy rows remain valid when those fields are omitted. Rankings payloads may also include the standard Yield Intelligence `methodology` envelope. `provenance.safetySnapshot` remains the hourly publisher's immutable generation evidence, while optional `provenance.liveSafetyHydration` describes the separate report-card source used for API-time row hydration.
 
 Each best-source row and alt-source row can also include `yieldSourceUrl`. The worker resolves this from the curated yield-source link registry (`worker/src/lib/yield-source-links.ts`) and falls back to coin metadata links when no source-specific override exists.
 
@@ -1219,7 +1221,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 - **First sync (no history):** `apy7d` and `apy30d` equal `currentApy`. PYS still computed.
 - **On-chain rate bootstrapping:** When a Tier 1 vault has no previous exchange rate in history (first 7 days after config is added), the sync emits a seed row with `currentApy: 0` and the current `exchangeRate`. This persists the rate in `yield_history` so future cycles can compute APY once a 7-day-old reference point exists.
 - **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Most NAV tokens hit this path since the report card framework doesn't grade them yet.
-- **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped.
+- **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped. The API preserves the hourly `safetySnapshot`, reports the read-time state under `liveSafetyHydration`, and emits body warning `yield-safety-hydration-degraded` plus HTTP `Warning: 199` for stale inputs/snapshot age, low coverage, or a hydration failure.
 - **All tiers fail:** Coin is recorded with `yield: null` and skipped in the write phase. No PYS computed. Logged as warning.
 - **Negative APY:** Stored and displayed. PYS returns 0 for `apy30d <= 0`.
 - **DL Yields circuit-broken:** Tier 2 skipped entirely. Coins with Tier 1 or Tier 3 coverage still get APY. Others get `yield: null`.

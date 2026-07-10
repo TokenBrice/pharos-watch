@@ -358,6 +358,18 @@ const YieldSafetySnapshotMetaSchema = z.object({
   publishedAt: z.number().nullable().optional(),
 });
 
+const YieldLiveSafetyHydrationMetaSchema = z.object({
+  kind: z.enum(["ok", "degraded"]),
+  coverageRatio: z.number(),
+  coveredCount: z.number(),
+  trackedCount: z.number(),
+  reason: z.string().nullable(),
+  source: z.enum(["report-cards:snapshot", "computed-report-cards"]),
+  publicationGenerationId: z.string().nullable(),
+  methodologyVersion: z.string().nullable(),
+  publishedAt: z.number().nullable(),
+});
+
 const YieldRankingProvenanceSchema = z.object({
   sourceKey: z.string(),
   sourceObservedAt: z.number(),
@@ -391,6 +403,7 @@ const YieldRankingsProvenanceSchema = z.object({
   benchmarks: YieldBenchmarkRegistrySchema.optional(),
   dlPools: YieldSourceInputMetaSchema,
   safetySnapshot: YieldSafetySnapshotMetaSchema,
+  liveSafetyHydration: YieldLiveSafetyHydrationMetaSchema.optional(),
 });
 
 export type YieldHistoryPoint = z.infer<typeof YieldHistoryPointSchema>;
