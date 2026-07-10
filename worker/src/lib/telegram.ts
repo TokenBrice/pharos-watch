@@ -156,6 +156,13 @@ export interface SendToChatResult {
 
 export interface SendBatchOptions {
   softDeadlineAtMs?: number;
+  beforeSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
+  afterSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+    results: readonly BatchResult[],
+  ) => Promise<void>;
 }
 
 function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
@@ -388,22 +395,39 @@ export interface BatchResult {
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
   attempted?: boolean;
+  skippedReason?: "predecessor_failure" | "global_rate_limit" | "aborted" | "soft_deadline" | "pre_send";
 }
 
+export type PreSendBatchResult = Omit<BatchResult, "chatId" | "attempted">;
+
 /**
- * Send messages in parallel batches. Each batch sends up to `batchSize`
- * messages concurrently (must stay <= 6 to respect Workers connection limit).
- * Individual send failures are caught — a single 500 error does NOT abort the batch.
- * Returns one result per input message in the same order.
+ * One input selected for a distinct-chat send wave. `index` always refers to
+ * the item's position in the original input, even when the scheduler moves a
+ * different chat forward to fill a concurrency slot.
  */
+export interface ScheduledBatchEntry<T> {
+  index: number;
+  item: T;
+}
+
+interface PerChatBatchScheduleOptions<T> {
+  signal?: AbortSignal;
+  softDeadlineAtMs?: number | null;
+  beforeSendBatch?: (
+    entries: readonly ScheduledBatchEntry<T>[],
+  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
+  afterSendBatch?: (entries: readonly ScheduledBatchEntry<T>[], results: readonly BatchResult[]) => Promise<void>;
+}
+
 function buildUnsentRetryResult(
-  message: BatchMessage,
+  chatId: string,
   errorClass: TelegramSendErrorClass,
   retryAfterSec: number | null,
   rateLimitScope?: "chat" | "global",
+  skippedReason?: BatchResult["skippedReason"],
 ): BatchResult {
   return {
-    chatId: message.chatId,
+    chatId,
     ok: false,
     blocked: false,
     retryable: true,
@@ -414,9 +438,163 @@ function buildUnsentRetryResult(
     retryAfterSec,
     ...(rateLimitScope ? { rateLimitScope } : {}),
     attempted: false,
+    ...(skippedReason ? { skippedReason } : {}),
   };
 }
 
+function buildPredecessorFailureResult(chatId: string, predecessor: BatchResult): BatchResult {
+  return {
+    ...predecessor,
+    chatId,
+    attempted: false,
+    skippedReason: "predecessor_failure",
+  };
+}
+
+interface PerChatQueue {
+  chatId: string;
+  indexes: number[];
+  nextIndex: number;
+}
+
+/**
+ * Run at most one item per chat in each bounded-concurrency wave. Chat queues
+ * are round-robin, so a multi-chunk chat cannot monopolize the available
+ * connection slots. A failed predecessor classifies the untouched same-chat
+ * tail without launching it; successful chunks advance in stable input order.
+ */
+export async function schedulePerChatBatches<T extends { chatId: string }>(
+  items: readonly T[],
+  batchSize: number,
+  send: (item: T) => Promise<SendToChatResult>,
+  options: PerChatBatchScheduleOptions<T> = {},
+): Promise<BatchResult[]> {
+  if (!Number.isInteger(batchSize) || batchSize <= 0) {
+    throw new RangeError(`schedulePerChatBatches requires a positive integer batchSize (received ${batchSize})`);
+  }
+  if (items.length === 0) return [];
+
+  const results = new Array<BatchResult | undefined>(items.length);
+  const queueByChat = new Map<string, PerChatQueue>();
+  const readyQueues: PerChatQueue[] = [];
+  for (const [index, item] of items.entries()) {
+    let queue = queueByChat.get(item.chatId);
+    if (!queue) {
+      queue = { chatId: item.chatId, indexes: [], nextIndex: 0 };
+      queueByChat.set(item.chatId, queue);
+      readyQueues.push(queue);
+    }
+    queue.indexes.push(index);
+  }
+
+  const distinctRateLimitedChats = new Set<string>();
+  const fillQueueTail = (queue: PerChatQueue, buildResult: (item: T) => BatchResult): void => {
+    while (queue.nextIndex < queue.indexes.length) {
+      const index = queue.indexes[queue.nextIndex++];
+      results[index] = buildResult(items[index]);
+    }
+  };
+  const fillAllReady = (buildResult: (item: T) => BatchResult): void => {
+    for (const queue of readyQueues) fillQueueTail(queue, buildResult);
+    readyQueues.length = 0;
+  };
+
+  while (readyQueues.length > 0) {
+    if (options.signal?.aborted) {
+      fillAllReady((item) => buildUnsentRetryResult(item.chatId, "timeout", null, undefined, "aborted"));
+      break;
+    }
+    if (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs) {
+      fillAllReady((item) => buildUnsentRetryResult(item.chatId, "timeout", null, undefined, "soft_deadline"));
+      break;
+    }
+
+    const waveQueues = readyQueues.splice(0, batchSize);
+    const entries = waveQueues.map((queue): ScheduledBatchEntry<T> => {
+      const index = queue.indexes[queue.nextIndex++];
+      return { index, item: items[index] };
+    });
+    const preSendResults = await options.beforeSendBatch?.(entries);
+
+    const waveResults = await Promise.all(
+      entries.map(async ({ index, item }) => {
+        const preSendResult = preSendResults?.get(index);
+        if (preSendResult) {
+          return {
+            ...preSendResult,
+            chatId: item.chatId,
+            attempted: false,
+            skippedReason: preSendResult.skippedReason ?? "pre_send",
+          } satisfies BatchResult;
+        }
+        const result = await send(item);
+        return { chatId: item.chatId, ...result, attempted: true } satisfies BatchResult;
+      }),
+    );
+    for (const [waveIndex, entry] of entries.entries()) {
+      results[entry.index] = waveResults[waveIndex];
+    }
+    await options.afterSendBatch?.(entries, waveResults);
+
+    let globalRateLimitedResult = waveResults.find(
+      (result) =>
+        result.attempted !== false && result.errorClass === "rate_limit" && result.rateLimitScope === "global",
+    );
+    if (!globalRateLimitedResult) {
+      for (const result of waveResults) {
+        if (result.attempted === false) continue;
+        if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
+          distinctRateLimitedChats.add(result.chatId);
+        }
+      }
+      if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
+        globalRateLimitedResult = waveResults.find(
+          (result) => result.errorClass === "rate_limit" && result.rateLimitScope !== "global",
+        );
+        for (const result of waveResults) {
+          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
+            result.rateLimitScope = "global";
+          }
+        }
+      }
+    }
+
+    if (globalRateLimitedResult) {
+      const buildGlobalResult = (item: T) =>
+        buildUnsentRetryResult(
+          item.chatId,
+          "rate_limit",
+          globalRateLimitedResult?.retryAfterSec ?? null,
+          "global",
+          "global_rate_limit",
+        );
+      for (const queue of waveQueues) fillQueueTail(queue, buildGlobalResult);
+      fillAllReady(buildGlobalResult);
+      break;
+    }
+
+    for (const [waveIndex, queue] of waveQueues.entries()) {
+      const result = waveResults[waveIndex];
+      if (!result.ok) {
+        fillQueueTail(queue, (item) => buildPredecessorFailureResult(item.chatId, result));
+      } else if (queue.nextIndex < queue.indexes.length) {
+        readyQueues.push(queue);
+      }
+    }
+  }
+
+  return results.map((result, index) => {
+    if (result) return result;
+    return buildUnsentRetryResult(items[index].chatId, "unknown", null);
+  });
+}
+
+/**
+ * Send messages serially within each chat and concurrently across distinct
+ * chats. Concurrency must stay <= 6 to respect the Workers connection limit.
+ * Individual send failures are caught by `sendToChat`; one failed chat does
+ * not abort other chat queues. Results retain the original input order.
+ */
 export async function sendBatch(
   messages: BatchMessage[],
   botToken: string,
@@ -424,84 +602,28 @@ export async function sendBatch(
   signal?: AbortSignal,
   options: SendBatchOptions = {},
 ): Promise<BatchResult[]> {
-  const results: BatchResult[] = [];
-  const chatRateLimitedUntil = new Map<string, number | null>();
-  const distinctRateLimitedChats = new Set<string>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
-  for (let i = 0; i < messages.length; i += batchSize) {
-    if (signal?.aborted) {
-      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
-      break;
-    }
-    if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) {
-      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
-      break;
-    }
-    const batch = messages.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(async (msg) => {
-        if (chatRateLimitedUntil.has(msg.chatId)) {
-          return buildUnsentRetryResult(
-            msg,
-            "rate_limit",
-            chatRateLimitedUntil.get(msg.chatId) ?? null,
-            "chat",
-          );
-        }
-        const result = await sendToChat(msg.chatId, msg.html, botToken, {
-          // Caller-supplied preview options win; otherwise default to no preview
-          // for batch alert sends to keep the message dense on mobile.
-          ...(msg.linkPreviewOptions
-            ? { linkPreviewOptions: msg.linkPreviewOptions }
-            : { disableWebPagePreview: true }),
-          disableNotification: msg.disableNotification,
-          replyMarkup: msg.replyMarkup,
-          signal,
-        });
-        return { chatId: msg.chatId, ...result, attempted: true };
+  return schedulePerChatBatches(
+    messages,
+    batchSize,
+    (msg) =>
+      sendToChat(msg.chatId, msg.html, botToken, {
+        // Caller-supplied preview options win; otherwise default to no preview
+        // for batch alert sends to keep the message dense on mobile.
+        ...(msg.linkPreviewOptions ? { linkPreviewOptions: msg.linkPreviewOptions } : { disableWebPagePreview: true }),
+        disableNotification: msg.disableNotification,
+        replyMarkup: msg.replyMarkup,
+        signal,
       }),
-    );
-    results.push(...batchResults);
-    // Stop sending further batches only when the response context indicates a
-    // bot-wide limit. Single-chat 429s remain isolated to that chat.
-    const globalRateLimitedResult = batchResults.find(
-      (r) => r.errorClass === "rate_limit" && r.rateLimitScope === "global",
-    );
-    let escalatedGlobalRateLimitedResult = globalRateLimitedResult;
-    if (!escalatedGlobalRateLimitedResult) {
-      for (const result of batchResults) {
-        if (result.attempted === false) continue;
-        if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-          distinctRateLimitedChats.add(result.chatId);
-          chatRateLimitedUntil.set(result.chatId, result.retryAfterSec);
-        }
-      }
-      if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
-        escalatedGlobalRateLimitedResult = batchResults.find(
-          (r) => r.errorClass === "rate_limit" && r.rateLimitScope !== "global" && r.attempted !== false,
-        );
-        for (const result of batchResults) {
-          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-            result.rateLimitScope = "global";
-          }
-        }
-      }
-    }
-    if (escalatedGlobalRateLimitedResult) {
-      for (const skippedMessage of messages.slice(i + batchSize)) {
-        results.push(buildUnsentRetryResult(
-          skippedMessage,
-          "rate_limit",
-          escalatedGlobalRateLimitedResult.retryAfterSec,
-          "global",
-        ));
-      }
-      break;
-    }
-  }
-  return results;
+    {
+      signal,
+      softDeadlineAtMs,
+      beforeSendBatch: options.beforeSendBatch,
+      afterSendBatch: options.afterSendBatch,
+    },
+  );
 }
 
 export interface EditMessageOpts {

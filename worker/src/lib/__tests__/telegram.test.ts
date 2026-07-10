@@ -240,6 +240,93 @@ describe("sendBatch", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(7);
   });
 
+  it("sends same-chat chunks serially in ordinal order while other chats use bounded concurrency", async () => {
+    const started: string[] = [];
+    const completed: string[] = [];
+    const releases = new Map<string, () => void>();
+    let active = 0;
+    let maxActive = 0;
+    let sameChatActive = 0;
+    let maxSameChatActive = 0;
+
+    fetchSpy.mockImplementation(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { chat_id: string; text: string };
+      const key = `${body.chat_id}:${body.text}`;
+      started.push(key);
+      active++;
+      maxActive = Math.max(maxActive, active);
+      if (body.chat_id === "same-chat") {
+        sameChatActive++;
+        maxSameChatActive = Math.max(maxSameChatActive, sameChatActive);
+      }
+      return new Promise<Response>((resolve) => {
+        releases.set(key, () => {
+          completed.push(key);
+          active--;
+          if (body.chat_id === "same-chat") sameChatActive--;
+          resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+        });
+      });
+    });
+
+    const messages = [
+      ...Array.from({ length: 4 }, (_, index) => ({
+        chatId: "same-chat",
+        html: `chunk-${index}`,
+        disableNotification: false,
+        chunkIndex: index,
+      })),
+      ...["other-a", "other-b", "other-c", "other-d"].map((chatId) => ({
+        chatId,
+        html: "only-chunk",
+        disableNotification: false,
+      })),
+    ];
+
+    const sendPromise = sendBatch(messages, "bot-token", 4);
+    await vi.waitFor(() => expect(started).toHaveLength(4));
+    expect(started).toEqual([
+      "same-chat:chunk-0",
+      "other-a:only-chunk",
+      "other-b:only-chunk",
+      "other-c:only-chunk",
+    ]);
+
+    releases.get("other-a:only-chunk")?.();
+    releases.get("other-b:only-chunk")?.();
+    releases.get("other-c:only-chunk")?.();
+    await Promise.resolve();
+    expect(started).toHaveLength(4);
+
+    releases.get("same-chat:chunk-0")?.();
+    await vi.waitFor(() => expect(started).toHaveLength(6));
+    expect(started.slice(4)).toEqual(["other-d:only-chunk", "same-chat:chunk-1"]);
+    releases.get("other-d:only-chunk")?.();
+    releases.get("same-chat:chunk-1")?.();
+    await vi.waitFor(() => expect(started).toContain("same-chat:chunk-2"));
+    releases.get("same-chat:chunk-2")?.();
+    await vi.waitFor(() => expect(started).toContain("same-chat:chunk-3"));
+    releases.get("same-chat:chunk-3")?.();
+
+    const results = await sendPromise;
+    expect(results).toHaveLength(messages.length);
+    expect(results.every((result) => result.ok)).toBe(true);
+    expect(started.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(completed.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(maxActive).toBe(4);
+    expect(maxSameChatActive).toBe(1);
+  });
+
   it("reports blocked chats without throwing", async () => {
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
@@ -295,7 +382,7 @@ describe("sendBatch", () => {
     expect(results.slice(5).every((result) => result.ok)).toBe(true);
   });
 
-  it("short-circuits later messages for a chat already rate-limited in the same run", async () => {
+  it("does not launch later same-chat chunks after the first chunk is rate-limited", async () => {
     fetchSpy
       .mockResolvedValueOnce(
         new Response("Too Many Requests: chat retry after 45", {
@@ -303,20 +390,20 @@ describe("sendBatch", () => {
           headers: { "Retry-After": "45" },
         }),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     const messages = [
       { chatId: "same-chat", html: "<b>Alert 1</b>", disableNotification: false },
-      { chatId: "other-chat", html: "<b>Alert 2</b>", disableNotification: false },
+      { chatId: "same-chat", html: "<b>Alert 2</b>", disableNotification: false },
       { chatId: "same-chat", html: "<b>Alert 3</b>", disableNotification: false },
-      { chatId: "third-chat", html: "<b>Alert 4</b>", disableNotification: false },
+      { chatId: "same-chat", html: "<b>Alert 4</b>", disableNotification: false },
+      { chatId: "other-chat", html: "<b>Other alert</b>", disableNotification: false },
     ];
 
-    const results = await sendBatch(messages, "bot-token", 1);
+    const results = await sendBatch(messages, "bot-token", 4);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(results).toHaveLength(4);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(5);
     expect(results[0]).toMatchObject({
       chatId: "same-chat",
       errorClass: "rate_limit",
@@ -324,15 +411,47 @@ describe("sendBatch", () => {
       rateLimitScope: "chat",
       attempted: true,
     });
-    expect(results[2]).toMatchObject({
-      chatId: "same-chat",
-      errorClass: "rate_limit",
-      retryAfterSec: 45,
-      rateLimitScope: "chat",
-      attempted: false,
-    });
-    expect(results[1].ok).toBe(true);
-    expect(results[3].ok).toBe(true);
+    expect(results.slice(1, 4).every((result) =>
+      result.chatId === "same-chat" &&
+      result.errorClass === "rate_limit" &&
+      result.retryAfterSec === 45 &&
+      result.rateLimitScope === "chat" &&
+      result.attempted === false &&
+      result.skippedReason === "predecessor_failure"
+    )).toBe(true);
+    expect(results[4].ok).toBe(true);
+  });
+
+  it.each([
+    { status: 500, errorClass: "server_error", delivery: "retryable_failure" },
+    { status: 400, errorClass: "bad_request", delivery: "permanent_failure" },
+    { status: 403, errorClass: "blocked", delivery: "blocked" },
+  ])("classifies an unattempted same-chat tail from a $status predecessor", async ({
+    status,
+    errorClass,
+    delivery,
+  }) => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response("failed", { status }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const results = await sendBatch([
+      { chatId: "same-chat", html: "chunk-0", disableNotification: false },
+      { chatId: "same-chat", html: "chunk-1", disableNotification: false },
+      { chatId: "same-chat", html: "chunk-2", disableNotification: false },
+      { chatId: "other-chat", html: "other", disableNotification: false },
+    ], "bot-token", 4);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(results[0]).toMatchObject({ statusCode: status, errorClass, delivery, attempted: true });
+    expect(results.slice(1, 3).every((result) =>
+      result.statusCode === status &&
+      result.errorClass === errorClass &&
+      result.delivery === delivery &&
+      result.attempted === false &&
+      result.skippedReason === "predecessor_failure"
+    )).toBe(true);
+    expect(results[3]).toMatchObject({ ok: true, attempted: true });
   });
 
   it("escalates repeated 429s across distinct chats to global backoff", async () => {

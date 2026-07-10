@@ -143,7 +143,8 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       enqueued_at INTEGER,
       failed_at INTEGER,
       error_class TEXT,
-      created_at INTEGER
+      created_at INTEGER,
+      effect_state TEXT NOT NULL DEFAULT 'unstarted'
     );
   `);
   return { sqlite, db: createSqliteD1(sqlite) };
@@ -1111,11 +1112,11 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", blockedRows.length);
 
-    expect(result.attempted).toBe(blockedRows.length);
+    expect(result.attempted).toBe(1);
     expect(result.blocked).toBe(blockedRows.length);
     expect(result.blockedCleanedUp).toBe(1);
     expect(result.blockedCleanupFailed).toBe(0);
-    expect(mockSendToChat).toHaveBeenCalledTimes(blockedRows.length);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
 
     const history = db.getHistory();
     expect(history.filter((entry) => entry.sql.includes("SELECT consecutive_block_count"))).toHaveLength(1);
@@ -1148,6 +1149,47 @@ describe("drainPendingQueue", () => {
     const deadLetters = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_dead_letters"));
     expect(deadLetters).toHaveLength(blockedRows.length);
     expect(deadLetters.map((entry) => entry.binds[10])).toEqual(blockedRows.map(() => "blocked_disabled"));
+  });
+
+  it("dead-letters an unattempted same-chat tail after a permanent predecessor failure", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 400,
+      errorClass: "bad_request",
+      delivery: "permanent_failure",
+      retryAfterSec: null,
+    });
+    const rows = Array.from({ length: 4 }, (_, index) => ({
+      id: 1300 + index,
+      chat_id: "same-permanent-chat",
+      message_html: `chunk-${index}`,
+      disable_notification: 0,
+      created_at: now - 60,
+      attempts: 0,
+      chunk_index: index,
+      dedupe_key: `same-permanent-chat:${index}`,
+    }));
+    const db = mockD1([
+      { match: "FROM telegram_pending_alerts p", rows },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", rows.length);
+
+    expect(result).toMatchObject({
+      attempted: 1,
+      dropped: rows.length,
+      droppedPermanentFailure: rows.length,
+    });
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(
+      db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_dead_letters")),
+    ).toHaveLength(rows.length);
   });
 
   it("treats a stale first strike (older than 24h) as a fresh first strike", async () => {
@@ -1307,7 +1349,7 @@ describe("drainPendingQueue", () => {
     expect(mockSendToChat).toHaveBeenCalledTimes(8);
   });
 
-  it("short-circuits later pending rows for a chat already rate-limited in the same drain", async () => {
+  it("defers all later same-chat chunks when the first pending chunk is rate-limited", async () => {
     const okResult = {
       ok: true, blocked: false, retryable: false, permanentFailure: false,
       statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
@@ -1322,11 +1364,11 @@ describe("drainPendingQueue", () => {
       .mockResolvedValue(okResult);
 
     const rows = [
-      { id: 1, chat_id: "chat-a", message_html: "msg1", disable_notification: 0, created_at: 1000, attempts: 0 },
-      { id: 2, chat_id: "chat-b", message_html: "msg2", disable_notification: 0, created_at: 1000, attempts: 0 },
-      { id: 3, chat_id: "chat-c", message_html: "msg3", disable_notification: 0, created_at: 1000, attempts: 0 },
-      { id: 4, chat_id: "chat-d", message_html: "msg4", disable_notification: 0, created_at: 1000, attempts: 0 },
-      { id: 5, chat_id: "chat-a", message_html: "msg5", disable_notification: 0, created_at: 1000, attempts: 0 },
+      { id: 1, chat_id: "chat-a", message_html: "chunk-0", disable_notification: 0, created_at: 1000, attempts: 0, chunk_index: 0 },
+      { id: 2, chat_id: "chat-a", message_html: "chunk-1", disable_notification: 0, created_at: 1000, attempts: 0, chunk_index: 1 },
+      { id: 3, chat_id: "chat-a", message_html: "chunk-2", disable_notification: 0, created_at: 1000, attempts: 0, chunk_index: 2 },
+      { id: 4, chat_id: "chat-a", message_html: "chunk-3", disable_notification: 0, created_at: 1000, attempts: 0, chunk_index: 3 },
+      { id: 5, chat_id: "chat-b", message_html: "other", disable_notification: 0, created_at: 1000, attempts: 0, chunk_index: 0 },
     ];
 
     const db = mockD1([
@@ -1337,13 +1379,13 @@ describe("drainPendingQueue", () => {
 
     const result = await drainPendingQueue(db, "bot-token", 20);
 
-    expect(result.attempted).toBe(4);
-    expect(result.sent).toBe(3);
+    expect(result.attempted).toBe(2);
+    expect(result.sent).toBe(1);
     expect(result.retryQueued).toBe(1);
-    expect(result.deferred).toBe(1);
+    expect(result.deferred).toBe(3);
     expect(result.rateLimited).toBe(true);
     expect(result.retryAfterSec).toBe(45);
-    expect(mockSendToChat).toHaveBeenCalledTimes(4);
+    expect(mockSendToChat).toHaveBeenCalledTimes(2);
 
     const now = Math.floor(Date.now() / 1000);
     const retryUpdates = db.getHistory().filter((entry) =>
@@ -1353,11 +1395,15 @@ describe("drainPendingQueue", () => {
     expect(retryUpdates.map((entry) => entry.binds[4])).toEqual([1]);
     expect(retryUpdates[0]?.binds[0]).toBe(now + 45);
 
-    const deferUpdate = db.getHistory().find((entry) =>
+    const deferUpdates = db.getHistory().filter((entry) =>
       entry.sql.includes("UPDATE telegram_pending_alerts") &&
       entry.sql.includes("SET not_before_at = ?")
     );
-    expect(deferUpdate?.binds).toEqual([now + 45, now, 5]);
+    expect(deferUpdates.map((entry) => entry.binds)).toEqual([
+      [now + 45, now, 2],
+      [now + 45, now, 3],
+      [now + 45, now, 4],
+    ]);
   });
 
   it("escalates repeated pending 429s across distinct chats to global backoff", async () => {
@@ -1684,6 +1730,111 @@ describe("drainPendingQueue", () => {
     // Order returned by drain reflects the SQL ORDER BY: chunk 1 before chunk 2.
     const callOrder = mockSendToChat.mock.calls.map((call) => call[1] as string);
     expect(callOrder).toEqual(["<b>Chunk 1</b>", "<b>Chunk 2</b>"]);
+  });
+
+  it("drains four same-chat chunks serially while distinct chats use four send slots", async () => {
+    vi.useRealTimers();
+    const now = Math.floor(Date.now() / 1000);
+    const started: string[] = [];
+    const completed: string[] = [];
+    const releases = new Map<string, () => void>();
+    let active = 0;
+    let maxActive = 0;
+    let sameChatActive = 0;
+    let maxSameChatActive = 0;
+    const okResult = {
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    };
+
+    mockSendToChat.mockImplementation((chatId: string, html: string) => {
+      const key = `${chatId}:${html}`;
+      started.push(key);
+      active++;
+      maxActive = Math.max(maxActive, active);
+      if (chatId === "same-chat") {
+        sameChatActive++;
+        maxSameChatActive = Math.max(maxSameChatActive, sameChatActive);
+      }
+      return new Promise((resolve) => {
+        releases.set(key, () => {
+          completed.push(key);
+          active--;
+          if (chatId === "same-chat") sameChatActive--;
+          resolve(okResult);
+        });
+      });
+    });
+
+    const rows = [
+      ...Array.from({ length: 4 }, (_, index) => ({
+        id: 1800 + index,
+        chat_id: "same-chat",
+        message_html: `chunk-${index}`,
+        disable_notification: 0,
+        created_at: now - 60,
+        attempts: 0,
+        chunk_index: index,
+      })),
+      ...["other-a", "other-b", "other-c"].map((chatId, index) => ({
+        id: 1900 + index,
+        chat_id: chatId,
+        message_html: "only-chunk",
+        disable_notification: 0,
+        created_at: now - 60,
+        attempts: 0,
+        chunk_index: 0,
+      })),
+    ];
+    const db = mockD1([
+      { match: "FROM telegram_pending_alerts p", rows },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const drainPromise = drainPendingQueue(db, "bot-token", rows.length);
+    await vi.waitFor(() => expect(started).toHaveLength(4));
+    expect(started).toEqual([
+      "same-chat:chunk-0",
+      "other-a:only-chunk",
+      "other-b:only-chunk",
+      "other-c:only-chunk",
+    ]);
+
+    releases.get("other-a:only-chunk")?.();
+    releases.get("other-b:only-chunk")?.();
+    releases.get("other-c:only-chunk")?.();
+    await Promise.resolve();
+    expect(started).toHaveLength(4);
+    releases.get("same-chat:chunk-0")?.();
+
+    for (let index = 1; index < 4; index++) {
+      const key = `same-chat:chunk-${index}`;
+      await vi.waitFor(() => expect(started).toContain(key));
+      releases.get(key)?.();
+    }
+
+    const result = await drainPromise;
+    expect(result).toMatchObject({ attempted: rows.length, sent: rows.length });
+    expect(started.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(completed.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(maxActive).toBe(SEND_BATCH_SIZE);
+    expect(maxSameChatActive).toBe(1);
   });
 
   it("returns zeros when queue is empty", async () => {

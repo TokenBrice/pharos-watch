@@ -1,6 +1,10 @@
 import { buildInClause, chunkArray, batchExecute } from "../../lib/db";
-import { throwIfAborted } from "../../lib/abort";
-import { sendToChat, type SendToChatResult } from "../../lib/telegram";
+import {
+  schedulePerChatBatches,
+  sendToChat,
+  type BatchMessage,
+  type BatchResult,
+} from "../../lib/telegram";
 import { SNOOZE_REPLY_MARKUP } from "../../lib/telegram-alerts";
 import { toErrorMessage } from "../../lib/error-utils";
 import {
@@ -8,7 +12,6 @@ import {
   PENDING_BACKOFF_SCHEDULE_SEC,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
-  TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
   TELEGRAM_PENDING_PRIORITY,
 } from "../../lib/telegram-constants";
 import { recordTelegramDeliveryOutcomes } from "../../lib/telegram-usage-analytics";
@@ -397,7 +400,7 @@ async function claimDuePendingRows(
 }
 
 /** The Telegram send result enriched with the originating pending row's id/chat/attempts. */
-type PendingSendResult = { id: number; chatId: string; attempts: number } & SendToChatResult;
+type PendingSendResult = { id: number; chatId: string; attempts: number } & BatchResult;
 
 /**
  * Pure classification of a single send result into the mutually-exclusive
@@ -501,7 +504,6 @@ export async function drainPendingQueue(
   // counter derives from exactly one source of truth.
   const outcomeKinds: PendingResultClassification["kind"][] = [];
   let rateLimited = false;
-  let globalRateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
   let rateLimitNotBeforeAt: number | null = null;
   const deliveryDiagnostics: PendingDeliveryDiagnostic[] = [];
@@ -510,113 +512,148 @@ export async function drainPendingQueue(
   const blockedChatsThisLoop = new Set<string>();
   const chatsToResetOnSuccess = new Set<string>();
   const disabledChatIds = new Set<string>();
-  const chatRateLimitedThisLoop = new Map<string, { notBeforeAt: number }>();
-  const distinctRateLimitedChats = new Set<string>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
 
-  for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
-    if (signal?.aborted || globalRateLimited) break;
-    if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) break;
-    const batch = pending.slice(i, i + SEND_BATCH_SIZE).filter((row) => {
-      if (!isPendingRowSnoozed(row, nowSec)) return true;
+  const sendableRows: Array<{ chatId: string; row: PendingAlertRow; message: BatchMessage }> = [];
+  for (const row of pending) {
+    if (isPendingRowSnoozed(row, nowSec)) {
       deferred++;
-      deferUpdates.push({ id: row.id, notBeforeAt: Math.max(row.alert_snooze_until_ts ?? 0, nowSec + DEFAULT_RETRY_DELAY_SEC) });
+      deferUpdates.push({
+        id: row.id,
+        notBeforeAt: Math.max(row.alert_snooze_until_ts ?? 0, nowSec + DEFAULT_RETRY_DELAY_SEC),
+      });
       appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
       completedIds.add(row.id);
-      return false;
-    }).filter((row) => {
-      const chatRateLimit = chatRateLimitedThisLoop.get(row.chat_id);
-      if (!chatRateLimit) return true;
-      deferred++;
-      deferUpdates.push({ id: row.id, notBeforeAt: chatRateLimit.notBeforeAt });
-      appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
-      completedIds.add(row.id);
-      return false;
+      continue;
+    }
+    sendableRows.push({
+      chatId: row.chat_id,
+      row,
+      message: {
+        chatId: row.chat_id,
+        html: row.message_html,
+        disableNotification: shouldSilencePendingRow(row, nowSec),
+        replyMarkup: SNOOZE_REPLY_MARKUP,
+        ...(row.chunk_index != null ? { chunkIndex: row.chunk_index } : {}),
+        ...(row.alert_type != null ? { alertType: row.alert_type } : {}),
+      },
     });
-    if (batch.length === 0) continue;
-    await markPendingRowsSending(db, batch.map((row) => row.id), claimOwner, nowSec);
-    if (batch.length > 0) options.markTelegramDeliveryStarted?.();
-    const results = await Promise.all(
-      batch.map(async (row) => {
-        const result = await sendToChat(row.chat_id, row.message_html, botToken, {
-          disableWebPagePreview: true,
-          disableNotification: shouldSilencePendingRow(row, nowSec),
-          replyMarkup: SNOOZE_REPLY_MARKUP,
-          signal,
-        });
-        return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result };
+  }
+
+  const scheduledResults = await schedulePerChatBatches(
+    sendableRows,
+    SEND_BATCH_SIZE,
+    ({ row, message }) =>
+      sendToChat(row.chat_id, row.message_html, botToken, {
+        disableWebPagePreview: true,
+        disableNotification: message.disableNotification,
+        replyMarkup: message.replyMarkup,
+        signal,
       }),
-    );
+    {
+      signal,
+      softDeadlineAtMs,
+      beforeSendBatch: async (entries) => {
+        await markPendingRowsSending(
+          db,
+          entries.map(({ item }) => item.row.id),
+          claimOwner,
+          nowSec,
+        );
+        options.markTelegramDeliveryStarted?.();
+      },
+    },
+  );
 
-    for (const result of results) {
-      throwIfAborted(signal);
+  const predecessorRetryAtByChat = new Map<string, number>();
+  for (const [index, scheduledResult] of scheduledResults.entries()) {
+    const sendable = sendableRows[index];
+    if (!sendable) continue;
+    const result: PendingSendResult = {
+      ...scheduledResult,
+      id: sendable.row.id,
+      chatId: sendable.chatId,
+      attempts: sendable.row.attempts,
+    };
+    const pendingRow = pendingById.get(result.id);
+    const pushTargetStatus = (
+      status: TelegramAlertTargetStatusUpdate["status"],
+      errorClass?: string | null,
+    ) => appendPendingTargetStatus(targetStatusUpdates, pendingRow, status, nowSec, errorClass);
+
+    if (result.attempted === false) {
+      if (result.skippedReason === "predecessor_failure" && result.retryable) {
+        const notBeforeAt =
+          predecessorRetryAtByChat.get(result.chatId) ??
+          nowSec + pendingBackoffSec(result.attempts, result.retryAfterSec);
+        deferred++;
+        deferUpdates.push({ id: result.id, notBeforeAt });
+        pushTargetStatus("queued", result.errorClass);
+        completedIds.add(result.id);
+        continue;
+      }
+      if (result.skippedReason !== "predecessor_failure") {
+        continue;
+      }
+    } else {
       attempted++;
-      const pendingRow = pendingById.get(result.id);
-      const pushTargetStatus = (
-        status: TelegramAlertTargetStatusUpdate["status"],
-        errorClass?: string | null,
-      ) => appendPendingTargetStatus(targetStatusUpdates, pendingRow, status, nowSec, errorClass);
+      deliveryDiagnostics.push(
+        result.ok
+          ? { chatId: result.chatId, ok: true }
+          : { chatId: result.chatId, ok: false, errorClass: result.errorClass },
+      );
+    }
 
-      deliveryDiagnostics.push(result.ok
-        ? { chatId: result.chatId, ok: true }
-        : { chatId: result.chatId, ok: false, errorClass: result.errorClass });
+    const classification = classifyPendingSendResult(result, nowSec);
+    outcomeKinds.push(classification.kind);
+    completedIds.add(result.id);
 
-      const classification = classifyPendingSendResult(result, nowSec);
-      outcomeKinds.push(classification.kind);
-      completedIds.add(result.id);
-
-      switch (classification.kind) {
-        case "sent": {
-          sentIdsToDelete.push(result.id);
-          pushTargetStatus("sent");
-          chatsToResetOnSuccess.add(result.chatId);
-          break;
+    switch (classification.kind) {
+      case "sent": {
+        sentIdsToDelete.push(result.id);
+        pushTargetStatus("sent");
+        chatsToResetOnSuccess.add(result.chatId);
+        break;
+      }
+      case "blocked": {
+        if (pendingRow) blockedRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
+        pushTargetStatus("failed", classification.errorClass);
+        const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChatsThisLoop);
+        if (blockedCascade.disabled) {
+          blockedCleanedUp++;
+          disabledChatIds.add(result.chatId);
+        } else if (blockedCascade.failed) {
+          blockedCleanupFailed++;
         }
-        case "blocked": {
-          if (pendingRow) blockedRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-          pushTargetStatus("failed", classification.errorClass);
-          const blockedCascade = await handleBlockedChat(db, result.chatId, nowSec, blockedChatsThisLoop);
-          if (blockedCascade.disabled) {
-            blockedCleanedUp++;
-            disabledChatIds.add(result.chatId);
-          } else if (blockedCascade.failed) {
-            blockedCleanupFailed++;
+        break;
+      }
+      case "retry": {
+        retryUpdates.push(classification.retryUpdate);
+        pushTargetStatus("queued", classification.targetErrorClass);
+        if (classification.retryUpdate.notBeforeAt != null) {
+          predecessorRetryAtByChat.set(result.chatId, classification.retryUpdate.notBeforeAt);
+        }
+        if (classification.rateLimit) {
+          rateLimited = true;
+          rateLimitRetryAfterSec = classification.rateLimit.retryAfterSec;
+          rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, classification.rateLimit.notBeforeAt);
+          if (classification.rateLimit.scope === "global") {
+            await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
           }
-          break;
         }
-        case "retry": {
-          retryUpdates.push(classification.retryUpdate);
-          pushTargetStatus("queued", classification.targetErrorClass);
-          if (classification.rateLimit) {
-            rateLimited = true;
-            rateLimitRetryAfterSec = classification.rateLimit.retryAfterSec;
-            rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, classification.rateLimit.notBeforeAt);
-            if (classification.rateLimit.scope === "global") {
-              globalRateLimited = true;
-              await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
-            } else {
-              distinctRateLimitedChats.add(result.chatId);
-              chatRateLimitedThisLoop.set(result.chatId, { notBeforeAt: classification.rateLimit.notBeforeAt });
-              if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
-                globalRateLimited = true;
-                await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
-              }
-            }
-          }
-          break;
-        }
-        case "dropped-max-attempts": {
-          if (pendingRow) maxAttemptRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-          pushTargetStatus("failed", classification.errorClass);
-          break;
-        }
-        case "dropped-permanent": {
-          if (pendingRow) permanentRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-          pushTargetStatus("failed", classification.errorClass);
-          break;
-        }
+        break;
+      }
+      case "dropped-max-attempts": {
+        if (pendingRow) maxAttemptRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
+        pushTargetStatus("failed", classification.errorClass);
+        break;
+      }
+      case "dropped-permanent": {
+        if (pendingRow) permanentRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
+        pushTargetStatus("failed", classification.errorClass);
+        break;
       }
     }
   }
