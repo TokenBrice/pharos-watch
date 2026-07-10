@@ -385,12 +385,14 @@ describe("runTelegramRetentionCleanup", () => {
     const freshWarning = now - 20 * 24 * 60 * 60;
     state.cache.push(
       { key: "telegram:command-cooldown:42:/status", value: "1", updated_at: staleShortLived },
+      { key: "telegram:mini-app-mutation-burst:42", value: "12", updated_at: staleShortLived },
       { key: "telegram:command-flood:42", value: "1", updated_at: staleShortLived },
       { key: "telegram:chat-member:42:99", value: "1", updated_at: staleShortLived },
       { key: "telegram:chat-admins:-42", value: "1", updated_at: staleShortLived },
       { key: "telegram:group-welcome:-42", value: "1", updated_at: staleShortLived },
       { key: "telegram:re-engagement-warned:42", value: "1", updated_at: staleWarning },
       { key: "telegram:command-cooldown:43:/status", value: "1", updated_at: freshShortLived },
+      { key: "telegram:mini-app-mutation-burst:43", value: "6", updated_at: freshShortLived },
       { key: "telegram:command-flood:43", value: "1", updated_at: freshShortLived },
       { key: "telegram:chat-member:43:99", value: "1", updated_at: freshShortLived },
       { key: "telegram:chat-admins:-43", value: "1", updated_at: freshShortLived },
@@ -404,6 +406,7 @@ describe("runTelegramRetentionCleanup", () => {
     expect(state.cache.map((row) => row.key).sort()).toEqual(
       [
         "telegram:command-cooldown:43:/status",
+        "telegram:mini-app-mutation-burst:43",
         "telegram:command-flood:43",
         "telegram:chat-admins:-43",
         "telegram:chat-member:43:99",
@@ -413,6 +416,7 @@ describe("runTelegramRetentionCleanup", () => {
     );
     const metadata = JSON.parse(result.metadata!) as {
       commandCooldownCachePruned: number;
+      miniAppMutationBurstCachePruned: number;
       commandFloodCachePruned: number;
       chatMemberCachePruned: number;
       chatAdminsCachePruned: number;
@@ -424,6 +428,7 @@ describe("runTelegramRetentionCleanup", () => {
       };
     };
     expect(metadata.commandCooldownCachePruned).toBe(1);
+    expect(metadata.miniAppMutationBurstCachePruned).toBe(1);
     expect(metadata.commandFloodCachePruned).toBe(1);
     expect(metadata.chatMemberCachePruned).toBe(1);
     expect(metadata.chatAdminsCachePruned).toBe(1);

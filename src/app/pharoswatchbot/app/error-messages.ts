@@ -32,12 +32,14 @@ const MINI_APP_ERROR_CODE_SET: ReadonlySet<string> = new Set(MINI_APP_ERROR_CODE
 export class MiniAppRequestError extends Error {
   readonly status: number;
   readonly code: MiniAppErrorCode | null;
+  readonly retryAfterSec: number | null;
 
-  constructor(status: number, code: MiniAppErrorCode | null = null) {
+  constructor(status: number, code: MiniAppErrorCode | null = null, retryAfterSec: number | null = null) {
     super(`Request failed with ${status}`);
     this.name = "MiniAppRequestError";
     this.status = status;
     this.code = code;
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -64,7 +66,7 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
     // context === "mutation"
     switch (err.code) {
       case "rate-limited":
-        return "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
+        return "Pharos edit limit reached. Wait for the countdown before editing again.";
       case "not-private":
         return "This Mini App can only edit personal alerts. Use the bot commands in groups.";
       case "validation-error":

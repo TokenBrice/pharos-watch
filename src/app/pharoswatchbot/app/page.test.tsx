@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isMiniAppErrorCode, MINI_APP_ERROR_CODES } from "./error-messages";
+import { isMiniAppErrorCode, miniAppErrorMessage, MINI_APP_ERROR_CODES, MiniAppRequestError } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import type { TelegramMiniAppState } from "./types";
 
@@ -46,6 +46,13 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);
     expect(isMiniAppErrorCode("stale_auth")).toBe(false);
     expect(isMiniAppErrorCode(null)).toBe(false);
+  });
+
+  it("attributes edit throttling to Pharos rather than Telegram", () => {
+    expect(miniAppErrorMessage(
+      new MiniAppRequestError(429, "rate-limited", 12),
+      "mutation",
+    )).toBe("Pharos edit limit reached. Wait for the countdown before editing again.");
   });
 
   it("renders browser preview immediately without calling session APIs", () => {
@@ -477,6 +484,55 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("Something went wrong. Try again or reopen Telegram.")).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("disables mutation controls for the server retry window and announces the countdown", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "3" }),
+        json: async () => ({ error: "limit", code: "rate-limited", retryAfterSec: 3 }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    vi.useFakeTimers();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const countdown = screen.getByRole("timer");
+    expect(countdown.getAttribute("aria-live")).toBe("off");
+    expect(countdown.textContent).toContain("Settings unlock in 3 seconds");
+    expect(screen.getByText("Pharos edit limit reached. Settings are disabled for 3 seconds.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /Launch/i })).toHaveProperty("disabled", true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.getByRole("timer").textContent).toContain("Settings unlock in 1 second");
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.queryByText(/Settings unlock in/)).toBeNull();
+    expect(screen.getByText("Pharos editing is available again.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("reloads session state after a stale-auth mutation rejection", async () => {
@@ -984,7 +1040,6 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it.each([
     [401, "stale-auth", "Telegram authorization expired. Close and reopen from PharosWatchBot."],
-    [429, "rate-limited", "Slow down — Telegram is rate-limiting your edits. Try again in a moment."],
     [403, "not-private", "This Mini App can only edit personal alerts. Use the bot commands in groups."],
     [400, "validation-error", "Change was rejected by the server."],
     [400, "unknown-coin", "Change was rejected by the server."],

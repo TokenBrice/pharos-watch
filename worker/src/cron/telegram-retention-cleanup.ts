@@ -79,7 +79,7 @@ async function pruneTelegramProcessedUpdatesCapped(
   };
 }
 
-interface CappedDeleteResult {
+export interface CappedDeleteResult {
   pruned: number;
   cappedAtLimit: boolean;
 }
@@ -132,6 +132,19 @@ async function deleteCachePrefixOlderThanCapped(
     pruned,
     cappedAtLimit: pruned >= RETENTION_DELETE_BATCH_LIMIT,
   };
+}
+
+export function pruneTelegramMiniAppMutationBurstCache(
+  db: D1Database,
+  cutoff: number,
+  signal?: AbortSignal,
+): Promise<CappedDeleteResult> {
+  return deleteCachePrefixOlderThanCapped(
+    db,
+    "telegram:mini-app-mutation-burst:",
+    cutoff,
+    signal,
+  );
 }
 
 export async function runTelegramRetentionCleanup(
@@ -208,6 +221,13 @@ export async function runTelegramRetentionCleanup(
   );
   throwIfAborted(signal);
 
+  const miniAppMutationBurstCache = await pruneTelegramMiniAppMutationBurstCache(
+    db,
+    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
   const commandFloodCache = await deleteCachePrefixOlderThanCapped(
     db,
     "telegram:command-flood:",
@@ -256,6 +276,7 @@ export async function runTelegramRetentionCleanup(
     watcherLifecycle.pruned +
     diagnostics.pruned +
     commandCooldownCache.pruned +
+    miniAppMutationBurstCache.pruned +
     commandFloodCache.pruned +
     chatMemberCache.pruned +
     chatAdminsCache.pruned +
@@ -274,6 +295,7 @@ export async function runTelegramRetentionCleanup(
       watcherLifecyclePruned: watcherLifecycle.pruned,
       diagnosticsPruned: diagnostics.pruned,
       commandCooldownCachePruned: commandCooldownCache.pruned,
+      miniAppMutationBurstCachePruned: miniAppMutationBurstCache.pruned,
       commandFloodCachePruned: commandFloodCache.pruned,
       chatMemberCachePruned: chatMemberCache.pruned,
       chatAdminsCachePruned: chatAdminsCache.pruned,
@@ -303,6 +325,7 @@ export async function runTelegramRetentionCleanup(
         watcherLifecycle: watcherLifecycle.cappedAtLimit,
         diagnostics: diagnostics.cappedAtLimit,
         commandCooldownCache: commandCooldownCache.cappedAtLimit,
+        miniAppMutationBurstCache: miniAppMutationBurstCache.cappedAtLimit,
         commandFloodCache: commandFloodCache.cappedAtLimit,
         chatMemberCache: chatMemberCache.cappedAtLimit,
         chatAdminsCache: chatAdminsCache.cappedAtLimit,

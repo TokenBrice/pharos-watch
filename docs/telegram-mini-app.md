@@ -25,6 +25,7 @@ Owned files:
 - `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
 - `src/app/pharoswatchbot/app/use-telegram-main-button.ts`
 - `worker/src/api/telegram-mini-app.ts`
+- `worker/src/api/telegram-mini-app-rate-limit.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
 - `worker/src/api/telegram-mini-app-schemas.ts`
@@ -82,7 +83,7 @@ The load-bearing rules:
 
 - Do not duplicate per-coin or preset write SQL outside the existing State / persistence helpers. If a callback-shaped helper is too narrow, extract the shared D1 mutation into `worker/src/api/telegram-webhook-store.ts` (or the matching settings-mutation layer) and have both callbacks and Mini App call it.
 - Do not mutate group, supergroup, or channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
-- Do not write analytics, aggregate counters, or cooldown rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied requests must fail without D1 writes because the Mini App endpoints are public API-key-exempt surfaces.
+- Do not write analytics, aggregate counters, or rate-limit rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied requests must fail without D1 writes because the Mini App endpoints are public API-key-exempt surfaces.
 - Do not accept mutation auth older than the 5-minute mutation window.
 - Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
@@ -114,9 +115,11 @@ Freshness windows:
 - **Session reads (`POST /api/telegram-mini-app/session`):** `auth_date` must be within 24 hours. A 24-hour read window keeps long-lived open Mini Apps usable across the day.
 - **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Stale-auth rejections first pass the signed user through the per-user Mini App cooldown before they can emit a `mini_app_session_invalid` usage event; the client reloads the session endpoint for read-only state, then prompts the user to close and reopen the Mini App before retrying mutations. That stale-auth prompt is rendered by the client shell above every tab panel, not only on Home, because all tabs remain readable while mutations are blocked.
 
-Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
+Mutation auth is bounded by the short freshness window plus a per-user burst budget of 12 schema-valid, signature-valid mutation attempts in an anchored 30-second window. The window begins at the first admitted write, so adjacent wall-clock buckets cannot admit a double burst. This budget allows a normal settings pass (all five global toggles plus one quiet-hours save) without delay while bounding scripted state writes. Attempts beyond the budget return HTTP 429 with the same integer `retryAfterSec` in the JSON body and `Retry-After` header. The client disables mutation controls for that interval, renders a visible non-live countdown, announces the start and end once through its polite status channel, keeps session refresh available, and does not automatically replay writes.
 
-Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, analytics, or cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures intentionally perform no D1 writes before auth so unauthenticated clients cannot amplify writes or pollute usage counters.
+The burst counter is independent of operation semantics and webhook replay protection: it does not make `initData` a one-shot credential, and it does not replace `telegram_processed_updates` deduplication for webhook updates. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits. Mini App operations remain set-shaped/idempotent where their domain permits, but the client still requires an explicit user action after a 429 rather than automatically retrying destructive mutations. `/forget` deletes the identity-linked burst key, and the retention cron prunes stale burst keys under the bounded seven-day short-lived-cache policy.
+
+Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, analytics, or rate-limit writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures intentionally perform no D1 writes before auth so unauthenticated clients cannot amplify writes or pollute usage counters.
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 
@@ -146,5 +149,6 @@ For incident triage, start at the runbooks rather than DevTools:
 ## Test Fixtures
 
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
-- `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, mutation cooldowns, partial-failure rollback.
+- `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, burst-limit responses, partial-failure rollback.
+- `worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts` — real-SQLite atomic burst admission, exact retry windows, rollover, D1 failure behavior, `/forget`, and retention cleanup.
 - `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.

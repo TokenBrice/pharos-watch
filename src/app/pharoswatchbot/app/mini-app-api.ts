@@ -91,6 +91,12 @@ function formatZodIssues(issues: readonly { path: readonly PropertyKey[]; messag
   return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
 }
 
+function parseRetryAfterSec(value: unknown): number | null {
+  const parsed = typeof value === "string" || typeof value === "number" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(60 * 60, Math.ceil(parsed));
+}
+
 export async function postMiniAppJson<T>(path: string, body: unknown, schema: ZodType<T>): Promise<T> {
   const response = await apiRequest(path, {
     method: "POST",
@@ -99,13 +105,16 @@ export async function postMiniAppJson<T>(path: string, body: unknown, schema: Zo
   });
   if (!response.ok) {
     let code: MiniAppErrorCode | null = null;
+    let retryAfterSec: number | null = null;
     try {
-      const payload = await response.json() as { code?: unknown };
+      const payload = await response.json() as { code?: unknown; retryAfterSec?: unknown };
       if (isMiniAppErrorCode(payload?.code)) code = payload.code;
+      retryAfterSec = parseRetryAfterSec(payload?.retryAfterSec);
     } catch {
       // body wasn't JSON or was empty - leave code null
     }
-    throw new MiniAppRequestError(response.status, code);
+    retryAfterSec ??= parseRetryAfterSec(response.headers?.get?.("Retry-After"));
+    throw new MiniAppRequestError(response.status, code, retryAfterSec);
   }
 
   const payload: unknown = await response.json();

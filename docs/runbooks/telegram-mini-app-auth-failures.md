@@ -8,6 +8,7 @@ Detection signals:
 
 - `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. The `outcome` column distinguishes `stale-auth` (expired but signature-valid sessions) from `rate_limited` (per-user cooldown exceeded); these are the only two outcomes written as `mini_app_session_invalid` rows. Body-size (`413`) and schema (`400 validation-error`) failures return immediately without a D1 write and are visible only in Worker logs. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
 - The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppSessionsToday` flat or falling. Its `miniAppDeniedToday` counter tracks post-auth mutation denials (`mini_app_mutation_denied`) only and does not move for a session/auth-failure spike; use the `event_type = 'mini_app_session_invalid'` query below for that signal.
+- A high share of `mini_app_mutation_denied` rows with `failure_class = 'rate_limited'` means authenticated users or scripts exhausted the Pharos mutation budget. The server allows 12 mutation attempts per Telegram user in a 30-second window anchored to the first admitted write; this signal is distinct from Telegram Bot API delivery rate limits.
 - Cloudflare logs for `POST /api/telegram-mini-app/mutate` return `401` with `code = "stale-auth"` across many distinct user IDs in a short window.
 - Wrangler tail shows `POST /api/telegram-mini-app/session` or `/mutate` returning `401` for `stale-auth` or `validation-error` repeatedly.
 
@@ -33,6 +34,43 @@ WHERE event_type = 'mini_app_session_invalid'
   AND day >= date('now', '-7 days')
 GROUP BY day, outcome, failure_class
 ORDER BY day DESC, events DESC;
+```
+
+Measure the aggregate Pharos mutation-limit ratio before changing the budget:
+
+```sql
+WITH mini_app_writes AS (
+  SELECT
+    SUM(CASE
+      WHEN event_type = 'mini_app_mutation_denied'
+       AND failure_class = 'rate_limited'
+      THEN count ELSE 0 END) AS rate_limited,
+    SUM(CASE
+      WHEN (
+        event_type IN (
+          'mini_app_mutation',
+          'mini_app_recommended_setup',
+          'mini_app_coin_add',
+          'mini_app_coin_remove',
+          'mini_app_quiet_hours',
+          'mini_app_snooze',
+          'mini_app_coin_snooze',
+          'mini_app_forget'
+        )
+        OR (
+          event_type IN ('timezone_change', 'unsubscribe')
+          AND source_category IN ('startapp', 'menu_or_main_app')
+        )
+      ) AND outcome = 'success'
+      THEN count ELSE 0 END) AS successful
+  FROM telegram_usage_daily
+  WHERE day >= date('now', '-7 days')
+)
+SELECT
+  rate_limited,
+  successful,
+  ROUND(100.0 * rate_limited / NULLIF(rate_limited + successful, 0), 2) AS rate_limited_pct
+FROM mini_app_writes;
 ```
 
 Confirm the bot-token rotation state:
@@ -70,7 +108,7 @@ npx wrangler tail stablecoin-api --format pretty
 
 ## Cross-References
 
-- [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — auth model, freshness windows, mutation cooldowns.
+- [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — auth model, freshness windows, and mutation burst budget.
 - [`telegram-secret-rotation.md`](./telegram-secret-rotation.md) — bot-token and webhook-secret rotation contract.
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) — broader Telegram dispatch diagnostics.
 - [`telegram-operator-queries.md`](./telegram-operator-queries.md) — D1 query patterns for usage analytics.

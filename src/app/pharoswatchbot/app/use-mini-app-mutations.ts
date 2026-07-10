@@ -121,6 +121,8 @@ export interface UseMiniAppMutationsResult {
   isMutating: boolean;
   /** Mutation currently in flight, used for scoped control feedback. */
   pendingOperation: TelegramMiniAppOperation | null;
+  /** Remaining server-directed edit lockout after a bounded-burst 429. */
+  mutationRetryAfterSec: number;
   /** Banner copy. Auto-clears 6s after set when `messageAutoDismissActive` is true. */
   message: string | null;
   /** Aria-live announcement. */
@@ -181,11 +183,13 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
   const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
   const [forgottenView, setForgottenView] = useState(false);
   const [pendingOperation, setPendingOperation] = useState<TelegramMiniAppOperation | null>(null);
+  const [mutationRetryAfterSec, setMutationRetryAfterSec] = useState(0);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedWriteAccessRef = useRef(false);
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
+  const mutationLimitWasActiveRef = useRef(false);
   const [, startTransition] = useTransition();
 
   const [optimisticOperation, applyOptimisticOperation] = useOptimistic<
@@ -257,8 +261,23 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     };
   }, [message, messageAutoDismissActive]);
 
+  useEffect(() => {
+    if (mutationRetryAfterSec <= 0) {
+      if (mutationLimitWasActiveRef.current) {
+        mutationLimitWasActiveRef.current = false;
+        setAnnouncement("Pharos editing is available again.");
+      }
+      return;
+    }
+    mutationLimitWasActiveRef.current = true;
+    const timer = setTimeout(() => {
+      setMutationRetryAfterSec((current) => Math.max(0, current - 1));
+    }, 1_000);
+    return () => clearTimeout(timer);
+  }, [mutationRetryAfterSec]);
+
   const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppState | null> => {
-    if (!initData || state?.viewer.canMutate !== true) return null;
+    if (!initData || state?.viewer.canMutate !== true || mutationRetryAfterSec > 0) return null;
     // Capture pre-mutation snapshot for engagement gating (T-57).
     const preSubscriberExists = state?.subscriber.exists ?? false;
     const preChatType = state?.viewer.chatType ?? null;
@@ -313,7 +332,14 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       }
       return next;
     } catch (err) {
-      setMessage(miniAppErrorMessage(err, "mutation"));
+      if (err instanceof MiniAppRequestError && err.status === 429 && err.code === "rate-limited") {
+        const retryAfterSec = err.retryAfterSec ?? 1;
+        setMutationRetryAfterSec((current) => Math.max(current, retryAfterSec));
+        setMessage(null);
+        setAnnouncement(`Pharos edit limit reached. Settings are disabled for ${retryAfterSec} ${retryAfterSec === 1 ? "second" : "seconds"}.`);
+      } else {
+        setMessage(miniAppErrorMessage(err, "mutation"));
+      }
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       if (err instanceof MiniAppRequestError && err.status === 401 && err.code === "stale-auth") {
         await reloadSession({ clearMessage: false });
@@ -324,7 +350,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       setPendingOperation(null);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, onStateReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
+  }, [initData, mutationRetryAfterSec, onStateReplaced, reloadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") {
@@ -425,6 +451,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     optimisticGlobals,
     isMutating,
     pendingOperation,
+    mutationRetryAfterSec,
     message,
     announcement,
     forgottenView,

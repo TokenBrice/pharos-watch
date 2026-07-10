@@ -531,7 +531,7 @@ describe("handleTelegramMiniAppSession", () => {
       chat_type: "private",
       user: JSON.stringify({ id: 42, username: "alice" }),
     });
-    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation:any";
+    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation-auth-failure";
     const db = mockD1([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
@@ -778,7 +778,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "INSERT INTO telegram_preset_subscriptions", ["42", "usd-top25", 1, 1, 0])).toBe(true);
   });
 
-  it("releases mutation cooldown when preset data is transiently unavailable", async () => {
+  it("keeps authenticated transient failures inside the bounded mutation budget", async () => {
     const initData = await privateInitData();
     const db = mockD1([
       {
@@ -796,7 +796,8 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ code: "preset-unavailable" });
-    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(true);
+    expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", ["telegram:mini-app-mutation-burst:42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", [])).toBe(false);
   });
 
   it("follows and unfollows presets through exact preset tables", async () => {
@@ -938,20 +939,20 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(401);
   });
 
-  it("shares the mutation cooldown across operation kinds", async () => {
+  it("shares the mutation burst budget across operation kinds", async () => {
     const initData = await privateInitData();
-    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation:any";
+    const burstKey = "telegram:mini-app-mutation-burst:42";
     const db = mockD1([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
-        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 5],
+        matchBinds: [burstKey, NOW_SEC, NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, 12],
         rows: [],
         runMeta: { changes: 0 },
       },
       {
         match: "SELECT updated_at FROM cache WHERE key = ?",
-        matchBinds: [cooldownKey],
-        rows: [{ updated_at: NOW_SEC - 1 }],
+        matchBinds: [burstKey],
+        rows: [{ updated_at: NOW_SEC - 17 }],
       },
     ]);
 
@@ -961,7 +962,9 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(429);
-    // P1.3: mutation cooldown denials must emit `mini_app_mutation_denied`
+    expect(response.headers.get("Retry-After")).toBe("13");
+    expect(await response.json()).toMatchObject({ code: "rate-limited", retryAfterSec: 13 });
+    // P1.3: mutation budget denials must emit `mini_app_mutation_denied`
     // with the `rate_limited` failure class so abuse signals are visible.
     const deniedRows = db
       .getHistory()
@@ -1028,7 +1031,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(400);
-    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(false);
+    expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", ["telegram:mini-app-mutation-burst:42"])).toBe(false);
   });
 
   it("rejects set-quiet-hours with equal start and end hours", async () => {
@@ -1070,7 +1073,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
-    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:command-cooldown:42:mini-app:mutation:any"])).toBe(true);
+    expect(historyHas(db, "INSERT INTO cache (key, value, updated_at)", ["telegram:mini-app-mutation-burst:42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", [])).toBe(false);
   });
 
   it("validates initData with the previous bot token when current rejects", async () => {
@@ -1298,24 +1302,25 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", ["42"])).toBe(true);
     expect(historyHas(db, "DELETE FROM telegram_subscribers WHERE chat_id = ?", ["42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM cache WHERE key = ?", ["telegram:mini-app-mutation-burst:42"])).toBe(true);
     // processed_updates intentionally retained for idempotency.
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_processed_updates"))).toBe(false);
   });
 
-  it("shares the mini-app:mutation:any cooldown across new operation kinds", async () => {
+  it("applies the same mutation burst budget to destructive operation kinds", async () => {
     const initData = await privateInitData();
-    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation:any";
+    const burstKey = "telegram:mini-app-mutation-burst:42";
     const db = mockD1([
       {
         match: "INSERT INTO cache (key, value, updated_at)",
-        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 5],
+        matchBinds: [burstKey, NOW_SEC, NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, 12],
         rows: [],
         runMeta: { changes: 0 },
       },
       {
         match: "SELECT updated_at FROM cache WHERE key = ?",
-        matchBinds: [cooldownKey],
-        rows: [{ updated_at: NOW_SEC - 1 }],
+        matchBinds: [burstKey],
+        rows: [{ updated_at: NOW_SEC - 29 }],
       },
     ]);
 
@@ -1325,7 +1330,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(429);
-    expect(await response.json()).toMatchObject({ code: "rate-limited" });
+    expect(await response.json()).toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
   });
 
   it("attaches a non-null latencyBucket to failed mutation analytics rows", async () => {

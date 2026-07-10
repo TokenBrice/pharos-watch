@@ -117,6 +117,7 @@ export function PharosWatchBotMiniAppClient() {
     optimisticGlobals,
     isMutating,
     pendingOperation,
+    mutationRetryAfterSec,
     message,
     announcement,
     forgottenView,
@@ -277,16 +278,17 @@ export function PharosWatchBotMiniAppClient() {
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
   const canMutate = Boolean(initData && state?.viewer.canMutate);
+  const mutationControlsDisabled = isMutating || mutationRetryAfterSec > 0;
   const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
-    if (!canMutate || isMutating || mainButtonInFlightRef.current) return;
+    if (!canMutate || mutationControlsDisabled || mainButtonInFlightRef.current) return;
     mainButtonInFlightRef.current = true;
     void performMutation(operation).finally(() => {
       mainButtonInFlightRef.current = false;
     });
-  }, [canMutate, isMutating, performMutation]);
+  }, [canMutate, mutationControlsDisabled, performMutation]);
 
   const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
-    if (!canMutate || isMutating) return { text: null, handler: null };
+    if (!canMutate || mutationControlsDisabled) return { text: null, handler: null };
     if (view === "home") {
       if (optimisticState && !optimisticState.subscriber.exists) {
         return { text: "Use recommended setup", handler: () => runMainButtonMutation(RECOMMENDED_OPERATION) };
@@ -297,13 +299,13 @@ export function PharosWatchBotMiniAppClient() {
       }
     }
     return { text: null, handler: null };
-  }, [canMutate, isMutating, optimisticState, runMainButtonMutation, view]);
+  }, [canMutate, mutationControlsDisabled, optimisticState, runMainButtonMutation, view]);
   useTelegramMainButton({
     webApp,
     text: mainButtonText,
     handler: mainButtonHandler,
-    visible: Boolean(mainButtonText && mainButtonHandler && canMutate && !isMutating),
-    active: canMutate && !isMutating,
+    visible: Boolean(mainButtonText && mainButtonHandler && canMutate && !mutationControlsDisabled),
+    active: canMutate && !mutationControlsDisabled,
   });
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
@@ -399,6 +401,16 @@ export function PharosWatchBotMiniAppClient() {
           </section>
         ) : null}
         {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
+        {mutationRetryAfterSec > 0 && status === "ready" ? (
+          <section
+            role="timer"
+            aria-live="off"
+            aria-atomic="true"
+            className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground"
+          >
+            Pharos edit limit reached. Settings unlock in {mutationRetryAfterSec} {mutationRetryAfterSec === 1 ? "second" : "seconds"}.
+          </section>
+        ) : null}
         {showStaleAuthBanner ? (
           <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
             <div className="flex gap-3">
@@ -419,7 +431,7 @@ export function PharosWatchBotMiniAppClient() {
                 <StatusPanel
                   state={optimisticState}
                   canMutate={canMutate}
-                  isMutating={isMutating}
+                  isMutating={mutationControlsDisabled}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
                   optimisticHomeHeadline={headline}
@@ -444,7 +456,7 @@ export function PharosWatchBotMiniAppClient() {
                 <WatchlistPanel
                   state={optimisticState}
                   canMutate={canMutate}
-                  isMutating={isMutating}
+                  isMutating={mutationControlsDisabled}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
                   onRemove={handleRemoveCoin}
@@ -463,7 +475,7 @@ export function PharosWatchBotMiniAppClient() {
                 <PresetsPanel
                   state={optimisticState}
                   canMutate={canMutate}
-                  isMutating={isMutating}
+                  isMutating={mutationControlsDisabled}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
                   onUnfollowPreset={handleUnfollowPreset}
@@ -475,7 +487,7 @@ export function PharosWatchBotMiniAppClient() {
                 <SettingsPanel
                   state={optimisticState}
                   canMutate={canMutate}
-                  isMutating={isMutating}
+                  isMutating={mutationControlsDisabled}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
                   optimisticGlobalAlerts={optimisticGlobals}
