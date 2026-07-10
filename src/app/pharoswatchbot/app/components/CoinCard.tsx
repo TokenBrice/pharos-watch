@@ -156,12 +156,12 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
           <ExternalLink className="h-4 w-4" aria-hidden="true" /> View on Pharos
         </MiniButton>
       </div>
-      <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3 py-2">
-        <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
+      <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3">
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center rounded-md text-xs font-semibold text-muted-foreground">
           Snooze {coin.symbol}
           {coinSnoozeActive && coin.snoozeUntilTs != null ? ` · until ${formatSnoozePill(coin.snoozeUntilTs)}` : ""}
         </summary>
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2 pb-3">
           {coinSnoozeActive ? (
             <MiniButton ariaLabel={`Clear ${coin.symbol} snooze`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate(snoozeOperation("clear"))}>
               Clear snooze
@@ -189,11 +189,11 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
         </div>
       </details>
       {showTune ? (
-        <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3 py-2">
-          <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
+        <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center rounded-md text-xs font-semibold text-muted-foreground">
             Tune {coin.symbol}
           </summary>
-          <div className="mt-3 space-y-4">
+          <div className="mt-3 space-y-4 pb-3">
             {dewsEnabled ? (
               <div>
                 <p className="pharos-kicker">DEWS minimum band</p>

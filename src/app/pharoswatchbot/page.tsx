@@ -117,12 +117,12 @@ function TelegramLink({ href, children }: { href: string; children: React.ReactN
 function CommandLine({ command }: { command: string }) {
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-2 py-1.5">
-      <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-1 font-mono text-xs text-foreground">
+      <code className="block min-w-0 flex-1 whitespace-pre-wrap px-1 font-mono text-xs text-foreground [overflow-wrap:anywhere]">
         {command}
       </code>
       <CopyButton
         text={command}
-        className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="size-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
       />
     </div>
   );
@@ -367,12 +367,12 @@ export default function PharosWatchBotPage() {
                     <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
                       ▸
                     </span>
-                    <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
+                    <code className="block min-w-0 flex-1 whitespace-pre-wrap font-mono text-[13px] font-medium text-foreground [overflow-wrap:anywhere] sm:text-sm">
                       {RECOMMENDED_SETUP_COMMAND}
                     </code>
                     <CopyButton
                       text={RECOMMENDED_SETUP_COMMAND}
-                      className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="size-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                     />
                   </div>
                   <TelegramPulseStrip />
@@ -688,20 +688,20 @@ export default function PharosWatchBotPage() {
                       {group.commands.map((cmd) => (
                         <TableRow key={cmd.command} className="group/row border-t border-border/40 transition-colors hover:bg-muted/40">
                           <TableCell className="whitespace-normal px-0 py-3 pr-4 align-top">
-                            <div className="inline-flex items-center gap-1 rounded bg-muted px-1 py-0.5">
-                              <code className="whitespace-nowrap px-1 text-xs font-mono text-foreground">
+                            <div className="flex max-w-full min-w-0 items-center gap-1 rounded bg-muted px-1 py-0.5">
+                              <code className="min-w-0 flex-1 whitespace-pre-wrap px-1 text-xs font-mono text-foreground [overflow-wrap:anywhere]">
                                 {cmd.command}
                               </code>
                               <CopyButton
                                 text={cmd.command}
-                                className="size-6 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                                className="size-11 shrink-0 text-muted-foreground hover:bg-background/70 hover:text-foreground"
                               />
                             </div>
                           </TableCell>
                           <TableCell className="whitespace-normal px-0 py-3 pr-4 align-top text-muted-foreground">{cmd.description}</TableCell>
                           <TableCell className="hidden whitespace-normal px-0 py-3 align-top sm:table-cell">
                             {cmd.example ? (
-                              <code className="whitespace-nowrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80">
+                              <code className="whitespace-pre-wrap rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80 [overflow-wrap:anywhere]">
                                 {cmd.example}
                               </code>
                             ) : (

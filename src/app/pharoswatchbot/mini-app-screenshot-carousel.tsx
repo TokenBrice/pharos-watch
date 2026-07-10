@@ -65,13 +65,13 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
           aria-label={paused ? "Play Mini App screenshots" : "Pause Mini App screenshots"}
           aria-pressed={paused}
           onClick={() => setPaused((current) => !current)}
-          className="pharos-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-md border border-border/65 bg-background/70 text-foreground hover:bg-muted/45"
+          className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-border/65 bg-background/70 text-foreground hover:bg-muted/45"
         >
           {paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
         </button>
@@ -86,7 +86,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
               setPaused(true);
             }}
             className={cn(
-              "pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs",
+              "pharos-focus-ring pharos-control-pill min-h-11 shrink-0 px-2.5 py-1 text-xs",
               activeIndex === idx ? "pharos-control-pill-active" : "",
             )}
           >

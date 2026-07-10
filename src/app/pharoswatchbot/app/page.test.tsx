@@ -175,7 +175,14 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(ready).toHaveBeenCalled();
     expect(expand).toHaveBeenCalled();
     expect(screen.getByText("Global alerts")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "watchlist" }).className).toContain("truncate");
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
+    for (const tab of tabs) {
+      expect(tab.className).toContain("whitespace-nowrap");
+      expect(tab.className).toContain("text-xs");
+      expect(tab.className).not.toContain("truncate");
+    }
+    expect(screen.getByRole("button", { name: "Refresh session" }).className).toContain("size-11");
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),

@@ -347,7 +347,7 @@ export function PharosWatchBotMiniAppClient() {
               aria-label="Refresh session"
               disabled={!initData || status === "loading" || isMutating}
               onClick={triggerRefresh}
-              className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/65 bg-background/60 text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/65 bg-background/60 text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className={cn("h-4 w-4", status === "loading" && "animate-spin")} aria-hidden="true" />
             </button>
@@ -366,7 +366,7 @@ export function PharosWatchBotMiniAppClient() {
                   onClick={() => activateView(key)}
                   onKeyDown={handleTabKeyDown}
                   className={cn(
-                    "pharos-focus-ring min-h-11 truncate rounded-lg px-2 text-sm font-semibold capitalize transition-colors",
+                    "pharos-focus-ring min-h-11 whitespace-nowrap rounded-lg px-1 text-xs font-semibold capitalize transition-colors",
                     view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/40",
                   )}
                 >

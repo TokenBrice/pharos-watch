@@ -58,7 +58,9 @@ vi.mock("@/components/feature-page-shell", () => ({
 }));
 
 vi.mock("@/components/copy-button", () => ({
-  CopyButton: ({ text }: { text: string }) => <button type="button" aria-label={`Copy ${text}`} />,
+  CopyButton: ({ text, className }: { text: string; className?: string }) => (
+    <button type="button" aria-label={`Copy ${text}`} className={className} />
+  ),
 }));
 
 vi.mock("./telegram-pulse-strip", () => ({
@@ -162,6 +164,17 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
+
+    const commandStrings = screen.getAllByText(RECOMMENDED_SETUP_COMMAND).filter((node) => node.tagName === "CODE");
+    expect(commandStrings.length).toBeGreaterThan(0);
+    for (const command of commandStrings) {
+      expect(command.className).toContain("whitespace-pre-wrap");
+      expect(command.className).toContain("[overflow-wrap:anywhere]");
+    }
+    for (const copyButton of screen.getAllByRole("button", { name: /^Copy / })) {
+      expect(copyButton.className).toContain("size-11");
+      expect(copyButton.className).toContain("shrink-0");
+    }
 
     const jsonLd = parseJsonLd(container);
     const faq = findJsonLdNode(jsonLd, "FAQPage");

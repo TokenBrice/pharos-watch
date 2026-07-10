@@ -83,4 +83,19 @@ describe("CoinCard source chip (C74)", () => {
     expect(symbol.parentElement?.className).toContain("flex-wrap");
     expect(screen.getByText("All-stablecoins").className).toContain("truncate");
   });
+
+  it("keeps remove, snooze, and tune targets at least 44px with visible focus styles", () => {
+    renderCard({ coin: makeCoin({ dews: true }) });
+
+    const remove = screen.getByRole("button", { name: "Remove USDC" });
+    expect(remove.className).toContain("min-h-11");
+    expect(remove.className).toContain("min-w-11");
+
+    for (const label of ["Snooze USDC", "Tune USDC"]) {
+      const summary = screen.getByText(label).closest("summary");
+      expect(summary).toBeTruthy();
+      expect(summary?.className).toContain("min-h-11");
+      expect(summary?.className).toContain("pharos-focus-ring");
+    }
+  });
 });
