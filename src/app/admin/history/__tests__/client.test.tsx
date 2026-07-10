@@ -6,16 +6,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { getActiveAdminWorkspace, isAdminWorkspaceActive } from "@/lib/admin-workspaces";
 
-const { useStatusMock, useStatusHistoryMock, useReleaseMetadataMock, historySectionPropsMock } = vi.hoisted(() => ({
+const {
+  useStatusMock,
+  useStatusHistoryMock,
+  useReleaseMetadataMock,
+  useAdminActionLogMock,
+  useApiKeyAuditLogMock,
+  historySectionPropsMock,
+} = vi.hoisted(() => ({
   useStatusMock: vi.fn(),
   useStatusHistoryMock: vi.fn(),
   useReleaseMetadataMock: vi.fn(),
+  useAdminActionLogMock: vi.fn(),
+  useApiKeyAuditLogMock: vi.fn(),
   historySectionPropsMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-status", () => ({ useStatus: useStatusMock }));
 vi.mock("@/hooks/use-status-history", () => ({ useStatusHistory: useStatusHistoryMock }));
 vi.mock("@/hooks/use-release-metadata", () => ({ useReleaseMetadata: useReleaseMetadataMock }));
+vi.mock("@/hooks/use-admin-action-log", () => ({ useAdminActionLog: useAdminActionLogMock }));
+vi.mock("@/hooks/use-api-key-audit-log", () => ({ useApiKeyAuditLog: useApiKeyAuditLogMock }));
 vi.mock("../../workspace-status-boundary", () => ({
   WorkspaceStatusBoundary: ({ data, children }: { data: unknown; children: (data: unknown) => ReactNode }) =>
     data ? children(data) : null,
@@ -49,6 +60,20 @@ beforeEach(() => {
     refetch: vi.fn().mockResolvedValue(undefined),
   });
   useReleaseMetadataMock.mockReturnValue({ status: "unavailable", metadata: null });
+  useAdminActionLogMock.mockReturnValue({
+    data: { entries: [] },
+    error: null,
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn().mockResolvedValue(undefined),
+  });
+  useApiKeyAuditLogMock.mockReturnValue({
+    data: { entries: [] },
+    error: null,
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn().mockResolvedValue(undefined),
+  });
 });
 
 afterEach(() => {
@@ -105,5 +130,33 @@ describe("HistoryClient", () => {
       sources: [],
     });
     expect(props.transitionsLast24h).toBe(status.summary.transitionsLast24h);
+  });
+
+  it("owns both operational-history queries and passes source failures independently", async () => {
+    useAdminActionLogMock.mockReturnValue({
+      data: undefined,
+      error: new Error("action log unavailable"),
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    useApiKeyAuditLogMock.mockReturnValue({
+      data: { entries: [] },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<HistoryClient />);
+    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+
+    expect(useAdminActionLogMock).toHaveBeenCalled();
+    expect(useApiKeyAuditLogMock).toHaveBeenCalledWith("global");
+    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
+      adminActionLog: { error: Error | null };
+      credentialAudit: { error: Error | null };
+    };
+    expect(props.adminActionLog.error?.message).toBe("action log unavailable");
+    expect(props.credentialAudit.error).toBeNull();
   });
 });

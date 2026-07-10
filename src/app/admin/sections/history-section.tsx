@@ -1,5 +1,6 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusResponse } from "@shared/types";
+import { OperationalActivity, type OperationalActivityProps } from "@/components/status/operational-activity";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import type { ReleaseMetadataState } from "@/hooks/use-release-metadata";
@@ -18,6 +19,8 @@ export interface HistorySectionProps {
   reserveComposition: StatusResponse["reserveComposition"];
   releaseMetadataState: ReleaseMetadataState;
   workerVersionEvidence: WorkerVersionEvidence;
+  adminActionLog: OperationalActivityProps["adminActions"];
+  credentialAudit: OperationalActivityProps["credentialAudit"];
   nowSeconds: number;
   transitionsLast24h: number;
   historyWindow: StatusHistoryWindow;
@@ -186,6 +189,8 @@ export function HistorySection({
   reserveComposition,
   releaseMetadataState,
   workerVersionEvidence,
+  adminActionLog,
+  credentialAudit,
   nowSeconds,
   transitionsLast24h,
   historyWindow,
@@ -235,6 +240,7 @@ export function HistorySection({
         onFiltersChange={setHistoryFilters}
         isLoading={historyLoading}
       />
+      <OperationalActivity adminActions={adminActionLog} credentialAudit={credentialAudit} nowSeconds={nowSeconds} />
       <ReleaseCorrelationPanel
         transitions={allTransitions}
         releaseMetadataState={releaseMetadataState}

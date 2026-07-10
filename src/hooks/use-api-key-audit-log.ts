@@ -9,17 +9,20 @@ import { useAdminPollingQuery } from "./use-admin-polling-query";
 
 const AUDIT_HISTORY_LIMIT = 50;
 
-export function useApiKeyAuditLog(apiKeyId: number | null): UseQueryResult<ApiKeyAuditLogResponse, Error> {
-  const path = () => {
-    const params = new URLSearchParams({
-      apiKeyId: String(apiKeyId),
-      limit: String(AUDIT_HISTORY_LIMIT),
-    });
-    return `${API_PATHS.apiKeyAuditLog()}?${params.toString()}`;
-  };
+export type ApiKeyAuditLogTarget = number | null | "global";
 
-  return useAdminPollingQuery<ApiKeyAuditLogResponse>(["api-key-audit-log", apiKeyId], path, CRON_1MIN, {
-    enabled: apiKeyId != null,
+export function buildApiKeyAuditLogPath(target: Exclude<ApiKeyAuditLogTarget, null>): string {
+  const params = new URLSearchParams();
+  if (typeof target === "number") params.set("apiKeyId", String(target));
+  params.set("limit", String(AUDIT_HISTORY_LIMIT));
+  return `${API_PATHS.apiKeyAuditLog()}?${params.toString()}`;
+}
+
+export function useApiKeyAuditLog(target: ApiKeyAuditLogTarget): UseQueryResult<ApiKeyAuditLogResponse, Error> {
+  const path = buildApiKeyAuditLogPath(target ?? "global");
+
+  return useAdminPollingQuery<ApiKeyAuditLogResponse>(["api-key-audit-log", target], path, CRON_1MIN, {
+    enabled: target != null,
     schema: ApiKeyAuditLogResponseSchema,
   });
 }
