@@ -7,7 +7,6 @@ import { useStatus } from "@/hooks/use-status";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildBrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { ReliabilitySection } from "../sections/reliability-section";
-import { useAutoExpand } from "../use-auto-expand";
 import { WorkspaceStatusBoundary } from "../workspace-status-boundary";
 
 export default function ReliabilityClient() {
@@ -16,11 +15,6 @@ export default function ReliabilityClient() {
   const probesQuery = useEndpointProbes({ mode: "full" });
   const requestSourceQuery = useRequestSourceStats();
   const browserProbeSummary = buildBrowserProbeSummary(probesQuery.data, probesQuery.dataUpdatedAt);
-  const reliabilitySignal =
-    (healthQuery.data?.status ?? statusQuery.data?.availabilityStatus ?? "healthy") !== "healthy" ||
-    (browserProbeSummary?.failCount ?? 0) > 0 ||
-    (statusQuery.data != null && statusQuery.data.summary.worstCacheRatio > 1);
-  const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
   const handleRefresh = () => {
     void refetchQueryGroup(
       [statusQuery.refetch, healthQuery.refetch, probesQuery.refetch, requestSourceQuery.refetch],
@@ -39,10 +33,11 @@ export default function ReliabilityClient() {
         <ReliabilitySection
           data={data}
           healthData={healthQuery.data}
+          healthError={healthQuery.error?.message ?? null}
+          healthLoading={healthQuery.isLoading}
           browserProbeSummary={browserProbeSummary}
-          isReliabilityOpen={isReliabilityOpen}
-          setIsReliabilityOpen={setIsReliabilityOpen}
           probes={probesQuery.data}
+          probesError={probesQuery.error?.message ?? null}
           probesLoading={probesQuery.isLoading}
           requestSourceStats={requestSourceQuery.data}
           requestSourceError={requestSourceQuery.error?.message ?? null}
