@@ -107,7 +107,7 @@ function queryForCase(client: D1ReadClient, benchmarkCase: BenchmarkCase, asOf: 
   }
 }
 
-export default {
+const d1ReadReplicationBenchmark = {
   async fetch(request: Request, env: BenchmarkEnv): Promise<Response> {
     if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
     if (!await authorized(request, env.BENCHMARK_TOKEN)) return json({ error: "Unauthorized" }, 401);
@@ -152,3 +152,5 @@ export default {
     }
   },
 };
+
+export default d1ReadReplicationBenchmark;

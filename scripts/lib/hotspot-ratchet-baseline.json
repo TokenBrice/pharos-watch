@@ -132,8 +132,8 @@
     "notes": "The yield workbench route still combines query orchestration, URL state, toolbar state, and section composition. Move route state and presentation sections behind focused controller boundaries before extending the workbench."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 201,
-    "maxFunctionLines": 168,
+    "fileLines": 224,
+    "maxFunctionLines": 189,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -192,8 +192,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 289,
-    "maxFunctionLines": 269,
+    "fileLines": 292,
+    "maxFunctionLines": 272,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -300,7 +300,7 @@
     "notes": "The public form is now a thin composition shell over field and one-time reveal sections, with workflow state retained in the dedicated hook. Keep transport and field behavior out of this facade."
   },
   "src/hooks/use-api-key-request-form-state.ts": {
-    "fileLines": 200,
+    "fileLines": 199,
     "maxFunctionLines": 136,
     "branchCount": 12,
     "disposition": "stabilized",
@@ -420,9 +420,9 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 833,
-    "maxFunctionLines": 164,
-    "branchCount": 20,
+    "fileLines": 837,
+    "maxFunctionLines": 165,
+    "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 370,
@@ -456,8 +456,8 @@
     "notes": "Staged-pool merge surfaced as a long-function hotspot after orchestration splits. Extract source-priority selection and candidate dedupe from D1 staging reads before extending merge policy."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 344,
-    "maxFunctionLines": 278,
+    "fileLines": 364,
+    "maxFunctionLines": 295,
     "branchCount": 16,
     "disposition": "stabilized",
     "targetBudget": {
@@ -492,9 +492,9 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 451,
-    "maxFunctionLines": 145,
-    "branchCount": 22,
+    "fileLines": 634,
+    "maxFunctionLines": 206,
+    "branchCount": 48,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -504,9 +504,9 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 246,
-    "maxFunctionLines": 170,
-    "branchCount": 9,
+    "fileLines": 261,
+    "maxFunctionLines": 185,
+    "branchCount": 11,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 260,
@@ -540,9 +540,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 596,
-    "maxFunctionLines": 366,
-    "branchCount": 46,
+    "fileLines": 753,
+    "maxFunctionLines": 548,
+    "branchCount": 57,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,
@@ -552,9 +552,9 @@
     "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 216,
-    "maxFunctionLines": 175,
-    "branchCount": 20,
+    "fileLines": 292,
+    "maxFunctionLines": 160,
+    "branchCount": 25,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 300,
@@ -564,9 +564,9 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/sync-fx-rates-helpers.ts": {
-    "fileLines": 898,
+    "fileLines": 895,
     "maxFunctionLines": 78,
-    "branchCount": 74,
+    "branchCount": 73,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 650,
@@ -624,9 +624,9 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/scheduled-slot-fence.ts": {
-    "fileLines": 662,
-    "maxFunctionLines": 146,
-    "branchCount": 41,
+    "fileLines": 710,
+    "maxFunctionLines": 168,
+    "branchCount": 45,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 675,
@@ -636,8 +636,8 @@
     "notes": "Stale child-artifact reconciliation and event persistence now live behind scheduled-slot-reconciliation.ts. Keep claim, heartbeat, takeover, and finalization ownership in this fence without pulling D1 cleanup logic back in."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 261,
-    "maxFunctionLines": 133,
+    "fileLines": 264,
+    "maxFunctionLines": 134,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {

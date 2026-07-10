@@ -158,5 +158,37 @@
     "createdAt": "2026-07-02",
     "reviewAfter": "2026-09-30",
     "nextAction": "Extract CompareClient selection/cohort state and the live-refresh timer wiring into hooks so the component drops back under the function-lines threshold."
+  },
+  "worker/src/lib/scheduled-recovery-checkpoint.ts": {
+    "disposition": "queued-p4",
+    "notes": "Night Watch recovery added durable checkpoint fencing, takeover eligibility, and lifecycle persistence to one store module. Keep the release scoped to correctness; separate SQL construction and row parsing after the recovery contract has soaked.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-10",
+    "reviewAfter": "2026-10-10",
+    "nextAction": "Extract checkpoint row parsing and prepared-statement builders behind the current recovery-checkpoint API."
+  },
+  "worker/src/cron/fetch-tbill-rate.ts": {
+    "disposition": "queued-p4",
+    "notes": "The Treasury-rate producer combines multiple source adapters, validation, fallback selection, and publication metadata. It entered the file-size candidate set during the Night Watch release and needs a source-adapter split rather than a rushed gate refactor.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-10",
+    "reviewAfter": "2026-10-10",
+    "nextAction": "Extract provider fetch/parse adapters from Treasury-rate selection and publication orchestration."
+  },
+  "worker/src/cron/status-self-check.ts": {
+    "disposition": "queued-p4",
+    "notes": "Status self-check owns several operational health families and their alert projections. The Night Watch checks increased its visibility as a file-size hotspot; decompose by check family after the new contracts have production evidence.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-10",
+    "reviewAfter": "2026-10-10",
+    "nextAction": "Split scheduler, publication, and capacity check families into focused evaluators behind the existing self-check entrypoint."
+  },
+  "worker/src/cron/yield-sync/vaults-fyi.ts": {
+    "disposition": "queued-p4",
+    "notes": "The Vaults.fyi adapter now includes quota reservation, pagination, normalization, and degradation metadata. Its branch count warrants a focused adapter decomposition after the quota fencing behavior has soaked.",
+    "owner": "yield-intelligence",
+    "createdAt": "2026-07-10",
+    "reviewAfter": "2026-10-10",
+    "nextAction": "Extract quota/pagination state handling from payload normalization and opportunity projection."
   }
 }

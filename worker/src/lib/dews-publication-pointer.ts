@@ -233,11 +233,6 @@ export async function readDewsPublishedGenerationResult(
   }
 }
 
-export async function readDewsPublishedGeneration(db: D1Database, nowSec: number): Promise<number | null> {
-  const result = await readDewsPublishedGenerationResult(db, nowSec);
-  return result.status === "ok" ? result.computedAt : null;
-}
-
 /**
  * Backfill/reconcile the current validated cache pointer into the durable
  * generation ledger. This closes the migration-to-deploy window where the old

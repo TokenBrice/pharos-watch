@@ -1,7 +1,7 @@
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
+import { parseJsonObject } from "./json-parse";
 
 export type ScheduledCheckpointState =
   | "running"
@@ -178,17 +178,13 @@ function nowSec(): number {
 }
 
 function parseChildDispositions(value: string): Record<string, ScheduledChildDisposition> {
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, ScheduledChildDisposition] =>
-        typeof entry[0] === "string"
-        && ["not_started", "running", "completed", "failed", "platform_abandoned"].includes(String(entry[1]))
-      ),
-    );
-  } catch {
-    return {};
-  }
+  const parsed = parseJsonObject(value) ?? {};
+  return Object.fromEntries(
+    Object.entries(parsed).filter((entry): entry is [string, ScheduledChildDisposition] =>
+      typeof entry[0] === "string"
+      && ["not_started", "running", "completed", "failed", "platform_abandoned"].includes(String(entry[1]))
+    ),
+  );
 }
 
 function mapCheckpointRow(row: ScheduledCheckpointRow): ScheduledRecoveryCheckpoint {
@@ -369,7 +365,7 @@ export async function markScheduledCheckpointDomainAttempt(
   );
 }
 
-export function buildScheduledCheckpointAdvanceStatement(
+function buildScheduledCheckpointAdvanceStatement(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   input: ScheduledCheckpointAdvance,
@@ -500,15 +496,7 @@ async function loadCompletedCronJobsForSlot(
   const completed = new Set<string>();
   for (const row of rows.results ?? []) {
     if (row.status !== "ok" && row.status !== "degraded") continue;
-    let metadata: Record<string, unknown> | null = null;
-    try {
-      const parsed = row.metadata ? JSON.parse(row.metadata) as unknown : null;
-      metadata = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? parsed as Record<string, unknown>
-        : null;
-    } catch {
-      metadata = null;
-    }
+    const metadata = parseJsonObject(row.metadata);
     if (metadata?.childDisposition === "not_started") continue;
     if (metadata?.runBudgetTruncated === true) continue;
     if (typeof metadata?.skippedReason === "string") continue;
@@ -909,10 +897,6 @@ export async function claimNextScheduledCheckpointRecovery(
     };
   }
   return null;
-}
-
-export function checkpointErrorMetadata(error: unknown): string {
-  return toErrorMessage(error).slice(0, 1_000);
 }
 
 export async function pruneScheduledRecoveryCheckpoints(

@@ -5,7 +5,7 @@ import type {
 
 export const D1_PAID_MAX_DATABASE_SIZE_BYTES = 10_000_000_000;
 export const D1_CAPACITY_FORECAST_WINDOW_SEC = 30 * 24 * 60 * 60;
-export const D1_CAPACITY_MIN_FORECAST_SPAN_SEC = 24 * 60 * 60;
+const D1_CAPACITY_MIN_FORECAST_SPAN_SEC = 24 * 60 * 60;
 
 export interface D1CapacityObservation {
   observedAt: number;

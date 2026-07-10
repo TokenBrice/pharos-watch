@@ -18,6 +18,7 @@ import {
 } from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
 import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
+import { parseJsonObject } from "./json-parse";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -273,22 +274,13 @@ const NON_PRODUCTIVE_REASONS = new Set([
   "not-due-today",
 ]);
 
-export function inferCronProductivity(result: CronResult | null | void): CronProductivity {
+function inferCronProductivity(result: CronResult | null | void): CronProductivity {
   if (result?.productivity) return result.productivity;
   const status = result?.status ?? "ok";
   if (status === "error" || status === "skipped_locked" || status === "skipped_neutral") {
     return { productive: false, reason: status };
   }
-  const metadata = result?.metadata ? (() => {
-    try {
-      const parsed = JSON.parse(result.metadata) as unknown;
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? parsed as Record<string, unknown>
-        : null;
-    } catch {
-      return null;
-    }
-  })() : null;
+  const metadata = parseJsonObject(result?.metadata);
   const reason = typeof metadata?.reason === "string" ? metadata.reason : null;
   if (reason && NON_PRODUCTIVE_REASONS.has(reason)) {
     return { productive: false, reason };

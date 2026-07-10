@@ -1,5 +1,6 @@
 import type { ScheduledRecoveryCheckpoint } from "./scheduled-recovery-checkpoint";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { parseJsonObject } from "./json-parse";
 
 export const RESERVE_RECOVERY_FAULT_KILL_POINTS = [
   "after_checkpoint",
@@ -37,24 +38,21 @@ function faultCacheKey(identity: Pick<ReserveRecoveryFaultInjectionSpec, "schedu
 }
 
 function parseSpec(value: string): ReserveRecoveryFaultInjectionSpec | null {
-  try {
-    const parsed = JSON.parse(value) as Partial<ReserveRecoveryFaultInjectionSpec>;
-    if (
-      typeof parsed.workerVersion !== "string"
-      || parsed.scheduleKey !== "fourHourlyReserveSync"
-      || !Number.isInteger(parsed.slotStartedAt)
-      || !Number.isInteger(parsed.attemptNo)
-      || !RESERVE_RECOVERY_FAULT_KILL_POINTS.includes(parsed.killPoint as ReserveRecoveryFaultKillPoint)
-      || (parsed.targetItemKey !== null && typeof parsed.targetItemKey !== "string")
-      || !Number.isInteger(parsed.armedAt)
-      || !Number.isInteger(parsed.expiresAt)
-    ) {
-      return null;
-    }
-    return parsed as ReserveRecoveryFaultInjectionSpec;
-  } catch {
+  const parsed = parseJsonObject<Partial<ReserveRecoveryFaultInjectionSpec>>(value);
+  if (
+    !parsed
+    || typeof parsed.workerVersion !== "string"
+    || parsed.scheduleKey !== "fourHourlyReserveSync"
+    || !Number.isInteger(parsed.slotStartedAt)
+    || !Number.isInteger(parsed.attemptNo)
+    || !RESERVE_RECOVERY_FAULT_KILL_POINTS.includes(parsed.killPoint as ReserveRecoveryFaultKillPoint)
+    || (parsed.targetItemKey !== null && typeof parsed.targetItemKey !== "string")
+    || !Number.isInteger(parsed.armedAt)
+    || !Number.isInteger(parsed.expiresAt)
+  ) {
     return null;
   }
+  return parsed as ReserveRecoveryFaultInjectionSpec;
 }
 
 export class ReserveRecoveryFaultInjectionTermination extends Error {

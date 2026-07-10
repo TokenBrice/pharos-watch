@@ -9,6 +9,7 @@ import {
   type D1CapacityAssessment,
 } from "@shared/types/status/d1-capacity";
 import { getCache, setCacheIfNewer } from "../db-cache";
+import { parseJsonObject } from "../json-parse";
 
 export const D1_CAPACITY_CACHE_KEY = "ops:d1-capacity:v1";
 const D1_CAPACITY_CACHE_VERSION = 1;
@@ -25,14 +26,10 @@ interface CapacityCacheEnvelope {
 }
 
 function parseCapacityCache(value: string): D1CapacityAssessment | null {
-  try {
-    const envelope = JSON.parse(value) as Partial<CapacityCacheEnvelope>;
-    if (envelope.version !== D1_CAPACITY_CACHE_VERSION) return null;
-    const parsed = D1CapacityAssessmentSchema.safeParse(envelope.assessment);
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
+  const envelope = parseJsonObject<Partial<CapacityCacheEnvelope>>(value);
+  if (envelope?.version !== D1_CAPACITY_CACHE_VERSION) return null;
+  const parsed = D1CapacityAssessmentSchema.safeParse(envelope.assessment);
+  return parsed.success ? parsed.data : null;
 }
 
 export const D1_CAPACITY_OBSERVATION_INTERVAL_SEC = 60 * 60;

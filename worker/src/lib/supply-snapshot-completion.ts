@@ -4,7 +4,7 @@ import type { StablecoinPublicationWaiver } from "./stablecoin-publication-cover
 
 export const SNAPSHOT_SUPPLY_LAST_WRITE_KEY = "snapshot-supply:last-write";
 export const SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY = "snapshot-chain-supply:last-write";
-export const SUPPLY_SNAPSHOT_COVERAGE_VERSION = 2;
+const SUPPLY_SNAPSHOT_COVERAGE_VERSION = 2;
 
 const SHA_256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 

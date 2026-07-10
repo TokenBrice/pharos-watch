@@ -2,6 +2,7 @@ import { normalizeStringSet } from "../../lib/normalizers";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { getCache, setCache } from "../../lib/db-cache";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { parseJsonObject } from "../../lib/json-parse";
 
 export interface MintBurnRunStateRow {
   degradedStreak: number;
@@ -176,15 +177,11 @@ export interface MintBurnAttemptCoverageSummary {
 
 function parseAttemptState(value: string | undefined): MintBurnAttemptState | null {
   if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<MintBurnAttemptState>;
-    if (parsed.version !== ATTEMPT_STATE_VERSION || !parsed.entries || typeof parsed.entries !== "object") {
-      return null;
-    }
-    return parsed as MintBurnAttemptState;
-  } catch {
+  const parsed = parseJsonObject<Partial<MintBurnAttemptState>>(value);
+  if (!parsed || parsed.version !== ATTEMPT_STATE_VERSION || !parsed.entries || typeof parsed.entries !== "object") {
     return null;
   }
+  return parsed as MintBurnAttemptState;
 }
 
 export async function updateMintBurnAttemptState(input: {

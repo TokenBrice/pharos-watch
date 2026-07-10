@@ -8,6 +8,7 @@ import {
   summarizeCronResult,
   summarizeSkippedScheduledJob,
 } from "./slot-summary";
+import { parseJsonObject } from "../../lib/json-parse";
 
 interface MintBurnSlotOptions {
   lane: MintBurnLane;
@@ -27,14 +28,10 @@ export interface MintBurnSidecarOutcome {
 function appendSidecarOutcome(result: CronResult, sidecar: MintBurnSidecarOutcome): CronResult {
   let metadata: Record<string, unknown> = {};
   if (result.metadata) {
-    try {
-      const parsed = JSON.parse(result.metadata) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        metadata = parsed as Record<string, unknown>;
-      } else {
-        metadata.rawMetadata = result.metadata;
-      }
-    } catch {
+    const parsed = parseJsonObject(result.metadata);
+    if (parsed) {
+      metadata = parsed;
+    } else {
       metadata.rawMetadata = result.metadata;
     }
   }

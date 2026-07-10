@@ -55,9 +55,10 @@ const DEFAULT_BUDGETS = {
   // Docs/API reference RSC helpers are the largest legitimate TXT payloads.
   // Safety Score v8.12 exposed bridge-route and oracle-risk report-card fields;
   // Yield source-role / alternate-summary contracts then pushed the generated
-  // API reference helper to ~1.33 MB. Keep this tight so the next public schema
-  // expansion has to re-ratchet deliberately.
-  largestTxtBytes: 1_345_000,
+  // API reference helper to ~1.33 MB. Night Watch publication and recovery
+  // contracts measured 1,350,636 bytes; retain about 1% headroom so the next
+  // public schema expansion still has to re-ratchet deliberately.
+  largestTxtBytes: 1_365_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD plus the inline critical-CSS block
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the

@@ -41,6 +41,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts",
       "worker/scripts/lib/destructive-operation-guard.ts",
     ),
+    strict("worker/scripts/reconcile-night-watch-blacklist.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),
   exemptions: Object.freeze([
@@ -97,6 +98,8 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/audit-redemption-registry-parity.ts", "build"),
     exempt("scripts/maintenance/audit-seo-render-budget.mjs", "read-only"),
     exempt("scripts/maintenance/backtest-depeg-resolver-lock-policy.ts", "build"),
+    exempt("scripts/maintenance/benchmark-d1-read-replication.mjs", "test"),
+    exempt("scripts/maintenance/benchmark-worker-compatibility-date.mjs", "test"),
     exempt("scripts/maintenance/build-ai-summary-staleness-candidates.ts", "build"),
     exempt("scripts/maintenance/build-annotation-candidates.ts", "build"),
     exempt("scripts/maintenance/build-l2beat-bridge-route-candidates.ts", "build"),

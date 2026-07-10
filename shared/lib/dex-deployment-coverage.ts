@@ -1,12 +1,9 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 
-export const DEX_DEPLOYMENT_OUTCOMES = [
-  "observed_pools",
-  "verified_no_pools",
-  "provider_inaccessible",
-] as const;
-
-export type DexDeploymentOutcome = (typeof DEX_DEPLOYMENT_OUTCOMES)[number];
+export type DexDeploymentOutcome =
+  | "observed_pools"
+  | "verified_no_pools"
+  | "provider_inaccessible";
 export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener";
 
 export interface DexCoverageWaiver {

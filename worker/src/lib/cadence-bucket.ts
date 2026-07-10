@@ -1,5 +1,6 @@
 import { getCache } from "./db-cache";
 import type { CronResult } from "./cron-logger";
+import { parseJsonObject } from "./json-parse";
 
 interface CadenceMarker {
   version: 1;
@@ -22,21 +23,18 @@ export type CadenceBucketClaimResult =
   | { kind: "skip"; reason: "already-completed" | "in-progress"; bucket: number };
 
 function parseMarker(value: string): CadenceMarker | null {
-  try {
-    const parsed = JSON.parse(value) as Partial<CadenceMarker>;
-    if (
-      parsed.version !== 1
-      || !Number.isInteger(parsed.bucket)
-      || (parsed.state !== "claimed" && parsed.state !== "failed" && parsed.state !== "completed")
-      || typeof parsed.generation !== "string"
-      || !Number.isFinite(parsed.claimedAt)
-    ) {
-      return null;
-    }
-    return parsed as CadenceMarker;
-  } catch {
+  const parsed = parseJsonObject<Partial<CadenceMarker>>(value);
+  if (
+    !parsed
+    || parsed.version !== 1
+    || !Number.isInteger(parsed.bucket)
+    || (parsed.state !== "claimed" && parsed.state !== "failed" && parsed.state !== "completed")
+    || typeof parsed.generation !== "string"
+    || !Number.isFinite(parsed.claimedAt)
+  ) {
     return null;
   }
+  return parsed as CadenceMarker;
 }
 
 function createGeneration(bucket: number, nowSec: number): string {
@@ -61,12 +59,10 @@ export function appendCadenceResultMetadata(
   cadence: Record<string, unknown>,
 ): CronResult {
   let metadata: Record<string, unknown> = {};
-  try {
-    const parsed = result.metadata ? JSON.parse(result.metadata) as unknown : null;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      metadata = parsed as Record<string, unknown>;
-    }
-  } catch {
+  const parsed = parseJsonObject(result.metadata);
+  if (parsed) {
+    metadata = parsed;
+  } else if (result.metadata) {
     metadata = { originalMetadata: result.metadata };
   }
   return { ...result, metadata: JSON.stringify({ ...metadata, cadence }) };

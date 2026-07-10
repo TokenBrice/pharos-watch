@@ -305,7 +305,7 @@ export async function fetchAlchemyLogs(
 
 const LOG_SPLIT_MAX_DEPTH = 8;
 const LOG_SPLIT_MIN_RANGE = 8;
-export const DEFAULT_LOG_SPLIT_MAX_CALLS = 64;
+const DEFAULT_LOG_SPLIT_MAX_CALLS = 64;
 
 type LogSplitCallBudget = { count: number; limit: number };
 

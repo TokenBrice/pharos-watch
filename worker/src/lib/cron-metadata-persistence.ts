@@ -1,4 +1,5 @@
 import { stripSensitive } from "./safe-error-message";
+import { parseJsonObject } from "./json-parse";
 
 export const MAX_PERSISTED_CRON_METADATA_BYTES = 64 * 1_024 - 1;
 const MAX_TOP_LEVEL_DIAGNOSTICS = 80;
@@ -45,14 +46,7 @@ function summarizeDiagnostic(value: unknown): unknown {
 }
 
 function safeParseMetadata(metadata: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(metadata) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : null;
-  } catch {
-    return null;
-  }
+  return parseJsonObject(metadata);
 }
 
 export function compactCronMetadataForPersistence(

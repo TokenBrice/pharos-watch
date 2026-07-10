@@ -68,7 +68,7 @@ export interface WriteReportCardCacheOptions {
 /** Shared max-age budget for report-card-dependent read paths. */
 export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 export const REPORT_CARD_CACHE_GENERATION = 1;
-export const REPORT_CARD_CACHE_KEY = "report_card_cache";
+const REPORT_CARD_CACHE_KEY = "report_card_cache";
 
 function isValidCompleteness(value: unknown): value is ReportCardPublicationCompleteness {
   if (!isRecord(value)) return false;

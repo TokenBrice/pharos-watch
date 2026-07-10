@@ -12,6 +12,7 @@ import {
 } from "./collectors-shared";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 function parseStressSignalsMap(
   signalsJson: string,
@@ -101,7 +102,14 @@ export async function collectDewsStress(
     const publishedDews = await loadPublishedStressSignalGeneration(ctx.db, ctx.nowSec);
     if (publishedDews.status !== "ok") {
       markCollectorDegraded(degradedReasons, "dews-published-generation");
-      console.error(`[daily-digest] Published DEWS generation unavailable: ${publishedDews.reason}`);
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "daily_digest.dews_generation_unavailable",
+        job: "daily-digest",
+        message: "Published DEWS generation unavailable",
+        metadata: { reason: publishedDews.reason },
+      });
       return undefined;
     }
 

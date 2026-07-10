@@ -16,6 +16,7 @@ import {
   failCadenceBucket,
 } from "../lib/cadence-bucket";
 import { logWorkerEvent } from "../lib/structured-log";
+import { parseJson, parseJsonObject } from "../lib/json-parse";
 
 // D1 caps bound parameters per query at 100; keep headroom for non-IN binds.
 const SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE = 90;
@@ -129,7 +130,7 @@ export async function syncStablecoinCharts(
 
   try {
     const result = await runStablecoinChartsPublication(db, syncStartSec, signal);
-    const resultMetadata = result.metadata ? JSON.parse(result.metadata) as Record<string, unknown> : {};
+    const resultMetadata = parseJsonObject(result.metadata) ?? {};
     if (resultMetadata.lastWriteAdvanced !== true) {
       await failCadenceBucket(db, claimResult.claim);
       return appendCadenceResultMetadata(
@@ -183,10 +184,8 @@ async function runStablecoinChartsPublication(
   }
   const res = chartResult.response;
 
-  let raw: RawChartPoint[];
-  try {
-    raw = JSON.parse(chartResult.body) as RawChartPoint[];
-  } catch {
+  const parsedBody = parseJson(chartResult.body);
+  if (!parsedBody.ok) {
     /* non-blocking: DL charts API returned non-JSON; degrade gracefully so other cron jobs continue */
     console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
     return {
@@ -195,6 +194,7 @@ async function runStablecoinChartsPublication(
       metadata: JSON.stringify({ reason: "DL API invalid JSON", apiStatus: res.status }),
     };
   }
+  const raw = parsedBody.value as RawChartPoint[];
 
   if (!Array.isArray(raw) || raw.length < 100) {
     console.error(`[sync-charts] Unexpected data length (${raw?.length}), skipping cache write`);

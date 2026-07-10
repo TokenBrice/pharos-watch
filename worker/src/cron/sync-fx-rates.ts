@@ -30,6 +30,7 @@ import {
   loadSecondaryCurrencyCandidate,
 } from "./sync-fx-rates-sources";
 import { logWorkerEvent } from "../lib/structured-log";
+import { parseJsonObject } from "../lib/json-parse";
 
 /**
  * Fetches live FX rates from the European Central Bank (via api.frankfurter.dev)
@@ -97,7 +98,7 @@ export async function syncFxRates(
       drpcApiKey,
       etherscanApiKey,
     );
-    const resultMetadata = result.metadata ? JSON.parse(result.metadata) as Record<string, unknown> : {};
+    const resultMetadata = parseJsonObject(result.metadata) ?? {};
     if (resultMetadata.lastWriteAdvanced !== true) {
       await failCadenceBucket(db, claimResult.claim);
       return appendCadenceResultMetadata(

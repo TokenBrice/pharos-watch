@@ -56,8 +56,8 @@ const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
 // createRateLimiter is intentionally serial. Keep the declared live
 // concurrency aligned with that implementation and the shared six-connection
 // trigger budget; throughput is controlled independently by requests/second.
-export const BLACKLIST_PROVIDER_LIVE_CONCURRENCY = 1;
-export const BLACKLIST_PROVIDER_REQUESTS_PER_SECOND = 3;
+const BLACKLIST_PROVIDER_LIVE_CONCURRENCY = 1;
+const BLACKLIST_PROVIDER_REQUESTS_PER_SECOND = 3;
 
 type SyncBlacklistResult = {
   itemCount: number;

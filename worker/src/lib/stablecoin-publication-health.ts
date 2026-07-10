@@ -1,6 +1,7 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import type { StablecoinPublicationHealth } from "@shared/types/status";
+import { tryParseJson } from "./json-parse";
 
 export function unknownStablecoinPublicationHealth(
   observedAt: number | null = null,
@@ -23,42 +24,38 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
-export function parseStablecoinPublicationHealth(
+function parseStablecoinPublicationHealth(
   metadataJson: string,
   observedAt: number,
 ): StablecoinPublicationHealth {
-  try {
-    const metadata = JSON.parse(metadataJson) as unknown;
-    const coverage = isRecord(metadata) && isRecord(metadata.activePublicationCoverage)
-      ? metadata.activePublicationCoverage
-      : null;
-    if (!coverage) return unknownStablecoinPublicationHealth(observedAt);
-    const expectedActiveCount = typeof coverage.expectedActiveCount === "number"
-      ? coverage.expectedActiveCount
-      : 0;
-    const presentActiveCount = typeof coverage.presentActiveCount === "number"
-      ? coverage.presentActiveCount
-      : 0;
-    const waivedActiveCount = typeof coverage.waivedActiveCount === "number"
-      ? coverage.waivedActiveCount
-      : 0;
-    const missingActiveIds = stringArray(coverage.missingActiveIds);
-    const complete = coverage.complete === true
-      && expectedActiveCount === ACTIVE_IDS.size
-      && missingActiveIds.length === 0;
-    return {
-      status: complete ? "complete" : "incomplete",
-      expectedActiveCount,
-      presentActiveCount,
-      waivedActiveCount,
-      missingActiveIds,
-      waivedActiveIds: stringArray(coverage.waivedActiveIds),
-      expiredWaiverIds: stringArray(coverage.expiredWaiverIds),
-      observedAt,
-    };
-  } catch {
-    return unknownStablecoinPublicationHealth(observedAt);
-  }
+  const metadata = tryParseJson(metadataJson);
+  const coverage = isRecord(metadata) && isRecord(metadata.activePublicationCoverage)
+    ? metadata.activePublicationCoverage
+    : null;
+  if (!coverage) return unknownStablecoinPublicationHealth(observedAt);
+  const expectedActiveCount = typeof coverage.expectedActiveCount === "number"
+    ? coverage.expectedActiveCount
+    : 0;
+  const presentActiveCount = typeof coverage.presentActiveCount === "number"
+    ? coverage.presentActiveCount
+    : 0;
+  const waivedActiveCount = typeof coverage.waivedActiveCount === "number"
+    ? coverage.waivedActiveCount
+    : 0;
+  const missingActiveIds = stringArray(coverage.missingActiveIds);
+  const complete = coverage.complete === true
+    && expectedActiveCount === ACTIVE_IDS.size
+    && missingActiveIds.length === 0;
+  return {
+    status: complete ? "complete" : "incomplete",
+    expectedActiveCount,
+    presentActiveCount,
+    waivedActiveCount,
+    missingActiveIds,
+    waivedActiveIds: stringArray(coverage.waivedActiveIds),
+    expiredWaiverIds: stringArray(coverage.expiredWaiverIds),
+    observedAt,
+  };
 }
 
 export async function loadStablecoinPublicationHealth(

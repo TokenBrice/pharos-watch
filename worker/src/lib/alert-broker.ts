@@ -130,7 +130,7 @@ function canonicalStringify(value: unknown): string {
     .join(",")}}`;
 }
 
-export function buildAlertConditionFingerprint(conditionKey: string, value: unknown): string {
+function buildAlertConditionFingerprint(conditionKey: string, value: unknown): string {
   return fnv1aHash(`${conditionKey}:${canonicalStringify(value)}`);
 }
 
@@ -694,39 +694,4 @@ export async function loadAlertBrokerSummary(db: D1Database): Promise<AlertBroke
       queryFailed: true,
     };
   }
-}
-
-export async function pruneAlertBrokerHistory(
-  db: D1Database,
-  input: { normalCutoff: number; failureCutoff: number; signal?: AbortSignal },
-): Promise<{ conditions: number; deliveries: number }> {
-  if (input.signal?.aborted) throw input.signal.reason ?? new Error("alert broker prune aborted");
-  const results = await runWithOverloadRetry(
-    () => db.batch([
-      db
-        .prepare(
-          `DELETE FROM alert_broker_deliveries
-            WHERE (state IN ('delivered', 'shadow', 'status_only') AND updated_at < ?)
-               OR (state IN ('failed', 'missing_target') AND updated_at < ?)`,
-        )
-        .bind(input.normalCutoff, input.failureCutoff),
-      db
-        .prepare(
-          `DELETE FROM alert_broker_conditions
-            WHERE state = 'recovered'
-              AND updated_at < ?
-              AND NOT EXISTS (
-                SELECT 1 FROM alert_broker_deliveries d
-                 WHERE d.condition_key = alert_broker_conditions.condition_key
-              )`,
-        )
-        .bind(input.normalCutoff),
-    ]),
-    3,
-    input.signal,
-  );
-  return {
-    deliveries: results[0]?.meta.changes ?? 0,
-    conditions: results[1]?.meta.changes ?? 0,
-  };
 }

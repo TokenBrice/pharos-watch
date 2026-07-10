@@ -305,7 +305,7 @@ function isValidHistoricalPrice(meta: StablecoinMeta, price: number): boolean {
     .accepted;
 }
 
-export function selectNearestEventDayPrice(
+function selectNearestEventDayPrice(
   meta: StablecoinMeta,
   eventTimestamp: number,
   series: HistoricalPriceSeriesResult,
