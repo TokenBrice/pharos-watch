@@ -23,6 +23,12 @@ import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { trackEvent } from "@/lib/analytics";
+import {
+  formatEvidenceCompleteness,
+  YIELD_CALCULATION_MODE_LABELS,
+  YIELD_EVIDENCE_CLASS_LABELS,
+  YIELD_SCORE_QUALIFICATION_LABELS,
+} from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -61,6 +67,10 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
   const confidenceTier = ranking.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null) : null;
   const confidenceLabel = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null) : null;
+  const calculationMode = ranking.provenance?.calculationMode ?? null;
+  const evidenceClass = ranking.provenance?.evidenceClass ?? null;
+  const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
+  const scoreQualification = ranking.provenance?.scoreQualification ?? null;
   const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
@@ -142,6 +152,37 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
                 </span>
               ) : null}
             </div>
+            {calculationMode && evidenceClass && scoreQualification ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+                <span
+                  className={cn(
+                    "rounded-full border px-1.5 py-0.5 font-medium",
+                    scoreQualification === "rated" &&
+                      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                    scoreQualification === "estimated" &&
+                      "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                    scoreQualification === "partial" &&
+                      "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+                    scoreQualification === "NR" &&
+                      "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
+                  )}
+                  title="Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"
+                >
+                  {YIELD_SCORE_QUALIFICATION_LABELS[scoreQualification]}
+                </span>
+                <span title="The evidence origin used to establish this yield observation">
+                  {YIELD_EVIDENCE_CLASS_LABELS[evidenceClass]}
+                </span>
+                <span title="The calculation used to turn source evidence into APY">
+                  {YIELD_CALCULATION_MODE_LABELS[calculationMode]}
+                </span>
+                {evidenceCompleteness != null ? (
+                  <span title="Share of required evidence fields measured for this observation">
+                    {formatEvidenceCompleteness(evidenceCompleteness)}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             <YieldDecisionLedgerCard ledger={ranking.decisionLedger} variant="inline" className="mt-2" />
             <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

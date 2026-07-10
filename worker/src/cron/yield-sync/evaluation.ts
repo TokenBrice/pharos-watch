@@ -1,5 +1,6 @@
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
+import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import {
   computePysComponents,
   computePysRewardShare,
@@ -29,7 +30,16 @@ import {
 } from "./benchmarks";
 import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
-import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
+import {
+  compareCandidates,
+  getConfidencePriority,
+  getConfidenceTier,
+  relativeDivergence,
+  resolveCalculationMode,
+  resolveEvidenceClass,
+  resolveYieldSourceLabel,
+  resolveYieldTypeLabel,
+} from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 
@@ -338,7 +348,6 @@ function evaluateYieldSourceGroup(
     const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
       selectionMode: benchmarkSelection.selectionMode,
     });
-    const scoreQualified = sourceFreshness !== "stale" && benchmarkFreshness !== "stale";
     // Resolve the reviewed venue config from the same identifier stored as
     // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
     // auto-discovered lending rows — not just native/curated families — pick up
@@ -353,6 +362,20 @@ function evaluateYieldSourceGroup(
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
       (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
+    const calculationMode = resolveCalculationMode(y);
+    const evidenceClass = resolveEvidenceClass(y);
+    const evidenceAssessment = assessYieldEvidence({
+      evidenceClass,
+      safetyObserved: !usedDefaultSafety && underlyingSafetyGrade !== "NR",
+      sourceFreshness,
+      benchmarkFreshness,
+      hasSourceDepth: sourceDepthRatio != null,
+      hasVenueRisk: resolvedVenueRiskTier !== "unknown",
+      hasHistory: !historySelection.usedLegacyHistory && historyRowsForStats.length > 0,
+      hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
+    });
+    const { evidenceCompleteness, scoreQualification } = evidenceAssessment;
+    const scoreQualified = scoreQualification !== "NR";
     // Reviewer-set cross-venue dependency concentration (yield v8.292): resolve by
     // stablecoin id and attach it so it both penalizes PYS and surfaces on the row.
     const dependencyConcentration =
@@ -387,15 +410,19 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const freshnessNullReason = sourceFreshness === "stale"
+    const evidenceNullReason = sourceFreshness === "stale"
       ? "source-stale" as const
+      : sourceFreshness === "unknown"
+        ? "source-freshness-unknown" as const
       : benchmarkFreshness === "stale"
         ? "benchmark-stale" as const
+        : !scoreQualified
+          ? "safety-unrated" as const
         : null;
-    const pharosYieldScore = freshnessNullReason == null && Number.isFinite(computedPharosYieldScore)
+    const pharosYieldScore = evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
       ? computedPharosYieldScore
       : null;
-    const pysNullReason = freshnessNullReason ?? (computedPharosYieldScore > 0
+    const pysNullReason = evidenceNullReason ?? (computedPharosYieldScore > 0
       ? null
       : derivePysNullReason({
           apy30d,
@@ -420,11 +447,18 @@ function evaluateYieldSourceGroup(
       anomalies.push("anchor-stale");
     }
     if (sourceFreshness === "stale") anomalies.push("source-stale");
+    if (sourceFreshness === "unknown") anomalies.push("source-freshness-unknown");
+    if (!usedDefaultSafety && underlyingSafetyGrade === "NR") anomalies.push("safety-unrated");
+    if (usedDefaultSafety) anomalies.push("safety-missing");
     if (benchmarkFreshness === "degraded") anomalies.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") anomalies.push("benchmark-stale");
 
     const freshnessWarnings: string[] = [];
     if (sourceFreshness === "stale") freshnessWarnings.push("data-stale");
+    if (sourceFreshness === "unknown") freshnessWarnings.push("data-freshness-unknown");
+    if (!scoreQualified && sourceFreshness === "fresh" && benchmarkFreshness !== "stale") {
+      freshnessWarnings.push("safety-unrated");
+    }
     if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
 
@@ -477,6 +511,10 @@ function evaluateYieldSourceGroup(
       pysNullReason,
       sourceFreshness,
       benchmarkFreshness,
+      calculationMode,
+      evidenceClass,
+      evidenceCompleteness,
+      scoreQualification,
       scoreQualified,
       prevExchangeRate,
       prevTvlUsd,

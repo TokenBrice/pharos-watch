@@ -89,6 +89,10 @@ function evaluatedSourceToRanking(
           safetyReason: source.safetyReason,
           sourceFreshness: source.sourceFreshness,
           benchmarkFreshness: source.benchmarkFreshness,
+          calculationMode: source.calculationMode,
+          evidenceClass: source.evidenceClass,
+          evidenceCompleteness: source.evidenceCompleteness,
+          scoreQualification: source.scoreQualification,
           scoreQualified: source.scoreQualified,
         }
       : null,
@@ -131,6 +135,10 @@ function buildAltYieldSource(params: {
     }),
     sourceRole: deriveYieldSourceRole(params.candidate, { isSelected: false }),
     confidenceTier: params.candidate.confidenceTier,
+    calculationMode: params.candidate.calculationMode,
+    evidenceClass: params.candidate.evidenceClass,
+    evidenceCompleteness: params.candidate.evidenceCompleteness,
+    scoreQualification: params.candidate.scoreQualification,
     selectionRank: params.selectionRank,
     rejectionReasonCode: deriveRejectionReasonCode(params.selected, params.candidate),
   };
@@ -352,10 +360,20 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         : "benchmark-stale";
     }
     if (ranking.provenance) {
+      const effectiveSourceFreshness = staleSource ? "stale" : (source.sourceFreshness ?? "unknown");
+      const qualificationInvalidated = staleSource || benchmarkFreshness === "stale";
+      const newlyMissingEvidenceFields =
+        (staleSource && source.sourceFreshness === "fresh" ? 1 : 0) +
+        (benchmarkFreshness === "stale" && source.benchmarkFreshness !== "stale" ? 1 : 0);
       ranking.provenance = {
         ...ranking.provenance,
-        sourceFreshness: staleSource ? "stale" : (source.sourceFreshness ?? "unknown"),
+        sourceFreshness: effectiveSourceFreshness,
         benchmarkFreshness,
+        evidenceCompleteness: Math.max(
+          0,
+          Number((source.evidenceCompleteness - newlyMissingEvidenceFields / 7).toFixed(4)),
+        ),
+        scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,
         scoreQualified: ranking.pharosYieldScore != null,
       };
     }

@@ -118,6 +118,10 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     pysNullReason: null,
     sourceFreshness: "fresh",
     benchmarkFreshness: "healthy",
+    calculationMode: "market-api",
+    evidenceClass: "curated-observation",
+    evidenceCompleteness: 1,
+    scoreQualification: "rated",
     scoreQualified: true,
     prevExchangeRate: null,
     prevTvlUsd: 1_700_000,
@@ -229,6 +233,8 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     expect(payload.rankings[0]?.pysNullReason).toBe("source-stale");
     expect(payload.rankings[0]?.provenance).toMatchObject({
       sourceFreshness: "stale",
+      scoreQualification: "NR",
+      evidenceCompleteness: 0.8571,
       scoreQualified: false,
     });
   });
@@ -549,6 +555,10 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     expect(firstAlt).toMatchObject({
       sourceRole: "audit-alternate",
       confidenceTier: "curated",
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+      evidenceCompleteness: 1,
+      scoreQualification: "rated",
       selectionRank: 2,
       rejectionReasonCode: "unspecified",
     });

@@ -372,7 +372,16 @@ describe("handleYieldRankings", () => {
         safetyReason?: string | null;
         yieldToRisk: number | null;
         pharosYieldScore: number | null;
-        provenance: { usedDefaultSafety: boolean; safetyProvenance?: string; safetyReason?: string | null } | null;
+        provenance: {
+          usedDefaultSafety: boolean;
+          safetyProvenance?: string;
+          safetyReason?: string | null;
+          calculationMode?: string;
+          evidenceClass?: string;
+          evidenceCompleteness?: number;
+          scoreQualification?: string;
+          scoreQualified?: boolean;
+        } | null;
       }>;
       provenance: {
         safetySnapshot: {
@@ -421,6 +430,13 @@ describe("handleYieldRankings", () => {
     expect(rated?.provenance?.usedDefaultSafety).toBe(false);
     expect(rated?.provenance?.safetyProvenance).toBe("live-report-card");
     expect(rated?.safetyReason).toBeNull();
+    expect(rated?.provenance).toMatchObject({
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+      evidenceCompleteness: 0.5714,
+      scoreQualification: "partial",
+      scoreQualified: true,
+    });
 
     expect(unrated?.safetyGrade).toBe("NR");
     expect(unrated?.safetyScore).toBe(40);
@@ -428,6 +444,11 @@ describe("handleYieldRankings", () => {
     expect(unrated?.provenance?.safetyProvenance).toBe("default-safety");
     expect(unrated?.safetyReason).toBe("report-card-score-missing");
     expect(unrated?.provenance?.safetyReason).toBe("report-card-score-missing");
+    expect(unrated?.pharosYieldScore).toBeNull();
+    expect(unrated?.provenance).toMatchObject({
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",

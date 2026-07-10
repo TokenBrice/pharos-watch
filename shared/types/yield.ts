@@ -45,7 +45,9 @@ export const YIELD_PYS_NULL_REASONS = [
   "scaling-invalid",
   "missing-inputs",
   "source-stale",
+  "source-freshness-unknown",
   "benchmark-stale",
+  "safety-unrated",
 ] as const;
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
@@ -66,6 +68,25 @@ export const YIELD_SOURCE_CONFIDENCE_TIER_VALUES = [
   "fallback",
 ] as const;
 export type YieldSourceConfidenceTier = (typeof YIELD_SOURCE_CONFIDENCE_TIER_VALUES)[number];
+export const YIELD_CALCULATION_MODE_VALUES = [
+  "direct-read",
+  "exchange-rate-math",
+  "market-api",
+  "benchmark-model",
+  "price-return",
+] as const;
+export type YieldCalculationMode = (typeof YIELD_CALCULATION_MODE_VALUES)[number];
+export const YIELD_EVIDENCE_CLASS_VALUES = [
+  "direct-first-party",
+  "direct-onchain",
+  "curated-observation",
+  "discovered-observation",
+  "modeled-proxy",
+  "fallback",
+] as const;
+export type YieldEvidenceClass = (typeof YIELD_EVIDENCE_CLASS_VALUES)[number];
+export const YIELD_SCORE_QUALIFICATION_VALUES = ["rated", "estimated", "partial", "NR"] as const;
+export type YieldScoreQualification = (typeof YIELD_SCORE_QUALIFICATION_VALUES)[number];
 export const YIELD_SOURCE_ROLE_VALUES = [
   "canonical-holder",
   "external-opportunity",
@@ -238,6 +259,10 @@ const YieldPublicDecisionAlternativeSchema = z.object({
   apy30dDelta: z.number(),
   rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES),
   confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
+  calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
+  evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
   selectionRank: z.number().int().positive().optional(),
 });
@@ -284,6 +309,10 @@ const AltYieldSourceSchema = z.object({
   sourceRisk: YieldSourceRiskSchema.nullable().optional(),
   sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
   confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
+  calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
+  evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   selectionRank: z.number().int().positive().optional(),
   rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES).optional(),
 });
@@ -379,6 +408,10 @@ const YieldRankingProvenanceSchema = z.object({
   comparisonAnchorObservedAt: z.number().nullable().optional(),
   comparisonAnchorAgeSeconds: z.number().nullable().optional(),
   confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
+  calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
+  evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   selectionMethod: z.literal("confidence-weighted"),
   selectionReason: z.string(),
   sourceSwitch: z.boolean(),

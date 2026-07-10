@@ -203,6 +203,10 @@ export function buildPublicDecisionLedger(params: {
       apy30dDelta: candidate.apy30d - params.selected.apy30d,
       rejectionReasonCode: deriveRejectionReasonCode(params.selected, candidate),
       confidenceTier: candidate.confidenceTier,
+      calculationMode: candidate.calculationMode,
+      evidenceClass: candidate.evidenceClass,
+      evidenceCompleteness: candidate.evidenceCompleteness,
+      scoreQualification: candidate.scoreQualification,
       sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
       selectionRank: selectionRankBySourceKey.get(candidate.sourceKey),
     }));

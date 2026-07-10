@@ -1,7 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { YieldType } from "@shared/types/core";
+import type { YieldCalculationMode, YieldEvidenceClass } from "@shared/types/yield";
 import { LENDING_PROTOCOL_LABELS } from "../yield-config";
 import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
+import type { ResolvedYield } from "./types";
 
 export type { ConfidenceTier } from "./evaluation-types";
 
@@ -67,6 +69,53 @@ export function getConfidencePriority(tier: ConfidenceTier): number {
   }
 }
 
+export function resolveCalculationMode(source: ResolvedYield): YieldCalculationMode {
+  if (source.dataSource === "rate-derived") return "benchmark-model";
+  if (source.dataSource === "price-derived") return "price-return";
+  if (source.exchangeRate != null || source.comparisonAnchorObservedAt != null) {
+    return "exchange-rate-math";
+  }
+  if (source.dataSource === "onchain") return "direct-read";
+  return "market-api";
+}
+
+export function resolveEvidenceClass(source: ResolvedYield): YieldEvidenceClass {
+  switch (source.dataSource) {
+    case "onchain":
+      return "direct-onchain";
+    case "protocol-api":
+      return source.sourceKey.startsWith("protocol-api:vaults-fyi:")
+        ? "curated-observation"
+        : "direct-first-party";
+    case "defillama":
+      return "curated-observation";
+    case "defillama-auto":
+      return "discovered-observation";
+    case "rate-derived":
+      return "modeled-proxy";
+    case "price-derived":
+    default:
+      return "fallback";
+  }
+}
+
+export function getEvidencePriority(evidenceClass: YieldEvidenceClass): number {
+  switch (evidenceClass) {
+    case "direct-first-party":
+    case "direct-onchain":
+      return 6;
+    case "curated-observation":
+      return 5;
+    case "discovered-observation":
+      return 4;
+    case "modeled-proxy":
+      return 2;
+    case "fallback":
+    default:
+      return 1;
+  }
+}
+
 export function relativeDivergence(a: number, b: number): number {
   const maxValue = Math.max(Math.abs(a), Math.abs(b), 1e-9);
   return Math.abs(a - b) / maxValue;
@@ -82,6 +131,9 @@ export function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSour
   const aFixedYield = a.yieldType === "fixed-yield";
   const bFixedYield = b.yieldType === "fixed-yield";
   if (aFixedYield !== bFixedYield) return aFixedYield ? 1 : -1;
+
+  const evidenceDiff = getEvidencePriority(b.evidenceClass) - getEvidencePriority(a.evidenceClass);
+  if (evidenceDiff !== 0) return evidenceDiff;
 
   const confidenceDiff = getConfidencePriority(b.confidenceTier) - getConfidencePriority(a.confidenceTier);
   if (confidenceDiff !== 0) return confidenceDiff;
@@ -102,7 +154,9 @@ export function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers
   }
 
   const confidenceLabel =
-    source.confidenceTier === "deterministic"
+    source.evidenceClass === "modeled-proxy"
+      ? "modeled proxy"
+      : source.confidenceTier === "deterministic"
       ? "deterministic"
       : source.confidenceTier === "curated"
         ? "curated canonical"

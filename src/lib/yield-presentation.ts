@@ -1,8 +1,11 @@
 import type {
+  YieldCalculationMode,
   YieldDecisionReasonCode,
   YieldDecisionRejectionReasonCode,
+  YieldEvidenceClass,
   YieldPysNullReason,
   YieldRankChangeAttribution,
+  YieldScoreQualification,
 } from "@shared/types";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-risk";
 
@@ -12,8 +15,38 @@ export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "scaling-invalid": "Scaling factor unavailable",
   "missing-inputs": "Missing inputs",
   "source-stale": "Source observation stale",
+  "source-freshness-unknown": "Source observation time unavailable",
   "benchmark-stale": "Benchmark stale",
+  "safety-unrated": "Safety evidence not rated",
 };
+
+export const YIELD_CALCULATION_MODE_LABELS: Record<YieldCalculationMode, string> = {
+  "direct-read": "Direct read",
+  "exchange-rate-math": "Exchange-rate math",
+  "market-api": "Market API",
+  "benchmark-model": "Benchmark model",
+  "price-return": "Price return",
+};
+
+export const YIELD_EVIDENCE_CLASS_LABELS: Record<YieldEvidenceClass, string> = {
+  "direct-first-party": "Direct first-party",
+  "direct-onchain": "Direct onchain",
+  "curated-observation": "Curated observation",
+  "discovered-observation": "Discovered observation",
+  "modeled-proxy": "Modeled proxy",
+  fallback: "Fallback evidence",
+};
+
+export const YIELD_SCORE_QUALIFICATION_LABELS: Record<YieldScoreQualification, string> = {
+  rated: "Rated",
+  estimated: "Estimated",
+  partial: "Partial evidence",
+  NR: "Not rated",
+};
+
+export function formatEvidenceCompleteness(value: number): string {
+  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}% evidence`;
+}
 
 export function formatSignedPysDelta(delta: number): string {
   if (!Number.isFinite(delta)) return "";

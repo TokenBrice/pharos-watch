@@ -286,6 +286,9 @@ describe("evaluateYieldSources", () => {
       safetyGrade: "NR",
       usedDefaultSafety: true,
       safetyReason: "report-card-score-missing",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
     });
 
     const notRated = evaluateYieldSources(baseEvaluationInput({
@@ -296,6 +299,9 @@ describe("evaluateYieldSources", () => {
       safetyGrade: "NR",
       usedDefaultSafety: false,
       safetyReason: "report-card-grade-not-rated",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
     });
   });
 
@@ -610,7 +616,7 @@ describe("evaluateYieldSources", () => {
     expect(result.evaluatedSources[0]?.sourceSwitchCount30d).toBe(2);
   });
 
-  it("preserves deterministic precedence over lower-tier rows even when the deterministic row has a penalty", () => {
+  it("keeps a fresh direct observation ahead of a deterministic modeled proxy", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
         {
@@ -634,7 +640,16 @@ describe("evaluateYieldSources", () => {
       ],
     }));
 
-    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:high");
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
+      calculationMode: "benchmark-model",
+      evidenceClass: "modeled-proxy",
+      scoreQualification: "estimated",
+    });
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:high")).toMatchObject({
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+    });
   });
 
   it("rejects an expired deterministic source before arbitration and retains it behind a fresh curated source", () => {

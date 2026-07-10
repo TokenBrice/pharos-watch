@@ -40,6 +40,10 @@ export function buildYieldSourceProvenance(params: {
     comparisonAnchorObservedAt,
     comparisonAnchorAgeSeconds,
     confidenceTier: source.confidenceTier,
+    calculationMode: source.calculationMode,
+    evidenceClass: source.evidenceClass,
+    evidenceCompleteness: source.evidenceCompleteness,
+    scoreQualification: source.scoreQualification,
     selectionMethod: "confidence-weighted",
     selectionReason: isBest
       ? buildSelectionReason(source, rejectedPeers)

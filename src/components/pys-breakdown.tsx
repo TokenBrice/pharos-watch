@@ -52,7 +52,9 @@ const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "scaling-invalid": "Scaling factor unavailable.",
   "missing-inputs": "Required inputs missing for scoring.",
   "source-stale": "Source observation exceeded its scoring freshness window.",
+  "source-freshness-unknown": "Source observation time is unavailable, so the score is not rated.",
   "benchmark-stale": "Selected benchmark exceeded its scoring freshness window.",
+  "safety-unrated": "Critical safety evidence is unavailable, so the score is not rated.",
 };
 
 function ModeConditionalTooltip({
