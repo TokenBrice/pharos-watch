@@ -174,3 +174,14 @@ For incident triage, start at the runbooks rather than DevTools:
 - `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.
 - `src/app/pharoswatchbot/app/telegram-theme.test.ts` / `telegram-sdk.test.ts` — WCAG contrast normalization, hostile light/dark Telegram palettes, CSS variable publication, fallback clearing, viewport, and safe-area behavior.
 - `tests/visual/telegram-mini-app-launch.spec.ts` — standalone/signed launch behavior, 320 px control sizing, and an authenticated hostile-theme axe color-contrast fixture.
+- `tests/visual/telegram-mini-app-a11y.spec.ts` — deterministic signed sessions for populated Home, Watchlist, Presets, and Settings panels plus group read-only, stale-auth, mutation-error, and forgotten states. The bounded matrix covers 320 px light/safe-area, 390 px tall dark/reduced-motion/200% root-text-resize, and 360 px exceptional-state fixtures without multiplying every state across every device condition. Axe uses the shared WCAG 2.2 AA tags and node-level waiver policy; semantic assertions also cover keyboard tab movement, focus visibility, touch height, status announcements, disabled read-only actions, and horizontal reflow.
+
+The automated `200%` case changes the root font size and is a text-resize/reflow proxy, not a claim of full browser-zoom coverage. Before a release that changes Mini App layout, theme, auth, or mutations, an operator still verifies a real Telegram session:
+
+1. Open a populated private session on current Telegram iOS, Android, and Desktop in light and dark appearance.
+2. Visit all four panels; use VoiceOver or TalkBack on one mobile client and keyboard-only navigation on Desktop, including arrow-key tab movement and visible focus.
+3. Repeat one mobile pass with the OS large-text setting and reduced motion enabled; rotate once and inspect top/bottom controls on a device with safe-area insets.
+4. On Desktop, check browser/WebView zoom at 200% and confirm controls reflow without horizontal page scrolling or hidden focused controls.
+5. Verify group read-only and stale-auth copy with edits disabled. Use a non-production test subscriber for the destructive forgotten-state check.
+
+Record the Telegram/client version, OS/device, appearance, assistive setting, and result in the release handoff. These are operator checks; CI does not report them as automated passes.

@@ -28,7 +28,7 @@ import {
 
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
-  "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/";
+  "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/";
 const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";

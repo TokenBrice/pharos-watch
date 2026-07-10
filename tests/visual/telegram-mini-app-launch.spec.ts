@@ -1,81 +1,20 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-
-const TELEGRAM_SDK_URL = "https://telegram.org/js/telegram-web-app.js";
-
-const MINI_APP_STATE = {
-  viewer: {
-    userId: "42",
-    username: "watcher",
-    firstName: null,
-    chatId: "42",
-    chatType: "private",
-    canMutate: true,
-    mutationBlockReason: null,
-  },
-  subscriber: {
-    exists: true,
-    globalAlerts: {
-      dews: true,
-      depeg: true,
-      safety: false,
-      launch: false,
-      reserve: false,
-      depegStepBps: 250,
-    },
-    quietHours: {
-      enabled: false,
-      startHourUtc: null,
-      endHourUtc: null,
-      timezone: "UTC",
-    },
-    snoozeUntilTs: null,
-  },
-  presets: [],
-  subscriptions: [],
-  catalog: { recommendedPresets: [], searchableCoins: [] },
-  health: {
-    lastSuccessfulDeliveryAt: null,
-    lastSuccessfulReplyAt: null,
-    queuedAlerts: 0,
-    recentFailureClass: null,
-  },
-};
-
-function sdkBody(
-  initData: string,
-  platform: string,
-  options: { colorScheme?: "light" | "dark"; themeParams?: Record<string, string> } = {},
-): string {
-  return `window.Telegram = { WebApp: {
-    initData: ${JSON.stringify(initData)},
-    platform: ${JSON.stringify(platform)},
-    colorScheme: ${JSON.stringify(options.colorScheme)},
-    themeParams: ${JSON.stringify(options.themeParams)},
-    initDataUnsafe: { user: { username: "watcher" } },
-    ready() {}, expand() {}, onEvent() {}, offEvent() {}
-  } };`;
-}
-
-async function trackSessionRequests(page: Page, state: unknown = MINI_APP_STATE): Promise<{ count: () => number }> {
-  let sessionRequestCount = 0;
-  await page.route("**/api/telegram-mini-app/session", async (route) => {
-    sessionRequestCount += 1;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(state),
-    });
-  });
-  return { count: () => sessionRequestCount };
-}
+import {
+  installTelegramSdkFixture,
+  MINI_APP_STATE,
+  TELEGRAM_SDK_URL,
+  TELEGRAM_SIGNED_LAUNCH_PATH,
+  telegramSdkBody,
+  trackMiniAppSessionRequests,
+} from "./telegram-mini-app-fixtures";
 
 test("standalone Mini App stays in preview after the Telegram SDK loads", async ({ page }) => {
-  const sessionRequests = await trackSessionRequests(page);
+  const sessionRequests = await trackMiniAppSessionRequests(page);
   let sdkRequested = false;
   await page.route(TELEGRAM_SDK_URL, async (route) => {
     sdkRequested = true;
-    await route.fulfill({ status: 200, contentType: "text/javascript", body: sdkBody("", "unknown") });
+    await route.fulfill({ status: 200, contentType: "text/javascript", body: telegramSdkBody("", "unknown") });
   });
 
   await page.goto("/pharoswatchbot/app/", { waitUntil: "domcontentloaded" });
@@ -87,18 +26,11 @@ test("standalone Mini App stays in preview after the Telegram SDK loads", async 
 });
 
 test("a delayed Telegram SDK completes a supported signed launch", async ({ page }) => {
-  const sessionRequests = await trackSessionRequests(page);
-  await page.route(TELEGRAM_SDK_URL, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await route.fulfill({
-      status: 200,
-      contentType: "text/javascript",
-      body: sdkBody("signed-init-data", "tdesktop"),
-    });
-  });
+  const sessionRequests = await trackMiniAppSessionRequests(page);
+  await installTelegramSdkFixture(page, { delayMs: 300 });
 
   await page.goto(
-    "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop",
+    TELEGRAM_SIGNED_LAUNCH_PATH,
     { waitUntil: "domcontentloaded" },
   );
 
@@ -108,7 +40,7 @@ test("a delayed Telegram SDK completes a supported signed launch", async ({ page
 
 test("the signed Mini App keeps compact controls usable at 320px", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  const sessionRequests = await trackSessionRequests(page, {
+  const sessionRequests = await trackMiniAppSessionRequests(page, {
     ...MINI_APP_STATE,
     subscriptions: [
       {
@@ -123,12 +55,10 @@ test("the signed Mini App keeps compact controls usable at 320px", async ({ page
       },
     ],
   });
-  await page.route(TELEGRAM_SDK_URL, async (route) => {
-    await route.fulfill({ status: 200, contentType: "text/javascript", body: sdkBody("signed-init-data", "tdesktop") });
-  });
+  await installTelegramSdkFixture(page);
 
   await page.goto(
-    "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop",
+    TELEGRAM_SIGNED_LAUNCH_PATH,
     { waitUntil: "domcontentloaded" },
   );
 
@@ -161,12 +91,12 @@ test("the signed Mini App keeps compact controls usable at 320px", async ({ page
 
 test("an authenticated 320px Mini App repairs hostile Telegram theme contrast", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  await trackSessionRequests(page);
+  await trackMiniAppSessionRequests(page);
   await page.route(TELEGRAM_SDK_URL, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/javascript",
-      body: sdkBody("signed-init-data", "tdesktop", {
+      body: telegramSdkBody("signed-init-data", "tdesktop", {
         colorScheme: "light",
         themeParams: {
           bg_color: "#ffffff",
@@ -187,7 +117,7 @@ test("an authenticated 320px Mini App repairs hostile Telegram theme contrast", 
   });
 
   await page.goto(
-    "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop",
+    TELEGRAM_SIGNED_LAUNCH_PATH,
     { waitUntil: "domcontentloaded" },
   );
 
@@ -201,12 +131,12 @@ test("an authenticated 320px Mini App repairs hostile Telegram theme contrast", 
 });
 
 test("an unsupported Telegram host receives the non-sensitive preview", async ({ page }) => {
-  const sessionRequests = await trackSessionRequests(page);
+  const sessionRequests = await trackMiniAppSessionRequests(page);
   await page.route(TELEGRAM_SDK_URL, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/javascript",
-      body: sdkBody("signed-init-data", "unknown"),
+      body: telegramSdkBody("signed-init-data", "unknown"),
     });
   });
 

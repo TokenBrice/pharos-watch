@@ -530,6 +530,22 @@ describe("getOverflowRoutes", () => {
       }
     }
   });
+
+  it("includes the public PharosWatchBot page in local and live canary coverage", () => {
+    const previousRoutes = process.env.SMOKE_UI_OVERFLOW_ROUTES;
+    const previousCanary = process.env.SMOKE_UI_CANARY_ROUTE;
+    delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
+    delete process.env.SMOKE_UI_CANARY_ROUTE;
+    try {
+      expect(getOverflowRoutes("local")).toContain("/pharoswatchbot/");
+      expect(getOverflowRoutes("live")).toContain("/pharoswatchbot/");
+    } finally {
+      if (previousRoutes == null) delete process.env.SMOKE_UI_OVERFLOW_ROUTES;
+      else process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
+      if (previousCanary == null) delete process.env.SMOKE_UI_CANARY_ROUTE;
+      else process.env.SMOKE_UI_CANARY_ROUTE = previousCanary;
+    }
+  });
 });
 
 describe("HOMEPAGE_RECENT_EVENTS_SMOKE_PATH", () => {

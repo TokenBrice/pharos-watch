@@ -349,7 +349,7 @@ export function PharosWatchBotMiniAppClient() {
   };
 
   return (
-    <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
+    <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] [overflow-wrap:anywhere] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
       <div className="mx-auto flex max-w-2xl flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
         <div className="sticky top-0 z-20 -mx-3 border-b border-border/60 bg-[var(--telegram-bg,var(--background))] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+0.5rem)] sm:-mx-4 sm:px-4">
           <header className="flex items-center justify-between gap-3 pb-2">
@@ -378,7 +378,7 @@ export function PharosWatchBotMiniAppClient() {
                   onClick={() => activateView(key)}
                   onKeyDown={handleTabKeyDown}
                   className={cn(
-                    "pharos-focus-ring min-h-11 whitespace-nowrap rounded-lg px-1 text-xs font-semibold capitalize transition-colors",
+                    "pharos-focus-ring min-h-11 min-w-0 break-words rounded-lg px-1 text-xs font-semibold capitalize leading-tight transition-colors",
                     view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/40",
                   )}
                 >

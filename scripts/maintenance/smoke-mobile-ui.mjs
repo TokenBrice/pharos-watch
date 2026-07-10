@@ -31,6 +31,7 @@ export const DEFAULT_MOBILE_UI_ROUTES = [
   "/coverage/",
   "/portfolio/",
   "/cemetery/",
+  "/pharoswatchbot/",
 ];
 
 export const DEFAULT_MOBILE_UI_VIEWPORTS = [

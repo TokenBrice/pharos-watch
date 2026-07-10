@@ -22,7 +22,13 @@ const MAX_OVERFLOW_WORKERS = 6;
 // Homepage tape now hits the unified events endpoint; the smoke check pings
 // it to verify the site-data lane is reachable from the page host.
 export const HOMEPAGE_RECENT_EVENTS_SMOKE_PATH = "/_site-data/events?limit=1";
-const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/freezewatch/", "/stability-index/"];
+const DEFAULT_LIVE_CANARY_ROUTES = [
+  "/yield/",
+  "/alt-pegs/",
+  "/freezewatch/",
+  "/stability-index/",
+  "/pharoswatchbot/",
+];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/alt-pegs/",
@@ -35,6 +41,7 @@ const OVERFLOW_ROUTE_DEFAULTS = [
   "/stability-index/",
   "/safety-scores/",
   "/api/",
+  "/pharoswatchbot/",
 ];
 
 function parseArgs(argv) {

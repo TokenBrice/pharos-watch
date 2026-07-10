@@ -196,8 +196,10 @@ describe("PharosWatchBotMiniAppPage", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs.map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
     for (const tab of tabs) {
-      expect(tab.className).toContain("whitespace-nowrap");
+      expect(tab.className).toContain("min-w-0");
+      expect(tab.className).toContain("break-words");
       expect(tab.className).toContain("text-xs");
+      expect(tab.className).not.toContain("whitespace-nowrap");
       expect(tab.className).not.toContain("truncate");
     }
     expect(screen.getByRole("button", { name: "Refresh session" }).className).toContain("size-11");

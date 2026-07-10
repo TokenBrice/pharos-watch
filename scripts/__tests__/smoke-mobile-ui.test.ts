@@ -22,6 +22,7 @@ describe("parseRouteList", () => {
     expect(DEFAULT_MOBILE_UI_ROUTES).toContain("/flows/");
     expect(DEFAULT_MOBILE_UI_ROUTES).toContain("/cemetery/");
     expect(DEFAULT_MOBILE_UI_ROUTES).toContain("/coverage/");
+    expect(DEFAULT_MOBILE_UI_ROUTES).toContain("/pharoswatchbot/");
   });
 
   it("normalizes route input and removes duplicates", () => {
