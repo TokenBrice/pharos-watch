@@ -85,6 +85,61 @@ describe("durable alert broker", () => {
     sqlite.close();
   });
 
+  it("rolls back incident and recovery transitions when their outbox insert is skipped or fails", async () => {
+    const { db, sqlite } = openDb();
+    sqlite.exec(`
+      CREATE TRIGGER fail_incident_delivery
+      BEFORE INSERT ON alert_broker_deliveries
+      WHEN NEW.transition = 'incident'
+      BEGIN
+        SELECT RAISE(IGNORE);
+      END
+    `);
+
+    await expect(reportAlertCondition(db, condition())).rejects.toThrow("CHECK constraint failed");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_conditions").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_deliveries").get()).toEqual({ count: 0 });
+
+    sqlite.exec("DROP TRIGGER fail_incident_delivery");
+    await expect(reportAlertCondition(db, condition())).resolves.toMatchObject({
+      state: "active",
+      transition: "incident",
+      deliveryState: "delivered",
+    });
+    sqlite.exec(`
+      CREATE TRIGGER fail_recovery_delivery
+      BEFORE INSERT ON alert_broker_deliveries
+      WHEN NEW.transition = 'recovery'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected recovery outbox failure');
+      END
+    `);
+
+    await expect(reportAlertCondition(db, condition({ active: false, nowSec: 1_010 })))
+      .rejects.toThrow("injected recovery outbox failure");
+    expect(sqlite
+      .prepare("SELECT state, episode, generation, last_transition FROM alert_broker_conditions")
+      .get()).toEqual({ state: "active", episode: 1, generation: 1, last_transition: "incident" });
+    expect(sqlite
+      .prepare("SELECT transition, episode FROM alert_broker_deliveries")
+      .all()).toEqual([{ transition: "incident", episode: 1 }]);
+
+    sqlite.exec("DROP TRIGGER fail_recovery_delivery");
+    await expect(reportAlertCondition(db, condition({ active: false, nowSec: 1_010 }))).resolves.toMatchObject({
+      state: "recovered",
+      transition: "recovery",
+      deliveryState: "delivered",
+    });
+    expect(sqlite
+      .prepare("SELECT transition, episode FROM alert_broker_deliveries ORDER BY transition")
+      .all()).toEqual([
+      { transition: "incident", episode: 1 },
+      { transition: "recovery", episode: 1 },
+    ]);
+    expect(sendAlert).toHaveBeenCalledTimes(2);
+    sqlite.close();
+  });
+
   it("permits a later identical incident after recovery under a new episode", async () => {
     const { db, sqlite } = openDb();
     await reportAlertCondition(db, condition());

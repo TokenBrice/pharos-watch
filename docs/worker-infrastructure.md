@@ -896,7 +896,7 @@ Primary-oracle implementation notes:
 
 **Files:** `worker/src/lib/alert-broker.ts`, `worker/src/lib/operational-alert.ts`, and transport-only `worker/src/lib/alerts.ts`.
 
-Scheduled producers report stable condition keys, fingerprints, severity, active/recovered observations, and bounded metadata. `alert_broker_conditions` generation-fences incident state; `alert_broker_deliveries` owns one incident and one recovery delivery per episode. The persisted `cooldown_until` survives recovery: a recurrence inside that window remains pending without opening another episode, while the first qualifying observation at or after expiry can emit the next incident. Delivery claims are leased, failures and missing webhook targets remain retryable/visible, and the five-minute lane drains due retries. Public and admin status use the same broker summary and classification floor.
+Scheduled producers report stable condition keys, fingerprints, severity, active/recovered observations, and bounded metadata. `alert_broker_conditions` generation-fences incident state; each transition mutation and its deterministic `alert_broker_deliveries` outbox row commit in one D1 batch, while the delivery uniqueness fence permits at most one incident and one recovery per episode. The persisted `cooldown_until` survives recovery: a recurrence inside that window remains pending without opening another episode, while the first qualifying observation at or after expiry can emit the next incident. Delivery claims are leased, failures and missing webhook targets remain retryable/visible, and the five-minute lane drains due retries. Public and admin status use the same broker summary and classification floor.
 
 Modes are operationally distinct:
 

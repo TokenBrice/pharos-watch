@@ -160,49 +160,102 @@ function persistedInitialDeliveryState(mode: PersistedAlertBrokerMode): AlertDel
   return "pending";
 }
 
-async function insertTransitionDelivery(
+interface TransitionDeliveryPlan {
+  id: string;
+  insert: D1PreparedStatement;
+  assertPresent: D1PreparedStatement;
+}
+
+function prepareTransitionDelivery(
   db: D1Database,
   input: {
     conditionKey: string;
     fingerprint: string;
+    generation: number;
     episode: number;
     transition: AlertBrokerTransition;
     mode: PersistedAlertBrokerMode;
+    conditionState: AlertConditionState;
     webhookUrl?: string | null;
     title: string;
     message: string;
-    metadataJson: string | null;
     nowSec: number;
   },
-): Promise<string> {
+): TransitionDeliveryPlan {
   const id = deliveryId(input.conditionKey, input.episode, input.transition);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO alert_broker_deliveries (
+  const exactTransitionWhere = `condition_key = ? AND generation = ? AND episode = ?
+    AND fingerprint = ? AND state = ? AND mode = ? AND last_transition = ?`;
+  const exactTransitionBindings = [
+    input.conditionKey,
+    input.generation,
+    input.episode,
+    input.fingerprint,
+    input.conditionState,
+    input.mode,
+    input.transition,
+  ];
+  const insert = db
+    .prepare(
+      `INSERT INTO alert_broker_deliveries (
            delivery_id, condition_key, fingerprint, episode, transition, state, mode, target_class,
            title, message, metadata_json, attempts, next_attempt_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-      )
-      .bind(
-        id,
-        input.conditionKey,
-        input.fingerprint,
-        input.episode,
-        input.transition,
-        persistedInitialDeliveryState(input.mode),
-        input.mode,
-        targetClass(input.webhookUrl),
-        input.title,
-        input.message,
-        input.metadataJson,
-        input.mode === "alert" ? input.nowSec : null,
-        input.nowSec,
-        input.nowSec,
-      )
-      .run(),
+         )
+         SELECT ?, condition_key, fingerprint, episode, ?, ?, mode, ?, ?, ?, metadata_json,
+                0, ?, ?, ?
+           FROM alert_broker_conditions
+          WHERE ${exactTransitionWhere}
+         ON CONFLICT(delivery_id) DO NOTHING`,
+    )
+    .bind(
+      id,
+      input.transition,
+      persistedInitialDeliveryState(input.mode),
+      targetClass(input.webhookUrl),
+      input.title,
+      input.message,
+      input.mode === "alert" ? input.nowSec : null,
+      input.nowSec,
+      input.nowSec,
+      ...exactTransitionBindings,
+    );
+  const assertPresent = db
+    .prepare(
+      `UPDATE alert_broker_conditions
+          SET state = '__missing_alert_delivery__'
+        WHERE ${exactTransitionWhere}
+          AND NOT EXISTS (
+            SELECT 1
+              FROM alert_broker_deliveries
+             WHERE delivery_id = ? AND condition_key = ? AND episode = ? AND transition = ?
+          )`,
+    )
+    .bind(
+      ...exactTransitionBindings,
+      id,
+      input.conditionKey,
+      input.episode,
+      input.transition,
+    );
+  return { id, insert, assertPresent };
+}
+
+async function runConditionMutation(
+  db: D1Database,
+  conditionMutation: D1PreparedStatement,
+  delivery: TransitionDeliveryPlan | null,
+): Promise<D1Result<unknown>> {
+  if (!delivery) {
+    return runWithOverloadRetry(() => conditionMutation.run());
+  }
+  // D1 batches are transactional. The final statement deliberately violates
+  // the condition-state CHECK if the exact transition lacks its outbox row,
+  // forcing the condition mutation to roll back instead of stranding it.
+  const results = await runWithOverloadRetry(() =>
+    db.batch([conditionMutation, delivery.insert, delivery.assertPresent]),
   );
-  return id;
+  const mutationResult = results[0];
+  if (!mutationResult) throw new Error("alert condition batch returned no mutation result");
+  return mutationResult;
 }
 
 async function loadDelivery(db: D1Database, id: string): Promise<AlertDeliveryRow | null> {
@@ -323,7 +376,11 @@ async function writeConditionObservation(
   mode: PersistedAlertBrokerMode,
   fingerprint: string,
   nowSec: number,
-): Promise<{ row: AlertConditionRow; transition: AlertBrokerTransition | null }> {
+): Promise<{
+  row: AlertConditionRow;
+  transition: AlertBrokerTransition | null;
+  deliveryId: string | null;
+}> {
   const minStreak = Math.max(1, Math.floor(input.minStreak ?? 1));
   const metadataJson = input.metadata ? JSON.stringify(input.metadata) : null;
 
@@ -333,42 +390,57 @@ async function writeConditionObservation(
       const streak = input.active ? 1 : 0;
       const state: AlertConditionState = input.active && streak >= minStreak ? "active" : input.active ? "pending" : "recovered";
       const transition: AlertBrokerTransition | null = state === "active" ? "incident" : null;
-      const inserted = await runWithOverloadRetry(() =>
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO alert_broker_conditions (
+      const episode = state === "active" ? 1 : 0;
+      const conditionInsert = db
+        .prepare(
+          `INSERT INTO alert_broker_conditions (
                condition_key, fingerprint, state, mode, severity, generation, episode, streak,
                first_observed_at, last_observed_at, activated_at, recovered_at, cooldown_until,
                title, message, recovery_title, recovery_message, metadata_json, last_transition, updated_at
-             ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(
-            input.conditionKey,
+             ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(condition_key) DO NOTHING`,
+        )
+        .bind(
+          input.conditionKey,
+          fingerprint,
+          state,
+          mode,
+          input.severity,
+          episode,
+          streak,
+          nowSec,
+          nowSec,
+          state === "active" ? nowSec : null,
+          state === "recovered" ? nowSec : null,
+          state === "active" ? nowSec + Math.max(0, input.cooldownSec ?? 0) : null,
+          input.title,
+          input.message,
+          input.recoveryTitle ?? null,
+          input.recoveryMessage ?? null,
+          metadataJson,
+          transition,
+          nowSec,
+        );
+      const delivery = transition
+        ? prepareTransitionDelivery(db, {
+            conditionKey: input.conditionKey,
             fingerprint,
-            state,
-            mode,
-            input.severity,
-            state === "active" ? 1 : 0,
-            streak,
-            nowSec,
-            nowSec,
-            state === "active" ? nowSec : null,
-            state === "recovered" ? nowSec : null,
-            state === "active" ? nowSec + Math.max(0, input.cooldownSec ?? 0) : null,
-            input.title,
-            input.message,
-            input.recoveryTitle ?? null,
-            input.recoveryMessage ?? null,
-            metadataJson,
+            generation: 1,
+            episode,
             transition,
+            mode,
+            conditionState: state,
+            webhookUrl: input.webhookUrl,
+            title: input.title,
+            message: input.message,
             nowSec,
-          )
-          .run(),
-      );
+          })
+        : null;
+      const inserted = await runConditionMutation(db, conditionInsert, delivery);
       if ((inserted.meta.changes ?? 0) === 1) {
         const row = await loadCondition(db, input.conditionKey);
         if (!row) throw new Error(`alert condition ${input.conditionKey} disappeared after insert`);
-        return { row, transition };
+        return { row, transition, deliveryId: delivery?.id ?? null };
       }
       continue;
     }
@@ -400,10 +472,9 @@ async function writeConditionObservation(
     }
 
     const effectiveFingerprint = input.active ? fingerprint : existing.fingerprint;
-    const result = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `UPDATE alert_broker_conditions
+    const conditionUpdate = db
+      .prepare(
+        `UPDATE alert_broker_conditions
               SET fingerprint = ?, state = ?, mode = ?, severity = ?, generation = generation + 1,
                   episode = CASE WHEN ? = 'incident' THEN episode + 1 ELSE episode END,
                   streak = ?, last_observed_at = ?,
@@ -413,38 +484,54 @@ async function writeConditionObservation(
                   title = ?, message = ?, recovery_title = ?, recovery_message = ?,
                   metadata_json = ?, last_transition = COALESCE(?, last_transition), updated_at = ?
             WHERE condition_key = ? AND generation = ?`,
-        )
-        .bind(
-          effectiveFingerprint,
-          state,
+      )
+      .bind(
+        effectiveFingerprint,
+        state,
+        mode,
+        input.severity,
+        transition,
+        nextStreak,
+        nowSec,
+        transition,
+        nowSec,
+        transition,
+        nowSec,
+        state,
+        transition,
+        nowSec + Math.max(0, input.cooldownSec ?? 0),
+        input.title,
+        input.message,
+        input.recoveryTitle ?? existing.recovery_title,
+        input.recoveryMessage ?? existing.recovery_message,
+        metadataJson,
+        transition,
+        nowSec,
+        input.conditionKey,
+        existing.generation,
+      );
+    const episode = existing.episode + (transition === "incident" ? 1 : 0);
+    const recovery = transition === "recovery";
+    const delivery = transition
+      ? prepareTransitionDelivery(db, {
+          conditionKey: input.conditionKey,
+          fingerprint: effectiveFingerprint,
+          generation: existing.generation + 1,
+          episode,
+          transition,
           mode,
-          input.severity,
-          transition,
-          nextStreak,
+          conditionState: state,
+          webhookUrl: input.webhookUrl,
+          title: recovery ? input.recoveryTitle ?? `${input.title} recovered` : input.title,
+          message: recovery ? input.recoveryMessage ?? "The condition has recovered." : input.message,
           nowSec,
-          transition,
-          nowSec,
-          transition,
-          nowSec,
-          state,
-          transition,
-          nowSec + Math.max(0, input.cooldownSec ?? 0),
-          input.title,
-          input.message,
-          input.recoveryTitle ?? existing.recovery_title,
-          input.recoveryMessage ?? existing.recovery_message,
-          metadataJson,
-          transition,
-          nowSec,
-          input.conditionKey,
-          existing.generation,
-        )
-        .run(),
-    );
+        })
+      : null;
+    const result = await runConditionMutation(db, conditionUpdate, delivery);
     if ((result.meta.changes ?? 0) !== 1) continue;
     const row = await loadCondition(db, input.conditionKey);
     if (!row) throw new Error(`alert condition ${input.conditionKey} disappeared after update`);
-    return { row, transition };
+    return { row, transition, deliveryId: delivery?.id ?? null };
   }
   throw new Error(`alert condition ${input.conditionKey} changed concurrently`);
 }
@@ -468,23 +555,7 @@ export async function reportAlertCondition(
   }
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const observation = await writeConditionObservation(db, input, mode, fingerprint, nowSec);
-  let id: string | null = null;
-  if (observation.transition) {
-    const recovery = observation.transition === "recovery";
-    id = await insertTransitionDelivery(db, {
-      conditionKey: input.conditionKey,
-      fingerprint: observation.row.fingerprint,
-      episode: observation.row.episode,
-      transition: observation.transition,
-      mode,
-      webhookUrl: input.webhookUrl,
-      title: recovery ? input.recoveryTitle ?? `${input.title} recovered` : input.title,
-      message: recovery ? input.recoveryMessage ?? "The condition has recovered." : input.message,
-      metadataJson: observation.row.metadata_json,
-      nowSec,
-    });
-  }
-  const deliveryState = await transitionDeliveryState(db, id, input.webhookUrl, nowSec);
+  const deliveryState = await transitionDeliveryState(db, observation.deliveryId, input.webhookUrl, nowSec);
   return {
     mode,
     conditionKey: input.conditionKey,
