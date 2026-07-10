@@ -99,6 +99,50 @@ describe("durable alert broker", () => {
     sqlite.close();
   });
 
+  it("suppresses recovery flaps until the persisted cooldown expires", async () => {
+    const { db, sqlite } = openDb();
+    await expect(reportAlertCondition(db, condition({ cooldownSec: 300 }))).resolves.toMatchObject({
+      state: "active",
+      transition: "incident",
+    });
+    await expect(reportAlertCondition(db, condition({
+      active: false,
+      cooldownSec: 300,
+      nowSec: 1_010,
+    }))).resolves.toMatchObject({
+      state: "recovered",
+      transition: "recovery",
+    });
+    await expect(reportAlertCondition(db, condition({ cooldownSec: 300, nowSec: 1_020 }))).resolves.toMatchObject({
+      state: "pending",
+      transition: null,
+      deliveryState: null,
+    });
+    await expect(reportAlertCondition(db, condition({ cooldownSec: 300, nowSec: 1_299 }))).resolves.toMatchObject({
+      state: "pending",
+      transition: null,
+      deliveryState: null,
+    });
+
+    const coolingDown = sqlite
+      .prepare("SELECT state, episode, cooldown_until FROM alert_broker_conditions WHERE condition_key = ?")
+      .get("cron:sync-live-reserves") as { state: string; episode: number; cooldown_until: number };
+    expect(coolingDown).toEqual({ state: "pending", episode: 1, cooldown_until: 1_300 });
+    expect(sendAlert).toHaveBeenCalledTimes(2);
+
+    await expect(reportAlertCondition(db, condition({ cooldownSec: 300, nowSec: 1_300 }))).resolves.toMatchObject({
+      state: "active",
+      transition: "incident",
+      deliveryState: "delivered",
+    });
+    const incidents = sqlite
+      .prepare("SELECT episode FROM alert_broker_deliveries WHERE transition = 'incident' ORDER BY episode")
+      .all() as Array<{ episode: number }>;
+    expect(incidents.map((row) => row.episode)).toEqual([1, 2]);
+    expect(sendAlert).toHaveBeenCalledTimes(3);
+    sqlite.close();
+  });
+
   it("keeps failed delivery retryable and claims it once", async () => {
     const { db, sqlite } = openDb();
     vi.mocked(sendAlert).mockResolvedValueOnce(false).mockResolvedValueOnce(true);

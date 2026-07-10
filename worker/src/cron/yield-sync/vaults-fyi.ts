@@ -126,14 +126,23 @@ function parseCreditLedger(value: string | null | undefined, bucket: string, now
     const reservationExpiresAt = typeof parsed.reservationExpiresAt === "number"
       ? Math.trunc(parsed.reservationExpiresAt)
       : null;
-    const reservationActive = reservationExpiresAt != null && reservationExpiresAt > nowSec;
+    const creditsReserved = typeof parsed.creditsReserved === "number" && Number.isFinite(parsed.creditsReserved)
+      ? Math.max(0, Math.trunc(parsed.creditsReserved))
+      : 0;
+    const reservationActive =
+      reservationExpiresAt != null
+      && reservationExpiresAt > nowSec
+      && typeof parsed.reservationId === "string";
+    // A crashed owner may have consumed any or all of its reserved credits
+    // before losing the chance to finalize. Once its reservation is no longer
+    // active, charge the full reservation conservatively. A successor CAS
+    // persists this folded value, while repeated reads of the unchanged row do
+    // not accumulate the charge again.
+    const expiredReservationCharge = !reservationActive ? creditsReserved : 0;
     return {
       generation,
-      creditsEstimated,
-      creditsReserved:
-        reservationActive && typeof parsed.creditsReserved === "number" && Number.isFinite(parsed.creditsReserved)
-          ? Math.max(0, Math.trunc(parsed.creditsReserved))
-          : 0,
+      creditsEstimated: creditsEstimated + expiredReservationCharge,
+      creditsReserved: reservationActive ? creditsReserved : 0,
       reservationId: reservationActive && typeof parsed.reservationId === "string" ? parsed.reservationId : null,
       reservationExpiresAt: reservationActive ? reservationExpiresAt : null,
     };

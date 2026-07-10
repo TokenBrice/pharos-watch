@@ -380,7 +380,19 @@ async function writeConditionObservation(
     if (input.active) {
       state = nextStreak >= minStreak ? "active" : "pending";
       if (state === "active" && (existing.state !== "active" || existing.fingerprint !== fingerprint)) {
-        transition = "incident";
+        const recurrenceCoolingDown =
+          existing.state !== "active"
+          && existing.last_transition === "recovery"
+          && existing.cooldown_until != null
+          && existing.cooldown_until > nowSec;
+        if (recurrenceCoolingDown) {
+          // Keep evidence that the condition recurred without opening a new
+          // episode. Pending state ensures the first qualifying observation
+          // at or after cooldown expiry can emit the delayed incident.
+          state = "pending";
+        } else {
+          transition = "incident";
+        }
       }
     } else {
       state = "recovered";

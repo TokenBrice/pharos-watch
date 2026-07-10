@@ -204,7 +204,7 @@ describe("fetchVaultsFyiSources", () => {
     expect(current).toMatchObject({ generation: 1, creditsEstimated: 0, creditsReserved: 12 });
   });
 
-  it("prevents an expired owner from overwriting a newer reservation", async () => {
+  it("charges an expired owner's reservation and prevents it from overwriting a successor", async () => {
     const { db } = sqliteLedger();
     const bucket = "2026-07";
     const firstAt = Date.parse("2026-07-01T00:25:00.000Z") / 1000;
@@ -214,6 +214,12 @@ describe("fetchVaultsFyiSources", () => {
 
     const secondAt = firstAt + 21 * 60;
     const afterExpiry = await readMonthlyCredits(db, bucket, secondAt);
+    expect(afterExpiry).toMatchObject({
+      generation: 1,
+      creditsEstimated: 12,
+      creditsReserved: 0,
+      reservationId: null,
+    });
     const second = await reserveMonthlyCredits(db, bucket, afterExpiry!, 10, secondAt);
     expect(second).not.toBeNull();
 
@@ -221,7 +227,7 @@ describe("fetchVaultsFyiSources", () => {
     const current = await readMonthlyCredits(db, bucket, secondAt);
     expect(current).toMatchObject({
       generation: 2,
-      creditsEstimated: 0,
+      creditsEstimated: 12,
       creditsReserved: 10,
       reservationId: second!.reservationId,
     });
