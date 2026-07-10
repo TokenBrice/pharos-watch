@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
 
 import {
@@ -31,6 +32,7 @@ import {
   WATCHER_TARGETS,
   type LoadScenarioResult,
   type SyntheticFixtureSummary,
+  type SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
 import { parseTelegramLoadTargets, printTelegramLoadReport } from "../lib/telegram-load-report";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -44,11 +46,32 @@ export type {
 
 type QueryPlanStatus = "ok" | "review" | "fail";
 
+/**
+ * Reviewed in-memory duration ceiling shared by the status read paths (TGB-043).
+ * Measured 2026-07-10 at the 5,000-watcher planning fixture: every budgeted
+ * query completes in under 10ms; the generous ceiling absorbs CI variance while
+ * still catching an accidental O(n^2) regression at planning scale.
+ */
+export const STATUS_PATH_MAX_DURATION_MS = 250;
+const STATUS_PATH_MEASUREMENT_RUNS = 3;
+
 interface QueryPlanRow {
   id: number;
   parent: number;
   notused: number;
   detail: string;
+}
+
+export interface StatusPathBudget {
+  /**
+   * Tables the reviewed plan fully scans. Their seeded row counts at the
+   * required planning target define the deterministic rows-read cost.
+   */
+  rowsReadTables: string[];
+  /** Reviewed maximum rows-read at the required planning target. */
+  maxRowsRead: number;
+  /** Reviewed maximum in-memory execution duration at the planning target. */
+  maxDurationMs: number;
 }
 
 export interface QueryPlanCheckDefinition {
@@ -58,6 +81,8 @@ export interface QueryPlanCheckDefinition {
   binds: Array<string | number | null>;
   requiredDetails?: string[];
   allowedFullScanTables?: string[];
+  /** TGB-043: reviewed rows-read/duration maxima for status read paths. */
+  budget?: StatusPathBudget;
   note?: string;
 }
 
@@ -68,6 +93,19 @@ export interface QueryPlanCheckResult {
   details: string[];
   missingRequiredDetails: string[];
   unexpectedFullScanTables: string[];
+  note?: string;
+}
+
+export interface StatusPathBudgetResult {
+  id: string;
+  category: QueryPlanCheckDefinition["category"];
+  status: "ok" | "fail";
+  targetActiveWatchers: number;
+  rowsRead: number;
+  maxRowsRead: number;
+  durationMs: number;
+  maxDurationMs: number;
+  seededRowCounts: Record<string, number>;
   note?: string;
 }
 
@@ -97,6 +135,7 @@ export interface TelegramLoadCheckReport {
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
   queryPlans: QueryPlanCheckResult[];
+  statusPathBudgets: StatusPathBudgetResult[];
 }
 /**
  * Required-target scenarios whose modeled per-invocation CPU exceeds the safety
@@ -324,7 +363,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            ) sub ON sub.chat_id = s.chat_id`,
       binds: [],
       allowedFullScanTables: ["s"],
-      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query.",
+      budget: {
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        maxRowsRead: 35_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
     },
     {
       id: "status-top-stablecoins",
@@ -341,7 +385,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
        LIMIT 5`,
       binds: [],
       allowedFullScanTables: ["telegram_subscriptions"],
-      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists.",
+      budget: {
+        rowsReadTables: ["telegram_subscriptions"],
+        maxRowsRead: 30_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists. Measured 2026-07-10 at the 5,000-watcher fixture: 28,334 rows read, ~5ms in-memory; no rollup justified yet.",
     },
     {
       id: "lifecycle-current-active-history",
@@ -359,7 +408,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            ORDER BY day ASC`,
       binds: [],
       allowedFullScanTables: ["s"],
-      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated.",
+      budget: {
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        maxRowsRead: 35_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
     },
   ];
 }
@@ -396,6 +450,133 @@ export function runQueryPlanChecks(migrationsDir?: string): QueryPlanCheckResult
   const db = createTelegramPlanDatabase(migrationsDir);
   try {
     return buildQueryPlanChecks().map((check) => runExplainQueryPlan(db, check));
+  } finally {
+    db.close();
+  }
+}
+
+const STATUS_PATH_FIXTURE_BASE_CREATED_AT = 1_735_689_600; // 2025-01-01T00:00:00Z
+const STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS = 180;
+
+/**
+ * Materializes the synthetic watcher fixture into the migrated plan database so
+ * status-path budgets measure real query cost at the planning target instead of
+ * empty-table plans. Created-at values are spread across distinct UTC days so
+ * the lifecycle fallback GROUP BY does representative work.
+ */
+function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixture): void {
+  const insertSubscriber = db.prepare(
+    `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, quiet_hours_enabled,
+       global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+       alert_snooze_until_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertSubscription = db.prepare(
+    `INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
+       alert_launch, alert_reserve, alert_snooze_until_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertPreset = db.prepare(
+    `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  db.exec("BEGIN");
+  try {
+    fixture.watchers.forEach((watcher, index) => {
+      const createdAt = STATUS_PATH_FIXTURE_BASE_CREATED_AT
+        + (index % STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS) * 86_400;
+      const snoozeUntil = createdAt + 999_999_999;
+      insertSubscriber.run(
+        watcher.chatId, createdAt, createdAt + 3_600, watcher.quietHours ? 1 : 0,
+        watcher.globals.dews ? 1 : 0, watcher.globals.depeg ? 1 : 0, watcher.globals.safety ? 1 : 0,
+        watcher.globals.launch ? 1 : 0, watcher.globals.reserve ? 1 : 0,
+        watcher.chatSnoozed ? snoozeUntil : null,
+      );
+      for (const subscription of watcher.directSubscriptions) {
+        insertSubscription.run(
+          watcher.chatId, subscription.stablecoinId,
+          subscription.flags.dews ? 1 : 0, subscription.flags.depeg ? 1 : 0, subscription.flags.safety ? 1 : 0,
+          subscription.flags.launch ? 1 : 0, subscription.flags.reserve ? 1 : 0,
+          subscription.snoozed ? snoozeUntil : null,
+        );
+      }
+      for (const preset of watcher.presetSubscriptions) {
+        insertPreset.run(
+          watcher.chatId, preset.presetId,
+          preset.flags.dews ? 1 : 0, preset.flags.depeg ? 1 : 0, preset.flags.safety ? 1 : 0,
+          createdAt, createdAt,
+        );
+      }
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function countTableRows(db: DatabaseSync, table: string): number {
+  const row = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get() as { n: number };
+  return row.n;
+}
+
+export function evaluateStatusPathBudget(
+  check: QueryPlanCheckDefinition,
+  budget: StatusPathBudget,
+  measurement: { rowsRead: number; durationMs: number; seededRowCounts: Record<string, number> },
+): StatusPathBudgetResult {
+  return {
+    id: check.id,
+    category: check.category,
+    status: measurement.rowsRead <= budget.maxRowsRead && measurement.durationMs <= budget.maxDurationMs
+      ? "ok"
+      : "fail",
+    targetActiveWatchers: REQUIRED_TARGET,
+    rowsRead: measurement.rowsRead,
+    maxRowsRead: budget.maxRowsRead,
+    durationMs: measurement.durationMs,
+    maxDurationMs: budget.maxDurationMs,
+    seededRowCounts: measurement.seededRowCounts,
+    note: check.note,
+  };
+}
+
+/**
+ * TGB-043: enforce reviewed rows-read/duration maxima for the pulse aggregate,
+ * top-coins status, and lifecycle-fallback read paths at the required planning
+ * target. Rows-read is deterministic (the reviewed plans fully scan their base
+ * tables, so seeded row counts are the exact per-refresh read cost); duration
+ * is the fastest of a few in-memory runs to dampen CI jitter.
+ */
+export function runStatusPathBudgetChecks(migrationsDir?: string): StatusPathBudgetResult[] {
+  const budgetedChecks = buildQueryPlanChecks().filter(
+    (check): check is QueryPlanCheckDefinition & { budget: StatusPathBudget } => check.budget != null,
+  );
+  if (budgetedChecks.length === 0) return [];
+
+  const db = createTelegramPlanDatabase(migrationsDir);
+  try {
+    seedStatusPathFixture(db, buildSyntheticTelegramFixture(REQUIRED_TARGET));
+    return budgetedChecks.map((check) => {
+      const seededRowCounts = Object.fromEntries(
+        check.budget.rowsReadTables.map((table) => [table, countTableRows(db, table)]),
+      );
+      const rowsRead = Object.values(seededRowCounts).reduce((sum, count) => sum + count, 0);
+      const statement = db.prepare(check.sql);
+      let durationMs = Number.POSITIVE_INFINITY;
+      for (let run = 0; run < STATUS_PATH_MEASUREMENT_RUNS; run += 1) {
+        const startedAt = performance.now();
+        statement.all(...(check.binds as never[]));
+        durationMs = Math.min(durationMs, performance.now() - startedAt);
+      }
+      return evaluateStatusPathBudget(check, check.budget, {
+        rowsRead,
+        durationMs: Math.round(durationMs * 10) / 10,
+        seededRowCounts,
+      });
+    });
   } finally {
     db.close();
   }
@@ -444,6 +625,7 @@ export function buildTelegramLoadCheckReport(
     fixtureSummaries: fixtures.map(summarizeFixture),
     scenarios,
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
+    statusPathBudgets: options.skipQueryPlans ? [] : runStatusPathBudgetChecks(options.migrationsDir),
   };
 }
 
@@ -462,6 +644,7 @@ function main(): void {
   }
 
   const failedPlans = report.queryPlans.filter((plan) => plan.status === "fail");
+  const failedStatusPathBudgets = report.statusPathBudgets.filter((budget) => budget.status === "fail");
   const normalTargetSloFailures = report.scenarios.filter(
     (scenario) =>
       enforceTargetSlo &&
@@ -483,6 +666,7 @@ function main(): void {
 
   if (
     failedPlans.length > 0 ||
+    failedStatusPathBudgets.length > 0 ||
     normalTargetSloFailures.length > 0 ||
     spikeTargetSloBreaches.length > 0 ||
     cpuBudgetBreaches.length > 0 ||
@@ -490,6 +674,13 @@ function main(): void {
   ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
+    }
+    if (failedStatusPathBudgets.length > 0) {
+      console.error(
+        `\n${failedStatusPathBudgets.length} status-path budget check(s) exceeded reviewed maxima: ${failedStatusPathBudgets
+          .map((budget) => `${budget.id} rowsRead ${budget.rowsRead.toLocaleString()}/${budget.maxRowsRead.toLocaleString()}, duration ${budget.durationMs}ms/${budget.maxDurationMs}ms`)
+          .join("; ")}.`,
+      );
     }
     if (normalTargetSloFailures.length > 0) {
       console.error(

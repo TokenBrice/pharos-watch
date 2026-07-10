@@ -57,4 +57,14 @@ export function printTelegramLoadReport(report: TelegramLoadCheckReport): void {
       console.log(`- ${plan.status.toUpperCase()} ${plan.id}: ${plan.details.join(" | ")}${suffix}`);
     }
   }
+
+  if (report.statusPathBudgets.length > 0) {
+    console.log("");
+    console.log("Status-path budgets (reviewed maxima at the planning target):");
+    for (const budget of report.statusPathBudgets) {
+      console.log(
+        `- ${budget.status.toUpperCase()} ${budget.id} @ ${budget.targetActiveWatchers.toLocaleString()} watchers: rows read ${budget.rowsRead.toLocaleString()}/${budget.maxRowsRead.toLocaleString()}, duration ${budget.durationMs}ms/${budget.maxDurationMs}ms`,
+      );
+    }
+  }
 }
