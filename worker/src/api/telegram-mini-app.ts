@@ -33,6 +33,13 @@ import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationAct
 import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-limit";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 import { logWorkerEvent } from "../lib/structured-log";
+import {
+  recordTelegramFirstFollow,
+  recordTelegramMiniAppAdoptionSession,
+  recordTelegramMiniAppFirstMutation,
+  telegramAdoptionDimensionsForMiniApp,
+} from "../lib/telegram-adoption-analytics";
+import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
@@ -299,6 +306,26 @@ function mutationEventType(operation: TelegramMiniAppOperation): TelegramUsageEv
   return "mini_app_mutation";
 }
 
+function adoptionMutationFeature(operation: TelegramMiniAppOperation): TelegramAdoptionFeature {
+  if (operation.kind === "recommended-setup") return "recommended_setup";
+  if (operation.kind === "set-coin" || operation.kind === "remove-coin") return "coin";
+  if (operation.kind === "set-quiet-hours") return "quiet_hours";
+  if (operation.kind === "set-snooze" || operation.kind === "set-coin-snooze" || operation.kind === "pause" || operation.kind === "clear-snooze") return "snooze";
+  if (operation.kind === "set-timezone") return "timezone";
+  if (operation.kind === "unsubscribe-all") return "unsubscribe";
+  if (operation.kind === "forget-me") return "forget";
+  if (operation.kind === "follow-preset" || operation.kind === "unfollow-preset") return "preset";
+  if (operation.kind === "set-global" || operation.kind === "set-global-depeg-step") return "global";
+  return "settings";
+}
+
+function firstFollowFeature(operation: TelegramMiniAppOperation): "direct" | "preset" | "global" | null {
+  if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") return "preset";
+  if (operation.kind === "set-coin") return "direct";
+  if (operation.kind === "set-global" && operation.enabled) return "global";
+  return null;
+}
+
 function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "not-private") return "Mini App mutations are private-chat only";
   if (err.code === "unknown-coin") return "Unknown stablecoin";
@@ -367,6 +394,12 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });
     }
     await recordMiniAppEvents(db, sessionEvents);
+    await recordTelegramMiniAppAdoptionSession(db, {
+      userId: auth.userId,
+      startParam: auth.startParam,
+      canMutate: auth.canMutatePrivateChat,
+      nowSec: unixNow(),
+    });
 
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
@@ -444,6 +477,21 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       outcome: "success",
       latencyMs: Date.now() - start,
     });
+    const adoptionNowSec = unixNow();
+    await recordTelegramMiniAppFirstMutation(db, {
+      userId: auth.userId,
+      feature: adoptionMutationFeature(parsed.operation),
+      nowSec: adoptionNowSec,
+    });
+    const followFeature = firstFollowFeature(parsed.operation);
+    if (followFeature) {
+      await recordTelegramFirstFollow(db, {
+        ...telegramAdoptionDimensionsForMiniApp(auth.startParam),
+        chatId: auth.userId,
+        feature: followFeature,
+        nowSec: adoptionNowSec,
+      });
+    }
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,

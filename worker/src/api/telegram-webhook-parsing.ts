@@ -14,6 +14,7 @@ import type {
   PendingDisambiguationRow,
   PendingSetupSentinel,
 } from "./telegram-webhook-shared";
+import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
 import { SETUP_PENDING_ACTION_TYPE, STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 
 function logPendingParseWarning(pending: PendingDisambiguationRow, field: string, error: unknown): void {
@@ -413,6 +414,7 @@ export type ParsedStartPayload =
   | { kind: "setup" }
   | { kind: "sample" }
   | { kind: "app" }
+  | { kind: "adoption"; token: string }
   | { kind: "subscribe"; args: string }
   | { kind: "status"; coinId: string }
   | { kind: "why"; coinId: string }
@@ -440,6 +442,8 @@ export function parseStartPayload(args: string): ParsedStartPayload {
   if (!TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(payload)) return { kind: "none" };
 
   const lower = payload.toLowerCase();
+  const adoption = parseTelegramAdoptionToken(lower);
+  if (adoption?.destination === "setup") return { kind: "adoption", token: adoption.token };
   if (lower === "setup") return { kind: "setup" };
   if (lower === "sample") return { kind: "sample" };
   if (lower === "app" || lower === "home") return { kind: "app" };

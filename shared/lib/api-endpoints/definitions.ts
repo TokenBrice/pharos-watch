@@ -1091,6 +1091,11 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   adminGet({
+    key: "admin-telegram-adoption-report",
+    path: API_PATHS.adminTelegramAdoptionReport(),
+    probeGroup: "admin",
+  }),
+  adminGet({
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
     probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),

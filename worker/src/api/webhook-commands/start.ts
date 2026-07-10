@@ -9,6 +9,10 @@ import { START_MESSAGE } from "../telegram-webhook-shared";
 import { isGroupAdminActor, isGroupChatType } from "../telegram-webhook-auth";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import type { WebhookCommandHandler } from "./context";
+import {
+  recordTelegramAdoptionEvent,
+  telegramAdoptionDimensionsForStart,
+} from "../../lib/telegram-adoption-analytics";
 import { handleSubscribe } from "./subscribe";
 import { handleSample } from "./sample";
 import { handleStatus } from "./status";
@@ -35,6 +39,13 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       outcome: "received",
     });
   }
+
+  const adoption = telegramAdoptionDimensionsForStart(args.trim().split(/\s+/, 1)[0] ?? "");
+  await recordTelegramAdoptionEvent(ctx.db, {
+    ...adoption,
+    nowSec: ctx.operationNowSec ?? Math.floor(Date.now() / 1_000),
+    stage: "bot_start",
+  });
 
   const payload = parseStartPayload(args);
   switch (payload.kind) {
@@ -84,6 +95,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       await handleSample(ctx, "");
       return;
     case "setup":
+    case "adoption":
     case "none":
       if (
         isGroupChatType(ctx.chatType) &&
@@ -96,6 +108,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       // and for group admins. Non-admin group members get the read-only start
       // message above.
       await sendWizardIntro(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId, {
+        adoptionToken: payload.kind === "adoption" ? payload.token : null,
         includeMiniAppButton: ctx.chatType === "private",
         beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
         planIntent: ctx.planIntent,

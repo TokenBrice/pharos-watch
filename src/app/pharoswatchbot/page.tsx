@@ -27,9 +27,11 @@ import {
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
 import { TelegramPulseBoard } from "./telegram-pulse-strip";
+import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
   MINI_APP_HOME_DEEP_LINK,
+  MINI_APP_SETUP_DEEP_LINK,
   MINI_APP_WATCHLIST_DEEP_LINK,
   RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
@@ -164,16 +166,16 @@ function SetupSection() {
           </ol>
           <div className="flex flex-wrap gap-2.5">
             <Button asChild size="sm" className="gap-2">
-              <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+              <TelegramAdoptionLink href={RECOMMENDED_SETUP_DEEP_LINK} placement="setup" target="_blank" rel="noopener noreferrer">
                 Use recommended setup
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
+              </TelegramAdoptionLink>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+              <TelegramAdoptionLink href={MINI_APP_SETUP_DEEP_LINK} placement="miniapp_setup" target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
                 Open Mini App
-              </a>
+              </TelegramAdoptionLink>
             </Button>
           </div>
           <details className="group border-t border-border/55 pt-3">
@@ -241,16 +243,16 @@ function MiniAppSection() {
           </details>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Button asChild size="sm" className="gap-2">
-              <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+              <TelegramAdoptionLink href={MINI_APP_HOME_DEEP_LINK} placement="miniapp_home" target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
                 Open Mini App
-              </a>
+              </TelegramAdoptionLink>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href={MINI_APP_WATCHLIST_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+              <TelegramAdoptionLink href={MINI_APP_WATCHLIST_DEEP_LINK} placement="miniapp_watchlist" target="_blank" rel="noopener noreferrer">
                 Open watchlist
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
+              </TelegramAdoptionLink>
             </Button>
           </div>
         </div>
@@ -508,8 +510,9 @@ export default function PharosWatchBotPage() {
               one preset; tune later.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">
-              <a
+              <TelegramAdoptionLink
                 href={SETUP_DEEP_LINK}
+                placement="hero"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pharoswatchbot-hero-primary pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors sm:px-6"
@@ -517,7 +520,7 @@ export default function PharosWatchBotPage() {
                 <Bot className="h-4 w-4" aria-hidden="true" />
                 Open Bot
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
+              </TelegramAdoptionLink>
               <Link
                 href="#alerts"
                 className="pharoswatchbot-hero-secondary pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors sm:px-6"

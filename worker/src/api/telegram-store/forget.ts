@@ -1,4 +1,4 @@
-import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { unixNow } from "./subscribers";
@@ -108,6 +108,7 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
   (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
+  (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [
@@ -461,7 +462,9 @@ export async function migrateTelegramChatId(
         consecutive_block_first_at,
         created_at,
         last_active_at,
-        preference_generation
+        preference_generation,
+        first_follow_at,
+        first_setup_completed_at
       )
       SELECT
         ?,
@@ -486,7 +489,9 @@ export async function migrateTelegramChatId(
         consecutive_block_first_at,
         created_at,
         last_active_at,
-        preference_generation + 1
+        preference_generation + 1,
+        first_follow_at,
+        first_setup_completed_at
       FROM telegram_subscribers
       WHERE chat_id = ?
       ON CONFLICT(chat_id) DO UPDATE SET
@@ -538,7 +543,17 @@ export async function migrateTelegramChatId(
         preference_generation = MAX(
           telegram_subscribers.preference_generation,
           excluded.preference_generation
-        ) + 1
+        ) + 1,
+        first_follow_at = CASE
+          WHEN telegram_subscribers.first_follow_at IS NULL THEN excluded.first_follow_at
+          WHEN excluded.first_follow_at IS NULL THEN telegram_subscribers.first_follow_at
+          ELSE MIN(telegram_subscribers.first_follow_at, excluded.first_follow_at)
+        END,
+        first_setup_completed_at = CASE
+          WHEN telegram_subscribers.first_setup_completed_at IS NULL THEN excluded.first_setup_completed_at
+          WHEN excluded.first_setup_completed_at IS NULL THEN telegram_subscribers.first_setup_completed_at
+          ELSE MIN(telegram_subscribers.first_setup_completed_at, excluded.first_setup_completed_at)
+        END
     `).bind(newChatId, oldChatId),
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),

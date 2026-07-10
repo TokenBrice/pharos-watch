@@ -5,6 +5,7 @@
  */
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramFirstFollow } from "../../lib/telegram-adoption-analytics";
 import {
   type ResolvedCoin,
   type TickerResolutionScope,
@@ -197,6 +198,13 @@ const completionHandlers: CompletionHandlerMap = {
       });
       confirmActionMutation(context, operation);
     }
+    await recordTelegramFirstFollow(context.db, {
+      campaign: "organic",
+      placement: "unknown",
+      chatId: context.chatId,
+      feature: presetIds.length > 0 ? "preset" : "direct",
+      nowSec: context.operationNowSec ?? Math.floor(Date.now() / 1_000),
+    });
     if (presetIds.length > 0) {
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_follow",

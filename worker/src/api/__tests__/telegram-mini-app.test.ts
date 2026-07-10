@@ -248,8 +248,9 @@ describe("handleTelegramMiniAppSession", () => {
     const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(batchSpy).toHaveBeenCalledTimes(1);
-    expect(batchSpy.mock.calls[0]?.[0]).toHaveLength(4);
+    expect(batchSpy).toHaveBeenCalledTimes(2);
+    expect(batchSpy.mock.calls[0]?.[0]).toHaveLength(2);
+    expect(batchSpy.mock.calls[1]?.[0]).toHaveLength(4);
     const history = db.getHistory();
     expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
   });

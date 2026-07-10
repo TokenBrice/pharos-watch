@@ -9,6 +9,10 @@ import {
   type TelegramProcessedUpdateBacklog,
 } from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
+import {
+  TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
+  TELEGRAM_ADOPTION_SESSION_TTL_SEC,
+} from "../lib/telegram-adoption-analytics";
 
 const DAY_SEC = 24 * 60 * 60;
 const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;
@@ -245,6 +249,30 @@ export async function runTelegramRetentionCleanup(
   );
   throwIfAborted(signal);
 
+  const adoptionDaily = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_adoption_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
+    cutoffDayString,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const adoptionRetention = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_adoption_retention_daily WHERE measurement_day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_retention_daily WHERE measurement_day < ? ORDER BY measurement_day ASC, rowid ASC LIMIT ?)",
+    cutoffDayString,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const adoptionIngressQuota = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_adoption_ingress_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_ingress_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
+    nowSec - 2 * DAY_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
   const diagnostics = await deleteOlderThanCapped(
     db,
     "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
@@ -264,6 +292,14 @@ export async function runTelegramRetentionCleanup(
   const miniAppMutationBurstCache = await pruneTelegramMiniAppMutationBurstCache(
     db,
     nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const miniAppAdoptionSessionCache = await deleteCachePrefixOlderThanCapped(
+    db,
+    TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
+    nowSec - TELEGRAM_ADOPTION_SESSION_TTL_SEC,
     signal,
   );
   throwIfAborted(signal);
@@ -319,9 +355,13 @@ export async function runTelegramRetentionCleanup(
     sourceEvents.pruned +
     usageDaily.pruned +
     watcherLifecycle.pruned +
+    adoptionDaily.pruned +
+    adoptionRetention.pruned +
+    adoptionIngressQuota.pruned +
     diagnostics.pruned +
     commandCooldownCache.pruned +
     miniAppMutationBurstCache.pruned +
+    miniAppAdoptionSessionCache.pruned +
     commandFloodCache.pruned +
     chatMemberCache.pruned +
     chatAdminsCache.pruned +
@@ -343,9 +383,13 @@ export async function runTelegramRetentionCleanup(
       sourceEventsPruned: sourceEvents.pruned,
       usageDailyPruned: usageDaily.pruned,
       watcherLifecyclePruned: watcherLifecycle.pruned,
+      adoptionDailyPruned: adoptionDaily.pruned,
+      adoptionRetentionPruned: adoptionRetention.pruned,
+      adoptionIngressQuotaPruned: adoptionIngressQuota.pruned,
       diagnosticsPruned: diagnostics.pruned,
       commandCooldownCachePruned: commandCooldownCache.pruned,
       miniAppMutationBurstCachePruned: miniAppMutationBurstCache.pruned,
+      miniAppAdoptionSessionCachePruned: miniAppAdoptionSessionCache.pruned,
       commandFloodCachePruned: commandFloodCache.pruned,
       chatMemberCachePruned: chatMemberCache.pruned,
       chatAdminsCachePruned: chatAdminsCache.pruned,
@@ -378,9 +422,13 @@ export async function runTelegramRetentionCleanup(
         sourceEvents: sourceEvents.cappedAtLimit,
         usageDaily: usageDaily.cappedAtLimit,
         watcherLifecycle: watcherLifecycle.cappedAtLimit,
+        adoptionDaily: adoptionDaily.cappedAtLimit,
+        adoptionRetention: adoptionRetention.cappedAtLimit,
+        adoptionIngressQuota: adoptionIngressQuota.cappedAtLimit,
         diagnostics: diagnostics.cappedAtLimit,
         commandCooldownCache: commandCooldownCache.cappedAtLimit,
         miniAppMutationBurstCache: miniAppMutationBurstCache.cappedAtLimit,
+        miniAppAdoptionSessionCache: miniAppAdoptionSessionCache.cappedAtLimit,
         commandFloodCache: commandFloodCache.cappedAtLimit,
         chatMemberCache: chatMemberCache.cappedAtLimit,
         chatAdminsCache: chatAdminsCache.cappedAtLimit,
@@ -391,8 +439,12 @@ export async function runTelegramRetentionCleanup(
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+        adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+        adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+        adoptionIngressQuota: 2,
         chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
         shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
+        miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
         reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
         processedUpdates: 7,
       },

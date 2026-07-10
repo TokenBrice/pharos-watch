@@ -12,6 +12,12 @@ import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type Inli
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
+import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
+import {
+  recordTelegramFirstFollow,
+  recordTelegramFirstSetupComplete,
+  telegramAdoptionDimensionsForStart,
+} from "../lib/telegram-adoption-analytics";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
@@ -174,6 +180,7 @@ async function persistSetupState(
     step: state.step,
     alertTypes: state.alertTypes,
     target: state.target,
+    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
   };
   return persistPendingDisambiguationRow(db, {
     chatId,
@@ -231,7 +238,11 @@ export function parseSetupState(
       target = { kind: "ticker", coinId: rawTarget.coinId, symbol: rawTarget.symbol };
     }
   }
-  return { step, alertTypes, target, initiatorUserId };
+  const adoptionToken = typeof record.adoptionToken === "string"
+    && parseTelegramAdoptionToken(record.adoptionToken)?.destination === "setup"
+    ? record.adoptionToken
+    : null;
+  return { step, alertTypes, target, initiatorUserId, adoptionToken };
 }
 
 export async function sendWizardIntro(
@@ -240,6 +251,7 @@ export async function sendWizardIntro(
   chatId: string,
   initiatorUserId: string | null,
   options: {
+    adoptionToken?: string | null;
     includeMiniAppButton?: boolean;
     beforeIrreversibleEffect?: (kind: string) => Promise<void>;
     planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
@@ -267,6 +279,9 @@ export async function sendWizardIntro(
     alertTypes: [],
     target: null,
     initiatorUserId,
+    adoptionToken: parseTelegramAdoptionToken(options.adoptionToken)?.destination === "setup"
+      ? options.adoptionToken
+      : null,
   };
   await options.planIntent?.(createTelegramWebhookIntent("command:start", {
     stage: "setup-intro",
@@ -303,11 +318,33 @@ interface CallbackContext {
   wasMutationApplied?: boolean;
 }
 
+async function recordSetupAdoptionMilestones(
+  context: CallbackContext,
+  state: SetupWizardState,
+  feature: "direct" | "preset" | "global",
+): Promise<void> {
+  const nowSec = unixNow();
+  const dimensions = telegramAdoptionDimensionsForStart(state.adoptionToken);
+  await recordTelegramFirstSetupComplete(context.db, {
+    ...dimensions,
+    chatId: context.chatId,
+    feature,
+    nowSec,
+  });
+  await recordTelegramFirstFollow(context.db, {
+    ...dimensions,
+    chatId: context.chatId,
+    feature,
+    nowSec,
+  });
+}
+
 function setupIntentState(state: SetupWizardState): Record<string, unknown> {
   return {
     step: state.step,
     alertTypes: [...state.alertTypes],
     target: state.target,
+    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
   };
 }
 
@@ -623,6 +660,7 @@ export async function handleSetupConfirm(
       });
       if (operationStatements) context.confirmAtomicMutationApplied?.();
     }
+    await recordSetupAdoptionMilestones(context, state, "global");
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -660,6 +698,7 @@ export async function handleSetupConfirm(
       });
       if (operationStatements) context.confirmAtomicMutationApplied?.();
     }
+    await recordSetupAdoptionMilestones(context, state, "preset");
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -694,6 +733,7 @@ export async function handleSetupConfirm(
     });
     if (operationStatements) context.confirmAtomicMutationApplied?.();
   }
+  await recordSetupAdoptionMilestones(context, state, "direct");
   await recordTelegramUsageEvent(context.db, {
     eventType: "setup_complete",
     sourceCategory: "custom",

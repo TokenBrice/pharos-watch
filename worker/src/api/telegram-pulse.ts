@@ -20,6 +20,10 @@ import {
   loadTelegramMiniAppDailyAggregate,
   utcDayFromUnixSeconds,
 } from "../lib/status/telegram-bot-stats";
+import {
+  loadTelegramFirstMutationP50,
+  refreshTelegramAdoptionRetention,
+} from "../lib/telegram-adoption-analytics";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
@@ -326,9 +330,10 @@ async function buildTelegramPulseSnapshot(
         miniAppMutationsToday: reusablePulse.miniAppMutationsToday,
         miniAppDeniedToday: reusablePulse.miniAppDeniedToday,
         miniAppReplayClaimsToday: reusablePulse.miniAppReplayClaimsToday,
+        miniAppOpenToFirstMutationP50Sec: reusablePulse.miniAppOpenToFirstMutationP50Sec,
       }
     : await (async () => {
-        const [topRows, snapshotHistory, miniAppDailyAggregate, fallbackHistory] = await Promise.all([
+        const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation, fallbackHistory] = await Promise.all([
           loadTelegramTopFollowedCoins(db, 5).catch((error) => {
             console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
             unavailableFields.add("topCoins");
@@ -340,6 +345,11 @@ async function buildTelegramPulseSnapshot(
             unavailableFields.add("miniAppDailyAggregate");
             return null;
           }),
+          loadTelegramFirstMutationP50(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
+            console.warn("[telegram-pulse] mini-app first-mutation latency unavailable:", error);
+            unavailableFields.add("miniAppOpenToFirstMutationP50Sec");
+            return null;
+          }),
           loadFallbackWatcherHistory(db).catch((error) => {
             console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
             unavailableFields.add("watcherHistory");
@@ -347,6 +357,9 @@ async function buildTelegramPulseSnapshot(
           }),
         ]);
         const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
+        if (miniAppFirstMutation && shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)) {
+          suppressedFields.add("miniAppOpenToFirstMutationP50Sec");
+        }
         return {
           topCoins: topRows.map(
             (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
@@ -367,6 +380,10 @@ async function buildTelegramPulseSnapshot(
           miniAppReplayClaimsToday: miniAppDailyAggregate
             ? miniAppDailyAggregate.replayClaimed
             : null,
+          miniAppOpenToFirstMutationP50Sec: miniAppFirstMutation == null
+            || shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)
+            ? null
+            : miniAppFirstMutation.p50Sec,
         };
       })();
   if (reusablePulse) {
@@ -399,9 +416,7 @@ async function buildTelegramPulseSnapshot(
     miniAppMutationsToday: heavySections.miniAppMutationsToday,
     miniAppDeniedToday: heavySections.miniAppDeniedToday,
     miniAppReplayClaimsToday: heavySections.miniAppReplayClaimsToday,
-    // P50 stays null until Wave 6 (T-64) wires bucketed session→first-mutation
-    // latency through `telegram_usage_daily.latency_bucket`.
-    miniAppOpenToFirstMutationP50Sec: null,
+    miniAppOpenToFirstMutationP50Sec: heavySections.miniAppOpenToFirstMutationP50Sec,
     currentSnapshotAt: currentSnapshot.snapshotAt,
     lifecycleHistoryUpdatedAt: heavySections.lifecycleHistoryUpdatedAt,
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,
@@ -450,6 +465,13 @@ export async function publishTelegramPulseSnapshotWithOutcome(
     } catch (error) {
       throwIfAborted(options.signal);
       markerError = toErrorMessage(error);
+    }
+    try {
+      throwIfAborted(options.signal);
+      await refreshTelegramAdoptionRetention(db, nowSec);
+    } catch (error) {
+      throwIfAborted(options.signal);
+      console.warn("[telegram-adoption] retention refresh failed:", toErrorMessage(error));
     }
   }
 

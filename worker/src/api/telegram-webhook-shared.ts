@@ -204,6 +204,7 @@ export interface SetupWizardState {
   alertTypes: string[];
   target: SetupWizardTarget | null;
   initiatorUserId: string | null;
+  adoptionToken?: string | null;
 }
 
 export const SETUP_PENDING_ACTION_TYPE = "setup-step";
