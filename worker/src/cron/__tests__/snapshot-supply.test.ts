@@ -118,7 +118,13 @@ describe("snapshotSupply", () => {
         rows: [],
         first: {
           key: "snapshot-supply:last-write",
-          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          value: JSON.stringify({
+            snapshotDate: todaySnapshotDate,
+            coverageVersion: 1,
+            expectedActiveCount: 2,
+            accountedActiveCount: 2,
+            writtenRows: 2,
+          }),
           updated_at: slotStartedAt - 60,
         },
       },
@@ -201,7 +207,13 @@ describe("snapshotSupply", () => {
         rows: [],
         first: {
           key: "snapshot-supply:last-write",
-          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          value: JSON.stringify({
+            snapshotDate: todaySnapshotDate,
+            coverageVersion: 1,
+            expectedActiveCount: 2,
+            accountedActiveCount: 2,
+            writtenRows: 2,
+          }),
           updated_at: freshUpdatedAt,
         },
       },
@@ -212,6 +224,49 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "already_written_today" });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
+  it("retries a same-day legacy marker that cannot prove exact coverage", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const todaySnapshotDate = Math.floor(Date.UTC(2025, 5, 15) / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.itemCount).toBe(2);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toHaveLength(2);
+    const markerWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "snapshot-supply:last-write"
+    );
+    expect(JSON.parse(String(markerWrite?.binds[1]))).toMatchObject({
+      snapshotDate: todaySnapshotDate,
+      coverageVersion: 1,
+      expectedActiveCount: 2,
+      accountedActiveCount: 2,
+      writtenRows: 2,
+    });
   });
 
   it("writes after UTC midnight even when the previous write is under 20 hours old", async () => {
@@ -273,5 +328,36 @@ describe("snapshotSupply", () => {
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
+  });
+
+  it("leaves the day retryable when the snapshot batch fails", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+      },
+      {
+        match: "INSERT OR REPLACE INTO supply_history",
+        rows: [],
+        throwError: new Error("partial batch failure"),
+      },
+    ]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "db_write_failed" });
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "snapshot-supply:last-write"
+    )).toBe(false);
   });
 });

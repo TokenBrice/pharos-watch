@@ -356,6 +356,24 @@ vi.mock("../../lib/alerts", () => ({
   sendAlert: vi.fn(async () => true),
 }));
 
+// Coverage completeness is exercised in stablecoin-publication-coverage.test.ts.
+// This suite isolates pricing/publication mechanics with intentionally partial fixtures.
+vi.mock("../../lib/stablecoin-publication-coverage", () => ({
+  evaluateStablecoinPublicationCoverage: (ids: Iterable<string>) => {
+    const published = [...new Set(ids)];
+    return {
+      complete: true,
+      expectedActiveCount: published.length,
+      presentActiveCount: published.length,
+      waivedActiveCount: 0,
+      missingActiveIds: [],
+      waivedActiveIds: [],
+      expiredWaiverIds: [],
+      invalidWaiverIds: [],
+    };
+  },
+}));
+
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";

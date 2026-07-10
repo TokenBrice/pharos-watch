@@ -1,7 +1,8 @@
-import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { REPORT_CARD_CACHE_GENERATION, REPORT_CARD_CACHE_MAX_AGE_MS, loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
+import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
@@ -117,7 +118,6 @@ const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 90 * 24 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
-const STABLECOINS_ACTIVE_MIN_RATIO = 0.95;
 
 export function normalizeWorkerCanaryMode(value: string | undefined): WorkerCanaryMode {
   const normalized = value?.trim().toLowerCase();
@@ -174,7 +174,6 @@ function worstSeverity(results: readonly Pick<CanaryCheckResult, "severity">[]):
 async function checkStablecoinsCacheActiveCount(db: D1Database) {
   const cache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   const expectedActiveCount = ACTIVE_IDS.size;
-  const minimumActiveCount = Math.floor(expectedActiveCount * STABLECOINS_ACTIVE_MIN_RATIO);
   if (!hasUsableStablecoinsPayload(cache)) {
     return {
       status: "error" as const,
@@ -182,7 +181,6 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
       error: `stablecoins cache ${cache.reason}`,
       metadata: {
         expectedActiveCount,
-        minimumActiveCount,
         updatedAt: cache.updatedAt,
         reason: cache.reason,
       },
@@ -190,25 +188,25 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
   }
 
   const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => asset.id));
-  const activeCount = [...ACTIVE_IDS].filter((id) => cachedIds.has(id)).length;
-  const missingExamples = ACTIVE_STABLECOINS
-    .filter((coin) => !cachedIds.has(coin.id))
-    .slice(0, 12)
-    .map((coin) => coin.id);
+  const coverage = evaluateStablecoinPublicationCoverage(cachedIds);
+  const activeCount = coverage.presentActiveCount;
   const metadata = {
     activeCount,
     expectedActiveCount,
-    minimumActiveCount,
     cachedAssetCount: cache.payload.peggedAssets.length,
     updatedAt: cache.updatedAt,
-    missingExamples,
+    missingActiveIds: coverage.missingActiveIds,
+    waivedActiveIds: coverage.waivedActiveIds,
+    expiredWaiverIds: coverage.expiredWaiverIds,
     cacheKind: cache.kind,
   };
-  if (activeCount < minimumActiveCount) {
+  if (!coverage.complete) {
     return {
       status: "degraded" as const,
       severity: "warning" as const,
-      error: `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}`,
+      error:
+        `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}; ` +
+        `missing=${coverage.missingActiveIds.join(",")}`,
       metadata,
     };
   }
@@ -535,7 +533,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "stablecoins-cache-active-count",
     label: "Stablecoins cache active count",
-    description: "The stablecoins cache contains nearly all active registry assets.",
+    description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
     run: checkStablecoinsCacheActiveCount,
   },
   {

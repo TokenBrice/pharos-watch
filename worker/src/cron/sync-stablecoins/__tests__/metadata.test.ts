@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildPricingSourceAuditReport } from "../metadata";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
 import type { PeggedAsset } from "../enrich-prices";
 
 describe("stablecoins pricing metadata", () => {
@@ -81,5 +82,44 @@ describe("stablecoins pricing metadata", () => {
       },
     });
     expect(report.assetsWithoutIndependentHardSource).toEqual(["cached", "low", "search"]);
+  });
+
+  it("keeps persisted metadata below 64 KiB without serializing deduped assets", () => {
+    const sentinel = "full-asset-payload-must-not-be-persisted";
+    const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
+      id: stablecoin.id,
+      name: stablecoin.name,
+      symbol: stablecoin.symbol,
+      price: 1,
+      priceSource: "defillama-list",
+      priceConfidence: "single-source" as const,
+      circulating: { peggedUSD: 1 },
+      diagnosticSentinel: sentinel,
+    })) as PeggedAsset[];
+    const result = buildStablecoinsSyncResult({
+      assets,
+      rawAssetCount: assets.length,
+      droppedMalformedAssets: 0,
+      canonicalDeduplication: {
+        dedupedAssets: assets,
+        duplicateRows: 1,
+        affectedIds: assets.map((asset) => asset.id),
+      },
+      enrichStats: { oversizedDiagnostics: Array.from({ length: 500 }, (_, index) => ({ index, text: "x".repeat(1_000) })) },
+      priceValidationStats: { rejected: [] },
+      providerDiagnostics: [],
+      rejectedCount: 0,
+      stalenessWarning: false,
+      stalenessCheckFailed: false,
+      gtProbe: { updatedCount: 0, stats: {} as never },
+      depegErrorCount: 0,
+      depegErrors: [],
+      syncStartSec: 1_777_000_000,
+    });
+
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    expect(result.metadata).not.toContain(sentinel);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.canonicalDeduplication).not.toHaveProperty("dedupedAssets");
   });
 });

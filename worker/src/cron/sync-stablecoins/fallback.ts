@@ -18,6 +18,7 @@ import {
   runFallbackDepegFollowThrough,
 } from "./fallback-publish";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -139,9 +140,13 @@ export async function syncViaCoingeckoFallback(
   });
   if (isFallbackCronResult(depegResult)) return depegResult;
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    assets.map((asset) => String(asset.id)),
+    syncStartSec,
+  );
 
   const result: CronResult = {
-    status: depegErrorCount > 0 || stalenessCheckFailed ? "degraded" : "ok",
+    status: depegErrorCount > 0 || stalenessCheckFailed || !publicationCoverage.complete ? "degraded" : "ok",
     itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: assets.length,
@@ -168,10 +173,11 @@ export async function syncViaCoingeckoFallback(
       cacheKey: cacheResult.cacheKey,
       syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
+      activePublicationCoverage: publicationCoverage,
     }, {
       cacheWriteMode: "published",
       capabilities: {
-        stablecoinsCache: true,
+        stablecoinsCache: publicationCoverage.complete,
         depegPipeline: depegErrorCount === 0,
       },
     }),

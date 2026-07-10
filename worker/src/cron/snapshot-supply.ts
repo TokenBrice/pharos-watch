@@ -1,6 +1,7 @@
 import { batchExecute } from "../lib/db";
 import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -9,11 +10,10 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { setCache } from "../lib/db-cache";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 import { startOfUtcDaySec } from "../lib/time-constants";
+import { evaluateStablecoinPublicationCoverage } from "../lib/stablecoin-publication-coverage";
 
 const CACHE_MAX_AGE_SEC = 1200;
 const CACHE_DEGRADED_AGE_SEC = 600;
-/** Minimum fraction of tracked coins that must have valid data; below this the snapshot is blocked. */
-const MIN_SNAPSHOT_COVERAGE_FRACTION = 0.8;
 
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
@@ -83,7 +83,7 @@ export async function snapshotSupply(
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
   ) {
-    if (lastWrite?.snapshotDate === snapshotDate) {
+    if (lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified) {
       return buildAlreadyWrittenBeforeFreshnessGateResult({
         snapshotDate,
         cacheUpdatedAt: stablecoinsCache.updatedAt,
@@ -112,11 +112,16 @@ export async function snapshotSupply(
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
-  if (lastWrite?.snapshotDate === snapshotDate) {
+  if (lastWrite?.snapshotDate === snapshotDate && lastWrite.exactCoverageVerified) {
     return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
   }
 
   const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
+  const requiredActiveIds = PSI_ELIGIBLE_STABLECOINS
+    .map((stablecoin) => stablecoin.id)
+    .filter((id) => ACTIVE_IDS.has(id));
+  const cachedIds = new Set(stablecoinsCache.payload.peggedAssets.map((asset) => asset.id));
+  const validSnapshotIds = new Set<string>();
 
   const stmts: D1PreparedStatement[] = [];
 
@@ -127,6 +132,7 @@ export async function snapshotSupply(
     if (!circ) continue;
     const circulatingUsd = sumPegBuckets(circ);
     if (circulatingUsd <= 0) continue;
+    validSnapshotIds.add(asset.id);
 
     const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
 
@@ -137,16 +143,38 @@ export async function snapshotSupply(
     );
   }
 
-  const expectedCount = trackedIds.size;
-  if (stmts.length < expectedCount * MIN_SNAPSHOT_COVERAGE_FRACTION) {
-    console.warn(`[snapshot-supply] Only ${stmts.length}/${expectedCount} coins have valid data — possible upstream issue`);
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    validSnapshotIds,
+    undefined,
+    undefined,
+    requiredActiveIds,
+  );
+  if (!publicationCoverage.complete) {
+    const cacheCoverage = evaluateStablecoinPublicationCoverage(
+      cachedIds,
+      undefined,
+      undefined,
+      requiredActiveIds,
+    );
+    const invalidSupplyIds = publicationCoverage.missingActiveIds.filter(
+      (id) => cachedIds.has(id),
+    );
+    console.warn(
+      `[snapshot-supply] Exact active coverage failed: ` +
+      `${publicationCoverage.presentActiveCount}/${publicationCoverage.expectedActiveCount}; ` +
+      `missing=${publicationCoverage.missingActiveIds.slice(0, 20).join(",")}`,
+    );
     return {
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "partial_snapshot_blocked",
-        validRows: stmts.length,
-        expectedCount,
+        validRows: publicationCoverage.presentActiveCount,
+        expectedCount: publicationCoverage.expectedActiveCount,
+        missingActiveIds: publicationCoverage.missingActiveIds,
+        missingCacheActiveIds: cacheCoverage.missingActiveIds,
+        invalidSupplyIds,
+        waivedActiveIds: publicationCoverage.waivedActiveIds,
       }),
     };
   }
@@ -156,7 +184,14 @@ export async function snapshotSupply(
       throwIfAborted(signal);
       await batchExecute(db, stmts, { signal });
       throwIfAborted(signal);
-      await setCache(db, "snapshot-supply:last-write", JSON.stringify({ snapshotDate }));
+      await setCache(db, "snapshot-supply:last-write", JSON.stringify({
+        snapshotDate,
+        coverageVersion: 1,
+        expectedActiveCount: publicationCoverage.expectedActiveCount,
+        accountedActiveCount:
+          publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
+        writtenRows: stmts.length,
+      }));
     } catch (err) {
       rethrowIfAborted(err, signal);
       recordCronFailure("snapshot-supply", err, { metadata: { stage: "batchExecute" } });

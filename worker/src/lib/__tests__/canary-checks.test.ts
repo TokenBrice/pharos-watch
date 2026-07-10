@@ -51,6 +51,7 @@ function healthyD1(
     retainedOlderPublishedRows?: number;
     unpublishedRows?: number;
     generationCount?: number;
+    stablecoinsActiveCount?: number;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -99,7 +100,12 @@ function healthyD1(
     {
       match: "FROM cache WHERE key = ?",
       rows: [
-        { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        {
+          key: "stablecoins",
+          value: stablecoinsPayload(dex.stablecoinsActiveCount),
+          updatedAt: NOW - 60,
+          updated_at: NOW - 60,
+        },
         { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
       ],
     },
@@ -149,6 +155,27 @@ describe("worker data invariant canaries", () => {
       worstStatus: "ok",
       worstSeverity: "info",
     });
+  });
+
+  it("degrades and names even one missing active stablecoin", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - 1 }),
+      { observedAt: NOW, mode: "status" },
+    );
+    const check = summary.results.find((result) => result.checkId === "stablecoins-cache-active-count");
+
+    expect(check).toMatchObject({
+      status: "degraded",
+      severity: "warning",
+      metadata: expect.objectContaining({
+        activeCount: ACTIVE_IDS.size - 1,
+        expectedActiveCount: ACTIVE_IDS.size,
+      }),
+    });
+    expect((check?.metadata?.missingActiveIds as string[])).toHaveLength(1);
+    expect(check?.error).toContain((check?.metadata?.missingActiveIds as string[])[0]!);
   });
 
   it("accepts retained DEX rows outside the latest published generation", async () => {
@@ -319,7 +346,7 @@ describe("worker data invariant canaries", () => {
               duration_ms: 5,
               metadata_json: JSON.stringify({
                 label: "Stablecoins cache active count",
-                description: "The stablecoins cache contains nearly all active registry assets.",
+                description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
                 activeCount: ACTIVE_IDS.size,
                 mode: "status",
               }),
