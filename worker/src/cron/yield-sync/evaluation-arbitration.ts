@@ -39,8 +39,10 @@ export function resolveYieldTypeLabel(params: {
   );
 }
 
-export function getConfidenceTier(dataSource: string): ConfidenceTier {
-  switch (dataSource) {
+export function getConfidenceTier(source: Pick<ResolvedYield, "dataSource" | "yieldType">): ConfidenceTier {
+  if (source.yieldType === "lending-opportunity") return "discovered";
+
+  switch (source.dataSource) {
     case "onchain":
     case "rate-derived":
       return "deterministic";
@@ -80,6 +82,8 @@ export function resolveCalculationMode(source: ResolvedYield): YieldCalculationM
 }
 
 export function resolveEvidenceClass(source: ResolvedYield): YieldEvidenceClass {
+  if (source.yieldType === "lending-opportunity") return "discovered-observation";
+
   switch (source.dataSource) {
     case "onchain":
       return "direct-onchain";
@@ -99,7 +103,7 @@ export function resolveEvidenceClass(source: ResolvedYield): YieldEvidenceClass 
   }
 }
 
-export function getEvidencePriority(evidenceClass: YieldEvidenceClass): number {
+function getEvidencePriority(evidenceClass: YieldEvidenceClass): number {
   switch (evidenceClass) {
     case "direct-first-party":
     case "direct-onchain":

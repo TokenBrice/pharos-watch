@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
-import { buildComparisonAnchorFreshnessMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator-metadata";
+import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
+import {
+  buildComparisonAnchorFreshnessMeta,
+  buildYieldDegradationReasons,
+  buildYieldSyncMetadata,
+} from "../yield-sync/coordinator-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 
@@ -68,6 +73,29 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
       staleAnchorExamplesTruncated: false,
     });
     expect(meta.staleAnchorExamples.map((row) => row.stablecoinId)).toEqual(["stale"]);
+  });
+});
+
+describe("buildYieldDegradationReasons", () => {
+  it("retains default benchmark fallback health when no source row is selected", () => {
+    expect(buildYieldDegradationReasons({
+      safetySnapshotDegraded: false,
+      safetySnapshotReason: null,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("fred-api-error-retained"),
+      selectedSources: [],
+      dlPoolsMeta: {
+        mode: "dex-cache",
+        updatedAt: START_SEC,
+        ageSeconds: 0,
+        poolCount: 0,
+        fallbackMode: null,
+      },
+      allDeterministicFailed: false,
+      maskedAllDeterministicFailure: false,
+      onChainSkippedDueToCooldown: false,
+      onChainAlternativeCoverageMissingIds: [],
+      previousTvlRowsTruncated: false,
+    })).toContain("risk-free-rate:fred-api-error-retained");
   });
 });
 

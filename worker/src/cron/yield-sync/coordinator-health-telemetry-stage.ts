@@ -97,6 +97,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
   const degradationReasons = buildYieldDegradationReasons({
     safetySnapshotDegraded: fetched.safetySnapshotDegraded,
     safetySnapshotReason: fetched.safetySnapshot.reason ?? null,
+    defaultBenchmarkMeta: fetched.riskFreeRateMeta,
     selectedSources: normalized.evaluatedSources.filter(
       (source) => normalized.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
     ),

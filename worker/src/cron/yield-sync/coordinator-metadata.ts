@@ -1,5 +1,6 @@
-import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import type { YieldBenchmarkMeta, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { EvaluatedYieldSource } from "./evaluation-types";
+import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
 import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
@@ -90,6 +91,7 @@ export function buildYieldSafetySnapshotMeta(input: {
 export function buildYieldDegradationReasons(params: {
   safetySnapshotDegraded: boolean;
   safetySnapshotReason: string | null;
+  defaultBenchmarkMeta: YieldBenchmarkMeta;
   selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   allDeterministicFailed: boolean;
@@ -106,8 +108,16 @@ export function buildYieldDegradationReasons(params: {
       degradationReasons.push(`safety-snapshot:${params.safetySnapshotReason}`);
     }
   }
+  const defaultBenchmarkFreshness = classifyYieldBenchmarkFreshness(params.defaultBenchmarkMeta);
+  if (defaultBenchmarkFreshness !== "healthy") {
+    degradationReasons.push(
+      `risk-free-rate:${params.defaultBenchmarkMeta.fallbackMode ?? defaultBenchmarkFreshness}`,
+    );
+  }
   const benchmarkByKey = new Map(
-    params.selectedSources.map((source) => [source.benchmarkKey, source] as const),
+    params.selectedSources
+      .filter((source) => source.benchmarkKey !== "USD")
+      .map((source) => [source.benchmarkKey, source] as const),
   );
   for (const [key, source] of benchmarkByKey) {
     if (source.benchmarkFreshness === "healthy") continue;

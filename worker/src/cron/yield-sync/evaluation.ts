@@ -71,14 +71,6 @@ function getHistoryRowsForStats(
   return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
 }
 
-export function shouldDegradeForRiskFreeRate(meta: {
-  fallbackMode: string | null;
-  isFallback: boolean;
-  ageSeconds: number | null;
-}): boolean {
-  return classifyYieldBenchmarkFreshness(meta) !== "healthy";
-}
-
 export interface EvaluateYieldSourcesInput {
   resolved: ResolvedYieldEntry[];
   startSec: number;
@@ -579,7 +571,7 @@ function evaluateYieldSourceGroup(
       sourceSwitchCount30d: null,
       anomalies,
       warnings: freshnessWarnings,
-      confidenceTier: getConfidenceTier(y.dataSource),
+      confidenceTier: getConfidenceTier(y),
       rejected: !scoreQualified,
       usedLegacyHistory: historySelection.usedLegacyHistory,
       usedDefaultSafety,

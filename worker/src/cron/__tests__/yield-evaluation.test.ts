@@ -538,6 +538,41 @@ describe("evaluateYieldSources", () => {
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:higher");
   });
 
+  it("keeps a curated native row ahead of a lower external lending opportunity", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:native",
+            currentApy: 4.5,
+            dataSource: "defillama",
+            yieldType: "lending-vault",
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:opportunity",
+            currentApy: 2.2,
+            dataSource: "protocol-api",
+            yieldType: "lending-opportunity",
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:native");
+    expect(result.evaluatedSources.find(
+      (source) => source.sourceKey === "protocol-api:coin-a:opportunity",
+    )).toMatchObject({
+      evidenceClass: "discovered-observation",
+      confidenceTier: "discovered",
+    });
+  });
+
   it("prefers a non-fixed-yield holder row over a fixed-yield market for the same coin", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
