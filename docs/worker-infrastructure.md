@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 20 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 48 `CRON_JOB_DEFINITIONS` jobs across 19 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The isolated five-minute reserve-recovery lane is the 20th expression and the final slot under the current trigger soft cap.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 20 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 48 `CRON_JOB_DEFINITIONS` jobs across 19 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces for Telegram registration reconciliation, durable alert-broker delivery draining, and the separate `*/5 * * * *` digest-trigger poll slot. The isolated five-minute reserve-recovery lane is the 20th expression and the final slot under the current trigger soft cap.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
 
@@ -68,6 +68,8 @@ Repair task runner: unset `WORKER_REPAIR_RUNNER_MODE` defaults to `off`, but the
 
 Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, but the checked-in Worker config sets `shadow`. `off` skips and writes no run, `shadow` records observed findings while the cron remains OK, `status` returns degraded findings to status, and `alert` returns critical findings as an error for the durable broker. Promote one step at a time only after two clean cycles; rollback is the preceding mode.
 
+Reserve interruption recovery: unset `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`, while the checked-in Worker config sets `shadow`. Producer checkpoints are written in every mode. The isolated recovery lane uses `off` for no scan, `shadow` for read-only eligibility/blocker telemetry, `reconcile` for generation-fenced abandonment and ready-attempt preparation without a claim, and `recover` for claim plus suffix/sidecar replay.
+
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
 
@@ -92,7 +94,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional comma-separated allowlist for exact-address price providers; unset auto-enables DexPaprika plus configured key-backed providers. Use `none` to disable, or include `dexscreener-address` only for explicit opt-in to that Cloudflare/WAF-protected public lane. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
 | `ALERT_WEBHOOK_URL` | `string` | optional | - | - | Webhook URL used for Discord/Slack-style error alerts. |
-| `ALERT_BROKER_MODE` | `string` | optional | - | - | Durable alert mode: `off` bypasses state, `shadow` records episodes only, `status` also affects health, and `alert` claims/retries webhook delivery. Checked-in default: `shadow`. |
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
 | `JUPITER_API_KEY` | `string` | optional | - | - | Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`. |
@@ -135,10 +136,12 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `MAINTENANCE_MODE` | `string` | optional | - | - | Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses. |
 | `REQUEST_SOURCE_ATTRIBUTION_DISABLED` | `string` | optional | - | optional | Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes. |
 | `API_KEY_REQUEST_ATTRIBUTION_DISABLED` | `string` | optional | - | - | Worker-only operational telemetry kill switch for per-key public API attribution writes. |
-| `WORKER_JOB_LEDGER_MODE` | `string` | optional | - | - | Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes ledger persistence part of the job contract. |
+| `WORKER_JOB_LEDGER_MODE` | `string` | optional | - | - | Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract. |
 | `WORKER_JOB_LEDGER_ALLOWLIST` | `string` | optional | - | - | Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled. |
 | `WORKER_REPAIR_RUNNER_MODE` | `string` | optional | - | - | Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` records due/stale backlog telemetry without claiming rows; `enabled` lets the daily DB-only runner claim, close, or defer a small batch. |
+| `WORKER_RESERVE_RECOVERY_MODE` | `string` | optional | - | - | Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts. |
 | `WORKER_CANARY_MODE` | `string` | optional | - | - | Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors. |
+| `ALERT_BROKER_MODE` | `string` | optional | - | - | Durable alert broker mode. `off` bypasses persistence, `shadow` records transitions only, `status` also affects health, and `alert` additionally claims and retries webhook delivery. |
 | `OPS_UI_ORIGIN` | `string` | reserved | optional | optional | Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks. |
 | `OPS_API_ORIGIN` | `string` | reserved | optional | - | Ops API origin override; reserved on the worker and active on the Pages admin proxy upstream hop. |
 | `CF_ACCESS_OPS_UI_AUD` | `string` | reserved | required | - | Cloudflare Access audience used by the Pages ops proxy to verify the inbound UI JWT. |
@@ -180,11 +183,11 @@ Self-serve API key requests use `api_key_requests`, `api_key_request_rate_limit_
 
 ### Method Routing
 
-| Method    | Handling                                                                                                             |
-| --------- | -------------------------------------------------------------------------------------------------------------------- |
-| `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                            |
-| `POST`    | `/api/feedback`, `/api/api-key-requests`, `/api/api-key-requests/verify`, `/api/telegram-webhook`, `/api/telegram-mini-app/session`, `/api/telegram-mini-app/mutate`, and mutating admin endpoints from `shared/lib/api-endpoints/` |
-| `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except dry-run previews such as `/api/audit-depeg-history?dry-run=true` and `/api/backfill-dews?repair=...&dry-run=true`, plus the read-only `GET /api/backfill-dews` backtest |
+| Method    | Handling                                                                                                                                                                                                                                                    |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                                                                                                                                                                   |
+| `POST`    | `/api/feedback`, `/api/api-key-requests`, `/api/api-key-requests/verify`, `/api/telegram-webhook`, `/api/telegram-mini-app/session`, `/api/telegram-mini-app/mutate`, and mutating admin endpoints from `shared/lib/api-endpoints/`                         |
+| `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except dry-run previews such as `/api/audit-depeg-history?dry-run=true` and `/api/backfill-dews?repair=...&dry-run=true`, plus the read-only `GET /api/backfill-dews` backtest        |
 | Other     | Known endpoint families with disallowed methods return 405 `{ error: "Method not allowed" }` with `Allow`; unregistered public `/api/*` paths can return auth errors first, then 404 after lane auth succeeds because no route dependencies can be hydrated |
 
 Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in the folderized `shared/lib/api-endpoints/` module surface and consumed by both worker and frontend status tooling.
@@ -238,26 +241,26 @@ The kill switches are for observability degradation only. They do not disable AP
 
 The daily `prune-cron-history` job owns bounded cleanup for cron observability, quota, cache, canary, job-attempt, and repair-task rows only. These append-only product/audit tables are intentionally not pruned by that job:
 
-| Table | Retention owner ruling | Why |
-| --- | --- | --- |
-| `daily_digest` | Product archive - keep forever | Digest detail pages, archive rows, recent-copy context, cross-day trends, and the total-mcap ATH collector read historical `input_data`. Do not add age-based pruning unless ATH and archive dependencies are materialized or an explicit output change is accepted. |
-| `admin_action_audit` | Operator audit archive - keep forever | Admin mutations need a durable operator audit trail. |
-| `api_key_audit_log` | API-key audit archive - keep forever | API key create/update/deactivate/rotate events need a durable credential lifecycle audit trail. |
-| `tape_events` | Product timeline archive - keep forever | `/timeline/` all-time filters, permalinks, homepage event reads, and DDRR review evidence depend on historical projected events. |
-| `status_transitions` | Operational incident archive - keep forever | Public and admin status endpoints window their reads with query bounds instead of deleting the incident timeline. |
-| `depeg_backfill_runs` | Backfill audit archive - keep forever | Replay manifests preserve repair provenance, expected fingerprints, and incomplete-run evidence for historical depeg repairs. |
-| `feedback_submissions` | Stale schema-retained, no active runtime pruning | The current feedback runtime writes GitHub issues directly and does not write this table. It remains a destructive-cleanup candidate unless durable feedback D1 persistence is deliberately reintroduced with privacy and retention docs. |
+| Table                  | Retention owner ruling                           | Why                                                                                                                                                                                                                                                                  |
+| ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `daily_digest`         | Product archive - keep forever                   | Digest detail pages, archive rows, recent-copy context, cross-day trends, and the total-mcap ATH collector read historical `input_data`. Do not add age-based pruning unless ATH and archive dependencies are materialized or an explicit output change is accepted. |
+| `admin_action_audit`   | Operator audit archive - keep forever            | Admin mutations need a durable operator audit trail.                                                                                                                                                                                                                 |
+| `api_key_audit_log`    | API-key audit archive - keep forever             | API key create/update/deactivate/rotate events need a durable credential lifecycle audit trail.                                                                                                                                                                      |
+| `tape_events`          | Product timeline archive - keep forever          | `/timeline/` all-time filters, permalinks, homepage event reads, and DDRR review evidence depend on historical projected events.                                                                                                                                     |
+| `status_transitions`   | Operational incident archive - keep forever      | Public and admin status endpoints window their reads with query bounds instead of deleting the incident timeline.                                                                                                                                                    |
+| `depeg_backfill_runs`  | Backfill audit archive - keep forever            | Replay manifests preserve repair provenance, expected fingerprints, and incomplete-run evidence for historical depeg repairs.                                                                                                                                        |
+| `feedback_submissions` | Stale schema-retained, no active runtime pruning | The current feedback runtime writes GitHub issues directly and does not write this table. It remains a destructive-cleanup candidate unless durable feedback D1 persistence is deliberately reintroduced with privacy and retention docs.                            |
 
 ### Stale D1 Schema Inventory
 
 Several migration-era tables are intentionally schema-retained until a separate destructive D1 cleanup rollout runs. Current Worker code does not read or write:
 
-| Table | Replaced by / current runtime path | Cleanup status |
-| --- | --- | --- |
-| `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` | stale schema-retained table |
-| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
-| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup after the completed May 2026 v2 rollout; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
-| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup unless feedback D1 persistence is deliberately reintroduced; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
+| Table                        | Replaced by / current runtime path                                                        | Cleanup status                                                                                                                                                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public_api_rate_limit`      | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit`                  | stale schema-retained table                                                                                                                                                                                                            |
+| `api_request_source_stats`   | `api_request_consumer_stats` and `api_key_request_stats`                                  | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs                                                             |
+| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2`                                                           | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup after the completed May 2026 v2 rollout; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs                     |
+| `feedback_submissions`       | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup unless feedback D1 persistence is deliberately reintroduced; 2026-07-02 zero-use check found no runtime readers/writers outside historical migrations/docs |
 
 Do not drop these in a normal migration. Destructive cleanup requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated rollout after compatible Worker code has soaked.
 
@@ -265,18 +268,18 @@ Do not drop these in a normal migration. Destructive cleanup requires production
 
 Applied to every response via `addCorsHeaders()`:
 
-| Header                          | Value                                                                                           |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Header                          | Value                                                                                                                                           |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Access-Control-Allow-Origin`   | matching request origin from the `CORS_ORIGIN` allowlist; omitted for foreign origins; first configured origin when the request has no `Origin` |
-| `Vary`                          | `Origin`                                                                                        |
-| `Access-Control-Allow-Methods`  | `GET, POST, OPTIONS`                                                                            |
-| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin`                                      |
-| `Access-Control-Expose-Headers` | `X-Data-Age, Warning, Retry-After`                                                              |
-| `Access-Control-Max-Age`        | `86400`                                                                                         |
-| `X-Content-Type-Options`        | `nosniff`                                                                                       |
-| `Strict-Transport-Security`     | `max-age=31536000; includeSubDomains`                                                           |
-| `Referrer-Policy`               | `strict-origin-when-cross-origin`                                                               |
-| `Content-Security-Policy`       | `default-src 'none'; frame-ancestors 'none'`                                                    |
+| `Vary`                          | `Origin`                                                                                                                                        |
+| `Access-Control-Allow-Methods`  | `GET, POST, OPTIONS`                                                                                                                            |
+| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key, X-Pharos-Admin`                                                                                      |
+| `Access-Control-Expose-Headers` | `X-Data-Age, Warning, Retry-After`                                                                                                              |
+| `Access-Control-Max-Age`        | `86400`                                                                                                                                         |
+| `X-Content-Type-Options`        | `nosniff`                                                                                                                                       |
+| `Strict-Transport-Security`     | `max-age=31536000; includeSubDomains`                                                                                                           |
+| `Referrer-Policy`               | `strict-origin-when-cross-origin`                                                                                                               |
+| `Content-Security-Policy`       | `default-src 'none'; frame-ancestors 'none'`                                                                                                    |
 
 `CORS_ORIGIN` is now treated as a comma-separated allowlist. If the incoming request includes an `Origin` header that matches one of the configured entries, the Worker echoes that specific origin. If the request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin` and rejects `OPTIONS` preflights with `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback.
 
@@ -294,22 +297,22 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 4. **Cache-Control profiles** (centralized in `shared/lib/api-cache-profiles.ts`; set by individual API handlers, with a small number of route-local special cases):
 
-| Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
-| -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Realtime | `public, s-maxage=60, max-age=10`      | health, events                                                                                                                     |
-| Producer-backed | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains |
-| Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
-| Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
-| Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity; telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                  |
-| Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                        |
-| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                   |
-| Public status | `public, max-age=60`             | public status history                                                                                                                                              |
-| OG image | `public, max-age=900, s-maxage=900`    | dynamic Worker OG images (`/api/og/*`)                                                                                                                             |
-| Reserve live | `public, s-maxage=3600, max-age=300` | `/api/stablecoin-reserves/:id` when live reserve rows are fresh enough for the requested presentation mode                                                       |
-| Reserve live stale | `public, s-maxage=1800, max-age=120` | `/api/stablecoin-reserves/:id` when live reserve rows are stale but still usable for stale presentation                                                          |
-| Reserve fallback | `public, s-maxage=300, max-age=60` | `/api/stablecoin-reserves/:id` fallback/static presentation mode                                                                                                  |
-| No-store | `no-store`                            | admin GETs, bypassed status/control routes, and per-coin stale fallback responses                                                                                   |
-| Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | route-local dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`) |
+| Profile            | `Cache-Control` header                                         | Used by                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Realtime           | `public, s-maxage=60, max-age=10`                              | health, events                                                                                                                                                                             |
+| Producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                         |
+| Per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                                  |
+| Standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
+| Custom             | `public, s-maxage=300, max-age=300`                            | dex-liquidity; telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                                         |
+| Slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                                                |
+| Archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot, snapshots-index                                                                                                                                                           |
+| Public status      | `public, max-age=60`                                           | public status history                                                                                                                                                                      |
+| OG image           | `public, max-age=900, s-maxage=900`                            | dynamic Worker OG images (`/api/og/*`)                                                                                                                                                     |
+| Reserve live       | `public, s-maxage=3600, max-age=300`                           | `/api/stablecoin-reserves/:id` when live reserve rows are fresh enough for the requested presentation mode                                                                                 |
+| Reserve live stale | `public, s-maxage=1800, max-age=120`                           | `/api/stablecoin-reserves/:id` when live reserve rows are stale but still usable for stale presentation                                                                                    |
+| Reserve fallback   | `public, s-maxage=300, max-age=60`                             | `/api/stablecoin-reserves/:id` fallback/static presentation mode                                                                                                                           |
+| No-store           | `no-store`                                                     | admin GETs, bypassed status/control routes, and per-coin stale fallback responses                                                                                                          |
+| Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | route-local dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`)                                              |
 
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
@@ -419,13 +422,13 @@ Current consumers:
 
 Most module-level mutable state was eliminated in the parameter-passing refactor. Remaining intentional isolate-local state is allowlisted here:
 
-| Module | State | Purpose | Reset / TTL behavior |
-| --- | --- | --- | --- |
-| `shared/lib/cloudflare-access-jwt.ts` | `jwksCache` | Cloudflare Access signing-key cache | 1-hour TTL; auth still re-fetches when cold or expired |
-| `worker/src/lib/rate-limit.ts` | `IsolateLocalState` limiter/prune state | Public API limiter emergency counters and pending prune coordination | Resets on isolate recycle/deploy; D1 remains source of truth |
-| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-second fresh key cache TTL (entries are deleted on expiry, no stale window); usage updates are best-effort and D1 remains source of truth |
-| `worker/src/lib/request-source-attribution.ts` | Worker route/source and per-key attribution buffers plus prune bucket/promise | Collapses same-route and same-key Worker attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Worker isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
-| `functions/lib/request-attribution.ts` | Pages attribution buffer plus prune bucket/promise | Collapses same-route site-data attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Pages Functions isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
+| Module                                         | State                                                                         | Purpose                                                                                                                                                   | Reset / TTL behavior                                                                                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/lib/cloudflare-access-jwt.ts`          | `jwksCache`                                                                   | Cloudflare Access signing-key cache                                                                                                                       | 1-hour TTL; auth still re-fetches when cold or expired                                                                                      |
+| `worker/src/lib/rate-limit.ts`                 | `IsolateLocalState` limiter/prune state                                       | Public API limiter emergency counters and pending prune coordination                                                                                      | Resets on isolate recycle/deploy; D1 remains source of truth                                                                                |
+| `worker/src/lib/api-key-core.ts`               | API-key cache, last-used throttle, per-key prune state                        | Short-lived key lookup cache and write-throttling for API-key metadata                                                                                    | 5-second fresh key cache TTL (entries are deleted on expiry, no stale window); usage updates are best-effort and D1 remains source of truth |
+| `worker/src/lib/request-source-attribution.ts` | Worker route/source and per-key attribution buffers plus prune bucket/promise | Collapses same-route and same-key Worker attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Worker isolate | Resets on isolate recycle/deploy; D1 remains source of truth                                                                                |
+| `functions/lib/request-attribution.ts`         | Pages attribution buffer plus prune bucket/promise                            | Collapses same-route site-data attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Pages Functions isolate  | Resets on isolate recycle/deploy; D1 remains source of truth                                                                                |
 
 **Constraints:**
 
@@ -443,15 +446,15 @@ Cron expressions are source-owned in `worker/wrangler.toml`. The canonical sched
 
 ### Trigger 1: `*/15 * * * *` (every 15 minutes)
 
-| Job                              | Function                                                                                   | File                                              | Documentation                                                                |
-| -------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `sync-fx-rates`                  | `syncFxRates()`                                                                            | `worker/src/cron/sync-fx-rates.ts`                | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md)   |
-| `sync-stablecoins`               | `syncStablecoins()`                                                                        | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
-| `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`)                                      | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
-| `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections) | `worker/src/cron/snapshot-chain-supply.ts`        | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
-| `publish-report-card-cache`      | `publishReportCardCache()` (chained after safe `sync-stablecoins`, DB-only)                | `worker/src/cron/publish-report-card-cache.ts`    | [Risk Lab](./report-cards.md), [Chains Page](./chains-page.md)               |
+| Job                              | Function                                                                                                                | File                                              | Documentation                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `sync-fx-rates`                  | `syncFxRates()`                                                                                                         | `worker/src/cron/sync-fx-rates.ts`                | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md)   |
+| `sync-stablecoins`               | `syncStablecoins()`                                                                                                     | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
+| `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`)                                                                   | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections)                              | `worker/src/cron/snapshot-chain-supply.ts`        | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `publish-report-card-cache`      | `publishReportCardCache()` (chained after safe `sync-stablecoins`, DB-only)                                             | `worker/src/cron/publish-report-card-cache.ts`    | [Risk Lab](./report-cards.md), [Chains Page](./chains-page.md)               |
 | `compute-depeg-resolver`         | `computeDepegResolver()` (resolves canonical incidents, seals/publishes DDR readiness/backstop outcomes, rebuilds DDRR) | `worker/src/cron/compute-depeg-resolver.ts`       | [Depeg Duration Resolver](./depeg-resolver.md)                               |
-| _(inline)_                       | Stale-cache health alert                                                                   | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below)                                                             |
+| _(inline)_                       | Stale-cache health alert                                                                                                | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below)                                                             |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled/quarter-hourly.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-fx-rates` runs first so Chainlink / FX probes get a clean fetch window before the heavier stablecoin pricing pipeline consumes the slot budget. `sync-stablecoins` now reports explicit capability metadata:
 
@@ -464,12 +467,12 @@ Stablecoins freshness is observed only by `cron-staleness-watchdog`; the quarter
 
 ### Trigger 2: `9,24,39,54 * * * *` (status self-check - isolated offset)
 
-| Job                         | Function                       | File                                            | Documentation                             |
-| --------------------------- | ------------------------------ | ----------------------------------------------- | ----------------------------------------- |
-| `cron-slot-sweeper`         | `runCronSlotSweeper()`         | `worker/src/cron/cron-slot-sweeper.ts`          | [Status Dashboard](./status-dashboard.md) |
-| `status-self-check`         | `runStatusSelfCheck()`         | `worker/src/cron/status-self-check.ts`          | [Status Dashboard](./status-dashboard.md) |
-| `data-invariant-canary`     | `runDataInvariantCanary()`     | `worker/src/cron/data-invariant-canary.ts`      | This doc |
-| `cron-staleness-watchdog`   | `runCronStalenessWatchdog()`   | `worker/src/cron/cron-staleness-watchdog.ts`    | [Status Dashboard](./status-dashboard.md) |
+| Job                       | Function                     | File                                         | Documentation                             |
+| ------------------------- | ---------------------------- | -------------------------------------------- | ----------------------------------------- |
+| `cron-slot-sweeper`       | `runCronSlotSweeper()`       | `worker/src/cron/cron-slot-sweeper.ts`       | [Status Dashboard](./status-dashboard.md) |
+| `status-self-check`       | `runStatusSelfCheck()`       | `worker/src/cron/status-self-check.ts`       | [Status Dashboard](./status-dashboard.md) |
+| `data-invariant-canary`   | `runDataInvariantCanary()`   | `worker/src/cron/data-invariant-canary.ts`   | This doc                                  |
+| `cron-staleness-watchdog` | `runCronStalenessWatchdog()` | `worker/src/cron/cron-staleness-watchdog.ts` | [Status Dashboard](./status-dashboard.md) |
 
 Dedicated quarter-hourly offset trigger for stale-slot sweeping, public/admin status probes, DB/cache-only data-invariant canaries, and freshness alerting. It runs at :09/:24/:39/:54 so status probes, structural checks, and Tier-1 cache staleness checks do not compete with the heavier quarter-hourly stablecoin pricing slot. `cron-slot-sweeper` runs first and reconciles stale `cron_slot_executions` across all schedule keys, writes `scheduled-slot-abandoned` event markers, synthesizes child `cron_runs` error rows for expired leases when needed, and sends a cooldown-gated alert when abandoned slots are closed before the next same schedule key fires. `status-self-check` then persists a compacted raw `/api/status` computation to `cache["status:raw-snapshot:v1"]` with a compare-and-swap write; `/api/status` serves that snapshot while it is no more than 30 minutes old and falls back to live computation when it is missing, stale, or unreadable. The compacted snapshot keeps each lane's latest run metadata for operator summaries while trimming older recent-run metadata, long strings, and large arrays before writing the cache row. When `WORKER_CANARY_MODE` is enabled, `data-invariant-canary` runs after the self-check and records structural findings for DEX publication rows, stablecoins cache active coverage, PSI/DEWS latest samples, and report-card cache methodology/freshness in `worker_canary_runs` without opening outbound connections. The DEX current-publication canary compares the latest published generation's row count to rows with that generation id and `publication_state = 'published'`; retained legacy or older published rows are recorded as metadata so inactive historical rows do not trip the active-set publication check.
 
@@ -481,7 +484,7 @@ The self-check now records separate internal and external probe planes. Internal
 | ---------------- | ----------------- | ----------------------------------- | ------------------------------------------- |
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | [Blacklist Tracker](./blacklist-tracker.md) |
 
-Dedicated 6-hourly trigger for blacklist sync. Blacklist events are infrequent enough (~1–3 per week network-wide across the tracked issuer set) that 6h cadence is sufficient. The runner admits event scans before historical amount maintenance and orders typed EVM-block and Tron-timestamp cohorts by their comparable per-config attempt time, alternating never-attempted cohort ties. Each config claim increments a generation; cursor/outcome finalization dual-writes the typed cursor and legacy `last_block` only when that generation and starting cursor still match. EVM cursors advance only to the minimum contiguous frontier proven across every configured topic and never beyond a 15-minute safe head; Arbitrum explorer windows are bounded at 25 million blocks. Any budget/provider skip, incomplete topic set, provider failure, or state conflict degrades the run and withholds producer snapshots. Snapshot freshness is the oldest successful required-config scan, not the cron finish time. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC/Gnosis, dRPC for historical balance reads, and TronGrid for Tron (with same-origin pagination validation and circuit-breaker gating). Gets its own 6-connection pool and CPU budget.
+Dedicated 6-hourly trigger for blacklist sync. Blacklist events are infrequent enough (~1–3 per week network-wide across the tracked issuer set) that 6h cadence is sufficient. The runner admits event scans before historical amount maintenance and orders typed EVM-block and Tron-timestamp cohorts by their comparable per-config attempt time, alternating never-attempted cohort ties. Each config claim increments a generation; cursor/outcome finalization dual-writes the typed cursor and legacy `last_block` only when that generation and starting cursor still match. EVM cursors advance only to the minimum contiguous frontier proven across every configured topic and never beyond a 15-minute safe head; Arbitrum explorer windows are bounded at 25 million blocks. RPC-backed configs combine topic0 signatures in one provider-supported OR query, while recursive Alchemy splits remain sequential and stop after 64 calls. Any budget/provider skip, incomplete topic set, provider failure, or state conflict degrades the run and withholds producer snapshots. Snapshot freshness is the oldest successful required-config scan, not the cron finish time. Historical gaps are prioritized through a durable repair queue, unambiguous legacy identities migrate in bounded batches, and per-config call/depth/frontier/failure telemetry is retained for 14 days. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC/Gnosis, dRPC for historical balance reads, and TronGrid for Tron (with same-origin pagination validation and circuit-breaker gating). Gets its own 6-connection pool and CPU budget. Guarded one-off recovery evidence lives in `blacklist_reconciliation_runs`; public summary and admin data-quality status expose the latest exact manifest/balance/frontier result.
 
 ### Trigger 4: `4,34 * * * *` (mint/burn critical — dedicated, every 30 min)
 
@@ -539,12 +542,12 @@ While the run is leased, `cron_run_progress` now exposes DEX stage summaries for
 
 ### Trigger 10: `11 */4 * * *` (every 4h at :11 — reserve + redemption lane)
 
-| Job                         | Function                    | File                                           | Documentation                                     |
-| --------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| `sync-live-reserves`        | `syncLiveReserves()`        | `worker/src/cron/sync-live-reserves.ts`        | This doc (below)                                  |
-| `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
-| `sync-kinesis-supply`       | `syncKinesisSupply()`       | `worker/src/cron/sync-kinesis-supply.ts`       | This doc (below)                                  |
-| `reserve-post-sync-watchdog` | reserve drift/cache checks | `worker/src/handlers/scheduled/hourly-live-reserves.ts` | This doc (below)                                  |
+| Job                          | Function                    | File                                                    | Documentation                                     |
+| ---------------------------- | --------------------------- | ------------------------------------------------------- | ------------------------------------------------- |
+| `sync-live-reserves`         | `syncLiveReserves()`        | `worker/src/cron/sync-live-reserves.ts`                 | This doc (below)                                  |
+| `sync-redemption-backstops`  | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts`          | [Redemption Backstops](./redemption-backstops.md) |
+| `sync-kinesis-supply`        | `syncKinesisSupply()`       | `worker/src/cron/sync-kinesis-supply.ts`                | This doc (below)                                  |
+| `reserve-post-sync-watchdog` | reserve drift/cache checks  | `worker/src/handlers/scheduled/hourly-live-reserves.ts` | This doc (below)                                  |
 
 **Connection budget:** dedicated 4-hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak). The named `reserve-post-sync-watchdog` child records the former post-child drift/cache/stale-source work in `cron_runs`, honors the slot abort signal, writes the Telegram reserve-drift snapshot, and alerts on the oldest configured reserve-attempt cohort rather than allowing one recent success to mask stale assets. The slot writes a generation-fenced `worker_scheduled_checkpoints` row before adapter work, records exact item/domain-attempt progress and every child disposition, and marks the checkpoint terminal only after all started work is accounted for. A platform interruption leaves enough durable state for Trigger 20 to seal the old generation and resume safely. Moved from hourly to 4-hourly because most reserve attestations update daily or weekly. `LIVE_RESERVE_FRESHNESS_SEC = 48h` at the API layer keeps consumer-facing "fresh" classification unaffected.
 
@@ -570,14 +573,14 @@ While the run is leased, `cron_run_progress` now exposes DEX stage summaries for
 
 ### Trigger 13: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
-| Job                        | Function                   | File                                          | Documentation                              |
-| -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
-| `telegram-degradation-watchdog` | `runTelegramDegradationWatchdog()` | `worker/src/cron/telegram-degradation-watchdog.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
-| `telegram-disambiguation-cleanup` | `cleanExpiredDisambiguations()` | `worker/src/api/telegram-store/disambiguation.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
-| `telegram-pulse-snapshot` | `publishTelegramPulseSnapshot()` | `worker/src/api/telegram-pulse.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| Job                               | Function                           | File                                               | Documentation                              |
+| --------------------------------- | ---------------------------------- | -------------------------------------------------- | ------------------------------------------ |
+| `dispatch-telegram-alerts`        | `dispatchTelegramAlerts()`         | `worker/src/cron/dispatch-telegram-alerts.ts`      | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-degradation-watchdog`   | `runTelegramDegradationWatchdog()` | `worker/src/cron/telegram-degradation-watchdog.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-disambiguation-cleanup` | `cleanExpiredDisambiguations()`    | `worker/src/api/telegram-store/disambiguation.ts`  | [Telegram Alert Bot](./telegram-alerts.md) |
+| `telegram-pulse-snapshot`         | `publishTelegramPulseSnapshot()`   | `worker/src/api/telegram-pulse.ts`                 | [Telegram Alert Bot](./telegram-alerts.md) |
 
-Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, the default Mini App menu button, and webhook registration when a bot token is configured. Those serial Bot API calls are modeled as the budget-only `telegram-registration-reconciliation` entry in `CRON_CONNECTION_BUDGET_ENTRIES`; they are not separate `cron_runs` rows, but each slot writes compact cache-backed telemetry that `/api/status.budgetOnlySurfaces` exposes. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 3,600 subscriber message attempts per run; `dispatch-telegram-alerts` still has a 14-minute hard app timeout and 30-second lease heartbeat, but pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, releasing unattempted pending claims or queueing the untouched fresh tail so slow Bot API runs yield the next 5-minute trigger interval. Discovery writes durable alert job/target manifests, target statuses reconcile by dedupe key, and overflow/retryable fresh-send failures are enqueued to claim-based `telegram_pending_alerts` rows in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, the DB-only `telegram-disambiguation-cleanup` sidecar prunes expired mid-conversation state, and `telegram-pulse-snapshot` publishes the public pulse cache so `/api/telegram-pulse` is snapshot-first in the common path.
+Dedicated trigger for Telegram and durable operational-alert delivery work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Before status-tracked jobs run, the slot best-effort reconciles Telegram command suggestions, bot profile metadata, the default Mini App menu button, and webhook registration when a bot token is configured. Those serial Bot API calls are modeled as the budget-only `telegram-registration-reconciliation` entry in `CRON_CONNECTION_BUDGET_ENTRIES`; they are not separate `cron_runs` rows, but each slot writes compact cache-backed telemetry that `/api/status.budgetOnlySurfaces` exposes. Subscriber fan-out uses up to 4 of 6 available connections for parallel `sendBatch()` sends. Up to 3,600 subscriber message attempts per run; `dispatch-telegram-alerts` still has a 14-minute hard app timeout and 30-second lease heartbeat, but pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, releasing unattempted pending claims or queueing the untouched fresh tail so slow Bot API runs yield the next 5-minute trigger interval. Discovery writes durable alert job/target manifests, target statuses reconcile by dedupe key, and overflow/retryable fresh-send failures are enqueued to claim-based `telegram_pending_alerts` rows in D1 for subsequent runs. After alert dispatch, the watchdog records Telegram degradation signals, the DB-only `telegram-disambiguation-cleanup` sidecar prunes expired mid-conversation state, and `telegram-pulse-snapshot` publishes the public pulse cache so `/api/telegram-pulse` is snapshot-first in the common path. Finally, the canonical budget-only `alert-broker-delivery-drain` surface retries up to 25 due webhook deliveries serially. That drain is outside Telegram token preflight, so it continues when `TELEGRAM_BOT_TOKEN` is absent; its failed and missing-target counts remain durable and are exposed through budget-only telemetry.
 
 Safety-grade fan-out on this lane is now gated by the generation-aware live source cache `cache["alert:safety-source-cache"]`, written only by `publish-report-card-cache`. If that source is missing, corrupt, stale, or from the wrong generation, only safety alerts are suppressed; DEWS/depeg/launch alerts continue. The same cache row carries optional compact `explain` snapshots for safety-alert `Reason:` lines; the worker test suite enforces the current serialized-size budget.
 
@@ -585,8 +588,8 @@ Safety-grade fan-out on this lane is now gated by the generation-aware live sour
 
 ### Trigger 14: `*/5 * * * *` (manual digest trigger poll)
 
-| Job surface | Function | File | Documentation |
-| ----------- | -------- | ---- | ------------- |
+| Job surface                   | Function                     | File                                                   | Documentation                           |
+| ----------------------------- | ---------------------------- | ------------------------------------------------------ | --------------------------------------- |
 | `daily-digest` lease consumer | `runDigestTriggerPollSlot()` | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
 
 This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal, reportProgress)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It also records every poll, including the expected no-pending-request path, under the budget-only `digest-trigger-poll` telemetry key surfaced by `/api/status.budgetOnlySurfaces`. It is a runner slot, not a separate status-tracked cron job. `npm run check:cron-connections` still models it as the budget-only `digest-trigger-poll` entry with the same one-connection peak used by the daily digest chain.
@@ -608,11 +611,11 @@ Forced digest runs inherit the `daily-digest` progress stream, including preflig
 
 ### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — digest and Bluechip fetchers)
 
-| Job              | Function                | File                                | Documentation                           |
-| ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
-| `sync-bluechip`  | `syncBluechip()`        | `worker/src/cron/sync-bluechip.ts`  | This doc (below)                        |
-| `daily-digest`   | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts`   | [Digest Pipeline](./digest-pipeline.md) |
-| `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
+| Job             | Function                | File                               | Documentation                           |
+| --------------- | ----------------------- | ---------------------------------- | --------------------------------------- |
+| `sync-bluechip` | `syncBluechip()`        | `worker/src/cron/sync-bluechip.ts` | This doc (below)                        |
+| `daily-digest`  | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts`  | [Digest Pipeline](./digest-pipeline.md) |
+| `weekly-recap`  | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`  | [Digest Pipeline](./digest-pipeline.md) |
 
 **Connection budget:** `sync-bluechip` (3 parallel batch connections) and `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest) use <=4 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` runs Monday-only and returns immediately on other days. Reliability is failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, or `weekly-recap` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
 
@@ -636,26 +639,28 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 
 ### Trigger 19: `0 3 * * *` (daily at 03:00 UTC — TTL pruning)
 
-| Job                       | Function                    | File                                             | Documentation            |
-| ------------------------- | --------------------------- | ------------------------------------------------ | ------------------------ |
-| `prune-status-probe-runs` | `runPruneStatusProbeRuns()` | `worker/src/cron/prune-status-probe-runs.ts`     | [Status Dashboard](./status-dashboard.md) |
-| `prune-cron-history`      | `runPruneCronHistory()`     | `worker/src/cron/prune-cron-history.ts`          | This doc                 |
-| `worker-repair-runner`    | `runRepairTaskRunner()`     | `worker/src/cron/repair-task-runner.ts`          | This doc                 |
-| `prune-detail-cache`      | `runPruneDetailCache()`     | `worker/src/cron/prune-detail-cache.ts`          | This doc                 |
-| `telegram-inactive-cleanup` | `runTelegramInactiveCleanup()` | `worker/src/cron/telegram-inactive-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| Job                          | Function                        | File                                            | Documentation                              |
+| ---------------------------- | ------------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| `prune-status-probe-runs`    | `runPruneStatusProbeRuns()`     | `worker/src/cron/prune-status-probe-runs.ts`    | [Status Dashboard](./status-dashboard.md)  |
+| `prune-cron-history`         | `runPruneCronHistory()`         | `worker/src/cron/prune-cron-history.ts`         | This doc                                   |
+| `worker-repair-runner`       | `runRepairTaskRunner()`         | `worker/src/cron/repair-task-runner.ts`         | This doc                                   |
+| `prune-detail-cache`         | `runPruneDetailCache()`         | `worker/src/cron/prune-detail-cache.ts`         | This doc                                   |
+| `telegram-inactive-cleanup`  | `runTelegramInactiveCleanup()`  | `worker/src/cron/telegram-inactive-cleanup.ts`  | [Telegram Alert Bot](./telegram-alerts.md) |
 | `telegram-retention-cleanup` | `runTelegramRetentionCleanup()` | `worker/src/cron/telegram-retention-cleanup.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
-| `mint-burn-growth-watchdog` | `runMintBurnGrowthWatchdog()` | `worker/src/cron/mint-burn-growth-watchdog.ts` | [Mint/Burn Flows](./mint-burn-flows.md) |
-| `cron-duration-watchdog` | `runCronDurationWatchdog()` | `worker/src/cron/cron-duration-watchdog.ts` | This doc |
+| `mint-burn-growth-watchdog`  | `runMintBurnGrowthWatchdog()`   | `worker/src/cron/mint-burn-growth-watchdog.ts`  | [Mint/Burn Flows](./mint-burn-flows.md)    |
+| `cron-duration-watchdog`     | `runCronDurationWatchdog()`     | `worker/src/cron/cron-duration-watchdog.ts`     | This doc                                   |
 
 Housekeeping slot. `prune-status-probe-runs` enforces the status-probe retention window, `prune-cron-history` deletes `cron_runs` rows older than 7 days, terminal `worker_job_attempts` / `worker_repair_tasks` rows older than 7 days, `cron_slot_executions`, `block_timestamp_cache`, and terminal `worker_scheduled_checkpoints` rows older than 14 days, `worker_canary_runs` rows older than 90 days, and `selector_snapshot_daily_quota` rows older than 2 days. Ready or recovering checkpoints are never retention-pruned. `worker-repair-runner` then runs the `WORKER_REPAIR_RUNNER_MODE`-gated, DB-only repair-task consumer: off is a no-op, shadow reads due/stale backlog counts only, and enabled claims at most five due rows before closing already-resolved DDR repair tasks or deferring unresolved manual DDR repairs for a later pass. `prune-detail-cache` deletes `detail:*` cache rows whose coin id is no longer in `READABLE_IDS` (orphans incl. legacy numeric keys) or whose row is older than 7 days (demand-refreshed rows past 24h force the cold-miss refresh on access anyway), `telegram-inactive-cleanup` trims inactive Telegram subscriber state, and `telegram-retention-cleanup` prunes Telegram dead letters, alert-job audit rows, usage aggregates, chat diagnostics, and processed-update dedupe rows. Telegram retention deletes are capped per table per run. Processed-update pruning additionally uses 1,000-row batches under a 2-second internal budget and a 5,000-row run ceiling. Its bounded 5,001-row follow-up probe reports `processedUpdatesRemainingBacklog` as an exact count below the probe limit or a lower bound at the limit; any remainder sets `runBudgetTruncated` so backlog pressure is visible without letting the shared TTL lane run unbounded DELETEs. `mint-burn-growth-watchdog` counts `mint_burn_events` rows against the append-only growth budget (alert threshold 2.3M rows ≈ the agreed ~5 GB D1 revisit point) and webhook-alerts with a 7-day redelivery cooldown when exceeded. `cron-duration-watchdog` reports job runtime budget pressure from `cron_runs` and scheduled-slot abandonment from `cron_slot_executions`; synthetic reconciliation rows are excluded from runtime averages. The scheduled-runner contract test requires every `CRON_JOB_DEFINITIONS` entry to have a positive finite `CRON_TIMEOUT_MS` budget.
 
 ### Trigger 20: `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` (reserve recovery — isolated, every 5 min)
 
-| Job               | Function                   | File                                                    | Documentation    |
-| ----------------- | -------------------------- | ------------------------------------------------------- | ---------------- |
-| `reserve-recovery` | `runFiveMinuteReserveRecoverySlot()` | `worker/src/handlers/scheduled/reserve-recovery.ts` | This doc |
+| Job                | Function                             | File                                                | Documentation |
+| ------------------ | ------------------------------------ | --------------------------------------------------- | ------------- |
+| `reserve-recovery` | `runFiveMinuteReserveRecoverySlot()` | `worker/src/handlers/scheduled/reserve-recovery.ts` | This doc      |
 
-This lane is deliberately isolated from both the four-hour reserve producer and the status slot. It checks only `fourHourlyReserveSync` slots, and an active exact child lease blocks reconciliation so a slow live invocation cannot be mistaken for abandonment. After the lease expires, the next poll can mark never-started sidecars explicitly, seal the interrupted checkpoint as `platform_abandoned`, clear only the matching pending reserve-domain attempt with compare-and-swap semantics, and create a new attempt number and execution generation. Recovery validates the deterministic reserve queue hash, resumes at the unfinished item, skips already completed children, and records the recovery as its own status-tracked cron run. A recovery interruption is itself lease-backed and requeued under another attempt after expiry. The job has a 13-minute wrapper timeout, a 15-minute checkpoint lease, and a static `2/6` connection peak.
+This lane is deliberately isolated from both the four-hour reserve producer and the status slot. Its checked-in `shadow` mode performs read-only eligibility and blocker queries. `reconcile` owns stale-slot generation CAS, exact pending-attempt cleanup, explicit `not_started` sidecar accounting, and ready-attempt preparation without a claim; `recover` additionally claims and replays one prepared attempt. An active exact child or recovery lease blocks reconciliation so a slow live invocation cannot be mistaken for abandonment. Recovery validates the deterministic reserve queue hash, resumes at the unfinished item, skips already completed children, and records the recovery as its own status-tracked cron run. A recovery interruption is itself lease-backed and requeued under another attempt after expiry. The job has a 13-minute wrapper timeout, a 15-minute checkpoint lease, and a static `2/6` connection peak.
+
+Preview cancellation drills use the Access-authenticated `POST /api/admin/reserve-recovery-fault-injection` route on a `workers.dev` host. It refuses production hosts and arms one cache-backed fault for the exact Worker version, `fourHourlyReserveSync` slot, attempt number, kill point, and optional reserve asset. Supported points are after checkpoint creation, after pending-attempt begin, after the authoritative reserve write, and before each of the three sidecars. The control is deleted by compare-and-swap when consumed and expires after six hours; the injected termination deliberately bypasses reserve domain/checkpoint catch finalization so the recovery path sees an interrupted attempt.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -663,7 +668,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 `npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
 
-Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `digest-trigger-poll` and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
+Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `digest-trigger-poll`, Telegram registration reconciliation, and alert-broker delivery drain entries even though those surfaces do not create separate `/api/status` job rows.
 
 Fetch-heavy provider phases should use `worker/src/lib/provider-execution.ts` for lane permits, provider-local permits, timeout signal composition, circuit gating, and response-body policy. `createProviderExecutionContextForJob()` derives the lane ceiling from `CRON_CONNECTION_BUDGET_ENTRIES` and refuses budgets above the repo's 5/6 headroom-full limit. The first production pilot is the `sync-dex-liquidity` direct API phase: it keeps the existing two-provider fetch cap, wraps each protocol provider in a provider policy, and records circuit outcomes through the existing `circuit:<source>` breaker keys.
 
@@ -787,21 +792,21 @@ Each cron job receives an `AbortSignal` from `logCronRun()` that fires after a c
 
 Some long-running jobs also enforce their own earlier wall-clock guard so they can return controlled metadata instead of hard-failing at the wrapper timeout. `sync-blacklist`, for example, self-stops after 10 minutes and avoids starting a new config when fewer than 60 seconds remain. Its unstarted tail is persisted as `budget_skipped`, always degrades the run, and is ordered ahead of recently attempted configs on the next due run. `sync-live-reserves` keeps a 9-minute internal cursoring budget inside its 12-minute wrapper so deferred-tail state, cleanup, and cron logging have at least two minutes of headroom. `sync-mint-burn` and `sync-mint-burn-extended` keep a 9-minute self-budget inside their 10-minute wrapper timeout, pass that deadline into `eth_getLogs`, and skip the remaining config tail once fewer than 60 seconds remain for another config.
 
-| Job                       | Timeout | Reason                                                                                                                                                                                                    |
-| ------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Default                   | 5 min   | Standard jobs complete in <60s                                                                                                                                                                            |
-| `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes N-source weighted primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
-| `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
-| `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                 |
-| `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
-| `weekly-recap`            | 12 min  | Weekly Anthropic recap, chained after the daily digest on Mondays                                                                                                                                         |
-| `sync-live-reserves`      | 12 min  | Multi-adapter reserve fetching with per-adapter timeouts                                                                                                                                                  |
-| `sync-mint-burn`          | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime, with a 9-minute internal guard before the wrapper timeout                                                                          |
-| `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state and the same 9-minute internal guard                                                                                                                       |
-| `sync-yield-data`         | 10 min  | Multi-source yield data aggregation                                                                                                                                                                       |
-| `sync-yield-supplemental` | 12 min  | Supplemental yield source sync; runs less frequently but covers more sources per invocation                                                                                                               |
-| `dispatch-telegram-alerts` | 14 min | Dedicated Telegram fan-out lane with a 4-minute send-loop soft deadline, leaving scheduled-event headroom for pending enqueue/release, sidecars, and logging                                             |
-| `daily-digest`            | 14 min  | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                   |
+| Job                        | Timeout | Reason                                                                                                                                                                                                                 |
+| -------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default                    | 5 min   | Standard jobs complete in <60s                                                                                                                                                                                         |
+| `sync-stablecoins`         | 8 min   | Core quarter-hour pipeline entrypoint now includes N-source weighted primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
+| `sync-dex-liquidity`       | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                                     |
+| `sync-dex-discovery`       | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                              |
+| `sync-blacklist`           | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                                        |
+| `weekly-recap`             | 12 min  | Weekly Anthropic recap, chained after the daily digest on Mondays                                                                                                                                                      |
+| `sync-live-reserves`       | 12 min  | Multi-adapter reserve fetching with per-adapter timeouts                                                                                                                                                               |
+| `sync-mint-burn`           | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime, with a 9-minute internal guard before the wrapper timeout                                                                                       |
+| `sync-mint-burn-extended`  | 10 min  | Long-tail mint/burn lane with its own run-state and the same 9-minute internal guard                                                                                                                                   |
+| `sync-yield-data`          | 10 min  | Multi-source yield data aggregation                                                                                                                                                                                    |
+| `sync-yield-supplemental`  | 12 min  | Supplemental yield source sync; runs less frequently but covers more sources per invocation                                                                                                                            |
+| `dispatch-telegram-alerts` | 14 min  | Dedicated Telegram fan-out lane with a 4-minute send-loop soft deadline, leaving scheduled-event headroom for pending enqueue/release, sidecars, and logging                                                           |
+| `daily-digest`             | 14 min  | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                                |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
 
@@ -831,7 +836,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
 | `DEXSCREENER_LIQUIDITY`              | `dexscreener-liquidity`       | Optional DexScreener DEX liquidity/discovery pool lookups; excluded from public-impact breaker counts                     |
-| `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | Legacy `enrich-prices` addressless unique-symbol DexScreener search fallback; retired for new sync runs                  |
+| `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | Legacy `enrich-prices` addressless unique-symbol DexScreener search fallback; retired for new sync runs                   |
 | `DEXSCREENER_ADDRESS_PRICES`         | `dexscreener-address-prices`  | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `DEXPAPRIKA_PRICES`                  | `dexpaprika-prices`           | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `ALCHEMY_PRICES`                     | `alchemy-prices`              | `enrich-prices` targeted exact-address primary augmentation                                                               |
@@ -895,12 +900,12 @@ Scheduled producers report stable condition keys, fingerprints, severity, active
 
 Modes are operationally distinct:
 
-| Mode | Persistence | Health impact | Webhook delivery |
-| --- | --- | --- | --- |
-| `off` | none | none | none |
-| `shadow` | condition and transition evidence | none | none |
-| `status` | condition and transition evidence | active/failing conditions degrade health | none |
-| `alert` | full broker state | active/failing conditions degrade health | claimed, awaited, and retried |
+| Mode     | Persistence                       | Health impact                            | Webhook delivery              |
+| -------- | --------------------------------- | ---------------------------------------- | ----------------------------- |
+| `off`    | none                              | none                                     | none                          |
+| `shadow` | condition and transition evidence | none                                     | none                          |
+| `status` | condition and transition evidence | active/failing conditions degrade health | none                          |
+| `alert`  | full broker state                 | active/failing conditions degrade health | claimed, awaited, and retried |
 
 `sendAlert()` is the broker's transport adapter and auto-detects webhook format from URL:
 
@@ -911,7 +916,7 @@ Modes are operationally distinct:
 
 `sendAlert()` returns `true` only when the webhook responds with `2xx`. The broker converts false/throwing transport outcomes into durable `failed` delivery rows; a missing URL becomes `missing_target` rather than silent success.
 
-Rollout: keep `shadow` until condition identities are clean, promote to `status`, provision `ALERT_WEBHOOK_URL`, inject one synthetic incident and recovery, then promote to `alert`. Roll back immediately with `ALERT_BROKER_MODE=off` or `shadow`; keep broker rows for forensic reconciliation.
+Rollout: keep `shadow` until condition identities are clean, promote to `status`, then provision `ALERT_WEBHOOK_URL`. Preview `POST /api/alert-broker-canary` first; live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus a unique `Idempotency-Key`, emits only fixed synthetic copy to the configured target, and verifies the exact persisted incident/recovery episode. Confirm the five-minute `alert-broker-delivery-drain` budget surface is fresh and any intentionally failed delivery remains visible/retryable before promoting to `alert`. Roll back immediately with `ALERT_BROKER_MODE=off` or `shadow`; keep broker rows for forensic reconciliation.
 
 ---
 
@@ -931,22 +936,22 @@ CREATE TABLE IF NOT EXISTS cache (
 );
 ```
 
-| Cache Key                  | Writer                   | Data                                                                                   |
-| -------------------------- | ------------------------ | -------------------------------------------------------------------------------------- |
-| `stablecoins`              | `syncStablecoins`        | Full DefiLlama pegged assets payload                                                   |
-| `stablecoins:invalid-last` | `syncStablecoins`        | Last schema-invalid stablecoins payload (diagnostic only, never served to clients)     |
-| `stablecoin-charts`        | `syncStablecoinCharts`   | Downsampled chart points                                                               |
-| `fx-rates`                 | `syncFxRates`            | FX rates (EUR, GBP, etc.)                                                              |
-| `usds-status`              | `syncUsdsStatus`         | Freeze capability + implementation address                                             |
-| `bluechip-ratings`         | `syncBluechip`           | Ratings map keyed by canonical Pharos ID                                               |
-| `report-cards:snapshot`    | `publishReportCardCache` | Private generation/methodology-pinned cache envelope carrying the full report-card API payload for `/api/report-cards` and yield hydration reads |
-| `report_card_cache`        | `publishReportCardCache` | Compact Safety Score map for lightweight consumers; payload includes `methodologyVersion` and is rejected when it does not match the current Safety Score methodology |
-| `peg-analytics`            | `publishReportCardCache` | Producer-published peg-analytics snapshot (`pegData` + daily depeg counters); `/api/peg-summary` accepts it for up to 30 min (2x producer cadence) and falls back to direct compute on miss/stale |
-| `detail-write-failure:<id>` | stablecoin detail API   | Marker written when a `detail:<id>` cache write fails or is oversized; the staleness watchdog alerts on markers fresher than 24h and prunes them after 7-day retention |
-| `yield-rankings`           | `syncYieldData`          | Pre-computed yield rankings + PYS scores                                               |
-| `risk_free_rates`          | `fetchTbillRate`         | Structured benchmark registry used by yield benchmark selection and provenance         |
-| `risk_free_rate`           | `fetchTbillRate`         | Current T-bill rate for PYS computation                                                |
-| `fetch-tbill-rate:gbp-retained-fallback-streak` | `fetchTbillRate` | GBP SONIA retained-fallback streak, last alert timestamp, and recovery metadata |
+| Cache Key                                       | Writer                   | Data                                                                                                                                                                                              |
+| ----------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stablecoins`                                   | `syncStablecoins`        | Full DefiLlama pegged assets payload                                                                                                                                                              |
+| `stablecoins:invalid-last`                      | `syncStablecoins`        | Last schema-invalid stablecoins payload (diagnostic only, never served to clients)                                                                                                                |
+| `stablecoin-charts`                             | `syncStablecoinCharts`   | Downsampled chart points                                                                                                                                                                          |
+| `fx-rates`                                      | `syncFxRates`            | FX rates (EUR, GBP, etc.)                                                                                                                                                                         |
+| `usds-status`                                   | `syncUsdsStatus`         | Freeze capability + implementation address                                                                                                                                                        |
+| `bluechip-ratings`                              | `syncBluechip`           | Ratings map keyed by canonical Pharos ID                                                                                                                                                          |
+| `report-cards:snapshot`                         | `publishReportCardCache` | Private generation/methodology-pinned cache envelope carrying the full report-card API payload for `/api/report-cards` and yield hydration reads                                                  |
+| `report_card_cache`                             | `publishReportCardCache` | Compact Safety Score map for lightweight consumers; payload includes `methodologyVersion` and is rejected when it does not match the current Safety Score methodology                             |
+| `peg-analytics`                                 | `publishReportCardCache` | Producer-published peg-analytics snapshot (`pegData` + daily depeg counters); `/api/peg-summary` accepts it for up to 30 min (2x producer cadence) and falls back to direct compute on miss/stale |
+| `detail-write-failure:<id>`                     | stablecoin detail API    | Marker written when a `detail:<id>` cache write fails or is oversized; the staleness watchdog alerts on markers fresher than 24h and prunes them after 7-day retention                            |
+| `yield-rankings`                                | `syncYieldData`          | Pre-computed yield rankings + PYS scores                                                                                                                                                          |
+| `risk_free_rates`                               | `fetchTbillRate`         | Structured benchmark registry used by yield benchmark selection and provenance                                                                                                                    |
+| `risk_free_rate`                                | `fetchTbillRate`         | Current T-bill rate for PYS computation                                                                                                                                                           |
+| `fetch-tbill-rate:gbp-retained-fallback-streak` | `fetchTbillRate`         | GBP SONIA retained-fallback streak, last alert timestamp, and recovery metadata                                                                                                                   |
 
 **Cache access helpers:**
 
@@ -1027,12 +1032,12 @@ The dedicated quarter-hour `cron-slot-sweeper` reconciles stale `cron_slot_execu
 
 ### Cursor Tracking (Blacklist)
 
-| Function | Description |
-| --- | --- |
-| `loadBlacklistConfigStates(db)` | Bulk-loads typed cursors plus attempt/success/skip/failure state; reads the maximum of compatibility `last_block` and `cursor_value` |
-| `claimBlacklistConfigAttempt(db, state, attemptedAt)` | Claims the exact loaded cursor/generation and increments `attempt_generation` |
-| `finalizeBlacklistConfigAttempt(db, attempt, outcome)` | Monotonically dual-writes `cursor_value`/`last_block` plus outcome and safe-head state under the claimed generation |
-| `recordBlacklistConfigSkips(db, states, skippedAt)` | Records an unstarted budget tail without moving any cursor |
+| Function                                               | Description                                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `loadBlacklistConfigStates(db)`                        | Bulk-loads typed cursors plus attempt/success/skip/failure state; reads the maximum of compatibility `last_block` and `cursor_value` |
+| `claimBlacklistConfigAttempt(db, state, attemptedAt)`  | Claims the exact loaded cursor/generation and increments `attempt_generation`                                                        |
+| `finalizeBlacklistConfigAttempt(db, attempt, outcome)` | Monotonically dual-writes `cursor_value`/`last_block` plus outcome and safe-head state under the claimed generation                  |
+| `recordBlacklistConfigSkips(db, states, skippedAt)`    | Records an unstarted budget tail without moving any cursor                                                                           |
 
 ### Price Cache
 
@@ -1121,32 +1126,32 @@ The three crons below were previously only listed by filename in [Architecture](
 
 **D1 table: `reserve_composition`**
 
-| Column          | Type    | Description                           |
-| --------------- | ------- | ------------------------------------- |
-| `stablecoin_id` | TEXT PK | Pharos coin ID                        |
-| `slices`        | TEXT    | JSON-serialized `ReserveSlice[]`      |
-| `fetched_at`    | INTEGER | Unix seconds of last successful sync  |
-| `source`        | TEXT    | Adapter key used (e.g., `"infinifi"`) |
+| Column                                               | Type           | Description                                                                  |
+| ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------------- |
+| `stablecoin_id`                                      | TEXT PK        | Pharos coin ID                                                               |
+| `slices`                                             | TEXT           | JSON-serialized `ReserveSlice[]`                                             |
+| `fetched_at`                                         | INTEGER        | Unix seconds of last successful sync                                         |
+| `source`                                             | TEXT           | Adapter key used (e.g., `"infinifi"`)                                        |
 | `metadata` / warning fields / adapter classification | TEXT / INTEGER | Snapshot telemetry, warning summary, and source-model/evidence-class columns |
-| `attempt_id` | TEXT | Attempt-fencing identifier for rejecting orphaned partial writes |
+| `attempt_id`                                         | TEXT           | Attempt-fencing identifier for rejecting orphaned partial writes             |
 
 Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only). A row is only considered an authoritative live snapshot when it matches the coin’s `reserve_sync_state.last_success_at`.
 
 **D1 table: `reserve_sync_state`**
 
-| Column              | Type    | Description                                         |
-| ------------------- | ------- | --------------------------------------------------- |
-| `stablecoin_id`     | TEXT PK | Pharos coin ID                                      |
-| `adapter_key`       | TEXT    | Adapter key used for the last attempt               |
-| `breaker_key`       | TEXT    | Per-source circuit-breaker key                      |
-| `last_attempted_at` | INTEGER | Unix seconds of the latest sync attempt             |
-| `last_success_at`   | INTEGER | Unix seconds of the latest successful live snapshot |
-| `last_status`       | TEXT    | `ok`, `degraded`, `error`, or `skipped`             |
-| `warning_count`     | INTEGER | Count of warnings returned by the adapter           |
-| `warnings`          | TEXT    | JSON-serialized warning objects                     |
-| `last_error`        | TEXT    | Last failure message, if any                        |
-| `metadata`          | TEXT    | Adapter-specific operational metadata               |
-| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | TEXT | Attempt-fencing identifiers for correlating sync state with composition rows |
+| Column                                                               | Type    | Description                                                                  |
+| -------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------- |
+| `stablecoin_id`                                                      | TEXT PK | Pharos coin ID                                                               |
+| `adapter_key`                                                        | TEXT    | Adapter key used for the last attempt                                        |
+| `breaker_key`                                                        | TEXT    | Per-source circuit-breaker key                                               |
+| `last_attempted_at`                                                  | INTEGER | Unix seconds of the latest sync attempt                                      |
+| `last_success_at`                                                    | INTEGER | Unix seconds of the latest successful live snapshot                          |
+| `last_status`                                                        | TEXT    | `ok`, `degraded`, `error`, or `skipped`                                      |
+| `warning_count`                                                      | INTEGER | Count of warnings returned by the adapter                                    |
+| `warnings`                                                           | TEXT    | JSON-serialized warning objects                                              |
+| `last_error`                                                         | TEXT    | Last failure message, if any                                                 |
+| `metadata`                                                           | TEXT    | Adapter-specific operational metadata                                        |
+| `last_attempt_id` / `pending_attempt_id` / `last_success_attempt_id` | TEXT    | Attempt-fencing identifiers for correlating sync state with composition rows |
 
 **Registered adapters:**
 
@@ -1268,7 +1273,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, budget-only surface telemetry, publication-generation health, provider circuit health, data-invariant canaries, derived dependency health, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 48 cron jobs across 19 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections` and in the top-level `budgetOnlySurfaces` array for observability. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, budget-only surface telemetry, publication-generation health, provider circuit health, data-invariant canaries, derived dependency health, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 48 cron jobs across 19 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections` and in the top-level `budgetOnlySurfaces` array for observability. That includes Telegram registration reconciliation, durable alert-broker delivery draining, and the `*/5 * * * *` digest-trigger poll slot:
 
 Default reads use the raw status snapshot produced by `status-self-check` and recompute only the lightweight response wrappers, current status-state/probe/timeline views, and admin supplements. Publication health is one of those live admin supplements: it reads existing `dex_liquidity_publication_generations` and `yield_publication_generations` rows into `publicationHealth`, reads migrated `surface_publication_generations` rows when present, and falls back to the validated canonical `stablecoins` cache, `stress_signals_latest`/`cache["dews"]`, `stability_index_samples`, and `cache["report_card_cache"]` for stablecoins, DEWS, PSI, and report-card cache publication status until writers are migrated. `providerCircuitHealth` reads authoritative `circuit:<source>` cache rows for the bounded active provider allowlist into open/half-open breaker counts by provider family; loader failures surface as `sectionErrors.providerCircuitHealth` and do not change availability. `canaries` reads the latest row per check from `worker_canary_runs`; loader failures surface as `sectionErrors.canaries` and do not change availability. `dependencyHealth` is then derived in-process from the raw cache/cron maps, `publicationHealth`, and `shared/lib/data-dependency-registry.ts`; it performs no additional D1 reads and is advisory only. Snapshot age is bounded to 30 minutes; operators can force the previous live raw computation path with `GET /api/status?refresh=live`.
 
@@ -1276,56 +1281,56 @@ Status hysteresis transitions and self-probe history use nullable `idempotency_k
 
 The `probe` object returned by `/api/status` is the latest `status_probe_runs` aggregate. New split-plane rows include optional `internal`, `external`, and `internalExternalDiscrepancy` subobjects so operators can compare internal router health against the production custom-domain path. Legacy rows and cold-start fallbacks omit those optional fields.
 
-| Job                             | Interval         | Trigger                                           |
-| ------------------------------- | ---------------- | ------------------------------------------------- |
-| `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |
-| `sync-stablecoin-charts`        | 3,600s (1h)      | `16,46 * * * *` (scheduled hourly cadence buckets) |
-| `sync-fx-rates`                 | 1,800s (30min)   | `*/15 * * * *` (scheduled 30-min cadence buckets) |
-| `stability-index`               | 1,800s (30min)   | `26,56 * * * *`                                   |
-| `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
-| `project-tape`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
-| `cron-slot-sweeper`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
-| `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
-| `data-invariant-canary`         | 900s (15min)     | `9,24,39,54 * * * *`                              |
-| `cron-staleness-watchdog`       | 900s (15min)     | `9,24,39,54 * * * *`                              |
-| `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
-| `telegram-degradation-watchdog` | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
-| `telegram-disambiguation-cleanup` | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
-| `telegram-pulse-snapshot`       | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
-| `sync-blacklist`                | 21,600s (6h)     | `3 */6 * * *`                                     |
-| `sync-mint-burn`                | 1,800s (30min)   | `4,34 * * * *`                                    |
-| `sync-dex-discovery`            | 7,200s (2h)      | `6 */2 * * *`                                     |
-| `sync-mint-burn-extended`       | 1,800s (30min)   | `13,43 * * * *`                                   |
-| `sync-dex-liquidity`            | 1,800s (30min)   | `10,40 * * * *`                                   |
-| `sync-yield-data`               | 3,600s (1h)      | `20 * * * *`                                      |
-| `sync-yield-supplemental`       | 14,400s (4h)     | `25 */4 * * *`                                    |
-| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (once per UTC date) / `0 8 * * *` (fallback) |
-| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *` (once per UTC date)                |
-| `publish-report-card-cache`     | 900s (15min)     | `*/15 * * * *`                                    |
-| `compute-depeg-resolver`        | 900s (15min)     | `*/15 * * * *`                                    |
-| `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
-| `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
-| `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
-| `snapshot-public-dataset`       | 86,400s (24h)    | `0 8 * * *`                                       |
-| `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
-| `sync-live-reserves`            | 14,400s (4h)     | `11 */4 * * *`                                    |
-| `reserve-recovery`              | 300s (5min)      | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *`       |
-| `sync-redemption-backstops`     | 14,400s (4h)     | `11 */4 * * *`                                    |
-| `sync-kinesis-supply`           | 14,400s (4h)     | `11 */4 * * *`                                    |
-| `reserve-post-sync-watchdog`    | 14,400s (4h)     | `11 */4 * * *`                                    |
-| `sync-bluechip`                 | 86,400s (24h)    | `5 8 * * *`                                       |
-| `daily-digest`                  | 86,400s (24h)    | `5 8 * * *`                                       |
-| `weekly-recap`                  | 604,800s (7d)    | `5 8 * * *`                                       |
-| `discovery-scan`                | 604,800s (7d)    | `10 8 * * *` (Monday-only)                        |
-| `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
-| `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
-| `worker-repair-runner`          | 86,400s (24h)    | `0 3 * * *`                                       |
-| `prune-detail-cache`            | 86,400s (24h)    | `0 3 * * *`                                       |
-| `telegram-inactive-cleanup`     | 604,800s (7d)    | `0 3 * * *` (daily invocation, 7-day cache guard) |
-| `telegram-retention-cleanup`    | 86,400s (24h)    | `0 3 * * *`                                       |
-| `mint-burn-growth-watchdog`     | 86,400s (24h)    | `0 3 * * *`                                       |
-| `cron-duration-watchdog`        | 86,400s (24h)    | `0 3 * * *`                                       |
-| `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
+| Job                               | Interval         | Trigger                                                     |
+| --------------------------------- | ---------------- | ----------------------------------------------------------- |
+| `sync-stablecoins`                | 900s (15min)     | `*/15 * * * *`                                              |
+| `sync-stablecoin-charts`          | 3,600s (1h)      | `16,46 * * * *` (scheduled hourly cadence buckets)          |
+| `sync-fx-rates`                   | 1,800s (30min)   | `*/15 * * * *` (scheduled 30-min cadence buckets)           |
+| `stability-index`                 | 1,800s (30min)   | `26,56 * * * *`                                             |
+| `compute-dews`                    | 1,800s (30min)   | `26,56 * * * *`                                             |
+| `project-tape`                    | 1,800s (30min)   | `26,56 * * * *`                                             |
+| `cron-slot-sweeper`               | 900s (15min)     | `9,24,39,54 * * * *`                                        |
+| `status-self-check`               | 900s (15min)     | `9,24,39,54 * * * *`                                        |
+| `data-invariant-canary`           | 900s (15min)     | `9,24,39,54 * * * *`                                        |
+| `cron-staleness-watchdog`         | 900s (15min)     | `9,24,39,54 * * * *`                                        |
+| `dispatch-telegram-alerts`        | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`                 |
+| `telegram-degradation-watchdog`   | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`                 |
+| `telegram-disambiguation-cleanup` | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`                 |
+| `telegram-pulse-snapshot`         | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`                 |
+| `sync-blacklist`                  | 21,600s (6h)     | `3 */6 * * *`                                               |
+| `sync-mint-burn`                  | 1,800s (30min)   | `4,34 * * * *`                                              |
+| `sync-dex-discovery`              | 7,200s (2h)      | `6 */2 * * *`                                               |
+| `sync-mint-burn-extended`         | 1,800s (30min)   | `13,43 * * * *`                                             |
+| `sync-dex-liquidity`              | 1,800s (30min)   | `10,40 * * * *`                                             |
+| `sync-yield-data`                 | 3,600s (1h)      | `20 * * * *`                                                |
+| `sync-yield-supplemental`         | 14,400s (4h)     | `25 */4 * * *`                                              |
+| `snapshot-supply`                 | 86,400s (24h)    | `*/15 * * * *` (once per UTC date) / `0 8 * * *` (fallback) |
+| `snapshot-chain-supply`           | 86,400s (24h)    | `*/15 * * * *` (once per UTC date)                          |
+| `publish-report-card-cache`       | 900s (15min)     | `*/15 * * * *`                                              |
+| `compute-depeg-resolver`          | 900s (15min)     | `*/15 * * * *`                                              |
+| `snapshot-safety-grade-history`   | 86,400s (24h)    | `0 8 * * *`                                                 |
+| `fetch-tbill-rate`                | 86,400s (24h)    | `0 8 * * *`                                                 |
+| `snapshot-psi`                    | 86,400s (24h)    | `0 8 * * *`                                                 |
+| `snapshot-public-dataset`         | 86,400s (24h)    | `0 8 * * *`                                                 |
+| `sync-usds-status`                | 86,400s (24h)    | `0 8 * * *`                                                 |
+| `sync-live-reserves`              | 14,400s (4h)     | `11 */4 * * *`                                              |
+| `reserve-recovery`                | 300s (5min)      | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *`                 |
+| `sync-redemption-backstops`       | 14,400s (4h)     | `11 */4 * * *`                                              |
+| `sync-kinesis-supply`             | 14,400s (4h)     | `11 */4 * * *`                                              |
+| `reserve-post-sync-watchdog`      | 14,400s (4h)     | `11 */4 * * *`                                              |
+| `sync-bluechip`                   | 86,400s (24h)    | `5 8 * * *`                                                 |
+| `daily-digest`                    | 86,400s (24h)    | `5 8 * * *`                                                 |
+| `weekly-recap`                    | 604,800s (7d)    | `5 8 * * *`                                                 |
+| `discovery-scan`                  | 604,800s (7d)    | `10 8 * * *` (Monday-only)                                  |
+| `prune-status-probe-runs`         | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `prune-cron-history`              | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `worker-repair-runner`            | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `prune-detail-cache`              | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `telegram-inactive-cleanup`       | 604,800s (7d)    | `0 3 * * *` (daily invocation, 7-day cache guard)           |
+| `telegram-retention-cleanup`      | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `mint-burn-growth-watchdog`       | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `cron-duration-watchdog`          | 86,400s (24h)    | `0 3 * * *`                                                 |
+| `yield-coverage-audit`            | 2,592,000s (30d) | `0 6 1 * *`                                                 |
 
 A job is treated as healthy when cron telemetry is unavailable, when a fresh in-flight run exists, when the last run is fresh and `ok`/`degraded`, when the last run is a fresh `skipped_neutral` expected no-op backed by a fresh latest non-neutral `ok` required run, when a fresh `skipped_locked` run has another fresh `ok` run in recent history, or when a watch-tier job has no history yet. Otherwise it is unhealthy, including stale history, non-fresh errors, or a neutral skip whose latest required run was degraded/error. `/api/status` also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way; orphaned rows and expired leases move to `crons[*].staleArtifacts` and increment `summary.staleCronArtifacts`, `summary.orphanedCronProgressRows`, and `summary.expiredCronLeases`. Running scheduled-slot aggregates live in `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec`. Budget-only side work lives in `budgetOnlySurfaces` with separate `summary.budgetOnlySurface*` counters, not in `crons`. When a scheduled slot is later reconciled as abandoned, `crons[*].latestEvent` on each child job in that slot can carry the latest `scheduled-slot-abandoned` marker with the schedule key, owner, and progress-stage metadata for operator triage.
 
@@ -1356,53 +1361,53 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 ## File Index
 
-| File                                               | Role                                                                                                                                                                  |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                   |
-| `worker/src/handlers/http/request-dispatch.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                           |
-| `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                            |
-| `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                   |
-| `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                         |
-| `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                              |
-| `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                        |
-| `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                            |
+| File                                               | Role                                                                                                                                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                                                                            |
+| `worker/src/handlers/http/request-dispatch.ts`     | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                                                                                    |
+| `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                                                                                     |
+| `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                                                                            |
+| `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                                                                                  |
+| `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                                                                                       |
+| `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                                                                                 |
+| `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                                                                                     |
 | `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 30-min mint/burn lanes, half-hourly charts/DEX liquidity, decoupled DEWS/PSI, 2-hourly DEX discovery, 6-hourly blacklist, 4-hourly reserve slot, Telegram, and daily slots) |
-| `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                         |
-| `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                     |
-| `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                      |
-| `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                              |
-| `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                            |
-| `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                      |
-| `worker/src/lib/auth.ts`                           | Admin auth: verifies the `ops-api` Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`)                                                                                  |
-| `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                     |
-| `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                                |
-| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                               |
-| `shared/lib/status-thresholds.ts`                  | Shared status threshold constants for frontend + worker data-quality/status bands                                                                                     |
-| `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                        |
-| `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                                |
-| `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                  |
-| `shared/lib/bluechip-slugs.ts`                     | Bluechip slug → canonical Pharos ID mapping (19 coins)                                                                                                                |
-| `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, sync freshness evaluator                                                                                   |
-| `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                           |
-| `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                            |
-| `worker/src/lib/redemption-backstops-store.ts`     | D1 snapshot storage + `GET /api/redemption-backstops` response builder                                                                                                |
-| `worker/src/lib/psi-recompute.ts`                  | Shared historical PSI day-input builder used by audit/backfill admin APIs                                                                                             |
-| `worker/src/lib/mint-burn-contracts.ts`            | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and per-config tiering metadata                       |
-| `worker/src/lib/mint-burn-scoring.ts`              | FIS computation, gauge bands, flight-to-quality detection (pure functions)                                                                                            |
-| `worker/src/cron/sync-stablecoin-charts.ts`        | Chart sync: DefiLlama charts, FX fix, downsampling                                                                                                                    |
-| `worker/src/cron/sync-mint-burn.ts`                | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation                                                                              |
-| `worker/src/cron/sync-redemption-backstops.ts`     | 4-hourly redemption-route snapshot sync used by detail pages and report cards                                                                                         |
-| `worker/src/cron/sync-kinesis-supply.ts`           | 4-hourly Kinesis Horizon supply sync: KAU/KAG circulation, mint, and redemption totals                                                                                |
-| `worker/src/cron/sync-usds-status.ts`              | USDS freeze monitor: ERC-1967 proxy inspection                                                                                                                        |
-| `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                       |
-| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                         |
-| `worker/src/cron/status-self-check.ts`             | Status reliability self-check: internal router probes, explicit production-domain external probes, hysteresis persistence, discrepancy + probe-failure alerting       |
-| `worker/src/lib/status-reliability.ts`             | Stable facade for status reliability imports                                                                                                                          |
-| `worker/src/lib/status-state-store.ts`             | Status hysteresis state persistence, snapshots, and transition history                                                                                                |
-| `worker/src/lib/status-probe-store.ts`             | Status self-probe persistence helpers                                                                                                                                 |
-| `worker/src/lib/status-discrepancy-store.ts`       | Divergence/probe-failure streak persistence and alert markers                                                                                                         |
-| `worker/src/lib/status-discrepancy-view.ts`        | Discrepancy view assembly from effective status + probe summary                                                                                                       |
-| `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                   |
+| `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                                                                                  |
+| `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                                                                              |
+| `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                                                                               |
+| `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                                                                                       |
+| `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                                                                                     |
+| `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                                                                               |
+| `worker/src/lib/auth.ts`                           | Admin auth: verifies the `ops-api` Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`)                                                                                                                                           |
+| `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                                                                              |
+| `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                                                                                         |
+| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                                                                                        |
+| `shared/lib/status-thresholds.ts`                  | Shared status threshold constants for frontend + worker data-quality/status bands                                                                                                                                              |
+| `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                                                                                 |
+| `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                                                                                         |
+| `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                                                                           |
+| `shared/lib/bluechip-slugs.ts`                     | Bluechip slug → canonical Pharos ID mapping (19 coins)                                                                                                                                                                         |
+| `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, sync freshness evaluator                                                                                                                                           |
+| `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                                                                                    |
+| `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                                                                                     |
+| `worker/src/lib/redemption-backstops-store.ts`     | D1 snapshot storage + `GET /api/redemption-backstops` response builder                                                                                                                                                         |
+| `worker/src/lib/psi-recompute.ts`                  | Shared historical PSI day-input builder used by audit/backfill admin APIs                                                                                                                                                      |
+| `worker/src/lib/mint-burn-contracts.ts`            | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and per-config tiering metadata                                                                                |
+| `worker/src/lib/mint-burn-scoring.ts`              | FIS computation, gauge bands, flight-to-quality detection (pure functions)                                                                                                                                                     |
+| `worker/src/cron/sync-stablecoin-charts.ts`        | Chart sync: DefiLlama charts, FX fix, downsampling                                                                                                                                                                             |
+| `worker/src/cron/sync-mint-burn.ts`                | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation                                                                                                                                       |
+| `worker/src/cron/sync-redemption-backstops.ts`     | 4-hourly redemption-route snapshot sync used by detail pages and report cards                                                                                                                                                  |
+| `worker/src/cron/sync-kinesis-supply.ts`           | 4-hourly Kinesis Horizon supply sync: KAU/KAG circulation, mint, and redemption totals                                                                                                                                         |
+| `worker/src/cron/sync-usds-status.ts`              | USDS freeze monitor: ERC-1967 proxy inspection                                                                                                                                                                                 |
+| `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                                                                                |
+| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                                                                                  |
+| `worker/src/cron/status-self-check.ts`             | Status reliability self-check: internal router probes, explicit production-domain external probes, hysteresis persistence, discrepancy + probe-failure alerting                                                                |
+| `worker/src/lib/status-reliability.ts`             | Stable facade for status reliability imports                                                                                                                                                                                   |
+| `worker/src/lib/status-state-store.ts`             | Status hysteresis state persistence, snapshots, and transition history                                                                                                                                                         |
+| `worker/src/lib/status-probe-store.ts`             | Status self-probe persistence helpers                                                                                                                                                                                          |
+| `worker/src/lib/status-discrepancy-store.ts`       | Divergence/probe-failure streak persistence and alert markers                                                                                                                                                                  |
+| `worker/src/lib/status-discrepancy-view.ts`        | Discrepancy view assembly from effective status + probe summary                                                                                                                                                                |
+| `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                                                                            |
 
 ---
 

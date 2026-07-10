@@ -135,7 +135,7 @@ The active frontend operator mode is now:
   - Rows show state, operator-friendly label, raw job id, trigger, last run, last good run, duration, item count, and error/skip streaks
   - A selected-row detail panel owns full metadata, error text, in-flight progress, and recent run dots so long metadata does not stretch the default scan view
   - Slot execution metadata includes compact child outcome counts (`jobsAttempted`, `jobsSucceeded`, legacy `jobsRun`, `jobsSkipped`, `jobsNeutralSkipped`, `jobsDegraded`, `jobsErrored`, `budgetOnlyJobs`) so a best-effort slot can surface degraded/error children without hiding later jobs that still ran. Expected no-op skips, such as an empty manual digest poll, increment `jobsNeutralSkipped` instead of `jobsSkipped`.
-  - Budget-only scheduled surfaces are exposed separately through `budgetOnlySurfaces` instead of being folded into `crons`: Telegram registration reconciliation and the manual digest-trigger poll report cache-backed checked-at time, duration, due/processed counts, outcome, skip reason, and bounded metadata.
+  - Budget-only scheduled surfaces are exposed separately through `budgetOnlySurfaces` instead of being folded into `crons`: Telegram registration reconciliation, the durable alert-broker delivery drain, and the manual digest-trigger poll report cache-backed checked-at time, duration, due/processed counts, outcome, skip reason, and bounded metadata. Broker retry telemetry is independent of Telegram bot-token preflight.
   - When a leased job is still running, rows and the detail panel surface `running` / `running-stale` state from `crons[*].inFlight`
   - Orphaned progress rows and expired leases are suppressed from `crons[*].inFlight` and exposed as `crons[*].staleArtifacts`, with aggregate counters in `summary.staleCronArtifacts`, `summary.orphanedCronProgressRows`, and `summary.expiredCronLeases`
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
@@ -340,7 +340,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `canaries`: admin-only latest structural canary results from `worker_canary_runs`, written by `data-invariant-canary` when `WORKER_CANARY_MODE` is enabled. It covers DEX publication/current-row invariants, stablecoins-cache active coverage, PSI/DEWS latest samples, and report-card cache generation/methodology freshness without changing producer behavior.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
-- `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
+- `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) plus an additive `capacity` assessment with 60/75/90% state, 30-day growth, next-threshold, and exhaustion forecasts, sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
 - `classificationWarnings`: optional array of decentralized-governance coins where centralized custody fraction exceeds 50% (`coinId`, `governance`, `centralizedCustodyPct`, `threshold`). Signals potential governance reclassification candidates. Omitted when no warnings.
 
@@ -600,12 +600,14 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 Renders in the Admin Pipeline `Storage` tab beside pipeline freshness. It shows:
 
 - current D1 database size
+- current utilization state against the 10 GB ceiling
+- next-threshold and exhaustion forecast when at least three samples span 24 hours
 - table count
 - read-replication mode and region
 - trailing 24-hour read/write query counts
 - trailing 24-hour rows-read/rows-written counts
 
-Data is sourced from the admin-only `GET /api/status` payload. The worker supplement uses the same Cloudflare D1 info + analytics calls that `wrangler d1 info` uses: a D1 control-plane fetch for database metadata plus a GraphQL `d1AnalyticsAdaptiveGroups` query over the trailing 24 hours. The field stays `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker. Loader/config failures are surfaced through `sectionErrors.d1Usage`.
+Data is sourced from the admin-only `GET /api/status` payload. The worker supplement uses the same Cloudflare D1 info + analytics calls that `wrangler d1 info` uses: a D1 control-plane fetch for database metadata plus a GraphQL `d1AnalyticsAdaptiveGroups` query over the trailing 24 hours. The scheduled status self-check records at most one capacity sample per UTC hour and routes threshold transitions through the durable alert broker. The field stays `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker. Loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 ## Mint/Burn Reconciliation Card
 
