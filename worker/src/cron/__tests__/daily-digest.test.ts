@@ -173,6 +173,7 @@ import { postDigestTweet } from "../../lib/twitter";
 import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
@@ -274,12 +275,64 @@ function mockAnthropicStreamResponse(text: string): Response {
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
 
-function makeBaseTables(): MockTableConfig[] {
+interface TestDewsRow {
+  stablecoin_id: string;
+  score: number;
+  band: string;
+  signals_json: string;
+  computed_at: number;
+}
+
+function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
+  const computedAt = dewsRows[0]!.computed_at;
+  return [
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["dews:published-generation"],
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          updatedAt: computedAt,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: dewsRows.length,
+          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
+        }),
+        updated_at: computedAt,
+      },
+    },
+    {
+      match: "pharos:stress-signals:published-exact",
+      rows: dewsRows.map((row) => ({ ...row })),
+    },
+  ];
+}
+
+function makeBaseTables(options: {
+  dewsRows?: TestDewsRow[];
+} = {}): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
   const weekAgoTs = todayTs - 7 * 86_400;
-
+  const dewsRows = options.dewsRows ?? [
+    {
+      stablecoin_id: "usdt-tether",
+      score: 8,
+      band: "CALM",
+      signals_json: '{"supply":{"value":5,"available":true}}',
+      computed_at: nowSec - 600,
+    },
+    {
+      stablecoin_id: "usdc-circle",
+      score: 12,
+      band: "CALM",
+      signals_json: '{"pool":{"value":10,"available":true}}',
+      computed_at: nowSec - 600,
+    },
+  ];
   return [
+    ...makePublishedDewsTables(dewsRows),
     {
       match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
       rows: [],
@@ -814,30 +867,25 @@ describe("generateDailyDigest", () => {
 
   it("includes DEWS stress data with band changes in stored input", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-
-    const baseTables = makeBaseTables();
+    const dewsRows = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 8,
+        band: "CALM",
+        signals_json: '{"supply":{"value":5,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 62,
+        band: "ALERT",
+        signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+    ];
+    const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
       ...baseTables,
-      // Latest DEWS per coin
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 8,
-            band: "CALM",
-            signals_json: '{"supply":{"value":5,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            score: 62,
-            band: "ALERT",
-            signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-        ],
-      },
       // Yesterday's snapshot
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
@@ -866,28 +914,25 @@ describe("generateDailyDigest", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const baseTables = makeBaseTables();
+    const dewsRows = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 8,
+        band: "CALM",
+        signals_json: '{"supply":{"value":5,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 62,
+        band: "ALERT",
+        signals_json: '{"pool":',
+        computed_at: nowSec - 600,
+      },
+    ];
+    const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
       ...baseTables,
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 8,
-            band: "CALM",
-            signals_json: '{"supply":{"value":5,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            score: 62,
-            band: "ALERT",
-            signals_json: '{"pool":',
-            computed_at: nowSec - 600,
-          },
-        ],
-      },
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [
@@ -2671,24 +2716,62 @@ describe("collectDewsStress — topSignals enrichment", () => {
     vi.useRealTimers();
   });
 
-  it("returns topSignals on elevated coins when signals_json is provided", async () => {
+  it("marks the collector degraded instead of using a partial staged generation", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
     const db = mockD1([
       {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify({
-              supply: { value: 30, available: true },
-              pool: { value: 80, available: true },
-              liq: { value: 45, available: true },
-              price: { value: 10, available: true },
-            }),
-          },
-        ],
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            updatedAt: computedAt,
+            source: "compute-dews",
+            publishStatus: "published",
+            coverageVersion: 2,
+            expectedRowCount: 2,
+            stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
+          }),
+          updated_at: computedAt,
+        },
       },
+      {
+        match: "pharos:stress-signals:published-exact",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          score: 65,
+          band: "ALERT",
+          signals_json: "{}",
+          computed_at: computedAt,
+        }],
+      },
+    ]);
+    const degradedReasons: string[] = [];
+
+    const result = await collectDewsStress(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("dews-published-generation");
+  });
+
+  it("returns topSignals on elevated coins when signals_json is provided", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
+    const dewsRows: TestDewsRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify({
+          supply: { value: 30, available: true },
+          pool: { value: 80, available: true },
+          liq: { value: 45, available: true },
+          price: { value: 10, available: true },
+        }),
+        computed_at: computedAt,
+      },
+    ];
+    const db = mockD1([
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
@@ -2712,18 +2795,16 @@ describe("collectDewsStress — topSignals enrichment", () => {
   });
 
   it("returns empty topSignals when signals_json is missing", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
+    const dewsRows: TestDewsRow[] = [{
+      stablecoin_id: "usdt-tether",
+      score: 65,
+      band: "ALERT",
+      signals_json: "{}",
+      computed_at: computedAt,
+    }];
     const db = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: "{}",
-          },
-        ],
-      },
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [],
@@ -2747,18 +2828,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
       },
       amplifiers: { psi: 1.08, contagion: 1.15 },
     });
+    const dewsRows: TestDewsRow[] = [{
+      stablecoin_id: "usdt-tether",
+      score: 65,
+      band: "ALERT",
+      signals_json: wrappedJson,
+      computed_at: Math.floor(Date.now() / 1000) - 600,
+    }];
     const db = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: wrappedJson,
-          },
-        ],
-      },
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
@@ -2785,35 +2863,28 @@ describe("collectDewsStress — topSignals enrichment", () => {
       pool: { value: 80, available: true },
       liq: { value: 45, available: true },
     };
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
     const flatDb = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify(signalsPayload),
-          },
-        ],
-      },
+      ...makePublishedDewsTables([{
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify(signalsPayload),
+        computed_at: computedAt,
+      }]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
     const wrappedDb = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify({
-              signals: signalsPayload,
-              amplifiers: { psi: 1, contagion: 1 },
-            }),
-          },
-        ],
-      },
+      ...makePublishedDewsTables([{
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify({
+          signals: signalsPayload,
+          amplifiers: { psi: 1, contagion: 1 },
+        }),
+        computed_at: computedAt,
+      }]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
 

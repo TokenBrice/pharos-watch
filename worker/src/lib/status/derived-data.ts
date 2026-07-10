@@ -16,6 +16,7 @@ import {
 import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
+import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -51,6 +52,9 @@ type DatasetFreshnessTarget =
   | {
       type: "cron";
       jobs: readonly string[];
+    }
+  | {
+      type: "dews-publication";
     };
 
 const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
@@ -66,7 +70,7 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
     where: "is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
   },
   depegs: { type: "cron", jobs: ["sync-stablecoins"] },
-  dews: { type: "table", table: "stress_signals", column: "computed_at" },
+  dews: { type: "dews-publication" },
   digest: { type: "table", table: "daily_digest", column: "generated_at" },
   discoveryCandidates: { type: "cron", jobs: ["sync-stablecoins", "discovery-scan"] },
 };
@@ -142,26 +146,41 @@ async function getLastSuccessfulCronRun(db: D1Database, jobs: readonly string[])
   }
 }
 
-async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Promise<number | null> {
+async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now: number): Promise<number | null> {
   if (target.type === "cron") {
     return getLastSuccessfulCronRun(db, target.jobs);
+  }
+  if (target.type === "dews-publication") {
+    const published = await readDewsPublishedGenerationResult(db, now);
+    if (published.status === "ok") return published.computedAt;
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "dews_publication_freshness_unavailable",
+      route: "status",
+      source: "dews:published-generation",
+      message: "Failed to validate the DEWS published generation for dataset freshness",
+      metadata: { status: published.status },
+    });
+    return null;
   }
   return getLastTableUpdate(db, target);
 }
 
 export async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
+  const now = Math.floor(Date.now() / 1000);
   const [stablecoins, blacklist, mintBurn, supply, safetyGrades, yieldTs, depegs, dews, digest, discoveryCandidates] =
     await Promise.all([
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest, now),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates, now),
     ]);
 
   return {

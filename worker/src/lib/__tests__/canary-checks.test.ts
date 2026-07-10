@@ -10,6 +10,7 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { REPORT_CARD_CACHE_GENERATION } from "../report-card-cache";
+import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_900_000;
 
@@ -83,6 +84,32 @@ function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } 
   ];
 }
 
+function dewsRows(computedAt = NOW - 60, outOfRangeCount = 0) {
+  return Array.from({ length: 20 }, (_, index) => ({
+    stablecoin_id: `stablecoin-${String(index).padStart(2, "0")}`,
+    score: index < outOfRangeCount ? 101 : 20 + index,
+    band: "CALM",
+    signals_json: "{}",
+    computed_at: computedAt,
+  }));
+}
+
+function dewsPointerRow(rows: ReturnType<typeof dewsRows>, computedAt = NOW - 60) {
+  return {
+    key: "dews:published-generation",
+    value: JSON.stringify({
+      updatedAt: computedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: rows.length,
+      stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+    }),
+    updatedAt: computedAt,
+    updated_at: computedAt,
+  };
+}
+
 function healthyD1(
   dex: {
     rowCount?: number;
@@ -104,6 +131,7 @@ function healthyD1(
   const retainedOlderPublishedRows = dex.retainedOlderPublishedRows ?? 0;
   const unpublishedRows = dex.unpublishedRows ?? 0;
   const generationCount = dex.generationCount ?? 1;
+  const publishedDewsRows = dewsRows();
   return mockD1([
     {
       match: "FROM dex_liquidity_publication_generations",
@@ -150,6 +178,7 @@ function healthyD1(
           updated_at: NOW - 60,
         },
         { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        dewsPointerRow(publishedDewsRows),
         ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
     },
@@ -164,14 +193,9 @@ function healthyD1(
       rows: [],
     },
     {
-      match: "FROM stress_signals_latest",
-      first: {
-        source_table: "stress_signals_latest",
-        row_count: 20,
-        latest_computed_at: NOW - 60,
-        out_of_range_scores: 0,
-      },
-      rows: [],
+      match: "pharos:stress-signals:published-exact",
+      matchBinds: [NOW - 60],
+      rows: publishedDewsRows,
     },
   ]);
 }
@@ -199,6 +223,25 @@ describe("worker data invariant canaries", () => {
       worstStatus: "ok",
       worstSeverity: "info",
     });
+  });
+
+  it("derives DEWS canary health from the exact published generation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const db = healthyD1();
+
+    const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    const dews = summary.results.find((result) => result.checkId === "dews-latest-signal");
+
+    expect(dews).toMatchObject({
+      status: "ok",
+      metadata: expect.objectContaining({
+        sourceTable: "stress_signals",
+        latestComputedAt: NOW - 60,
+        exactCoverageVerified: true,
+      }),
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("stress_signals_latest"))).toBe(false);
   });
 
   it("degrades and names even one missing active stablecoin", async () => {
@@ -328,6 +371,7 @@ describe("worker data invariant canaries", () => {
   it("degrades noisy invariants without aborting the rest of the run", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
+    const unhealthyDewsRows = dewsRows(NOW - 60, 2);
     const db = mockD1([
       {
         match: "FROM dex_liquidity_publication_generations",
@@ -354,6 +398,7 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
           { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+          dewsPointerRow(unhealthyDewsRows),
           ...gbpCanaryCacheRows(),
         ],
       },
@@ -368,14 +413,9 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
-        match: "FROM stress_signals_latest",
-        first: {
-          source_table: "stress_signals_latest",
-          row_count: 20,
-          latest_computed_at: NOW - 60,
-          out_of_range_scores: 2,
-        },
-        rows: [],
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [NOW - 60],
+        rows: unhealthyDewsRows,
       },
     ]);
 
@@ -542,8 +582,9 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.skippedCount).toBe(4);
+    expect(summary.skippedCount).toBe(3);
+    expect(summary.degradedCount).toBe(1);
     expect(summary.okCount).toBe(3);
-    expect(summary.worstStatus).toBe("ok");
+    expect(summary.worstStatus).toBe("degraded");
   });
 });

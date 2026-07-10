@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { buildBriefMessage, buildCoverageMessage, buildTopMessage } from "../telegram-webhook-insights";
 import type { StatusForCoin } from "../telegram-webhook-status";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 describe("buildBriefMessage", () => {
   afterEach(() => {
@@ -72,6 +73,53 @@ describe("buildTopMessage", () => {
     const sql = db.getHistory()[0]?.sql ?? "";
     expect(sql).toMatch(/\bCOALESCE\(peak_price,\s*start_price\) AS display_price\b/);
     expect(sql).not.toMatch(/\bSELECT\b[\s\S]*,\s*price\s*,[\s\S]*\bFROM depeg_events\b/);
+  });
+
+  it("builds /top dews only from the exact published generation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const publishedAt = nowSec - 60;
+    const rows = [
+      { stablecoin_id: "usdc-circle", score: 44, band: "WATCH", signals_json: "{}", computed_at: publishedAt },
+      { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", signals_json: "{}", computed_at: publishedAt },
+    ];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: publishedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+      }),
+      updated_at: publishedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [publishedAt],
+        rows,
+      },
+      {
+        match: "MAX(computed_at)",
+        rows: [{ stablecoin_id: "staged", score: 100, band: "CRITICAL", computed_at: nowSec }],
+      },
+    ]);
+
+    const message = await buildTopMessage(db, "dews");
+
+    expect(message).toContain("1. USDT");
+    expect(message).toContain("2. USDC");
+    expect(message).not.toContain("staged");
+    expect(db.getHistory().some((entry) => entry.sql.includes("MAX(computed_at)"))).toBe(false);
   });
 
   it("falls back to usage text for unknown /top views", async () => {

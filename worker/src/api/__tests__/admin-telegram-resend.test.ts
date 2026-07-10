@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAdminTelegramResend } from "../admin-telegram-resend";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
@@ -193,6 +194,54 @@ describe("handleAdminTelegramResend", () => {
     });
     expect(res.status).toBe(422);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 422 rather than reviving an older DEWS row under an exact publication pointer", async () => {
+    const publishedAt = Math.floor(Date.now() / 1000) - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: publishedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: 2,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
+      }),
+      updated_at: publishedAt,
+    };
+    const db = mockD1([
+      subscriberRows(),
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-one",
+        matchBinds: ["usdc-circle", publishedAt],
+        rows: [{ score: 25, band: "WATCH", signals_json: "{}", computed_at: publishedAt - 60 }],
+      },
+      {
+        match: "pharos:stress-signals:published-exact-one",
+        matchBinds: ["usdc-circle", publishedAt],
+        rows: [],
+        first: null,
+      },
+      auditRow(),
+    ]);
+
+    const res = await handleAdminTelegramResend({
+      db,
+      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
+      trustedAdmin: true,
+      telegramBotToken: BOT_TOKEN,
+    });
+
+    expect(res.status).toBe(422);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
   });
 
   it("sends a synthetic dews alert and audits the action", async () => {

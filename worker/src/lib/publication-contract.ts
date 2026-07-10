@@ -13,6 +13,7 @@ import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
 import { loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache } from "./stablecoins-cache";
+import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -68,9 +69,9 @@ const DEWS_SURFACE: PublicationSurfaceDefinition = {
   sourceOfTruth: "surface_publication_generations",
 };
 
-const DEWS_LATEST_SURFACE: PublicationSurfaceDefinition = {
+const DEWS_POINTER_SURFACE: PublicationSurfaceDefinition = {
   ...DEWS_SURFACE,
-  sourceOfTruth: "stress_signals_latest",
+  sourceOfTruth: "cache[dews:published-generation]+stress_signals",
 };
 
 const PSI_SURFACE: PublicationSurfaceDefinition = {
@@ -485,63 +486,36 @@ async function loadDewsFallbackPublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
-  const sentinelUpdatedAt = await getCacheUpdatedAt(db, "dews").catch(() => null);
-  let row: { computed_at: number | null; row_count: number | null } | null = null;
-  try {
-    row = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT computed_at, COUNT(*) AS row_count
-             FROM stress_signals_latest
-            GROUP BY computed_at
-            ORDER BY computed_at DESC
-            LIMIT 1`,
-        )
-        .first<{ computed_at: number | null; row_count: number | null }>(),
-    2);
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-  }
-
-  if (row?.computed_at != null) {
+  const published = await loadPublishedStressSignalGeneration(db, now);
+  if (published.status === "ok" && published.exactCoverageVerified) {
     const publishedRow = publishedFallbackRow(
-      `dews:${row.computed_at}`,
-      row.computed_at,
-      row.row_count,
+      `dews:${published.computedAt}`,
+      published.computedAt,
+      published.rows.length,
       {
         inputWatermarks: {
-          stressSignalsLatest: row.computed_at,
-          freshnessSentinel: sentinelUpdatedAt,
+          publishedGeneration: published.computedAt,
         },
-        cacheKey: "dews",
+        cacheKey: "dews:published-generation",
+        exactCoverageVerified: true,
       },
     );
-    return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, publishedRow, publishedRow, null);
+    return buildSurfaceHealth(DEWS_POINTER_SURFACE, now, publishedRow, publishedRow, null);
   }
 
-  if (sentinelUpdatedAt != null) {
-    const sentinelRow = publishedFallbackRow(
-      `dews-sentinel:${sentinelUpdatedAt}`,
-      sentinelUpdatedAt,
-      null,
-      {
-        inputWatermarks: {
-          freshnessSentinel: sentinelUpdatedAt,
-        },
-        cacheKey: "dews",
-        fallbackMode: "freshness-sentinel",
-      },
-    );
-    return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, sentinelRow, sentinelRow, null);
-  }
-
+  const failureReason = published.status === "ok"
+    ? "legacy-publication-pointer-without-exact-coverage"
+    : published.reason;
   const failedRow = failedFallbackRow(
     "dews:missing",
-    "missing-stress-signals-latest",
+    failureReason,
     now,
-    { cacheKey: "dews" },
+    {
+      cacheKey: "dews:published-generation",
+      exactCoverageVerified: false,
+    },
   );
-  return buildSurfaceHealth(DEWS_LATEST_SURFACE, now, failedRow, null, failedRow);
+  return buildSurfaceHealth(DEWS_POINTER_SURFACE, now, failedRow, null, failedRow);
 }
 
 async function loadDewsPublicationSurface(

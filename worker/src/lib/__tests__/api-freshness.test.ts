@@ -32,6 +32,17 @@ function sentinelRow(
   });
 }
 
+function dewsPublicationPointerRow(updatedAt: number) {
+  return cacheRow("dews:published-generation", updatedAt, {
+    updatedAt,
+    source: "compute-dews",
+    publishStatus: "published",
+    coverageVersion: 2,
+    expectedRowCount: 2,
+    stablecoinIdsDigest: "a".repeat(64),
+  });
+}
+
 describe("getLatestSuccessfulCronTimestampResult", () => {
   it("returns ok when a successful cron run exists", async () => {
     const db = mockD1([
@@ -211,5 +222,82 @@ describe("buildCacheStatuses sentinel validation", () => {
       }),
     ]);
     expect(warnings).toContain("dex-liquidity: freshness sentinel invalid (malformed-json); using cron-fallback");
+  });
+
+  it("uses the DEWS publication pointer instead of partial stress-signal rows", async () => {
+    const now = 1_800_000_000;
+    const publishedAt = now - 420;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          sentinelRow("yield-data", now - 180),
+          sentinelRow("dews", now - 240, { source: "wrong-producer" }),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [dewsPublicationPointerRow(publishedAt)],
+      },
+    ]);
+
+    const { caches, diagnostics, warnings } = await buildCacheStatuses(db, now);
+
+    expect(caches.dews).toMatchObject({
+      ageSeconds: 420,
+      freshnessSource: "table-fallback",
+      sentinelValidationReason: "wrong-source",
+    });
+    expect(diagnostics).toContainEqual(expect.objectContaining({
+      key: "dews",
+      freshnessSource: "table-fallback",
+    }));
+    expect(warnings).toContain("dews: freshness sentinel invalid (wrong-source); using table-fallback");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
+  });
+
+  it("fails closed when DEWS publication evidence is missing even if cron history is fresh", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          sentinelRow("yield-data", now - 180),
+          { key: "freshness:dews", updated_at: now - 240, value: "{bad-json" },
+        ],
+      },
+      { match: "GROUP BY job", rows: [{ job: "compute-dews", started_at: now - 30 }] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const { caches, failures, statusFloor } = await buildCacheStatuses(db, now);
+
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(caches.dews?.freshnessSource).toBeUndefined();
+    expect(failures).toContainEqual(expect.objectContaining({
+      key: "dews",
+      source: "table-freshness",
+      message: expect.stringContaining("no-pointer"),
+    }));
+    expect(statusFloor).toBe("stale");
   });
 });

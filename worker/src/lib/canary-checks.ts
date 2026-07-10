@@ -10,6 +10,7 @@ import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
+import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 
 export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
 
@@ -74,13 +75,6 @@ interface PsiLatestRow {
   score: number;
   band: string;
   methodology_version: string;
-}
-
-interface DewsLatestSummaryRow {
-  source_table: string;
-  row_count: number | null;
-  latest_computed_at: number | null;
-  out_of_range_scores: number | null;
 }
 
 interface WorkerCanaryRunRow {
@@ -408,57 +402,40 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
   }
 }
 
-async function loadDewsLatestSummary(db: D1Database): Promise<DewsLatestSummaryRow> {
-  try {
-    return (await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT
-             'stress_signals_latest' AS source_table,
-             COUNT(*) AS row_count,
-             MAX(computed_at) AS latest_computed_at,
-             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
-           FROM stress_signals_latest`,
-        )
-        .first<DewsLatestSummaryRow>(),
-    )) ?? { source_table: "stress_signals_latest", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-    return (await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT
-             'stress_signals' AS source_table,
-             COUNT(*) AS row_count,
-             MAX(computed_at) AS latest_computed_at,
-             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
-           FROM stress_signals`,
-        )
-        .first<DewsLatestSummaryRow>(),
-    )) ?? { source_table: "stress_signals", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
-  }
-}
-
 async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   try {
-    const summary = await loadDewsLatestSummary(db);
-    const rowCount = Number(summary.row_count ?? 0);
-    const outOfRangeScores = Number(summary.out_of_range_scores ?? 0);
-    const latestComputedAt = summary.latest_computed_at;
-    const ageSec = latestComputedAt == null ? null : Math.max(0, observedAt - latestComputedAt);
+    const published = await loadPublishedStressSignalGeneration(db, observedAt);
+    if (published.status !== "ok") {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: `DEWS published generation unavailable: ${published.reason}`,
+        metadata: {
+          sourceTable: "stress_signals",
+          publicationStatus: "unavailable",
+          publicationReason: published.reason,
+          maxAgeSec: DEWS_MAX_AGE_SEC,
+        },
+      };
+    }
+    const rowCount = published.rows.length;
+    const outOfRangeScores = published.rows.filter((row) => !isScoreInRange(row.score)).length;
+    const latestComputedAt = published.computedAt;
+    const ageSec = Math.max(0, observedAt - latestComputedAt);
     const metadata = {
-      sourceTable: summary.source_table,
+      sourceTable: "stress_signals",
       rowCount,
       latestComputedAt,
       ageSec,
       maxAgeSec: DEWS_MAX_AGE_SEC,
       outOfRangeScores,
+      exactCoverageVerified: published.exactCoverageVerified,
     };
-    if (rowCount === 0 || latestComputedAt == null) {
+    if (!published.exactCoverageVerified) {
       return {
         status: "degraded" as const,
         severity: "warning" as const,
-        error: "no DEWS stress signal rows found",
+        error: "DEWS published generation uses legacy coverage evidence",
         metadata,
       };
     }

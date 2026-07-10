@@ -1801,7 +1801,7 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
 
-The writer fails closed for required cache/table reads and now also marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. Successful empty DEWS/DEX reads still publish empty `dewsRows` / `liquidityRows`; failed reads are not silently omitted from an `ok` snapshot.
+The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidityRows` section, while failed reads are never silently omitted from an `ok` snapshot.
 
 **Cache:** immutable-snapshot
 
@@ -3207,6 +3207,8 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 | ------------ | --------- | ------- | ----------------------------------------------- |
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
+
+Current responses are bounded by `cache["dews:published-generation"]`. Version 2 pointers bind the exact generation timestamp, row count, and stablecoin-ID digest; readers use `stress_signals_latest` only when it matches that proof and otherwise read exactly the canonical `stress_signals` rows at the published timestamp. Missing rows, same-count ID drift, and newer failed partial generations fail closed instead of being filled with older per-coin rows. Legacy or absent pointers retain the bounded compatibility path during rollout.
 
 Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, and `X-Data-Age` / `Warning` freshness headers use that aggregate generation timestamp. `oldestComputedAt` remains a body-only lag diagnostic for consumers that need per-coin retained-last-valid detection.
 

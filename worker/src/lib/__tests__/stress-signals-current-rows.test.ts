@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   loadStressSignalCurrentRowForCoin,
   loadStressSignalCurrentRows,
+  loadPublishedStressSignalGeneration,
   mergeNewestStressSignalRows,
   type StressSignalCurrentRow,
 } from "../stress-signals-current-rows";
@@ -32,6 +33,80 @@ describe("stress-signal current-row helpers", () => {
       row("usdt-tether", nowSec - 30, 15),
       row("usdc-circle", nowSec - 60, 30),
     ]);
+  });
+
+  it("loads one exact canonical generation from the publication pointer", async () => {
+    const completedAt = nowSec - 60;
+    const rows = [row("usdt-tether", completedAt), row("usdc-circle", completedAt)];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((entry) => entry.stablecoin_id)),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [completedAt],
+        rows: rows.map((entry) => ({ ...entry })),
+      },
+    ], { requireMatch: true });
+
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
+      status: "ok",
+      computedAt: completedAt,
+      rows,
+      exactCoverageVerified: true,
+    });
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("rejects a partial canonical generation instead of mixing staged rows", async () => {
+    const completedAt = nowSec - 60;
+    const publishedIds = ["usdt-tether", "usdc-circle"];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: publishedIds.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [completedAt],
+        rows: [{ ...row("usdc-circle", completedAt) }],
+      },
+    ], { requireMatch: true });
+
+    await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
+      status: "unavailable",
+      reason: "published generation coverage mismatch: rows=1/2",
+    });
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("falls back to canonical history rows when latest materialization is stale", async () => {
@@ -102,7 +177,7 @@ describe("stress-signal current-row helpers", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
-  it("merges canonical history when chunked staging hides part of the published latest set", async () => {
+  it("loads the exact canonical generation when chunked staging hides part of the published latest set", async () => {
     const completedAt = nowSec - 60;
     const publishedIds = ["usdt-tether", "usdc-circle"];
     const pointer = {
@@ -135,7 +210,7 @@ describe("stress-signal current-row helpers", () => {
         rows: [{ ...untouchedOldSubset }],
       },
       {
-        match: "pharos:stress-signals:legacy-latest-all",
+        match: "pharos:stress-signals:published-exact-all",
         matchBinds: [completedAt],
         rows: canonicalRows.map((canonicalRow) => ({ ...canonicalRow })),
       },
@@ -144,6 +219,47 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual(canonicalRows);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("fails closed when the exact published generation has lost a row", async () => {
+    const completedAt = nowSec - 60;
+    const publishedIds = ["usdt-tether", "usdc-circle"];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: publishedIds.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...row("usdc-circle", completedAt) }],
+      },
+      {
+        match: "pharos:stress-signals:published-exact-all",
+        matchBinds: [completedAt],
+        rows: [{ ...row("usdt-tether", completedAt) }],
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual([]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-all"))).toBe(false);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
@@ -259,6 +375,59 @@ describe("stress-signal current-row helpers", () => {
     );
 
     expect(loaded).toEqual(staleLatest);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("does not revive an older single-coin row under an exact publication pointer", async () => {
+    const completedAt = nowSec - 60;
+    const older = {
+      score: 25,
+      band: "WATCH",
+      signals_json: signalsJson,
+      computed_at: completedAt - 60,
+    };
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: 2,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether", "usdc-circle"]),
+      }),
+      updated_at: completedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-one",
+        matchBinds: ["usdt-tether", completedAt],
+        rows: [older],
+        first: older,
+      },
+      {
+        match: "pharos:stress-signals:published-exact-one",
+        matchBinds: ["usdt-tether", completedAt],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(
+      db,
+      "usdt-tether",
+      nowSec,
+      { staleAfterSec: 300 },
+    );
+
+    expect(loaded).toBeNull();
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 

@@ -23,6 +23,7 @@ import {
 import { emptyAlerts } from "../cron/dispatch-telegram-routing";
 import { extractTopSignals } from "../cron/telegram-alert-snapshots";
 import { z } from "zod";
+import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 
 const ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
 type AlertType = (typeof ALERT_TYPES)[number];
@@ -72,22 +73,16 @@ async function buildDewsEvent(
   db: D1Database,
   stablecoinId: string,
 ): Promise<DewsChange | null> {
-  const row = await db
-    .prepare(
-      `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) AS max_at
-             FROM stress_signals WHERE stablecoin_id = ? GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
-         WHERE s.stablecoin_id = ?`,
-    )
-    .bind(stablecoinId, stablecoinId)
-    .first<{ stablecoin_id: string; score: number; band: string; signals_json: string | null }>();
+  const row = await loadStressSignalCurrentRowForCoin(
+    db,
+    stablecoinId,
+    Math.floor(Date.now() / 1000),
+    { staleAfterSec: 30 * 60 },
+  );
   if (!row) return null;
   return {
-    stablecoinId: row.stablecoin_id,
-    symbol: getSymbol(row.stablecoin_id),
+    stablecoinId,
+    symbol: getSymbol(stablecoinId),
     oldBand: row.band,
     newBand: row.band,
     score: row.score,
