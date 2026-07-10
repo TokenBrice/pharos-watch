@@ -62,6 +62,7 @@
     "ops:watch-worker-cron": "node scripts/maintenance/watch-worker-cron.mjs",
     "ops:night-watch-worker": "node scripts/maintenance/night-watch-worker.mjs",
     "ops:night-watch-worker:two-cycle": "node scripts/maintenance/night-watch-worker.mjs --cycles 2 --include-status --include-status-history --include-d1",
+    "calibrate:yield-outcomes": "tsx scripts/maintenance/generate-yield-outcome-validation.ts",
     "calibrate:yield-pys-v8": "tsx scripts/maintenance/yield-pys-v8-calibration.ts",
     "calibrate:ddrr": "tsx scripts/maintenance/generate-ddrr-calibration-report.ts",
     "calibrate:oracle-risk-score": "tsx scripts/maintenance/calibrate-oracle-risk-score.ts",

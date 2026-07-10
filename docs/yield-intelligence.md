@@ -1175,6 +1175,16 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 ---
 
+## Outcome Validation
+
+`npm run calibrate:yield-outcomes -- --input <dataset.json>` runs the offline, deterministic PYS outcome validator. The input is a strict privacy-safe dataset keyed by publication generation, stablecoin id, and source key. Ranking anchors carry the exact score inputs used at publication; future history observations provide the APY/PYS outcomes matched at configurable 7d/30d/90d horizons.
+
+The report records the normalized dataset SHA-256 digest, methodology versions, observation coverage, exact published-score recomputation, forward APY/PYS retention, rank correlation, top-quartile lift, and cohort cuts for canonical holders, direct evidence, external opportunities, and modeled proxies. One-component ablations neutralize benchmark, stablecoin safety, sustainability, or source risk through the checked-in `computePYS` implementation. Formula weights are not configurable and the report explicitly records `formulaWeightsModified: false`; this tool measures the current formula and does not change it.
+
+Use `--out <path>` to write deterministic JSON, `--horizons 7,30,90` to select forward windows, and `--max-gap-hours` to bound observation matching. Unsafe identifiers, duplicate generation/source rows, dangling generation references, unknown fields, and weight-control arguments are rejected.
+
+---
+
 ## Testing
 
 **Pure function tests:** `worker/src/cron/__tests__/yield-helpers.test.ts`
