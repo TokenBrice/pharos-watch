@@ -136,19 +136,19 @@ function FreshnessTransitionAnnouncer({
   labelPrefix?: string;
   state: "current" | "stale" | "unavailable";
 }) {
-  const [announcement, setAnnouncement] = useState("");
+  const regionRef = useRef<HTMLSpanElement>(null);
   const previousStateRef = useRef(state);
 
+  // The live region is an external system: writing its text imperatively
+  // announces the transition without rerendering (or cascading renders).
   useEffect(() => {
     const previous = previousStateRef.current;
     previousStateRef.current = state;
     if (previous === state || state === "unavailable") return;
-    setAnnouncement(`${labelPrefix ?? "Data"} is ${state === "stale" ? "stale" : "current again"}.`);
+    if (regionRef.current) {
+      regionRef.current.textContent = `${labelPrefix ?? "Data"} is ${state === "stale" ? "stale" : "current again"}.`;
+    }
   }, [labelPrefix, state]);
 
-  return (
-    <span role="status" aria-live="polite" className="sr-only">
-      {announcement}
-    </span>
-  );
+  return <span ref={regionRef} role="status" aria-live="polite" className="sr-only" />;
 }

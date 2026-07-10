@@ -12,7 +12,9 @@ export function SummaryBadge({ label, value, className }: { label: string; value
   return (
     <div
       className={cn(
-        "rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs shadow-[inset_0_1px_0_oklch(1_0_0_/0.55)] dark:bg-background/45 dark:shadow-none",
+        // Static value chip: intentionally flat (no control-pill inset sheen)
+        // so read-only metrics do not read as interactive mode controls.
+        "rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs dark:bg-background/45",
         className,
       )}
     >

@@ -3,8 +3,7 @@ import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { SeverityPill } from "@/components/status/severity-pill";
 
-const RECOMMENDED_ACTION_STRIP_CLASS =
-  "rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5";
+const RECOMMENDED_ACTION_STRIP_CLASS = "rounded-xl border border-border/60 bg-background/35 p-4";
 
 export function RecommendedActionStrip({
   recommendations,
@@ -20,7 +19,7 @@ export function RecommendedActionStrip({
       <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
         <div className="space-y-2">
           <p className="pharos-kicker">Recommended Now</p>
-          <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">No manual intervention.</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">No manual intervention.</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             The system is holding. Use the lane order below to sweep for softer pressure, not to chase an active breach.
           </p>
@@ -34,15 +33,15 @@ export function RecommendedActionStrip({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="pharos-kicker">Recommended Now</p>
-          <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">Take the shortest path in.</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">Take the shortest path in.</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             These actions are derived from the current blockers and unhealthy cron lanes.
           </p>
         </div>
       </div>
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 divide-y divide-border/60">
         {recommendations.slice(0, 3).map((recommendation) => (
-          <div key={recommendation.action.path} className="rounded-xl border border-white/10 bg-black/18 p-3.5">
+          <div key={recommendation.action.path} className="py-3 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
