@@ -43,6 +43,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
   "worker/src/cron/__tests__/telegram-transport-outage-integration.test.ts",
   "worker/src/lib/__tests__/telegram-constants.test.ts",
+  "worker/src/lib/__tests__/telegram-delivery-sli.test.ts",
   "worker/src/lib/__tests__/telegram-transport-control.test.ts",
   "worker/src/lib/__tests__/telegram-watchlist-token.test.ts",
   "worker/src/lib/__tests__/telegram.test.ts",

@@ -129,6 +129,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/dispatch-telegram-delivery.ts",
   "worker/src/cron/telegram-alert-source-events.ts",
   "worker/src/cron/telegram-alert-job-target-outcomes.ts",
+  "worker/src/lib/telegram-delivery-sli.ts",
   "worker/src/cron/telegram-alert-target-plans/coordinator.ts",
   "worker/src/cron/telegram-alert-target-plans/delivery.ts",
   "worker/src/cron/telegram-alert-target-plans/horizon.ts",
