@@ -51,7 +51,7 @@ describe("OpsShell", () => {
   it("renders compact production navigation with the current workspace active and visible", () => {
     render(
       <OpsShell>
-        <div>Reliability body</div>
+        <h1>Reliability body</h1>
       </OpsShell>,
     );
 
@@ -61,6 +61,14 @@ describe("OpsShell", () => {
     expect(screen.getByRole("link", { name: "Reliability" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Triage" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByText("Reliability body")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Reliability body" })).toBeTruthy();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("main").id).toBe("ops-main-content");
+    expect(screen.getByRole("link", { name: "Skip to operator workspace" }).getAttribute("href")).toBe(
+      "#ops-main-content",
+    );
+    expect(screen.getByRole("link", { name: "Reliability" }).className).toContain("min-h-11");
+    expect(screen.getByRole("button", { name: "Dark mode" }).className).toContain("size-11");
     expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" }));
   });
 
@@ -81,6 +89,19 @@ describe("OpsShell", () => {
     );
 
     await waitFor(() => expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" })));
+  });
+
+  it("announces the host check while access is unresolved", () => {
+    useOpsUiHostMock.mockReturnValue(null);
+
+    render(
+      <OpsShell>
+        <div>Private body</div>
+      </OpsShell>,
+    );
+
+    expect(screen.getByRole("status").textContent).toContain("Loading operator access");
+    expect(screen.getByRole("main").id).toBe("ops-main-content");
   });
 
   it("repositions the workspace nav when the route changes", async () => {

@@ -25,7 +25,7 @@ describe("AdminApiClient", () => {
     render(<AdminApiClient />);
 
     const shell = screen.getByTestId("ops-shell");
-    const heading = screen.getByRole("heading", { level: 2, name: "API Management" });
+    const heading = screen.getByRole("heading", { level: 1, name: "API Management" });
     const requests = screen.getByTestId("api-key-requests");
     const inventory = screen.getByTestId("api-key-inventory");
 

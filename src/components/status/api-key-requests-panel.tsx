@@ -48,6 +48,7 @@ export function ApiKeyRequestsPanel() {
   const [pendingMutation, setPendingMutation] = useState<{
     request: ApiKeySelfServeRequestAdminSummary;
     action: ApiKeyRequestAction;
+    origin: HTMLElement | null;
   } | null>(null);
   const [reasonDraft, setReasonDraft] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
@@ -59,24 +60,23 @@ export function ApiKeyRequestsPanel() {
     [generatedAt, requests, statusFilter],
   );
 
-  async function runMutation(
-    request: ApiKeySelfServeRequestAdminSummary,
-    action: ApiKeyRequestAction,
-    reason: string,
-  ) {
+  async function runMutation(request: ApiKeySelfServeRequestAdminSummary, action: ApiKeyRequestAction, reason: string) {
     setBusyRequestId(request.requestId);
     setMutationError(null);
     setMutationNotice(null);
     try {
-      const path = action === "reject"
-        ? API_PATHS.apiKeyRequestAdminReject(request.requestId)
-        : API_PATHS.apiKeyRequestAdminReleaseClaim(request.requestId);
+      const path =
+        action === "reject"
+          ? API_PATHS.apiKeyRequestAdminReject(request.requestId)
+          : API_PATHS.apiKeyRequestAdminReleaseClaim(request.requestId);
       const result = await postAdminJson<ApiKeySelfServeAdminMutationResponse>(
         path,
         { reason },
         { idempotencyKey: createApiKeyRequestIdempotencyKey(action, request.requestId) },
       );
-      setMutationNotice(`Request marked ${API_KEY_REQUEST_STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`);
+      setMutationNotice(
+        `Request marked ${API_KEY_REQUEST_STATUS_LABELS[result.status].toLowerCase()}; claim ${result.claimStatus ?? "none"}.`,
+      );
       await refetch();
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : "API key request action failed");
@@ -85,11 +85,28 @@ export function ApiKeyRequestsPanel() {
     }
   }
 
-  function requestMutation(request: ApiKeySelfServeRequestAdminSummary, action: ApiKeyRequestAction) {
+  function focusElement(element: HTMLElement | null) {
+    queueMicrotask(() => {
+      if (element?.isConnected) element.focus();
+    });
+  }
+
+  function closePendingMutation() {
+    const origin = pendingMutation?.origin ?? null;
+    setPendingMutation(null);
+    setReasonError(null);
+    focusElement(origin);
+  }
+
+  function requestMutation(
+    request: ApiKeySelfServeRequestAdminSummary,
+    action: ApiKeyRequestAction,
+    origin: HTMLElement | null,
+  ) {
     setMutationError(null);
     setReasonDraft("");
     setReasonError(null);
-    setPendingMutation({ request, action });
+    setPendingMutation({ request, action, origin });
   }
 
   function confirmPendingMutation() {
@@ -99,8 +116,9 @@ export function ApiKeyRequestsPanel() {
       setReasonError("Enter a reason with at least 4 characters.");
       return;
     }
-    const { request, action } = pendingMutation;
+    const { request, action, origin } = pendingMutation;
     setPendingMutation(null);
+    focusElement(origin);
     void runMutation(request, action, trimmed.slice(0, 300));
   }
 
@@ -109,7 +127,15 @@ export function ApiKeyRequestsPanel() {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">Self-Serve API Requests</CardTitle>
-          <Button type="button" size="sm" variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="min-h-11"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
+          >
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} aria-hidden="true" />
             Refresh
           </Button>
@@ -119,7 +145,7 @@ export function ApiKeyRequestsPanel() {
         {!isLoading && !error ? (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Request triage summary">
             {requestSummary.map((item) => (
-              <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+              <div key={item.label} className="border-y border-border/60 py-2">
                 <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
                 <div className="mt-1 pharos-numeric text-xl font-semibold text-foreground">{item.value}</div>
                 <div className="text-[11px] text-muted-foreground">{item.detail}</div>
@@ -134,6 +160,7 @@ export function ApiKeyRequestsPanel() {
               key={status}
               type="button"
               size="sm"
+              className="min-h-11"
               variant={statusFilter === status ? "default" : "outline"}
               aria-pressed={statusFilter === status}
               onClick={() => setStatusFilter(status)}
@@ -144,23 +171,37 @@ export function ApiKeyRequestsPanel() {
         </div>
 
         {mutationNotice ? (
-          <div role="status" aria-live="polite" className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300"
+          >
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{mutationNotice}</p>
           </div>
         ) : null}
 
         {mutationError ? (
-          <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300"
+          >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{mutationError}</p>
           </div>
         ) : null}
 
-        {isLoading ? <div className="text-sm text-muted-foreground">Loading API key requests...</div> : null}
+        {isLoading ? (
+          <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            Loading API key requests...
+          </div>
+        ) : null}
 
         {!isLoading && error ? (
-          <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300">
+          <div
+            role="alert"
+            className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300"
+          >
             {error.message}
           </div>
         ) : null}
@@ -179,8 +220,8 @@ export function ApiKeyRequestsPanel() {
                 request={request}
                 generatedAt={generatedAt}
                 busyRequestId={busyRequestId}
-                onReject={(selectedRequest) => requestMutation(selectedRequest, "reject")}
-                onReleaseClaim={(selectedRequest) => requestMutation(selectedRequest, "release-claim")}
+                onReject={(selectedRequest, origin) => requestMutation(selectedRequest, "reject", origin)}
+                onReleaseClaim={(selectedRequest, origin) => requestMutation(selectedRequest, "release-claim", origin)}
               />
             ))}
           </div>
@@ -190,8 +231,7 @@ export function ApiKeyRequestsPanel() {
           open={pendingMutation != null}
           onOpenChange={(isOpen) => {
             if (!isOpen) {
-              setPendingMutation(null);
-              setReasonError(null);
+              closePendingMutation();
             }
           }}
         >
@@ -201,7 +241,8 @@ export function ApiKeyRequestsPanel() {
                 <DialogHeader>
                   <DialogTitle>{API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action]}</DialogTitle>
                   <DialogDescription>
-                    Confirm {API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action]} for {describeRequester(pendingMutation.request)}. This changes self-serve API access state.
+                    Confirm {API_KEY_REQUEST_ACTION_LABELS[pendingMutation.action]} for{" "}
+                    {describeRequester(pendingMutation.request)}. This changes self-serve API access state.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-1">
@@ -217,14 +258,16 @@ export function ApiKeyRequestsPanel() {
                     aria-invalid={reasonError != null}
                   />
                   {reasonError ? (
-                    <p role="alert" className="text-xs text-red-600 dark:text-red-400">{reasonError}</p>
+                    <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+                      {reasonError}
+                    </p>
                   ) : null}
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setPendingMutation(null)}>
+                  <Button className="min-h-11" variant="outline" onClick={closePendingMutation}>
                     Cancel
                   </Button>
-                  <Button variant="destructive" onClick={confirmPendingMutation}>
+                  <Button className="min-h-11" variant="destructive" onClick={confirmPendingMutation}>
                     Confirm
                   </Button>
                 </DialogFooter>

@@ -49,6 +49,7 @@ export interface AdminActionDialogRequest {
   initialDryRun?: boolean;
   readinessChecks?: readonly ActionReadinessCheck[];
   onFinished?: (execution: AdminActionExecution) => void;
+  returnFocus?: HTMLElement | null;
 }
 
 export interface AdminActionDialogState extends AdminActionDialogRequest {

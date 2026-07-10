@@ -86,6 +86,18 @@ describe("ApiKeyRequestsPanel", () => {
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("returns focus to the request action when confirmation is cancelled", async () => {
+    renderPanel();
+    const trigger = screen.getByRole("button", { name: "Reject pending request" });
+    trigger.focus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(trigger.className).toContain("min-h-11");
+  });
+
   it("renders triage summary and request-level next action guidance", () => {
     renderPanel([
       makeRequest({

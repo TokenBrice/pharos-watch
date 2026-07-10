@@ -20,6 +20,13 @@ function formatAge(ageMs: number): string {
   return `${Math.floor(ageMs / 3_600_000)}h ago`;
 }
 
+function nextFreshnessUpdateDelay(ageMs: number, staleAfterMs: number): number {
+  const labelStepMs = ageMs < 60_000 ? 1_000 : ageMs < 3_600_000 ? 60_000 : 3_600_000;
+  const nextLabelBoundaryMs = labelStepMs - (ageMs % labelStepMs);
+  const nextStaleBoundaryMs = ageMs <= staleAfterMs ? staleAfterMs - ageMs + 1 : Number.POSITIVE_INFINITY;
+  return Math.max(1_000, Math.min(nextLabelBoundaryMs, nextStaleBoundaryMs, 3_600_000));
+}
+
 export function FreshnessIndicator({
   updatedAtMs,
   staleAfterMs,
@@ -34,12 +41,13 @@ export function FreshnessIndicator({
   const [isStale, setIsStale] = useState(() => !isUnavailable && Math.max(0, Date.now() - updatedAtMs) > staleAfterMs);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const recompute = () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       if (updatedAtMs <= 0) {
         setLabel("not loaded");
         setIsStale(false);
-        return;
+        return 0;
       }
       const ageMs = Math.max(0, Date.now() - updatedAtMs);
       setLabel((prev) => {
@@ -47,15 +55,25 @@ export function FreshnessIndicator({
         return next === prev ? prev : next;
       });
       setIsStale(ageMs > staleAfterMs);
+      return ageMs;
     };
-    recompute();
-    const id = setInterval(recompute, 1000);
+
+    const schedule = () => {
+      if (document.visibilityState === "hidden") return;
+      const ageMs = recompute();
+      if (updatedAtMs <= 0) return;
+      timeoutId = setTimeout(schedule, nextFreshnessUpdateDelay(ageMs, staleAfterMs));
+    };
+
+    schedule();
     const onVisibility = () => {
-      if (document.visibilityState === "visible") recompute();
+      if (timeoutId != null) clearTimeout(timeoutId);
+      timeoutId = null;
+      if (document.visibilityState === "visible") schedule();
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      clearInterval(id);
+      if (timeoutId != null) clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [updatedAtMs, staleAfterMs]);

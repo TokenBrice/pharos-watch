@@ -165,7 +165,7 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
 
       {model.healthyProbes.length > 0 ? (
         <details>
-          <summary className="pharos-focus-ring cursor-pointer rounded-md text-sm font-medium text-muted-foreground">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-muted-foreground">
             {model.healthyProbes.length} healthy endpoint{model.healthyProbes.length === 1 ? "" : "s"}
           </summary>
           <TableFrame

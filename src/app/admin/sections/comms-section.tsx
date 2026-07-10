@@ -24,8 +24,8 @@ export function CommsSection({ data }: CommsSectionProps) {
       kicker="Messaging"
       title="Comms"
       headingLevel="h1"
+      variant="workspace"
       description="Telegram delivery operations and audience coverage, with missing evidence kept explicitly Unknown."
-      accentClassName="border-l-teal-500"
       summary={
         <>
           <SummaryBadge label="Delivery" value={healthLabel} />

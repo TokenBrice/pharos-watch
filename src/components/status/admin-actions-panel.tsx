@@ -196,7 +196,7 @@ function ActionCatalogRow({
 
       {(action.preconditions.length > 0 || action.blockedBy.length > 0 || liveReadiness.reasons.length > 0) && (
         <details className="mt-3 text-xs">
-          <summary className="cursor-pointer font-medium text-muted-foreground">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md font-medium text-muted-foreground">
             Prerequisites {action.preconditions.length} · declared blockers {action.blockedBy.length}
             {liveReadiness.reasons.length > 0 ? ` · active blockers ${liveReadiness.reasons.length}` : ""}
           </summary>
@@ -305,6 +305,7 @@ export function AdminActionsPanel({
     [filteredActions],
   );
   const hasFilters = query.trim().length > 0 || intent !== "all" || risk !== "all";
+  const catalogVisible = catalogOpen || hasFilters;
 
   const handleFinished = () => {
     onActionFinished?.();
@@ -390,7 +391,13 @@ export function AdminActionsPanel({
               Loading persisted history...
             </span>
           ) : actionLog.isError ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => void actionLog.refetch()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => void actionLog.refetch()}
+            >
               <RefreshCw className="size-3.5" aria-hidden="true" />
               Retry history
             </Button>
@@ -419,118 +426,129 @@ export function AdminActionsPanel({
       </section>
 
       <details
-        open={catalogOpen || hasFilters}
+        open={catalogVisible}
         onToggle={(event) => {
           if (!hasFilters) setCatalogOpen(event.currentTarget.open);
         }}
         className="border-t border-border/60 pt-4"
       >
-        <summary className="cursor-pointer list-none text-sm font-semibold text-foreground marker:hidden">
-          <span className="flex items-center justify-between gap-3">
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center rounded-md text-sm font-semibold text-foreground marker:hidden">
+          <span className="flex w-full min-w-0 items-center justify-between gap-3">
             <span>Complete action catalog</span>
-            <span className="pharos-numeric text-xs font-normal text-muted-foreground">
+            <span className="pharos-numeric text-xs font-normal text-muted-foreground" aria-live="polite">
               {filteredActions.length}/{ADMIN_ACTIONS.length} actions
             </span>
           </span>
         </summary>
-        <div className="mt-4">
-          <div className="flex flex-col gap-2 border-y border-border/60 bg-muted/25 p-3 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <label htmlFor="admin-action-search" className="sr-only">
-                Search action catalog
+        {catalogVisible ? (
+          <div className="mt-4">
+            <div className="flex flex-col gap-2 border-y border-border/60 bg-muted/25 p-3 lg:flex-row lg:items-center">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <label htmlFor="admin-action-search" className="sr-only">
+                  Search action catalog
+                </label>
+                <input
+                  id="admin-action-search"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search action, scope, path, or prerequisite"
+                  className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <label className="sr-only" htmlFor="admin-action-intent-filter">
+                Filter by intent
               </label>
-              <input
-                id="admin-action-search"
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search action, scope, path, or prerequisite"
-                className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+              <select
+                id="admin-action-intent-filter"
+                value={intent}
+                onChange={(event) => setIntent(event.target.value as ActionIntentCategory | "all")}
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">All intents</option>
+                {ACTION_INTENT_ORDER.map((category) => (
+                  <option key={category} value={category}>
+                    {ACTION_INTENT_COPY[category].label}
+                  </option>
+                ))}
+              </select>
+              <label className="sr-only" htmlFor="admin-action-risk-filter">
+                Filter by risk
+              </label>
+              <select
+                id="admin-action-risk-filter"
+                value={risk}
+                onChange={(event) => setRisk(event.target.value as StatusPageActionRisk | "all")}
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">All risks</option>
+                {Object.entries(RISK_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {hasFilters && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="min-h-11"
+                  onClick={clearFilters}
+                  aria-label="Clear action filters"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                  Clear
+                </Button>
+              )}
             </div>
-            <label className="sr-only" htmlFor="admin-action-intent-filter">
-              Filter by intent
-            </label>
-            <select
-              id="admin-action-intent-filter"
-              value={intent}
-              onChange={(event) => setIntent(event.target.value as ActionIntentCategory | "all")}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="all">All intents</option>
-              {ACTION_INTENT_ORDER.map((category) => (
-                <option key={category} value={category}>
-                  {ACTION_INTENT_COPY[category].label}
-                </option>
-              ))}
-            </select>
-            <label className="sr-only" htmlFor="admin-action-risk-filter">
-              Filter by risk
-            </label>
-            <select
-              id="admin-action-risk-filter"
-              value={risk}
-              onChange={(event) => setRisk(event.target.value as StatusPageActionRisk | "all")}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="all">All risks</option>
-              {Object.entries(RISK_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {hasFilters && (
-              <Button type="button" size="sm" variant="ghost" onClick={clearFilters} aria-label="Clear action filters">
-                <X className="size-4" aria-hidden="true" />
-                Clear
-              </Button>
+
+            {groupedActions.length > 0 ? (
+              <div className="divide-y divide-border">
+                {groupedActions.map((group) => (
+                  <section key={group.category} aria-labelledby={`action-group-${group.category}`} className="py-5">
+                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h3 id={`action-group-${group.category}`} className="text-sm font-semibold text-foreground">
+                          {ACTION_INTENT_COPY[group.category].label}
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {ACTION_INTENT_COPY[group.category].description}
+                        </p>
+                      </div>
+                      <span className="pharos-numeric text-xs text-muted-foreground">
+                        {group.actions.length} actions
+                      </span>
+                    </div>
+                    <div>
+                      {group.actions.map((action) => (
+                        <ActionCatalogRow
+                          key={action.path}
+                          action={action}
+                          activities={activities}
+                          nowSeconds={nowSeconds}
+                          readinessChecks={readinessChecks}
+                          onFinished={handleFinished}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="py-10 text-center">
+                <p className="text-sm font-medium text-foreground">No actions match these filters.</p>
+                <Button type="button" variant="ghost" size="sm" className="mt-2 min-h-11" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              </div>
             )}
           </div>
-
-          {groupedActions.length > 0 ? (
-            <div className="divide-y divide-border">
-              {groupedActions.map((group) => (
-                <section key={group.category} aria-labelledby={`action-group-${group.category}`} className="py-5">
-                  <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h3 id={`action-group-${group.category}`} className="text-sm font-semibold text-foreground">
-                        {ACTION_INTENT_COPY[group.category].label}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {ACTION_INTENT_COPY[group.category].description}
-                      </p>
-                    </div>
-                    <span className="pharos-numeric text-xs text-muted-foreground">{group.actions.length} actions</span>
-                  </div>
-                  <div>
-                    {group.actions.map((action) => (
-                      <ActionCatalogRow
-                        key={action.path}
-                        action={action}
-                        activities={activities}
-                        nowSeconds={nowSeconds}
-                        readinessChecks={readinessChecks}
-                        onFinished={handleFinished}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="py-10 text-center">
-              <p className="text-sm font-medium text-foreground">No actions match these filters.</p>
-              <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={clearFilters}>
-                Clear filters
-              </Button>
-            </div>
-          )}
-        </div>
+        ) : null}
       </details>
     </div>
   );

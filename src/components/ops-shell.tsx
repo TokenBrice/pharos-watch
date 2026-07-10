@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 function OpsPublicHostGate() {
   return (
-    <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center px-4 py-12 sm:px-6">
+    <main id="ops-main-content" className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center px-4 py-12 sm:px-6">
       <div className="w-full border border-border bg-background p-6 sm:p-8">
         <p className="pharos-kicker">Private surface</p>
         <h1 className="mt-2 text-2xl font-semibold text-foreground">Operator tooling is unavailable on this host</h1>
@@ -41,7 +41,7 @@ function OpsPublicHostGate() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -85,7 +85,13 @@ export function OpsShell({ children }: { children: ReactNode }) {
   }, [opsUiHost, pathname]);
 
   if (opsUiHost == null) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading operator access...</div>;
+    return (
+      <main id="ops-main-content" className="py-20 text-center text-sm text-muted-foreground">
+        <p role="status" aria-live="polite">
+          Loading operator access...
+        </p>
+      </main>
+    );
   }
 
   if (!opsUiHost) return <OpsPublicHostGate />;
@@ -95,16 +101,22 @@ export function OpsShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ "--ops-sticky-offset": "6rem" } as CSSProperties}>
+    <div className="min-h-screen bg-background" style={{ "--ops-sticky-offset": "7rem" } as CSSProperties}>
+      <a
+        href="#ops-main-content"
+        className="pharos-focus-ring fixed left-3 top-3 z-50 -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
+      >
+        Skip to operator workspace
+      </a>
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-[96rem] flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/admin/" className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-md">
               <PharosLogo size={26} priority />
-              <h1 className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-semibold text-foreground">
                 <span className="sm:hidden">Pharos Ops</span>
                 <span className="hidden sm:inline">Pharos Operator Admin</span>
-              </h1>
+              </span>
             </Link>
             <span className="hidden h-5 border-l border-border md:block" aria-hidden="true" />
             <span className="hidden truncate text-xs font-medium text-muted-foreground md:inline">
@@ -120,7 +132,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
             </span>
             <Link
               href="/status/"
-              className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground sm:w-auto sm:gap-2 sm:px-3"
+              className="pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground sm:w-auto sm:gap-2 sm:px-3"
               title="Open public status"
             >
               <Activity className="size-4" aria-hidden="true" />
@@ -129,7 +141,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={toggleTheme}
-              className="pharos-focus-ring inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              className="pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               aria-label={themeLabel}
               title={themeLabel}
             >
@@ -138,7 +150,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={handleSignOut}
-              className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-md px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               title="Sign out"
             >
               <LogOut className="size-4" aria-hidden="true" />
@@ -162,9 +174,9 @@ export function OpsShell({ children }: { children: ReactNode }) {
                   href={workspace.path}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "pharos-focus-ring inline-flex min-h-9 items-center rounded-md px-3 text-xs font-medium transition-colors",
+                    "pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
                     active
-                      ? "bg-foreground text-background"
+                      ? "bg-foreground text-background forced-colors:border forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
@@ -176,7 +188,9 @@ export function OpsShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <div className="mx-auto w-full max-w-[96rem] px-3 py-4 sm:px-5 sm:py-5 lg:px-6">{children}</div>
+      <main id="ops-main-content" className="mx-auto w-full max-w-[96rem] px-3 py-4 sm:px-5 sm:py-5 lg:px-6">
+        {children}
+      </main>
     </div>
   );
 }

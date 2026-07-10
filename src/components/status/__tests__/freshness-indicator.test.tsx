@@ -54,6 +54,23 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByText(/35s ago/i)).toBeDefined();
   });
 
+  it("uses minute-boundary timeouts instead of a permanent one-second interval for older data", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    const intervalSpy = vi.spyOn(globalThis, "setInterval");
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={600_000} />);
+
+    expect(screen.getByText(/3m ago/i)).toBeDefined();
+    expect(intervalSpy).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(59_000);
+    });
+    expect(screen.getByText(/3m ago/i)).toBeDefined();
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.getByText(/4m ago/i)).toBeDefined();
+  });
+
   it("keeps ticking age text out of live regions", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);

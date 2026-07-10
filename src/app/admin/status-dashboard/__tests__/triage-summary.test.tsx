@@ -79,7 +79,12 @@ describe("TriageSummary workspace links", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 2, name: "Triage" }).tagName).toBe("H2");
+    expect(screen.getByRole("heading", { level: 1, name: "Triage" }).tagName).toBe("H1");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Triage" }).closest("section")?.getAttribute("aria-labelledby"),
+    ).toBe("triage-title");
+    expect(screen.queryByText("diagnostics")).toBeNull();
+    expect(screen.getByText("State machine, probe, and discrepancy diagnostics").className).toContain("min-h-11");
     expect(screen.getByRole("link", { name: /pipeline health/i }).getAttribute("href")).toBe("/admin/pipeline/");
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });

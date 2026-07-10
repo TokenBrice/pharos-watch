@@ -32,11 +32,13 @@ export function AdminActionButton({
       type="button"
       variant={action.destructive ? "destructive" : "outline"}
       size="sm"
-      className={`${fullWidth ? "w-full" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`.trim()}
+      className={`min-h-11 ${fullWidth ? "w-full" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`.trim()}
       disabled={loading}
       aria-busy={loading}
       data-execution-status={execution?.status ?? "idle"}
-      onClick={() => openDialog({ action, initialDryRun, readinessChecks, onFinished })}
+      onClick={(event) =>
+        openDialog({ action, initialDryRun, readinessChecks, onFinished, returnFocus: event.currentTarget })
+      }
     >
       {loading ? "Running..." : (buttonLabel ?? action.label)}
     </Button>

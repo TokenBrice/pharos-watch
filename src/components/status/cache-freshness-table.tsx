@@ -195,7 +195,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           )}
           {ok.length > 0 && (
             <details className={unhealthy.length > 0 ? "mt-4" : undefined}>
-              <summary className="cursor-pointer text-sm text-muted-foreground">
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
                 {ok.length} healthy cache{ok.length !== 1 ? "s" : ""}
               </summary>
               <TableFrame

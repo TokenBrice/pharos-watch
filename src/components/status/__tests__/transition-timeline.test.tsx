@@ -86,11 +86,13 @@ describe("TransitionTimeline", () => {
     const selectedWindow = screen.getByRole("button", { name: "24h" });
     const otherWindow = screen.getByRole("button", { name: "30d" });
     expect(selectedWindow.getAttribute("aria-pressed")).toBe("true");
+    expect(selectedWindow.className).toContain("min-h-11");
     expect(otherWindow.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(otherWindow);
     expect(onWindowChange).toHaveBeenCalledWith("30d");
 
     const disclosure = screen.getByRole("button", { name: "Show 1 causes for transition 17" });
+    expect(disclosure.className).toContain("min-h-11");
     expect(disclosure.getAttribute("aria-expanded")).toBe("false");
     expect(disclosure.hasAttribute("aria-controls")).toBe(false);
     fireEvent.click(disclosure);

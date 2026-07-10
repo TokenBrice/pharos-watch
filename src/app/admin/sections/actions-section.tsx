@@ -36,6 +36,8 @@ export function ActionsSection({
       id="actions"
       kicker="Operations"
       title="Actions"
+      headingLevel="h1"
+      variant="workspace"
       description="Inspect evidence, preview bounded changes, and run recovery actions with scope and readiness visible before confirmation."
       summary={
         <>

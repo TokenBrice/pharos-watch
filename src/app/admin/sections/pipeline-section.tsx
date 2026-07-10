@@ -149,9 +149,9 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Data Pipeline</p>
-          <h2 id="pipeline-title" className="text-2xl font-bold leading-tight text-foreground">
+          <h1 id="pipeline-title" className="text-2xl font-bold leading-tight text-foreground">
             Pipeline Health
-          </h2>
+          </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Thresholds, publication integrity, and source coverage organized by operator workflow.
           </p>
@@ -172,6 +172,9 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
 
       <PipelineLoaderSummary errors={loaderErrors} />
       <PipelineModeTabs activeMode={activeMode} modes={modeSummaries} onModeChange={selectMode} />
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        Pipeline view: {modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Quality"}
+      </p>
 
       <div
         id={getPipelinePanelId(activeMode)}

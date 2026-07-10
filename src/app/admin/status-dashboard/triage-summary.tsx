@@ -142,13 +142,16 @@ export function TriageSummary({
   return (
     <section
       id="overview"
+      aria-labelledby="triage-title"
       className={cn("scroll-mt-36 rounded-xl border px-4 py-4 sm:px-5 lg:px-6", topFoldCopy.shell)}
     >
       <div className="space-y-4">
         {/* Triage header: status + key metrics + controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="mr-1 text-sm font-semibold text-foreground">Triage</h2>
+            <h1 id="triage-title" className="mr-1 text-lg font-semibold text-foreground">
+              Triage
+            </h1>
             <span
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em]",
@@ -164,6 +167,7 @@ export function TriageSummary({
                       ? "bg-[var(--severity-mild)]"
                       : "bg-[var(--severity-healthy)]",
                 )}
+                aria-hidden="true"
               />
               {resolvedDecision.systemLabel}
             </span>
@@ -202,7 +206,7 @@ export function TriageSummary({
             />
             <RefreshControl key={lastUpdated} onRefresh={handleRefresh} />
             {showSignOut && onSignOut ? (
-              <Button variant="outline" size="sm" onClick={onSignOut}>
+              <Button variant="outline" size="sm" className="min-h-11" onClick={onSignOut}>
                 Sign out
               </Button>
             ) : null}
@@ -312,10 +316,10 @@ export function TriageSummary({
               </span>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div id="triage-issue-list" className="mt-3 divide-y divide-border/60">
               {activeIssues.length > 0 ? (
                 (areIssuesExpanded ? activeIssues : activeIssues.slice(0, 4)).map((issue) => (
-                  <div key={issue.id} className="rounded-lg border border-border/60 bg-background/30 p-3">
+                  <div key={issue.id} className="py-3 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
@@ -342,7 +346,7 @@ export function TriageSummary({
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border border-border/60 bg-background/45 p-3 text-sm text-muted-foreground">
+                <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
                   No active incidents, warnings, maintenance debt, or informational watches.
                 </div>
               )}
@@ -350,7 +354,9 @@ export function TriageSummary({
                 <button
                   type="button"
                   onClick={() => setAreIssuesExpanded((value) => !value)}
-                  className="pharos-focus-ring mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                  aria-expanded={areIssuesExpanded}
+                  aria-controls="triage-issue-list"
+                  className="pharos-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-xs font-medium text-muted-foreground hover:text-foreground"
                 >
                   {areIssuesExpanded ? "Show top 4" : `+${activeIssues.length - 4} more`}
                 </button>
@@ -383,7 +389,7 @@ export function TriageSummary({
                   <a
                     key={section.id}
                     href={getAdminWorkspacePathForLegacyHash(section.id) ?? "/admin/"}
-                    className="pharos-focus-ring flex items-start justify-between gap-3 rounded-md px-1 py-2 text-left hover:bg-background/45"
+                    className="pharos-focus-ring flex min-h-11 items-start justify-between gap-3 rounded-md px-1 py-2 text-left hover:bg-background/45"
                   >
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-foreground">{section.title}</span>
@@ -412,7 +418,7 @@ export function TriageSummary({
                 Required status evidence is {resolvedEvidence.state}. Current operational actions remain secondary until
                 the missing or delayed signals refresh.
               </p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
+              <Button variant="outline" size="sm" className="mt-4 min-h-11" onClick={handleRefresh}>
                 Refresh evidence
               </Button>
             </div>
@@ -440,36 +446,38 @@ export function TriageSummary({
         <details
           open={isDiagnosticsOpen}
           onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
-          className="rounded-xl border border-border/60 bg-background/30 p-4"
+          className="border-y border-border/60 py-1"
         >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
             State machine, probe, and discrepancy diagnostics
           </summary>
-          <div className="mt-4 space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
-              <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
-              <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
-              <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
-              <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
-              <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
-              <SummaryBadge
-                label="Sync Floor"
-                value={clientDataAgeSec == null ? "unknown" : `${clientDataAgeSec}s`}
-                className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+          {isDiagnosticsOpen ? (
+            <div className="mt-3 space-y-4 pb-3">
+              <div className="flex flex-wrap gap-2">
+                <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
+                <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
+                <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+                <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
+                <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
+                <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
+                <SummaryBadge
+                  label="Sync Floor"
+                  value={clientDataAgeSec == null ? "unknown" : `${clientDataAgeSec}s`}
+                  className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+                />
+              </div>
+              <SystemDiagnostics
+                state={data.state}
+                staleness={data.staleness}
+                probe={data.probe}
+                discrepancy={data.discrepancy}
+                browserProbe={browserProbeSummary}
+                browserProbeLabel={probeCoverageLabel}
+                error={data.sectionErrors.statusState}
+                nowSeconds={data.timestamp}
               />
             </div>
-            <SystemDiagnostics
-              state={data.state}
-              staleness={data.staleness}
-              probe={data.probe}
-              discrepancy={data.discrepancy}
-              browserProbe={browserProbeSummary}
-              browserProbeLabel={probeCoverageLabel}
-              error={data.sectionErrors.statusState}
-              nowSeconds={data.timestamp}
-            />
-          </div>
+          ) : null}
         </details>
       </div>
     </section>

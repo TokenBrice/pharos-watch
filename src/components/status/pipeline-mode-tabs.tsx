@@ -70,9 +70,9 @@ export function PipelineModeTabs({
               onClick={() => onModeChange(mode.id)}
               onKeyDown={(event) => moveSelection(event, index)}
               className={cn(
-                "pharos-focus-ring inline-flex min-h-10 min-w-[6.5rem] items-center justify-between gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
+                "pharos-focus-ring inline-flex min-h-11 min-w-[6.5rem] items-center justify-between gap-2 rounded-md border px-3 text-xs font-medium transition-colors motion-reduce:transition-none",
                 isActive
-                  ? "border-foreground bg-foreground text-background"
+                  ? "border-foreground bg-foreground text-background forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
                   : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >
@@ -80,7 +80,9 @@ export function PipelineModeTabs({
               <span
                 className={cn(
                   "inline-flex min-w-5 items-center justify-center rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
-                  isActive ? "border-background/30 bg-background/10 text-background" : SEVERITY_CLASS[mode.severity],
+                  isActive
+                    ? "border-background/30 bg-background/10 text-background forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
+                    : SEVERITY_CLASS[mode.severity],
                 )}
                 title={`${mode.issueCount} issues; ${mode.severity}`}
               >

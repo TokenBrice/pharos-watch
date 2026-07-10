@@ -27,6 +27,7 @@ describe("CacheFreshnessTable", () => {
     render(<CacheFreshnessTable caches={{ "dex-liquidity": dexCache }} />);
 
     expect(screen.getByText(/Availability uses ratio thresholds/i)).toBeTruthy();
+    expect(screen.getByText("1 healthy cache").className).toContain("min-h-11");
     const tableShell = screen.getByTestId("cache-freshness-healthy-table");
     expect(tableShell.getAttribute("data-table-id")).toBe("cache-freshness-healthy");
     expect(within(tableShell).getByRole("table", { name: /healthy cache freshness/i })).toBeTruthy();

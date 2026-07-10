@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { SeverityPill, StatusPill } from "./severity-pill";
 
 const FILTER_CLASS_NAME =
-  "h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
+  "h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const SURFACE_LABELS: Record<StatusCause["layer"], string> = {
   availability: "Availability",
@@ -118,7 +118,9 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
             </p>
           ) : null}
           <details className="mt-2 text-xs">
-            <summary className="cursor-pointer text-muted-foreground">Raw cause data</summary>
+            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+              Raw cause data
+            </summary>
             <pre className="mt-2 max-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-[11px] text-foreground">
               {JSON.stringify(cause, null, 2)}
             </pre>
@@ -166,7 +168,7 @@ export function TransitionTimeline({
           <h3 id="incident-timeline-title" className="text-base font-semibold text-foreground">
             Incident timeline
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground" aria-live="polite" aria-atomic="true">
             {view.visibleTransitions} of {view.totalTransitions} transitions in the loaded window
           </p>
         </div>
@@ -184,9 +186,9 @@ export function TransitionTimeline({
                 aria-pressed={selected}
                 onClick={() => onWindowChange(option)}
                 className={cn(
-                  "pharos-focus-ring min-h-9 min-w-12 border-r border-border/70 px-3 text-xs font-medium last:border-r-0",
+                  "pharos-focus-ring min-h-11 min-w-12 border-r border-border/70 px-3 text-xs font-medium last:border-r-0",
                   selected
-                    ? "bg-foreground text-background"
+                    ? "bg-foreground text-background forced-colors:text-[Highlight]"
                     : "bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
@@ -198,7 +200,7 @@ export function TransitionTimeline({
       </div>
 
       {view.isFlapping ? (
-        <div className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
           <span className="font-medium">Flapping detected.</span> {view.transitionsLast24h} transitions were recorded in
           the last 24 hours; the stable baseline is at most {INCIDENT_FLAPPING_TRANSITION_THRESHOLD}.
         </div>
@@ -262,7 +264,14 @@ export function TransitionTimeline({
           </select>
         </label>
         <div className="flex items-end">
-          <Button type="button" size="sm" variant="ghost" disabled={!hasActiveFilters} onClick={resetFilters}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="min-h-11"
+            disabled={!hasActiveFilters}
+            onClick={resetFilters}
+          >
             <RotateCcw aria-hidden="true" />
             Reset filters
           </Button>
@@ -270,7 +279,11 @@ export function TransitionTimeline({
       </div>
 
       {isLoading && transitions.length === 0 ? (
-        <p className="border-y border-border/60 py-8 text-center text-sm text-muted-foreground">
+        <p
+          role="status"
+          aria-live="polite"
+          className="border-y border-border/60 py-8 text-center text-sm text-muted-foreground"
+        >
           Loading status history...
         </p>
       ) : transitions.length === 0 ? (
@@ -368,6 +381,7 @@ export function TransitionTimeline({
                         type="button"
                         size="sm"
                         variant="ghost"
+                        className="min-h-11"
                         aria-expanded={isExpanded}
                         aria-controls={isExpanded ? causesId : undefined}
                         aria-label={`${isExpanded ? "Hide" : "Show"} ${transition.causes.length} causes for transition ${transition.id}`}

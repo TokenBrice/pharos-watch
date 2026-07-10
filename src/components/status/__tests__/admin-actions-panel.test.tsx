@@ -71,13 +71,16 @@ afterEach(() => {
 });
 
 describe("AdminActionsPanel", () => {
-  it("collapses the complete catalog when healthy and opens it for search", () => {
+  it("collapses the complete catalog when healthy and opens it for search", async () => {
     renderPanel();
 
     const details = screen.getByText("Complete action catalog").closest("details");
     expect(details?.hasAttribute("open")).toBe(false);
+    expect(screen.queryByLabelText("Search action catalog")).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("Search action catalog"), { target: { value: "DEWS historical" } });
+    fireEvent.click(screen.getByText("Complete action catalog"));
+    const search = await screen.findByLabelText("Search action catalog");
+    fireEvent.change(search, { target: { value: "DEWS historical" } });
     expect(details?.hasAttribute("open")).toBe(true);
     expect(screen.getByText("Validate DEWS History")).toBeTruthy();
     expect(screen.getByText(/2\/\d+ actions/)).toBeTruthy();
@@ -125,7 +128,8 @@ describe("AdminActionsPanel", () => {
     expect(screen.getByText("1 audited records loaded")).toBeTruthy();
     expect(screen.getByText("operator@example.com", { exact: false })).toBeTruthy();
     expect(screen.getByText(/Persisted audit coverage is limited/)).toBeTruthy();
-    expect(screen.getByText("1m ago · succeeded")).toBeTruthy();
+    expect(screen.getByText("1m ago")).toBeTruthy();
+    expect(screen.getByText("succeeded")).toBeTruthy();
   });
 
   it("offers retry when persisted history fails", () => {

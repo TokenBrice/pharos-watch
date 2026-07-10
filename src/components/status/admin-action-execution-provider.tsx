@@ -354,7 +354,13 @@ export function AdminActionExecutionProvider({
           key={dialogRequest.dialogId}
           request={dialogRequest}
           controller={value}
-          onClose={() => setDialogRequest(null)}
+          onClose={() => {
+            const returnFocus = dialogRequest.returnFocus;
+            setDialogRequest(null);
+            queueMicrotask(() => {
+              if (returnFocus?.isConnected) returnFocus.focus();
+            });
+          }}
         />
       )}
     </AdminActionExecutionContext.Provider>

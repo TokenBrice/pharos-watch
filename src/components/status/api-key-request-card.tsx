@@ -22,8 +22,8 @@ export function ApiKeyRequestCard({
   request: ApiKeySelfServeRequestAdminSummary;
   generatedAt: number;
   busyRequestId: string | null;
-  onReject: (request: ApiKeySelfServeRequestAdminSummary) => void;
-  onReleaseClaim: (request: ApiKeySelfServeRequestAdminSummary) => void;
+  onReject: (request: ApiKeySelfServeRequestAdminSummary, origin: HTMLButtonElement) => void;
+  onReleaseClaim: (request: ApiKeySelfServeRequestAdminSummary, origin: HTMLButtonElement) => void;
 }) {
   const viewModel = buildApiKeyRequestCardViewModel(request, generatedAt, busyRequestId);
 
@@ -32,25 +32,30 @@ export function ApiKeyRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", statusClassName(request.status))}>
+            <span
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                statusClassName(request.status),
+              )}
+            >
               {API_KEY_REQUEST_STATUS_LABELS[request.status]}
             </span>
           </div>
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {viewModel.requesterLabel}
-          </h3>
+          <h3 className="text-base font-semibold tracking-tight text-foreground">{viewModel.requesterLabel}</h3>
           <p className="text-sm text-muted-foreground">
-            Created {formatApiKeyRequestRelativeTime(request.createdAt, generatedAt)} - Claim {request.claimStatus ?? "none"}
+            Created {formatApiKeyRequestRelativeTime(request.createdAt, generatedAt)} - Claim{" "}
+            {request.claimStatus ?? "none"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
+            className="min-h-11"
             variant="outline"
             disabled={viewModel.busy || !viewModel.canReject}
             title={viewModel.canReject ? viewModel.rejectLabel : "Only pending or issued requests can be rejected."}
-            onClick={() => onReject(request)}
+            onClick={(event) => onReject(request, event.currentTarget)}
           >
             <ShieldOff className="h-4 w-4" aria-hidden="true" />
             {viewModel.rejectLabel}
@@ -58,10 +63,11 @@ export function ApiKeyRequestCard({
           <Button
             type="button"
             size="sm"
+            className="min-h-11"
             variant="outline"
             disabled={viewModel.busy || !viewModel.canReleaseClaim}
             title={viewModel.releaseClaimTitle}
-            onClick={() => onReleaseClaim(request)}
+            onClick={(event) => onReleaseClaim(request, event.currentTarget)}
           >
             <Unlock className="h-4 w-4" aria-hidden="true" />
             {viewModel.releaseClaimLabel}
@@ -90,15 +96,22 @@ export function ApiKeyRequestCard({
       </div>
 
       <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">Use case and endpoints</summary>
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
+          Use case and endpoints
+        </summary>
         <div className="mt-3 space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
           <div className="flex flex-wrap gap-2">
-            {request.intendedEndpoints.length > 0 ? request.intendedEndpoints.map((endpoint) => (
-              <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground">
-                {endpoint}
-              </span>
-            )) : (
+            {request.intendedEndpoints.length > 0 ? (
+              request.intendedEndpoints.map((endpoint) => (
+                <span
+                  key={endpoint}
+                  className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground"
+                >
+                  {endpoint}
+                </span>
+              ))
+            ) : (
               <span className="text-xs text-muted-foreground">No endpoint list provided</span>
             )}
           </div>
@@ -108,7 +121,10 @@ export function ApiKeyRequestCard({
       {request.riskReasons.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {request.riskReasons.map((reason) => (
-            <span key={reason} className="rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+            <span
+              key={reason}
+              className="rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-1 text-xs text-amber-700 dark:text-amber-300"
+            >
               {reason}
             </span>
           ))}
@@ -116,9 +132,13 @@ export function ApiKeyRequestCard({
       ) : null}
 
       <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">Requester details</summary>
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
+          Requester details
+        </summary>
         <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
-          <div>Email: <span className="break-all">{request.email}</span></div>
+          <div>
+            Email: <span className="break-all">{request.email}</span>
+          </div>
           <div>Name: {request.requesterName ?? "not provided"}</div>
           <div>Organization: {request.organization ?? "not provided"}</div>
           <div>Project: {request.projectUrl ?? "not provided"}</div>
@@ -128,7 +148,10 @@ export function ApiKeyRequestCard({
       </details>
 
       <div className="grid gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
-        <div>Created: {formatApiKeyRequestTime(request.createdAt)} ({formatApiKeyRequestRelativeTime(request.createdAt, generatedAt)})</div>
+        <div>
+          Created: {formatApiKeyRequestTime(request.createdAt)} (
+          {formatApiKeyRequestRelativeTime(request.createdAt, generatedAt)})
+        </div>
         <div>Verification expires: {formatApiKeyRequestTime(request.verificationExpiresAt)}</div>
         <div>Issued: {formatApiKeyRequestTime(request.issuedAt)}</div>
         <div>Key: {request.linkedKeyPrefix ?? "none"}</div>

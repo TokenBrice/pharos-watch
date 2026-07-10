@@ -206,8 +206,9 @@ export function HistorySection({
       id="history"
       kicker="Incident Log"
       title="Incident History"
+      headingLevel="h1"
+      variant="workspace"
       description="Status transitions, persisted causes, resolution timing, and deployment evidence."
-      accentClassName="border-l-rose-500"
       summary={
         <>
           <SummaryBadge label="Window" value={historyWindow} />

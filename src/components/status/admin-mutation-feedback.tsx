@@ -48,11 +48,17 @@ export function AdminMutationFeedback({
       ) : null}
       <div className="flex flex-wrap gap-2">
         {unknown ? (
-          <Button type="button" size="sm" variant="outline" onClick={onRetrySame}>
+          <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={onRetrySame}>
             Retry same intent
           </Button>
         ) : null}
-        <Button type="button" size="sm" variant={unknown ? "destructive" : "outline"} onClick={onStartNew}>
+        <Button
+          type="button"
+          size="sm"
+          variant={unknown ? "destructive" : "outline"}
+          className="min-h-11"
+          onClick={onStartNew}
+        >
           {newIntentLabel ?? (unknown ? "Start new intent" : "Try new intent")}
         </Button>
       </div>

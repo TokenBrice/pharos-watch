@@ -33,9 +33,9 @@ type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
 
 const FIELD_CLASS_NAME =
-  "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
+  "min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 const FILTER_FIELD_CLASS_NAME =
-  "h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
+  "h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
 function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>({
   state,
@@ -133,7 +133,7 @@ export function ApiKeyInventorySummary({ items }: { items: readonly ApiKeySummar
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="API key inventory summary">
       {items.map((item) => (
-        <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+        <div key={item.label} className="border-y border-border/60 py-2">
           <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
           <div className="mt-1 pharos-numeric text-xl font-semibold text-foreground">{item.value}</div>
           <div className="text-[11px] text-muted-foreground">{item.detail}</div>
@@ -180,7 +180,7 @@ export function ApiKeyInventoryControls({
             />
             <input
               type="search"
-              className="h-9 w-full rounded-md border border-input bg-background px-2.5 pl-9 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-11 w-full rounded-md border border-input bg-background px-2.5 pl-9 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
               value={query.search ?? ""}
               placeholder="Name, owner, prefix, tier, or route"
               onChange={(event) => onQueryChange({ search: event.target.value })}
@@ -299,7 +299,7 @@ export function ApiKeyInventoryControls({
               type="button"
               size="icon-sm"
               variant="outline"
-              className="shrink-0"
+              className="size-11 shrink-0"
               aria-label={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
               title={`Sort ${sort.direction === "asc" ? "descending" : "ascending"}`}
               onClick={() =>
@@ -317,7 +317,7 @@ export function ApiKeyInventoryControls({
         </label>
 
         <div className="flex items-end lg:col-span-2 xl:col-span-3">
-          <Button type="button" size="sm" variant="ghost" onClick={onReset}>
+          <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={onReset}>
             <RotateCcw aria-hidden="true" />
             Reset view
           </Button>
@@ -365,7 +365,7 @@ export function CreateApiKeyForm({
             : "Non-expiring exception. Use only when lifecycle management is intentionally handled outside the default 90-day policy."}
       </div>
       <div className="flex justify-end">
-        <Button onClick={onCreate} disabled={busy} aria-busy={busy}>
+        <Button className="min-h-11" onClick={onCreate} disabled={busy} aria-busy={busy}>
           {busy ? "Creating..." : "Create Key"}
         </Button>
       </div>
@@ -427,7 +427,7 @@ export function TokenRevealDialog({
           </pre>
           <CopyButton
             text={revealedToken.token}
-            className="border border-amber-500/30 bg-background text-foreground hover:bg-muted hover:text-foreground"
+            className="size-11 border border-amber-500/30 bg-background text-foreground hover:bg-muted hover:text-foreground"
           />
         </div>
 
@@ -459,7 +459,7 @@ export function TokenRevealDialog({
         </fieldset>
 
         <DialogFooter>
-          <Button type="button" onClick={onClose} disabled={!canClose}>
+          <Button type="button" className="min-h-11" onClick={onClose} disabled={!canClose}>
             {acknowledgement === "dismissed" ? "Dismiss token" : "Finish"}
           </Button>
         </DialogFooter>
@@ -510,10 +510,10 @@ export function TokenUnavailableReplayDialog({
           </p>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" className="min-h-11" variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button type="button" variant="destructive" onClick={onRotate}>
+          <Button type="button" className="min-h-11" variant="destructive" onClick={onRotate}>
             Rotate {apiKey.name} (ID {apiKey.id}) now
           </Button>
         </DialogFooter>
@@ -564,7 +564,7 @@ export function ApiKeyInventoryPagination({
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           Rows
           <select
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="h-11 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
           >
@@ -579,6 +579,7 @@ export function ApiKeyInventoryPagination({
         <Button
           type="button"
           size="icon-sm"
+          className="size-11"
           variant="outline"
           disabled={page <= 1}
           aria-label="Go to previous API key page"
@@ -590,6 +591,7 @@ export function ApiKeyInventoryPagination({
         <Button
           type="button"
           size="icon-sm"
+          className="size-11"
           variant="outline"
           disabled={page >= totalPages}
           aria-label="Go to next API key page"
@@ -713,6 +715,7 @@ export function ApiKeyTable({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
+                    className="min-h-11"
                     variant={isSelected ? "default" : "outline"}
                     disabled={isBusy}
                     aria-expanded={isSelected}
@@ -724,6 +727,7 @@ export function ApiKeyTable({
                   </Button>
                   <Button
                     size="sm"
+                    className="min-h-11"
                     variant="outline"
                     disabled={isBusy || !key.isActive}
                     aria-label={`Deactivate ${apiKeyAccessibleIdentity(key)}`}
@@ -733,6 +737,7 @@ export function ApiKeyTable({
                   </Button>
                   <Button
                     size="sm"
+                    className="min-h-11"
                     variant="outline"
                     disabled={isBusy}
                     aria-label={`Rotate ${apiKeyAccessibleIdentity(key)}`}
@@ -784,6 +789,7 @@ function ApiKeyAuditHistory({
           <Button
             type="button"
             size="icon-sm"
+            className="size-11"
             variant="ghost"
             disabled={isFetching}
             aria-label="Refresh API key audit history"
@@ -795,7 +801,11 @@ function ApiKeyAuditHistory({
         ) : null}
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading audit history...</p> : null}
+      {isLoading ? (
+        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+          Loading audit history...
+        </p>
+      ) : null}
       {!isLoading && error ? (
         <div
           role="alert"
@@ -808,6 +818,7 @@ function ApiKeyAuditHistory({
           <Button
             type="button"
             size="sm"
+            className="min-h-11"
             variant="outline"
             disabled={isFetching}
             aria-busy={isFetching}
@@ -840,7 +851,9 @@ function ApiKeyAuditHistory({
               <p className="mt-1 text-xs text-muted-foreground">Actor: {entry.actor}</p>
               {entry.detail != null ? (
                 <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer text-muted-foreground">Event detail</summary>
+                  <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+                    Event detail
+                  </summary>
                   <pre className="mt-2 max-h-40 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-[11px] text-foreground">
                     {JSON.stringify(entry.detail, null, 2)}
                   </pre>
@@ -911,7 +924,7 @@ export function ApiKeyDetailEditor({
               </span>
             ) : null}
           </div>
-          <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+          <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={onClose}>
             <X aria-hidden="true" />
             Close details
           </Button>
@@ -958,6 +971,7 @@ export function ApiKeyDetailEditor({
           <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
             <Button
               size="sm"
+              className="min-h-11"
               variant="outline"
               disabled={isBusy}
               aria-label={`Save changes to ${apiKeyAccessibleIdentity(apiKey)}`}
@@ -967,6 +981,7 @@ export function ApiKeyDetailEditor({
             </Button>
             <Button
               size="sm"
+              className="min-h-11"
               variant="outline"
               disabled={isBusy || !apiKey.isActive}
               aria-label={`Deactivate ${apiKeyAccessibleIdentity(apiKey)} from editor`}
@@ -976,6 +991,7 @@ export function ApiKeyDetailEditor({
             </Button>
             <Button
               size="sm"
+              className="min-h-11"
               variant="outline"
               disabled={isBusy}
               aria-label={`Rotate ${apiKeyAccessibleIdentity(apiKey)} from editor`}

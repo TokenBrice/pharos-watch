@@ -63,6 +63,7 @@ function SourceStatus<TEntry>({ label, state }: { label: string; state: Operatio
             type="button"
             size="sm"
             variant="outline"
+            className="min-h-11"
             disabled={state.isFetching}
             aria-busy={state.isFetching}
             onClick={state.onRetry}
@@ -113,7 +114,9 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
           </dl>
           {entry.detail != null ? (
             <details className="text-xs">
-              <summary className="cursor-pointer text-muted-foreground">Safe structured detail</summary>
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+                Safe structured detail
+              </summary>
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Sensitive fields, assignments, and token-shaped values are redacted.
               </p>
@@ -136,8 +139,7 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
 
 export function OperationalActivity({ adminActions, credentialAudit, nowSeconds }: OperationalActivityProps) {
   const view = buildOperationalActivityView(adminActions.entries, credentialAudit.entries);
-  const awaitingAnySource =
-    view.entries.length === 0 && (adminActions.isLoading || credentialAudit.isLoading);
+  const awaitingAnySource = view.entries.length === 0 && (adminActions.isLoading || credentialAudit.isLoading);
   const noAvailableEntries = view.entries.length === 0 && !awaitingAnySource;
 
   return (
@@ -153,13 +155,13 @@ export function OperationalActivity({ adminActions, credentialAudit, nowSeconds 
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="min-h-11">
             <Link href="/admin/actions/">
               Actions workspace
               <ArrowRight aria-hidden="true" />
             </Link>
           </Button>
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="min-h-11">
             <Link href="/admin-api/">
               API Management
               <ArrowRight aria-hidden="true" />
@@ -181,7 +183,9 @@ export function OperationalActivity({ adminActions, credentialAudit, nowSeconds 
       ) : null}
 
       {awaitingAnySource ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Loading operational activity...</p>
+        <p role="status" aria-live="polite" className="py-6 text-center text-sm text-muted-foreground">
+          Loading operational activity...
+        </p>
       ) : noAvailableEntries ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
           No persisted operational activity is available from the current source responses.

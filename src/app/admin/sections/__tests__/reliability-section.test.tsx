@@ -136,6 +136,9 @@ describe("ReliabilitySection", () => {
     const endpoints = screen.getByRole("tab", { name: /^Endpoints/ });
     const tablist = screen.getByRole("tablist", { name: "Reliability views" });
     expect(screen.getByText("Impact panel mounted")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Reliability Workbench" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Reliability view: Impact");
+    expect(impact.className).toContain("min-h-11");
     expect(screen.queryByText("Endpoints panel mounted")).toBeNull();
     expect(impact.getAttribute("aria-controls")).toBe("reliability-panel-impact");
     expect(endpoints.getAttribute("aria-controls")).toBeNull();
@@ -147,6 +150,7 @@ describe("ReliabilitySection", () => {
     await waitFor(() => expect(screen.getByText("Endpoints panel mounted")).toBeTruthy());
     expect(screen.queryByText("Impact panel mounted")).toBeNull();
     expect(window.location.search).toContain("view=endpoints");
+    expect(screen.getByRole("status").textContent).toContain("Reliability view: Endpoints");
     expect(document.activeElement).toBe(endpoints);
     expect(endpoints.getAttribute("aria-controls")).toBe("reliability-panel-endpoints");
     expect(impact.getAttribute("aria-controls")).toBeNull();

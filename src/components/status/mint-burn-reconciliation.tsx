@@ -88,7 +88,9 @@ export function MintBurnReconciliationCard({
           </div>
           <div className="rounded-lg border border-border/50 p-3">
             <div className="text-xs text-muted-foreground">Insufficient source</div>
-            <div className="pharos-numeric text-xl font-semibold text-muted-foreground">{summary.insufficientCount}</div>
+            <div className="pharos-numeric text-xl font-semibold text-muted-foreground">
+              {summary.insufficientCount}
+            </div>
           </div>
         </div>
 
@@ -96,9 +98,11 @@ export function MintBurnReconciliationCard({
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
               Compares 24h configured canonical issuance-chain mint/burn net flow against the stablecoins cache&apos;s
-              matching chain-supply delta.
-              Critical: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.criticalRatio * 100).toFixed(0)}%`}.
-              Warn: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.warnRatio * 100).toFixed(0)}%`}.
+              matching chain-supply delta. Critical:{" "}
+              {`>$${(STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.criticalRatio * 100).toFixed(0)}%`}
+              . Warn:{" "}
+              {`>$${(STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.warnRatio * 100).toFixed(0)}%`}
+              .
             </p>
             <div className="text-xs text-muted-foreground">
               Showing {visibleRows.length} of {summary.rows.length} rows, sorted by severity.
@@ -109,7 +113,7 @@ export function MintBurnReconciliationCard({
               type="button"
               variant="outline"
               size="sm"
-              className="min-w-[9rem]"
+              className="min-h-11 min-w-[9rem]"
               onClick={() => setIsExpanded((current) => !current)}
             >
               {isExpanded ? "Show fewer" : `See all ${summary.rows.length} assets`}

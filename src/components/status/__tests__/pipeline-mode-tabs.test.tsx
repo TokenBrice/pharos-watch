@@ -28,7 +28,7 @@ describe("PipelineModeTabs", () => {
     expect(tablist.className).toContain("overflow-x-auto");
     expect(tablist.firstElementChild?.className).toContain("min-w-max");
     expect(screen.getAllByRole("tab")).toHaveLength(MODES.length);
-    expect(screen.getByRole("tab", { name: /Quality/ }).className).toContain("min-h-10");
+    expect(screen.getByRole("tab", { name: /Quality/ }).className).toContain("min-h-11");
     expect(screen.getByRole("tab", { name: /Quality/ }).className).toContain("min-w-[6.5rem]");
   });
 });

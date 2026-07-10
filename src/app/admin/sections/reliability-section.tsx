@@ -140,7 +140,7 @@ export function ReliabilitySection({
         return (
           <div className="space-y-4">
             {model.cacheUnknownCount > 0 ? (
-              <div className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
                 {model.cacheUnknownCount} cache {model.cacheUnknownCount === 1 ? "row has" : "rows have"} missing age or
                 budget evidence and remains Unknown.
               </div>
@@ -168,9 +168,9 @@ export function ReliabilitySection({
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Service Health</p>
-          <h2 id="reliability-title" className="text-2xl font-bold leading-tight text-foreground">
+          <h1 id="reliability-title" className="text-2xl font-bold leading-tight text-foreground">
             Reliability Workbench
-          </h2>
+          </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Public impact, endpoint planes, dependency root causes, demand, and cache freshness in focused views.
           </p>
@@ -191,6 +191,9 @@ export function ReliabilitySection({
 
       <ReliabilityEvidenceSummary gaps={model.evidenceGaps} />
       <ReliabilityModeTabs activeMode={activeMode} modes={model.modeSummaries} onModeChange={selectMode} />
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        Reliability view: {model.modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Impact"}
+      </p>
       <div
         id={getReliabilityPanelId(activeMode)}
         role="tabpanel"

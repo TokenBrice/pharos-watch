@@ -47,7 +47,9 @@ describe("DiscoveryCandidatesCard", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Dismiss BIG (Big Dollar, candidate ID 1)" })).toBeTruthy();
+    const dismissBig = screen.getByRole("button", { name: "Dismiss BIG (Big Dollar, candidate ID 1)" });
+    expect(dismissBig).toBeTruthy();
+    expect(dismissBig.className).toContain("min-h-11");
     expect(screen.getByRole("button", { name: "Dismiss SML (Small Dollar, candidate ID 2)" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss BIG (Big Dollar, candidate ID 1)" }));
 
@@ -55,7 +57,9 @@ describe("DiscoveryCandidatesCard", () => {
     expect(screen.getByText(/Moderate.*audited coverage-triage mutation/i)).toBeTruthy();
     expect(screen.getByText(/Removes this candidate from the active discovery queue/i)).toBeTruthy();
     expect(screen.getByText(/no restore control/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Confirm dismiss of BIG (candidate ID 1)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Confirm dismiss of BIG (candidate ID 1)" }).className).toContain(
+      "min-h-11",
+    );
   });
 
   it("coalesces double confirmation and removes the confirmed object", async () => {
@@ -106,7 +110,9 @@ describe("DiscoveryCandidatesCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirm dismiss of BIG/ }));
     await screen.findByText("Outcome unknown");
     const firstKey = idempotencyKey(0);
-    fireEvent.click(screen.getByRole("button", { name: "Retry same intent" }));
+    const retry = screen.getByRole("button", { name: "Retry same intent" });
+    expect(retry.className).toContain("min-h-11");
+    fireEvent.click(retry);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(idempotencyKey(1)).toBe(firstKey);

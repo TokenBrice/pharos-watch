@@ -106,6 +106,18 @@ describe("AdminActionButton", () => {
     expect(screen.queryByLabelText(/Allow constant-price fallback for non-USD backfill/i)).toBeNull();
   });
 
+  it("returns focus to the action that opened the dialog", async () => {
+    renderActions([makeAction()]);
+    const trigger = screen.getByRole("button", { name: "Backfill Supply" });
+    trigger.focus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(trigger.className).toContain("min-h-11");
+  });
+
   it("requires an explicit asset or acknowledged batch scope", async () => {
     renderActions([
       makeAction({

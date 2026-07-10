@@ -130,7 +130,9 @@ function StructuredExecutionResult({ execution }: { execution: AdminActionExecut
       )}
       {execution.output && (
         <details>
-          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Raw JSON response</summary>
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-xs font-medium text-muted-foreground">
+            Raw JSON response
+          </summary>
           <pre
             className={`mt-2 max-h-60 overflow-auto rounded-md p-3 text-xs ${
               execution.status === "failed"
@@ -345,7 +347,7 @@ export function AdminActionExecutionDialog({
                   value={assetFilter}
                   onChange={(event) => setAssetFilter(event.target.value)}
                   placeholder={assetScope.assetPlaceholder}
-                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  className="min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
                   disabled={inputsLocked}
                   required
                 />
@@ -368,7 +370,7 @@ export function AdminActionExecutionDialog({
           (dryRunConfig.liveSupported ? (
             <label
               htmlFor={dryRunInputId}
-              className="flex items-start gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="flex min-h-11 items-start gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <input
                 id={dryRunInputId}
@@ -396,7 +398,7 @@ export function AdminActionExecutionDialog({
         {isSupplyBackfillAction && (
           <label
             htmlFor={fallbackInputId}
-            className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex min-h-11 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <input
               id={fallbackInputId}
@@ -468,7 +470,7 @@ export function AdminActionExecutionDialog({
         {requiresBroadScopeAcknowledgement && (
           <label
             htmlFor={acknowledgementInputId}
-            className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+            className={`flex min-h-11 items-start gap-2 rounded-md border px-3 py-2 text-sm ${
               action.risk === "high"
                 ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100"
                 : "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100"
@@ -514,26 +516,26 @@ export function AdminActionExecutionDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+          <Button className="min-h-11" variant="outline" onClick={onClose} disabled={loading}>
             {hasTerminalResult ? "Close" : "Cancel"}
           </Button>
           {hasTerminalResult && (
-            <Button variant="outline" onClick={handleStartNew}>
+            <Button className="min-h-11" variant="outline" onClick={handleStartNew}>
               Start new execution
             </Button>
           )}
           {(execution?.status === "failed" || execution?.status === "unknown") && (
-            <Button variant={confirmVariant} onClick={handleRetry}>
+            <Button className="min-h-11" variant={confirmVariant} onClick={handleRetry}>
               Retry same execution
             </Button>
           )}
           {(!execution || execution.status === "ready") && (
-            <Button variant={confirmVariant} onClick={handleConfirm} disabled={!canConfirm}>
+            <Button className="min-h-11" variant={confirmVariant} onClick={handleConfirm} disabled={!canConfirm}>
               Confirm
             </Button>
           )}
           {loading && (
-            <Button variant={confirmVariant} disabled aria-busy>
+            <Button className="min-h-11" variant={confirmVariant} disabled aria-busy>
               Running...
             </Button>
           )}

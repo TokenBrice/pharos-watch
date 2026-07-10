@@ -127,14 +127,14 @@ export function DiscoveryCandidatesCard({
         {visible.map((candidate) => (
           <div
             key={candidate.id}
-            className="flex items-center justify-between gap-2 rounded-md border border-border/50 px-3 py-2"
+            className="flex flex-col items-stretch justify-between gap-2 rounded-md border border-border/50 px-3 py-2 sm:flex-row sm:items-center"
           >
             <div className="flex items-center gap-2 overflow-hidden">
               <span className="shrink-0 font-mono tabular-nums text-sm font-medium">{candidate.symbol}</span>
               <span className="truncate text-xs text-muted-foreground">{candidate.name}</span>
               <SourceBadge source={candidate.source} />
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
               <span className="pharos-numeric text-xs">
                 {candidate.marketCap == null ? "—" : formatCurrency(candidate.marketCap, 1)}
               </span>
@@ -145,7 +145,7 @@ export function DiscoveryCandidatesCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs"
+                className="min-h-11 px-3 text-xs"
                 aria-label={`Dismiss ${candidateIdentity(candidate)}`}
                 onClick={(event) => requestDismiss(candidate, event.currentTarget)}
               >
@@ -203,13 +203,20 @@ export function DiscoveryCandidatesCard({
                   newIntentLabel="Start new dismiss intent"
                 />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={closeDialog} disabled={pendingBusy}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    onClick={closeDialog}
+                    disabled={pendingBusy}
+                  >
                     Cancel
                   </Button>
                   {pendingExecution?.status !== "failed" && pendingExecution?.status !== "unknown" ? (
                     <Button
                       type="button"
                       variant="destructive"
+                      className="min-h-11"
                       disabled={pendingBusy}
                       aria-busy={pendingBusy}
                       onClick={() => void runDismiss("start")}

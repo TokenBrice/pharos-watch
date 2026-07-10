@@ -32,7 +32,7 @@ function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
     trafficClass: overrides.trafficClass ?? "external",
     rateLimitPerMinute: overrides.rateLimitPerMinute ?? 120,
     isActive: overrides.isActive ?? true,
-    expiresAt: overrides.expiresAt === undefined ? GENERATED_AT + (2 * 24 * 60 * 60) : overrides.expiresAt,
+    expiresAt: overrides.expiresAt === undefined ? GENERATED_AT + 2 * 24 * 60 * 60 : overrides.expiresAt,
     createdAt: overrides.createdAt ?? GENERATED_AT - 100,
     updatedAt: overrides.updatedAt ?? GENERATED_AT - 50,
     lastUsedAt: overrides.lastUsedAt ?? null,
@@ -81,13 +81,18 @@ afterEach(() => {
 describe("ApiKeysPanel", () => {
   it("represents the default create expiry as omitted expiresAt", async () => {
     const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
-      key: makeKey({ id: 2, name: "Digest Key" }),
-      token,
-    }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: makeKey({ id: 2, name: "Digest Key" }),
+          token,
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     const { refetch } = renderPanel([]);
 
     fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
@@ -109,17 +114,22 @@ describe("ApiKeysPanel", () => {
     const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
-      key: makeKey({ id: 2, name: "Digest Key" }),
-      token,
-    }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }));
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: makeKey({ id: 2, name: "Digest Key" }),
+          token,
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
 
     renderPanel([
       makeKey({ id: 1, name: "Expired", expiresAt: GENERATED_AT - 3600 }),
-      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + (2 * 24 * 60 * 60) }),
+      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + 2 * 24 * 60 * 60 }),
       makeKey({ id: 3, name: "Permanent", expiresAt: null }),
     ]);
 
@@ -133,7 +143,9 @@ describe("ApiKeysPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
     expect(await screen.findByText(token)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Copy to clipboard" }));
+    const copy = screen.getByRole("button", { name: "Copy to clipboard" });
+    expect(copy.className).toContain("size-11");
+    fireEvent.click(copy);
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(token));
   });
@@ -228,12 +240,17 @@ describe("ApiKeysPanel", () => {
   });
 
   it("opens focused recovery when a successful replay cannot return the one-time token", async () => {
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
-      key: makeKey({ id: 2, name: "Digest Key" }),
-    }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: makeKey({ id: 2, name: "Digest Key" }),
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     const { refetch } = renderPanel([]);
 
     fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
@@ -241,20 +258,27 @@ describe("ApiKeysPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    expect(await screen.findByRole("heading", { name: /Created Digest Key confirmed; token unavailable/i })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: /Created Digest Key confirmed; token unavailable/i }),
+    ).toBeTruthy();
     expect(screen.getByText(/plaintext token was not returned/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Rotate Digest Key \(ID 2\) now/i })).toBeTruthy();
     expect(refetch).toHaveBeenCalledOnce();
   });
 
   it("sends explicit null for a non-expiring create exception", async () => {
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
-      key: makeKey({ id: 3, name: "Permanent", expiresAt: null }),
-      token: "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: makeKey({ id: 3, name: "Permanent", expiresAt: null }),
+          token: "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
 
     renderPanel([]);
 
@@ -272,12 +296,17 @@ describe("ApiKeysPanel", () => {
 
   it("converts custom expiry inputs to epoch seconds on save", async () => {
     const expectedEpoch = Math.floor(new Date(2026, 3, 10, 12, 30, 0, 0).getTime() / 1000);
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
-      key: makeKey({ expiresAt: expectedEpoch }),
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          key: makeKey({ expiresAt: expectedEpoch }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
 
     renderPanel([makeKey()]);
 
@@ -442,8 +471,8 @@ describe("ApiKeysPanel", () => {
   it("renders expired, expiring soon, inactive, and non-expiring states distinctly", () => {
     renderPanel([
       makeKey({ id: 1, name: "Expired", expiresAt: GENERATED_AT - 3600 }),
-      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + (2 * 24 * 60 * 60) }),
-      makeKey({ id: 3, name: "Inactive", isActive: false, expiresAt: GENERATED_AT + (30 * 24 * 60 * 60) }),
+      makeKey({ id: 2, name: "Soon", expiresAt: GENERATED_AT + 2 * 24 * 60 * 60 }),
+      makeKey({ id: 3, name: "Inactive", isActive: false, expiresAt: GENERATED_AT + 30 * 24 * 60 * 60 }),
       makeKey({ id: 4, name: "Permanent", expiresAt: null }),
     ]);
 

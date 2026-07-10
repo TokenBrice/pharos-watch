@@ -63,8 +63,11 @@ describe("ReliabilityEndpointsPanel", () => {
     expect(screen.queryByText(/token=secret/)).toBeNull();
     const healthyDetails = screen.getByText("1 healthy endpoint").closest("details");
     expect(healthyDetails?.hasAttribute("open")).toBe(false);
+    expect(screen.getByText("1 healthy endpoint").className).toContain("min-h-11");
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy secret-free reliability diagnostics" }));
+    const copy = screen.getByRole("button", { name: "Copy secret-free reliability diagnostics" });
+    expect(copy.className).toContain("min-h-11");
+    fireEvent.click(copy);
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const copied = String(writeText.mock.calls[0]?.[0]);
     expect(copied).toContain('"path": "/api/status"');

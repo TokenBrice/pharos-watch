@@ -20,7 +20,7 @@ export function ReliabilityCopyDiagnostics({ text }: { text: string }) {
       <button
         type="button"
         onClick={() => void copy()}
-        className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted/50"
+        className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted/50"
         aria-label="Copy secret-free reliability diagnostics"
       >
         {status === "copied" ? (

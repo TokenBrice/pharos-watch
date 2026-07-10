@@ -429,6 +429,7 @@ export function ApiKeysPanel() {
             <Button
               ref={createTriggerRef}
               size="sm"
+              className="min-h-11"
               variant={isCreateOpen ? "default" : "outline"}
               onClick={() => setIsCreateOpen((value) => !value)}
             >
@@ -465,7 +466,11 @@ export function ApiKeysPanel() {
           </div>
         ) : null}
 
-        {isLoading ? <div className="text-sm text-muted-foreground">Loading API keys...</div> : null}
+        {isLoading ? (
+          <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            Loading API keys...
+          </div>
+        ) : null}
         {!isLoading && error ? (
           <div
             role="alert"
@@ -475,6 +480,7 @@ export function ApiKeysPanel() {
             <Button
               type="button"
               size="sm"
+              className="min-h-11"
               variant="outline"
               onClick={() => void refreshInventory()}
               disabled={isFetching}
@@ -617,12 +623,19 @@ export function ApiKeysPanel() {
                   newIntentLabel={`Start new ${pendingLifecycle.action} intent`}
                 />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={closeLifecycleDialog} disabled={pendingBusy}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    onClick={closeLifecycleDialog}
+                    disabled={pendingBusy}
+                  >
                     Cancel
                   </Button>
                   {pendingExecution?.status !== "failed" && pendingExecution?.status !== "unknown" ? (
                     <Button
                       type="button"
+                      className="min-h-11"
                       variant={pendingLifecycle.action === "rotate" ? "destructive" : "default"}
                       disabled={pendingBusy}
                       aria-busy={pendingBusy}

@@ -80,7 +80,9 @@ describe("HistorySection", () => {
   it("separates Pages release correlation from Worker runtime observations", () => {
     render(<HistorySection {...baseProps()} />);
 
-    expect(screen.getByRole("heading", { level: 2, name: "Incident History" })).toBeTruthy();
+    const pageHeading = screen.getByRole("heading", { level: 1, name: "Incident History" });
+    expect(pageHeading).toBeTruthy();
+    expect(pageHeading.className).not.toContain("pharos-display");
     expect(screen.getByRole("heading", { name: "Pages deployment" })).toBeTruthy();
     expect(screen.getByText(/First degradation after release/i)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Worker deployment" })).toBeTruthy();

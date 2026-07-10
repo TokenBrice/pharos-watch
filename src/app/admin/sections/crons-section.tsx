@@ -18,7 +18,7 @@ export function CronsSection({ data, runningCrons, cronGroups }: CronsSectionPro
       kicker="Schedulers"
       title="Cron Lanes"
       headingLevel="h1"
-      accentClassName="border-l-orange-500"
+      variant="workspace"
       summary={
         <>
           <SummaryBadge label="Impacting" value={String(data.summary.availabilityImpactingUnhealthyCrons)} />

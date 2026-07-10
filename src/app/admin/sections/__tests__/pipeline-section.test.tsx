@@ -44,7 +44,9 @@ vi.mock("@/components/status/discovery-candidates", () => ({
   DiscoveryCandidatesCard: ({ onDismissed }: { onDismissed: () => void }) => (
     <div>
       Discovery panel mounted
-      <button type="button" onClick={onDismissed}>Dismiss candidate</button>
+      <button type="button" onClick={onDismissed}>
+        Dismiss candidate
+      </button>
     </div>
   ),
 }));
@@ -67,6 +69,8 @@ describe("PipelineSection", () => {
     const qualityTab = screen.getByRole("tab", { name: /^Quality/ });
     const marketsTab = screen.getByRole("tab", { name: /^Markets/ });
     expect(screen.getByText("Quality panel mounted")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Pipeline Health" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Pipeline view: Quality");
     expect(screen.queryByText("Price source panel mounted")).toBeNull();
     expect(qualityTab.getAttribute("aria-controls")).toBe("pipeline-panel-quality");
     expect(marketsTab.getAttribute("aria-controls")).toBeNull();
@@ -78,6 +82,7 @@ describe("PipelineSection", () => {
     expect(screen.getByText("CoinGecko panel mounted")).toBeTruthy();
     expect(screen.queryByText("Quality panel mounted")).toBeNull();
     expect(window.location.search).toContain("view=markets");
+    expect(screen.getByRole("status").textContent).toContain("Pipeline view: Markets");
     expect(document.activeElement).toBe(marketsTab);
     expect(marketsTab.getAttribute("aria-controls")).toBe("pipeline-panel-markets");
     expect(qualityTab.getAttribute("aria-controls")).toBeNull();
