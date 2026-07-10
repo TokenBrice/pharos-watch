@@ -35,8 +35,88 @@ export interface ApiKeySummaryItem {
   detail: string;
 }
 
+export type ApiKeyInventoryStatus = "expired" | "expiring-soon" | "inactive" | "non-expiring" | "active";
+export type ApiKeyInventoryStatusFilter = "all" | "attention" | ApiKeyInventoryStatus;
+export type ApiKeyInventorySortField = "expiry" | "last-use" | "rate-limit" | "name" | "status";
+export type ApiKeyInventorySortDirection = "asc" | "desc";
+
+export interface ApiKeyExpiryWindowFilter {
+  expiresFrom?: number | null;
+  expiresThrough?: number | null;
+  includeNonExpiring?: boolean;
+}
+
+export interface ApiKeyInventoryFilters {
+  search?: string;
+  status?: ApiKeyInventoryStatusFilter;
+  expiryWindow?: ApiKeyExpiryWindowFilter | null;
+  owner?: string | null;
+  tier?: string;
+  trafficClass?: ApiKeyTrafficClass;
+}
+
+export interface ApiKeyInventorySort {
+  field: ApiKeyInventorySortField;
+  direction: ApiKeyInventorySortDirection;
+}
+
+export interface ApiKeyInventoryQuery extends ApiKeyInventoryFilters {
+  sort?: ApiKeyInventorySort;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ApiKeyInventoryPage {
+  keys: ApiKeySummary[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  firstItemNumber: number;
+  lastItemNumber: number;
+  pageWasCorrected: boolean;
+  pageSizeWasCorrected: boolean;
+}
+
+export interface ApiKeyInventoryView extends ApiKeyInventoryPage {
+  totalInventoryItems: number;
+}
+
 const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE);
 const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
+
+export const API_KEY_INVENTORY_MIN_PAGE_SIZE = 1;
+export const API_KEY_INVENTORY_DEFAULT_PAGE_SIZE = 25;
+export const API_KEY_INVENTORY_MAX_PAGE_SIZE = 100;
+export const DEFAULT_API_KEY_INVENTORY_STATUS_FILTER: ApiKeyInventoryStatusFilter = "attention";
+
+export const API_KEY_INVENTORY_STATUS_PRIORITY: readonly ApiKeyInventoryStatus[] = [
+  "expired",
+  "expiring-soon",
+  "inactive",
+  "non-expiring",
+  "active",
+];
+
+const API_KEY_INVENTORY_STATUS_RANK: Record<ApiKeyInventoryStatus, number> = {
+  expired: 0,
+  "expiring-soon": 1,
+  inactive: 2,
+  "non-expiring": 3,
+  active: 4,
+};
+
+export const DEFAULT_API_KEY_INVENTORY_SORT: ApiKeyInventorySort = {
+  field: "status",
+  direction: "asc",
+};
+
+export const DEFAULT_API_KEY_INVENTORY_QUERY: ApiKeyInventoryQuery = {
+  status: DEFAULT_API_KEY_INVENTORY_STATUS_FILTER,
+  sort: DEFAULT_API_KEY_INVENTORY_SORT,
+  page: 1,
+  pageSize: API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
+};
 
 export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   name: "",
@@ -79,6 +159,226 @@ export function buildApiKeyInventorySummary(keys: readonly ApiKeySummary[], nowS
     { label: "Expired", value: String(expired), detail: "needs rotation or deactivation" },
     { label: "Non-expiring", value: String(nonExpiring), detail: "explicit exceptions" },
   ];
+}
+
+export function getApiKeyInventoryStatus(key: ApiKeySummary, nowSeconds: number): ApiKeyInventoryStatus {
+  if (!key.isActive) {
+    return "inactive";
+  }
+  if (key.expiresAt != null && key.expiresAt <= nowSeconds) {
+    return "expired";
+  }
+  if (isApiKeyExpiringSoon(key, nowSeconds)) {
+    return "expiring-soon";
+  }
+  if (key.expiresAt == null) {
+    return "non-expiring";
+  }
+  return "active";
+}
+
+export function isApiKeyInAttentionQueue(key: ApiKeySummary, nowSeconds: number): boolean {
+  return getApiKeyInventoryStatus(key, nowSeconds) !== "active";
+}
+
+function normalizeInventoryText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function searchApiKeys(keys: readonly ApiKeySummary[], search: string): ApiKeySummary[] {
+  const terms = normalizeInventoryText(search).split(/\s+/).filter(Boolean);
+  if (terms.length === 0) {
+    return [...keys];
+  }
+
+  return keys.filter((key) => {
+    const searchableText = normalizeInventoryText(
+      [key.name, key.ownerEmail ?? "", key.keyPrefix, key.maskedToken, key.tier, key.lastUsedRoute ?? ""].join(" "),
+    );
+    return terms.every((term) => searchableText.includes(term));
+  });
+}
+
+function matchesApiKeyStatus(key: ApiKeySummary, status: ApiKeyInventoryStatusFilter, nowSeconds: number): boolean {
+  if (status === "all") {
+    return true;
+  }
+  if (status === "attention") {
+    return isApiKeyInAttentionQueue(key, nowSeconds);
+  }
+  return getApiKeyInventoryStatus(key, nowSeconds) === status;
+}
+
+function matchesApiKeyExpiryWindow(key: ApiKeySummary, window: ApiKeyExpiryWindowFilter): boolean {
+  if (key.expiresAt == null) {
+    return window.includeNonExpiring === true;
+  }
+  if (window.expiresFrom != null && key.expiresAt < window.expiresFrom) {
+    return false;
+  }
+  if (window.expiresThrough != null && key.expiresAt > window.expiresThrough) {
+    return false;
+  }
+  return true;
+}
+
+function matchesNormalizedValue(value: string | null, filter: string): boolean {
+  return value != null && normalizeInventoryText(value) === normalizeInventoryText(filter);
+}
+
+export function filterApiKeys(
+  keys: readonly ApiKeySummary[],
+  filters: ApiKeyInventoryFilters,
+  nowSeconds: number,
+): ApiKeySummary[] {
+  return searchApiKeys(keys, filters.search ?? "").filter((key) => {
+    if (!matchesApiKeyStatus(key, filters.status ?? "all", nowSeconds)) {
+      return false;
+    }
+    if (filters.expiryWindow != null && !matchesApiKeyExpiryWindow(key, filters.expiryWindow)) {
+      return false;
+    }
+    if (filters.owner !== undefined) {
+      if (filters.owner === null ? key.ownerEmail !== null : !matchesNormalizedValue(key.ownerEmail, filters.owner)) {
+        return false;
+      }
+    }
+    if (filters.tier !== undefined && !matchesNormalizedValue(key.tier, filters.tier)) {
+      return false;
+    }
+    if (filters.trafficClass !== undefined && key.trafficClass !== filters.trafficClass) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function compareNumbers(left: number, right: number): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareText(left: string, right: string): number {
+  const normalizedLeft = normalizeInventoryText(left);
+  const normalizedRight = normalizeInventoryText(right);
+  return normalizedLeft < normalizedRight ? -1 : normalizedLeft > normalizedRight ? 1 : 0;
+}
+
+function compareNullableNumbers(
+  left: number | null,
+  right: number | null,
+  direction: ApiKeyInventorySortDirection,
+): number {
+  if (left == null) return right == null ? 0 : 1;
+  if (right == null) return -1;
+  const result = compareNumbers(left, right);
+  return direction === "asc" ? result : -result;
+}
+
+function compareApiKeys(
+  left: ApiKeySummary,
+  right: ApiKeySummary,
+  sort: ApiKeyInventorySort,
+  nowSeconds: number,
+): number {
+  const directionMultiplier = sort.direction === "asc" ? 1 : -1;
+  let comparison = 0;
+
+  switch (sort.field) {
+    case "expiry":
+      comparison = compareNullableNumbers(left.expiresAt, right.expiresAt, sort.direction);
+      break;
+    case "last-use":
+      comparison = compareNullableNumbers(left.lastUsedAt, right.lastUsedAt, sort.direction);
+      break;
+    case "rate-limit":
+      comparison = directionMultiplier * compareNumbers(left.rateLimitPerMinute, right.rateLimitPerMinute);
+      break;
+    case "name":
+      comparison = directionMultiplier * compareText(left.name, right.name);
+      break;
+    case "status":
+      comparison =
+        directionMultiplier *
+        compareNumbers(
+          API_KEY_INVENTORY_STATUS_RANK[getApiKeyInventoryStatus(left, nowSeconds)],
+          API_KEY_INVENTORY_STATUS_RANK[getApiKeyInventoryStatus(right, nowSeconds)],
+        );
+      break;
+  }
+
+  return comparison === 0 ? compareNumbers(left.id, right.id) : comparison;
+}
+
+export function sortApiKeys(
+  keys: readonly ApiKeySummary[],
+  sort: ApiKeyInventorySort,
+  nowSeconds: number,
+): ApiKeySummary[] {
+  return [...keys].sort((left, right) => compareApiKeys(left, right, sort, nowSeconds));
+}
+
+function normalizePageSize(requestedPageSize: number): number {
+  if (!Number.isFinite(requestedPageSize)) {
+    return API_KEY_INVENTORY_DEFAULT_PAGE_SIZE;
+  }
+  return Math.min(
+    API_KEY_INVENTORY_MAX_PAGE_SIZE,
+    Math.max(API_KEY_INVENTORY_MIN_PAGE_SIZE, Math.floor(requestedPageSize)),
+  );
+}
+
+function normalizePage(requestedPage: number): number {
+  return Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
+}
+
+export function paginateApiKeys(
+  keys: readonly ApiKeySummary[],
+  requestedPage = 1,
+  requestedPageSize = API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
+): ApiKeyInventoryPage {
+  const pageSize = normalizePageSize(requestedPageSize);
+  const totalItems = keys.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const normalizedRequestedPage = normalizePage(requestedPage);
+  const page = Math.min(normalizedRequestedPage, totalPages);
+  const offset = (page - 1) * pageSize;
+  const pageKeys = keys.slice(offset, offset + pageSize);
+
+  return {
+    keys: pageKeys,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    firstItemNumber: pageKeys.length === 0 ? 0 : offset + 1,
+    lastItemNumber: offset + pageKeys.length,
+    pageWasCorrected: page !== requestedPage,
+    pageSizeWasCorrected: pageSize !== requestedPageSize,
+  };
+}
+
+export function buildApiKeyInventoryView(
+  keys: readonly ApiKeySummary[],
+  nowSeconds: number,
+  query: ApiKeyInventoryQuery = DEFAULT_API_KEY_INVENTORY_QUERY,
+): ApiKeyInventoryView {
+  const {
+    sort = DEFAULT_API_KEY_INVENTORY_SORT,
+    page = 1,
+    pageSize = API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
+    ...filters
+  } = query;
+  const filteredKeys = filterApiKeys(
+    keys,
+    { ...filters, status: filters.status ?? DEFAULT_API_KEY_INVENTORY_STATUS_FILTER },
+    nowSeconds,
+  );
+  const sortedKeys = sortApiKeys(filteredKeys, sort, nowSeconds);
+
+  return {
+    ...paginateApiKeys(sortedKeys, page, pageSize),
+    totalInventoryItems: keys.length,
+  };
 }
 
 function padTwo(value: number): string {
