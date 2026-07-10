@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
+import { TelegramPulseBoard } from "./telegram-pulse-strip";
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import type { TelegramPulse } from "@shared/types/status";
 
@@ -79,7 +79,7 @@ const pulse: TelegramPulse = {
       activeWatchers: 1842,
     },
   ],
-  pendingDeliveries: null,
+  pendingDeliveries: 7,
   currentSnapshotAt: 1_771_856_400,
   lifecycleHistoryUpdatedAt: 1_775_002_000,
   lifecycleHistoryEverySeconds: 900,
@@ -98,39 +98,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("TelegramPulseStrip", () => {
-  it("renders the compact public pulse metrics", () => {
-    mockUseTelegramPulse.mockReturnValue({ data: pulse, isLoading: false, isError: false } as ReturnType<
-      typeof useTelegramPulse
-    >);
-
-    render(<TelegramPulseStrip />);
-
-    expect(screen.getByText("1,842")).toBeTruthy();
-    const strip = screen.getByText("1,842").closest("div");
-    expect(strip?.getAttribute("aria-live")).toBe("polite");
-    expect(strip?.getAttribute("aria-busy")).toBe("false");
-    expect(screen.getByText(/watcher load scenarios tested/i)).toBeTruthy();
-    expect(screen.queryByText(/estimated capacity/i)).toBeNull();
-    expect(screen.getByText("5,621")).toBeTruthy();
-    expect(screen.getByText(/alert links \(incl\. presets\)/i)).toBeTruthy();
-    expect(screen.getByText(/updated every 5m/i)).toBeTruthy();
-    expect(screen.getByText(/USDT, USDC, USDe/)).toBeTruthy();
-  });
-
-  it("renders the unavailable state without hiding bot setup", () => {
-    mockUseTelegramPulse.mockReturnValue({ data: undefined, isLoading: false, isError: true } as ReturnType<
-      typeof useTelegramPulse
-    >);
-
-    render(<TelegramPulseStrip />);
-
-    expect(screen.getByText(/commands still work/i)).toBeTruthy();
-  });
-});
-
 describe("TelegramPulseBoard", () => {
-  it("keeps current public evidence visible and folds historical telemetry", () => {
+  it("keeps current adoption visible and folds historical telemetry", () => {
     mockUseTelegramPulse.mockReturnValue({ data: pulse, isLoading: false, isError: false } as ReturnType<
       typeof useTelegramPulse
     >);
@@ -145,8 +114,9 @@ describe("TelegramPulseBoard", () => {
     const currentSnapshot = screen.getByText("Current snapshot");
     const topFollowed = screen.getByText("Most followed");
     expect(activeChats).toBeTruthy();
-    expect(screen.getByText(/Selected modeled workloads are tested at 5,000 watchers/i)).toBeTruthy();
-    expect(screen.getByText(/This public snapshot is evidence, not a delivery guarantee/i)).toBeTruthy();
+    expect(screen.getByText("Live adoption")).toBeTruthy();
+    expect(screen.queryByText(/watcher load scenarios|modeled workloads|fixed capacity limit/i)).toBeNull();
+    expect(screen.queryByText(/evidence, not a delivery guarantee/i)).toBeNull();
     expect(screen.getByText("Complete telemetry")).toBeTruthy();
     expect(screen.queryByText(/% used/i)).toBeNull();
     expect(screen.queryByText(/estimated capacity/i)).toBeNull();
@@ -158,9 +128,7 @@ describe("TelegramPulseBoard", () => {
     expect(screen.getByRole("figure", { name: /chat lifecycle chart/i })).toBeTruthy();
     expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
     expect(screen.queryByText(/Low-cardinality deltas below 5/i)).toBeNull();
-    const summary = screen
-      .getByText("Adoption history and aggregate telemetry")
-      .closest("summary") as HTMLElement | null;
+    const summary = screen.getByText("Adoption history").closest("summary") as HTMLElement | null;
     expect(summary).toBeTruthy();
     const details = summary?.closest("details") as HTMLDetailsElement | null;
     expect(details).toBeTruthy();
@@ -190,26 +158,14 @@ describe("TelegramPulseBoard", () => {
     expect(within(pulseDetails).queryByText("Delivery controls")).toBeNull();
     expect(within(pulseDetails).queryByText("Alert coverage")).toBeNull();
     expect(within(pulseDetails).queryByText("Quiet-hours chats")).toBeNull();
+    expect(within(pulseDetails).getByRole("link", { name: "status page" }).getAttribute("href")).toMatch(
+      /^\/status\/?$/,
+    );
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });
 
-  it("does not turn the load-test scenario into a capacity-utilization claim", () => {
-    mockUseTelegramPulse.mockReturnValue({
-      data: { ...pulse, activeWatchers: 6_000 },
-      isLoading: false,
-      isError: false,
-    } as ReturnType<typeof useTelegramPulse>);
-
-    render(<TelegramPulseBoard />);
-
-    expect(screen.getByText("6,000")).toBeTruthy();
-    expect(screen.getByText(/This is not a fixed capacity limit/i)).toBeTruthy();
-    expect(screen.queryByText(/% used/i)).toBeNull();
-    expect(screen.queryByText(/estimated capacity/i)).toBeNull();
-  });
-
-  it("does not surface replay-protected Mini App counts without a producer", () => {
+  it("keeps operational Mini App and delivery counts off the public board", () => {
     mockUseTelegramPulse.mockReturnValue({
       data: {
         ...pulse,
@@ -224,15 +180,15 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    const summary = screen.getByText("Adoption history and aggregate telemetry").closest("summary") as HTMLElement;
+    const summary = screen.getByText("Adoption history").closest("summary") as HTMLElement;
     fireEvent.click(summary);
 
     const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
-    expect(within(pulseDetails).getByText("Mini App today")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Sessions today")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Mutations today")).toBeTruthy();
-    expect(within(pulseDetails).getByText("Denied today")).toBeTruthy();
-    expect(within(pulseDetails).queryByText("Replay-protected today")).toBeNull();
+    expect(within(pulseDetails).queryByText("Mini App today")).toBeNull();
+    expect(within(pulseDetails).queryByText("Sessions today")).toBeNull();
+    expect(within(pulseDetails).queryByText("Mutations today")).toBeNull();
+    expect(within(pulseDetails).queryByText("Denied today")).toBeNull();
+    expect(within(pulseDetails).queryByText("Queued deliveries")).toBeNull();
   });
 
   it("keeps the lifecycle placeholder only when no history points are available", () => {

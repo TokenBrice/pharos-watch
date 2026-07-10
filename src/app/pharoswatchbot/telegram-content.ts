@@ -1,13 +1,4 @@
-import {
-  Bell,
-  MessageSquareText,
-  Radio,
-  ShieldCheck,
-  SlidersHorizontal,
-  Terminal,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Bell, MessageSquareText, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
@@ -32,7 +23,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@pharoswatch",
     href: "https://t.me/pharoswatch",
     description:
-      "Optional daily recap, AI-written from the same signals — peg deviations, supply shifts, liquidity changes, and what changed overnight.",
+      "Optional daily recap, AI-written from the same signals: peg deviations, supply shifts, liquidity changes, and what changed overnight.",
     cardButtonLabel: "Join Channel",
     finalButtonLabel: "Digest",
     showArchiveLink: true,
@@ -44,7 +35,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@pharoswatchers",
     href: "https://t.me/pharoswatchers",
     description:
-      "Optional open channel where watchers compare notes between digests — fresh depegs, risk signals, and live commentary.",
+      "Optional open channel where watchers compare notes between digests: fresh depegs, risk signals, and live commentary.",
     cardButtonLabel: "Join Community",
     finalButtonLabel: "Community",
     showArchiveLink: false,
@@ -124,44 +115,12 @@ export const RECOMMENDED_SETUPS = [
   icon: LucideIcon;
 }[];
 
-export const GROWTH_SUPPORT = [
-  {
-    title: "Dynamic presets",
-    detail: "Top-N and market-cap cohorts subscribe to a moving list with one command. No re-subscribing as the universe changes.",
-    signal: "/presets",
-    icon: Terminal,
-  },
-  {
-    title: "Noise controls",
-    detail: "Raise the DEWS floor, set depeg milestones, mute upgrades, schedule quiet hours in your /timezone, snooze on the fly.",
-    signal: "/set, /mute",
-    icon: SlidersHorizontal,
-  },
-  {
-    title: "Shared group state",
-    detail: "One Telegram chat, one shared subscription. Pending ticker selections stay scoped to whoever started them.",
-    signal: "@PharosWatchBot",
-    icon: Users,
-  },
-  {
-    title: "Bounded retry queue",
-    detail:
-      "Overflow and retryable failures are prioritized and retried within family-specific TTLs. Terminal failures remain visible to operators.",
-    signal: "1h / 30m TTL",
-    icon: Radio,
-  },
-] as const satisfies readonly {
-  title: string;
-  detail: string;
-  signal: string;
-  icon: LucideIcon;
-}[];
-
 export const TELEGRAM_ALERT_EXAMPLES = [
   {
     key: "dews",
     label: "DEWS Threat Level",
-    tagline: "Fires when a coin crosses into a worse DEWS band. Shows the two highest-stress sub-signals.",
+    tagline:
+      "Fires when a coin crosses into a worse band of DEWS, Pharos's Depeg Early Warning System. Shows the two highest-stress sub-signals.",
     content: `DEWS
 
 USDT — WATCH → ALERT (score: 42)
@@ -199,7 +158,7 @@ View on Pharos: pharos.watch/stablecoin/usdr-tangible`,
   {
     key: "launch",
     label: "Launch Promotions",
-    tagline: "Fires when a tracked pre-launch asset goes live. Must be subscribed by ticker — presets don't apply here.",
+    tagline: "Fires when a tracked pre-launch asset goes live. Must be subscribed by ticker; presets don't apply here.",
     content: `Stablecoin Launched
 
 USDPT — US Dollar Payment Token has launched and is now tracked by Pharos
@@ -286,7 +245,7 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/mute <start>-<end>",
         description:
-          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone — UTC if none is set. Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
+          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone (UTC if none is set). Notifications are silenced; messages still deliver. Use alert toggles or unsubscribes for all-day silence.",
         example: "/mute 22-07",
       },
       {
@@ -420,7 +379,7 @@ export const TELEGRAM_PARAM_LEGEND = [
   { token: "<types>", meaning: "Comma-separated: dews, depeg, safety, launch, reserve" },
   { token: "<targets>", meaning: "Space-separated tickers, coin-ids, or presets" },
   { token: "<ticker>", meaning: "Symbol (USDC) or coin-id (usdc-circle)" },
-  { token: "<value>", meaning: "Setting-specific — see the /set rows" },
+  { token: "<value>", meaning: "Setting-specific; see the /set rows" },
   { token: "<view>", meaning: "depeg, dews, yield, liquidity, chains, safety" },
   { token: "<start>-<end>", meaning: "Integer hours, 0–23 (interpreted in the chat's /timezone; UTC by default)" },
   { token: "all", meaning: "Reserved target meaning every tracked stablecoin" },
@@ -450,12 +409,12 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How do I silence Telegram notifications during certain hours?",
     answer:
-      "Use /mute <start>-<end> with integer hours (0–23). For example, /mute 22-07 silences alerts between 10pm and 7am. Quiet hours are interpreted in the chat's /timezone — set it once with /timezone Europe/Paris (or any IANA zone) and /mute will use it; without /timezone, hours fall back to UTC. Use /unmutehours to disable quiet hours. Use alert toggles or unsubscribes for all-day silence.",
+      "Use /mute <start>-<end> with integer hours (0–23). For example, /mute 22-07 silences alerts between 10pm and 7am. Quiet hours are interpreted in the chat's /timezone: set it once with /timezone Europe/Paris (or any IANA zone) and /mute will use it; without /timezone, hours fall back to UTC. Use /unmutehours to disable quiet hours. Use alert toggles or unsubscribes for all-day silence.",
   },
   {
     question: "Is there a Mini App or do I have to type commands?",
     answer:
-      "Both work. Every alert family, preset, and threshold is reachable through commands. There's also a Mini App you can open from the bot's menu button or via https://t.me/PharosWatchBot?startapp=home — it gives you a visual surface for the watchlist, settings, snooze, and presets without typing slash commands. The Mini App and the bot share the same subscription state, so you can switch between them freely.",
+      "Both work. Every alert family, preset, and threshold is reachable through commands. There's also a Mini App you can open from the bot's menu button or via https://t.me/PharosWatchBot?startapp=home. It gives you a visual surface for the watchlist, settings, snooze, and presets without typing slash commands. The Mini App and the bot share the same subscription state, so you can switch between them freely.",
   },
   {
     question: "What are preset watchlists?",
@@ -478,31 +437,6 @@ export const TELEGRAM_FAQ: FaqItem[] = [
       "Pharos stores chat-level alert settings, quiet hours, snooze state, and short-lived command or delivery metadata. /forget starts a private two-step deletion flow for subscriber data and live diagnostics. Inactive unsubscribed chats are pruned after 180 days, and public pulse metrics hide low-cardinality deltas while keeping the exact active watcher total visible.",
   },
 ];
-
-export const TELEGRAM_HOW_IT_WORKS_CARDS = [
-  {
-    title: "Cadence",
-    description:
-      "The dispatcher checks every 5 minutes. Eligible alerts can send immediately or enter the bounded retry queue. Safety uses the live report-card publish path; reserve drift uses the four-hour live-reserve producer.",
-    unsubscribeCommand: null,
-    descriptionAfterCommand: null,
-  },
-  {
-    title: "Volume",
-    description:
-      "Expect zero alerts on a calm day, a handful during volatility. Repeated transitions to the same DEWS band are deduped against the last alert state, so you are not paged twice for the same condition. Every alert ships with snooze buttons (1h / 4h / 24h).",
-    unsubscribeCommand: null,
-    descriptionAfterCommand: null,
-  },
-  {
-    title: "Privacy",
-    description:
-      "We store your Telegram chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived command/alert queue metadata. Public pulse metrics hide low-cardinality deltas; exact active watcher totals are public by current product decision.",
-    unsubscribeCommand: "/unsubscribe all",
-    descriptionAfterCommand:
-      "at any time to stop alerts; inactive unsubscribed chat rows are pruned after 180 days.",
-  },
-] as const;
 
 export const TELEGRAM_COMMAND_REFERENCE_TIPS = [
   "Tickers are case-insensitive. Use the exact Pharos coin-id (e.g. usdc-circle) when a symbol is ambiguous.",

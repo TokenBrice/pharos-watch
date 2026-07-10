@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PharosWatchBotPage, { metadata } from "./page";
 import {
-  GROWTH_SUPPORT,
   TELEGRAM_ALERT_EXAMPLES,
   TELEGRAM_COMMAND_GROUPS,
   TELEGRAM_FAQ,
@@ -117,10 +116,6 @@ describe("PharosWatchBotPage", () => {
       ),
     );
     expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
-
-    const retryContract = GROWTH_SUPPORT.find((entry) => entry.title === "Bounded retry queue");
-    expect(retryContract?.detail).toContain("retried within family-specific TTLs");
-    expect(JSON.stringify(GROWTH_SUPPORT)).not.toMatch(/no dropped alerts|arrive in order/i);
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {
@@ -157,7 +152,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
     expect(
       screen.getByText(
-        `PharosWatchBot · Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`,
+        `Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/Safety changes name the score driver/i)).toBeTruthy();
@@ -180,11 +175,14 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
     expect(screen.getByText(/Risk alerts expire after 1 hour/i)).toBeTruthy();
     expect(screen.getByText(/reserve drift follows the four-hour live-reserve producer/i)).toBeTruthy();
-    const examples = screen.getByRole("heading", { name: "These are the alerts" });
+    const examples = screen.getByRole("heading", { name: "What lands in your chat" });
     const setup = screen.getByRole("heading", { name: "Start in two minutes" });
     const evidence = screen.getByLabelText("Live Telegram adoption metrics");
     expect(Boolean(examples.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(Boolean(setup.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    expect(container.textContent).not.toMatch(/no dropped alerts|arrive in order/i);
+    expect(container.textContent).toContain("Depeg Early Warning System");
 
     const commandStrings = screen.getAllByText(RECOMMENDED_SETUP_COMMAND).filter((node) => node.tagName === "CODE");
     expect(commandStrings.length).toBeGreaterThan(0);

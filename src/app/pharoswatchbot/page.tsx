@@ -80,30 +80,40 @@ function AlertBubble({ content, time }: { content: string; time: string }) {
 function AlertExamples() {
   return (
     <section id="alerts" className="scroll-mt-24 space-y-5" aria-labelledby="alert-types-title">
-      <div className="max-w-3xl space-y-2">
+      <div className="max-w-2xl space-y-2">
         <h2 id="alert-types-title" className="pharos-section-title">
-          These are the alerts
+          What lands in your chat
         </h2>
         <p className="pharos-lead">
-          Real formatter-derived examples from all five families. Safety changes name the score driver; reserve alerts
-          only cover coins with live reserve tracking.
+          Real examples from all five families, shown exactly as the bot sends them. Safety changes name the score
+          driver; reserve alerts only cover coins with live reserve tracking.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {TELEGRAM_ALERT_EXAMPLES.map((alert) => (
-          <article key={alert.key} className="rounded-lg border border-border/65 bg-card p-3.5 sm:p-4">
-            <div className="mb-3">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h3 className="text-sm font-semibold text-foreground">{alert.label}</h3>
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-muted-foreground">
-                  {alert.key}
-                </code>
+        {TELEGRAM_ALERT_EXAMPLES.map((alert, index) => {
+          const isLastOdd = index === TELEGRAM_ALERT_EXAMPLES.length - 1 && TELEGRAM_ALERT_EXAMPLES.length % 2 === 1;
+          return (
+            <article
+              key={alert.key}
+              className={
+                isLastOdd
+                  ? "rounded-lg border border-border/65 bg-card p-3.5 sm:p-4 md:col-span-2 md:grid md:grid-cols-2 md:items-start md:gap-5"
+                  : "rounded-lg border border-border/65 bg-card p-3.5 sm:p-4"
+              }
+            >
+              <div className={isLastOdd ? "mb-3 md:mb-0" : "mb-3"}>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">{alert.label}</h3>
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-muted-foreground">
+                    {alert.key}
+                  </code>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{alert.tagline}</p>
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{alert.tagline}</p>
-            </div>
-            <AlertBubble content={alert.content} time={alert.time} />
-          </article>
-        ))}
+              <AlertBubble content={alert.content} time={alert.time} />
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -126,7 +136,7 @@ function SetupSection() {
         <div className="space-y-5">
           <ol className="space-y-4">
             <li className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-frost-blue">
+              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-muted-foreground">
                 01
               </span>
               <div>
@@ -137,7 +147,7 @@ function SetupSection() {
               </div>
             </li>
             <li className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-frost-blue">
+              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-muted-foreground">
                 02
               </span>
               <div>
@@ -152,7 +162,7 @@ function SetupSection() {
               </div>
             </li>
             <li className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-frost-blue">
+              <span aria-hidden="true" className="pharos-numeric pt-0.5 text-xs font-semibold text-muted-foreground">
                 03
               </span>
               <div>
@@ -174,7 +184,7 @@ function SetupSection() {
             <Button asChild variant="outline" size="sm" className="gap-2">
               <TelegramAdoptionLink href={MINI_APP_SETUP_DEEP_LINK} placement="miniapp_setup" target="_blank" rel="noopener noreferrer">
                 <Smartphone className="h-4 w-4" aria-hidden="true" />
-                Open Mini App
+                Set up in the Mini App
               </TelegramAdoptionLink>
             </Button>
           </div>
@@ -269,7 +279,7 @@ function ReliabilityContract() {
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
           <ShieldCheck className="h-4 w-4" aria-hidden="true" />
         </span>
-        <div className="max-w-3xl">
+        <div className="max-w-2xl">
           <h2 id="reliability-title" className="pharos-section-title">
             What Pharos promises, and what it does not
           </h2>
@@ -310,9 +320,9 @@ function ReliabilityContract() {
           </dd>
         </div>
       </dl>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Public pulse metrics hide low-cardinality deltas while keeping the exact active chat total visible. Read the
-        full{" "}
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+        Adoption metrics above are aggregate counts; small daily changes are hidden to avoid identifying individual
+        chats. Read the full{" "}
         <Link href="/privacy/" className={PROSE_LINK_CLASS}>
           privacy policy
         </Link>
@@ -366,7 +376,7 @@ function CommandReference() {
               >
                 <h3
                   id={`command-group-${group.label.toLowerCase().replaceAll(" ", "-")}`}
-                  className="font-mono text-xs font-semibold uppercase text-sky-700 dark:text-sky-300"
+                  className="font-mono text-xs font-semibold uppercase text-muted-foreground"
                 >
                   {group.label}
                 </h3>
@@ -496,8 +506,7 @@ export default function PharosWatchBotPage() {
           <div className="pharoswatchbot-hero-scrim absolute inset-0" aria-hidden="true" />
           <div className="relative flex h-full max-w-3xl flex-col justify-end px-5 py-6 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
             <p className="text-xs font-semibold text-white/80">
-              PharosWatchBot · Free Telegram alerts for {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked
-              stablecoins
+              Free Telegram alerts for {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins
             </p>
             <h2
               id="telegram-hero-title"
@@ -506,8 +515,8 @@ export default function PharosWatchBotPage() {
               Stablecoin alerts, before you have to check.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:mt-4 sm:text-base">
-              Depegs, DEWS, reasoned safety shifts, launches, and reserve drift, sent to your Telegram chat. Start with
-              one preset; tune later.
+              Depeg events, DEWS early warnings, safety-grade changes, launches, and reserve drift, sent to your
+              Telegram chat. Start with one preset; tune later.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">
               <TelegramAdoptionLink
@@ -529,9 +538,6 @@ export default function PharosWatchBotPage() {
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
-            <p className="mt-5 hidden max-w-2xl text-xs leading-relaxed text-white/70 sm:block">
-              Five-minute dispatch lane. Reserve signals follow a four-hour source. Delivery is bounded, not guaranteed.
-            </p>
           </div>
         </section>
 

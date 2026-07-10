@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
+import Link from "next/link";
 import { Area, AreaChart } from "recharts";
 import { ChevronDown } from "lucide-react";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
@@ -30,9 +31,6 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
-// Scenario size enforced by `npm run check:telegram-load`; this is evidence from
-// selected modeled workloads, not a fixed subscriber capacity.
-const TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS = 5_000;
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);
@@ -126,7 +124,6 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
 type PulseStat = {
   label: string;
   value: number;
-  detail?: string;
   shareTotal?: number;
 };
 
@@ -151,7 +148,6 @@ function PulseStatGroup({ title, items }: { title: string; items: PulseStat[] })
                   {formatCount(item.value)}
                 </span>
               </div>
-              {item.detail ? <p className="text-[11px] leading-snug text-muted-foreground">{item.detail}</p> : null}
               {item.shareTotal ? (
                 <div
                   className="h-1.5 overflow-hidden rounded-full bg-muted"
@@ -164,74 +160,6 @@ function PulseStatGroup({ title, items }: { title: string; items: PulseStat[] })
           );
         })}
       </div>
-    </div>
-  );
-}
-
-export function TelegramPulseStrip() {
-  const { data, isLoading, isError } = useTelegramPulse();
-  let content: ReactNode;
-
-  if (isLoading) {
-    content = (
-      <>
-        <Skeleton className="h-3.5 w-20 sm:w-24" />
-        <Skeleton className="h-3.5 w-24 sm:w-28" />
-        <Skeleton className="hidden h-3.5 w-28 sm:block" />
-      </>
-    );
-  } else if (!data || isError) {
-    content = <p>Telegram adoption metrics unavailable; commands still work.</p>;
-  } else {
-    content = (
-      <>
-        <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.activeWatchers)}</span>{" "}
-          active Telegram chats
-        </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">
-          &middot;
-        </span>
-        <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground pharos-numeric">
-            {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)}
-          </span>{" "}
-          watcher load scenarios tested
-        </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">
-          &middot;
-        </span>
-        <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.coinSubscriptions)}</span>{" "}
-          alert links (incl. presets)
-        </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">
-          &middot;
-        </span>
-        <span className="text-muted-foreground">
-          updated every {Math.round((data.updatedEverySeconds ?? 300) / 60)}m
-        </span>
-        {data.topCoins.length > 0 && (
-          <>
-            <span className="hidden text-border sm:inline" aria-hidden="true">
-              &middot;
-            </span>
-            <span className="text-muted-foreground">
-              most followed: <span className="font-medium text-foreground">{data.topCoins.slice(0, 3).join(", ")}</span>
-            </span>
-          </>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <div
-      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground tabular-nums"
-      aria-live="polite"
-      aria-busy={isLoading ? "true" : "false"}
-    >
-      {content}
     </div>
   );
 }
@@ -273,11 +201,11 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       >
         <div className="flex items-center gap-3 border-b border-border/55 pb-4">
           <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-          <h2 className="pharos-section-title">Live public evidence</h2>
+          <h2 className="pharos-section-title">Live adoption</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Public Telegram telemetry is temporarily unavailable. It retries automatically; bot links and setup commands
-          still work. No healthy service state is inferred while the evidence is unavailable.
+          Public Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and setup
+          commands keep working.
         </p>
       </section>
     );
@@ -299,18 +227,6 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Reactivated today", value: data.reactivatedWatchersToday },
     { label: "Churned today", value: data.churnedWatchersToday },
   ].filter(isPulseStat);
-  const deliveryStats = [{ label: "Queued deliveries", value: data.pendingDeliveries }].filter(isPulseStat);
-  const miniAppStats = [
-    { label: "Sessions today", value: data.miniAppSessionsToday },
-    { label: "Mutations today", value: data.miniAppMutationsToday },
-    { label: "Denied today", value: data.miniAppDeniedToday },
-    {
-      label: "Open → first mutation (P50)",
-      value: data.miniAppOpenToFirstMutationP50Sec,
-      detail: "seconds",
-    },
-  ].filter(isPulseStat);
-
   return (
     <section
       className={cn("border-y border-border/65 py-7 sm:py-9", className)}
@@ -325,9 +241,9 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-accent)]" />
           </span>
           <div>
-            <h2 className="pharos-section-title">Live public evidence</h2>
+            <h2 className="pharos-section-title">Live adoption</h2>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-              Aggregate adoption and telemetry freshness. This public snapshot is evidence, not a delivery guarantee.
+              Aggregate counts from the bot itself, updated every five minutes.
             </p>
           </div>
         </div>
@@ -344,7 +260,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
       </div>
 
       {data.quality?.status === "partial" ? (
-        <p className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+        <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
           Some public Telegram telemetry is temporarily unavailable. Counts shown here keep working where source data is
           complete.
         </p>
@@ -376,17 +292,13 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           </dd>
         </div>
       </dl>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Selected modeled workloads are tested at {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)} watchers. This is
-        not a fixed capacity limit.
-      </p>
 
       <details className="group mt-5 border-t border-border/60">
         <summary className="pharos-focus-ring flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-md py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0">
-            <span className="block">Adoption history and aggregate telemetry</span>
+            <span className="block">Adoption history</span>
             <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
-              Lifecycle chart, most-followed coins, daily deltas, delivery controls, and Mini App activity
+              Lifecycle chart, most-followed coins, and daily changes
             </span>
           </span>
           <ChevronDown
@@ -434,15 +346,20 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
               <p className="mt-3 text-xs text-muted-foreground">No ranked follows yet.</p>
             )}
           </div>
-          <div
-            className="mt-4 grid gap-x-6 md:grid-cols-2 xl:grid-cols-4"
-            aria-label="Telegram aggregate alert telemetry"
-          >
+          <div className="mt-4 grid gap-x-6 sm:grid-cols-2" aria-label="Telegram aggregate alert telemetry">
             <PulseStatGroup title="Follow composition" items={followStats} />
             <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
-            <PulseStatGroup title="Delivery controls" items={deliveryStats} />
-            <PulseStatGroup title="Mini App today" items={miniAppStats} />
           </div>
+          <p className="mt-4 border-t border-border/55 pt-4 text-xs leading-relaxed text-muted-foreground">
+            Operational service health lives on the{" "}
+            <Link
+              href="/status/"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+            >
+              status page
+            </Link>
+            .
+          </p>
         </div>
       </details>
     </section>
