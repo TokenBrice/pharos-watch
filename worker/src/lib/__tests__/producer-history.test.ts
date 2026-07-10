@@ -9,6 +9,7 @@ import {
   recordProducerOutcome,
   utcCalendarMonth,
 } from "../producer-history";
+import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
 
 const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
 
@@ -123,7 +124,94 @@ describe("producer history", () => {
       });
     }
     expect(await loadProducerHeads(db)).toHaveLength(2);
-    expect(utcCalendarMonth(1_772_000_000)).toMatch(/^2026-/);
+    sqlite.close();
+  });
+
+  it("keeps both scheduled snapshot-supply paths queryable", async () => {
+    const { sqlite, db } = createMigratedDb();
+    for (const [scheduleKey, producerPath, invocationId] of [
+      ["quarterHourly", "quarterHourly", "quarter"],
+      ["daily0800Utc", "daily0800Utc", "fallback"],
+    ] as const) {
+      await recordProducerOutcome(db, {
+        scheduleKey,
+        job: "snapshot-supply",
+        producerPath,
+        producerKind: "scheduled-job",
+        invocationId,
+        idempotencyKey: `snapshot-${invocationId}`,
+        invokedAt: 1_772_000_000,
+        completedAt: 1_772_000_010,
+        outcome: "ok",
+        itemCount: 364,
+        productivity: { productive: true },
+      });
+    }
+
+    const heads = await loadProducerHeads(db);
+    expect(heads.map((head) => [head.scheduleKey, head.job, head.producerPath])).toEqual([
+      ["daily0800Utc", "snapshot-supply", "daily0800Utc"],
+      ["quarterHourly", "snapshot-supply", "quarterHourly"],
+    ]);
+    sqlite.close();
+  });
+
+  it("derives calendar identity across a real UTC month boundary", () => {
+    const januaryEnd = Date.UTC(2026, 0, 31, 23, 59, 59) / 1_000;
+    expect(utcCalendarMonth(januaryEnd)).toBe("2026-01");
+    expect(utcCalendarMonth(januaryEnd + 1)).toBe("2026-02");
+  });
+
+  it("overwrites a retried budget error without double-counting history", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const producer = {
+      scheduleKey: "digestTriggerPoll",
+      job: "digest-trigger-poll",
+      producerPath: "digestTriggerPoll",
+      producerKind: "budget-only",
+      invocationId: "budget-invocation-1",
+      workerVersion: "version-c",
+      slotStartedAt: 1_772_000_000,
+    };
+    await recordBudgetSurfaceTelemetry(db, {
+      surface: "digest-trigger-poll",
+      checkedAt: 1_772_000_010,
+      durationMs: 1_000,
+      dueCount: 1,
+      processedCount: 0,
+      outcome: "error",
+      error: "transient D1 failure",
+      producer,
+    });
+    await recordBudgetSurfaceTelemetry(db, {
+      surface: "digest-trigger-poll",
+      checkedAt: 1_772_000_020,
+      durationMs: 900,
+      dueCount: 1,
+      processedCount: 1,
+      outcome: "ok",
+      producer,
+    });
+
+    const history = sqlite.prepare(
+      `SELECT outcome, productive, error
+         FROM worker_producer_history
+        WHERE idempotency_key = ?`,
+    ).all("budget-surface:budget-invocation-1:digest-trigger-poll");
+    expect(history).toEqual([{ outcome: "ok", productive: 1, error: null }]);
+    expect(await loadProducerHeads(db)).toEqual([
+      expect.objectContaining({
+        lastOutcome: "ok",
+        lastError: null,
+        invocationCount: 1,
+        productiveCount: 1,
+      }),
+    ]);
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get("cron:budget-surface:digest-trigger-poll") as { value: string };
+    const payload = JSON.parse(cache.value) as Record<string, unknown>;
+    expect(payload).toMatchObject({ outcome: "ok", processedCount: 1 });
+    expect(payload).not.toHaveProperty("error");
     sqlite.close();
   });
 

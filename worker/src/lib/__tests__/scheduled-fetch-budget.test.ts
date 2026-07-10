@@ -36,4 +36,40 @@ describe("ScheduledFetchBudget", () => {
     release();
     expect(budget.snapshot().allocated).toBe(0);
   });
+
+  it("keeps measured nested live-fetch concurrency below six", async () => {
+    const budget = new ScheduledFetchBudget(5);
+    let activeFetches = 0;
+    let peakFetches = 0;
+    let markPeakReached!: () => void;
+    const peakReached = new Promise<void>((resolve) => { markPeakReached = resolve; });
+    let releaseFetches!: () => void;
+    const fetchGate = new Promise<void>((resolve) => { releaseFetches = resolve; });
+    const measuredFetch = async () => {
+      activeFetches++;
+      peakFetches = Math.max(peakFetches, activeFetches);
+      if (activeFetches === 5) markPeakReached();
+      try {
+        await fetchGate;
+      } finally {
+        activeFetches--;
+      }
+    };
+    const runNestedFetches = (count: number) => Promise.all(
+      Array.from({ length: count }, () => measuredFetch()),
+    );
+
+    const first = budget.run(3, undefined, () => runNestedFetches(3));
+    const second = budget.run(2, undefined, () => runNestedFetches(2));
+    const queued = budget.run(1, undefined, () => runNestedFetches(1));
+    await peakReached;
+
+    expect(activeFetches).toBe(5);
+    expect(peakFetches).toBe(5);
+    expect(budget.snapshot()).toMatchObject({ allocated: 5, waiting: 1 });
+    releaseFetches();
+    await Promise.all([first, second, queued]);
+    expect(peakFetches).toBe(5);
+    expect(activeFetches).toBe(0);
+  });
 });
