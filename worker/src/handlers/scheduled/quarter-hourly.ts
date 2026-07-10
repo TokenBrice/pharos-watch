@@ -33,6 +33,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       runtime.chainRpcs,
       runtime.env.DRPC_API_KEY ?? null,
       runtime.env.ETHERSCAN_API_KEY ?? null,
+      { scheduledAtSec: runtime.slotStartedAt },
     ),
   )).summary);
 

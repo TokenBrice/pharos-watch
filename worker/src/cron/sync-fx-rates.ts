@@ -1,8 +1,14 @@
 import type { CronResult } from "../lib/cron-logger";
 import { RUB_FALLBACK, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { getCache } from "../lib/db-cache";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import {
+  cadenceBucketFor,
+  claimCadenceBucket,
+  completeCadenceBucket,
+  failCadenceBucket,
+  appendCadenceResultMetadata,
+} from "../lib/cadence-bucket";
 import { loadFxRateState } from "../lib/fx-rate-state";
 import {
   EXPECTED_FX_PEG_KEYS,
@@ -35,8 +41,17 @@ import {
  * currency API because Frankfurter/ECB does not publish them all directly.
  * Supported Chainlink feeds overlay the reference cache for a curated subset
  * of fiat and commodity pegs when the on-chain quotes are fresh and plausible.
- * Triggered every 15 minutes, with an internal 30-minute write/fetch cooldown.
+ * Triggered every 15 minutes, with scheduled deliveries grouped into one
+ * generation-fenced 30-minute publication bucket.
  */
+
+export interface SyncFxRatesOptions {
+  scheduledAtSec?: number;
+}
+
+const FX_CADENCE_SEC = 30 * 60;
+const FX_CADENCE_KEY = "sync-fx-rates:cadence";
+const FX_STALE_CLAIM_SEC = 12 * 60;
 
 export async function syncFxRates(
   db: D1Database,
@@ -44,24 +59,75 @@ export async function syncFxRates(
   openExchangeRatesKey?: string,
   chainRpcs?: Map<string, ChainRpcConfig>,
   drpcApiKey?: string | null, etherscanApiKey?: string | null,
+  options: SyncFxRatesOptions = {},
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
-
-  // FX rates rarely move meaningfully in 15 min. The quarter-hourly slot keeps
-  // firing every 15 min because sync-stablecoins needs it; FX is gated here so
-  // it only does work every 30 min, halving Frankfurter/fawazahmed0/OXR calls
-  // and the Chainlink RPC overlay.
-  const COOLDOWN_SEC = 30 * 60;
-  const lastWrite = await getCache(db, "sync-fx-rates:last-write");
-  if (lastWrite && syncStartSec - lastWrite.updatedAt < COOLDOWN_SEC) {
+  const scheduledAtSec = options.scheduledAtSec ?? syncStartSec;
+  const bucket = cadenceBucketFor(scheduledAtSec, FX_CADENCE_SEC);
+  const claimResult = await claimCadenceBucket(db, {
+    key: FX_CADENCE_KEY,
+    bucket,
+    nowSec: syncStartSec,
+    staleClaimAfterSec: FX_STALE_CLAIM_SEC,
+  });
+  if (claimResult.kind === "skip") {
     return {
       itemCount: 0,
       metadata: JSON.stringify({
-        reason: "cooldown_active",
-        lastWriteAgeSec: syncStartSec - lastWrite.updatedAt,
+        reason: claimResult.reason === "already-completed"
+          ? "cadence_bucket_completed"
+          : "cadence_bucket_in_progress",
+        cadence: {
+          bucket,
+          observedBucket: claimResult.bucket,
+          cadenceSec: FX_CADENCE_SEC,
+        },
       }),
     };
   }
+
+  try {
+    const result = await runFxRatePublication(
+      db,
+      syncStartSec,
+      signal,
+      openExchangeRatesKey,
+      chainRpcs,
+      drpcApiKey,
+      etherscanApiKey,
+    );
+    const resultMetadata = result.metadata ? JSON.parse(result.metadata) as Record<string, unknown> : {};
+    if (resultMetadata.lastWriteAdvanced !== true) {
+      await failCadenceBucket(db, claimResult.claim);
+      return appendCadenceResultMetadata(
+        { ...result, status: "degraded" },
+        { bucket, cadenceSec: FX_CADENCE_SEC, completed: false, retryable: true },
+      );
+    }
+    const completed = await completeCadenceBucket(db, claimResult.claim);
+    return appendCadenceResultMetadata(
+      completed ? result : { ...result, status: "degraded" },
+      { bucket, cadenceSec: FX_CADENCE_SEC, completed, retryable: !completed },
+    );
+  } catch (error) {
+    try {
+      await failCadenceBucket(db, claimResult.claim);
+    } catch (transitionError) {
+      console.warn("[sync-fx-rates] Failed to release cadence claim:", transitionError);
+    }
+    throw error;
+  }
+}
+
+async function runFxRatePublication(
+  db: D1Database,
+  syncStartSec: number,
+  signal?: AbortSignal,
+  openExchangeRatesKey?: string,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
+): Promise<CronResult> {
 
   const runBestEffort = async (label: string, fn: () => Promise<void>) => {
     try {
