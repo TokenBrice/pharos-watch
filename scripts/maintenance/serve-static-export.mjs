@@ -14,6 +14,7 @@ import {
 } from "../../shared/lib/site-csp.ts";
 import canonicalOrder from "../../shared/data/stablecoins/canonical-order.json" with { type: "json" };
 import origins from "../../shared/lib/runtime-origins.json" with { type: "json" };
+import { setYieldWorkbenchFallbackParam } from "../../shared/lib/yield-workbench-fallback.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const CONTENT_TYPES = {
@@ -113,6 +114,7 @@ export function resolveMissingYieldWorkbenchLocation(requestUrl, knownStablecoin
   target.search = requestUrl.search;
   if (!target.searchParams.has("compare")) target.searchParams.set("compare", parts[1]);
   if (!target.searchParams.has("from")) target.searchParams.set("from", "detail-fallback");
+  if (!setYieldWorkbenchFallbackParam(target.searchParams, parts[1])) return null;
   return `${target.pathname}${target.search}`;
 }
 

@@ -36,6 +36,8 @@ import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
 import type { YieldRankingsResponse } from "@shared/types";
 
 interface YieldFreshnessBannerProps {
@@ -168,6 +170,31 @@ function SelectorHandoffNotice({ visible }: { visible: boolean }) {
   );
 }
 
+function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string | null }) {
+  const meta = stablecoinId ? CLIENT_TRACKED_META_BY_ID.get(stablecoinId) : null;
+  if (!meta) return null;
+
+  return (
+    <section
+      aria-label="Yield workbench fallback"
+      className="rounded-xl border border-amber-500/35 bg-amber-500/[0.08] px-4 py-3 text-sm text-foreground"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p>
+          The dedicated Yield workbench for <span className="font-semibold">{meta.symbol}</span> is not published in
+          this release. The full leaderboard is shown instead, with {meta.symbol} kept in comparison when available.
+        </p>
+        <Link
+          href={buildStablecoinUrl(meta.id)}
+          className="pharos-focus-ring w-fit shrink-0 rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
+        >
+          View {meta.symbol} dossier
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function YieldEmptyStateNotice({
   emptyState,
   onFilterChange,
@@ -206,6 +233,7 @@ export function YieldClient() {
   const { searchParams, setParam, replaceParams } = useUrlFilters();
   const router = useRouter();
   const arrivedFromSelector = searchParams.get("from") === "selector";
+  const workbenchFallbackId = parseYieldWorkbenchFallbackId(searchParams.get(YIELD_WORKBENCH_FALLBACK_PARAM));
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
   const watchlist = useWatchlist();
@@ -471,6 +499,7 @@ export function YieldClient() {
       <YieldFreshnessBanner dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
       <YieldApiWarnings warnings={data.warnings} />
       <SelectorHandoffNotice visible={arrivedFromSelector} />
+      <YieldWorkbenchFallbackNotice stablecoinId={workbenchFallbackId} />
 
       <div className="flex flex-col gap-6">
         <section aria-label="Risk tolerance" className="order-1 lg:order-2">

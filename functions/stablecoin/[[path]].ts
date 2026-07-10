@@ -1,6 +1,7 @@
 import legacyLlamaRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 import canonicalOrder from "@shared/data/stablecoins/canonical-order.json";
 import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
+import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback";
 
 interface StablecoinRouteEnv {
   ASSETS: {
@@ -69,6 +70,7 @@ export function resolveMissingYieldWorkbenchRedirect(
   target.search = url.search;
   if (!target.searchParams.has("compare")) target.searchParams.set("compare", parts[1]);
   if (!target.searchParams.has("from")) target.searchParams.set("from", "detail-fallback");
+  if (!setYieldWorkbenchFallbackParam(target.searchParams, parts[1])) return null;
   return target.toString();
 }
 

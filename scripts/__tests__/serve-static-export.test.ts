@@ -62,7 +62,7 @@ describe("serve-static-export", () => {
         new URL("https://pharos.watch/stablecoin/usdc-circle/yield/?days=90"),
         new Set(["usdc-circle"]),
       ),
-    ).toBe("/yield/?days=90&compare=usdc-circle&from=detail-fallback");
+    ).toBe("/yield/?days=90&compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle");
     expect(
       resolveMissingYieldWorkbenchLocation(
         new URL("https://pharos.watch/stablecoin/not-tracked/yield/"),
@@ -80,8 +80,26 @@ describe("serve-static-export", () => {
     });
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("/yield/?days=90&compare=usdc-circle&from=detail-fallback");
+    expect(response.headers.get("location")).toBe(
+      "/yield/?days=90&compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle",
+    );
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("keeps local fallback state while overriding the dedicated notice id", () => {
+    const location = resolveMissingYieldWorkbenchLocation(
+      new URL(
+        "https://pharos.watch/stablecoin/usdc-circle/yield/?compare=usdt-tether&from=watchlist&workbenchFallback=spoofed&days=30",
+      ),
+      new Set(["usdc-circle"]),
+    );
+
+    expect(location).not.toBeNull();
+    const redirected = new URL(location!, "https://pharos.watch");
+    expect(redirected.searchParams.get("compare")).toBe("usdt-tether");
+    expect(redirected.searchParams.get("from")).toBe("watchlist");
+    expect(redirected.searchParams.get("days")).toBe("30");
+    expect(redirected.searchParams.getAll("workbenchFallback")).toEqual(["usdc-circle"]);
   });
 
   it("serves exact /api and /api/ from the static API access page", async () => {

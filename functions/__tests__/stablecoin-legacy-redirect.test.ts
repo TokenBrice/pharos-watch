@@ -95,8 +95,37 @@ describe("stablecoin legacy redirects", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBe(
-      "https://pharos.watch/yield/?days=90&compare=usdc-circle&from=detail-fallback",
+      "https://pharos.watch/yield/?days=90&compare=usdc-circle&from=detail-fallback&workbenchFallback=usdc-circle",
     );
+  });
+
+  it("preserves existing yield state while binding the notice to the requested coin", () => {
+    const target = resolveMissingYieldWorkbenchRedirect(
+      new URL(
+        "https://pharos.watch/stablecoin/usdc-circle/yield/?compare=usdt-tether&from=watchlist&workbenchFallback=spoofed&days=30",
+      ),
+      404,
+      new Set(["usdc-circle"]),
+    );
+
+    expect(target).not.toBeNull();
+    const redirected = new URL(target!);
+    expect(redirected.pathname).toBe("/yield/");
+    expect(redirected.searchParams.get("compare")).toBe("usdt-tether");
+    expect(redirected.searchParams.get("from")).toBe("watchlist");
+    expect(redirected.searchParams.get("days")).toBe("30");
+    expect(redirected.searchParams.getAll("workbenchFallback")).toEqual(["usdc-circle"]);
+  });
+
+  it("rejects an oversized fallback id even if a supplied registry marks it known", () => {
+    const oversizedId = "a".repeat(65);
+    expect(
+      resolveMissingYieldWorkbenchRedirect(
+        new URL(`https://pharos.watch/stablecoin/${oversizedId}/yield/`),
+        404,
+        new Set([oversizedId]),
+      ),
+    ).toBeNull();
   });
 
   it("keeps unknown or available yield routes on static asset handling", () => {

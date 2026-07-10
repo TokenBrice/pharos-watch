@@ -167,6 +167,26 @@ describe("YieldClient", () => {
     );
   });
 
+  it("explains when an omitted per-coin workbench falls back to the leaderboard", () => {
+    searchParamsMock.set("workbenchFallback", "usdc-circle");
+
+    render(<YieldClient />);
+
+    expect(screen.getByRole("region", { name: "Yield workbench fallback" })).toBeTruthy();
+    expect(screen.getByText(/dedicated Yield workbench for/i).textContent).toContain("USDC");
+    expect(screen.getByRole("link", { name: "View USDC dossier" }).getAttribute("href")).toBe(
+      "/stablecoin/usdc-circle",
+    );
+  });
+
+  it("does not render fallback metadata for an invalid or untracked id", () => {
+    searchParamsMock.set("workbenchFallback", "not-a-tracked-stablecoin");
+
+    render(<YieldClient />);
+
+    expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
+  });
+
   it("risk budget changes preserve non-risk research filters", () => {
     searchParamsMock.set("peg", "USD");
     searchParamsMock.set("q", "coin");
