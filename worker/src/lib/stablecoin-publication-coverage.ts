@@ -18,11 +18,30 @@ export interface StablecoinPublicationCoverage {
   invalidWaiverIds: string[];
 }
 
+const NIGHT_WATCH_SUPPLY_WAIVER_EXPIRY_SEC = Date.UTC(2026, 7, 10) / 1000;
+
 /**
- * Deliberately empty by default. Any exception must identify an owner, explain
- * why the asset is unavailable, and expire so it cannot silently become policy.
+ * Temporary exceptions for active assets that have no positive supply from an
+ * existing permitted publication source. The 2026-07-10 audit confirmed that
+ * these IDs are absent from the DefiLlama stablecoins list and CoinGecko
+ * reports no market cap. Keep the roster explicit so a restored upstream row
+ * supersedes its waiver automatically and expiry forces another review.
  */
-export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
+export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [
+  "benji-franklin-templeton",
+  "wtgxx-wisdomtree",
+  "busd0-usual",
+  "tbill-openeden",
+  "cetes-etherfuse",
+  "jusd-jusd-stable-token",
+  "vndc-jade-labs",
+  "sofid-sofi",
+].map((stablecoinId) => ({
+  stablecoinId,
+  owner: "data-platform",
+  reason: "DefiLlama stablecoins has no row and CoinGecko reports no positive market cap",
+  expiresAt: NIGHT_WATCH_SUPPLY_WAIVER_EXPIRY_SEC,
+}));
 
 function isNonEmpty(value: string): boolean {
   return value.trim().length > 0;

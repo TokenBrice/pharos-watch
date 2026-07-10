@@ -50626,6 +50626,7 @@
   },
   {
     "id": "rusd-royal-dollar",
+    "llamaId": "415",
     "detailProvider": "coingecko",
     "name": "Royal Dollar",
     "symbol": "RUSD",
