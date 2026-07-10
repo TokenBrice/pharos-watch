@@ -9,9 +9,8 @@ ALTER TABLE mint_burn_events ADD COLUMN price_repair_attempted_at INTEGER;
 ALTER TABLE mint_burn_events ADD COLUMN price_repair_run_id TEXT;
 ALTER TABLE mint_burn_events ADD COLUMN price_repair_bookmark TEXT;
 
-CREATE INDEX IF NOT EXISTS idx_mbe_historical_price_repair_backlog
-  ON mint_burn_events(price_repair_status, price_repair_attempted_at ASC, timestamp ASC, id ASC)
-  WHERE amount_usd IS NULL OR price_repair_status = 'pending_aggregate';
+-- The existing idx_mbe_null_price_ts index serves the bounded repair backlog.
+-- Building another index over this large table exceeds D1's migration timeout.
 
 -- Events 90492, 90493, and 90494 are recovered BRLA below-peg backfill flaps
 -- separated from event 90491 by gaps inside the canonical incident merge
