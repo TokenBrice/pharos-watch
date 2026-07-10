@@ -47,6 +47,9 @@ export function deriveYieldSourceRole(
   source: EvaluatedYieldSource,
   options: { isSelected: boolean },
 ): YieldSourceRole {
+  if (source.sourceKey.startsWith("linked-variant:") && isExternalOpportunitySource(source)) {
+    return "external-opportunity";
+  }
   if (source.confidenceTier === "fallback" || source.dataSource === "price-derived") {
     return "fallback-proxy";
   }

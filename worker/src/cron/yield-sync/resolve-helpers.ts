@@ -1,6 +1,8 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
+import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
 import type { YieldType } from "@shared/types/core";
+import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";
 import {
   MIN_LENDING_POOL_APY,
   MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY,
@@ -15,12 +17,14 @@ import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
+  ON_CHAIN_RATE_CONFIGS,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import { buildDlChainFilter, buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContractAddresses, resolveYieldCandidateStablecoinId } from "./identity";
 import type {
   DlPool,
+  ResolvedYield,
   ResolvedYieldCandidate,
   ResolvedYieldEntry,
   SafetyScoreSnapshot,
@@ -135,6 +139,10 @@ export type YieldCandidateAppendStatus = "appended" | "duplicate" | "size-gated"
 
 function isExternalYieldOpportunityType(yieldType: YieldType | undefined): boolean {
   return yieldType === "lending-opportunity" || yieldType === "fixed-yield";
+}
+
+function isThirdPartyYieldOpportunityType(yieldType: YieldType | undefined): boolean {
+  return isExternalYieldOpportunityType(yieldType) || yieldType === "structured-tranche";
 }
 
 interface AppendOptionalYieldCandidateInput {
@@ -290,6 +298,75 @@ function getEffectiveYieldType(entry: ResolvedYieldEntry, fallbackType: YieldTyp
   return entry.yield?.yieldType ?? fallbackType;
 }
 
+const LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID: Readonly<Record<string, YieldRiskConfigProtocol>> = {
+  "bbqusdc-steakhouse": "morpho-blue",
+  "gtusdc-gauntlet": "morpho-blue",
+  "gtusdcp-gauntlet": "morpho-blue",
+  "sdai-sky": "spark-savings",
+  "sgho-aave": "aave-v3",
+  "steakusdc-steakhouse": "morpho-blue",
+  "steakusdt-steakhouse": "morpho-blue",
+  "stkgho-umbrella-aave": "aave-v3",
+  "susdc-spark": "spark-savings",
+  "susdt-spark": "spark-savings",
+  "syrupusdc-maple": "maple",
+  "syrupusdt-maple": "maple",
+  "ybold-yearn": "yearn",
+  "yvusdc-yearn": "yearn",
+};
+
+function inferLinkedVariantDeploymentPlace(
+  variantKind: string | undefined,
+  childYieldType: YieldType | undefined,
+): YieldDeploymentPlace | null {
+  if (variantKind === "strategy-vault") return "strategy-vault";
+  if (variantKind === "savings-passthrough") return "native-wrapper";
+  if (variantKind === "risk-absorption" || variantKind === "bond-maturity") return "structured-tranche";
+  if (childYieldType === "lp-receipt") return "lp-or-dex";
+  if (childYieldType === "lending-vault") return "strategy-vault";
+  if (childYieldType === "nav-appreciation" || childYieldType === "rebase") return "native-wrapper";
+  if (childYieldType === "governance-set" || childYieldType === "fee-sharing") return "issuer-savings";
+  return null;
+}
+
+function resolveLinkedVariantChain(
+  childId: string,
+  source: ResolvedYield,
+  contracts: Array<{ chain?: string }> | undefined,
+): string | null {
+  if (source.sourceRisk?.venueChain) return normalizeYieldPoolChain(source.sourceRisk.venueChain);
+  if (source.chain) return normalizeYieldPoolChain(source.chain);
+  const onChainConfig = ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === childId);
+  if (onChainConfig) return normalizeYieldPoolChain(onChainConfig.chain);
+
+  const uniqueChains = [...new Set((contracts ?? []).flatMap((contract) => (contract.chain ? [contract.chain] : [])))];
+  return uniqueChains.length === 1 ? normalizeYieldPoolChain(uniqueChains[0]!) : null;
+}
+
+function buildLinkedVariantSourceRisk(params: {
+  childId: string;
+  childYieldType: YieldType | undefined;
+  variantKind: string | undefined;
+  contracts: Array<{ chain?: string }> | undefined;
+  source: ResolvedYield;
+}): YieldSourceRisk {
+  const existing = params.source.sourceRisk ?? {};
+  const venueProtocol =
+    existing.venueProtocol ??
+    params.source.project ??
+    LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID[params.childId] ??
+    null;
+  const venueChain = resolveLinkedVariantChain(params.childId, params.source, params.contracts);
+
+  return {
+    ...existing,
+    deploymentPlace:
+      existing.deploymentPlace ?? inferLinkedVariantDeploymentPlace(params.variantKind, params.childYieldType),
+    venueProtocol,
+    venueChain,
+  };
+}
+
 function hasParentSourcePool(resolved: ResolvedYieldEntry[], parentId: string, sourcePool: string | null): boolean {
   if (!sourcePool) return false;
   return resolved.some((entry) => entry.id === parentId && entry.yield?.sourcePool === sourcePool);
@@ -318,7 +395,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
     if (!parentMeta) continue;
 
     const effectiveYieldType = getEffectiveYieldType(entry, childMeta.yieldConfig?.yieldType);
-    if (isExternalYieldOpportunityType(effectiveYieldType)) continue;
+    if (isThirdPartyYieldOpportunityType(effectiveYieldType)) continue;
 
     const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
     if (
@@ -339,7 +416,22 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
         ...entry.yield,
         sourceKey,
         yieldSource: getEffectiveYieldSource(entry, childMeta.yieldConfig?.yieldSource),
-        yieldType: effectiveYieldType,
+        // Holding the deposit asset does not earn a wrapper's NAV yield. The
+        // parent projection therefore represents the action of acquiring the
+        // child receipt token, while the original child row remains intrinsic.
+        yieldType: "lending-opportunity",
+        project:
+          entry.yield.sourceRisk?.venueProtocol ??
+          entry.yield.project ??
+          LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID[childMeta.id],
+        chain: resolveLinkedVariantChain(childMeta.id, entry.yield, childMeta.contracts),
+        sourceRisk: buildLinkedVariantSourceRisk({
+          childId: childMeta.id,
+          childYieldType: effectiveYieldType,
+          variantKind: childMeta.variantKind,
+          contracts: childMeta.contracts,
+          source: entry.yield,
+        }),
       },
     });
     existingKeys.add(entryKey);
