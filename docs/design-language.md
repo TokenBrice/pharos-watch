@@ -31,6 +31,14 @@ The `HomeAltHero` tagline reads `Backing, freeze risk, liquidity, and peg stress
 
 On `lg+`, the detail hero starts with a desktop identity/action strip (coin logo, name, one-line description, source links, report/compare/share controls), followed by a compact dossier card: top taxonomy/archetype chips plus launch date, a divider-based metric grid for Price / Market Cap / Supply / 30d Excess, and the verification passport row. Safety / Peg / Liquidity / DEWS move to the `xl+` summary rail instead of rendering as an inline hero rail. Mobile (`<lg`) continues to render the visible identity block, actions, and `SafetyGradeHero` because the Safety Score card is far down scroll on narrow screens.
 
+### Operator workspaces (private)
+
+The Access-protected operator UI uses `OpsShell`, not the public site shell. It owns a compact brand/header row, horizontally scrollable route navigation, theme, public-status, and sign-out controls; it intentionally omits the public event tape, global nav, feedback control, and footer. `/admin/` is Triage, while Pipeline, Reliability, Crons, Actions, Comms, History, and API Management are separate routes so inactive workbenches do not mount.
+
+Each route owns one `h1`; local workbench and mode headings begin at `h2`. URL-backed modes use tab semantics and mount only the selected view. Operational sections are flat bands, definition lists, or locally scrolling tables with hairline dividers. Framed surfaces are reserved for bounded tools, repeated rows, and dialogs; category-colored section stripes and nested cards are not part of the ops shell. Severity stripes remain valid only on rows and notices where color encodes live state and text repeats that state.
+
+Primary mobile controls and workspace tabs use a 44px target. Wide operational tables scroll inside their own named viewport with sticky headers rather than widening the document. Selected states retain text or icon cues in forced-colors mode, and transitions respect reduced motion.
+
 ### Breadcrumbs
 
 Visible slash-separated breadcrumb trails are retired from page headers. Routes that need crawlable hierarchy should keep emitting `BreadcrumbJsonLd` through `FeaturePageShell`, `LearnPageShell`, or a page-local JSON-LD block, but the hierarchy should not render as `Dashboard / current page` UI above the title.
@@ -440,7 +448,6 @@ The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) ha
 
 - depeg table row severity accents (`rowAccentClass` → `border-l-red-500` / `border-l-orange-500` / `border-l-amber-500`)
 - stablecoin-detail hero metric accents (`accentClass` in `hero-card-metrics`)
-- internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
 - stablecoin-detail per-coin notices (`coin-notice.tsx`): the danger/warning/info alert stripe is severity-keyed data, deliberately kept through the June 2026 mythos review and normalized to the same 3px weight
 
 The desktop **top-nav** (`top-nav.tsx`) active state is a neutral `bg-muted/60` fill, not a stripe — the old left "watch column" sidebar was retired in the Figma redesign. The frost lit-tab survives on **methodology-family longform scrollspies** (`LongformScrollspyNav` default recipe: `.pharos-rail-tab-active` + `.pharos-nav-beam` + lit `text-frost-blue`); the stablecoin detail page uses the `pill-tabs` emphasis (Figma coin template) with an elevated-neutral active pill (`.pharos-pill-tab-active`), and the **mobile drawer** (`header.tsx`) keeps `border-l-2 border-l-frost-blue` on the active route group. See `### Navigation Active vs Inactive` below.

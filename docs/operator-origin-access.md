@@ -10,7 +10,7 @@ Current repo-side state:
 
 - the Worker is attached to `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
-- `/admin/` only serves the live operator panel on `ops.pharos.watch`; `/admin-api/` only serves private API management there. The public host is blocked by Pages host-gate functions and returns non-indexed `404` responses.
+- `/admin/`, `/admin/pipeline/`, `/admin/reliability/`, `/admin/crons/`, `/admin/actions/`, `/admin/comms/`, and `/admin/history/` serve route-based operator workspaces on `ops.pharos.watch`; `/admin-api/` serves private API management there. Public hosts are blocked by Pages host-gate functions and return non-indexed `404` responses.
 - `/admin/*` and `/admin-api/*` static fallback headers are `no-store`; the host-gate functions also nonce-authorize inline scripts and return `no-store` HTML so stale pre-hydration operator shells cannot persist in shared caches.
 - `/status/` is public and read-only on both the public and ops hosts
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
@@ -18,6 +18,7 @@ Current repo-side state:
 Still true:
 
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
+- the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
 - the reserve-recovery fault injector is the sole preview-host admin exception: a `workers.dev` request must carry a valid `Cf-Access-Jwt-Assertion` for `CF_ACCESS_OPS_API_AUD`, and the handler still refuses every production hostname
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
@@ -106,7 +107,7 @@ The current proxy now fails closed on its own trust boundary:
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
-- The proxy reflects only a narrow response-header set back to the browser, then a final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
+- The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
