@@ -106,13 +106,15 @@ export default function PrivacyPage() {
               confirmations): 5-minute TTL.
             </li>
             <li>
-              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 1-hour TTL for depeg, DEWS,
-              safety, and reserve; 30-minute TTL for launch and admin broadcasts.
+              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 2-hour TTL for depeg, DEWS,
+              safety, reserve, and legacy alerts; 90-minute TTL for launch alerts and 45-minute TTL for admin
+              broadcasts.
             </li>
             <li>
               <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
-              rows; aggregate job manifests remain until their normal prune.
+              rows, planning snapshots, rendered target plans, and transport-failure observations; aggregate job
+              manifests remain until their normal prune.
             </li>
             <li>
               <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,

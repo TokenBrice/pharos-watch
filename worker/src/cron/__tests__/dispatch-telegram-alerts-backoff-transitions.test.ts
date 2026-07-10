@@ -375,7 +375,7 @@ describe("dispatchTelegramAlerts", () => {
           id: index + 1,
           chat_id: `expired-${index}`,
           message_html: "<b>Expired</b>",
-          created_at: now - 3_700,
+          created_at: now - 2 * 60 * 60 - 100,
           attempts: 0,
           last_error_class: null,
           dedupe_key: `expired-${index}`,

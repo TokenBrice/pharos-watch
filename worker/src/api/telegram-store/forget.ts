@@ -66,7 +66,18 @@ export async function forgetSubscriber(
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(chatId),
+    db.prepare(
+      `DELETE FROM telegram_alert_target_plan_items
+        WHERE (source_event_id, plan_generation, plan_key) IN (
+          SELECT source_event_id, plan_generation, plan_key
+            FROM telegram_alert_target_plans
+           WHERE chat_id = ?
+        )`,
+    ).bind(chatId),
     db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
@@ -436,6 +447,7 @@ export async function migrateTelegramChatId(
   options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   if (!oldChatId || !newChatId || oldChatId === newChatId) return;
+  const now = unixNow();
 
   const statements: D1PreparedStatement[] = [
     db.prepare(`
@@ -562,7 +574,24 @@ export async function migrateTelegramChatId(
     db.prepare("UPDATE OR IGNORE telegram_alert_source_resolution_targets SET chat_id = ? WHERE chat_id = ?")
       .bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(oldChatId),
+    db.prepare(
+      `UPDATE telegram_alert_job_targets
+          SET status = 'expired',
+              cancelled_at = COALESCE(cancelled_at, ?),
+              cancellation_reason = COALESCE(cancellation_reason, 'chat_migrated_before_handoff'),
+              final_delivery_state = COALESCE(final_delivery_state, 'cancelled'),
+              final_delivery_at = COALESCE(final_delivery_at, ?),
+              final_delivery_error = COALESCE(final_delivery_error, 'chat_migrated_before_handoff')
+        WHERE chat_id = ? AND status = 'planned'`,
+    ).bind(now, now, oldChatId),
     db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_alert_planning_subscribers SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("UPDATE telegram_alert_target_plans SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_transport_failure_observations SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(oldChatId),
     ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),

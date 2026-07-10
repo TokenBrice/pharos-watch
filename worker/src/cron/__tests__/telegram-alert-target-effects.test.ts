@@ -23,6 +23,9 @@ interface TargetRow {
   enqueued_at: number | null;
   failed_at: number | null;
   error_class: string | null;
+  final_delivery_state: string | null;
+  final_delivery_at: number | null;
+  final_delivery_error: string | null;
 }
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
@@ -48,6 +51,9 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
       effect_started_at INTEGER,
       effect_completed_at INTEGER,
       effect_claim_expires_at INTEGER,
+      final_delivery_state TEXT,
+      final_delivery_at INTEGER,
+      final_delivery_error TEXT,
       PRIMARY KEY (job_id, target_key)
     );
     CREATE TABLE telegram_pending_alerts (
@@ -69,7 +75,17 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
       expires_at INTEGER,
       processing_owner TEXT,
       processing_started_at INTEGER,
-      processing_expires_at INTEGER
+      processing_expires_at INTEGER,
+      delivery_state TEXT NOT NULL DEFAULT 'pending',
+      delivery_owner TEXT,
+      delivery_generation INTEGER NOT NULL DEFAULT 0,
+      delivery_started_at INTEGER,
+      delivery_completed_at INTEGER,
+      delivery_claim_expires_at INTEGER,
+      source_event_id TEXT,
+      alert_scope_json TEXT,
+      preference_generation INTEGER,
+      markup_policy_json TEXT
     );
   `);
   sqlite
@@ -87,7 +103,8 @@ function loadTarget(sqlite: DatabaseSync): TargetRow {
     .prepare(
       `SELECT status, effect_state, effect_owner, effect_generation,
               effect_claimed_at, effect_started_at, effect_completed_at,
-              effect_claim_expires_at, sent_at, enqueued_at, failed_at, error_class
+              effect_claim_expires_at, sent_at, enqueued_at, failed_at, error_class,
+              final_delivery_state, final_delivery_at, final_delivery_error
          FROM telegram_alert_job_targets
         WHERE job_id = 'job-1' AND target_key = 'target-1'`,
     )
@@ -171,9 +188,10 @@ describe("fresh Telegram alert target effect fencing", () => {
       ),
     ).toBe(1);
     expect(loadTarget(sqlite)).toMatchObject({
-      status: "failed",
+      status: "planned",
       effect_state: "execution_unknown",
       error_class: "fresh_effect_owner_lost",
+      final_delivery_state: "execution_unknown",
     });
   });
 
@@ -193,11 +211,13 @@ describe("fresh Telegram alert target effect fencing", () => {
     }]);
 
     expect(loadTarget(sqlite)).toMatchObject({
-      status: "failed",
+      status: "planned",
       effect_state: "execution_unknown",
       effect_completed_at: 205,
-      failed_at: 205,
+      failed_at: null,
       error_class: "timeout",
+      final_delivery_state: "execution_unknown",
+      final_delivery_at: 205,
     });
   });
 

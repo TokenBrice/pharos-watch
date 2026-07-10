@@ -242,6 +242,9 @@ const SQLITE_DISPATCH_TABLES = [
   "telegram_pending_alerts",
   "telegram_alert_dead_letters",
   "telegram_chat_delivery_diagnostics",
+  "telegram_delivery_pauses",
+  "telegram_transport_circuit",
+  "telegram_transport_failure_observations",
   "telegram_legacy_overflow_state",
 ] as const;
 
