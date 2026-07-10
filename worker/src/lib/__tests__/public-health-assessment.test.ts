@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { assessPublicHealth } from "../public-health-assessment";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 /**
  * Minimal D1 mock that returns a stablecoins cache row and empty results for
  * every other query. Enough to drive `assessPublicHealth` through its cache
  * enrichment path without having to mock every downstream sub-query.
  */
-function makeMinimalDb(nowSec: number): D1Database {
+function makeMinimalDb(
+  nowSec: number,
+  d1Capacity?: Record<string, unknown>,
+  stablecoinPublicationMetadata?: Record<string, unknown>,
+): D1Database {
   const emptyFirst = async <T>() => null as T | null;
   return {
     prepare: (sql: string) => ({
@@ -22,11 +27,27 @@ function makeMinimalDb(nowSec: number): D1Database {
           }
           return { results: [] as T[], success: true, meta: {} };
         },
-        first: emptyFirst,
+        first: async <T>() => {
+          if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+            return {
+              value: JSON.stringify({ version: 1, assessment: d1Capacity }),
+              updated_at: nowSec,
+            } as T;
+          }
+          return emptyFirst<T>();
+        },
         run: async () => ({ success: true, meta: {} }),
       }),
       all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: emptyFirst,
+      first: async <T>() => {
+        if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
+          return {
+            started_at: nowSec - 30,
+            metadata: JSON.stringify(stablecoinPublicationMetadata),
+          } as T;
+        }
+        return emptyFirst<T>();
+      },
       run: async () => ({ success: true, meta: {} }),
     }),
     batch: async () => [],
@@ -140,6 +161,60 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     // than just the stablecoins lane.
     expect(result.caches["fx-rates"]?.upstreamProvider).toBe("Frankfurter");
     expect(result.caches["bluechip-ratings"]?.upstreamProvider).toBe("Bluechip");
+  });
+
+  it("surfaces cached D1 warning capacity as degraded health", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeMinimalDb(nowSec, {
+      observedAt: nowSec,
+      databaseSizeBytes: 7_500_000_000,
+      maximumSizeBytes: 10_000_000_000,
+      utilizationRatio: 0.75,
+      utilizationPercent: 75,
+      thresholdState: "warning",
+      crossedThresholdPercent: 75,
+      nextThresholdPercent: 90,
+      sampleCount: 72,
+      forecastBasis: "linear-30d",
+      forecastSpanHours: 71,
+      growthBytesPerDay: 100_000_000,
+      nextThresholdAt: nowSec + 15 * 86_400,
+      exhaustionAt: nowSec + 25 * 86_400,
+      daysUntilExhaustion: 25,
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.d1Capacity?.thresholdState).toBe("warning");
+    expect(result.d1CapacityImpactStatus).toBe("degraded");
+    expect(result.overallStatus).not.toBe("healthy");
+    expect(result.warnings).toContain("d1-capacity-warning:75");
+  });
+
+  it("names unwaived active-universe omissions and degrades public health", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const missingId = [...ACTIVE_IDS][0]!;
+    const db = makeMinimalDb(nowSec, undefined, {
+      activePublicationCoverage: {
+        complete: false,
+        expectedActiveCount: ACTIVE_IDS.size,
+        presentActiveCount: ACTIVE_IDS.size - 1,
+        waivedActiveCount: 0,
+        missingActiveIds: [missingId],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+      },
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.stablecoinPublication).toMatchObject({
+      status: "incomplete",
+      missingActiveIds: [missingId],
+    });
+    expect(result.stablecoinPublicationImpactStatus).toBe("degraded");
+    expect(result.overallStatus).not.toBe("healthy");
+    expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missingId}`);
   });
 });
 

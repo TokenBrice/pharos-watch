@@ -757,6 +757,7 @@ describe("handleStatus", () => {
       canonicalMissing: number;
       residuals: number;
       residualsMissing: number;
+      publicationCoverage?: Record<string, unknown>;
     }) {
       const now = Math.floor(Date.now() / 1000);
       const canonicalIds = fixtureACTIVE_STABLECOINS.slice(0, params.canonicalTotal).map((c) => c.id);
@@ -792,6 +793,16 @@ describe("handleStatus", () => {
         { match: "dex_liquidity", rows: [], first: { age: 300 } },
         { match: "yield_data", rows: [], first: { age: 300 } },
         { match: "stress_signals", rows: [], first: { age: 300 } },
+        ...(params.publicationCoverage
+          ? [{
+              match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+              rows: [],
+              first: {
+                started_at: now - 30,
+                metadata: JSON.stringify({ activePublicationCoverage: params.publicationCoverage }),
+              },
+            }]
+          : []),
         { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
         { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
         { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
@@ -804,7 +815,11 @@ describe("handleStatus", () => {
 
     type CanonicalScopeBody = {
       dataQualityStatus: string;
-      dataQuality: { totalStablecoins: number; missingPrices: number };
+      dataQuality: {
+        totalStablecoins: number;
+        missingPrices: number;
+        stablecoinPublication?: { status: string; missingActiveIds: string[] };
+      };
       causes: { dataQuality: Array<{ code: string }> };
     };
 
@@ -848,6 +863,39 @@ describe("handleStatus", () => {
       expect(body.dataQuality.missingPrices).toBe(2);
       const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
       expect(degradedCause).toBeDefined();
+    });
+
+    it("names an absent active ID and degrades the admin data-quality plane", async () => {
+      const missingId = fixtureACTIVE_STABLECOINS[fixtureACTIVE_STABLECOINS.length - 1]!.id;
+      const expectedActiveCount = fixtureACTIVE_STABLECOINS.length;
+      const db = buildMixedCacheDb({
+        canonicalTotal: expectedActiveCount - 1,
+        canonicalMissing: 0,
+        residuals: 0,
+        residualsMissing: 0,
+        publicationCoverage: {
+          complete: false,
+          expectedActiveCount,
+          presentActiveCount: expectedActiveCount - 1,
+          waivedActiveCount: 0,
+          missingActiveIds: [missingId],
+          waivedActiveIds: [],
+          expiredWaiverIds: [],
+        },
+      });
+      const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as CanonicalScopeBody;
+
+      expect(body.dataQualityStatus).toBe("degraded");
+      expect(body.dataQuality.totalStablecoins).toBe(expectedActiveCount);
+      expect(body.dataQuality.missingPrices).toBe(1);
+      expect(body.dataQuality.stablecoinPublication).toEqual(expect.objectContaining({
+        status: "incomplete",
+        missingActiveIds: [missingId],
+      }));
+      expect(body.causes.dataQuality.map((cause) => cause.code)).toContain("stablecoin_publication_incomplete");
     });
   });
 

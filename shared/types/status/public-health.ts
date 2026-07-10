@@ -1,9 +1,10 @@
 import { z } from "zod";
-import type { CacheStatus, StatusHealthValue } from "./core";
+import type { CacheStatus, StablecoinPublicationHealth, StatusHealthValue } from "./core";
 import { StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
 import { SAFETY_ALERT_SOURCE_STATE_VALUES, type SafetyAlertFieldsNullable } from "./telegram";
 import type { AlertBrokerHealthSummary } from "./operational";
+import { D1CapacityAssessmentSchema, type D1CapacityAssessment } from "./d1-capacity";
 
 const SafetyAlertFieldsNullableSchemaShape = {
   safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
@@ -101,6 +102,8 @@ export interface HealthResponse {
     };
   };
   circuits: Record<string, CircuitRecord>;
+  stablecoinPublication?: StablecoinPublicationHealth;
+  d1Capacity?: D1CapacityAssessment | null;
   alertBroker?: AlertBrokerHealthSummary;
   telegramSummary?: TelegramHealthSummary | null;
 }
@@ -146,6 +149,17 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
+  stablecoinPublication: z.object({
+    status: z.enum(["complete", "incomplete", "unknown"]),
+    expectedActiveCount: z.number(),
+    presentActiveCount: z.number(),
+    waivedActiveCount: z.number(),
+    missingActiveIds: z.array(z.string()),
+    waivedActiveIds: z.array(z.string()),
+    expiredWaiverIds: z.array(z.string()),
+    observedAt: z.number().nullable(),
+  }).optional(),
+  d1Capacity: D1CapacityAssessmentSchema.nullable().optional(),
   alertBroker: z.object({
     activeCount: z.number(),
     pendingCount: z.number(),

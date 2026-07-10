@@ -7,8 +7,17 @@ import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { startOfUtcDaySec } from "../lib/time-constants";
+import {
+  evaluateStablecoinPublicationCoverage,
+  type StablecoinPublicationWaiver,
+} from "../lib/stablecoin-publication-coverage";
 
 const CACHE_MAX_AGE_SEC = 1200;
+
+interface SnapshotChainSupplyOptions {
+  nowSec?: number;
+  publicationWaivers?: readonly StablecoinPublicationWaiver[];
+}
 
 function abortedCronResult(): CronResult {
   return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "aborted" }) };
@@ -18,7 +27,11 @@ function isAbortError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "name" in error && (error as { name?: string }).name === "AbortError";
 }
 
-export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function snapshotChainSupply(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SnapshotChainSupplyOptions = {},
+): Promise<CronResult> {
   if (signal?.aborted) return abortedCronResult();
 
   const cache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
@@ -38,15 +51,48 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   const snapshotDate = startOfUtcDaySec();
   const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
   if (lastWrite) {
-    let lastSnapshotDate: unknown;
+    let completion: {
+      snapshotDate?: unknown;
+      coverageVersion?: unknown;
+      expectedActiveCount?: unknown;
+      accountedActiveCount?: unknown;
+    } = {};
     try {
-      lastSnapshotDate = (JSON.parse(lastWrite.value) as { snapshotDate?: unknown }).snapshotDate;
+      completion = JSON.parse(lastWrite.value) as typeof completion;
     } catch {
-      lastSnapshotDate = undefined;
+      completion = {};
     }
-    if (lastSnapshotDate === snapshotDate) {
+    if (
+      completion.snapshotDate === snapshotDate
+      && completion.coverageVersion === 1
+      && completion.expectedActiveCount === ACTIVE_IDS.size
+      && completion.accountedActiveCount === ACTIVE_IDS.size
+    ) {
       return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
     }
+  }
+
+  const expectedActiveIds = [...ACTIVE_IDS].sort();
+  const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => String(asset.id)));
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    cachedIds,
+    options.nowSec,
+    options.publicationWaivers,
+    expectedActiveIds,
+  );
+  if (!publicationCoverage.complete) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "partial_snapshot_blocked",
+        presentActiveCount: publicationCoverage.presentActiveCount,
+        expectedActiveCount: publicationCoverage.expectedActiveCount,
+        missingActiveIds: publicationCoverage.missingActiveIds,
+        waivedActiveIds: publicationCoverage.waivedActiveIds,
+        expiredWaiverIds: publicationCoverage.expiredWaiverIds,
+      }),
+    };
   }
 
   // Accumulate per-chain totals
@@ -89,7 +135,14 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
 
   try {
     await batchExecute(db, stmts, { signal });
-    await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
+    await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({
+      snapshotDate,
+      coverageVersion: 1,
+      expectedActiveCount: publicationCoverage.expectedActiveCount,
+      accountedActiveCount:
+        publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
+      writtenChains: stmts.length,
+    }));
   } catch (err) {
     if (signal?.aborted || isAbortError(err)) return abortedCronResult();
     recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });

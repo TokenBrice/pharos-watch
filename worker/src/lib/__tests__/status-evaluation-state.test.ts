@@ -85,6 +85,9 @@ function makePublicHealth(
     openCircuitCount: 0,
     circuitImpactStatus: "healthy",
     circuitQueryError: null,
+    d1Capacity: null,
+    d1CapacityImpactStatus: "healthy",
+    d1CapacityQueryError: null,
     alertBroker: {
       activeCount: 0,
       pendingCount: 0,
@@ -96,6 +99,17 @@ function makePublicHealth(
       queryFailed: false,
     },
     alertBrokerImpactStatus: "healthy",
+    stablecoinPublication: {
+      status: "complete",
+      expectedActiveCount: 0,
+      presentActiveCount: 0,
+      waivedActiveCount: 0,
+      missingActiveIds: [],
+      waivedActiveIds: [],
+      expiredWaiverIds: [],
+      observedAt: null,
+    },
+    stablecoinPublicationImpactStatus: "healthy",
     ...overrides,
   };
 }
@@ -302,6 +316,19 @@ describe("status evaluation policy", () => {
     });
 
     expect(availability).toBe("degraded");
+  });
+
+  it("uses the D1 capacity floor for admin availability", () => {
+    const availability = deriveAvailabilityStatus({
+      publicHealth: makePublicHealth({
+        d1CapacityImpactStatus: "stale",
+      }),
+      availabilityImpactingCronErrors: 0,
+      availabilityImpactingUnhealthyCrons: 0,
+      availabilityImpactingConsecutiveCronErrors: 0,
+    });
+
+    expect(availability).toBe("stale");
   });
 });
 

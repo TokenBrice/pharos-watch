@@ -142,6 +142,7 @@ export interface DataQuality {
   }>;
   totalStablecoins: number;
   missingPrices: number;
+  stablecoinPublication?: StablecoinPublicationHealth;
   blacklistMissingAmounts: number;
   blacklistRecentMissingAmounts: number;
   blacklistRecentWindowSec: number;
@@ -150,6 +151,7 @@ export interface DataQuality {
   blacklistOldestRecoverableAgeSec: number | null;
   blacklistNeverAttemptedCount: number;
   blacklistRepeatedFailureCount: number;
+  blacklistReconciliation?: BlacklistReconciliationStatus;
   onchainSupplyDivergences: number;
   onchainDivergenceRatio: number;
   onchainSupplyMonitoring: "active" | "unavailable";
@@ -158,6 +160,38 @@ export interface DataQuality {
   activeDepegs: number;
   staleOnchainSupply: number;
   onchainStaleRatio: number;
+}
+
+export interface StablecoinPublicationHealth {
+  status: "complete" | "incomplete" | "unknown";
+  expectedActiveCount: number;
+  presentActiveCount: number;
+  waivedActiveCount: number;
+  missingActiveIds: string[];
+  waivedActiveIds: string[];
+  expiredWaiverIds: string[];
+  observedAt: number | null;
+}
+
+export interface BlacklistReconciliationStatus {
+  status: "not-run" | "running" | "verified" | "failed" | "unknown";
+  runId: string | null;
+  manifestId: string | null;
+  manifestSha256: string | null;
+  bookmarkRecorded: boolean;
+  expectedEventCount: number;
+  presentEventCount: number;
+  missingEventCount: number;
+  duplicateIdentityCount: number;
+  destroyedAmountExpectedRaw: string;
+  destroyedAmountActualRaw: string;
+  balanceReplayExpectedCount: number;
+  balanceReplayMatchingCount: number;
+  unresolvedManifestGapCount: number;
+  tronAtSafeHead: boolean;
+  arbitrumAtSafeHead: boolean;
+  startedAt: number | null;
+  completedAt: number | null;
 }
 
 export interface RepairDebtKindSummary {

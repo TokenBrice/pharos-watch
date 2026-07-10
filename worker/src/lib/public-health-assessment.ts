@@ -1,4 +1,5 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
@@ -7,7 +8,7 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
-import type { CacheStatus, HealthResponse } from "@shared/types/status";
+import type { CacheStatus, HealthResponse, StablecoinPublicationHealth } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
@@ -24,6 +25,11 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadAlertBrokerSummary, type AlertBrokerSummary } from "./alert-broker";
+import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
+import {
+  loadStablecoinPublicationHealth,
+  unknownStablecoinPublicationHealth,
+} from "./stablecoin-publication-health";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -95,8 +101,13 @@ export interface PublicHealthAssessment {
   openCircuitCount: number;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
+  d1Capacity: HealthResponse["d1Capacity"];
+  d1CapacityImpactStatus: HealthResponse["status"];
+  d1CapacityQueryError: string | null;
   alertBroker: AlertBrokerSummary;
   alertBrokerImpactStatus: HealthResponse["status"];
+  stablecoinPublication: StablecoinPublicationHealth;
+  stablecoinPublicationImpactStatus: HealthResponse["status"];
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
@@ -341,8 +352,13 @@ export async function assessPublicHealth(
       openCircuitCount: 0,
       circuitImpactStatus: "healthy",
       circuitQueryError: null,
+      d1Capacity: null,
+      d1CapacityImpactStatus: "healthy",
+      d1CapacityQueryError: null,
       alertBroker: { ...EMPTY_ALERT_BROKER_SUMMARY },
       alertBrokerImpactStatus: "stale",
+      stablecoinPublication: unknownStablecoinPublicationHealth(),
+      stablecoinPublicationImpactStatus: "healthy",
     };
   }
 
@@ -351,7 +367,9 @@ export async function assessPublicHealth(
     blacklistResult,
     mintBurnResult,
     circuitResult,
+    d1CapacityResult,
     alertBroker,
+    stablecoinPublication,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
@@ -387,7 +405,22 @@ export async function assessPublicHealth(
         });
         return { circuits: {}, error: publicHealthErrorMessage("circuit") };
       }),
+    loadCachedD1CapacityAssessment(db, now)
+      .then((assessment) => ({ assessment, error: null as string | null }))
+      .catch((err) => {
+        logWorkerEvent({
+          scope: "status",
+          level: "warn",
+          event: "d1_capacity_cache_query_failed",
+          route: logPrefix,
+          source: "d1-capacity",
+          message: "Failed to load the cached D1 capacity assessment",
+          error: err,
+        });
+        return { assessment: null, error: "D1 capacity assessment unavailable." };
+      }),
     loadAlertBrokerSummary(db),
+    loadStablecoinPublicationHealth(db),
   ]);
 
   const cachesWithProvider: Record<string, CacheStatus> = {};
@@ -431,6 +464,19 @@ export async function assessPublicHealth(
     warnings.push("circuit-query-failed");
   }
 
+  const d1CapacityImpactStatus = d1CapacityResult.error
+    ? "degraded"
+    : d1CapacityResult.assessment
+      ? getD1CapacityImpactStatus(d1CapacityResult.assessment.thresholdState)
+      : "healthy";
+  if (d1CapacityResult.error) {
+    warnings.push("d1-capacity-query-failed");
+  } else if (d1CapacityResult.assessment?.thresholdState !== "normal" && d1CapacityResult.assessment) {
+    warnings.push(
+      `d1-capacity-${d1CapacityResult.assessment.thresholdState}:${d1CapacityResult.assessment.utilizationPercent}`,
+    );
+  }
+
   const alertBrokerImpactStatus = alertBroker.queryFailed || alertBroker.criticalActiveCount > 0
     ? "degraded"
     : alertBroker.activeCount > 0 || alertBroker.failedDeliveryCount > 0 || alertBroker.missingTargetCount > 0
@@ -447,6 +493,15 @@ export async function assessPublicHealth(
     warnings.push(`alert-delivery-missing-target:${alertBroker.missingTargetCount}`);
   }
 
+  const stablecoinPublicationImpactStatus = stablecoinPublication.status === "incomplete"
+    ? "degraded"
+    : "healthy";
+  if (stablecoinPublication.status === "incomplete") {
+    warnings.push(
+      `stablecoin-publication-incomplete:${stablecoinPublication.missingActiveIds.join(",") || "count-mismatch"}`,
+    );
+  }
+
   const blacklistImpactStatus = blacklistResult.error
     ? "degraded"
     : blacklistResult.metrics
@@ -461,7 +516,9 @@ export async function assessPublicHealth(
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
     blacklistImpactStatus,
+    d1CapacityImpactStatus,
     alertBrokerImpactStatus,
+    stablecoinPublicationImpactStatus,
   );
 
   return {
@@ -486,7 +543,12 @@ export async function assessPublicHealth(
     openCircuitCount,
     circuitImpactStatus,
     circuitQueryError: circuitResult.error,
+    d1Capacity: d1CapacityResult.assessment,
+    d1CapacityImpactStatus,
+    d1CapacityQueryError: d1CapacityResult.error,
     alertBroker,
     alertBrokerImpactStatus,
+    stablecoinPublication,
+    stablecoinPublicationImpactStatus,
   };
 }

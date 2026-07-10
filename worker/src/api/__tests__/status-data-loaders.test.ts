@@ -265,6 +265,11 @@ describe("handleStatus", () => {
         writeQueries24h: number | null;
         rowsRead24h: number | null;
         rowsWritten24h: number | null;
+        capacity?: {
+          utilizationPercent: number;
+          thresholdState: string;
+          forecastBasis: string;
+        } | null;
       } | null;
     };
 
@@ -280,6 +285,11 @@ describe("handleStatus", () => {
       writeQueries24h: 709_241,
       rowsRead24h: 1_633_139_670,
       rowsWritten24h: 1_555_568,
+      capacity: {
+        utilizationPercent: 15.89,
+        thresholdState: "normal",
+        forecastBasis: "insufficient-history",
+      },
     });
   });
 

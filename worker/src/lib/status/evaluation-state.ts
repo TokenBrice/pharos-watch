@@ -97,6 +97,7 @@ export function deriveAvailabilityStatus(input: {
       ? input.publicHealth.mintBurnImpactStatus
       : "healthy",
     input.publicHealth.alertBrokerImpactStatus,
+    input.publicHealth.d1CapacityImpactStatus,
   );
   return maxStatus(baseAvailabilityStatus, publicAvailabilityFloor);
 }
@@ -117,6 +118,7 @@ export function deriveDataQualityStatus(input: {
     input.reserveCompositionStatus === "stale"
     ? "stale"
     : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
+        input.dataQuality.stablecoinPublication?.status === "incomplete" ||
         input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
         input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded ||
         input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
