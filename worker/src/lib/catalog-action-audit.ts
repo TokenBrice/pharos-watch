@@ -44,10 +44,10 @@ function getSafeTarget(scope: StatusPageActionScope, url: URL): { target: string
 
 function isDryRun(dryRun: StatusPageActionDryRun, url: URL): boolean {
   if (!dryRun.supported) return false;
-  if (!dryRun.liveSupported) return true;
   const requestedMode = url.searchParams.get(dryRun.queryParam);
-  if (requestedMode == null) return dryRun.default;
-  return requestedMode !== "false";
+  if (requestedMode != null) return requestedMode !== "false";
+  if (!dryRun.liveSupported) return true;
+  return dryRun.default;
 }
 
 function getActionMode(endpoint: EndpointDefinition, url: URL, method: string): "dry-run" | "live" | "inspect" {
@@ -97,7 +97,7 @@ export async function auditCatalogActionResponse({
   const executionCertainty = getExecutionCertainty(response, outcome);
   const idempotentReplay = response.headers.get("X-Idempotent-Replay") === "true";
 
-  await logAdminAction(
+  const persisted = await logAdminAction(
     db,
     {
       action: endpoint.key,
@@ -124,13 +124,17 @@ export async function auditCatalogActionResponse({
     },
     request,
   );
+  if (!persisted) {
+    throw new Error("Canonical admin action audit could not be persisted");
+  }
 }
 
 export async function auditCatalogActionResponseSafely(
   input: Parameters<typeof auditCatalogActionResponse>[0],
-): Promise<void> {
+): Promise<boolean> {
   try {
     await auditCatalogActionResponse(input);
+    return true;
   } catch (error) {
     logWorkerEvent({
       scope: "admin",
@@ -141,5 +145,6 @@ export async function auditCatalogActionResponseSafely(
       message: "Catalog action audit failed after the route returned",
       error,
     });
+    return false;
   }
 }

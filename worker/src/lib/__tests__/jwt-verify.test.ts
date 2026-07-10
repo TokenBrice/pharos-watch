@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyAccessJwt, normalizeTeamDomain, _resetJwksCache } from "@shared/lib/cloudflare-access-jwt";
+import {
+  verifyAccessJwt,
+  verifyAccessJwtUserIdentity,
+  normalizeTeamDomain,
+  _resetJwksCache,
+} from "@shared/lib/cloudflare-access-jwt";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -29,7 +34,7 @@ async function makeSignedJwt(
   header: Record<string, unknown>,
   payload: Record<string, unknown>,
 ): Promise<{ token: string; jwk: Record<string, unknown> }> {
-  const keyPair = await crypto.subtle.generateKey(
+  const keyPair = (await crypto.subtle.generateKey(
     {
       name: "RSASSA-PKCS1-v1_5",
       modulusLength: 2048,
@@ -38,8 +43,8 @@ async function makeSignedJwt(
     },
     true,
     ["sign", "verify"],
-  ) as CryptoKeyPair;
-  const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey) as unknown as Record<string, unknown>;
+  )) as CryptoKeyPair;
+  const publicJwk = (await crypto.subtle.exportKey("jwk", keyPair.publicKey)) as unknown as Record<string, unknown>;
   const headerB64 = base64urlEncode(JSON.stringify(header));
   const payloadB64 = base64urlEncode(JSON.stringify(payload));
   const signingInput = `${headerB64}.${payloadB64}`;
@@ -243,19 +248,24 @@ describe("verifyAccessJwt", () => {
     it("rejects a service-token subject when a user subject is required", async () => {
       const fetchMock = vi.fn();
       vi.stubGlobal("fetch", fetchMock);
-      const { token } = makeJwtParts(validHeader(), validClaims({
-        type: "app",
-        common_name: "service-token.access",
-        sub: "",
-      }));
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({
+          type: "app",
+          common_name: "service-token.access",
+          sub: "",
+        }),
+      );
 
-      expect(await verifyAccessJwt({
-        token,
-        aud: AUD,
-        teamDomain: TEAM_DOMAIN,
-        expectedType: "app",
-        expectedSubject: "user",
-      })).toBe(false);
+      expect(
+        await verifyAccessJwt({
+          token,
+          aud: AUD,
+          teamDomain: TEAM_DOMAIN,
+          expectedType: "app",
+          expectedSubject: "user",
+        }),
+      ).toBe(false);
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
@@ -276,38 +286,50 @@ describe("verifyAccessJwt", () => {
 
     it("accepts a valid signed Access JWT", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims());
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
 
       await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).resolves.toBe(true);
     });
 
     it("accepts a valid signed Access JWT when the expected type matches", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
 
-      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(true);
+      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(
+        true,
+      );
     });
 
     it("accepts a valid signed user Access JWT when a user subject is required", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
 
-      await expect(verifyAccessJwt({
-        token,
-        aud: AUD,
-        teamDomain: TEAM_DOMAIN,
-        expectedType: "app",
-        expectedSubject: "user",
-      })).resolves.toBe(true);
+      await expect(
+        verifyAccessJwt({
+          token,
+          aud: AUD,
+          teamDomain: TEAM_DOMAIN,
+          expectedType: "app",
+          expectedSubject: "user",
+        }),
+      ).resolves.toBe(true);
+    });
+
+    it("returns normalized identity only after user Access JWT verification", async () => {
+      const { token, jwk } = await makeSignedJwt(
+        validHeader(),
+        validClaims({ type: "app", email: " Operator@Example.COM ", sub: " operator-subject " }),
+      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+
+      await expect(
+        verifyAccessJwtUserIdentity({
+          token,
+          aud: AUD,
+          teamDomain: TEAM_DOMAIN,
+          expectedType: "app",
+        }),
+      ).resolves.toEqual({ email: "operator@example.com", subject: "operator-subject" });
     });
   });
 
@@ -340,7 +362,8 @@ describe("verifyAccessJwt", () => {
     });
 
     it("retries with a fresh JWKS fetch when the cached key set misses the token kid", async () => {
-      const fetchMock = vi.fn()
+      const fetchMock = vi
+        .fn()
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "old-kid" }] }), { status: 200 }),
         )
@@ -356,8 +379,16 @@ describe("verifyAccessJwt", () => {
       const { token: rotatedToken } = makeJwtParts(validHeader({ kid: "rotated-kid" }), validClaims());
       expect(await verifyAccessJwt({ token: rotatedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
-      expect(fetchMock).toHaveBeenNthCalledWith(2, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        JWKS_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        JWKS_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     });
 
     it("returns false when JWKS response has no keys array", async () => {
@@ -421,8 +452,16 @@ describe("verifyAccessJwt", () => {
       await verifyAccessJwt({ token: token3, aud: AUD, teamDomain: TEAM_DOMAIN });
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
-      expect(fetchMock).toHaveBeenNthCalledWith(2, OTHER_JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        JWKS_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        OTHER_JWKS_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     });
   });
 
@@ -450,15 +489,10 @@ describe("verifyAccessJwt", () => {
       // JWKS key, not trust the attacker-controlled header. A token presenting
       // RS512 against an RS256 key must be rejected even before crypto verify.
       const { token, jwk } = await makeSignedJwt(validHeader({ alg: "RS256" }), validClaims());
-      const confusedHeaderB64 = base64urlEncode(
-        JSON.stringify(validHeader({ alg: "RS512" })),
-      );
+      const confusedHeaderB64 = base64urlEncode(JSON.stringify(validHeader({ alg: "RS512" })));
       const [, payloadB64, sigB64] = token.split(".");
       const confusedToken = `${confusedHeaderB64}.${payloadB64}.${sigB64}`;
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
 
       expect(await verifyAccessJwt({ token: confusedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });

@@ -69,6 +69,10 @@ function buildExecutionUnknownResponse(body = buildExecutionUnknownBody()): Resp
   });
 }
 
+function hasUnconfirmedExecutionOutcome(response: Response): boolean {
+  return response.status >= 500 || response.headers.get("X-Execution-Certainty")?.trim().toLowerCase() === "unknown";
+}
+
 async function requestFingerprint(request: Request): Promise<string> {
   const clone = request.clone();
   const body = await clone.text().catch(() => "");
@@ -319,6 +323,31 @@ export async function runIdempotentAdminAction(
         source: "admin_idempotency_keys",
         message: "Admin action failed after execution started and its unknown outcome could not be persisted",
         error,
+      });
+    }
+    return withIdempotencyHeaders(buildExecutionUnknownResponse(failureBody), key, false);
+  }
+
+  if (hasUnconfirmedExecutionOutcome(response)) {
+    const failureBody = buildExecutionUnknownBody();
+    const persisted = await persistTerminalResponse(
+      db,
+      action,
+      key,
+      fingerprint,
+      token,
+      EXECUTION_UNKNOWN_RESPONSE_STATUS,
+      failureBody,
+      Math.floor(Date.now() / 1000),
+    );
+    if (!persisted) {
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "idempotency_unconfirmed_response_unpersisted",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "An unconfirmed admin response could not be persisted as execution_unknown",
       });
     }
     return withIdempotencyHeaders(buildExecutionUnknownResponse(failureBody), key, false);

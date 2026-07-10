@@ -14,6 +14,11 @@ export interface AdminActionLogEntry {
 
 export const DETAILS_MAX_LEN = 4096;
 
+function reportAuditWriteFailure(action: string, error: unknown): false {
+  console.warn(`[admin-action-audit] write failed for action=${action}:`, error);
+  return false;
+}
+
 function serializeDetails(details: Record<string, unknown> | undefined): string | null {
   if (!details) return null;
   const detailsJson = JSON.stringify(details);
@@ -25,7 +30,7 @@ function serializeDetails(details: Record<string, unknown> | undefined): string 
   });
 }
 
-export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry, request?: Request): Promise<void> {
+export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry, request?: Request): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
   const actor = entry.actor ?? request?.headers.get("Cf-Access-Authenticated-User-Email") ?? "internal";
   const detailsJson = serializeDetails(entry.details);
@@ -56,20 +61,20 @@ export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry,
           : `INSERT OR IGNORE INTO admin_action_audit
                (created_at, actor, action, target, result, http_status, details_json, intent_key)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-      await db
+      const result = await db
         .prepare(sql)
         .bind(...values)
         .run();
-      return;
+      return result.success ? true : reportAuditWriteFailure(entry.action, "D1 returned success=false");
     }
-    await db
+    const result = await db
       .prepare(
         "INSERT INTO admin_action_audit (created_at, actor, action, target, result, http_status, details_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
       .bind(now, actor, entry.action, entry.target ?? null, entry.result, entry.httpStatus ?? null, detailsJson)
       .run();
+    return result.success ? true : reportAuditWriteFailure(entry.action, "D1 returned success=false");
   } catch (err) {
-    // Audit failures must not break the action itself — log and continue.
-    console.warn(`[admin-action-audit] write failed for action=${entry.action}:`, err);
+    return reportAuditWriteFailure(entry.action, err);
   }
 }

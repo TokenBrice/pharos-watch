@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { onRequest } from "../api/admin/[[path]].ts";
 
-const { verifyAccessJwt } = vi.hoisted(() => ({
-  verifyAccessJwt: vi.fn(),
+const { verifyAccessJwtUserIdentity } = vi.hoisted(() => ({
+  verifyAccessJwtUserIdentity: vi.fn(),
 }));
 vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/cloudflare-access-jwt")>();
-  return { ...actual, verifyAccessJwt };
+  return { ...actual, verifyAccessJwtUserIdentity };
 });
 
 const BASE_ENV = {
@@ -18,6 +18,11 @@ const BASE_ENV = {
   OPS_API_SERVICE_TOKEN_ID: "id",
   OPS_API_SERVICE_TOKEN_SECRET: "secret",
 };
+
+function readFetchInit(fetchSpy: unknown): RequestInit {
+  const calls = (fetchSpy as { mock: { calls: Array<unknown[]> } }).mock.calls;
+  return (calls[0]?.[1] ?? {}) as RequestInit;
+}
 
 function makeAuthedRequest(url: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
@@ -45,8 +50,8 @@ describe("ops admin proxy", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
-    verifyAccessJwt.mockReset();
-    verifyAccessJwt.mockResolvedValue(true);
+    verifyAccessJwtUserIdentity.mockReset();
+    verifyAccessJwtUserIdentity.mockResolvedValue({ email: "operator@pharos.watch", subject: "operator-subject" });
   });
 
   it("rejects requests from non-ops hosts", async () => {
@@ -89,7 +94,7 @@ describe("ops admin proxy", () => {
   it("returns 401 before proxying when the UI JWT is invalid", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
-    verifyAccessJwt.mockResolvedValueOnce(false);
+    verifyAccessJwtUserIdentity.mockResolvedValueOnce(null);
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -103,10 +108,13 @@ describe("ops admin proxy", () => {
   });
 
   it("accepts a bootstrapped Access session cookie when the assertion header is absent", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Cache-Control": "public, max-age=300", "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Cache-Control": "public, max-age=300", "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -121,12 +129,11 @@ describe("ops admin proxy", () => {
     expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
-    expect(verifyAccessJwt).toHaveBeenCalledWith({
+    expect(verifyAccessJwtUserIdentity).toHaveBeenCalledWith({
       token: "valid-ui-jwt",
       aud: "ui-aud",
       teamDomain: "pharos-watch",
       expectedType: "app",
-      expectedSubject: "user",
     });
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://ops-api.pharos.watch/api/status",
@@ -134,6 +141,29 @@ describe("ops admin proxy", () => {
         method: "GET",
       }),
     );
+  });
+
+  it("forwards only the verified JWT actor and ignores a browser-supplied actor header", async () => {
+    verifyAccessJwtUserIdentity.mockResolvedValueOnce({
+      email: "verified@pharos.watch",
+      subject: "verified-subject",
+    });
+    const fetchSpy = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
+        headers: { "Cf-Access-Authenticated-User-Email": "spoofed@evil.example" },
+      }),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(200);
+    const upstreamInit = readFetchInit(fetchSpy);
+    const upstreamHeaders = new Headers(upstreamInit.headers);
+    expect(upstreamHeaders.get("Cf-Access-Authenticated-User-Email")).toBe("verified@pharos.watch");
+    expect(upstreamHeaders.get("Cf-Access-Authenticated-User-Email")).not.toBe("spoofed@evil.example");
   });
 
   it("enforces endpoint method rules before proxying upstream", async () => {
@@ -157,7 +187,9 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", { method: "POST" }),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+        method: "POST",
+      }),
       env: BASE_ENV,
       params: { path: ["discovery-candidates", "42", "dismiss"] },
     });
@@ -186,10 +218,13 @@ describe("ops admin proxy", () => {
   });
 
   it("allowlists shared dynamic admin routes", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -211,10 +246,13 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies the self-serve request admin list route", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ requests: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ requests: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -231,15 +269,18 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies self-serve reject actions with admin and execution metadata headers", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ status: "rejected" }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": "idem-123",
-        "X-Execution-Certainty": "unknown",
-        "X-Idempotent-Replay": "true",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ status: "rejected" }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": "idem-123",
+            "X-Execution-Certainty": "unknown",
+            "X-Idempotent-Replay": "true",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -259,8 +300,7 @@ describe("ops admin proxy", () => {
     expect(response.headers.get("Idempotency-Key")).toBe("idem-123");
     expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(response.headers.get("X-Idempotent-Replay")).toBe("true");
-    const [, init] = fetchSpy.mock.calls[0] ?? [];
-    const headers = init?.headers as Headers;
+    const headers = new Headers(readFetchInit(fetchSpy).headers);
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject",
       expect.objectContaining({ method: "POST" }),
@@ -270,24 +310,29 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies self-serve release-claim actions and leaves missing admin headers to the Worker", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/release-claim", {
-        method: "POST",
-        headers: { Origin: "https://ops.pharos.watch" },
-      }),
+      request: makeAuthedRequest(
+        "https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/release-claim",
+        {
+          method: "POST",
+          headers: { Origin: "https://ops.pharos.watch" },
+        },
+      ),
       env: BASE_ENV,
       params: { path: ["api-key-requests-admin", "akr_abc12345", "release-claim"] },
     });
 
     expect(response.status).toBe(403);
-    const [, init] = fetchSpy.mock.calls[0] ?? [];
-    const headers = init?.headers as Headers;
+    const headers = new Headers(readFetchInit(fetchSpy).headers);
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://ops-api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim",
       expect.objectContaining({ method: "POST" }),
@@ -343,10 +388,16 @@ describe("ops admin proxy", () => {
   });
 
   it("translates Cloudflare Access redirects to 502", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
-      status: 302,
-      headers: { Location: "https://pharos.cloudflareaccess.com/cdn-cgi/access/login" },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(null, {
+            status: 302,
+            headers: { Location: "https://pharos.cloudflareaccess.com/cdn-cgi/access/login" },
+          }),
+      ),
+    );
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -359,10 +410,16 @@ describe("ops admin proxy", () => {
   });
 
   it("does not treat spoofed Cloudflare Access substrings as auth redirects", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
-      status: 302,
-      headers: { Location: "https://example.com/login?next=pharos.cloudflareaccess.com" },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(null, {
+            status: 302,
+            headers: { Location: "https://example.com/login?next=pharos.cloudflareaccess.com" },
+          }),
+      ),
+    );
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -375,10 +432,16 @@ describe("ops admin proxy", () => {
   });
 
   it("preserves malformed upstream redirect locations", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
-      status: 302,
-      headers: { Location: "not a valid URL with pharos.cloudflareaccess.com" },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(null, {
+            status: 302,
+            headers: { Location: "not a valid URL with pharos.cloudflareaccess.com" },
+          }),
+      ),
+    );
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -391,13 +454,19 @@ describe("ops admin proxy", () => {
   });
 
   it("preserves upstream Retry-After headers on degraded admin responses", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "temporarily unavailable" }), {
-      status: 503,
-      headers: {
-        "Content-Type": "application/json",
-        "Retry-After": "60",
-      },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: "temporarily unavailable" }), {
+            status: 503,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": "60",
+            },
+          }),
+      ),
+    );
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -413,9 +482,12 @@ describe("ops admin proxy", () => {
 
   it("returns 502 when the upstream fetch itself fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn(async () => {
-      throw new Error("network down");
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
 
     const response = await onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -430,13 +502,17 @@ describe("ops admin proxy", () => {
 
   it("returns 504 when the upstream request times out", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+            });
+          }),
+      ),
+    );
 
     const responsePromise = onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -453,14 +529,20 @@ describe("ops admin proxy", () => {
 
   it("keeps the timeout active while the upstream response body is read", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(
-      new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('{"partial":'));
-        },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(new TextEncoder().encode('{"partial":'));
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
 
     const responsePromise = onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
@@ -484,13 +566,17 @@ describe("ops admin proxy", () => {
 
   it("gives status-history the status proxy timeout budget", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+            });
+          }),
+      ),
+    );
 
     const responsePromise = onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status-history?limit=10"),
@@ -507,13 +593,17 @@ describe("ops admin proxy", () => {
 
   it("gives audit-depeg-history a longer proxy timeout budget", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+            });
+          }),
+      ),
+    );
 
     const responsePromise = onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/audit-depeg-history?dry-run=true"),
@@ -530,13 +620,17 @@ describe("ops admin proxy", () => {
 
   it("keeps the default 10s proxy timeout on non-status admin routes", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
-      new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-        });
-      })
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+            });
+          }),
+      ),
+    );
 
     const responsePromise = onRequest({
       request: makeAuthedRequest("https://ops.pharos.watch/api/admin/request-source-stats"),

@@ -378,6 +378,27 @@ describe("runIdempotentAdminAction", () => {
     expect(calls).toBe(1);
   });
 
+  it("stores handler 5xx responses as execution_unknown instead of terminal success", async () => {
+    const db = makeIdempotencyDb();
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return Response.json({ error: "partial_failure", detail: "effect may have completed" }, { status: 500 });
+    };
+
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("handler-5xx"), execute);
+    const replay = await runIdempotentAdminAction(db, "backfill-depegs", request("handler-5xx"), execute);
+    const stored = db.getRecord("backfill-depegs", "handler-5xx");
+
+    expect(first.status).toBe(503);
+    expect(first.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(stored?.response_status).toBe(-2);
+    expect(stored?.response_body).not.toContain("partial_failure");
+    expect(calls).toBe(1);
+  });
+
   it("does not replay a successful side effect when terminal persistence fails", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const db = makeIdempotencyDb({ failTerminalUpdates: true });

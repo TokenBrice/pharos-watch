@@ -2,7 +2,11 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEndpointDefinitionByKey, type EndpointDefinition, type EndpointKey } from "@shared/lib/api-endpoints";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { auditCatalogActionResponse, getCatalogActionAuditOwner } from "../catalog-action-audit";
+import {
+  auditCatalogActionResponse,
+  auditCatalogActionResponseSafely,
+  getCatalogActionAuditOwner,
+} from "../catalog-action-audit";
 
 const AUDIT_SCHEMA = `
   CREATE TABLE admin_action_audit (
@@ -147,12 +151,13 @@ describe("catalog action canonical audit", () => {
     const definition = endpoint("backfill-depegs");
     const req = request("/api/backfill-depegs?dry-run=true", "reconcile-intent");
 
-    await auditCatalogActionResponse({
+    const firstAudited = await auditCatalogActionResponseSafely({
       db,
       endpoint: definition,
       request: req,
       response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
     });
+    expect(firstAudited).toBe(false);
     sqlite.exec(AUDIT_SCHEMA);
     await auditCatalogActionResponse({
       db,
@@ -163,7 +168,22 @@ describe("catalog action canonical audit", () => {
 
     expect(rows(sqlite)).toHaveLength(1);
     expect(JSON.parse(rows(sqlite)[0]?.details_json ?? "null")).toMatchObject({ idempotentReplay: true });
-    expect(warning).toHaveBeenCalledOnce();
+    expect(warning).toHaveBeenCalled();
+  });
+
+  it("records an explicit mint/burn live request as live despite preview-only catalog metadata", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(AUDIT_SCHEMA);
+    const db = createSqliteD1(sqlite);
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: endpoint("backfill-mint-burn-prices"),
+      request: request("/api/backfill-mint-burn-prices?dry-run=false", "mint-price-live"),
+      response: Response.json({ ok: true }),
+    });
+
+    expect(JSON.parse(rows(sqlite)[0]?.details_json ?? "null")).toMatchObject({ mode: "live" });
   });
 
   it("lets the original success replace an earlier replay-unknown placeholder", async () => {

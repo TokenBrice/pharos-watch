@@ -28,7 +28,10 @@ const DEFAULT_MAX_ROWS = 5_000;
 const MAX_MAX_ROWS = 50_000;
 
 function readRepeatable(url: URL, key: string): string[] {
-  return url.searchParams.getAll(key).map((value) => value.trim()).filter(Boolean);
+  return url.searchParams
+    .getAll(key)
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function readBoolean(url: URL, body: Record<string, unknown>, key: string): boolean {
@@ -56,9 +59,10 @@ export async function handleBackfillTape(
     const requestedClasses = readRepeatable(url, "class");
 
     const allowedNames = new Set(TAPE_PROJECTOR_JOBS.map((job) => job.name));
-    const selectedJobs = requestedClasses.length === 0
-      ? TAPE_PROJECTOR_JOBS
-      : TAPE_PROJECTOR_JOBS.filter((job) => requestedClasses.includes(job.name));
+    const selectedJobs =
+      requestedClasses.length === 0
+        ? TAPE_PROJECTOR_JOBS
+        : TAPE_PROJECTOR_JOBS.filter((job) => requestedClasses.includes(job.name));
 
     if (requestedClasses.length > 0) {
       const unknown = requestedClasses.filter((name) => !allowedNames.has(name));
@@ -108,16 +112,19 @@ export async function handleBackfillTape(
       }
     }
 
-    return jsonResponse({
-      ok: errors.length === 0,
-      dryRun,
-      maxRows: maxRowsRaw,
-      since: since ?? null,
-      until: until ?? null,
-      selectedClasses: selectedJobs.map((job) => job.name),
-      projected: total,
-      perClass,
-      errors,
-    });
+    return jsonResponse(
+      {
+        ok: errors.length === 0,
+        dryRun,
+        maxRows: maxRowsRaw,
+        since: since ?? null,
+        until: until ?? null,
+        selectedClasses: selectedJobs.map((job) => job.name),
+        projected: total,
+        perClass,
+        errors,
+      },
+      errors.length > 0 ? { status: 500 } : undefined,
+    );
   });
 }

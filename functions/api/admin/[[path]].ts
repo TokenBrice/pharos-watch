@@ -1,6 +1,6 @@
 import { getEndpointOpsProxyTimeoutMs, isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
-import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
+import { verifyAccessJwtUserIdentity } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import { NOINDEX_HEADER_VALUE } from "../../lib/noindex";
 import {
@@ -14,9 +14,7 @@ import {
   buildUpstreamHeaders as buildUpstreamHeadersShared,
   buildProxyResponse as buildProxyResponseShared,
 } from "../../lib/proxy-utils";
-import {
-  DEFAULT_PROXY_TIMEOUT_MS,
-} from "../../lib/upstream-proxy";
+import { DEFAULT_PROXY_TIMEOUT_MS } from "../../lib/upstream-proxy";
 import { runPagesProxy, type PagesProxyContext } from "../../lib/pages-proxy-harness";
 import { resolveOpsAdminUpstreamPath } from "../../lib/proxy-paths";
 
@@ -60,6 +58,7 @@ function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
 function buildUpstreamHeaders(
   request: Request,
   env: OpsAdminProxyEnv,
+  verifiedActor: string | undefined,
 ): Headers | Response {
   if (!env.OPS_API_SERVICE_TOKEN_ID || !env.OPS_API_SERVICE_TOKEN_SECRET) {
     return jsonError(500, "Ops API proxy is not configured");
@@ -68,6 +67,7 @@ function buildUpstreamHeaders(
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
     "CF-Access-Client-Id": env.OPS_API_SERVICE_TOKEN_ID,
     "CF-Access-Client-Secret": env.OPS_API_SERVICE_TOKEN_SECRET,
+    ...(verifiedActor ? { "Cf-Access-Authenticated-User-Email": verifiedActor } : {}),
   });
 }
 
@@ -123,7 +123,7 @@ function getPresentedOpsUiAccessToken(request: Request): string | null {
   return getCookieValue(request.headers.get("Cookie"), ACCESS_SESSION_COOKIE);
 }
 
-async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Promise<Response | null> {
+async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Promise<Response | string> {
   const accessConfig = resolvePagesOpsUiAccessConfig(env);
   if (!accessConfig) {
     return jsonError(500, "Ops UI Access validation is not configured");
@@ -134,106 +134,104 @@ async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Pr
     return jsonError(401, "Unauthorized");
   }
 
-  const isValid = await verifyAccessJwt({
+  const identity = await verifyAccessJwtUserIdentity({
     token: accessJwt,
     aud: accessConfig.aud,
     teamDomain: accessConfig.teamDomain,
     expectedType: "app",
-    expectedSubject: "user",
   });
-  return isValid ? null : jsonError(401, "Unauthorized");
+  return identity?.email ?? jsonError(401, "Unauthorized");
 }
 
 function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProxyEnv): Response | null {
   if (!MUTATING_METHODS.has(request.method)) {
     return null;
   }
-  return hasMatchingOpsUiOriginHeader(request, env)
-    ? null
-    : jsonError(403, "Forbidden");
+  return hasMatchingOpsUiOriginHeader(request, env) ? null : jsonError(403, "Forbidden");
 }
 
-export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => runPagesProxy(context, {
-  logPrefix: "ops-proxy",
-  finalizeResponse: (_proxyContext, response) => applyAdminResponsePolicy(response),
-  rejectRequest: ({ request, env }) => {
-    const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
-    return rejected;
-  },
-  validateEnv: ({ env }) => {
-    const issues = validatePagesOpsProxyEnv(env);
-    for (const issue of issues) {
-      console.warn(`[ops-proxy] ${issue.message}`);
-    }
-    return issues.some((issue) => issue.code === "ops-api-origin-invalid")
-      ? jsonError(500, "Ops API proxy is not configured")
-      : null;
-  },
-  resolveUpstreamPath: ({ params }) => resolveOpsAdminUpstreamPath(params),
-  rejectUpstreamPath: (_context, upstreamPath) => (
-    upstreamPath && isAdminPath(upstreamPath)
-      ? null
-      : jsonError(404, "Not found")
-  ),
-  rejectMethod: ({ request, env }, upstreamPath) => {
-    const upstreamOrigin = resolveOpsApiOrigin(env);
-    if (!upstreamOrigin) {
-      return jsonError(500, "Ops API proxy is not configured");
-    }
-    const requestUrl = new URL(request.url);
-    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
-    const methodValidation = validateEndpointMethod(upstreamUrl, request.method);
-    if (!methodValidation) {
-      return null;
-    }
+export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
+  let verifiedActor: string | undefined;
+  return runPagesProxy(context, {
+    logPrefix: "ops-proxy",
+    finalizeResponse: (_proxyContext, response) => applyAdminResponsePolicy(response),
+    rejectRequest: ({ request, env }) => {
+      const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
+      return rejected;
+    },
+    validateEnv: ({ env }) => {
+      const issues = validatePagesOpsProxyEnv(env);
+      for (const issue of issues) {
+        console.warn(`[ops-proxy] ${issue.message}`);
+      }
+      return issues.some((issue) => issue.code === "ops-api-origin-invalid")
+        ? jsonError(500, "Ops API proxy is not configured")
+        : null;
+    },
+    resolveUpstreamPath: ({ params }) => resolveOpsAdminUpstreamPath(params),
+    rejectUpstreamPath: (_context, upstreamPath) =>
+      upstreamPath && isAdminPath(upstreamPath) ? null : jsonError(404, "Not found"),
+    rejectMethod: ({ request, env }, upstreamPath) => {
+      const upstreamOrigin = resolveOpsApiOrigin(env);
+      if (!upstreamOrigin) {
+        return jsonError(500, "Ops API proxy is not configured");
+      }
+      const requestUrl = new URL(request.url);
+      const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
+      const methodValidation = validateEndpointMethod(upstreamUrl, request.method);
+      if (!methodValidation) {
+        return null;
+      }
 
-    const response = jsonError(405, methodValidation.message);
-    response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
-    return response;
-  },
-  beforeFetch: async ({ request, env }) => {
-    const authError = await requireValidOpsUiJwt(request, env);
-    if (authError) {
-      return authError;
-    }
+      const response = jsonError(405, methodValidation.message);
+      response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
+      return response;
+    },
+    beforeFetch: async ({ request, env }) => {
+      const authResult = await requireValidOpsUiJwt(request, env);
+      if (authResult instanceof Response) {
+        return authResult;
+      }
+      verifiedActor = authResult;
 
-    const originError = requireSameOriginForMutatingRequest(request, env);
-    return originError;
-  },
-  buildUpstreamRequest: ({ request, env }, upstreamPath) => {
-    const upstreamHeaders = buildUpstreamHeaders(request, env);
-    if (upstreamHeaders instanceof Response) {
-      return upstreamHeaders;
-    }
+      const originError = requireSameOriginForMutatingRequest(request, env);
+      return originError;
+    },
+    buildUpstreamRequest: ({ request, env }, upstreamPath) => {
+      const upstreamHeaders = buildUpstreamHeaders(request, env, verifiedActor);
+      if (upstreamHeaders instanceof Response) {
+        return upstreamHeaders;
+      }
 
-    const upstreamOrigin = resolveOpsApiOrigin(env);
-    if (!upstreamOrigin) {
-      return jsonError(500, "Ops API proxy is not configured");
-    }
-    const requestUrl = new URL(request.url);
-    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
-    return {
-      upstreamUrl: upstreamUrl.toString(),
-      method: request.method,
-      headers: upstreamHeaders,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-      timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
-      timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
-      timeoutMessage: "Operator API upstream timed out",
-      fetchFailedMessage: "Operator API upstream fetch failed",
-    };
-  },
-  onFetchError: (_context, _upstreamPath, _errorKind, response) => response,
-  buildResponse: ({ request }, _upstreamPath, upstreamResponse) => {
-    const redirectLocation = upstreamResponse.headers.get("Location");
-    if (
-      upstreamResponse.status >= 300 &&
-      upstreamResponse.status < 400 &&
-      isCloudflareAccessLocation(redirectLocation)
-    ) {
-      return jsonError(502, "Operator API upstream auth failed");
-    }
+      const upstreamOrigin = resolveOpsApiOrigin(env);
+      if (!upstreamOrigin) {
+        return jsonError(500, "Ops API proxy is not configured");
+      }
+      const requestUrl = new URL(request.url);
+      const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
+      return {
+        upstreamUrl: upstreamUrl.toString(),
+        method: request.method,
+        headers: upstreamHeaders,
+        body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+        timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
+        timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
+        timeoutMessage: "Operator API upstream timed out",
+        fetchFailedMessage: "Operator API upstream fetch failed",
+      };
+    },
+    onFetchError: (_context, _upstreamPath, _errorKind, response) => response,
+    buildResponse: ({ request }, _upstreamPath, upstreamResponse) => {
+      const redirectLocation = upstreamResponse.headers.get("Location");
+      if (
+        upstreamResponse.status >= 300 &&
+        upstreamResponse.status < 400 &&
+        isCloudflareAccessLocation(redirectLocation)
+      ) {
+        return jsonError(502, "Operator API upstream auth failed");
+      }
 
-    return buildProxyResponse(upstreamResponse, request.method);
-  },
-});
+      return buildProxyResponse(upstreamResponse, request.method);
+    },
+  });
+};

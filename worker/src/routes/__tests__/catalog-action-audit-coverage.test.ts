@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinitionByKey, getStatusPageActions } from "@shared/lib/api-endpoints";
 import { route, type ResolvedRoute } from "../../router";
 import { getCatalogActionAuditOwner } from "../../lib/catalog-action-audit";
@@ -72,5 +72,38 @@ describe("catalog action audit coverage", () => {
       result: "ok",
       http_status: 202,
     });
+  });
+
+  it("returns a distinct recoverable failure when canonical audit persistence fails", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const sqlite = new DatabaseSync(":memory:");
+    const db = createSqliteD1(sqlite);
+    const endpoint = getEndpointDefinitionByKey("trigger-digest")!;
+    const request = new Request("https://ops-api.pharos.watch/api/trigger-digest", {
+      method: "POST",
+      headers: { "Idempotency-Key": "audit-failure-intent" },
+    });
+    const resolvedRoute: ResolvedRoute = {
+      methodValidation: null,
+      routeMatch: {
+        endpoint,
+        dependencies: [],
+        methods: endpoint.methods,
+        handle: async () =>
+          Response.json(
+            { accepted: true },
+            { status: 202, headers: { "Idempotency-Key": "audit-failure-intent", "X-Idempotent-Replay": "false" } },
+          ),
+      },
+    };
+
+    const response = await route(makeContext(db, request), resolvedRoute);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Idempotency-Key")).toBe("audit-failure-intent");
+    expect(response.headers.get("X-Idempotent-Replay")).toBe("false");
+    expect(response.headers.get("X-Execution-Certainty")).toBe("audit-incomplete");
+    await expect(response.json()).resolves.toMatchObject({ error: "audit_persistence_failed" });
+    expect(warning).toHaveBeenCalled();
   });
 });
