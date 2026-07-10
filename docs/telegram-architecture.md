@@ -202,7 +202,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (enqueue, claim/drain, backoff, capacity, cleanup, dead-letter, dedupe, lifecycle helpers)
-- The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE`, `TELEGRAM_FORMAT_BUDGET_ALLOWANCE`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
+- `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram-constants.ts` re-exports the established Worker import surface.
 
 **Allowed inbound dependencies.** Dispatch (the only legitimate enqueuer for alerts), Admin Telegram routes (`admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram-alerts.ts` keyboard).
 
@@ -210,7 +210,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Must NOT.**
 - Be opened by Ingress directly. Ingress should never enqueue.
-- Re-introduce schedule constants outside `telegram-constants.ts`.
+- Re-introduce delivery-policy constants outside `shared/lib/telegram-delivery-policy.ts`.
 - Mutate `telegram_subscribers` alert flags except via the 2-strike block-disable path. Subscription state is owned by State / persistence helpers.
 
 ---

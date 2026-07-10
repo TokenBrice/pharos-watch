@@ -1,6 +1,18 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import {
+  PENDING_TTL_SEC,
+  SEND_BATCH_SIZE,
+  TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+  TELEGRAM_DISPATCH_TIMEOUT_MS,
+  TELEGRAM_LOAD_GUARD_ASSUMPTIONS,
+  TELEGRAM_MAX_MESSAGES_PER_RUN,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+  TELEGRAM_PENDING_PRIORITY,
+} from "../../shared/lib/telegram-delivery-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
@@ -147,40 +159,33 @@ export interface TelegramLoadCheckReport {
   queryPlans: QueryPlanCheckResult[];
 }
 
-const WATCHER_TARGETS = [500, 1_000, 5_000, 10_000] as const;
-const REQUIRED_TARGET = 5_000;
-const EXPLORATORY_TARGET = 10_000;
+const {
+  watcherTargets: WATCHER_TARGETS,
+  requiredTarget: REQUIRED_TARGET,
+  exploratoryTarget: EXPLORATORY_TARGET,
+  telegramBroadcastMessagesPerSecond: TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
+  telegramP95SendLatencyMs: TELEGRAM_P95_SEND_LATENCY_MS,
+  d1WriteMsPerMessage: D1_WRITE_MS_PER_MESSAGE,
+  normalSloSeconds: NORMAL_SLO_SECONDS,
+  spikeMaxSeconds: SPIKE_MAX_SECONDS,
+  telegram429StormSeconds: TELEGRAM_429_STORM_SECONDS,
+  defaultDispatchCpuMs: DEFAULT_DISPATCH_CPU_MS,
+  cpuBudgetSafetyFraction: CPU_BUDGET_SAFETY_FRACTION,
+  formatCpuMsPerChat: FORMAT_CPU_MS_PER_CHAT,
+  sendCpuMsPerMessage: SEND_CPU_MS_PER_MESSAGE,
+} = TELEGRAM_LOAD_GUARD_ASSUMPTIONS;
 
-const FRESH_ATTEMPTS_PER_RUN = 3_600;
-const PENDING_DRAIN_ATTEMPTS_PER_RUN = Math.floor(FRESH_ATTEMPTS_PER_RUN / 4);
-const SEND_BATCH_SIZE = 4;
-const DISPATCH_TIMEOUT_SECONDS = 14 * 60;
-const SEND_LOOP_SOFT_DEADLINE_SECONDS = 4 * 60;
-const TELEGRAM_BROADCAST_MESSAGES_PER_SECOND = 30;
-const TELEGRAM_P95_SEND_LATENCY_MS = 250;
-const D1_WRITE_MS_PER_MESSAGE = 20;
-const RISK_ALERT_PRIORITY = 30;
-const LEGACY_PENDING_PRIORITY = 50;
-const CRON_INTERVAL_SECONDS = 300;
-const PENDING_TTL_SECONDS = 3_600;
-const NORMAL_SLO_SECONDS = 15 * 60;
-const SPIKE_MAX_SECONDS = 60 * 60;
-const ALERTS_PER_MESSAGE_CHUNK = 16;
-const TELEGRAM_429_STORM_SECONDS = 15 * 60;
+const FRESH_ATTEMPTS_PER_RUN = TELEGRAM_MAX_MESSAGES_PER_RUN;
+const PENDING_DRAIN_ATTEMPTS_PER_RUN = TELEGRAM_PENDING_DRAIN_BUDGET;
+const DISPATCH_TIMEOUT_SECONDS = TELEGRAM_DISPATCH_TIMEOUT_MS / 1000;
+const SEND_LOOP_SOFT_DEADLINE_SECONDS = TELEGRAM_DISPATCH_SOFT_DEADLINE_MS / 1000;
+const RISK_ALERT_PRIORITY = TELEGRAM_PENDING_PRIORITY.riskAlert;
+const LEGACY_PENDING_PRIORITY = TELEGRAM_PENDING_PRIORITY.legacy;
+const CRON_INTERVAL_SECONDS = TELEGRAM_DISPATCH_INTERVAL_SEC;
+const PENDING_TTL_SECONDS = PENDING_TTL_SEC;
+const ALERTS_PER_MESSAGE_CHUNK = TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE;
 
 // ---------- C102: per-invocation CPU budget modelling ----------
-
-/** Documented Worker CPU cap (`worker/wrangler.toml` `cpu_ms`). */
-const DEFAULT_DISPATCH_CPU_MS = 30_000;
-/** Fail when the required-target burst exceeds this fraction of the CPU cap. */
-const CPU_BUDGET_SAFETY_FRACTION = 0.5;
-/**
- * Modelled CPU cost of formatting one candidate chat's consolidated message
- * (`formatConsolidatedMessage` + `splitMessage`). Conservative per-chat estimate.
- */
-const FORMAT_CPU_MS_PER_CHAT = 1.5;
-/** Modelled CPU cost of marshalling/dispatching one delivered message chunk. */
-const SEND_CPU_MS_PER_MESSAGE = 2.0;
 
 /**
  * Read the dispatcher CPU cap from `worker/wrangler.toml`, falling back to the

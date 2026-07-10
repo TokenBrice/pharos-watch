@@ -21,6 +21,10 @@ import {
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import {
+  hasTelegramLoadGuardImpact,
+  TELEGRAM_LOAD_ADVISORY_COMMAND,
+} from "../lib/telegram-load-guard.mjs";
 
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
@@ -30,7 +34,6 @@ const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
 const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);
 const PRODUCTION_PUBLIC_ENV_PREFIXES = ["NEXT_PUBLIC_PHAROS_"];
-const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
 // Gate builds skip the prebuild artifact regeneration: every id below is
 // byte-verified fresh by check:generated-artifacts in the prebuild batch that
 // runs (and must pass) before the build batch in the same gate invocation, so
@@ -56,19 +59,6 @@ function addCommand(plan, cmd, reason) {
     return;
   }
   plan.push({ cmd, reasons: [reason] });
-}
-
-function hasTelegramLoadGuardImpact(changedFiles) {
-  return changedFiles.some((file) =>
-    file === "scripts/ci/check-telegram-load.ts" ||
-    file === ".github/workflows/telegram-load.yml" ||
-    file === "scripts/maintenance/test-merge-gate.mjs" ||
-    file.startsWith("worker/migrations/") ||
-    file.startsWith("worker/src/cron/dispatch-telegram-") ||
-    file.startsWith("worker/src/cron/telegram-pending/") ||
-    file.startsWith("worker/src/api/admin-telegram-broadcast") ||
-    file === "worker/src/lib/telegram-constants.ts",
-  );
 }
 
 export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke = false } = {}) {
@@ -104,7 +94,7 @@ export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke
     addCommand(
       plan,
       TELEGRAM_LOAD_ADVISORY_COMMAND,
-      "Telegram dispatch, pending queue, broadcast, or migration files changed; run advisory load/query-plan guard",
+      "A reviewed Telegram delivery/load dependency changed; run advisory load/query-plan guard",
     );
   }
 

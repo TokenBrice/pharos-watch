@@ -216,7 +216,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-cron-schedule-sync.ts` via `npm run check:cron-sync`
 - `check-cron-connection-budget.ts` via `npm run check:cron-connections`
 - `worker/src/__tests__/index.scheduled.test.ts` via `npm run validate:worker-scheduled-smoke`
-- `check-telegram-load.ts` via the scheduled/manual `.github/workflows/telegram-load.yml` lane
+- `check-telegram-load.ts` via the pull-request/scheduled/manual `.github/workflows/telegram-load.yml` lane; runtime/model inputs come from `shared/lib/telegram-delivery-policy.ts`, and `scripts/lib/telegram-load-guard.mjs` owns the reviewed local/CI trigger dependency set
 - `check-doc-counts.mjs` via `npm run check:doc-counts`
 - `check-verified-doc-links.mjs` via `npm run check:verified-doc-links`
 - `check-doc-source-paths.mjs` via `npm run check:doc-source-paths`
