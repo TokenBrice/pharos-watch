@@ -153,6 +153,7 @@ function normalizeLinkPreviewOptions(value: unknown): LinkPreviewOptions | null 
 export function serializePendingMarkupPolicy(input: {
   replyMarkup?: unknown;
   linkPreviewOptions?: LinkPreviewOptions;
+  disableWebPagePreview?: boolean;
 }): string {
   const replyMarkup = input.replyMarkup == null ? null : input.replyMarkup;
   if (replyMarkup != null && !isValidInlineKeyboardMarkup(replyMarkup)) {
@@ -164,7 +165,7 @@ export function serializePendingMarkupPolicy(input: {
   }
   const policy: PendingMarkupPolicyV1 = {
     version: 1,
-    disableWebPagePreview: true,
+    disableWebPagePreview: input.disableWebPagePreview ?? true,
     replyMarkup,
     linkPreviewOptions,
   };

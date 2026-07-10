@@ -133,6 +133,8 @@ const TelegramHealthSummarySchema = z.object({
     expired: z.number(),
     nearTtl: z.number().optional(),
     sending: z.number().optional(),
+    pendingSending: z.number().optional(),
+    freshSending: z.number().optional(),
     executionUnknown: z.number().optional(),
     pendingExecutionUnknown: z.number().optional(),
     freshExecutionUnknown: z.number().optional(),

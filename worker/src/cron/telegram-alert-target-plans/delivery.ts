@@ -23,7 +23,7 @@ interface PersistedPlanRow {
   plan_payload_digest: string;
 }
 
-interface ReadyTargetRow extends PersistedPlanRow {
+export interface ReadyTargetRow extends PersistedPlanRow {
   job_id: string;
   target_key: string;
   target_ordinal: number;
@@ -180,7 +180,7 @@ export async function openTelegramTargetPlanDelivery(
   return Number(result.meta?.changes ?? 0) === 1;
 }
 
-function readyTargetMatchesPlan(
+export function readyTargetMatchesPlan(
   row: ReadyTargetRow,
   plan: Awaited<ReturnType<typeof parseTelegramTargetPlan>>,
 ): boolean {

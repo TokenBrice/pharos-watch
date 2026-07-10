@@ -199,6 +199,8 @@ export async function readPendingCapacity(
       expired,
       nearTtl,
       sending: pendingSending + freshSending,
+      pendingSending,
+      freshSending,
       pendingExecutionUnknown,
       freshExecutionUnknown,
       executionUnknown,

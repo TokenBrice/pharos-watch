@@ -99,7 +99,7 @@ export interface PendingEnqueueOptions {
   notBeforeAt?: number | null;
   lastErrorClass?: TelegramSendErrorClass | null;
   retryAfterSec?: number | null;
-  sourceType?: "risk_alert" | "admin_broadcast" | "legacy";
+  sourceType?: "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy";
   priority?: number | null;
   ttlSec?: number | null;
 }
@@ -112,6 +112,8 @@ export interface PendingCapacitySnapshot {
   expired: number;
   nearTtl: number;
   sending: number;
+  pendingSending?: number;
+  freshSending?: number;
   pendingExecutionUnknown: number;
   freshExecutionUnknown: number;
   executionUnknown: number;

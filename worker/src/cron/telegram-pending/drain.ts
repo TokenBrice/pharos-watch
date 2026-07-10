@@ -1033,7 +1033,9 @@ export async function drainPendingQueue(
           for (const entry of entries) skipped.set(entry.index, skip);
           return skipped;
         }
-        const adminEntries = entries.filter((entry) => entry.item.row.source_type === "admin_broadcast");
+        const adminEntries = entries.filter((entry) =>
+          entry.item.row.source_type === "admin_broadcast" || entry.item.row.source_type === "admin_replay"
+        );
         const adminPause = adminEntries.length > 0
           ? await readTelegramDeliveryPause(db, "admin", permitNowSec)
           : null;

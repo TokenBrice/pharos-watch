@@ -41,7 +41,9 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
+      "/api/admin-telegram-adoption-report",
       "/api/admin-telegram-broadcast",
+      "/api/admin-telegram-delivery-control",
       "/api/admin-telegram-resend",
       "/api/admin/reserve-recovery-fault-injection",
       "/api/alert-broker-canary",
@@ -190,6 +192,7 @@ describe("api endpoint registry", () => {
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
       "/api/discovery-candidates",
+      "/api/admin-telegram-adoption-report",
       "/api/status-probe-history?path=%2Fapi%2Fhealth",
     ]);
 
@@ -218,6 +221,7 @@ describe("api endpoint registry", () => {
       "/api/alert-broker-canary",
       "/api/admin-telegram-resend",
       "/api/admin-telegram-broadcast",
+      "/api/admin-telegram-delivery-control",
     ]);
   });
 

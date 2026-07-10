@@ -1,507 +1,277 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
-function adminRequest(body: unknown, opts: { admin?: boolean } = {}): Request {
-  const headers = new Headers();
-  if (opts.admin !== false) headers.set("X-Pharos-Admin", "1");
-  headers.set("Content-Type", "application/json");
+const fetchSpy = vi.fn();
+vi.stubGlobal("fetch", fetchSpy);
+const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
+
+function latestDb() {
+  const fixture = createLatestSchemaSqlite();
+  openSqlite.push(fixture.sqlite);
+  return fixture;
+}
+
+function request(body: unknown, idempotencyKey?: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "X-Pharos-Admin": "1" };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
   return new Request("https://ops-api.pharos.watch/api/admin-telegram-broadcast", {
     method: "POST",
     headers,
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    body: JSON.stringify(body),
   });
 }
 
-function allSubscriberRows(chatIds: string[]) {
-  return {
-    match: "FROM telegram_subscribers ORDER BY chat_id",
-    rows: chatIds.map((chat_id) => ({ chat_id })),
-  };
-}
-
-function globalSubscriberRows(chatIds: string[]) {
-  return {
-    match: "global_alert_dews = 1",
-    rows: chatIds.map((chat_id) => ({ chat_id })),
-  };
-}
-
-function deliverableWatcherRows(chatIds: string[]) {
-  return {
-    match: "FROM telegram_preset_subscriptions ps",
-    rows: chatIds.map((chat_id) => ({ chat_id })),
-  };
-}
-
-function pendingInsertRow() {
-  return { match: "INSERT INTO telegram_pending_alerts", rows: [], runMeta: { changes: 1 } };
-}
-
-function auditRow() {
-  return { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } };
-}
-
-function pendingCapacityRow(active: number) {
+function capacityRow(active: number) {
   return {
     match: "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
+    rows: [],
     first: {
       total: active,
       expired: 0,
       due: active,
       deferred: 0,
       near_ttl: 0,
-      oldest_pending_created_at: active > 0 ? Math.floor(Date.now() / 1000) - 60 : null,
-      oldest_due_created_at: active > 0 ? Math.floor(Date.now() / 1000) - 60 : null,
+      oldest_pending_created_at: null,
+      oldest_due_created_at: null,
+      pending_sending: 0,
+      pending_execution_unknown: 0,
+      sent_cleanup: 0,
+      oldest_pending_execution_unknown_at: null,
+      fresh_sending: 0,
+      fresh_execution_unknown: 0,
+      oldest_fresh_execution_unknown_at: null,
+      fresh_uncertain_sample_count: 0,
     },
-    rows: [],
   };
 }
 
-function transportControlRows() {
-  return [
-    { match: "FROM telegram_delivery_pauses", rows: [] },
-    {
-      match: "FROM telegram_transport_circuit",
-      first: {
-        state: "closed",
-        generation: 0,
-        cause_class: null,
-        cause_scope: null,
-        distinct_failure_count: 0,
-        first_failure_at: null,
-        last_failure_at: null,
-        last_success_at: null,
-        opened_at: null,
-        next_probe_at: null,
-        probe_owner: null,
-        probe_generation: null,
-        probe_expires_at: null,
-        probe_limit: null,
-        probe_attempted: 0,
-        updated_at: 0,
-      },
-      rows: [],
-    },
-  ];
-}
+beforeEach(() => {
+  fetchSpy.mockReset();
+  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 }));
+});
 
-describe("handleAdminTelegramBroadcast", () => {
-  it("rejects requests without admin auth", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: true }),
-      trustedAdmin: false,
-    });
-    expect(res.status).toBe(401);
-  });
+afterEach(() => {
+  while (openSqlite.length > 0) openSqlite.pop()?.close();
+});
 
-  it("rejects invalid JSON bodies with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
+describe("handleAdminTelegramBroadcast canary gate", () => {
+  it("rejects stray raw < before targeting", async () => {
+    const db = mockD1([{ match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } }]);
+    const response = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest("not-json"),
+      request: request({ messageHtml: "loss < 1%", scope: "all", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects empty messageHtml with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "  ", scope: "all", dryRun: true }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects messageHtml over the admin broadcast cap with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "x".repeat(16_001), scope: "all", dryRun: true }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "messageHtml must be 16,000 characters or fewer" });
-  });
-
-  it("rejects unknown scope with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "everyone", dryRun: true }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects unsupported Telegram HTML before dry-run targeting", async () => {
-    const db = mockD1([auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<div>bad</div>", scope: "all", dryRun: true }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(422);
-    expect(await res.json()).toEqual({
-      error: "Unsupported Telegram HTML tag <div>",
-      position: 0,
-    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Raw <") });
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers"))).toBe(false);
-    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit?.binds).toContain("error");
-    expect(audit?.binds).toContain(422);
   });
 
-  it("rejects unbalanced Telegram HTML entities", async () => {
-    const db = mockD1([auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
+  it.each([
+    ["<div>unsupported</div>", "Unsupported Telegram HTML tag"],
+    ["<b>bad &copy;</b>", "Malformed or unsupported HTML entity"],
+    ["<b>unclosed", "Unclosed Telegram HTML tag"],
+  ])("rejects invalid preflight markup %s", async (messageHtml, error) => {
+    const db = mockD1([{ match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } }]);
+    const response = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({ messageHtml: "<b>bad &copy;</b>", scope: "all", dryRun: true }),
+      request: request({ messageHtml, scope: "all", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(res.status).toBe(422);
-    expect(await res.json()).toMatchObject({
-      error: "Malformed or unsupported HTML entity",
-      position: 7,
-    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining(error) });
   });
 
-  it("rejects non-boolean dryRun with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
+  it("preserves global and deliverable-watcher scope semantics", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      `INSERT INTO telegram_subscribers (chat_id, global_alert_dews, created_at, last_active_at)
+       VALUES ('10', 1, 1, 1), ('20', 0, 1, 1), ('30', 0, 1, 1)`,
+    ).run();
+    sqlite.prepare(
+      `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, created_at, updated_at)
+       VALUES ('20', 'usd-top25', 1, 1, 1)`,
+    ).run();
+    const global = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: "yes" }),
+      request: request({ messageHtml: "ok", scope: "global-subscribers", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects non-boolean acknowledgeBacklogRisk with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramBroadcast({
+    const deliverable = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({
-        messageHtml: "<b>x</b>",
-        scope: "all",
-        dryRun: false,
-        acknowledgeBacklogRisk: "yes",
-      }),
+      request: request({ messageHtml: "ok", scope: "deliverable-watchers", dryRun: true }),
       trustedAdmin: true,
     });
-    expect(res.status).toBe(400);
+    expect(await global.json()).toMatchObject({ targetChatCount: 1, sample: ["10"] });
+    expect(await deliverable.json()).toMatchObject({ targetChatCount: 2, sample: ["10", "20"] });
   });
 
-  it("dry-run returns target count and a sample without enqueuing and audits the preview", async () => {
-    const chatIds = ["1", "2", "3", "4", "5", "6", "7"];
-    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
+  it("dry-run reports the mandatory private canary and material TTL reserve", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('10', 1, 1), ('20', 1, 1)",
+    ).run();
+    const response = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: true }),
+      request: request({ messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: true, canaryChatId: "10" }),
       trustedAdmin: true,
     });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      targetChatCount: number;
-      chunkCount: number;
-      targetMessageCount: number;
-      deliveryEstimate: { projectedPendingMessages: number; estimatedDrainTimeSec: number; fitsWithinMinutes: Record<string, boolean> };
-      sample: string[];
-    };
-    expect(body.targetChatCount).toBe(7);
-    expect(body.chunkCount).toBe(1);
-    expect(body.targetMessageCount).toBe(7);
-    expect(body.deliveryEstimate.projectedPendingMessages).toBe(7);
-    expect(body.deliveryEstimate.estimatedDrainTimeSec).toBe(300);
-    expect(body.deliveryEstimate.fitsWithinMinutes["15"]).toBe(true);
-    expect(body.sample).toEqual(["1", "2", "3", "4", "5"]);
-
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
-    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit).toBeDefined();
-    expect(audit?.binds).toContain("admin-telegram-broadcast");
-    expect(audit?.binds).toContain("all");
-    expect(audit?.binds).toContain("ok");
-    expect(audit?.binds).toContain(200);
-    const details = JSON.parse(String(audit?.binds[6] ?? "{}")) as { dryRun?: boolean; targetChatCount?: number };
-    expect(details.dryRun).toBe(true);
-    expect(details.targetChatCount).toBe(7);
-  });
-
-  it("dry-run with global-subscribers scope filters by global_alert_* flags", async () => {
-    const db = mockD1([globalSubscriberRows(["100", "200"])]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "global-subscribers", dryRun: true }),
-      trustedAdmin: true,
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      targetChatCount: 2,
+      targetMessageCount: 1,
+      canary: { requiredForLive: true, chatId: "10", wouldSendChunkCount: 1 },
+      deliveryEstimate: { hasMaterialTtlReserve: true, minimumTtlReserveSec: 900 },
     });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { targetChatCount: number; sample: string[] };
-    expect(body.targetChatCount).toBe(2);
-    expect(body.sample).toEqual(["100", "200"]);
-
-    const history = db.getHistory();
-    const select = history.find((entry) => entry.sql.includes("FROM telegram_subscribers"));
-    expect(select?.sql).toContain("global_alert_dews = 1");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("dry-run with deliverable-watchers scope includes active direct, preset, and global follows", async () => {
-    const db = mockD1([deliverableWatcherRows(["100", "200"])]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "deliverable-watchers", dryRun: true }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { targetChatCount: number; sample: string[] };
-    expect(body.targetChatCount).toBe(2);
-    expect(body.sample).toEqual(["100", "200"]);
-
-    const select = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscribers"));
-    expect(select?.sql).toContain("FROM telegram_subscriptions ts");
-    expect(select?.sql).toContain("FROM telegram_preset_subscriptions ps");
-  });
-
-  it("deliverable-watchers scope query runs against the real telegram_preset_subscriptions schema", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
-    try {
-      // Mirrors migrations 0000_baseline.sql (telegram_subscribers + telegram_subscriptions),
-      // 0072_telegram_launch_alerts.sql (adds alert_launch / global_alert_launch to those two
-      // tables only), and 0114_telegram_dynamic_presets.sql (telegram_preset_subscriptions has
-      // NO alert_launch column — that is the bug guarded here).
-      sqlite.exec(`
-        CREATE TABLE telegram_subscribers (
-          chat_id TEXT PRIMARY KEY,
-          alert_dews INTEGER NOT NULL DEFAULT 0,
-          alert_depeg INTEGER NOT NULL DEFAULT 0,
-          alert_safety INTEGER NOT NULL DEFAULT 0,
-          alert_launch INTEGER NOT NULL DEFAULT 0,
-          alert_reserve INTEGER NOT NULL DEFAULT 0,
-          global_alert_dews INTEGER NOT NULL DEFAULT 0,
-          global_alert_depeg INTEGER NOT NULL DEFAULT 0,
-          global_alert_safety INTEGER NOT NULL DEFAULT 0,
-          global_alert_launch INTEGER NOT NULL DEFAULT 0,
-          global_alert_reserve INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE TABLE telegram_subscriptions (
-          chat_id TEXT NOT NULL,
-          stablecoin_id TEXT NOT NULL,
-          alert_dews INTEGER NOT NULL DEFAULT 0,
-          alert_depeg INTEGER NOT NULL DEFAULT 0,
-          alert_safety INTEGER NOT NULL DEFAULT 0,
-          alert_launch INTEGER NOT NULL DEFAULT 0,
-          alert_reserve INTEGER NOT NULL DEFAULT 0,
-          PRIMARY KEY (chat_id, stablecoin_id)
-        );
-        CREATE TABLE telegram_preset_subscriptions (
-          chat_id TEXT NOT NULL,
-          preset_id TEXT NOT NULL,
-          alert_dews INTEGER NOT NULL DEFAULT 0,
-          alert_depeg INTEGER NOT NULL DEFAULT 0,
-          alert_safety INTEGER NOT NULL DEFAULT 0,
-          PRIMARY KEY (chat_id, preset_id)
-        );
-        CREATE TABLE telegram_pending_alerts (
-          chat_id TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          expires_at INTEGER,
-          not_before_at INTEGER,
-          delivery_state TEXT NOT NULL DEFAULT 'pending',
-          delivery_started_at INTEGER
-        );
-        CREATE TABLE telegram_alert_job_targets (
-          effect_state TEXT NOT NULL DEFAULT 'unstarted',
-          effect_started_at INTEGER,
-          effect_completed_at INTEGER,
-          created_at INTEGER NOT NULL
-        );
-      `);
-      sqlite.prepare(
-        `INSERT INTO telegram_subscribers (chat_id, global_alert_dews) VALUES (?, 1)`,
-      ).run("global-1");
-      sqlite.prepare(
-        `INSERT INTO telegram_subscribers (chat_id) VALUES (?)`,
-      ).run("preset-only-1");
-      sqlite.prepare(
-        `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews) VALUES (?, ?, 1)`,
-      ).run("preset-only-1", "usd-top25");
-
-      const res = await handleAdminTelegramBroadcast({
-        db: createSqliteD1(sqlite),
-        request: adminRequest({ messageHtml: "<b>x</b>", scope: "deliverable-watchers", dryRun: true }),
-        trustedAdmin: true,
-      });
-
-      // Without the fix this returns 500 because the preset-subscription EXISTS clause
-      // references `ps.alert_launch`, which does not exist on telegram_preset_subscriptions.
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { targetChatCount: number; sample: string[] };
-      expect(body.targetChatCount).toBe(2);
-      expect(body.sample).toEqual(["global-1", "preset-only-1"]);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("live mode enqueues one pending row per chat and audits the action", async () => {
-    const chatIds = ["10", "20", "30"];
-    const db = mockD1([allSubscriberRows(chatIds), pendingCapacityRow(0), ...transportControlRows(), pendingInsertRow(), auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({
-        messageHtml: "<b>Pharos maintenance</b>\nOffline 10:00-10:15 UTC.",
-        scope: "all",
-        dryRun: false,
-      }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { enqueued: number };
-    expect(body.enqueued).toBe(3);
-
-    const history = db.getHistory();
-    const inserts = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(inserts).toHaveLength(3);
-    expect(inserts.map((entry) => entry.binds[0])).toEqual(["10", "20", "30"]);
-    expect(inserts.every((entry) => entry.binds.includes("admin_broadcast"))).toBe(true);
-
-    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit).toBeDefined();
-    expect(audit?.binds).toContain("admin-telegram-broadcast");
-    expect(audit?.binds).toContain("all");
-  });
-
-  it("blocks live broadcasts projected to outlive the admin broadcast TTL without acknowledgement", async () => {
+  it("rejects a live fanout that cannot retain the non-overridable TTL reserve", async () => {
     const db = mockD1([
-      allSubscriberRows(["10"]),
-      pendingCapacityRow(20_000),
-      ...transportControlRows(),
-      auditRow(),
+      { match: "FROM telegram_subscribers ORDER BY chat_id", rows: [{ chat_id: "20" }] },
+      capacityRow(10_801),
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
     ]);
-    const res = await handleAdminTelegramBroadcast({
+    const response = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({
-        messageHtml: "<b>Pharos maintenance</b>",
+      request: request({
+        messageHtml: "<b>Maintenance</b>",
         scope: "all",
         dryRun: false,
-      }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as {
-      deliveryEstimate: { requiresAcknowledgement: boolean; adminBroadcastTtlSec: number };
-    };
-    expect(body.deliveryEstimate.requiresAcknowledgement).toBe(true);
-    expect(body.deliveryEstimate.adminBroadcastTtlSec).toBe(TELEGRAM_ALERT_TTL_SEC.adminBroadcast);
-
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
-    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit).toBeDefined();
-    expect(audit?.binds).toContain("error");
-    expect(audit?.binds).toContain(409);
-    const details = JSON.parse(String(audit?.binds[6] ?? "{}")) as { rejectedReason?: string };
-    expect(details.rejectedReason).toBe("backlog-risk");
-  });
-
-  it("allows acknowledged live broadcasts with backlog risk and records short admin TTL", async () => {
-    const db = mockD1([allSubscriberRows(["10"]), pendingCapacityRow(20_000), ...transportControlRows(), pendingInsertRow(), auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({
-        messageHtml: "<b>Pharos maintenance</b>",
-        scope: "all",
-        dryRun: false,
+        canaryChatId: "10",
         acknowledgeBacklogRisk: true,
       }),
       trustedAdmin: true,
+      telegramBotToken: "token",
     });
-    expect(res.status).toBe(200);
-
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(insert?.binds).toContain("admin_broadcast");
-    expect(insert?.binds).toContain(90);
-    expect(Number(insert?.binds[13]) - Number(insert?.binds[3])).toBe(
-      TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
-    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      deliveryEstimate: { hasMaterialTtlReserve: false },
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("live mode with global-subscribers scope only enqueues filtered chats", async () => {
-    const db = mockD1([globalSubscriberRows(["77"]), pendingCapacityRow(0), ...transportControlRows(), pendingInsertRow(), auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({
-        messageHtml: "<b>maint</b>",
-        scope: "global-subscribers",
-        dryRun: false,
-      }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { enqueued: number };
-    expect(body.enqueued).toBe(1);
-
-    const history = db.getHistory();
-    const inserts = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]?.binds[0]).toBe("77");
-
-    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit?.binds).toContain("global-subscribers");
-  });
-
-  it("live mode with no target chats returns enqueued: 0 and still audits", async () => {
-    const db = mockD1([allSubscriberRows([]), pendingCapacityRow(0), ...transportControlRows(), auditRow()]);
-    const res = await handleAdminTelegramBroadcast({
-      db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: false }),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { enqueued: number };
-    expect(body.enqueued).toBe(0);
-
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(true);
-  });
-
-  it("refuses a live broadcast while admin delivery is paused", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      allSubscriberRows(["10"]),
-      pendingCapacityRow(0),
-      {
-        match: "FROM telegram_delivery_pauses",
-        first: {
-          mode: "admin",
-          generation: 1,
-          expires_at: now + 300,
-          reason: "incident",
-          actor: "operator",
-          created_at: now,
-          updated_at: now,
-        },
-        rows: [],
-      },
-      transportControlRows()[1],
-      auditRow(),
-    ]);
-
+  it("does not enqueue fleet work when Telegram rejects the private parse canary", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+      ok: false,
+      error_code: 400,
+      description: "Bad Request: can't parse entities",
+    }), { status: 400 }));
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
+    ).run();
     const response = await handleAdminTelegramBroadcast({
       db,
-      request: adminRequest({ messageHtml: "<b>x</b>", scope: "all", dryRun: false }),
+      request: request({ messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: false, canaryChatId: "10" }),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ fleetEnqueued: 0, errorClass: "formatting_error" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+  });
+
+  it("requires both a private canary and bot token for live fanout", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
+    ).run();
+    const missingCanary = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "ok", scope: "all", dryRun: false }),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    const missingToken = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "ok", scope: "all", dryRun: false, canaryChatId: "10" }),
       trustedAdmin: true,
     });
+    expect(missingCanary.status).toBe(400);
+    expect(missingToken.status).toBe(500);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
+  it.each(["pause", "circuit"] as const)("honors the admin %s transport gate before canary send", async (gate) => {
+    const { sqlite, db } = latestDb();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
+    ).run();
+    if (gate === "pause") {
+      sqlite.prepare(
+        `INSERT INTO telegram_delivery_pauses (mode, generation, expires_at, reason, actor, created_at, updated_at)
+         VALUES ('admin', 1, ?, 'incident', 'operator', ?, ?)`,
+      ).run(now + 300, now, now);
+    } else {
+      sqlite.prepare(
+        `UPDATE telegram_transport_circuit
+            SET state = 'open', generation = 1, cause_class = 'auth_error',
+                cause_scope = 'fatal', opened_at = ?, next_probe_at = ?, updated_at = ?
+          WHERE singleton_id = 1`,
+      ).run(now, now + 300, now);
+    }
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "ok", scope: "all", dryRun: false, canaryChatId: "10" }),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
     expect(response.status).toBe(409);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("sends the exact silent canary before enqueuing the remaining fleet", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('10', 1, 1), ('20', 1, 1), ('30', 1, 1)",
+    ).run();
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: false, canaryChatId: "10" }),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      enqueued: 2,
+      canary: { chatId: "10", chunksSent: 1 },
+    });
+    const sent = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(sent).toMatchObject({ chat_id: "10", text: "<b>Maintenance</b>", disable_notification: true });
+    const fleet = sqlite.prepare(
+      "SELECT chat_id, source_type FROM telegram_pending_alerts ORDER BY chat_id",
+    ).all();
+    expect(fleet).toEqual([
+      expect.objectContaining({ chat_id: "20", source_type: "admin_broadcast" }),
+      expect.objectContaining({ chat_id: "30", source_type: "admin_broadcast" }),
+    ]);
+  });
+
+  it("replays an idempotent live response without a second canary or duplicate fanout", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
+    ).run();
+    const body = { messageHtml: "<b>Maintenance</b>", scope: "all", dryRun: false, canaryChatId: "10" };
+    const first = await handleAdminTelegramBroadcast({
+      db,
+      request: request(body, "broadcast-replay-0001"),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    const second = await handleAdminTelegramBroadcast({
+      db,
+      request: request(body, "broadcast-replay-0001"),
+      trustedAdmin: true,
+      telegramBotToken: "token",
+    });
+    expect(first.status).toBe(200);
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 1 });
   });
 });

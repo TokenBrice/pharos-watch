@@ -119,6 +119,8 @@ describe("handleHealth", () => {
     expired: 0,
     nearTtl: 0,
     sending: 0,
+    pendingSending: 0,
+    freshSending: 0,
     executionUnknown: 0,
     pendingExecutionUnknown: 0,
     freshExecutionUnknown: 0,

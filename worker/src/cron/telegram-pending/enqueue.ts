@@ -23,8 +23,20 @@ interface PendingProvenanceValues {
 
 function resolvePendingProvenance(
   message: BatchMessage,
-  sourceType: "risk_alert" | "admin_broadcast" | "legacy",
+  sourceType: "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy",
 ): PendingProvenanceValues {
+  if (sourceType === "admin_replay") {
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: serializePendingMarkupPolicy({
+        replyMarkup: message.replyMarkup,
+        linkPreviewOptions: message.linkPreviewOptions,
+        disableWebPagePreview: message.disableWebPagePreview,
+      }),
+    };
+  }
   if (sourceType !== "risk_alert") {
     return {
       sourceEventId: null,
@@ -64,6 +76,7 @@ function resolvePendingProvenance(
     markupPolicyJson: serializePendingMarkupPolicy({
       replyMarkup: message.replyMarkup,
       linkPreviewOptions: message.linkPreviewOptions,
+      disableWebPagePreview: message.disableWebPagePreview,
     }),
   };
 }
@@ -77,12 +90,16 @@ function resolvePendingPriority(message: BatchMessage, options: PendingEnqueueOp
   if (options.priority != null && Number.isFinite(options.priority)) {
     return Math.max(0, Math.floor(options.priority));
   }
-  if (options.sourceType === "admin_broadcast") return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
+  if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
+    return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
+  }
   if (options.sourceType === "legacy") return TELEGRAM_PENDING_PRIORITY.legacy;
   return pendingPriorityForAlertType(message.alertType);
 }
 
-function resolvePendingSourceType(options: PendingEnqueueOptions): "risk_alert" | "admin_broadcast" | "legacy" {
+function resolvePendingSourceType(
+  options: PendingEnqueueOptions,
+): "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy" {
   return options.sourceType ?? "risk_alert";
 }
 
@@ -90,7 +107,9 @@ function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOpti
   if (options.ttlSec != null && Number.isFinite(options.ttlSec) && options.ttlSec > 0) {
     return Math.floor(options.ttlSec);
   }
-  if (options.sourceType === "admin_broadcast") return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
+    return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  }
   if (options.sourceType === "legacy") return TELEGRAM_ALERT_TTL_SEC.legacy;
   return message.alertType ? TELEGRAM_ALERT_TTL_SEC[message.alertType] : PENDING_TTL_SEC;
 }

@@ -52,6 +52,8 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
           expired: pendingCapacity.value.expired,
           nearTtl: pendingCapacity.value.nearTtl,
           sending: pendingCapacity.value.sending,
+          pendingSending: pendingCapacity.value.pendingSending,
+          freshSending: pendingCapacity.value.freshSending,
           executionUnknown: pendingCapacity.value.executionUnknown,
           pendingExecutionUnknown: pendingCapacity.value.pendingExecutionUnknown,
           freshExecutionUnknown: pendingCapacity.value.freshExecutionUnknown,

@@ -1077,12 +1077,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminMutation({
     key: "admin-telegram-resend",
     path: API_PATHS.adminTelegramResend(),
-    routeDependencies: ["telegram"],
+    routeDependencies: [],
     probeGroup: "manual",
   }),
   adminMutation({
     key: "admin-telegram-broadcast",
     path: API_PATHS.adminTelegramBroadcast(),
+    routeDependencies: ["telegram"],
     probeGroup: "manual",
   }),
   adminDualModeMutation({

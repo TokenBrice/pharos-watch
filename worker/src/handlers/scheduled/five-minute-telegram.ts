@@ -1,9 +1,8 @@
 import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   serial:
- *     dispatch-telegram-alerts (4) -> telegram-degradation-watchdog (1) -> telegram-disambiguation-cleanup (0) -> telegram-pulse-snapshot (0)
- *   budget-only, serial: Telegram registration reconciliation (1), durable alert-broker delivery drain (1)
+ *   serial: dispatch (when token configured) -> watchdog -> cleanup -> pulse
+ *   budget-only, after critical lane: one rotating registration unit, then alert-broker drain
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -28,9 +27,9 @@ import {
 } from "./context";
 import { logSkippedCronRun } from "./preflight-skip";
 import {
-  flattenScheduledSlotGroupTasks,
   runScheduledSlotGroups,
   type ScheduledSlotGroup,
+  type ScheduledSlotTask,
 } from "./slot-groups";
 import {
   buildScheduledSlotSummary,
@@ -39,6 +38,12 @@ import {
 } from "./slot-summary";
 
 const ALERT_BROKER_DELIVERY_DRAIN_SURFACE = "alert-broker-delivery-drain";
+const TELEGRAM_REGISTRATION_ACTIONS = [
+  "reconcile-commands",
+  "reconcile-profile",
+  "reconcile-menu",
+  "reconcile-webhook",
+] as const;
 
 async function runAlertBrokerDeliveryDrain(runtime: ScheduledRuntimeContext): Promise<void> {
   const startedMs = Date.now();
@@ -98,7 +103,7 @@ interface TelegramReconciliationTelemetry {
   attempted: boolean;
   skipped: boolean;
   reason: string | null;
-  success: boolean;
+  outcome: "skipped" | "succeeded" | "failed";
   error: string | null;
 }
 
@@ -117,7 +122,7 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
       attempted: result.attempted,
       skipped: resultRecord.skipped === true,
       reason: typeof resultRecord.reason === "string" ? resultRecord.reason : null,
-      success: true,
+      outcome: result.attempted ? "succeeded" : "skipped",
       error: null,
     };
   } catch (err) {
@@ -133,7 +138,7 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
       attempted: true,
       skipped: false,
       reason: null,
-      success: false,
+      outcome: "failed",
       error,
     };
   }
@@ -141,69 +146,73 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
 
 function buildTelegramSlotGroups(
   runtime: ScheduledRuntimeContext,
-  botToken: string,
+  botToken: string | null,
 ): ScheduledSlotGroup[] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
+  const tasks: ScheduledSlotTask[] = [];
+  if (botToken) {
+    tasks.push({
+      job: "dispatch-telegram-alerts",
+      errorMessage: "[cron] dispatch-telegram-alerts failed:",
+      run: (signal, reportProgress) =>
+        dispatchTelegramAlerts(
+          runtime.db,
+          botToken,
+          signal,
+          sharedTelegramState,
+          reportProgress,
+        ),
+    });
+  }
+  tasks.push(
+    {
+      job: "telegram-degradation-watchdog",
+      errorMessage: "[cron] telegram-degradation-watchdog failed:",
+      run: (signal) =>
+        runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
+          pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
+          safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
+          alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
+        }),
+    },
+    {
+      job: "telegram-disambiguation-cleanup",
+      errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
+      run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
+    },
+    {
+      job: "telegram-pulse-snapshot",
+      errorMessage: "[cron] telegram-pulse-snapshot failed:",
+      run: async (signal) => {
+        const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
+          pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
+          signal,
+        });
+        return {
+          status: outcome.status,
+          itemCount: outcome.snapshotPublished ? 1 : 0,
+          error: outcome.error ?? undefined,
+          metadata: JSON.stringify({
+            sidecar: "telegram-pulse-snapshot",
+            snapshotPublished: outcome.snapshotPublished,
+            heavySectionsRecomputed: outcome.heavySectionsRecomputed,
+            heavyMarkerAdvanced: outcome.heavyMarkerAdvanced,
+            qualityStatus: outcome.pulse.quality.status,
+            unavailableFields: outcome.pulse.quality.unavailableFields,
+          }),
+          productivity: {
+            productive: outcome.snapshotPublished,
+            reason: outcome.snapshotPublished ? "pulse-snapshot-published" : "pulse-snapshot-write-failed",
+          },
+        };
+      },
+    },
+  );
   return [
     {
       mode: "serial",
       label: "telegram-alerts-and-sidecars",
-      tasks: [
-        {
-          job: "dispatch-telegram-alerts",
-          errorMessage: "[cron] dispatch-telegram-alerts failed:",
-          run: (signal, reportProgress) =>
-            dispatchTelegramAlerts(
-              runtime.db,
-              botToken,
-              signal,
-              sharedTelegramState,
-              reportProgress,
-            ),
-        },
-        {
-          job: "telegram-degradation-watchdog",
-          errorMessage: "[cron] telegram-degradation-watchdog failed:",
-          run: (signal) =>
-            runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
-              pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
-              safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
-              alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
-            }),
-        },
-        {
-          job: "telegram-disambiguation-cleanup",
-          errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
-          run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
-        },
-        {
-          job: "telegram-pulse-snapshot",
-          errorMessage: "[cron] telegram-pulse-snapshot failed:",
-          run: async (signal) => {
-            const outcome = await publishTelegramPulseSnapshotWithOutcome(runtime.db, undefined, {
-              pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
-              signal,
-            });
-            return {
-              status: outcome.status,
-              itemCount: outcome.snapshotPublished ? 1 : 0,
-              error: outcome.error ?? undefined,
-              metadata: JSON.stringify({
-                sidecar: "telegram-pulse-snapshot",
-                snapshotPublished: outcome.snapshotPublished,
-                heavySectionsRecomputed: outcome.heavySectionsRecomputed,
-                heavyMarkerAdvanced: outcome.heavyMarkerAdvanced,
-                qualityStatus: outcome.pulse.quality.status,
-                unavailableFields: outcome.pulse.quality.unavailableFields,
-              }),
-              productivity: {
-                productive: outcome.snapshotPublished,
-                reason: outcome.snapshotPublished ? "pulse-snapshot-published" : "pulse-snapshot-write-failed",
-              },
-            };
-          },
-        },
-      ],
+      tasks,
     },
   ];
 }
@@ -211,20 +220,18 @@ function buildTelegramSlotGroups(
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
   const reconciliationStartedMs = Date.now();
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
-    const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram scheduled lane";
-    // Token is absent: groups are only enumerated for skip-summaries; the task
-    // closures are never invoked, so an empty token placeholder is unused.
-    const groups = buildTelegramSlotGroups(runtime, "");
-    const tasks = flattenScheduledSlotGroupTasks(groups);
+    const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
     const skippedJobs = [
-      summarizeSkippedScheduledJob("telegram-registration-reconciliation", "missing-telegram-bot-token"),
-      ...tasks.map((task) =>
-        summarizeSkippedScheduledJob(task.job, "missing-telegram-bot-token")
-      ),
+      {
+        job: "telegram-registration-reconciliation",
+        outcome: "error" as const,
+        error: "missing-telegram-bot-token",
+      },
+      summarizeSkippedScheduledJob("dispatch-telegram-alerts", "missing-telegram-bot-token"),
     ];
-    for (const task of tasks) {
+    for (const job of ["dispatch-telegram-alerts"]) {
       await logSkippedCronRun(runtime, {
-        job: task.job,
+        job,
         reason: "missing-telegram-bot-token",
         message,
       });
@@ -232,80 +239,114 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: "telegram-registration-reconciliation",
       durationMs: Date.now() - reconciliationStartedMs,
-      dueCount: 1,
+      dueCount: TELEGRAM_REGISTRATION_ACTIONS.length,
       processedCount: 0,
-      outcome: "skipped",
-      skippedReason: "missing-telegram-bot-token",
-      metadata: { botTokenConfigured: false },
+      outcome: "error",
+      error: "missing-telegram-bot-token",
+      metadata: {
+        botTokenConfigured: false,
+        attemptedCount: 0,
+        skippedCount: 0,
+        succeededCount: 0,
+        failedCount: TELEGRAM_REGISTRATION_ACTIONS.length,
+        lastSuccessAt: null,
+        failedActions: TELEGRAM_REGISTRATION_ACTIONS,
+        actions: TELEGRAM_REGISTRATION_ACTIONS.map((action) => ({
+          action,
+          attempted: false,
+          skipped: false,
+          reason: "missing-telegram-bot-token",
+          outcome: "failed",
+        })),
+      },
       producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
     });
+    const sidecarSummary = await runScheduledSlotGroups(
+      runtime,
+      "five-minute telegram token-independent sidecars",
+      buildTelegramSlotGroups(runtime, null),
+    );
     await runAlertBrokerDeliveryDrain(runtime);
-    return buildScheduledSlotSummary(skippedJobs, { budgetOnlyJobs: 2 });
+    return mergeScheduledSlotSummaries([
+      sidecarSummary,
+      buildScheduledSlotSummary(skippedJobs),
+    ], { budgetOnlyJobs: 2 });
   }
-
-  const reconciliationResults = await runRuntimeBudgetOnlyTask(
-    runtime,
-    "telegram-registration-reconciliation",
-    async (signal) => [
-      await runTelegramReconciliation("reconcile-commands", () =>
-        reconcileTelegramCommandRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal,
-        }),
-      ),
-      await runTelegramReconciliation("reconcile-profile", () =>
-        reconcileTelegramProfileRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal,
-        }),
-      ),
-      await runTelegramReconciliation("reconcile-menu", () =>
-        reconcileTelegramMenuButton(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal,
-        }),
-      ),
-      await runTelegramReconciliation("reconcile-webhook", () =>
-        reconcileTelegramWebhookRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-          selfUrl: runtime.env.SELF_URL,
-          signal,
-        }),
-      ),
-    ],
-  );
-  const failedReconciliations = reconciliationResults.filter((result) => !result.success);
-  await recordBudgetSurfaceTelemetry(runtime.db, {
-    surface: "telegram-registration-reconciliation",
-    durationMs: Date.now() - reconciliationStartedMs,
-    dueCount: reconciliationResults.length,
-    processedCount: reconciliationResults.filter((result) => result.success).length,
-    outcome: failedReconciliations.length > 0 ? "error" : "ok",
-    error: failedReconciliations.length > 0
-      ? failedReconciliations.map((result) => `${result.action}:${result.error ?? "failed"}`).join("; ")
-      : null,
-    metadata: {
-      botTokenConfigured: true,
-      attemptedCount: reconciliationResults.filter((result) => result.attempted).length,
-      skippedCount: reconciliationResults.filter((result) => result.skipped).length,
-      failedActions: failedReconciliations.map((result) => result.action),
-      actions: reconciliationResults.map((result) => ({
-        action: result.action,
-        attempted: result.attempted,
-        skipped: result.skipped,
-        reason: result.reason,
-        success: result.success,
-      })),
-    },
-    producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
-  });
 
   const summary = await runScheduledSlotGroups(
     runtime,
     "five-minute telegram slot",
     buildTelegramSlotGroups(runtime, runtime.env.TELEGRAM_BOT_TOKEN),
   );
+
+  const registrations: Array<{
+    action: string;
+    run: (signal?: AbortSignal) => Promise<{ attempted: boolean; skipped?: boolean; reason?: string }>;
+  }> = [
+    { action: "reconcile-commands", run: (signal) => reconcileTelegramCommandRegistration(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      signal,
+    }) },
+    { action: "reconcile-profile", run: (signal) => reconcileTelegramProfileRegistration(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      signal,
+    }) },
+    { action: "reconcile-menu", run: (signal) => reconcileTelegramMenuButton(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      signal,
+    }) },
+    { action: "reconcile-webhook", run: (signal) => reconcileTelegramWebhookRegistration(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+      selfUrl: runtime.env.SELF_URL,
+      signal,
+    }) },
+  ];
+  const reconciliationResults = await runRuntimeBudgetOnlyTask(
+    runtime,
+    "telegram-registration-reconciliation",
+    async (signal) => {
+      const results: TelegramReconciliationTelemetry[] = [];
+      for (const registration of registrations) {
+        results.push(await runTelegramReconciliation(registration.action, () => registration.run(signal)));
+      }
+      return results;
+    },
+  );
+  const failedReconciliations = reconciliationResults.filter((result) => result.outcome === "failed");
+  const succeededReconciliations = reconciliationResults.filter((result) => result.outcome === "succeeded");
+  const skippedReconciliations = reconciliationResults.filter((result) => result.outcome === "skipped");
+  await recordBudgetSurfaceTelemetry(runtime.db, {
+    surface: "telegram-registration-reconciliation",
+    durationMs: Date.now() - reconciliationStartedMs,
+    dueCount: reconciliationResults.length,
+    processedCount: succeededReconciliations.length,
+    outcome: failedReconciliations.length > 0
+      ? "error"
+      : succeededReconciliations.length > 0 ? "ok" : "skipped",
+    skippedReason: skippedReconciliations[0]?.reason ?? undefined,
+    error: failedReconciliations.length > 0
+      ? failedReconciliations.map((result) => `${result.action}:${result.error ?? "failed"}`).join("; ")
+      : null,
+    metadata: {
+      botTokenConfigured: true,
+      attemptedCount: reconciliationResults.filter((result) => result.attempted).length,
+      skippedCount: skippedReconciliations.length,
+      succeededCount: succeededReconciliations.length,
+      failedCount: failedReconciliations.length,
+      lastSuccessAt: succeededReconciliations.length > 0 ? Math.floor(Date.now() / 1000) : null,
+      failedActions: failedReconciliations.map((result) => result.action),
+      actions: reconciliationResults.map((result) => ({
+        action: result.action,
+        attempted: result.attempted,
+        skipped: result.skipped,
+        reason: result.reason,
+        outcome: result.outcome,
+      })),
+    },
+    producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
+  });
+
   await runAlertBrokerDeliveryDrain(runtime);
   return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 2 });
 }

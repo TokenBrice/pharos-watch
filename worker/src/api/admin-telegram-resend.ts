@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTelegramAlertType, type TelegramAlertType } from "@shared/types/status";
 import {
   adminErrorResponse,
   adminJsonResponse,
@@ -7,56 +7,85 @@ import {
 } from "../lib/route-wrappers";
 import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
-import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
-import { sendToChat, type SendToChatResult } from "../lib/telegram";
+import { sha256Hex } from "../lib/hash";
+import { parsePendingMarkupPolicy } from "../lib/telegram-pending-provenance";
 import {
-  buildAlertReplyMarkup,
-  formatConsolidatedMessage,
-  splitMessage,
-  type ConsolidatedAlerts,
-  type DepegAlertPayload,
-  type DewsChange,
-  type LaunchAlert,
-  type ReserveAlert,
-  type SafetyChange,
-} from "../lib/telegram-alerts";
-import { emptyAlerts } from "../cron/dispatch-telegram-routing";
-import { extractTopSignals } from "../cron/telegram-alert-snapshots";
+  enqueuePendingAlerts,
+  TELEGRAM_PENDING_PRIORITY,
+} from "../cron/telegram-pending";
+import {
+  readyTargetMatchesPlan,
+  type ReadyTargetRow,
+} from "../cron/telegram-alert-target-plans/delivery";
+import { parseTelegramTargetPlan } from "../cron/telegram-alert-target-plan-contract";
+import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
+import type { BatchMessage } from "../lib/telegram";
 import { z } from "zod";
-import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
-import {
-  claimTelegramTransportPermit,
-  recordTelegramTransportOutcomes as recordTelegramBotWideTransportOutcomes,
-} from "../lib/telegram-transport-control";
-
-const ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
-type AlertType = (typeof ALERT_TYPES)[number];
-
-interface ResendRequestBody {
-  chatId: string;
-  alertType: AlertType;
-  stablecoinId: string;
-}
 
 interface ResendContext extends AdminRouteContext {
-  telegramBotToken: string | undefined;
+  // Retained for route-context compatibility. Replay is queued, never sent inline.
+  telegramBotToken?: string;
 }
 
+const boundedIdentity = z.string().min(1).max(512).refine(
+  (value) => value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value),
+  "historical identity contains unsupported characters",
+);
+
 const ResendRequestBodySchema = z.object({
-  chatId: z.string().regex(/^-?\d+$/, "chatId must be a numeric string"),
-  alertType: z.enum(ALERT_TYPES, {
-    message: `alertType must be one of: ${ALERT_TYPES.join(", ")}`,
-  }),
-  stablecoinId: z.string().min(1, "stablecoinId must be a non-empty string")
-    .superRefine((stablecoinId, ctx) => {
-      if (!TRACKED_META_BY_ID.has(stablecoinId)) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Unknown stablecoinId: ${stablecoinId}`,
-        });
-      }
+  source: z.discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("target"),
+      jobId: boundedIdentity,
+      targetKey: boundedIdentity,
     }),
+    z.object({
+      kind: z.literal("dead-letter"),
+      deadLetterId: z.number().int().positive(),
+    }),
+  ]),
+  dryRun: z.boolean({ message: "dryRun must be a boolean" }).optional().default(true),
+  operatorReason: z.string().trim().min(8).max(500).optional(),
 });
+
+type ResendRequestBody = z.infer<typeof ResendRequestBodySchema>;
+
+interface TargetPayloadRow extends ReadyTargetRow {
+  status: string;
+  effect_state: string;
+  final_delivery_state: string | null;
+  final_delivery_at: number | null;
+  final_delivery_error: string | null;
+}
+
+interface DeadLetterRow {
+  id: number;
+  chat_id: string;
+  message_html: string;
+  source_type: string | null;
+  alert_type: string | null;
+  reason: string;
+  expired_at: number;
+  dedupe_key: string | null;
+  chunk_index: number | null;
+  delivery_state: string | null;
+  markup_policy_json: string | null;
+  source_event_id: string | null;
+}
+
+interface HistoricalReplayPayload {
+  sourceIdentity: ResendRequestBody["source"];
+  chatId: string;
+  messageHtml: string;
+  disableNotification: boolean;
+  disableWebPagePreview: boolean;
+  replyMarkup: Record<string, unknown> | null;
+  linkPreviewOptions: BatchMessage["linkPreviewOptions"] | null;
+  chunkIndex: number;
+  alertType: TelegramAlertType | null;
+  sourceEventId: string | null;
+  historicalOutcome: Record<string, unknown>;
+}
 
 async function parseBody(request: Request): Promise<ResendRequestBody | Response> {
   return parseRequestJsonWithSchema(request, ResendRequestBodySchema, {
@@ -64,296 +93,274 @@ async function parseBody(request: Request): Promise<ResendRequestBody | Response
       const first = issues[0];
       return first?.path.length === 0
         ? "Body must be a JSON object"
-        : first?.message ?? "Invalid resend request body";
+        : first?.message ?? "Invalid historical replay request body";
     },
   });
 }
 
-function getSymbol(stablecoinId: string): string {
-  return TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? stablecoinId;
-}
-
-async function buildDewsEvent(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<DewsChange | null> {
-  const row = await loadStressSignalCurrentRowForCoin(
-    db,
-    stablecoinId,
-    Math.floor(Date.now() / 1000),
-    { staleAfterSec: 30 * 60 },
-  );
-  if (!row) return null;
-  return {
-    stablecoinId,
-    symbol: getSymbol(stablecoinId),
-    oldBand: row.band,
-    newBand: row.band,
-    score: row.score,
-    topSignals: extractTopSignals(row.signals_json),
-  };
-}
-
-async function buildDepegEvent(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<DepegAlertPayload | null> {
-  const row = await db
-    .prepare(
-      `SELECT stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference
-         FROM depeg_events
-         WHERE stablecoin_id = ?
-         ORDER BY ended_at IS NULL DESC, started_at DESC
-         LIMIT 1`,
-    )
-    .bind(stablecoinId)
-    .first<{
-      stablecoin_id: string;
-      symbol: string;
-      direction: "above" | "below";
-      peak_deviation_bps: number;
-      start_price: number;
-      peg_reference: number;
-    }>();
-  if (!row) return null;
-  return {
-    stablecoinId: row.stablecoin_id,
-    symbol: row.symbol,
-    direction: row.direction,
-    deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-    price: Number(row.start_price ?? 0),
-    pegReference: Number(row.peg_reference ?? 1),
-  };
-}
-
-async function buildSafetyEvent(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<SafetyChange | null> {
-  const row = await db
-    .prepare(
-      `SELECT grade, score, prev_grade, prev_score
-         FROM safety_grade_history
-         WHERE stablecoin_id = ?
-         ORDER BY recorded_at DESC
-         LIMIT 1`,
-    )
-    .bind(stablecoinId)
-    .first<{ grade: string; score: number | null; prev_grade: string | null; prev_score: number | null }>();
-  if (!row) return null;
-  return {
-    stablecoinId,
-    symbol: getSymbol(stablecoinId),
-    oldGrade: row.prev_grade ?? row.grade,
-    newGrade: row.grade,
-    oldScore: row.prev_score ?? null,
-    newScore: row.score ?? null,
-  };
-}
-
-function buildLaunchEvent(stablecoinId: string): LaunchAlert | null {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (!meta) return null;
-  return {
-    stablecoinId,
-    symbol: meta.symbol,
-    name: meta.name,
-  };
-}
-
-function buildReserveEvent(stablecoinId: string): ReserveAlert | null {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (!meta) return null;
-  return {
-    stablecoinId,
-    symbol: meta.symbol,
-    name: meta.name,
-  };
-}
-
-async function buildSyntheticAlerts(
-  db: D1Database,
-  alertType: AlertType,
-  stablecoinId: string,
-): Promise<ConsolidatedAlerts | null> {
-  const alerts = emptyAlerts();
-  if (alertType === "dews") {
-    const event = await buildDewsEvent(db, stablecoinId);
-    if (!event) return null;
-    alerts.dews.push(event);
-  } else if (alertType === "depeg") {
-    const event = await buildDepegEvent(db, stablecoinId);
-    if (!event) return null;
-    alerts.depegTriggered.push(event);
-  } else if (alertType === "safety") {
-    const event = await buildSafetyEvent(db, stablecoinId);
-    if (!event) return null;
-    alerts.safety.push(event);
-  } else if (alertType === "launch") {
-    const event = buildLaunchEvent(stablecoinId);
-    if (!event) return null;
-    alerts.launch.push(event);
-  } else if (alertType === "reserve") {
-    const event = buildReserveEvent(stablecoinId);
-    if (!event) return null;
-    alerts.reserve.push(event);
+async function validateTargetPayload(
+  sourceIdentity: ResendRequestBody["source"],
+  target: TargetPayloadRow,
+  expectedMessageHtml?: string,
+): Promise<HistoricalReplayPayload | null> {
+  const parsedPlan = await parseTelegramTargetPlan(target.plan_payload_json, target.plan_payload_digest);
+  if (
+    !readyTargetMatchesPlan(target, parsedPlan)
+    || (expectedMessageHtml != null && target.message_html !== expectedMessageHtml)
+  ) {
+    return null;
   }
-  return alerts;
+  const markup = parsePendingMarkupPolicy(target.markup_policy_json);
+  if (markup.kind !== "ok") return null;
+  return {
+    sourceIdentity,
+    chatId: target.chat_id,
+    messageHtml: target.message_html,
+    disableNotification: target.disable_notification === 1,
+    disableWebPagePreview: markup.value.disableWebPagePreview,
+    replyMarkup: markup.value.replyMarkup,
+    linkPreviewOptions: markup.value.linkPreviewOptions,
+    chunkIndex: target.chunk_index,
+    alertType: isTelegramAlertType(target.alert_type) ? target.alert_type : null,
+    sourceEventId: target.source_event_id,
+    historicalOutcome: {
+      targetStatus: target.status,
+      effectState: target.effect_state,
+      finalDeliveryState: target.final_delivery_state,
+      finalDeliveryAt: target.final_delivery_at,
+      finalDeliveryError: target.final_delivery_error,
+    },
+  };
+}
+
+async function loadTarget(
+  db: D1Database,
+  jobId: string,
+  targetKey: string,
+): Promise<TargetPayloadRow | null> {
+  return db.prepare(
+    `SELECT target.job_id, target.target_key, target.target_ordinal,
+            target.chat_id, target.chunk_index, target.alert_type, target.status,
+            target.effect_state, target.final_delivery_state, target.final_delivery_at,
+            target.final_delivery_error, target.message_html,
+            target.disable_notification, target.alert_scope_json,
+            target.preference_generation, target.markup_policy_json,
+            target.target_expires_at, plan.source_event_id, plan.plan_generation,
+            plan.plan_key, plan.plan_ordinal, plan.plan_payload_json,
+            plan.plan_payload_digest
+       FROM telegram_alert_job_targets target
+       JOIN telegram_alert_target_plans plan
+         ON plan.source_event_id = target.source_event_id
+        AND plan.plan_generation = target.plan_generation
+        AND plan.plan_key = target.plan_key
+      WHERE target.job_id = ? AND target.target_key = ?
+        AND target.plan_generation IS NOT NULL`,
+  ).bind(jobId, targetKey).first<TargetPayloadRow>();
+}
+
+async function loadHistoricalPayload(
+  db: D1Database,
+  source: ResendRequestBody["source"],
+): Promise<{ kind: "ok"; payload: HistoricalReplayPayload } | { kind: "missing" | "incomplete" }> {
+  if (source.kind === "target") {
+    const target = await loadTarget(db, source.jobId, source.targetKey);
+    if (!target) return { kind: "missing" };
+    const payload = await validateTargetPayload(source, target);
+    return payload ? { kind: "ok", payload } : { kind: "incomplete" };
+  }
+
+  const deadLetter = await db.prepare(
+    `SELECT id, chat_id, message_html, source_type, alert_type, reason,
+            expired_at, dedupe_key, chunk_index, delivery_state,
+            markup_policy_json, source_event_id
+       FROM telegram_alert_dead_letters
+      WHERE id = ?`,
+  ).bind(source.deadLetterId).first<DeadLetterRow>();
+  if (!deadLetter) return { kind: "missing" };
+
+  const target = deadLetter.dedupe_key == null || deadLetter.source_event_id == null
+    ? null
+    : await db.prepare(
+      `SELECT target.job_id, target.target_key, target.target_ordinal,
+              target.chat_id, target.chunk_index, target.alert_type, target.status,
+              target.effect_state, target.final_delivery_state, target.final_delivery_at,
+              target.final_delivery_error, target.message_html,
+              target.disable_notification, target.alert_scope_json,
+              target.preference_generation, target.markup_policy_json,
+              target.target_expires_at, plan.source_event_id, plan.plan_generation,
+              plan.plan_key, plan.plan_ordinal, plan.plan_payload_json,
+              plan.plan_payload_digest
+         FROM telegram_alert_job_targets target
+         JOIN telegram_alert_target_plans plan
+           ON plan.source_event_id = target.source_event_id
+          AND plan.plan_generation = target.plan_generation
+          AND plan.plan_key = target.plan_key
+        WHERE target.chat_id = ?
+          AND target.source_event_id = ?
+          AND target.pending_dedupe_key = ?
+          AND target.plan_generation IS NOT NULL
+        LIMIT 1`,
+    ).bind(deadLetter.chat_id, deadLetter.source_event_id, deadLetter.dedupe_key).first<TargetPayloadRow>();
+  if (!target) return { kind: "incomplete" };
+  const payload = await validateTargetPayload(source, target, deadLetter.message_html);
+  if (!payload) return { kind: "incomplete" };
+  payload.historicalOutcome = {
+    ...payload.historicalOutcome,
+    deadLetterId: deadLetter.id,
+    deadLetterReason: deadLetter.reason,
+    deadLetterExpiredAt: deadLetter.expired_at,
+    deadLetterDeliveryState: deadLetter.delivery_state,
+  };
+  return { kind: "ok", payload };
+}
+
+function normalizedIdempotencyKey(request: Request): string | null {
+  const value = request.headers.get("Idempotency-Key")?.trim() ?? "";
+  return value.length >= 8 && value.length <= 128 ? value : null;
 }
 
 export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>(
   "route-admin-telegram-resend",
   "admin-telegram-resend",
-  async ({ db, request, telegramBotToken }) => {
+  async ({ db, request }) => {
     const parsed = await parseBody(request);
     if (parsed instanceof Response) return parsed;
-    const { chatId, alertType, stablecoinId } = parsed;
-
-    if (!telegramBotToken) {
-      return adminErrorResponse(500, "TELEGRAM_BOT_TOKEN is not configured");
-    }
-
-    const subscriber = await db
-      .prepare("SELECT chat_id FROM telegram_subscribers WHERE chat_id = ?")
-      .bind(chatId)
-      .first<{ chat_id: string }>();
-    if (!subscriber) {
-      await logAdminAction(
-        db,
-        {
-          action: "admin-telegram-resend",
-          target: chatId,
-          result: "error",
-          httpStatus: 404,
-          details: { chatId, alertType, stablecoinId, reason: "subscriber-not-found" },
-        },
-        request,
-      );
-      return adminErrorResponse(404, `No telegram_subscribers row for chatId=${chatId}`);
-    }
-
-    const alerts = await buildSyntheticAlerts(db, alertType, stablecoinId);
-    if (!alerts) {
-      await logAdminAction(
-        db,
-        {
-          action: "admin-telegram-resend",
-          target: chatId,
-          result: "error",
-          httpStatus: 422,
-          details: { chatId, alertType, stablecoinId, reason: "no-source-data" },
-        },
-        request,
-      );
+    const loaded = await loadHistoricalPayload(db, parsed.source);
+    if (loaded.kind !== "ok") {
+      const status = loaded.kind === "missing" ? 404 : 422;
+      const reason = loaded.kind === "missing" ? "historical-source-not-found" : "historical-payload-incomplete";
+      await logAdminAction(db, {
+        action: "admin-telegram-resend",
+        target: parsed.source.kind,
+        result: "error",
+        httpStatus: status,
+        details: { source: parsed.source, dryRun: parsed.dryRun, reason },
+      }, request);
       return adminErrorResponse(
-        422,
-        `No source data available to build a ${alertType} alert for ${stablecoinId}`,
+        status,
+        loaded.kind === "missing"
+          ? "Historical Telegram target was not found"
+          : "Historical target cannot be replayed exactly because its persisted payload policy is incomplete",
       );
     }
 
-    const canonicalHtml = formatConsolidatedMessage(alerts);
-    const chunks = splitMessage(canonicalHtml);
-    const sendResults: SendToChatResult[] = [];
-    const transportOwner = `admin-resend:${crypto.randomUUID()}`;
-    for (const [chunkIndex, chunk] of chunks.entries()) {
-      const permitNowSec = Math.floor(Date.now() / 1000);
-      const permit = await claimTelegramTransportPermit(db, {
-        mode: "admin",
-        owner: transportOwner,
-        nowSec: permitNowSec,
-        requestedDistinctChats: 1,
-      });
-      if (!permit.allowed) {
-        const httpStatus = permit.reason === "operator_pause" ? 409 : 503;
-        await logAdminAction(
-          db,
-          {
-            action: "admin-telegram-resend",
-            target: chatId,
-            result: "error",
-            httpStatus,
-            details: {
-              chatId,
-              alertType,
-              stablecoinId,
-              reason: permit.reason,
-              chunksAttempted: sendResults.length,
-              deferUntil: permit.deferUntil,
-            },
-          },
-          request,
-        );
-        return adminJsonResponse(
-          {
-            ok: false,
-            error: "Telegram delivery is temporarily unavailable",
-            reason: permit.reason,
-            chunkCount: chunks.length,
-            chunksAttempted: sendResults.length,
-            deferUntil: permit.deferUntil,
-          },
-          { status: httpStatus },
-        );
-      }
-      const result = await sendToChat(chatId, chunk, telegramBotToken, {
-        disableWebPagePreview: true,
-        disableNotification: false,
-        replyMarkup: buildAlertReplyMarkup(alerts, chunkIndex),
-      });
-      sendResults.push(result);
-      await recordTelegramBotWideTransportOutcomes(
-        db,
-        permit,
-        [{ chatId, result }],
-        Math.floor(Date.now() / 1000),
-      );
-      if (!result.ok) break;
-    }
-    const firstFailure = sendResults.find((result) => !result.ok);
-    const result = firstFailure ?? sendResults[sendResults.length - 1];
-    if (!result) {
-      return adminErrorResponse(500, "Could not render Telegram alert chunks");
-    }
-    await recordTelegramDeliveryOutcomes(db, [{
-      chatId,
-      ok: result.ok,
-      errorClass: result.errorClass,
-      nowSec: Math.floor(Date.now() / 1000),
-    }]);
-
-    const httpStatus = result.ok ? 200 : 502;
-    const responseBody = {
-      ok: result.ok,
-      mode: "synthetic_current_state",
-      chunkCount: chunks.length,
-      chunksAttempted: sendResults.length,
-      statusCode: result.statusCode,
-      errorClass: result.errorClass,
-      retryAfterSec: result.retryAfterSec,
+    const { payload } = loaded;
+    const payloadSha256 = await sha256Hex(JSON.stringify({
+      chatId: payload.chatId,
+      messageHtml: payload.messageHtml,
+      disableNotification: payload.disableNotification,
+      disableWebPagePreview: payload.disableWebPagePreview,
+      replyMarkup: payload.replyMarkup,
+      linkPreviewOptions: payload.linkPreviewOptions,
+    }));
+    const payloadSummary = {
+      sha256: payloadSha256,
+      messageLength: payload.messageHtml.length,
+      disableNotification: payload.disableNotification,
+      disableWebPagePreview: payload.disableWebPagePreview,
+      hasReplyMarkup: payload.replyMarkup != null,
+      hasLinkPreviewOptions: payload.linkPreviewOptions != null,
+      chunkIndex: payload.chunkIndex,
+      alertType: payload.alertType,
+      sourceEventId: payload.sourceEventId,
     };
 
-    await logAdminAction(
-      db,
-      {
+    if (parsed.dryRun) {
+      await logAdminAction(db, {
         action: "admin-telegram-resend",
-        target: chatId,
-        result: result.ok ? "ok" : "error",
-        httpStatus,
-        details: {
-          chatId,
-          alertType,
-          stablecoinId,
-          mode: "synthetic_current_state",
-          chunkCount: chunks.length,
-          chunksAttempted: sendResults.length,
-          delivery: result.delivery,
-          statusCode: result.statusCode,
-          errorClass: result.errorClass,
-        },
-      },
-      request,
-    );
+        target: payload.chatId,
+        result: "ok",
+        httpStatus: 200,
+        details: { source: parsed.source, dryRun: true, payload: payloadSummary },
+      }, request);
+      return adminJsonResponse({
+        mode: "exact_historical_outbox_replay",
+        dryRun: true,
+        enqueued: 0,
+        chatId: payload.chatId,
+        source: parsed.source,
+        payload: payloadSummary,
+        historicalOutcome: payload.historicalOutcome,
+      });
+    }
 
-    return adminJsonResponse(responseBody, { status: httpStatus });
+    if (!parsed.operatorReason) {
+      return adminErrorResponse(400, "Live historical replay requires operatorReason with at least 8 characters");
+    }
+
+    const finalDeliveryState = payload.historicalOutcome.finalDeliveryState;
+    if (finalDeliveryState === "accepted" || finalDeliveryState === "execution_unknown") {
+      await logAdminAction(db, {
+        action: "admin-telegram-resend",
+        target: payload.chatId,
+        result: "error",
+        httpStatus: 409,
+        details: {
+          source: parsed.source,
+          dryRun: false,
+          operatorReason: parsed.operatorReason,
+          reason: "terminal-state-replay-refused",
+          finalDeliveryState,
+        },
+      }, request);
+      return adminErrorResponse(
+        409,
+        `Historical target final state ${String(finalDeliveryState)} requires separate effect reconciliation; replay refused`,
+      );
+    }
+
+    const idempotencyKey = normalizedIdempotencyKey(request);
+    if (!idempotencyKey) {
+      return adminErrorResponse(400, "Live historical replay requires an Idempotency-Key header between 8 and 128 characters");
+    }
+    const subscriber = await db.prepare(
+      "SELECT chat_id FROM telegram_subscribers WHERE chat_id = ?",
+    ).bind(payload.chatId).first<{ chat_id: string }>();
+    if (!subscriber) {
+      return adminErrorResponse(409, "Historical target chat is no longer a registered Telegram subscriber");
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const replayIdentity = parsed.source.kind === "target"
+      ? `target:${parsed.source.jobId}:${parsed.source.targetKey}`
+      : `dead-letter:${parsed.source.deadLetterId}`;
+    const message: BatchMessage = {
+      chatId: payload.chatId,
+      html: payload.messageHtml,
+      canonicalHtml: `admin-replay:${replayIdentity}:${idempotencyKey}:${payloadSha256}`,
+      chunkIndex: payload.chunkIndex,
+      disableNotification: payload.disableNotification,
+      disableWebPagePreview: payload.disableWebPagePreview,
+      replyMarkup: payload.replyMarkup ?? undefined,
+      linkPreviewOptions: payload.linkPreviewOptions ?? undefined,
+      alertType: payload.alertType ?? undefined,
+    };
+    await enqueuePendingAlerts(db, [message], nowSec, {
+      sourceType: "admin_replay",
+      priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
+      ttlSec: TELEGRAM_ALERT_TTL_SEC.adminBroadcast,
+    });
+    await logAdminAction(db, {
+      action: "admin-telegram-resend",
+      target: payload.chatId,
+      result: "ok",
+      httpStatus: 202,
+      details: {
+        source: parsed.source,
+        dryRun: false,
+        operatorReason: parsed.operatorReason,
+        enqueued: 1,
+        payload: payloadSummary,
+      },
+    }, request);
+    return adminJsonResponse({
+      mode: "exact_historical_outbox_replay",
+      dryRun: false,
+      enqueued: 1,
+      chatId: payload.chatId,
+      source: parsed.source,
+      payload: payloadSummary,
+      historicalOutcome: payload.historicalOutcome,
+    }, { status: 202 });
   },
 );

@@ -239,6 +239,8 @@ export interface BatchMessage {
   chatId: string;
   html: string;
   disableNotification: boolean;
+  /** Persisted parse-mode policy for durable pending delivery. */
+  disableWebPagePreview?: boolean;
   replyMarkup?: unknown;
   chunkIndex?: number;
   /**

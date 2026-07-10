@@ -15,6 +15,10 @@ export interface TelegramPendingDeliveryBacklog {
   expired: number;
   nearTtl?: number;
   sending?: number;
+  /** Pending-table rows whose delivery effect is currently in flight. */
+  pendingSending?: number;
+  /** Authoritative fresh-target rows whose direct delivery effect is in flight. */
+  freshSending?: number;
   executionUnknown?: number;
   pendingExecutionUnknown?: number;
   freshExecutionUnknown?: number;

@@ -1,450 +1,257 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { handleAdminTelegramResend } from "../admin-telegram-resend";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import { buildDedupeKey } from "../../cron/telegram-pending";
+import { sha256Hex } from "../../lib/hash";
+import {
+  serializePendingAlertScope,
+  serializePendingMarkupPolicy,
+} from "../../lib/telegram-pending-provenance";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
-const fetchSpy = vi.fn();
-vi.stubGlobal("fetch", fetchSpy);
+const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
-const BOT_TOKEN = "test-bot-token";
+function latestDb() {
+  const fixture = createLatestSchemaSqlite();
+  openSqlite.push(fixture.sqlite);
+  return fixture;
+}
 
-function adminRequest(body: unknown): Request {
-  const headers = new Headers();
-  headers.set("X-Pharos-Admin", "1");
-  headers.set("Content-Type", "application/json");
+function request(body: unknown, idempotencyKey?: string) {
+  const headers = new Headers({ "Content-Type": "application/json", "X-Pharos-Admin": "1" });
+  if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
   return new Request("https://ops-api.pharos.watch/api/admin-telegram-resend", {
     method: "POST",
     headers,
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    body: JSON.stringify(body),
   });
 }
 
-function subscriberRows() {
-  return { match: "FROM telegram_subscribers", rows: [{ chat_id: "12345" }] };
-}
-
-function noSubscriberRows() {
-  return { match: "FROM telegram_subscribers", rows: [] };
-}
-
-function dewsRow(stablecoinId: string) {
-  return {
-    match: "FROM stress_signals",
-    rows: [
-      {
-        stablecoin_id: stablecoinId,
-        score: 72,
-        band: "WARNING",
-        signals_json: null,
-      },
-    ],
-  };
-}
-
-function depegRow(stablecoinId: string) {
-  return {
-    match: "FROM depeg_events",
-    rows: [
-      {
-        stablecoin_id: stablecoinId,
-        symbol: "USDC",
-        direction: "below" as const,
-        peak_deviation_bps: 350,
-        start_price: 0.965,
-        peg_reference: 1.0,
-      },
-    ],
-  };
-}
-
-function safetyRow() {
-  return {
-    match: "FROM safety_grade_history",
-    rows: [
-      {
-        grade: "B",
-        score: 70,
-        prev_grade: "A",
-        prev_score: 80,
-      },
-    ],
-  };
-}
-
-function auditRow() {
-  return {
-    match: "INSERT INTO admin_action_audit",
-    rows: [],
-    runMeta: { changes: 1 },
-  };
-}
-
-function deliveryDiagnosticsRow() {
-  return {
-    match: "INSERT INTO telegram_chat_delivery_diagnostics",
-    rows: [],
-    runMeta: { changes: 1 },
-  };
-}
-
-function transportControlRows() {
-  return [
-    { match: "FROM telegram_delivery_pauses", rows: [] },
-    {
-      match: "FROM telegram_transport_circuit",
-      first: {
-        state: "closed",
-        generation: 0,
-        cause_class: null,
-        cause_scope: null,
-        distinct_failure_count: 0,
-        first_failure_at: null,
-        last_failure_at: null,
-        last_success_at: null,
-        opened_at: null,
-        next_probe_at: null,
-        probe_owner: null,
-        probe_generation: null,
-        probe_expires_at: null,
-        probe_limit: null,
-        probe_attempted: 0,
-        updated_at: 0,
-      },
-      rows: [],
-    },
-  ];
-}
-
-beforeEach(() => {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(
-    new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 }),
+async function seedTarget(
+  sqlite: import("node:sqlite").DatabaseSync,
+  options: {
+    chatId?: string;
+    finalState?: "failed" | "accepted" | "execution_unknown";
+    corruptDigest?: boolean;
+  } = {},
+) {
+  const now = Math.floor(Date.now() / 1000);
+  const chatId = options.chatId ?? "12345";
+  const sourceEventId = "source-event-1";
+  const canonicalHtml = "<b>Historical DEWS alert</b>";
+  const messageHtml = "<b>Historical DEWS alert</b>";
+  const targetKey = buildDedupeKey({
+    chatId,
+    html: messageHtml,
+    canonicalHtml,
+    disableNotification: false,
+    chunkIndex: 0,
+  });
+  const alertScopeJson = serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]);
+  const markupPolicyJson = serializePendingMarkupPolicy({
+    replyMarkup: { inline_keyboard: [[{ text: "Status", callback_data: "status:usdc-circle" }]] },
+  });
+  const targetExpiresAt = now + 3_600;
+  const payloadJson = JSON.stringify({
+    schemaVersion: 1,
+    sourceEventId,
+    chatId,
+    alertType: "dews",
+    preferenceGeneration: 3,
+    canonicalHtml,
+    disableNotification: false,
+    alertScopeJson,
+    targetExpiresAt,
+    itemKeys: ["dews:usdc-circle:event-1"],
+    messages: [{ targetKey, chunkIndex: 0, html: messageHtml, markupPolicyJson }],
+  });
+  const payloadDigest = options.corruptDigest ? "0".repeat(64) : await sha256Hex(payloadJson);
+  sqlite.prepare(
+    `INSERT INTO telegram_alert_source_events (
+       source_event_id, status, detected_at, expires_at, event_payload,
+       baseline_payload, target_plan_state, target_plan_generation
+     ) VALUES (?, 'planned', ?, ?, '{}', '{}', 'materializing', 1)`,
+  ).run(sourceEventId, now - 60, targetExpiresAt);
+  sqlite.prepare(
+    `INSERT INTO telegram_alert_target_plans (
+       source_event_id, plan_generation, plan_key, page_index, plan_ordinal,
+       chat_id, alert_type, status, preference_generation, estimated_chunks,
+       plan_payload_json, plan_payload_digest, expected_target_count,
+       materialized_target_count, created_at, updated_at
+     ) VALUES (?, 1, 'plan-1', 0, 0, ?, 'dews', 'materialized', 3, 1,
+               ?, ?, 1, 1, ?, ?)`,
+  ).run(sourceEventId, chatId, payloadJson, payloadDigest, now - 50, now - 50);
+  sqlite.prepare(
+    `INSERT INTO telegram_alert_jobs (
+       job_id, alert_type, source_event_id, severity, created_at, expires_at, status,
+       target_count, planned_count
+     ) VALUES ('job-1', 'dews', ?, 'warning', ?, ?, 'degraded', 1, 1)`,
+  ).run(sourceEventId, now - 50, targetExpiresAt);
+  const finalState = options.finalState ?? "failed";
+  sqlite.prepare(
+    `INSERT INTO telegram_alert_job_targets (
+       job_id, target_key, chat_id, chunk_index, alert_type, status,
+       pending_dedupe_key, created_at, effect_state, source_event_id,
+       plan_generation, plan_key, plan_ordinal, target_ordinal,
+       target_schema_version, message_html, disable_notification,
+       alert_scope_json, preference_generation, markup_policy_json,
+       target_expires_at, final_delivery_state, final_delivery_at,
+       final_delivery_error
+     ) VALUES ('job-1', ?, ?, 0, 'dews', ?, ?, ?, ?, ?, 1, 'plan-1', 0, 0, 1,
+               ?, 0, ?, 3, ?, ?, ?, ?, ?)`,
+  ).run(
+    targetKey,
+    chatId,
+    finalState === "accepted" ? "sent" : "failed",
+    targetKey,
+    now - 40,
+    finalState === "execution_unknown" ? "execution_unknown" : "complete",
+    sourceEventId,
+    messageHtml,
+    alertScopeJson,
+    markupPolicyJson,
+    targetExpiresAt,
+    finalState,
+    now - 30,
+    finalState === "failed" ? "rate_limit" : null,
   );
+  return { chatId, sourceEventId, targetKey, messageHtml, markupPolicyJson, now };
+}
+
+afterEach(() => {
+  while (openSqlite.length > 0) openSqlite.pop()?.close();
 });
 
-describe("handleAdminTelegramResend", () => {
-  it("rejects requests without admin auth", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: false,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(401);
-  });
-
-  it("rejects invalid JSON bodies with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest("not-json"),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects bodies missing chatId with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects unknown alertType with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "yield", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
-      error: "alertType must be one of: dews, depeg, safety, launch, reserve",
-    });
-  });
-
-  it("rejects unknown stablecoinId with 400", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({
-        chatId: "12345",
-        alertType: "dews",
-        stablecoinId: "this-coin-does-not-exist",
-      }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 500 when TELEGRAM_BOT_TOKEN is missing", async () => {
-    const db = mockD1();
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: undefined,
-    });
-    expect(res.status).toBe(500);
-  });
-
-  it("returns 404 when the subscriber row is missing", async () => {
-    const db = mockD1([noSubscriberRows(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "99999", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(404);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("returns 422 when there is no source data for the requested alert", async () => {
-    const db = mockD1([
-      subscriberRows(),
-      { match: "FROM stress_signals", rows: [] },
-      auditRow(),
-    ]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(422);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("returns 422 rather than reviving an older DEWS row under an exact publication pointer", async () => {
-    const publishedAt = Math.floor(Date.now() / 1000) - 60;
-    const pointer = {
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: publishedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: 2,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
-      }),
-      updated_at: publishedAt,
-    };
-    const db = mockD1([
-      subscriberRows(),
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["dews:published-generation"],
-        rows: [pointer],
-        first: pointer,
-      },
-      {
-        match: "pharos:stress-signals:latest-one",
-        matchBinds: ["usdc-circle", publishedAt],
-        rows: [{ score: 25, band: "WATCH", signals_json: "{}", computed_at: publishedAt - 60 }],
-      },
-      {
-        match: "pharos:stress-signals:published-exact-one",
-        matchBinds: ["usdc-circle", publishedAt],
-        rows: [],
-        first: null,
-      },
-      auditRow(),
-    ]);
-
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-
-    expect(res.status).toBe(422);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
-  });
-
-  it("sends a synthetic dews alert and audits the action", async () => {
-    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    const body = (await res.json()) as {
-      ok: boolean;
-      mode: string;
-      chunkCount: number;
-      chunksAttempted: number;
-      statusCode: number | null;
-      errorClass: string | null;
-      retryAfterSec: number | null;
-    };
-    expect(body).toEqual({
-      ok: true,
-      mode: "synthetic_current_state",
-      chunkCount: 1,
-      chunksAttempted: 1,
-      statusCode: 200,
-      errorClass: null,
-      retryAfterSec: null,
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [calledUrl, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(calledUrl).toBe(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`);
-    const sentBody = JSON.parse(init.body as string) as { chat_id: string; text: string };
-    expect(sentBody.chat_id).toBe("12345");
-    expect(sentBody.text).toContain("DEWS");
-
-    const history = db.getHistory();
-    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit).toBeDefined();
-    expect(audit?.binds).toContain("admin-telegram-resend");
-    expect(audit?.binds).toContain("12345");
-    const diagnostics = history.find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
-    expect(diagnostics?.binds).toEqual(["12345", expect.any(Number), expect.any(Number), null, expect.any(Number)]);
-  });
-
-  it("sends a depeg alert from depeg_events", async () => {
-    const db = mockD1([subscriberRows(), depegRow("usdc-circle"), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "depeg", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    const sentBody = JSON.parse(init.body as string) as { text: string };
-    expect(sentBody.text).toContain("Depeg Detected");
-  });
-
-  it("sends a safety alert from safety_grade_history", async () => {
-    const db = mockD1([subscriberRows(), safetyRow(), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "safety", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    const sentBody = JSON.parse(init.body as string) as { text: string };
-    expect(sentBody.text).toContain("Safety Grade Change");
-  });
-
-  it("sends a launch alert built from tracked stablecoin metadata", async () => {
-    const db = mockD1([subscriberRows(), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "launch", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    const sentBody = JSON.parse(init.body as string) as { text: string };
-    expect(sentBody.text).toContain("Stablecoin Launched");
-  });
-
-  it("sends a reserve alert built from tracked stablecoin metadata", async () => {
-    const db = mockD1([subscriberRows(), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "reserve", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    const sentBody = JSON.parse(init.body as string) as {
-      text: string;
-      reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
-    };
-    expect(sentBody.text).toContain("Reserve Drift");
-    expect(sentBody.text).toContain("<b>USDC</b>");
-    expect(sentBody.text).toContain("USD Coin");
-    expect(sentBody.text).toContain("https://pharos.watch/stablecoin/usdc-circle");
-    expect(sentBody.reply_markup?.inline_keyboard?.flat().some((button) =>
-      button.callback_data === "status:usdc-circle"
-    )).toBe(true);
-  });
-
-  it("returns 502 and audits http_status 502 when Telegram delivery fails", async () => {
-    fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(
-      new Response(JSON.stringify({ ok: false, error_code: 429 }), {
-        status: 429,
-        headers: { "Retry-After": "30" },
-      }),
-    );
-    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), ...transportControlRows(), deliveryDiagnosticsRow(), auditRow()]);
-    const res = await handleAdminTelegramResend({
-      db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
-      trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
-    });
-    expect(res.status).toBe(502);
-    const body = (await res.json()) as {
-      ok: boolean;
-      statusCode: number | null;
-      errorClass: string | null;
-      retryAfterSec: number | null;
-    };
-    expect(body.ok).toBe(false);
-    expect(body.statusCode).toBe(429);
-    expect(body.errorClass).toBe("rate_limit");
-    expect(body.retryAfterSec).toBe(30);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const diagnostics = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
-    expect(diagnostics?.binds).toEqual(["12345", null, expect.any(Number), "rate_limit", expect.any(Number)]);
-    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
-    expect(audit?.binds).toContain(502);
-  });
-
-  it("does not cross the send boundary while admin delivery is paused", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      subscriberRows(),
-      dewsRow("usdc-circle"),
-      {
-        match: "FROM telegram_delivery_pauses",
-        first: {
-          mode: "admin",
-          generation: 1,
-          expires_at: now + 300,
-          reason: "incident",
-          actor: "operator",
-          created_at: now,
-          updated_at: now,
-        },
-        rows: [],
-      },
-      transportControlRows()[1],
-      auditRow(),
-    ]);
-
+describe("handleAdminTelegramResend exact replay", () => {
+  it("defaults to a non-effecting dry-run and reports exact historical outcome", async () => {
+    const { sqlite, db } = latestDb();
+    const seeded = await seedTarget(sqlite);
     const response = await handleAdminTelegramResend({
       db,
-      request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
+      request: request({ source: { kind: "target", jobId: "job-1", targetKey: seeded.targetKey } }),
       trustedAdmin: true,
-      telegramBotToken: BOT_TOKEN,
     });
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    expect(body).toMatchObject({
+      mode: "exact_historical_outbox_replay",
+      dryRun: true,
+      enqueued: 0,
+      historicalOutcome: { finalDeliveryState: "failed", finalDeliveryError: "rate_limit" },
+    });
+    expect(body.payload.messageLength).toBe(seeded.messageHtml.length);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+  });
 
-    expect(response.status).toBe(409);
-    expect(fetchSpy).not.toHaveBeenCalled();
+  it("enqueues an exact, independently deduped replay and leaves the original target unchanged", async () => {
+    const { sqlite, db } = latestDb();
+    const seeded = await seedTarget(sqlite);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES (?, ?, ?)",
+    ).run(seeded.chatId, seeded.now, seeded.now);
+    const response = await handleAdminTelegramResend({
+      db,
+      request: request({
+        source: { kind: "target", jobId: "job-1", targetKey: seeded.targetKey },
+        dryRun: false,
+        operatorReason: "Retry after confirmed rate-limit recovery",
+      }, "replay-target-0001"),
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(202);
+    const replay = sqlite.prepare(
+      `SELECT message_html, source_type, markup_policy_json, dedupe_key
+         FROM telegram_pending_alerts`,
+    ).get() as any;
+    expect(replay).toMatchObject({
+      message_html: seeded.messageHtml,
+      source_type: "admin_replay",
+      markup_policy_json: seeded.markupPolicyJson,
+    });
+    expect(replay.dedupe_key).not.toBe(seeded.targetKey);
+    expect(sqlite.prepare(
+      "SELECT final_delivery_state, final_delivery_error FROM telegram_alert_job_targets WHERE job_id = 'job-1'",
+    ).get()).toMatchObject({ final_delivery_state: "failed", final_delivery_error: "rate_limit" });
+  });
+
+  it("requires a reason, idempotency key, and live subscriber before enqueue", async () => {
+    const { sqlite, db } = latestDb();
+    const seeded = await seedTarget(sqlite);
+    const source = { kind: "target" as const, jobId: "job-1", targetKey: seeded.targetKey };
+
+    const missingReason = await handleAdminTelegramResend({
+      db,
+      request: request({ source, dryRun: false }, "guarded-replay-1"),
+      trustedAdmin: true,
+    });
+    expect(missingReason.status).toBe(400);
+
+    const missingKey = await handleAdminTelegramResend({
+      db,
+      request: request({ source, dryRun: false, operatorReason: "Confirmed delivery recovery" }),
+      trustedAdmin: true,
+    });
+    expect(missingKey.status).toBe(400);
+
+    const missingSubscriber = await handleAdminTelegramResend({
+      db,
+      request: request(
+        { source, dryRun: false, operatorReason: "Confirmed delivery recovery" },
+        "guarded-replay-2",
+      ),
+      trustedAdmin: true,
+    });
+    expect(missingSubscriber.status).toBe(409);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+  });
+
+  it.each(["accepted", "execution_unknown"] as const)(
+    "refuses live replay of %s targets pending effect reconciliation",
+    async (finalState) => {
+      const { sqlite, db } = latestDb();
+      const seeded = await seedTarget(sqlite, { finalState });
+      const response = await handleAdminTelegramResend({
+        db,
+        request: request({
+          source: { kind: "target", jobId: "job-1", targetKey: seeded.targetKey },
+          dryRun: false,
+          operatorReason: "Operator requested unsafe replay",
+        }, `refuse-${finalState}`),
+        trustedAdmin: true,
+      });
+      expect(response.status).toBe(409);
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+    },
+  );
+
+  it("rejects a target whose persisted plan digest no longer validates", async () => {
+    const { sqlite, db } = latestDb();
+    const seeded = await seedTarget(sqlite, { corruptDigest: true });
+    const response = await handleAdminTelegramResend({
+      db,
+      request: request({ source: { kind: "target", jobId: "job-1", targetKey: seeded.targetKey } }),
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(422);
+  });
+
+  it("resolves a dead letter only through its authoritative source-event target", async () => {
+    const { sqlite, db } = latestDb();
+    const seeded = await seedTarget(sqlite);
+    const result = sqlite.prepare(
+      `INSERT INTO telegram_alert_dead_letters (
+         chat_id, message_html, source_type, alert_type, created_at, expired_at,
+         reason, dedupe_key, source_event_id
+       ) VALUES (?, ?, 'risk_alert', 'dews', ?, ?, 'ttl_expired', ?, ?)`,
+    ).run(seeded.chatId, seeded.messageHtml, seeded.now - 40, seeded.now - 20, seeded.targetKey, seeded.sourceEventId);
+    const response = await handleAdminTelegramResend({
+      db,
+      request: request({ source: { kind: "dead-letter", deadLetterId: Number(result.lastInsertRowid) } }),
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      dryRun: true,
+      historicalOutcome: { deadLetterReason: "ttl_expired" },
+    });
   });
 });
