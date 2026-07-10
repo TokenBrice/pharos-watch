@@ -10,6 +10,12 @@ export interface TelegramAlertTargetStatusUpdate {
   errorClass?: string | null;
 }
 
+export interface TelegramAlertTargetCancellation {
+  targetKey: string;
+  at: number;
+  reason: string;
+}
+
 export async function recordTelegramAlertTargetStatuses(
   db: D1Database,
   updates: readonly TelegramAlertTargetStatusUpdate[],
@@ -48,6 +54,38 @@ export async function recordTelegramAlertTargetStatuses(
       action: "update-alert-job-targets",
       module: "telegram-alert-target-status",
       updateCount: updates.length,
+    });
+  }
+}
+
+export async function recordTelegramAlertTargetCancellations(
+  db: D1Database,
+  cancellations: readonly TelegramAlertTargetCancellation[],
+): Promise<void> {
+  if (cancellations.length === 0) return;
+  try {
+    await batchExecute(db, cancellations.map((cancellation) =>
+      db
+        .prepare(
+          `UPDATE telegram_alert_job_targets
+              SET status = 'failed',
+                  failed_at = COALESCE(failed_at, ?),
+                  error_class = COALESCE(error_class, 'preference_changed'),
+                  cancelled_at = COALESCE(cancelled_at, ?),
+                  cancellation_reason = COALESCE(cancellation_reason, ?)
+            WHERE pending_dedupe_key = ?
+              AND status <> 'sent'
+              AND effect_state NOT IN ('sending', 'execution_unknown')`,
+        )
+        .bind(cancellation.at, cancellation.at, cancellation.reason, cancellation.targetKey),
+    ));
+  } catch (error) {
+    logTelegramEvent({
+      level: "warn",
+      message: "Failed to cancel Telegram alert job targets",
+      action: "cancel-alert-job-targets",
+      module: "telegram-alert-target-status",
+      updateCount: cancellations.length,
     });
   }
 }

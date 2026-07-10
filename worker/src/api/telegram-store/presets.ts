@@ -1,6 +1,10 @@
-import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import type { PresetSubscriptionRow } from "../telegram-webhook-shared";
-import { unixNow } from "./subscribers";
+import {
+  preparePreferenceGenerationBump,
+  prepareUpsertSubscriberRow,
+  unixNow,
+} from "./subscribers";
 import {
   prepareRemoveSubscriptionStatements,
   prepareSubscriberAndSubscriptionStatements,
@@ -78,7 +82,16 @@ export async function upsertPresetSubscriptions(
 ): Promise<void> {
   const statements = preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options);
   if (statements.length === 0) return;
-  await batchExecute(db, statements);
+  const nowSec = unixNow();
+  await executeAtomicBatch(db, [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username: null,
+      nowSec,
+      bumpPreferenceGeneration: true,
+    }),
+    ...statements,
+  ]);
 }
 
 export function prepareSubscriberAndPresetStatements(
@@ -146,9 +159,7 @@ function prepareUnsubscribeIntentStatements(
   const statements = [
     ...prepareRemoveSubscriptionStatements(db, input.chatId, directStablecoinIds, { touchSubscriber: false }),
     ...prepareRemovePresetSubscriptionStatements(db, input.chatId, presetIds),
-    db
-      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-      .bind(unixNow(), input.chatId),
+    preparePreferenceGenerationBump(db, input.chatId),
   ];
   if (input.clearPending) {
     statements.push(
@@ -172,7 +183,10 @@ export async function removePresetSubscriptions(
 ): Promise<void> {
   const statements = prepareRemovePresetSubscriptionStatements(db, chatId, presetIds);
   if (statements.length === 0) return;
-  await db.batch(statements);
+  await executeAtomicBatch(db, [
+    ...statements,
+    preparePreferenceGenerationBump(db, chatId),
+  ]);
 }
 
 export async function loadPresetSubscriptions(

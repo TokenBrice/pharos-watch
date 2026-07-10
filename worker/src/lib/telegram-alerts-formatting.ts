@@ -185,6 +185,8 @@ export interface BurstSummaryAlert {
   coinCount: number;
   /** Dominant alert family across the collapsed set, used in the summary copy. */
   dominantFamily: string;
+  /** Exact delta coin ids retained for pending preference revalidation. */
+  stablecoinIds?: string[];
 }
 
 export interface ConsolidatedAlerts {

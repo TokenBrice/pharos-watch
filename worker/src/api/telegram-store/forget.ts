@@ -32,6 +32,7 @@ export async function unsubscribeAll(
                 global_alert_reserve = 0,
                 global_depeg_worsening_bps_step = NULL,
                 alert_snooze_until_ts = NULL,
+                preference_generation = preference_generation + 1,
                 last_active_at = ?
           WHERE chat_id = ?`,
       )
@@ -450,7 +451,8 @@ export async function migrateTelegramChatId(
         consecutive_block_count,
         consecutive_block_first_at,
         created_at,
-        last_active_at
+        last_active_at,
+        preference_generation
       )
       SELECT
         ?,
@@ -474,7 +476,8 @@ export async function migrateTelegramChatId(
         consecutive_block_count,
         consecutive_block_first_at,
         created_at,
-        last_active_at
+        last_active_at,
+        preference_generation + 1
       FROM telegram_subscribers
       WHERE chat_id = ?
       ON CONFLICT(chat_id) DO UPDATE SET
@@ -522,7 +525,11 @@ export async function migrateTelegramChatId(
           ELSE MIN(telegram_subscribers.consecutive_block_first_at, excluded.consecutive_block_first_at)
         END,
         created_at = MIN(telegram_subscribers.created_at, excluded.created_at),
-        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at)
+        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at),
+        preference_generation = MAX(
+          telegram_subscribers.preference_generation,
+          excluded.preference_generation
+        ) + 1
     `).bind(newChatId, oldChatId),
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
@@ -543,5 +550,5 @@ export async function migrateTelegramChatId(
     ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),
   ];
 
-  await batchExecute(db, statements);
+  await executeAtomicBatch(db, statements);
 }

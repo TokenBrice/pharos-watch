@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
-import { batchExecute } from "../lib/db";
+import { executeAtomicBatch } from "../lib/db";
 import { isSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import {
@@ -15,10 +15,10 @@ import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutati
 import {
   clearAlertSnooze,
   forgetSubscriber,
-  prepareRemovePresetSubscriptionStatements,
   prepareRemoveSubscriptionStatements,
   prepareSubscriberAndPresetStatements,
   prepareSubscriberAndSubscriptionStatements,
+  removePresetSubscriptions,
   setGlobalDepegWorseningStep,
   setSubscriberSnooze,
   setSubscriberTimezone,
@@ -175,7 +175,7 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
     apply("rs", patch.reserve ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
-  await batchExecute(db, statements);
+  await executeAtomicBatch(db, statements);
 }
 
 export async function applyTelegramMiniAppMutation(db: D1Database, auth: TelegramMiniAppAuthContext, operation: TelegramMiniAppOperation): Promise<void> {
@@ -185,7 +185,7 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
     case "recommended-setup": {
       await presetCoins(db, operation.presetId);
       const alertTypes = alertTypeSet(operation.alertTypes);
-      await batchExecute(
+      await executeAtomicBatch(
         db,
         prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes),
       );
@@ -239,14 +239,14 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       return;
     case "remove-coin":
       assertCoin(operation.stablecoinId);
-      await batchExecute(db, prepareRemoveSubscriptionStatements(db, chatId, [operation.stablecoinId]));
+      await executeAtomicBatch(db, prepareRemoveSubscriptionStatements(db, chatId, [operation.stablecoinId]));
       return;
     case "follow-preset": {
       assertPreset(operation.presetId);
       await presetCoins(db, operation.presetId);
       const alertTypes = alertTypesFromPatch(operation.alertTypes);
       const options = operation.alertTypes.depeg && "depegStepBps" in operation ? { depegWorseningBpsStep: operation.depegStepBps ?? null } : undefined;
-      await batchExecute(
+      await executeAtomicBatch(
         db,
         prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes, options),
       );
@@ -254,7 +254,7 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
     }
     case "unfollow-preset": {
       assertPreset(operation.presetId);
-      await batchExecute(db, prepareRemovePresetSubscriptionStatements(db, chatId, [operation.presetId]));
+      await removePresetSubscriptions(db, chatId, [operation.presetId]);
       return;
     }
   }

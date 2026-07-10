@@ -9,6 +9,11 @@ const NOW_SEC = 1_800_000_000;
 function createSubscriptionDb(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`
+    CREATE TABLE telegram_subscribers (
+      chat_id TEXT PRIMARY KEY,
+      last_active_at INTEGER NOT NULL DEFAULT 0,
+      preference_generation INTEGER NOT NULL DEFAULT 0
+    );
     CREATE TABLE telegram_subscriptions (
       chat_id TEXT NOT NULL,
       stablecoin_id TEXT NOT NULL,
@@ -54,6 +59,27 @@ describe("setSubscriptionSnooze clear invariants", () => {
     try {
       await setSubscriptionSnooze(db, "42", "usdc-circle", null);
       expect(subscriptionCount(sqlite)).toBe(0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("increments the parent preference generation in the same clear batch", async () => {
+    const { sqlite, db } = createSubscriptionDb();
+    try {
+      sqlite.prepare(
+        "INSERT INTO telegram_subscribers (chat_id, last_active_at, preference_generation) VALUES (?, ?, ?)",
+      ).run("42", NOW_SEC - 60, 7);
+      sqlite.prepare(
+        `INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_snooze_until_ts)
+         VALUES (?, ?, ?)`,
+      ).run("42", "usdc-circle", NOW_SEC + 3_600);
+
+      await setSubscriptionSnooze(db, "42", "usdc-circle", null);
+
+      expect(sqlite.prepare(
+        "SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?",
+      ).get("42")).toEqual({ preference_generation: 8 });
     } finally {
       sqlite.close();
     }

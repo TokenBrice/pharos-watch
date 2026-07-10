@@ -103,6 +103,7 @@ export function buildTelegramFanoutPlan(args: {
   presetFailureSummary?: PresetFanoutFailureSummary;
   handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
   collapseBursts?: boolean;
+  sourceEventId?: string;
 }): TelegramFanoutPlan {
   const {
     events,
@@ -212,7 +213,13 @@ export function buildTelegramFanoutPlan(args: {
     combinedOverflowPlanned,
     overflowFormatBudget,
     resolveDisableNotification,
-  } = buildOverflowAwareSubscriberQueue({ alertsByChat, overflowBacklog, nowSec, formatBudget });
+  } = buildOverflowAwareSubscriberQueue({
+    alertsByChat,
+    overflowBacklog,
+    nowSec,
+    formatBudget,
+    sourceEventId: args.sourceEventId,
+  });
 
   return {
     plannedQueue,

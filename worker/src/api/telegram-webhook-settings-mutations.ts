@@ -16,7 +16,7 @@ import {
   type GlobalAlertType,
   type SafetyModeValue,
 } from "./telegram-webhook-settings-shared";
-import { batchExecute } from "../lib/db";
+import { executeAtomicBatch } from "../lib/db";
 import { assertSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import {
   buildDepegStepUpsert,
@@ -78,7 +78,7 @@ export async function applyCoinSetting(
 ): Promise<string | null> {
   const prepared = prepareCoinSettingStatements(db, chatId, username, coinId, setting, value);
   if (prepared.description == null) return null;
-  await batchExecute(db, prepared.statements);
+  await executeAtomicBatch(db, prepared.statements);
   return prepared.description;
 }
 
@@ -215,6 +215,7 @@ function prepareBoolAlert(
       username,
       nowSec: now,
       perCoinAlertBumps: enabled ? { [bumpKey]: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildUpsert(chatId, coinId, enabled)),
   ];
@@ -234,6 +235,7 @@ function prepareDews(
       username,
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { dews: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildDewsUpsert(chatId, coinId, payload.enabled, payload.minBand)),
   ];
@@ -253,6 +255,7 @@ function prepareSafety(
       username,
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { safety: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildSafetyUpsert(chatId, coinId, payload.enabled, payload.mode)),
   ];
@@ -282,6 +285,7 @@ function prepareDepegStep(
       username,
       nowSec: now,
       perCoinAlertBumps: { depeg: 1 },
+      bumpPreferenceGeneration: true,
     }),
   ];
   statements.push(prepareSubscriptionUpsert(db, buildDepegStepUpsert(chatId, coinId, step)));

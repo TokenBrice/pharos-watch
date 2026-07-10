@@ -1,6 +1,6 @@
 import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
-import { buildInClause, chunkArray } from "../../lib/db";
+import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 
 /**
  * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
@@ -137,7 +137,7 @@ export async function flushChatSuccessResets(
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
   try {
-    await db.batch([
+    await executeAtomicBatch(db, [
       db
         .prepare(
           `UPDATE telegram_subscribers
@@ -151,7 +151,8 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
                   global_alert_safety=0,
                   global_alert_launch=0,
                   global_alert_reserve=0,
-                  global_depeg_worsening_bps_step=NULL
+                  global_depeg_worsening_bps_step=NULL,
+                  preference_generation=preference_generation + 1
             WHERE chat_id=?`,
         )
         .bind(chatId),

@@ -8,6 +8,65 @@ import {
 import type { PendingEnqueueOptions } from "./types";
 import { buildDedupeKey } from "./dedupe";
 import type { TelegramAlertType } from "@shared/types/status";
+import {
+  isValidPendingSourceEventId,
+  serializePendingAlertScope,
+  serializePendingMarkupPolicy,
+} from "../../lib/telegram-pending-provenance";
+
+interface PendingProvenanceValues {
+  sourceEventId: string | null;
+  alertScopeJson: string | null;
+  preferenceGeneration: number | null;
+  markupPolicyJson: string | null;
+}
+
+function resolvePendingProvenance(
+  message: BatchMessage,
+  sourceType: "risk_alert" | "admin_broadcast" | "legacy",
+): PendingProvenanceValues {
+  if (sourceType !== "risk_alert") {
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: null,
+    };
+  }
+  const fieldsPresent = [
+    message.sourceEventId != null,
+    message.alertScope != null,
+    message.preferenceGeneration != null,
+  ];
+  if (fieldsPresent.every((present) => !present)) {
+    // Existing cache entries and rolling-deploy producers predate provenance.
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: null,
+    };
+  }
+  if (
+    !fieldsPresent.every(Boolean) ||
+    !message.sourceEventId ||
+    !isValidPendingSourceEventId(message.sourceEventId) ||
+    !Number.isSafeInteger(message.preferenceGeneration) ||
+    (message.preferenceGeneration ?? -1) < 0 ||
+    !message.alertScope
+  ) {
+    throw new Error("Telegram pending risk alert has incomplete provenance");
+  }
+  return {
+    sourceEventId: message.sourceEventId,
+    alertScopeJson: serializePendingAlertScope(message.alertScope),
+    preferenceGeneration: message.preferenceGeneration ?? null,
+    markupPolicyJson: serializePendingMarkupPolicy({
+      replyMarkup: message.replyMarkup,
+      linkPreviewOptions: message.linkPreviewOptions,
+    }),
+  };
+}
 
 function pendingPriorityForAlertType(alertType: TelegramAlertType | undefined): number {
   if (!alertType) return TELEGRAM_PENDING_PRIORITY.riskAlert;
@@ -81,6 +140,7 @@ export function buildPendingAlertEnqueueStatement(
   guard?: PendingEnqueueGuard,
 ): D1PreparedStatement {
   const sourceType = resolvePendingSourceType(options);
+  const provenance = resolvePendingProvenance(msg, sourceType);
   const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
   const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
   const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
@@ -92,6 +152,22 @@ export function buildPendingAlertEnqueueStatement(
   const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
   const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
   const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
+  const sourceEventRefresh = refreshExistingRowCase(
+    "excluded.source_event_id",
+    "telegram_pending_alerts.source_event_id",
+  );
+  const alertScopeRefresh = refreshExistingRowCase(
+    "excluded.alert_scope_json",
+    "telegram_pending_alerts.alert_scope_json",
+  );
+  const preferenceGenerationRefresh = refreshExistingRowCase(
+    "excluded.preference_generation",
+    "telegram_pending_alerts.preference_generation",
+  );
+  const markupPolicyRefresh = refreshExistingRowCase(
+    "excluded.markup_policy_json",
+    "telegram_pending_alerts.markup_policy_json",
+  );
   const refreshBinds = collectSqlBinds(
     createdAtRefresh,
     attemptsRefresh,
@@ -100,6 +176,10 @@ export function buildPendingAlertEnqueueStatement(
     processingOwnerRefresh,
     processingStartedRefresh,
     processingExpiresRefresh,
+    sourceEventRefresh,
+    alertScopeRefresh,
+    preferenceGenerationRefresh,
+    markupPolicyRefresh,
   );
   const values = [
     msg.chatId,
@@ -116,6 +196,10 @@ export function buildPendingAlertEnqueueStatement(
     sourceType,
     msg.alertType ?? null,
     expiresAt,
+    provenance.sourceEventId,
+    provenance.alertScopeJson,
+    provenance.preferenceGeneration,
+    provenance.markupPolicyJson,
   ];
   const valuePlaceholders = values.map(() => "?").join(", ");
   const valuesSource = guard
@@ -126,7 +210,8 @@ export function buildPendingAlertEnqueueStatement(
       `INSERT INTO telegram_pending_alerts (
            chat_id, message_html, disable_notification, created_at, not_before_at,
            last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
-           priority, source_type, alert_type, expires_at
+           priority, source_type, alert_type, expires_at, source_event_id,
+           alert_scope_json, preference_generation, markup_policy_json
          )
          ${valuesSource}
          ON CONFLICT(dedupe_key) DO UPDATE SET
@@ -154,7 +239,11 @@ export function buildPendingAlertEnqueueStatement(
            expires_at = ${expiresAtRefresh.sql},
            processing_owner = ${processingOwnerRefresh.sql},
            processing_started_at = ${processingStartedRefresh.sql},
-           processing_expires_at = ${processingExpiresRefresh.sql}`,
+           processing_expires_at = ${processingExpiresRefresh.sql},
+           source_event_id = ${sourceEventRefresh.sql},
+           alert_scope_json = ${alertScopeRefresh.sql},
+           preference_generation = ${preferenceGenerationRefresh.sql},
+           markup_policy_json = ${markupPolicyRefresh.sql}`,
     )
     .bind(...values, ...(guard?.binds ?? []), ...refreshBinds);
 }

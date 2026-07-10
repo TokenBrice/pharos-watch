@@ -69,7 +69,8 @@ function openSqlite(): DatabaseSync {
       quiet_hours_start_utc INTEGER,
       quiet_hours_end_utc INTEGER,
       created_at INTEGER NOT NULL,
-      last_active_at INTEGER NOT NULL
+      last_active_at INTEGER NOT NULL,
+      preference_generation INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE telegram_subscriptions (
       chat_id TEXT NOT NULL,
@@ -154,7 +155,7 @@ describe("atomic Telegram subscribe intent", () => {
 
       expect(batchSizes).toEqual([5]);
       expect(sqlite.prepare(`
-        SELECT username, alert_dews, alert_depeg, last_active_at
+        SELECT username, alert_dews, alert_depeg, last_active_at, preference_generation
           FROM telegram_subscribers
          WHERE chat_id = ?
       `).get(CHAT_ID)).toEqual({
@@ -162,6 +163,7 @@ describe("atomic Telegram subscribe intent", () => {
         alert_dews: 1,
         alert_depeg: 1,
         last_active_at: Math.floor(NOW_MS / 1000),
+        preference_generation: 1,
       });
       expect(sqlite.prepare(`
         SELECT stablecoin_id, alert_dews, alert_depeg, depeg_worsening_bps_step
@@ -246,8 +248,12 @@ describe("atomic Telegram unsubscribe intent", () => {
         .toEqual({ count: 0 });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get())
         .toEqual({ count: 0 });
-      expect(sqlite.prepare("SELECT last_active_at FROM telegram_subscribers WHERE chat_id = ?").get(CHAT_ID))
-        .toEqual({ last_active_at: Math.floor((NOW_MS + 60_000) / 1000) });
+      expect(sqlite.prepare(
+        "SELECT last_active_at, preference_generation FROM telegram_subscribers WHERE chat_id = ?",
+      ).get(CHAT_ID)).toEqual({
+        last_active_at: Math.floor((NOW_MS + 60_000) / 1000),
+        preference_generation: 2,
+      });
     } finally {
       sqlite.close();
     }

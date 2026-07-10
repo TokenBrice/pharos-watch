@@ -4,6 +4,7 @@ import {
   sendToChat,
   type BatchMessage,
   type BatchResult,
+  type PreSendBatchResult,
 } from "../../lib/telegram";
 import { SNOOZE_REPLY_MARKUP } from "../../lib/telegram-alerts";
 import {
@@ -16,7 +17,9 @@ import {
 import { recordTelegramDeliveryOutcomes } from "../../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "../telegram-quiet-hours";
 import {
+  recordTelegramAlertTargetCancellations,
   recordTelegramAlertTargetStatuses,
+  type TelegramAlertTargetCancellation,
   type TelegramAlertTargetStatusUpdate,
 } from "../telegram-alert-target-status";
 import {
@@ -45,9 +48,14 @@ import {
   type PendingDeadLetterReason,
 } from "./types";
 import { logTelegramEvent } from "../../lib/telegram-log";
+import {
+  revalidatePendingAlertPreferences,
+  type PendingPreferenceRevalidation,
+} from "./preference-revalidation";
 
 const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
+const PREFERENCE_REVALIDATION_RETRY_SEC = 5 * 60;
 
 interface PendingDrainOptions {
   maxPriority?: number | null;
@@ -73,6 +81,20 @@ function createPendingClaimOwner(): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) return `pending-${cryptoObj.randomUUID()}`;
   return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildPendingPreSendSkip(): PreSendBatchResult {
+  return {
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: null,
+    errorClass: "unknown",
+    delivery: "retryable_failure",
+    retryAfterSec: null,
+    skippedReason: "pre_send",
+  };
 }
 
 function appendPendingTargetStatus(
@@ -204,6 +226,8 @@ async function loadClaimedPendingRows(
       `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at,
               p.expires_at, p.attempts, p.not_before_at, p.priority, p.source_type,
               p.alert_type, p.dedupe_key, p.chunk_index, p.last_error_class,
+              p.source_event_id, p.alert_scope_json, p.preference_generation,
+              p.markup_policy_json,
               u.alert_snooze_until_ts, u.quiet_hours_enabled,
               u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
          FROM telegram_pending_alerts p
@@ -245,14 +269,19 @@ async function releasePendingClaimsByIds(
   }
 }
 
+interface PendingSendingFence {
+  id: number;
+  validatedPreferenceGeneration: number | null;
+}
+
 async function markPendingRowsSending(
   db: D1Database,
-  ids: readonly number[],
+  rows: readonly PendingSendingFence[],
   owner: string,
   nowSec: number,
-): Promise<void> {
-  if (ids.length === 0) return;
-  const changed = await batchExecute(db, ids.map((id) =>
+): Promise<Set<number>> {
+  if (rows.length === 0) return new Set();
+  const results = await db.batch(rows.map((row) =>
     db
       .prepare(
         `UPDATE telegram_pending_alerts
@@ -261,13 +290,31 @@ async function markPendingRowsSending(
                 updated_at = ?
           WHERE id = ?
             AND processing_owner = ?
-            AND delivery_state = 'pending'`,
+            AND delivery_state = 'pending'
+            AND (
+              ? IS NULL
+              OR EXISTS (
+                SELECT 1
+                  FROM telegram_subscribers subscriber
+                 WHERE subscriber.chat_id = telegram_pending_alerts.chat_id
+                   AND subscriber.preference_generation = ?
+              )
+            )`,
       )
-      .bind(nowSec, nowSec, id, owner),
+      .bind(
+        nowSec,
+        nowSec,
+        row.id,
+        owner,
+        row.validatedPreferenceGeneration,
+        row.validatedPreferenceGeneration,
+      ),
   ));
-  if (changed !== ids.length) {
-    throw new Error(`Telegram pending delivery ownership changed before send (${changed}/${ids.length})`);
+  const marked = new Set<number>();
+  for (const [index, result] of results.entries()) {
+    if (Number(result.meta?.changes ?? 0) === 1) marked.add(rows[index].id);
   }
+  return marked;
 }
 
 async function markSentPendingAlerts(
@@ -346,13 +393,14 @@ async function persistPendingDeferrals(
       .prepare(
         `UPDATE telegram_pending_alerts
             SET not_before_at = ?,
+                last_error_class = COALESCE(?, last_error_class),
                 updated_at = ?,
                 processing_owner = NULL,
                 processing_started_at = NULL,
                 processing_expires_at = NULL
           WHERE id = ?`,
       )
-      .bind(update.notBeforeAt, nowSec, update.id),
+      .bind(update.notBeforeAt, update.reason ?? null, nowSec, update.id),
   ));
 }
 
@@ -495,6 +543,7 @@ export async function drainPendingQueue(
   const blockedRowsToDelete: DeadLetterPendingRow[] = [];
   const permanentRowsToDelete: DeadLetterPendingRow[] = [];
   const maxAttemptRowsToDelete: DeadLetterPendingRow[] = [];
+  const preferenceRowsToDelete: DeadLetterPendingRow[] = [];
   const completedIds = new Set<number>();
   const retryUpdates: PendingRetryUpdate[] = [];
   const deferUpdates: PendingDeferUpdate[] = [];
@@ -506,6 +555,7 @@ export async function drainPendingQueue(
   let rateLimitNotBeforeAt: number | null = null;
   const deliveryDiagnostics: PendingDeliveryDiagnostic[] = [];
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
+  const targetCancellations: TelegramAlertTargetCancellation[] = [];
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
   const blockedChatsThisLoop = new Set<string>();
   const chatsToResetOnSuccess = new Set<string>();
@@ -514,13 +564,63 @@ export async function drainPendingQueue(
     ? options.softDeadlineAtMs
     : null;
 
-  const sendableRows: Array<{ chatId: string; row: PendingAlertRow; message: BatchMessage }> = [];
-  for (const row of pending) {
+  let revalidations: PendingPreferenceRevalidation[];
+  try {
+    revalidations = await revalidatePendingAlertPreferences(db, pending, nowSec);
+  } catch (error) {
+    logTelegramEvent({
+      level: "warn",
+      message: "Failed to revalidate pending Telegram preferences",
+      action: "preference-revalidation",
+      module: "telegram-pending-drain",
+      rowCount: pending.length,
+    });
+    revalidations = pending.map((row) => ({
+      kind: "defer" as const,
+      row,
+      notBeforeAt: nowSec + PREFERENCE_REVALIDATION_RETRY_SEC,
+      reason: "preference_revalidation_failed",
+    }));
+  }
+
+  const sendableRows: Array<{
+    chatId: string;
+    row: PendingAlertRow;
+    message: BatchMessage;
+    disableWebPagePreview: boolean;
+    validatedPreferenceGeneration: number | null;
+  }> = [];
+  for (const outcome of revalidations) {
+    const row = outcome.row;
+    if (outcome.kind === "cancel") {
+      preferenceRowsToDelete.push({ ...row, last_error_class: outcome.reason });
+      if (row.dedupe_key) {
+        targetCancellations.push({
+          targetKey: row.dedupe_key,
+          at: nowSec,
+          reason: outcome.reason,
+        });
+      }
+      completedIds.add(row.id);
+      continue;
+    }
+    if (outcome.kind === "defer") {
+      deferred++;
+      deferUpdates.push({
+        id: row.id,
+        notBeforeAt: outcome.notBeforeAt,
+        reason: outcome.reason,
+      });
+      appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec, outcome.reason);
+      completedIds.add(row.id);
+      continue;
+    }
     if (isPendingRowSnoozed(row, nowSec)) {
       deferred++;
       deferUpdates.push({
         id: row.id,
         notBeforeAt: Math.max(row.alert_snooze_until_ts ?? 0, nowSec + DEFAULT_RETRY_DELAY_SEC),
+        reason: "preference_snoozed",
       });
       appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
       completedIds.add(row.id);
@@ -529,11 +629,16 @@ export async function drainPendingQueue(
     sendableRows.push({
       chatId: row.chat_id,
       row,
+      validatedPreferenceGeneration: outcome.validatedPreferenceGeneration,
+      disableWebPagePreview: outcome.markupPolicy?.disableWebPagePreview ?? true,
       message: {
         chatId: row.chat_id,
         html: row.message_html,
         disableNotification: shouldSilencePendingRow(row, nowSec),
-        replyMarkup: SNOOZE_REPLY_MARKUP,
+        replyMarkup: outcome.markupPolicy?.replyMarkup ?? SNOOZE_REPLY_MARKUP,
+        ...(outcome.markupPolicy?.linkPreviewOptions
+          ? { linkPreviewOptions: outcome.markupPolicy.linkPreviewOptions }
+          : {}),
         ...(row.chunk_index != null ? { chunkIndex: row.chunk_index } : {}),
         ...(row.alert_type != null ? { alertType: row.alert_type } : {}),
       },
@@ -543,9 +648,10 @@ export async function drainPendingQueue(
   const scheduledResults = await schedulePerChatBatches(
     sendableRows,
     SEND_BATCH_SIZE,
-    ({ row, message }) =>
+    ({ row, message, disableWebPagePreview }) =>
       sendToChat(row.chat_id, row.message_html, botToken, {
-        disableWebPagePreview: true,
+        disableWebPagePreview,
+        linkPreviewOptions: message.linkPreviewOptions,
         disableNotification: message.disableNotification,
         replyMarkup: message.replyMarkup,
         signal,
@@ -554,13 +660,24 @@ export async function drainPendingQueue(
       signal,
       softDeadlineAtMs,
       beforeSendBatch: async (entries) => {
-        await markPendingRowsSending(
+        const marked = await markPendingRowsSending(
           db,
-          entries.map(({ item }) => item.row.id),
+          entries.map(({ item }) => ({
+            id: item.row.id,
+            validatedPreferenceGeneration: item.validatedPreferenceGeneration,
+          })),
           claimOwner,
           nowSec,
         );
-        options.markTelegramDeliveryStarted?.();
+        if (marked.size > 0) options.markTelegramDeliveryStarted?.();
+        if (marked.size === entries.length) return;
+        const skipped = new Map<number, PreSendBatchResult>();
+        for (const entry of entries) {
+          if (!marked.has(entry.item.row.id)) {
+            skipped.set(entry.index, buildPendingPreSendSkip());
+          }
+        }
+        return skipped;
       },
     },
   );
@@ -582,6 +699,17 @@ export async function drainPendingQueue(
     ) => appendPendingTargetStatus(targetStatusUpdates, pendingRow, status, nowSec, errorClass);
 
     if (result.attempted === false) {
+      if (result.skippedReason === "pre_send") {
+        deferred++;
+        deferUpdates.push({
+          id: result.id,
+          notBeforeAt: nowSec + DEFAULT_RETRY_DELAY_SEC,
+          reason: "preference_generation_changed",
+        });
+        pushTargetStatus("queued", "preference_generation_changed");
+        completedIds.add(result.id);
+        continue;
+      }
       if (result.skippedReason === "predecessor_failure" && result.retryable) {
         const notBeforeAt =
           predecessorRetryAtByChat.get(result.chatId) ??
@@ -662,11 +790,12 @@ export async function drainPendingQueue(
   const retryQueued = outcomeKinds.filter((kind) => kind === "retry").length;
   const droppedMaxAttemptsFallback = outcomeKinds.filter((kind) => kind === "dropped-max-attempts").length;
   const droppedPermanentFailure = outcomeKinds.filter((kind) => kind === "dropped-permanent").length;
-  const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure;
+  const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure + preferenceRowsToDelete.length;
 
   await flushChatSuccessResets(db, chatsToResetOnSuccess);
   await markSentPendingAlerts(db, sentIdsToDelete, claimOwner, nowSec);
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
+  await recordTelegramAlertTargetCancellations(db, targetCancellations);
 
   for (const chatId of disabledChatIds) {
     const cleanup = await clearPendingAlertsForDisabledChat(db, chatId, nowSec, completedIds);
@@ -679,6 +808,7 @@ export async function drainPendingQueue(
     { rows: blockedRowsToDelete, reason: "blocked_disabled" },
     { rows: permanentRowsToDelete, reason: "permanent_failure" },
     { rows: maxAttemptRowsToDelete, reason: "max_attempts" },
+    { rows: preferenceRowsToDelete, reason: "preference_changed" },
   ];
   await deleteSentPendingAlerts(db, sentIdsToDelete);
   await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec);

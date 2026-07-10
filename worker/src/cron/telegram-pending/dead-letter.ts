@@ -31,9 +31,10 @@ async function insertPendingDeadLetters(
       .prepare(
         `INSERT INTO telegram_alert_dead_letters (
            pending_id, chat_id, message_html, source_type, alert_type, priority,
-           created_at, expired_at, attempts, last_error_class, reason, dedupe_key, chunk_index
+           created_at, expired_at, attempts, last_error_class, reason, dedupe_key, chunk_index,
+           source_event_id, alert_scope_json, preference_generation, markup_policy_json
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         row.id,
@@ -49,6 +50,10 @@ async function insertPendingDeadLetters(
         reason,
         row.dedupe_key ?? null,
         row.chunk_index ?? 0,
+        row.source_event_id ?? null,
+        row.alert_scope_json ?? null,
+        row.preference_generation ?? null,
+        row.markup_policy_json ?? null,
       ),
   ));
 }

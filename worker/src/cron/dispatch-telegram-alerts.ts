@@ -696,6 +696,7 @@ async function executeFullFanoutPath({
     burstOutcome,
     handledItemsPruned,
   } = buildTelegramFanoutPlan({
+    sourceEventId: sourceEvent.sourceEventId,
     events: {
       dewsChanges,
       depegTriggered,

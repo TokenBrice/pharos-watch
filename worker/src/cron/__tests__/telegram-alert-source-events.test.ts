@@ -56,7 +56,8 @@ function createHarness(): Harness {
       quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
       quiet_hours_start_utc INTEGER,
       quiet_hours_end_utc INTEGER,
-      timezone TEXT
+      timezone TEXT,
+      preference_generation INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE telegram_preset_subscriptions (
       chat_id TEXT NOT NULL,

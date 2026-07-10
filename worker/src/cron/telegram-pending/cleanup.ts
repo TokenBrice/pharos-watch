@@ -32,6 +32,10 @@ const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
   "priority",
   "source_type",
   "alert_type",
+  "source_event_id",
+  "alert_scope_json",
+  "preference_generation",
+  "markup_policy_json",
 ] as const;
 const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
 export const EXPIRED_PENDING_CLEANUP_BATCH_LIMIT = PENDING_DELETE_CHUNK_SIZE;

@@ -1,8 +1,8 @@
 import {
-  batchExecute,
   chunkArray,
   D1_MAX_BOUND_PARAMETERS,
   D1_SAFE_IN_CLAUSE_BIND_LIMIT,
+  executeAtomicBatch,
 } from "../../lib/db";
 import type { ResolvedCoin } from "../../lib/telegram-alerts";
 import type {
@@ -11,6 +11,7 @@ import type {
 } from "../telegram-webhook-shared";
 import {
   prepareUpsertSubscriberRow,
+  preparePreferenceGenerationBump,
   unixNow,
   upsertSubscriberRow,
   type UpsertSubscriberInput,
@@ -286,7 +287,7 @@ export async function upsertSubscriberAndSubscriptions(
     stablecoinIds,
     options,
   );
-  if (statements.length > 0) await batchExecute(db, statements);
+  if (statements.length > 0) await executeAtomicBatch(db, statements);
 }
 
 export async function applySettingToSubscriptions(
@@ -305,14 +306,14 @@ export async function applySettingToSubscriptions(
   if (command.setting === "launch" && command.enabled) perCoinAlertBumps.launch = 1;
   if (command.setting === "reserve" && command.enabled) perCoinAlertBumps.reserve = 1;
 
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: now,
-    perCoinAlertBumps,
-  });
-
-  const statements: D1PreparedStatement[] = [];
+  const statements: D1PreparedStatement[] = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps,
+    }),
+  ];
 
   for (const coin of coins) {
     switch (command.setting) {
@@ -355,7 +356,7 @@ export async function applySettingToSubscriptions(
     }
   }
 
-  if (statements.length > 0) await batchExecute(db, statements);
+  await executeAtomicBatch(db, statements);
 }
 
 export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
@@ -375,21 +376,21 @@ export async function setGlobalDepegWorseningStep(
   step: 100 | 250 | 500 | null,
 ): Promise<void> {
   const now = unixNow();
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: now,
-    globalAlertBumps: { depeg: 1 },
-  });
-  await db
-    .prepare(
+  await executeAtomicBatch(db, [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      globalAlertBumps: { depeg: 1 },
+    }),
+    db.prepare(
       `UPDATE telegram_subscribers
           SET global_depeg_worsening_bps_step = ?,
               last_active_at = ?
         WHERE chat_id = ?`,
     )
-    .bind(step, now, chatId)
-    .run();
+      .bind(step, now, chatId),
+  ]);
 }
 
 export async function applyGlobalSetting(
@@ -447,9 +448,7 @@ function prepareTouchSubscriberStatement(
   db: D1Database,
   chatId: string,
 ): D1PreparedStatement {
-  return db
-    .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-    .bind(unixNow(), chatId);
+  return preparePreferenceGenerationBump(db, chatId);
 }
 
 export async function removeSubscriptions(
@@ -459,7 +458,7 @@ export async function removeSubscriptions(
 ): Promise<void> {
   const statements = prepareRemoveSubscriptionStatements(db, chatId, stablecoinIds);
   if (statements.length === 0) return;
-  await db.batch(statements);
+  await executeAtomicBatch(db, statements);
 }
 
 export async function loadSubscriptionsByIds(

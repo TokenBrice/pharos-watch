@@ -16,6 +16,10 @@ export interface PendingAlertRow {
   last_error_class: string | null;
   dedupe_key: string | null;
   chunk_index: number | null;
+  source_event_id: string | null;
+  alert_scope_json: string | null;
+  preference_generation: number | null;
+  markup_policy_json: string | null;
   alert_snooze_until_ts: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -28,6 +32,7 @@ export type PendingDeadLetterReason =
   | "permanent_failure"
   | "max_attempts"
   | "blocked_disabled"
+  | "preference_changed"
   | "manual_clear";
 
 export interface DeadLetterPendingRow {
@@ -42,6 +47,10 @@ export interface DeadLetterPendingRow {
   priority?: number | null;
   source_type?: string | null;
   alert_type?: string | null;
+  source_event_id?: string | null;
+  alert_scope_json?: string | null;
+  preference_generation?: number | null;
+  markup_policy_json?: string | null;
 }
 
 export interface PendingDrainResult {
@@ -107,6 +116,7 @@ export interface PendingRetryUpdate {
 export interface PendingDeferUpdate {
   id: number;
   notBeforeAt: number;
+  reason?: string | null;
 }
 
 export interface PendingDeliveryDiagnostic {

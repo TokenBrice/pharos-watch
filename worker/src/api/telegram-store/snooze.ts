@@ -1,5 +1,10 @@
-import { buildSubscriberUpsert, unixNow } from "./subscribers";
+import {
+  buildSubscriberUpsert,
+  preparePreferenceGenerationBump,
+  unixNow,
+} from "./subscribers";
 import { assertSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+import { executeAtomicBatch } from "../../lib/db";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
@@ -57,7 +62,7 @@ export async function setSubscriptionSnooze(
   untilSec: number | null,
 ): Promise<void> {
   if (untilSec === null) {
-    await db.batch([
+    await executeAtomicBatch(db, [
       db
         .prepare(
           `UPDATE telegram_subscriptions
@@ -86,6 +91,7 @@ export async function setSubscriptionSnooze(
               AND depeg_worsening_bps_step IS NULL`,
         )
         .bind(chatId, stablecoinId),
+      preparePreferenceGenerationBump(db, chatId),
     ]);
     return;
   }
@@ -97,8 +103,9 @@ export async function setSubscriptionSnooze(
     chatId,
     username: null,
     nowSec: now,
+    bumpPreferenceGeneration: true,
   });
-  await db.batch([
+  await executeAtomicBatch(db, [
     db.prepare(parentUpsert.sql).bind(...parentUpsert.binds),
     db
       .prepare(

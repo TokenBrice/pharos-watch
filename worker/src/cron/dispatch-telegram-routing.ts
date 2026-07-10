@@ -40,6 +40,10 @@ import {
   type TelegramFreshTargetEffectOutcome,
 } from "./telegram-alert-target-effects";
 import { logTelegramEvent } from "../lib/telegram-log";
+import {
+  buildPendingAlertScope,
+  type PendingAlertScopeItem,
+} from "../lib/telegram-pending-provenance";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 
@@ -89,6 +93,8 @@ export interface SubscriberRow {
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
   timezone: string | null;
+  /** Persisted chat preference generation. Optional only for legacy fixtures/cache payloads. */
+  preference_generation?: number;
   isGlobal: boolean;
   /** A settings/direct write explicitly owns this alert family's local policy. */
   hasLocalOverride?: boolean;
@@ -101,6 +107,7 @@ export interface AlertsByChatEntry {
   quietHoursStartUtc: number | null;
   quietHoursEndUtc: number | null;
   timezone: string | null;
+  preferenceGeneration?: number;
   /** C128: per-run match-event counts by source, used to detect global-dominant bursts. */
   specificCount: number;
   globalCount: number;
@@ -115,6 +122,9 @@ export interface RoutedSubscriberAlert {
   chunks: string[];
   disableNotification: boolean;
   alertType: TelegramAlertType;
+  sourceEventId?: string;
+  preferenceGeneration?: number;
+  alertScope?: PendingAlertScopeItem[];
 }
 
 export interface FreshSendOutcome {
@@ -183,9 +193,16 @@ function addAlertToChat<T>(
   event: T,
   viaGlobal: boolean,
 ): void {
+  const preferenceGeneration = Number.isFinite(sub.preference_generation)
+    ? Math.max(0, Math.floor(sub.preference_generation ?? 0))
+    : 0;
   const existing = alertsByChat.get(sub.chat_id);
   if (existing) {
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
+    existing.preferenceGeneration = Math.min(
+      existing.preferenceGeneration ?? 0,
+      preferenceGeneration,
+    );
     append(existing.alerts).push(event);
     if (viaGlobal) existing.globalCount += 1;
     else existing.specificCount += 1;
@@ -201,6 +218,7 @@ function addAlertToChat<T>(
     quietHoursStartUtc: sub.quiet_hours_start_utc ?? null,
     quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
     timezone: sub.timezone ?? null,
+    preferenceGeneration,
     specificCount: viaGlobal ? 0 : 1,
     globalCount: viaGlobal ? 1 : 0,
   });
@@ -317,7 +335,10 @@ export function collapseBurstChats(
     }
 
     const dominantFamily = dominantAlertType(entry.alerts);
-    entry.alerts = { ...emptyAlerts(), burst: { coinCount: deltaIds.length, dominantFamily } };
+    entry.alerts = {
+      ...emptyAlerts(),
+      burst: { coinCount: deltaIds.length, dominantFamily, stablecoinIds: deltaIds },
+    };
     collapsedChats += 1;
     nextMarkers[chatId] = {
       enteredAt: marker?.enteredAt ?? nowSec,
@@ -337,6 +358,7 @@ export interface PlannedSubscriberAlert {
   chatId: string;
   entry: AlertsByChatEntry;
   alertType: TelegramAlertType;
+  sourceEventId?: string;
   /** Cheap chunk-count estimate (no formatting); see `estimateChatChunks`. */
   estimatedChunks: number;
 }
@@ -373,12 +395,14 @@ function estimateChatChunks(alerts: ConsolidatedAlerts): number {
  */
 export function planSubscriberQueue(
   alertsByChat: Map<string, AlertsByChatEntry>,
+  sourceEventId?: string,
 ): PlannedSubscriberAlert[] {
   return [...alertsByChat.entries()]
     .map(([chatId, entry]) => ({
       chatId,
       entry,
       alertType: dominantAlertType(entry.alerts),
+      sourceEventId,
       estimatedChunks: estimateChatChunks(entry.alerts),
     }))
     .sort((a, b) => b.entry.lastActiveAt - a.entry.lastActiveAt);
@@ -419,7 +443,7 @@ export function formatPlannedSubscriber(
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean,
 ): RoutedSubscriberAlert {
   const canonicalHtml = formatConsolidatedMessage(plan.entry.alerts);
-  return {
+  const routed: RoutedSubscriberAlert = {
     chatId: plan.chatId,
     lastActiveAt: plan.entry.lastActiveAt,
     alerts: plan.entry.alerts,
@@ -428,6 +452,12 @@ export function formatPlannedSubscriber(
     disableNotification: resolveDisableNotification(plan.entry),
     alertType: plan.alertType,
   };
+  if (plan.sourceEventId) {
+    routed.sourceEventId = plan.sourceEventId;
+    routed.preferenceGeneration = plan.entry.preferenceGeneration ?? 0;
+    routed.alertScope = buildPendingAlertScope(plan.entry.alerts);
+  }
+  return routed;
 }
 
 /** Format an already-ordered slice of planned chats (C102 phase 2). */
@@ -501,6 +531,13 @@ export function expandSubscriberChunks(
         replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex, { privateChat }),
         chunkIndex,
         alertType: sub.alertType,
+        ...(sub.sourceEventId && sub.preferenceGeneration != null && sub.alertScope
+          ? {
+              sourceEventId: sub.sourceEventId,
+              preferenceGeneration: sub.preferenceGeneration,
+              alertScope: sub.alertScope,
+            }
+          : {}),
         ...(linkPreviewOptions ? { linkPreviewOptions } : {}),
       });
     }

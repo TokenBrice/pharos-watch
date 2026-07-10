@@ -874,7 +874,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "DELETE FROM telegram_subscriptions", ["42", "usdc-circle"])).toBe(true);
-    expect(historyHas(db, "UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?", ["42"])).toBe(true);
+    expect(historyHas(db, "preference_generation = preference_generation + 1", ["42"])).toBe(true);
   });
 
   it("writes recommended setup as preset provenance without materializing coin rows", async () => {

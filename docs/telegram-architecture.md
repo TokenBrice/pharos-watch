@@ -153,7 +153,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 ## 5. Dispatch / fan-out
 
-**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch / reserve-drift snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Preset fan-out resolves preset membership before querying subscriber rows and narrows the SQL to presets that intersect the triggered stablecoins. Alert context reads the published report-card snapshot cache instead of rebuilding the report-card corpus inside the five-minute lane. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes. Fresh target effects are owner/generation claimed and durably marked `sending` immediately before each Bot API wave; only the owner may finalize them, and ambiguous post-send outcomes become `execution_unknown` instead of being replayed. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
+**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch / reserve-drift snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Preset fan-out resolves preset membership before querying subscriber rows and narrows the SQL to presets that intersect the triggered stablecoins. Alert context reads the published report-card snapshot cache instead of rebuilding the report-card corpus inside the five-minute lane. Build per-chat consolidated messages and chunk them. New risk chunks carry the immutable source event, a conservative target-group coin/family scope, the planning-time chat preference generation, and the rendered markup policy into Queue / rate-limit / retry. Persist alert-job manifests and per-target outcomes. Fresh target effects are owner/generation claimed and durably marked `sending` immediately before each Bot API wave; only the owner may finalize them, and ambiguous post-send outcomes become `execution_unknown` instead of being replayed. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
 
 The post-dispatch capacity/watchdog read model is fail-closed for incident recovery. It reports an explicit available/unknown read state, keeps recent `sending` work separate, promotes sends older than 15 minutes into execution-unknown risk, and samples fresh uncertain effects to a bounded 5,001-row lower bound. Unknown reads preserve existing incident keys. Zero-send streak evaluation is keyed to the authoritative `cron_runs.id`, so rerunning the watchdog against the same dispatch record is idempotent.
 
@@ -199,7 +199,7 @@ The post-dispatch capacity/watchdog read model is fail-closed for incident recov
 
 ## 6. Queue / rate-limit / retry
 
-**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, effect-state transition, drain, retry-with-backoff, dead-letter, expire. `pending -> sending` is durable before the Bot API call; retryable failures return to `pending`, confirmed successes become `sent`, and `sending` ambiguity is never auto-replayed. Terminal target state also excludes legacy sent rows from candidate selection. Hold per-chat/global backoff and the blocked-subscriber lifecycle.
+**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: enqueue bounded provenance, claim, revalidate current effective preference eligibility, effect-state transition, drain, retry-with-backoff, preference cancellation, dead-letter, expire. `pending -> sending` is generation-CASed immediately before the Bot API call; retryable failures return to `pending`, confirmed successes become `sent`, and `sending` ambiguity is never auto-replayed. Terminal target state also excludes legacy sent rows from candidate selection. Hold per-chat/global backoff and the blocked-subscriber lifecycle.
 
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
@@ -332,6 +332,7 @@ Files any seam may import:
 - `worker/src/lib/telegram-presets.ts` — preset definitions and resolution.
 - `worker/src/lib/telegram-digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
 - `worker/src/lib/telegram-log.ts` — structured logging.
+- `worker/src/lib/telegram-pending-provenance.ts` — bounded target-group scope and markup-policy serialization/parsing shared by Dispatch and Queue.
 
 ---
 

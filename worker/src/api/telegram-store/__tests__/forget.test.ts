@@ -296,10 +296,19 @@ describe("migrateTelegramChatId", () => {
     sqlite.exec("PRAGMA ignore_check_constraints = ON");
 
     const expectedRows = new Map(
-      CHAT_ROW_MERGE_TABLES.map((table) => [
-        table,
-        { ...insertSchemaSentinelRow(sqlite, table, oldChatId), chat_id: newChatId },
-      ]),
+      CHAT_ROW_MERGE_TABLES.map((table) => {
+        const sentinel = insertSchemaSentinelRow(sqlite, table, oldChatId);
+        return [
+          table,
+          {
+            ...sentinel,
+            chat_id: newChatId,
+            ...(table === "telegram_subscribers"
+              ? { preference_generation: Number(sentinel.preference_generation) + 1 }
+              : {}),
+          },
+        ];
+      }),
     );
 
     await migrateTelegramChatId(db, oldChatId, newChatId);

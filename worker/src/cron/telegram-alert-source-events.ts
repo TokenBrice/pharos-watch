@@ -92,6 +92,7 @@ interface CurrentResolutionTargetRow extends ResolutionTargetRow {
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
   timezone: string | null;
+  preference_generation: number;
 }
 
 interface ResolutionMembershipRow {
@@ -656,7 +657,8 @@ async function loadResolutionMaps(
                   subscriber.quiet_hours_enabled,
                   subscriber.quiet_hours_start_utc,
                   subscriber.quiet_hours_end_utc,
-                  subscriber.timezone
+                  subscriber.timezone,
+                  subscriber.preference_generation
              FROM telegram_alert_source_resolution_targets target
              JOIN telegram_alert_source_resolution_pages page
                ON page.source_event_id = target.source_event_id
@@ -700,6 +702,7 @@ async function loadResolutionMaps(
       quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
       quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
       timezone: row.timezone ?? null,
+      preference_generation: row.preference_generation ?? 0,
       isGlobal: false,
       hasLocalOverride: false,
     };

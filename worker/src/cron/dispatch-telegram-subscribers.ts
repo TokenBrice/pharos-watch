@@ -70,7 +70,8 @@ export async function loadSubscriberRowsBatch(
                 u.quiet_hours_enabled,
                 u.quiet_hours_start_utc,
                 u.quiet_hours_end_utc,
-                u.timezone
+                u.timezone,
+                u.preference_generation
            FROM telegram_subscriptions sub
            JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
           WHERE sub.stablecoin_id IN (${inClause.sql})
@@ -96,6 +97,7 @@ export async function loadSubscriberRowsBatch(
         quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
         quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
         timezone: row.timezone ?? null,
+        preference_generation: row.preference_generation ?? 0,
         isGlobal: false,
         hasLocalOverride: true,
       });
@@ -124,6 +126,7 @@ export async function loadGlobalSubscriberRows(
               quiet_hours_start_utc,
               quiet_hours_end_utc,
               timezone,
+              preference_generation,
               global_depeg_worsening_bps_step
          FROM telegram_subscribers
         WHERE ${alertColumn} = 1
@@ -142,6 +145,7 @@ export async function loadGlobalSubscriberRows(
     quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
     quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
     timezone: row.timezone ?? null,
+    preference_generation: row.preference_generation ?? 0,
     isGlobal: true,
   }));
 }
@@ -346,6 +350,7 @@ export async function loadPresetSubscriberRowsBatch(
       quiet_hours_start_utc: number | null;
       quiet_hours_end_utc: number | null;
       timezone: string | null;
+      preference_generation: number;
     }>;
   };
   try {
@@ -360,7 +365,8 @@ export async function loadPresetSubscriberRowsBatch(
                 u.quiet_hours_enabled,
                 u.quiet_hours_start_utc,
                 u.quiet_hours_end_utc,
-                u.timezone
+                u.timezone,
+                u.preference_generation
            FROM telegram_preset_subscriptions p
           JOIN telegram_subscribers u ON u.chat_id = p.chat_id
           WHERE p.${alertColumn} = 1
@@ -377,6 +383,7 @@ export async function loadPresetSubscriberRowsBatch(
         quiet_hours_start_utc: number | null;
         quiet_hours_end_utc: number | null;
         timezone: string | null;
+        preference_generation: number;
       }>();
   } catch (err) {
     logTelegramEvent({
@@ -412,6 +419,7 @@ export async function loadPresetSubscriberRowsBatch(
         quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
         quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
         timezone: row.timezone ?? null,
+        preference_generation: row.preference_generation ?? 0,
         isGlobal: false,
         hasLocalOverride: false,
       });

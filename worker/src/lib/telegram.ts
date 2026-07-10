@@ -4,6 +4,7 @@ import {
   TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
   TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC,
 } from "./telegram-constants";
+import type { PendingAlertScopeItem } from "./telegram-pending-provenance";
 
 export interface TelegramCreds {
   botToken: string;
@@ -390,6 +391,12 @@ export interface BatchMessage {
    * chunk of single-coin alerts.
    */
   linkPreviewOptions?: LinkPreviewOptions;
+  /** Immutable source identity for queued risk-alert provenance. */
+  sourceEventId?: string;
+  /** Chat preference generation observed while this alert target was planned. */
+  preferenceGeneration?: number;
+  /** Exact coin/family pairs represented by this immutable rendered target. */
+  alertScope?: PendingAlertScopeItem[];
 }
 
 export interface BatchResult {

@@ -23,6 +23,7 @@ import {
   readTelegramGlobalBackoff,
   type PendingDrainResult,
 } from "./telegram-pending";
+import { isValidPendingSourceEventId } from "../lib/telegram-pending-provenance";
 
 const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
 const OVERFLOW_PLAN_CACHE_VERSION = 1;
@@ -64,6 +65,10 @@ function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPl
   const rawEntry = isRecord(value.entry) ? value.entry : null;
   const alerts = rawEntry ? normalizeCachedAlerts(rawEntry.alerts) : null;
   const lastActiveAt = rawEntry ? finiteNumber(rawEntry.lastActiveAt) : null;
+  const sourceEventId = typeof value.sourceEventId === "string" && isValidPendingSourceEventId(value.sourceEventId)
+    ? value.sourceEventId
+    : undefined;
+  const preferenceGeneration = rawEntry ? finiteNumber(rawEntry.preferenceGeneration) : null;
 
   if (
     chatId == null ||
@@ -81,6 +86,7 @@ function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPl
   return {
     chatId,
     alertType,
+    ...(sourceEventId ? { sourceEventId } : {}),
     estimatedChunks: Math.max(1, Math.floor(estimatedChunks)),
     expiresAt: Math.floor(expiresAt),
     entry: {
@@ -90,6 +96,9 @@ function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPl
       quietHoursStartUtc: finiteNumber(rawEntry.quietHoursStartUtc),
       quietHoursEndUtc: finiteNumber(rawEntry.quietHoursEndUtc),
       timezone: typeof rawEntry.timezone === "string" ? rawEntry.timezone : null,
+      preferenceGeneration: preferenceGeneration != null && preferenceGeneration >= 0
+        ? Math.floor(preferenceGeneration)
+        : 0,
       specificCount: finiteNumber(rawEntry.specificCount) ?? 0,
       globalCount: finiteNumber(rawEntry.globalCount) ?? 0,
     },
@@ -242,6 +251,7 @@ export function buildOverflowAwareSubscriberQueue(args: {
   overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   formatBudget: number;
+  sourceEventId?: string;
 }): {
   plannedQueue: PlannedSubscriberAlert[];
   subscriberQueue: RoutedSubscriberAlert[];
@@ -259,7 +269,7 @@ export function buildOverflowAwareSubscriberQueue(args: {
       entry.quietHoursEndUtc,
       entry.timezone,
     );
-  const plannedQueue = planSubscriberQueue(args.alertsByChat);
+  const plannedQueue = planSubscriberQueue(args.alertsByChat, args.sourceEventId);
   const { toFormat, overflowPlanned, overflowFormatBudget } = splitFreshPlansForOverflowPriority(
     plannedQueue,
     args.overflowBacklog,
