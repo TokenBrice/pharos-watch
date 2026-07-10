@@ -134,20 +134,12 @@ function isPulseStat(item: { value: unknown }): item is PulseStat {
   return typeof item.value === "number";
 }
 
-function PulseStatGroup({
-  title,
-  items,
-}: {
-  title: string;
-  items: PulseStat[];
-}) {
+function PulseStatGroup({ title, items }: { title: string; items: PulseStat[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-background/42 p-3.5">
-      <p className="pharos-kicker">
-        {title}
-      </p>
+    <div className="border-t border-border/55 py-3.5">
+      <p className="pharos-kicker !tracking-normal">{title}</p>
       <div className="mt-3 space-y-3">
         {items.map((item) => {
           const sharePercent = item.shareTotal ? Math.max(3, Math.min(100, (item.value / item.shareTotal) * 100)) : 0;
@@ -165,10 +157,7 @@ function PulseStatGroup({
                   className="h-1.5 overflow-hidden rounded-full bg-muted"
                   aria-label={`${item.label} is ${formatShare(item.value, item.shareTotal)}`}
                 >
-                  <div
-                    className="h-full rounded-full bg-[var(--brand-accent)]"
-                    style={{ width: `${sharePercent}%` }}
-                  />
+                  <div className="h-full rounded-full bg-[var(--brand-accent)]" style={{ width: `${sharePercent}%` }} />
                 </div>
               ) : null}
             </div>
@@ -192,40 +181,43 @@ export function TelegramPulseStrip() {
       </>
     );
   } else if (!data || isError) {
-    content = (
-      <p>
-        Telegram adoption metrics unavailable; commands still work.
-      </p>
-    );
+    content = <p>Telegram adoption metrics unavailable; commands still work.</p>;
   } else {
     content = (
       <>
         <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.activeWatchers)}</span> active
-          Telegram chats
+          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.activeWatchers)}</span>{" "}
+          active Telegram chats
         </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+        <span className="hidden text-border sm:inline" aria-hidden="true">
+          &middot;
+        </span>
         <span className="text-muted-foreground">
           <span className="font-semibold text-foreground pharos-numeric">
             {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)}
           </span>{" "}
           watcher load scenarios tested
         </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
-        <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.coinSubscriptions)}</span> alert
-          links (incl. presets)
+        <span className="hidden text-border sm:inline" aria-hidden="true">
+          &middot;
         </span>
-        <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+        <span className="text-muted-foreground">
+          <span className="font-semibold text-foreground pharos-numeric">{formatCount(data.coinSubscriptions)}</span>{" "}
+          alert links (incl. presets)
+        </span>
+        <span className="hidden text-border sm:inline" aria-hidden="true">
+          &middot;
+        </span>
         <span className="text-muted-foreground">
           updated every {Math.round((data.updatedEverySeconds ?? 300) / 60)}m
         </span>
         {data.topCoins.length > 0 && (
           <>
-            <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+            <span className="hidden text-border sm:inline" aria-hidden="true">
+              &middot;
+            </span>
             <span className="text-muted-foreground">
-              most followed:{" "}
-              <span className="font-medium text-foreground">{data.topCoins.slice(0, 3).join(", ")}</span>
+              most followed: <span className="font-medium text-foreground">{data.topCoins.slice(0, 3).join(", ")}</span>
             </span>
           </>
         )}
@@ -250,7 +242,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   if (isLoading) {
     return (
       <section
-        className={cn("space-y-6", className)}
+        className={cn("space-y-5 border-y border-border/65 py-7", className)}
         aria-label="Loading Telegram adoption metrics"
         aria-live="polite"
         aria-busy="true"
@@ -262,7 +254,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           </div>
           <Skeleton className="h-3 w-28" />
         </div>
-        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-8">
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-3 sm:gap-x-8">
           <Skeleton className="h-24 sm:h-28" />
           <Skeleton className="h-24 sm:h-28" />
           <Skeleton className="h-24 sm:h-28" />
@@ -274,18 +266,18 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   if (!data || isError) {
     return (
       <section
-        className={cn("space-y-3", className)}
+        className={cn("space-y-3 border-y border-border/65 py-7", className)}
         aria-label="Telegram adoption metrics unavailable"
         aria-live="polite"
         aria-busy="false"
       >
         <div className="flex items-center gap-3 border-b border-border/55 pb-4">
           <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-          <h2 className="pharos-section-title">Telegram pulse</h2>
+          <h2 className="pharos-section-title">Live public evidence</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Live Telegram adoption metrics are temporarily unavailable. They retry automatically; bot links and setup
-          commands still work.
+          Public Telegram telemetry is temporarily unavailable. It retries automatically; bot links and setup commands
+          still work. No healthy service state is inferred while the evidence is unavailable.
         </p>
       </section>
     );
@@ -307,9 +299,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Reactivated today", value: data.reactivatedWatchersToday },
     { label: "Churned today", value: data.churnedWatchersToday },
   ].filter(isPulseStat);
-  const deliveryStats = [
-    { label: "Queued deliveries", value: data.pendingDeliveries },
-  ].filter(isPulseStat);
+  const deliveryStats = [{ label: "Queued deliveries", value: data.pendingDeliveries }].filter(isPulseStat);
   const miniAppStats = [
     { label: "Sessions today", value: data.miniAppSessionsToday },
     { label: "Mutations today", value: data.miniAppMutationsToday },
@@ -323,24 +313,33 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
 
   return (
     <section
-      className={cn(
-        "pharos-card-shell relative overflow-hidden p-4 sm:p-5 lg:p-6",
-        className,
-      )}
+      className={cn("border-y border-border/65 py-7 sm:py-9", className)}
       aria-label="Live Telegram adoption metrics"
       aria-live="polite"
       aria-busy="false"
     >
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="flex items-start gap-3">
           <span aria-hidden="true" className="relative flex h-2 w-2">
-            <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70" />
+            <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70 motion-reduce:animate-none" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-accent)]" />
           </span>
-          <h2 className="pharos-section-title">Telegram pulse</h2>
+          <div>
+            <h2 className="pharos-section-title">Live public evidence</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              Aggregate adoption and telemetry freshness. This public snapshot is evidence, not a delivery guarantee.
+            </p>
+          </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-          current pulse {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt)}
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+            data.quality?.status === "partial"
+              ? "bg-amber-500/10 text-amber-800 dark:text-amber-200"
+              : "bg-green-500/10 text-green-800 dark:text-green-200",
+          )}
+        >
+          {data.quality?.status === "partial" ? "Partial telemetry" : "Complete telemetry"}
         </span>
       </div>
 
@@ -351,56 +350,78 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </p>
       ) : null}
 
-      <div className="grid gap-5 pt-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-6">
-        <div className="rounded-2xl bg-background/60 p-4 sm:p-5">
-          <p className="pharos-kicker">
-            Active Telegram chats
-          </p>
-          <p className="mt-4 pharos-numeric leading-none text-foreground">
-            <span className="text-[3.5rem] font-semibold tracking-normal sm:text-[4.5rem] lg:text-[6rem]">
-              {formatCount(data.activeWatchers)}
-            </span>
-          </p>
-          <p className="mt-4 max-w-[48ch] text-xs leading-relaxed text-muted-foreground">
-            Selected load scenarios are tested at {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)} watchers. This is
-            not a fixed capacity limit.
-          </p>
+      <dl className="mt-6 grid gap-x-8 sm:grid-cols-3">
+        <div className="border-t border-border/55 py-4">
+          <dt className="pharos-kicker !tracking-normal">Active Telegram chats</dt>
+          <dd className="mt-2 pharos-numeric text-3xl font-semibold leading-none text-foreground sm:text-4xl">
+            {formatCount(data.activeWatchers)}
+          </dd>
         </div>
+        <div className="border-t border-border/55 py-4">
+          <dt className="pharos-kicker !tracking-normal">Alert follows</dt>
+          <dd className="mt-2 pharos-numeric text-3xl font-semibold leading-none text-foreground sm:text-4xl">
+            {formatCount(data.coinSubscriptions)}
+          </dd>
+          <dd className="mt-2 text-xs text-muted-foreground">
+            {formatCount(explicitFollows)} explicit · {formatCount(presetImpliedFollows)} preset-implied
+          </dd>
+        </div>
+        <div className="border-t border-border/55 py-4">
+          <dt className="pharos-kicker !tracking-normal">Current snapshot</dt>
+          <dd className="mt-2 font-mono text-sm font-semibold text-foreground">
+            {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt)}
+          </dd>
+          <dd className="mt-2 text-xs text-muted-foreground">
+            Refresh target: every {Math.round((data.updatedEverySeconds ?? 300) / 60)} minutes
+          </dd>
+        </div>
+      </dl>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Selected modeled workloads are tested at {formatCount(TELEGRAM_LOAD_TEST_SCENARIO_WATCHERS)} watchers. This is
+        not a fixed capacity limit.
+      </p>
 
-        <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-xl bg-background/42 p-3.5">
-            <p className="pharos-kicker">
-              Alert follows
-            </p>
-            <p className="mt-3 pharos-numeric text-4xl font-semibold leading-none text-foreground sm:text-5xl">
-              {formatCount(data.coinSubscriptions)}
-            </p>
-            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs text-muted-foreground">
-              <span>
-                <span className="block pharos-numeric text-sm font-semibold text-foreground">
-                  {formatCount(explicitFollows)}
-                </span>
-                explicit
-              </span>
-              <span>
-                <span className="block pharos-numeric text-sm font-semibold text-foreground">
-                  {formatCount(presetImpliedFollows)}
-                </span>
-                preset-implied
-              </span>
+      <details className="group mt-5 border-t border-border/60">
+        <summary className="pharos-focus-ring flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-md py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0">
+            <span className="block">Adoption history and aggregate telemetry</span>
+            <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
+              Lifecycle chart, most-followed coins, daily deltas, delivery controls, and Mini App activity
+            </span>
+          </span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="border-t border-border/60 pt-5" aria-label="Additional Telegram pulse details">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="pharos-kicker !tracking-normal">Telegram chat lifecycle</p>
             </div>
+            {latestHistoryPoint ? (
+              <div className="font-mono text-xs text-muted-foreground">
+                latest daily snapshot{" "}
+                <span className="font-semibold text-foreground">{formatCount(latestHistoryPoint.activeWatchers)}</span>
+                {latestHistoryLabel ? <span> · {latestHistoryLabel}</span> : null}
+              </div>
+            ) : null}
           </div>
-
-          <div className="rounded-xl bg-background/42 p-3.5">
-            <p className="pharos-kicker">
-              Most followed
-            </p>
+          {watcherHistory.length > 0 ? (
+            <TelegramWatcherGrowthChart data={watcherHistory} />
+          ) : (
+            <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+              Historical watcher points will appear once subscription telemetry is available.
+            </div>
+          )}
+          <div className="mt-5 border-t border-border/55 pt-4">
+            <p className="pharos-kicker !tracking-normal">Most followed</p>
             {topCoins.length > 0 ? (
               <ol className="mt-3 flex flex-wrap items-center gap-1.5">
                 {topCoins.map((coin, index) => (
                   <li
                     key={coin}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 pharos-numeric text-[13px] font-semibold text-foreground"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-muted/45 px-2.5 py-1.5 pharos-numeric text-[13px] font-semibold text-foreground"
                   >
                     <span aria-hidden="true" className="text-[10px] font-medium text-muted-foreground">
                       {index + 1}
@@ -410,48 +431,13 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
                 ))}
               </ol>
             ) : (
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">No ranked follows yet.</p>
+              <p className="mt-3 text-xs text-muted-foreground">No ranked follows yet.</p>
             )}
           </div>
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-2xl bg-background/46 px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="pharos-kicker">
-              Telegram chat lifecycle
-            </p>
-          </div>
-          {latestHistoryPoint ? (
-            <div className="font-mono text-xs text-muted-foreground">
-              latest daily snapshot{" "}
-              <span className="font-semibold text-foreground">{formatCount(latestHistoryPoint.activeWatchers)}</span>
-              {latestHistoryLabel ? <span> · {latestHistoryLabel}</span> : null}
-            </div>
-          ) : null}
-        </div>
-        {watcherHistory.length > 0 ? (
-          <TelegramWatcherGrowthChart data={watcherHistory} />
-        ) : (
-          <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
-            Historical watcher points will appear once subscription telemetry is available.
-          </div>
-        )}
-      </div>
-
-      <details className="group mt-5 border-t border-border/60">
-        <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden">
-          <span className="min-w-0">
-            <span className="block">More information</span>
-            <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
-              Follow composition, lifecycle deltas, delivery controls, and Mini App activity
-            </span>
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-        </summary>
-        <div className="border-t border-border/60 pt-4 sm:pt-5" aria-label="Additional Telegram pulse details">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
+          <div
+            className="mt-4 grid gap-x-6 md:grid-cols-2 xl:grid-cols-4"
+            aria-label="Telegram aggregate alert telemetry"
+          >
             <PulseStatGroup title="Follow composition" items={followStats} />
             <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
             <PulseStatGroup title="Delivery controls" items={deliveryStats} />

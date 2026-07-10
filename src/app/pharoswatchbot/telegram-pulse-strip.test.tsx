@@ -130,7 +130,7 @@ describe("TelegramPulseStrip", () => {
 });
 
 describe("TelegramPulseBoard", () => {
-  it("keeps the main pulse summary visible and folds deeper telemetry below the lifecycle chart", () => {
+  it("keeps current public evidence visible and folds historical telemetry", () => {
     mockUseTelegramPulse.mockReturnValue({ data: pulse, isLoading: false, isError: false } as ReturnType<
       typeof useTelegramPulse
     >);
@@ -142,27 +142,35 @@ describe("TelegramPulseBoard", () => {
     expect(board.getAttribute("aria-live")).toBe("polite");
     expect(board.getAttribute("aria-busy")).toBe("false");
     const alertFollows = screen.getByText("Alert follows");
+    const currentSnapshot = screen.getByText("Current snapshot");
     const topFollowed = screen.getByText("Most followed");
     expect(activeChats).toBeTruthy();
-    expect(screen.getByText(/Selected load scenarios are tested at 5,000 watchers/i)).toBeTruthy();
+    expect(screen.getByText(/Selected modeled workloads are tested at 5,000 watchers/i)).toBeTruthy();
+    expect(screen.getByText(/This public snapshot is evidence, not a delivery guarantee/i)).toBeTruthy();
+    expect(screen.getByText("Complete telemetry")).toBeTruthy();
     expect(screen.queryByText(/% used/i)).toBeNull();
     expect(screen.queryByText(/estimated capacity/i)).toBeNull();
     expect(alertFollows).toBeTruthy();
+    expect(currentSnapshot).toBeTruthy();
     expect(topFollowed).toBeTruthy();
     const lifecycle = screen.getByText("Telegram chat lifecycle");
     expect(lifecycle).toBeTruthy();
     expect(screen.getByRole("figure", { name: /chat lifecycle chart/i })).toBeTruthy();
     expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
     expect(screen.queryByText(/Low-cardinality deltas below 5/i)).toBeNull();
-    const summary = screen.getByText("More information").closest("summary") as HTMLElement | null;
+    const summary = screen
+      .getByText("Adoption history and aggregate telemetry")
+      .closest("summary") as HTMLElement | null;
     expect(summary).toBeTruthy();
     const details = summary?.closest("details") as HTMLDetailsElement | null;
     expect(details).toBeTruthy();
     expect(details?.open).toBe(false);
-    expect(Boolean(activeChats.compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(Boolean(lifecycle.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
-      true,
-    );
+    expect(
+      Boolean(activeChats.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
+    expect(
+      Boolean((summary as HTMLElement).compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
 
     fireEvent.click(summary as HTMLElement);
 
@@ -170,7 +178,7 @@ describe("TelegramPulseBoard", () => {
     const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
     expect(within(pulseDetails).queryByText("Active Telegram chats")).toBeNull();
     expect(within(pulseDetails).queryByText("Alert follows")).toBeNull();
-    expect(within(pulseDetails).queryByText("Most followed")).toBeNull();
+    expect(within(pulseDetails).getByText("Most followed")).toBeTruthy();
     expect(within(pulseDetails).getByText("Follow composition")).toBeTruthy();
     expect(within(pulseDetails).getByText("Explicit coin follows")).toBeTruthy();
     expect(within(pulseDetails).getByText("Preset-implied follows")).toBeTruthy();
@@ -216,7 +224,7 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    const summary = screen.getByText("More information").closest("summary") as HTMLElement;
+    const summary = screen.getByText("Adoption history and aggregate telemetry").closest("summary") as HTMLElement;
     fireEvent.click(summary);
 
     const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
