@@ -129,6 +129,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0183     | `0183_telegram_fresh_target_effect_fencing.sql`           | Add owner/generation-fenced fresh Telegram target effects with explicit execution-unknown reconciliation                                             |
 | 0184     | `0184_telegram_digest_outbox.sql`                         | Add immutable Telegram digest editions with owner/generation-fenced exact-payload delivery and ambiguity handling                                    |
 | 0185     | `0185_telegram_source_event_resolution.sql`               | Add immutable Telegram source events, cursorable normalized preset-resolution pages, target-item lineage, and atomic baseline advancement             |
+| 0186     | `0186_admin_action_audit_intent_keys.sql`                  | Add nullable intent identities and a partial unique index for exactly-once catalog action audit rows                                                   |
 
 ## Retired Individual Migrations
 
@@ -196,6 +197,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0183_telegram_fresh_target_effect_fencing.sql`: roll back fresh-target fencing by restoring the prior Worker version. Keep the additive target effect columns and indexes; rows in `sending` or `execution_unknown` require operator reconciliation before any manual resend.
 - `0184_telegram_digest_outbox.sql`: roll back digest outbox delivery by restoring the prior Worker version. Keep the additive outbox table; rows in `sending` or `execution_unknown` require operator reconciliation before any manual resend.
 - `0185_telegram_source_event_resolution.sql`: roll back resumable Telegram source planning by restoring the prior Worker version. Keep source/page/lineage rows for the 90-day audit window; unresolved or expired rows remain forensic evidence and require no destructive rollback.
+- `0186_admin_action_audit_intent_keys.sql`: roll back canonical catalog auditing by restoring the prior Worker version. Keep the nullable intent column and unique index; older Workers ignore both and existing handler-owned audit rows remain compatible.
 
 ## Rollback Procedure
 

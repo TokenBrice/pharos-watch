@@ -23,6 +23,7 @@ export type StatusPageActionGroup = "recovery" | "audit" | "communications";
 export type StatusPageActionKind = "inspect" | "backfill" | "repair" | "reset" | "communication";
 export type StatusPageActionRisk = "read-only" | "low" | "moderate" | "high";
 export type StatusPageActionResultMode = "immediate" | "queued" | "continuation";
+export type StatusPageActionAuditMode = "canonical" | "handler";
 export type StatusPageActionRunbookPath =
   | "docs/data-pipeline.md"
   | "docs/depeg-detection.md"
@@ -78,6 +79,8 @@ interface EndpointStatusPageActionConfig {
   preconditions: readonly string[];
   blockedBy: readonly string[];
   resultMode: StatusPageActionResultMode;
+  /** Canonical router audit is the default. Use handler only when the handler writes one richer audit row itself. */
+  auditMode?: StatusPageActionAuditMode;
   rollback?: string;
   runbookPath?: StatusPageActionRunbookPath;
 }

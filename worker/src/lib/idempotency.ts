@@ -62,7 +62,10 @@ function buildExecutionUnknownBody(): string {
 function buildExecutionUnknownResponse(body = buildExecutionUnknownBody()): Response {
   return new Response(body, {
     status: EXECUTION_UNKNOWN_HTTP_STATUS,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Execution-Certainty": "unknown",
+    },
   });
 }
 
@@ -76,11 +79,7 @@ async function requestFingerprint(request: Request): Promise<string> {
   return sha256Hex(canonical);
 }
 
-async function loadIdempotencyRecord(
-  db: D1Database,
-  action: string,
-  key: string,
-): Promise<IdempotencyRecord | null> {
+async function loadIdempotencyRecord(db: D1Database, action: string, key: string): Promise<IdempotencyRecord | null> {
   return db
     .prepare(
       `SELECT request_hash, response_status, response_body, created_at,
@@ -118,20 +117,9 @@ async function takeOverAbandonedUnstartedReservation(
             AND reservation_generation = ?
             AND created_at < ?`,
       )
-      .bind(
-        owner,
-        now,
-        action,
-        key,
-        fingerprint,
-        PENDING_RESPONSE_STATUS,
-        existingGeneration,
-        cutoff,
-      )
+      .bind(owner, now, action, key, fingerprint, PENDING_RESPONSE_STATUS, existingGeneration, cutoff)
       .run();
-    return (takeoverResult.meta?.changes ?? 0) === 1
-      ? { owner, generation: existingGeneration + 1 }
-      : null;
+    return (takeoverResult.meta?.changes ?? 0) === 1 ? { owner, generation: existingGeneration + 1 } : null;
   } catch (error) {
     logWorkerEvent({
       scope: "admin",
@@ -195,17 +183,7 @@ async function persistTerminalResponse(
               AND reservation_generation = ?
               AND execution_started_at IS NOT NULL`,
         )
-        .bind(
-          status,
-          body,
-          now,
-          action,
-          key,
-          fingerprint,
-          PENDING_RESPONSE_STATUS,
-          token.owner,
-          token.generation,
-        )
+        .bind(status, body, now, action, key, fingerprint, PENDING_RESPONSE_STATUS, token.owner, token.generation)
         .run(),
     );
     if ((result.meta?.changes ?? 0) === 1) return true;
@@ -274,7 +252,10 @@ export async function runIdempotentAdminAction(
   if (!existing) return errorResponse(500, "Failed to reserve idempotency key");
 
   if (existing.request_hash !== fingerprint) {
-    return errorResponse(409, "Idempotency key reuse with different request payload");
+    return withResponseHeaders(
+      withIdempotencyHeaders(errorResponse(409, "Idempotency key reuse with different request payload"), key, true),
+      { "X-Idempotency-Conflict": "request-mismatch" },
+    );
   }
   if (existing.response_status === EXECUTION_UNKNOWN_RESPONSE_STATUS) {
     return withIdempotencyHeaders(buildExecutionUnknownResponse(existing.response_body), key, true);
@@ -293,9 +274,7 @@ export async function runIdempotentAdminAction(
     return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
   }
 
-  let token: ReservationToken | null = insertedReservation
-    ? { owner, generation: 1 }
-    : null;
+  let token: ReservationToken | null = insertedReservation ? { owner, generation: 1 } : null;
   if (!token) {
     token = await takeOverAbandonedUnstartedReservation(
       db,

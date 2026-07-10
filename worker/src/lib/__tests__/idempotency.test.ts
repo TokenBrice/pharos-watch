@@ -261,9 +261,13 @@ describe("runIdempotentAdminAction", () => {
   it("does not replay while an execution is in flight", async () => {
     const db = makeIdempotencyDb();
     let started!: () => void;
-    const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     let finish!: (response: Response) => void;
-    const gate = new Promise<Response>((resolve) => { finish = resolve; });
+    const gate = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
     let calls = 0;
     const execute = async () => {
       calls++;
@@ -286,22 +290,16 @@ describe("runIdempotentAdminAction", () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const db = makeIdempotencyDb({ failBeginOnce: true });
-    const first = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("unstarted"),
-      async () => Response.json({ impossible: true }),
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("unstarted"), async () =>
+      Response.json({ impossible: true }),
     );
     expect(first.status).toBe(409);
     const pending = db.getRecord("backfill-depegs", "unstarted")!;
     pending.created_at = now - 20 * 60 - 1;
 
     let calls = 0;
-    const recovered = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("unstarted"),
-      async () => Response.json({ calls: ++calls }, { status: 202 }),
+    const recovered = await runIdempotentAdminAction(db, "backfill-depegs", request("unstarted"), async () =>
+      Response.json({ calls: ++calls }, { status: 202 }),
     );
 
     expect(recovered.status).toBe(202);
@@ -315,11 +313,8 @@ describe("runIdempotentAdminAction", () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const db = makeIdempotencyDb({ failBeginOnce: true });
-    await runIdempotentAdminAction(
-      db,
-      "reset-blacklist-sync",
-      request("legacy-generation-zero"),
-      async () => Response.json({ impossible: true }),
+    await runIdempotentAdminAction(db, "reset-blacklist-sync", request("legacy-generation-zero"), async () =>
+      Response.json({ impossible: true }),
     );
     const pending = db.getRecord("reset-blacklist-sync", "legacy-generation-zero")!;
     pending.reservation_generation = 0;
@@ -344,7 +339,9 @@ describe("runIdempotentAdminAction", () => {
   it("suppresses retry after a crash immediately after execution-start was persisted", async () => {
     const db = makeIdempotencyDb();
     let started!: () => void;
-    const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const first = runIdempotentAdminAction(db, "backfill-depegs", request("crash-before-effect"), async () => {
       started();
       return new Promise<Response>(() => {});
@@ -353,11 +350,8 @@ describe("runIdempotentAdminAction", () => {
     await startedPromise;
 
     let calls = 0;
-    const retry = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("crash-before-effect"),
-      async () => Response.json({ calls: ++calls }),
+    const retry = await runIdempotentAdminAction(db, "backfill-depegs", request("crash-before-effect"), async () =>
+      Response.json({ calls: ++calls }),
     );
 
     expect(retry.status).toBe(503);
@@ -376,7 +370,9 @@ describe("runIdempotentAdminAction", () => {
     const second = await runIdempotentAdminAction(db, "backfill-depegs", request("throws"), execute);
 
     expect(first.status).toBe(503);
+    expect(first.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(second.status).toBe(503);
+    expect(second.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(db.getRecord("backfill-depegs", "throws")?.response_status).toBe(-2);
     expect(calls).toBe(1);
@@ -404,11 +400,8 @@ describe("runIdempotentAdminAction", () => {
   it("confirms an ambiguous terminal commit without replaying execution", async () => {
     const db = makeIdempotencyDb({ ambiguousTerminalCommitOnce: true });
     let effects = 0;
-    const response = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("ambiguous-commit"),
-      async () => Response.json({ effects: ++effects }),
+    const response = await runIdempotentAdminAction(db, "backfill-depegs", request("ambiguous-commit"), async () =>
+      Response.json({ effects: ++effects }),
     );
 
     expect(response.status).toBe(200);
@@ -423,11 +416,8 @@ describe("runIdempotentAdminAction", () => {
         record.reservation_generation += 1;
       },
     });
-    const response = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("late-owner"),
-      async () => Response.json({ ok: true }),
+    const response = await runIdempotentAdminAction(db, "backfill-depegs", request("late-owner"), async () =>
+      Response.json({ ok: true }),
     );
 
     expect(response.status).toBe(503);
@@ -440,21 +430,17 @@ describe("runIdempotentAdminAction", () => {
 
   it("rejects key reuse with a different request fingerprint", async () => {
     const db = makeIdempotencyDb();
-    const first = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("conflict", "batch=1"),
-      async () => Response.json({ ok: true }),
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("conflict", "batch=1"), async () =>
+      Response.json({ ok: true }),
     );
-    const second = await runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request("conflict", "batch=2"),
-      async () => Response.json({ impossible: true }),
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", request("conflict", "batch=2"), async () =>
+      Response.json({ impossible: true }),
     );
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(409);
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(second.headers.get("X-Idempotency-Conflict")).toBe("request-mismatch");
   });
 
   it("canonicalizes query ordering in the request fingerprint", async () => {

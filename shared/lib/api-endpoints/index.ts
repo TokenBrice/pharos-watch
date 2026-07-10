@@ -24,6 +24,7 @@ export {
   type EndpointPublicApiAccess,
   type EndpointSiteDataAccess,
   type StatusPageAction,
+  type StatusPageActionAuditMode,
   type StatusPageActionDryRun,
   type StatusPageActionGroup,
   type StatusPageActionKind,

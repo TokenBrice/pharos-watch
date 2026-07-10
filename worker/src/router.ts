@@ -12,6 +12,7 @@ import {
   getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
 import { logWorkerEvent } from "./lib/structured-log";
+import { auditCatalogActionResponseSafely } from "./lib/catalog-action-audit";
 import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
 
 export interface ResolvedRoute {
@@ -86,6 +87,12 @@ async function handleRouteWithErrorBoundary(
   }
 
   const responseWithHeaders = addAdminGetNoStoreHeader(routeMatch.endpoint, routeCtx.request, response);
+  await auditCatalogActionResponseSafely({
+    db: routeCtx.db,
+    endpoint: routeMatch.endpoint,
+    request: routeCtx.request,
+    response: responseWithHeaders,
+  });
   return stripHeadBody(routeCtx.request, responseWithHeaders);
 }
 

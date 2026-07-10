@@ -79,4 +79,42 @@ describe("logAdminAction", () => {
       originalSize: JSON.stringify(huge).length,
     });
   });
+
+  it("uses the unique intent insert only for canonical deduplicated rows", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO admin_action_audit",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    await logAdminAction(db, {
+      action: "backfill-depegs",
+      result: "ok",
+      intentKey: "catalog:v1:opaque-hash",
+    });
+
+    const insert = db.getHistory().find((row) => row.sql.startsWith("INSERT OR IGNORE INTO admin_action_audit"));
+    expect(insert?.binds[7]).toBe("catalog:v1:opaque-hash");
+  });
+
+  it("uses an upsert for an authoritative original outcome", async () => {
+    const db = mockD1([
+      {
+        match: "ON CONFLICT(action, intent_key)",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    await logAdminAction(db, {
+      action: "backfill-depegs",
+      result: "ok",
+      intentKey: "catalog:v1:opaque-hash",
+      intentWriteMode: "authoritative",
+    });
+
+    expect(db.getHistory()[0]?.sql).toContain("DO UPDATE SET");
+  });
 });
