@@ -11,6 +11,10 @@ export interface BatchExecuteOptions {
   signal?: AbortSignal;
 }
 
+export interface AtomicBatchExecuteOptions {
+  signal?: AbortSignal;
+}
+
 function d1ErrorMessage(error: unknown): string {
   return toErrorMessage(error);
 }
@@ -48,6 +52,54 @@ export async function batchExecute(
     }
   }
   return changes;
+}
+
+/** Execute one bounded D1 batch so every statement commits or rolls back together. */
+export async function executeAtomicBatch(
+  db: D1Database,
+  stmts: D1PreparedStatement[],
+  options: AtomicBatchExecuteOptions = {},
+): Promise<number> {
+  if (stmts.length === 0) return 0;
+  if (stmts.length > D1_BATCH_SIZE) {
+    throw new RangeError(
+      `executeAtomicBatch supports at most ${D1_BATCH_SIZE} statements (received ${stmts.length})`,
+    );
+  }
+
+  const { signal } = options;
+  if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+  const result = await runWithOverloadRetry(() => db.batch(stmts), 3, signal);
+  if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+  return result.reduce((changes, row) => changes + Number(row?.meta?.changes ?? 0), 0);
+}
+
+/**
+ * Prepare bounded multi-row INSERT statements without exceeding D1's bind limit.
+ * `insertSql` must contain the INSERT target/columns but not a VALUES clause.
+ */
+export function prepareMultiRowInsertStatements(
+  db: D1Database,
+  insertSql: string,
+  rows: readonly (readonly unknown[])[],
+): D1PreparedStatement[] {
+  if (rows.length === 0) return [];
+  const columnCount = rows[0]?.length ?? 0;
+  if (columnCount <= 0 || columnCount > D1_MAX_BOUND_PARAMETERS) {
+    throw new RangeError(
+      `prepareMultiRowInsertStatements requires 1-${D1_MAX_BOUND_PARAMETERS} columns (received ${columnCount})`,
+    );
+  }
+  if (rows.some((row) => row.length !== columnCount)) {
+    throw new RangeError("prepareMultiRowInsertStatements requires rows with a consistent column count");
+  }
+
+  const rowsPerStatement = Math.floor(D1_MAX_BOUND_PARAMETERS / columnCount);
+  return chunkArray(rows, rowsPerStatement).map((chunk) => {
+    const rowPlaceholders = `(${new Array(columnCount).fill("?").join(", ")})`;
+    const valuesSql = new Array(chunk.length).fill(rowPlaceholders).join(", ");
+    return db.prepare(`${insertSql} VALUES ${valuesSql}`).bind(...chunk.flat());
+  });
 }
 
 /** Build WHERE, LIMIT, and OFFSET clauses for paginated SQL queries */

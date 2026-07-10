@@ -18,6 +18,12 @@ export interface StablecoinPublicationCoverage {
   invalidWaiverIds: string[];
 }
 
+export interface ResolvedStablecoinPublicationWaivers {
+  activeById: ReadonlyMap<string, StablecoinPublicationWaiver>;
+  expiredWaiverIds: string[];
+  invalidWaiverIds: string[];
+}
+
 const NIGHT_WATCH_SUPPLY_WAIVER_EXPIRY_SEC = Date.UTC(2026, 7, 10) / 1000;
 
 /**
@@ -47,15 +53,13 @@ function isNonEmpty(value: string): boolean {
   return value.trim().length > 0;
 }
 
-export function evaluateStablecoinPublicationCoverage(
-  publishedIds: Iterable<string>,
-  nowSec: number = Math.floor(Date.now() / 1000),
-  waivers: readonly StablecoinPublicationWaiver[] = STABLECOIN_PUBLICATION_WAIVERS,
-  expectedActiveIds: readonly string[] = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
-): StablecoinPublicationCoverage {
-  const presentIds = new Set(publishedIds);
+export function resolveStablecoinPublicationWaivers(
+  expectedActiveIds: readonly string[],
+  nowSec: number,
+  waivers: readonly StablecoinPublicationWaiver[],
+): ResolvedStablecoinPublicationWaivers {
   const activeIds = new Set(expectedActiveIds);
-  const waiverById = new Map<string, StablecoinPublicationWaiver>();
+  const activeById = new Map<string, StablecoinPublicationWaiver>();
   const expiredWaiverIds = new Set<string>();
   const invalidWaiverIds = new Set<string>();
 
@@ -74,8 +78,37 @@ export function evaluateStablecoinPublicationCoverage(
       expiredWaiverIds.add(waiver.stablecoinId);
       continue;
     }
-    waiverById.set(waiver.stablecoinId, waiver);
+    activeById.set(waiver.stablecoinId, waiver);
   }
+
+  return {
+    activeById,
+    expiredWaiverIds: [...expiredWaiverIds].sort(),
+    invalidWaiverIds: [...invalidWaiverIds].sort(),
+  };
+}
+
+export function selectAppliedStablecoinPublicationWaivers(
+  waivedActiveIds: readonly string[],
+  resolvedWaivers: ResolvedStablecoinPublicationWaivers,
+): StablecoinPublicationWaiver[] {
+  return waivedActiveIds.map((stablecoinId) => {
+    const waiver = resolvedWaivers.activeById.get(stablecoinId);
+    if (!waiver) {
+      throw new Error(`Missing resolved publication waiver for ${stablecoinId}`);
+    }
+    return waiver;
+  });
+}
+
+export function evaluateStablecoinPublicationCoverage(
+  publishedIds: Iterable<string>,
+  nowSec: number = Math.floor(Date.now() / 1000),
+  waivers: readonly StablecoinPublicationWaiver[] = STABLECOIN_PUBLICATION_WAIVERS,
+  expectedActiveIds: readonly string[] = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
+): StablecoinPublicationCoverage {
+  const presentIds = new Set(publishedIds);
+  const resolvedWaivers = resolveStablecoinPublicationWaivers(expectedActiveIds, nowSec, waivers);
 
   const missingActiveIds: string[] = [];
   const waivedActiveIds: string[] = [];
@@ -83,7 +116,7 @@ export function evaluateStablecoinPublicationCoverage(
   for (const stablecoinId of expectedActiveIds) {
     if (presentIds.has(stablecoinId)) {
       presentActiveCount++;
-    } else if (waiverById.has(stablecoinId)) {
+    } else if (resolvedWaivers.activeById.has(stablecoinId)) {
       waivedActiveIds.push(stablecoinId);
     } else {
       missingActiveIds.push(stablecoinId);
@@ -97,7 +130,7 @@ export function evaluateStablecoinPublicationCoverage(
     waivedActiveCount: waivedActiveIds.length,
     missingActiveIds,
     waivedActiveIds,
-    expiredWaiverIds: [...expiredWaiverIds].sort(),
-    invalidWaiverIds: [...invalidWaiverIds].sort(),
+    expiredWaiverIds: resolvedWaivers.expiredWaiverIds,
+    invalidWaiverIds: resolvedWaivers.invalidWaiverIds,
   };
 }

@@ -32,18 +32,19 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
    );
    ```
-6. Check the once-per-UTC-date guard before building write statements:
+6. Build the exact completion identity and check the once-per-UTC-date guard:
    - read cache key `snapshot-supply:last-write`
-   - if the marker's stored `snapshotDate` equals today's `snapshotDate`, skip with `reason: "already_written_today"` (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
+   - coverage-version 2 markers bind the UTC date to a SHA-256 digest of the sorted required active IDs plus the exact applied waiver IDs, owners, and expiries; count-only version 1 markers remain readable but cannot authorize a writer skip
+   - skip with `reason: "already_written_today"` only when the marker date and digest match the current complete coverage evaluation (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
 7. For each PSI-eligible cached asset:
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
    - Build `INSERT OR REPLACE` statement
 8. Exact-set data quality check: require every active registry ID to have positive cached supply or an owned, reasoned, unexpired publication waiver. Shadow rows are written when present but do not block active-universe completion. Missing cache IDs and present rows with invalid supply are named separately in `partial_snapshot_blocked` metadata.
-9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
+9. Atomically replace the cron-owned rows for the UTC date and write the completion marker in one bounded D1 batch. Multi-row inserts stay below the 100-bind limit. Supply-row deletion is restricted to the union of current PSI-eligible IDs and the prior version 2 marker's sorted `ownedRowIds`, so same-day admin-backfill rows outside snapshot ownership are preserved.
 10. If zero rows were prepared after passing the exact-set guard, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`; this is not normally reachable because the non-empty active set would fail the exact-set guard first
-11. Update cache key `snapshot-supply:last-write`
+11. The same transaction updates cache key `snapshot-supply:last-write`; any statement failure rolls back the row replacement and marker together
 12. Log item count and date
 
 ---
@@ -108,7 +109,7 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 - **Populated by:** `snapshot-chain-supply` cron stage (`worker/src/cron/snapshot-chain-supply.ts`) running in the `*/15 * * * *` quarter-hourly slot, chained after `snapshot-supply`.
 - **Normalization:** the cron canonicalizes raw DefiLlama chain labels through the shared chain resolver before writing, so display-name aliases and tracked metadata names collapse into the same `chain_id`.
-- **Write pattern:** `INSERT OR REPLACE` — idempotent, re-runs on the same day refresh the row.
+- **Write pattern:** atomic UTC-date replacement — delete the cron-owned date, multi-row `INSERT OR REPLACE` the recomputed aggregate, and write the same coverage-version 2 identity marker in one D1 batch. Re-runs therefore remove chains that disappeared from the aggregate instead of retaining stale rows.
 - **Volume:** ~50 rows/day (one row per active chain per UTC day).
 - **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
 - **Recoverability status:** historical rows written before the 2026-04-08 resolver fix are not approved for public charting. The retained D1 data does not include archived historical `stablecoins` cache payloads, so pre-fix chain splits cannot be reconstructed exactly. Any future public chain-history surface must start from a post-fix baseline date unless an audited export/purge plan is executed first.
@@ -244,11 +245,11 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 |-----------|----------|
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, `legacy-array-not-allowed`, or `filtered-malformed-entries`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
-| Today's UTC snapshot already written | Skip write (`reason: "already_written_today"`) |
+| Today's UTC snapshot has a version 2 marker matching the current exact ID/waiver digest | Skip write (`reason: "already_written_today"`) |
 | 0 prepared rows with a non-empty active set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the exact-set guard |
 | 0 prepared rows after passing the exact-set guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the active set is non-empty |
 | Any active ID lacks valid supply and no owned unexpired waiver applies | Return degraded with named `missingActiveIds`, `missingCacheActiveIds`, and `invalidSupplyIds`; do not write the completion marker |
-| `batchExecute()` exception (non-abort) | `recordCronFailure()` then return degraded (`reason: "db_write_failed"`); abort errors are re-thrown via `rethrowIfAborted` |
+| Atomic date-replacement exception (non-abort) | Roll back rows and marker together, `recordCronFailure()`, then return degraded (`reason: "db_write_failed"`); abort errors are re-thrown via `rethrowIfAborted` |
 
 All cron runs are logged to the `cron_runs` table (7-day retention).
 
@@ -261,10 +262,10 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 3. One snapshot per UTC day (no intraday data)
 4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data
 5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
-6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
-7. The write path is intentionally guarded by a once-per-UTC-date equality check on the `snapshot-supply:last-write` marker (the first healthy run after UTC midnight writes the single daily snapshot) even though the cron is chained to the 15-minute lane
+6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs; the cron scopes replacement deletes by marker-owned/current PSI IDs so unrelated admin rows survive
+7. The write path is guarded by a once-per-UTC-date version 2 exact-identity check on the `snapshot-supply:last-write` marker (the first healthy run after UTC midnight writes the single daily snapshot) even though the cron is chained to the 15-minute lane
 8. `supply_history` is kept as an archive for downstream historical replays such as PSI backfills; recover older gaps with the admin backfill when needed
-9. A failed or partial batch never consumes the daily completion marker. Any rows written before a failure remain hidden by completed-day API reads and are safely replaced by the next same-day retry.
+9. The date replacement and daily completion marker commit in the same D1 transaction. A failure leaves the prior rows and marker intact and the changed identity retryable.
 
 ---
 
@@ -278,7 +279,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
-| `worker/src/lib/db.ts` | `batchExecute()` helper used by snapshot and backfill writes |
+| `worker/src/lib/db.ts` | Bounded multi-row preparation and atomic batch helpers used by snapshot replacement; chunked helpers remain available to backfills |
 | `worker/src/lib/db-cache.ts` | `getCache()` cache-row access helpers |
 | `worker/src/lib/cron-logger.ts` | `CronResult` type and `logCronRun()` wrapper used by scheduled handlers |
 | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient stablecoins-cache loader and failure reasons |

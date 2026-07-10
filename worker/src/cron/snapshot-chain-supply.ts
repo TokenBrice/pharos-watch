@@ -1,22 +1,31 @@
-import { batchExecute } from "../lib/db";
+import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { startOfUtcDaySec } from "../lib/time-constants";
 import {
+  STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
+  resolveStablecoinPublicationWaivers,
+  selectAppliedStablecoinPublicationWaivers,
   type StablecoinPublicationWaiver,
 } from "../lib/stablecoin-publication-coverage";
+import {
+  buildSupplySnapshotCoverageExpectation,
+  buildSupplySnapshotCompletionMarker,
+  getCompletedSupplySnapshot,
+  SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
+} from "../lib/supply-snapshot-completion";
 
 const CACHE_MAX_AGE_SEC = 1200;
 
 interface SnapshotChainSupplyOptions {
   nowSec?: number;
   publicationWaivers?: readonly StablecoinPublicationWaiver[];
+  requiredActiveIds?: readonly string[];
 }
 
 function abortedCronResult(): CronResult {
@@ -40,7 +49,8 @@ export async function snapshotChainSupply(
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: cache.reason }) };
   }
 
-  const cacheAge = Math.floor(Date.now() / 1000) - cache.updatedAt;
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  const cacheAge = nowSec - cache.updatedAt;
   if (cacheAge > CACHE_MAX_AGE_SEC) {
     console.warn(`[snapshot-chain-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }) };
@@ -49,37 +59,37 @@ export async function snapshotChainSupply(
   // One snapshot per UTC day, keyed on the marker's stored snapshotDate.
   // See snapshot-supply.ts for the drift rationale.
   const snapshotDate = startOfUtcDaySec();
-  const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
-  if (lastWrite) {
-    let completion: {
-      snapshotDate?: unknown;
-      coverageVersion?: unknown;
-      expectedActiveCount?: unknown;
-      accountedActiveCount?: unknown;
-    } = {};
-    try {
-      completion = JSON.parse(lastWrite.value) as typeof completion;
-    } catch {
-      completion = {};
-    }
-    if (
-      completion.snapshotDate === snapshotDate
-      && completion.coverageVersion === 1
-      && completion.expectedActiveCount === ACTIVE_IDS.size
-      && completion.accountedActiveCount === ACTIVE_IDS.size
-    ) {
-      return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
-    }
-  }
-
-  const expectedActiveIds = [...ACTIVE_IDS].sort();
+  const expectedActiveIds = [...new Set(options.requiredActiveIds ?? ACTIVE_IDS)].sort();
+  const expectedActiveIdSet = new Set(expectedActiveIds);
+  const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
   const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => String(asset.id)));
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     cachedIds,
-    options.nowSec,
-    options.publicationWaivers,
+    nowSec,
+    publicationWaivers,
     expectedActiveIds,
   );
+  const resolvedWaivers = resolveStablecoinPublicationWaivers(
+    expectedActiveIds,
+    nowSec,
+    publicationWaivers,
+  );
+  const appliedWaivers = selectAppliedStablecoinPublicationWaivers(
+    publicationCoverage.waivedActiveIds,
+    resolvedWaivers,
+  );
+  const coverageExpectation = buildSupplySnapshotCoverageExpectation(expectedActiveIds, appliedWaivers);
+  const lastWrite = await getCompletedSupplySnapshot(db, {
+    cacheKey: SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY,
+    expectedCoverage: coverageExpectation,
+  });
+  if (
+    publicationCoverage.complete
+    && lastWrite?.snapshotDate === snapshotDate
+    && lastWrite.exactCoverageVerified
+  ) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
+  }
   if (!publicationCoverage.complete) {
     return {
       status: "degraded",
@@ -99,7 +109,7 @@ export async function snapshotChainSupply(
   const chainTotals = new Map<string, { totalUsd: number; coinCount: number }>();
 
   for (const asset of cache.payload.peggedAssets) {
-    if (!ACTIVE_IDS.has(String(asset.id))) continue;
+    if (!expectedActiveIdSet.has(String(asset.id))) continue;
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
     for (const [chainId, data] of canonicalChainCirculating) {
@@ -115,16 +125,12 @@ export async function snapshotChainSupply(
     }
   }
 
-  const stmts: D1PreparedStatement[] = [];
+  const chainRows: Array<readonly [string, number, number, number]> = [];
   for (const [chainId, { totalUsd, coinCount }] of chainTotals) {
-    stmts.push(
-      db.prepare(
-        "INSERT OR REPLACE INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count) VALUES (?, ?, ?, ?)",
-      ).bind(chainId, snapshotDate, totalUsd, coinCount),
-    );
+    chainRows.push([chainId, snapshotDate, totalUsd, coinCount]);
   }
 
-  if (stmts.length === 0) {
+  if (chainRows.length === 0) {
     console.warn("[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
     return {
       status: "degraded",
@@ -134,21 +140,33 @@ export async function snapshotChainSupply(
   }
 
   try {
-    await batchExecute(db, stmts, { signal });
-    await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({
-      snapshotDate,
-      coverageVersion: 1,
-      expectedActiveCount: publicationCoverage.expectedActiveCount,
-      accountedActiveCount:
-        publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-      writtenChains: stmts.length,
-    }));
+    const markerValue = JSON.stringify({
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate,
+        coverage: coverageExpectation,
+        accountedActiveCount:
+          publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
+        ownedRowIds: chainRows.map(([chainId]) => chainId),
+      }),
+      writtenChains: chainRows.length,
+    });
+    const replacementStatements = [
+      db.prepare("DELETE FROM chain_supply_history WHERE snapshot_date = ?").bind(snapshotDate),
+      ...prepareMultiRowInsertStatements(
+        db,
+        "INSERT OR REPLACE INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count)",
+        chainRows,
+      ),
+      db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .bind(SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY, markerValue, nowSec),
+    ];
+    await executeAtomicBatch(db, replacementStatements, { signal });
   } catch (err) {
     if (signal?.aborted || isAbortError(err)) return abortedCronResult();
-    recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "batchExecute" } });
+    recordCronFailure("snapshot-chain-supply", err, { metadata: { stage: "atomicDateReplacement" } });
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
   }
 
-  console.log(`[snapshot-chain-supply] Inserted ${stmts.length} rows for ${formatIsoDate(snapshotDate)}`);
-  return { itemCount: stmts.length };
+  console.log(`[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
+  return { itemCount: chainRows.length };
 }
