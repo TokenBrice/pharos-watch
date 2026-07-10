@@ -30,6 +30,7 @@ interface PendingDisambiguationPersistenceInput {
   initiatorUserId: string | null;
   expiresAt?: number;
   operationStatements?: D1PreparedStatement[];
+  beforePendingStatements?: D1PreparedStatement[];
 }
 
 export async function persistPendingDisambiguation(
@@ -112,12 +113,13 @@ export async function persistPendingDisambiguationRow(
       input.initiatorUserId,
       nowSec,
     );
-  if ((input.operationStatements?.length ?? 0) > 0) {
+  if ((input.operationStatements?.length ?? 0) > 0 || (input.beforePendingStatements?.length ?? 0) > 0) {
     const results = await runWithOverloadRetry(
-      () => db.batch([statement, ...(input.operationStatements ?? [])]),
+      () => db.batch([...(input.beforePendingStatements ?? []), statement, ...(input.operationStatements ?? [])]),
       3,
     );
-    return d1ChangeCount(results[0] ?? ({ meta: {} } as D1Result<unknown>)) > 0;
+    const pendingResultIndex = input.beforePendingStatements?.length ?? 0;
+    return d1ChangeCount(results[pendingResultIndex] ?? ({ meta: {} } as D1Result<unknown>)) > 0;
   }
   const result = await statement.run();
   return d1ChangeCount(result) > 0;
@@ -149,6 +151,7 @@ export async function persistPendingConfirmBulk(
     initiatorUserId: string | null;
     expiresAt?: number;
     operationStatements?: D1PreparedStatement[];
+    beforePendingStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
   return persistPendingDisambiguationRow(db, {
@@ -163,6 +166,7 @@ export async function persistPendingConfirmBulk(
     initiatorUserId: input.initiatorUserId,
     expiresAt: input.expiresAt,
     operationStatements: input.operationStatements,
+    beforePendingStatements: input.beforePendingStatements,
   });
 }
 

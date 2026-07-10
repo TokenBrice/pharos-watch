@@ -9,11 +9,14 @@ import {
   unixNow,
   unsubscribeAll,
   upsertGlobalAlertTypes,
+  applyWatchlistImportV2,
+  isWatchlistImportPreviewCurrent,
+  watchlistPortableStateMatches,
 } from "../telegram-webhook-store";
-import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
+import { parsePendingDisambiguation, parseStoredConfirmBulkPayload } from "../telegram-webhook-parsing";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
-import type { ConfirmBulkPayload, PendingAction } from "../telegram-webhook-shared";
+import type { ConfirmBulkPayload } from "../telegram-webhook-shared";
 import {
   callbackChatType,
   callbackUsername,
@@ -46,15 +49,8 @@ function parseStoredConfirmation(ctx: CallbackContext): NormalizedConfirmation |
   }
   if (kind === "forget") return { action, kind, expiresAt, payload: null };
   if (typeof payload !== "object" || payload == null || Array.isArray(payload)) return null;
-  const bulk = payload as Partial<ConfirmBulkPayload>;
-  if (
-    (bulk.kind !== "subscribe" && bulk.kind !== "unsubscribe")
-    || !Array.isArray(bulk.coinIds)
-    || !Array.isArray(bulk.presetIds)
-  ) {
-    return null;
-  }
-  return { action, kind, expiresAt, payload: bulk as ConfirmBulkPayload };
+  const bulk = parseStoredConfirmBulkPayload(payload as Record<string, unknown>);
+  return bulk ? { action, kind, expiresAt, payload: bulk } : null;
 }
 
 async function loadFreshConfirmation(
@@ -95,8 +91,33 @@ async function loadFreshConfirmation(
 async function executeConfirmedBulk(
   ctx: CallbackContext,
   payload: ConfirmBulkPayload,
+  expiresAt: number,
   operationStatements?: D1PreparedStatement[],
-): Promise<void> {
+): Promise<"applied" | "stale"> {
+  if (payload.kind === "watchlist-import-v2") {
+    const previewCurrent = await isWatchlistImportPreviewCurrent(ctx.db, ctx.chatId, payload);
+    const outcome = await applyWatchlistImportV2(ctx.db, {
+      chatId: ctx.chatId,
+      // A malformed or stale stored preview is consumed through the same
+      // normalized webhook mutation, but the impossible generation prevents
+      // every portable-preference statement from running.
+      expectedPreferenceGeneration: previewCurrent ? payload.expectedPreferenceGeneration : -1,
+      generationLease: payload.generationLease,
+      directEntries: payload.directEntries,
+      presetEntries: payload.presetEntries,
+      directRemoveIds: payload.preview.directRemoves,
+      presetRemoveIds: payload.preview.presetRemoves,
+      pendingExpiresAt: expiresAt,
+      pendingActionPayload: JSON.stringify(payload),
+      operationStatements,
+    });
+    await recordTelegramUsageEvent(ctx.db, {
+      eventType: "subscribe",
+      actionDetail: "import-v2",
+      outcome: outcome === "applied" ? "success" : "stale",
+    });
+    return outcome;
+  }
   if (payload.kind === "subscribe") {
     const alertTypes = new Set(payload.alertTypes);
     if (payload.subscribeAll) {
@@ -121,11 +142,11 @@ async function executeConfirmedBulk(
       actionDetail: payload.subscribeAll ? "all" : payload.presetIds.length > 0 ? "preset" : "coin",
       outcome: "success",
     });
-    return;
+    return "applied";
   }
   if (payload.unsubscribeAll) {
     await unsubscribeAll(ctx.db, ctx.chatId, { clearPending: true, operationStatements });
-  } else {
+  } else if (payload.kind === "unsubscribe") {
     await applyUnsubscribeIntent(ctx.db, {
       chatId: ctx.chatId,
       directStablecoinIds: payload.coinIds,
@@ -139,6 +160,7 @@ async function executeConfirmedBulk(
     actionDetail: payload.unsubscribeAll ? "all" : payload.presetIds.length > 0 ? "preset" : "coin",
     outcome: "success",
   });
+  return "applied";
 }
 
 async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedConfirmation): Promise<void> {
@@ -148,6 +170,7 @@ async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedCon
     expiresAt: normalized.expiresAt,
     payload: normalized.payload,
   }, "required"));
+  let importOutcome: "applied" | "stale" = "applied";
   if (!ctx.wasMutationApplied) {
     const operationStatements = ctx.prepareMutationAppliedStatement
       ? [ctx.prepareMutationAppliedStatement()]
@@ -163,26 +186,47 @@ async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedCon
     } else if (normalized.kind === "forget") {
       await forgetSubscriber(ctx.db, ctx.chatId, { operationStatements });
     } else if (normalized.payload) {
-      await executeConfirmedBulk(ctx, normalized.payload, operationStatements);
+      importOutcome = await executeConfirmedBulk(ctx, normalized.payload, normalized.expiresAt, operationStatements);
     }
     if (operationStatements) ctx.confirmAtomicMutationApplied?.();
     // The fallback exists for direct tests without an update_id claim; normal
     // webhook dispatch always commits a prepared marker with the domain write.
     else await ctx.markMutationApplied();
+  } else if (
+    normalized.action === "confirm"
+    && normalized.payload?.kind === "watchlist-import-v2"
+  ) {
+    importOutcome = await watchlistPortableStateMatches(
+      ctx.db,
+      ctx.chatId,
+      normalized.payload.directEntries,
+      normalized.payload.presetEntries,
+    ) ? "applied" : "stale";
   }
 
+  const isWatchlistImport = normalized.payload?.kind === "watchlist-import-v2";
   const reply = normalized.action === "cancel"
     ? "Cancelled."
     : normalized.kind === "forget"
       ? "Your subscriber data has been deleted. Use /start to begin again."
-      : "Confirmed.";
+      : isWatchlistImport && importOutcome === "stale"
+        ? "Your alert settings changed after this preview, so the watchlist was not replaced. Re-run /import to review a fresh preview."
+        : isWatchlistImport
+          ? "Watchlist replaced exactly as previewed. Quiet hours, timezone, global-all settings, and snoozes on retained coin rows were left unchanged. Removed coin rows and their snoozes were deleted."
+          : "Confirmed.";
   await ctx.beforeIrreversibleEffect(normalized.kind === "forget" ? "callback-forget-reply" : "callback-bulk-reply");
   await sendAuditedTelegramReply(ctx.db, ctx.chatId, reply, ctx.botToken, {
     actionDetail: normalized.kind === "forget" ? "callback_forget" : "callback_bulk",
     ...(normalized.kind === "forget" ? { recordReplyOutcome: false } : {}),
   });
   await ctx.answerCallback({
-    text: normalized.action === "cancel" ? "Cancelled." : normalized.kind === "forget" ? "Deleted." : "Applied.",
+    text: normalized.action === "cancel"
+      ? "Cancelled."
+      : normalized.kind === "forget"
+        ? "Deleted."
+        : isWatchlistImport && importOutcome === "stale"
+          ? "Preview stale. Nothing replaced."
+          : "Applied.",
   });
 }
 

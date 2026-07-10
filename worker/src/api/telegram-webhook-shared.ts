@@ -161,6 +161,24 @@ export type ConfirmBulkPayload =
       presetIds: string[];
       coinIds: string[];
       unsubscribeAll: boolean;
+    }
+  | {
+      kind: "watchlist-import-v2";
+      registryVersion: string;
+      directEntries: string[];
+      presetEntries: string[];
+      expectedPreferenceGeneration: number;
+      generationLease: number;
+      preview: {
+        directAdds: string[];
+        directRemoves: string[];
+        directChanges: string[];
+        directChangeBefore: string[];
+        presetAdds: string[];
+        presetRemoves: string[];
+        presetChanges: string[];
+        presetChangeBefore: string[];
+      };
     };
 
 /**
@@ -271,6 +289,7 @@ export interface SubscriberRow {
   alert_snooze_until_ts?: number | null;
   consecutive_block_count?: number | null;
   consecutive_block_first_at?: number | null;
+  preference_generation?: number | null;
 }
 
 export interface SubscriptionRow {
@@ -284,6 +303,11 @@ export interface SubscriptionRow {
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
   alert_snooze_until_ts?: number | null;
+  alert_dews_override?: number | null;
+  alert_depeg_override?: number | null;
+  alert_safety_override?: number | null;
+  alert_launch_override?: number | null;
+  alert_reserve_override?: number | null;
 }
 
 export type CoinResolution =

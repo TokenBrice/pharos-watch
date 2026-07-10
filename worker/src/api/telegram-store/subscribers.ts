@@ -13,6 +13,19 @@ export function unixNow(): number {
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
 
+export function prepareEnsureSubscriberExists(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  nowSec: number = unixNow(),
+): D1PreparedStatement {
+  return db.prepare(`
+    INSERT OR IGNORE INTO telegram_subscribers (
+      chat_id, username, created_at, last_active_at
+    ) VALUES (?, ?, ?, ?)
+  `).bind(chatId, username, nowSec, nowSec);
+}
+
 export interface UpsertSubscriberInput {
   chatId: string;
   username: string | null;

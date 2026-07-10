@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
-import { MAX_WATCHLIST_TOKEN_CHARS } from "../../lib/telegram-watchlist-token";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -274,26 +272,25 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("No coins available for new alerts");
   });
 
-  it("refuses a maximum-current-registry /export instead of emitting an unimportable token", async () => {
-    const subscriptions = [...TRACKED_META_BY_ID.keys()].map((stablecoinId) => ({
+  it("exports the maximum current subscribable registry as one copyable v2 token", async () => {
+    const frozenIds = new Set(FROZEN_STABLECOINS.map((coin) => coin.id));
+    const subscriptions = [...TRACKED_META_BY_ID.keys()].filter((id) => !frozenIds.has(id)).map((stablecoinId) => ({
       stablecoin_id: stablecoinId,
       alert_dews: 1,
       alert_depeg: 1,
       alert_safety: 0,
       alert_launch: 0,
       alert_reserve: 0,
+      alert_dews_override: 1,
+      alert_depeg_override: 1,
+      alert_safety_override: 1,
+      alert_launch_override: 1,
+      alert_reserve_override: 1,
       dews_min_band: null,
       safety_mode: null,
       depeg_worsening_bps_step: null,
       alert_snooze_until_ts: null,
     }));
-    const unsafeToken = encodeWatchlistToken({
-      coinIds: subscriptions.map((row) => row.stablecoin_id),
-      alertTypes: ["dews", "depeg"],
-      presetIds: [],
-    });
-    expect(unsafeToken.length).toBeGreaterThan(MAX_WATCHLIST_TOKEN_CHARS);
-
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       { match: "FROM telegram_subscriptions", rows: subscriptions },
@@ -303,18 +300,13 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
 
     const body = sentMessageBody();
-    expect(body.text).toContain("too large for the current copy-paste export format");
-    expect(body.text).toContain(`${subscriptions.length} explicit coin follows`);
-    expect(body.text).toContain("no token was sent");
-    expect(body.text).not.toContain("<pre>");
+    expect(body.text).toContain(`${subscriptions.length} direct/local rows`);
+    expect(body.text).toContain("<pre>pw2.");
+    expect(body.text).toContain("Import shows an exact replacement preview");
   });
 
-  it("refuses a decodable token when its copyable /export block would be split", async () => {
-    const stablecoinId = "x".repeat(2_960);
-    const token = encodeWatchlistToken({ coinIds: [stablecoinId], alertTypes: ["dews"], presetIds: [] });
-    expect(token.length).toBeLessThanOrEqual(MAX_WATCHLIST_TOKEN_CHARS);
-    expect(token.length + "<pre></pre>".length).toBeGreaterThan(TELEGRAM_MESSAGE_CHUNK_LIMIT);
-
+  it("refuses to export an unavailable row instead of silently dropping it", async () => {
+    const stablecoinId = "retired-stablecoin";
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
@@ -338,8 +330,9 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
 
     const body = sentMessageBody();
-    expect(body.text).toContain("too large for the current copy-paste export format");
-    expect(body.text).not.toContain(token);
+    expect(body.text).toContain("retired or unknown entries");
+    expect(body.text).toContain("Nothing was changed");
+    expect(body.text).not.toContain("<pre>");
   });
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {

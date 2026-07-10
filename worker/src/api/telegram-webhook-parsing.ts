@@ -37,7 +37,38 @@ function parsePendingActionType(value: string | null | undefined): PendingAction
   return null;
 }
 
-function parseStoredConfirmBulkPayload(payload: Record<string, unknown>): ConfirmBulkPayload | null {
+function parseImportPreview(value: unknown): Extract<ConfirmBulkPayload, { kind: "watchlist-import-v2" }>["preview"] | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const preview = value as Record<string, unknown>;
+  const parsed = {
+    directAdds: parseStringArray(preview.directAdds),
+    directRemoves: parseStringArray(preview.directRemoves),
+    directChanges: parseStringArray(preview.directChanges),
+    directChangeBefore: parseStringArray(preview.directChangeBefore),
+    presetAdds: parseStringArray(preview.presetAdds),
+    presetRemoves: parseStringArray(preview.presetRemoves),
+    presetChanges: parseStringArray(preview.presetChanges),
+    presetChangeBefore: parseStringArray(preview.presetChangeBefore),
+  };
+  const inputLengths = [
+    preview.directAdds,
+    preview.directRemoves,
+    preview.directChanges,
+    preview.directChangeBefore,
+    preview.presetAdds,
+    preview.presetRemoves,
+    preview.presetChanges,
+    preview.presetChangeBefore,
+  ].map((entry) => Array.isArray(entry) ? entry.length : -1);
+  const outputLengths = Object.values(parsed).map((entry) => entry.length);
+  return inputLengths.every((length, index) => length >= 0 && length === outputLengths[index])
+      && parsed.directChangeBefore.length === parsed.directChanges.length
+      && parsed.presetChangeBefore.length === parsed.presetChanges.length
+    ? parsed
+    : null;
+}
+
+export function parseStoredConfirmBulkPayload(payload: Record<string, unknown>): ConfirmBulkPayload | null {
   const kind = typeof payload.kind === "string" ? payload.kind : null;
   if (kind === "subscribe") {
     const depegWorseningBpsStep =
@@ -60,6 +91,36 @@ function parseStoredConfirmBulkPayload(payload: Record<string, unknown>): Confir
       presetIds: parseStringArray(payload.presetIds),
       coinIds: parseStringArray(payload.coinIds),
       unsubscribeAll: payload.unsubscribeAll === true,
+    };
+  }
+  if (kind === "watchlist-import-v2") {
+    const preview = parseImportPreview(payload.preview);
+    const directEntries = parseStringArray(payload.directEntries);
+    const presetEntries = parseStringArray(payload.presetEntries);
+    if (
+      !preview
+      || !Array.isArray(payload.directEntries)
+      || directEntries.length !== payload.directEntries.length
+      || !Array.isArray(payload.presetEntries)
+      || presetEntries.length !== payload.presetEntries.length
+      || typeof payload.registryVersion !== "string"
+      || payload.registryVersion.length < 1
+      || payload.registryVersion.length > 64
+      || !Number.isSafeInteger(payload.expectedPreferenceGeneration)
+      || Number(payload.expectedPreferenceGeneration) < 0
+      || !Number.isSafeInteger(payload.generationLease)
+      || Number(payload.generationLease) < 1_000_000_000_000_000
+    ) {
+      return null;
+    }
+    return {
+      kind,
+      registryVersion: payload.registryVersion,
+      directEntries,
+      presetEntries,
+      expectedPreferenceGeneration: Number(payload.expectedPreferenceGeneration),
+      generationLease: Number(payload.generationLease),
+      preview,
     };
   }
   return null;
