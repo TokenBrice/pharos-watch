@@ -54,7 +54,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
             }
           />
           <SummaryBadge label="Score-grade" value={formatPct(reserveComposition.authoritativeFreshCoverageRatio)} />
-          <SummaryBadge label="Drift rows" value={String(reserveDrift?.length ?? 0)} />
+          <SummaryBadge label="Drift rows" value={reserveDrift ? String(reserveDrift.length) : "Unknown"} />
         </div>
       </div>
 
@@ -88,7 +88,9 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
             </div>
           ) : (
             <div className="px-3 py-4 text-sm text-muted-foreground">
-              No live-vs-curated collateral drift is above the report-card watch threshold.
+              {reserveDrift
+                ? "No live-vs-curated collateral drift is above the report-card watch threshold."
+                : "Reserve drift payload is unavailable; no zero count is inferred."}
             </div>
           )}
         </div>
@@ -118,8 +120,10 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
               <div className="font-mono text-sm text-foreground">{reserveComposition.degradedCoins}</div>
             </div>
             <div>
-              <div className="text-muted-foreground">Class warnings</div>
-              <div className="font-mono text-sm text-foreground">{classificationWarnings?.length ?? 0}</div>
+              <div className="text-muted-foreground">Classification warnings</div>
+              <div className="font-mono text-sm text-foreground">
+                {classificationWarnings ? classificationWarnings.length : "Unknown"}
+              </div>
             </div>
           </div>
         </div>
