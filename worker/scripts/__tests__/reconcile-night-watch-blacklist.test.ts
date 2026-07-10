@@ -230,6 +230,83 @@ describe("Night Watch blacklist reconciliation", () => {
     sqlite.close();
   });
 
+  it("preserves a concurrently newer balance instead of overwriting it", async () => {
+    const { d1, executeStatements } = makeD1();
+    await runNightWatchBlacklistReconciliation(options(true), dependencies(d1));
+    const mutationStatements = executeStatements.mock.calls[0]?.[0] as string[];
+    const balanceStatement = mutationStatements.find((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
+    expect(balanceStatement).toContain(
+      "COALESCE(blacklist_current_balances.observed_at, 0) <= excluded.observed_at",
+    );
+    expect(balanceStatement).toContain(
+      "COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at",
+    );
+
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      const migrationFiles = readdirSync(migrationsDir)
+        .filter((filename) => filename.endsWith(".sql"))
+        .filter((filename) => filename.startsWith("0000_") || Number(filename.slice(0, 4)) >= 72)
+        .sort();
+      for (const filename of migrationFiles) {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- filenames come from the migrations directory listing above.
+        sqlite.exec(readFileSync(resolve(migrationsDir, filename), "utf8"));
+      }
+      sqlite.exec(balanceStatement!);
+      const inserted = sqlite
+        .prepare("SELECT id FROM blacklist_current_balances LIMIT 1")
+        .get() as { id: string };
+      sqlite
+        .prepare(
+          `UPDATE blacklist_current_balances
+              SET amount_native = 999,
+                  amount_usd = 999,
+                  observed_at = 2000000000,
+                  last_successful_observed_at = 2000000000,
+                  last_attempted_at = 2000000000
+            WHERE id = ?`,
+        )
+        .run(inserted.id);
+
+      sqlite.exec(balanceStatement!);
+
+      const preserved = sqlite
+        .prepare(
+          `SELECT amount_native, observed_at, last_attempted_at
+             FROM blacklist_current_balances
+            WHERE id = ?`,
+        )
+        .get(inserted.id);
+      expect(preserved).toEqual({
+        amount_native: 999,
+        observed_at: 2_000_000_000,
+        last_attempted_at: 2_000_000_000,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("marks reconciliation failed when a concurrent balance prevents exact replay parity", async () => {
+    const fixture = makeD1();
+    const originalQuery = fixture.d1.query;
+    fixture.d1.query = (<T>(sql: string): T[] => {
+      const rows = originalQuery<T>(sql);
+      if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
+        const balances = rows as Array<Record<string, unknown>>;
+        if (balances[0]) balances[0].amount_native = 999;
+      }
+      return rows;
+    }) as RemoteD1Client["query"];
+
+    const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(fixture.d1));
+
+    expect(summary.status).toBe("failed");
+    expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
+    expect(summary.unresolvedManifestGapCount).toBeGreaterThan(0);
+    expect(summary.samples.balanceMismatches).not.toEqual([]);
+  });
+
   it("is idempotent when every frozen identity already exists", async () => {
     const { d1 } = makeD1(true);
     const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(d1));

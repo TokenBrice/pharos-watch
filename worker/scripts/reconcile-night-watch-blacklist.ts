@@ -704,7 +704,9 @@ function balanceUpsertStatement(expectation: BalanceExpectation, observedAt: num
      attempt_count = blacklist_current_balances.attempt_count + 1,
      last_attempted_at = excluded.last_attempted_at,
      last_error_class = NULL,
-     consecutive_failures = 0;`;
+     consecutive_failures = 0
+   WHERE COALESCE(blacklist_current_balances.observed_at, 0) <= excluded.observed_at
+     AND COALESCE(blacklist_current_balances.last_attempted_at, 0) <= excluded.last_attempted_at;`;
 }
 
 function cursorValue(row: CursorRow | null): number | null {
