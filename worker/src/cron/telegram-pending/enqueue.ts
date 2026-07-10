@@ -41,6 +41,11 @@ interface SqlFragment {
   binds: readonly number[];
 }
 
+export interface PendingEnqueueGuard {
+  sql: string;
+  binds: readonly unknown[];
+}
+
 const SHOULD_REFRESH_EXISTING_ROW_SQL = [
   "COALESCE(telegram_pending_alerts.expires_at, telegram_pending_alerts.created_at + ?) <= excluded.created_at",
   "telegram_pending_alerts.created_at < excluded.created_at - ?",
@@ -68,41 +73,62 @@ function collectSqlBinds(...fragments: readonly SqlFragment[]): number[] {
   return fragments.flatMap((fragment) => [...fragment.binds]);
 }
 
-export async function enqueuePendingAlerts(
+export function buildPendingAlertEnqueueStatement(
   db: D1Database,
-  messages: BatchMessage[],
+  msg: BatchMessage,
   nowSec: number,
   options: PendingEnqueueOptions = {},
-): Promise<void> {
-  if (messages.length === 0) return;
-
+  guard?: PendingEnqueueGuard,
+): D1PreparedStatement {
   const sourceType = resolvePendingSourceType(options);
-  const stmts = messages.map((msg) => {
-    const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
-    const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
-    const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
-    const notBeforeRefresh = refreshExistingRowPredicate();
-    const expiresAtRefresh = refreshExistingRowCase("excluded.expires_at", "COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)");
-    const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
-    const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
-    const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
-    const refreshBinds = collectSqlBinds(
-      createdAtRefresh,
-      attemptsRefresh,
-      notBeforeRefresh,
-      expiresAtRefresh,
-      processingOwnerRefresh,
-      processingStartedRefresh,
-      processingExpiresRefresh,
-    );
-    return db
-      .prepare(
-        `INSERT INTO telegram_pending_alerts (
+  const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
+  const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
+  const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
+  const notBeforeRefresh = refreshExistingRowPredicate();
+  const expiresAtRefresh = refreshExistingRowCase(
+    "excluded.expires_at",
+    "COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)",
+  );
+  const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
+  const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
+  const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
+  const refreshBinds = collectSqlBinds(
+    createdAtRefresh,
+    attemptsRefresh,
+    notBeforeRefresh,
+    expiresAtRefresh,
+    processingOwnerRefresh,
+    processingStartedRefresh,
+    processingExpiresRefresh,
+  );
+  const values = [
+    msg.chatId,
+    msg.html,
+    msg.disableNotification ? 1 : 0,
+    nowSec,
+    options.notBeforeAt ?? null,
+    options.lastErrorClass ?? null,
+    options.retryAfterSec ?? null,
+    nowSec,
+    buildDedupeKey(msg),
+    msg.chunkIndex ?? 0,
+    resolvePendingPriority(msg, options),
+    sourceType,
+    msg.alertType ?? null,
+    expiresAt,
+  ];
+  const valuePlaceholders = values.map(() => "?").join(", ");
+  const valuesSource = guard
+    ? `SELECT ${valuePlaceholders} WHERE ${guard.sql}`
+    : `VALUES (${valuePlaceholders})`;
+  return db
+    .prepare(
+      `INSERT INTO telegram_pending_alerts (
            chat_id, message_html, disable_notification, created_at, not_before_at,
            last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
            priority, source_type, alert_type, expires_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ${valuesSource}
          ON CONFLICT(dedupe_key) DO UPDATE SET
            message_html = excluded.message_html,
            disable_notification = excluded.disable_notification,
@@ -129,24 +155,17 @@ export async function enqueuePendingAlerts(
            processing_owner = ${processingOwnerRefresh.sql},
            processing_started_at = ${processingStartedRefresh.sql},
            processing_expires_at = ${processingExpiresRefresh.sql}`,
-      )
-      .bind(
-        msg.chatId,
-        msg.html,
-        msg.disableNotification ? 1 : 0,
-        nowSec,
-        options.notBeforeAt ?? null,
-        options.lastErrorClass ?? null,
-        options.retryAfterSec ?? null,
-        nowSec,
-        buildDedupeKey(msg),
-        msg.chunkIndex ?? 0,
-        resolvePendingPriority(msg, options),
-        sourceType,
-        msg.alertType ?? null,
-        expiresAt,
-        ...refreshBinds,
-      );
-  });
+    )
+    .bind(...values, ...(guard?.binds ?? []), ...refreshBinds);
+}
+
+export async function enqueuePendingAlerts(
+  db: D1Database,
+  messages: BatchMessage[],
+  nowSec: number,
+  options: PendingEnqueueOptions = {},
+): Promise<void> {
+  if (messages.length === 0) return;
+  const stmts = messages.map((message) => buildPendingAlertEnqueueStatement(db, message, nowSec, options));
   await batchExecute(db, stmts);
 }

@@ -63,7 +63,9 @@ SELECT
   SUM(CASE WHEN t.status = 'queued' THEN 1 ELSE 0 END) AS queued,
   SUM(CASE WHEN t.status = 'sent' THEN 1 ELSE 0 END) AS sent,
   SUM(CASE WHEN t.status = 'failed' THEN 1 ELSE 0 END) AS failed,
-  SUM(CASE WHEN t.status = 'expired' THEN 1 ELSE 0 END) AS expired
+  SUM(CASE WHEN t.status = 'expired' THEN 1 ELSE 0 END) AS expired,
+  SUM(CASE WHEN t.effect_state = 'sending' THEN 1 ELSE 0 END) AS effect_sending,
+  SUM(CASE WHEN t.effect_state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown
 FROM telegram_alert_jobs j
 LEFT JOIN telegram_alert_job_targets t ON t.job_id = j.job_id
 WHERE j.created_at >= ? - 86400
@@ -85,12 +87,42 @@ SELECT
   enqueued_at,
   sent_at,
   failed_at,
+  effect_state,
+  effect_owner,
+  effect_generation,
+  effect_claimed_at,
+  effect_started_at,
+  effect_completed_at,
+  effect_claim_expires_at,
   pending_dedupe_key
 FROM telegram_alert_job_targets
 WHERE job_id = '<job_id>'
   AND status <> 'sent'
 ORDER BY status, created_at ASC;
 ```
+
+Fresh effects requiring reconciliation:
+
+```sql
+SELECT
+  job_id,
+  target_key,
+  chat_id,
+  chunk_index,
+  alert_type,
+  status,
+  effect_state,
+  effect_owner,
+  effect_generation,
+  effect_started_at,
+  effect_completed_at,
+  error_class
+FROM telegram_alert_job_targets
+WHERE effect_state IN ('sending', 'execution_unknown')
+ORDER BY COALESCE(effect_started_at, created_at) ASC;
+```
+
+Treat both states as execution-unknown once the claim expiry has passed. Inspect Telegram/user reports and the exact job payload context before any manual resend. Never reset these rows to `planned` merely to make the dispatcher retry them.
 
 ## Dead Letters
 

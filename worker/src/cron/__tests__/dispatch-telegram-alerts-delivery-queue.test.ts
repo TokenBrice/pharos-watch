@@ -145,9 +145,11 @@ describe("dispatchTelegramAlerts", () => {
       dispatchStartedAtMs,
     });
 
-    expect(mockSendBatch.mock.calls[0]?.[4]).toEqual({
+    expect(mockSendBatch.mock.calls[0]?.[4]).toEqual(expect.objectContaining({
       softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-    });
+      beforeSendBatch: expect.any(Function),
+      afterSendBatch: expect.any(Function),
+    }));
   });
 
   it("uses existing pending attempts when re-enqueuing a retryable fresh chunk", async () => {

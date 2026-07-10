@@ -5,10 +5,16 @@ import {
   splitMessage,
   type ConsolidatedAlerts,
 } from "../lib/telegram-alerts";
-import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram";
+import {
+  sendBatch,
+  type BatchMessage,
+  type BatchResult,
+  type PreSendBatchResult,
+} from "../lib/telegram";
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
+  hashDedupePart,
   clearPendingAlertsForDisabledChat,
   flushChatSuccessResets,
   handleBlockedChat,
@@ -26,6 +32,15 @@ import type {
   PerAlertTypeDeliveryStats,
   TelegramAlertType,
 } from "@shared/types/status";
+import {
+  claimFreshTelegramAlertTargets,
+  createTelegramFreshTargetOwner,
+  finalizeFreshTelegramAlertTargetEffects,
+  markFreshTelegramAlertTargetsSending,
+  type TelegramFreshTargetClaim,
+  type TelegramFreshTargetEffectOutcome,
+} from "./telegram-alert-target-effects";
+import { logTelegramEvent } from "../lib/telegram-log";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 
@@ -119,6 +134,35 @@ export interface FreshSendOutcome {
     at: number;
     errorClass?: string | null;
   }>;
+}
+
+export interface FreshRetryEffectHandoff {
+  message: BatchMessage;
+  result: BatchResult;
+  claim: TelegramFreshTargetClaim;
+  at: number;
+}
+
+function buildPreSendFenceSkip(): PreSendBatchResult {
+  return {
+    ok: false,
+    blocked: false,
+    retryable: false,
+    permanentFailure: true,
+    statusCode: null,
+    errorClass: "unknown",
+    delivery: "permanent_failure",
+    retryAfterSec: null,
+    skippedReason: "pre_send",
+  };
+}
+
+function isAmbiguousFreshSendResult(result: BatchResult): boolean {
+  return (
+    result.attempted !== false &&
+    result.statusCode == null &&
+    (result.errorClass === "timeout" || result.errorClass === "network" || result.errorClass === "unknown")
+  );
 }
 
 export function emptyAlerts(): ConsolidatedAlerts {
@@ -473,11 +517,95 @@ export async function deliverFreshAlerts(
   blockedUsersCleanedUpSeed: number,
   blockedUsersCleanupFailedSeed: number,
   dispatchStartedAtMs: number,
+  freshTargetJobIds: ReadonlyMap<string, string>,
+  handoffRetryableFreshEffects?: (handoffs: readonly FreshRetryEffectHandoff[]) => Promise<void>,
   signal?: AbortSignal,
 ): Promise<FreshSendOutcome> {
   const softDeadlineAtMs = dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS;
+  const freshEffectOwner = createTelegramFreshTargetOwner();
+  const freshTargetClaimsByKey = new Map<string, TelegramFreshTargetClaim>();
   const sendResults = sendList.length > 0
-    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, { softDeadlineAtMs })
+    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, {
+        softDeadlineAtMs,
+        beforeSendBatch: async (entries) => {
+          throwIfAborted(signal);
+          const identities = entries.map(({ item }) => {
+            const targetKey = buildDedupeKey(item);
+            const jobId = freshTargetJobIds.get(targetKey);
+            if (!jobId) {
+              throw new Error(`Telegram fresh target has no durable manifest identity (${hashDedupePart(targetKey)})`);
+            }
+            return { jobId, targetKey };
+          });
+          const { claims, skippedTargetKeys } = await claimFreshTelegramAlertTargets(
+            db,
+            identities,
+            freshEffectOwner,
+            Math.floor(Date.now() / 1000),
+            signal,
+          );
+          await markFreshTelegramAlertTargetsSending(
+            db,
+            [...claims.values()],
+            Math.floor(Date.now() / 1000),
+            signal,
+          );
+          for (const [targetKey, claim] of claims) freshTargetClaimsByKey.set(targetKey, claim);
+          if (skippedTargetKeys.size === 0) return;
+          const skipped = new Map<number, PreSendBatchResult>();
+          for (const entry of entries) {
+            if (skippedTargetKeys.has(buildDedupeKey(entry.item))) {
+              skipped.set(entry.index, buildPreSendFenceSkip());
+            }
+          }
+          return skipped;
+        },
+        afterSendBatch: async (entries, results) => {
+          const completedAt = Math.floor(Date.now() / 1000);
+          const outcomes: TelegramFreshTargetEffectOutcome[] = [];
+          const retryHandoffs: FreshRetryEffectHandoff[] = [];
+          for (const [index, entry] of entries.entries()) {
+            const result = results[index];
+            if (!result || result.attempted === false) continue;
+            const targetKey = buildDedupeKey(entry.item);
+            const claim = freshTargetClaimsByKey.get(targetKey);
+            if (!claim) {
+              throw new Error(`Telegram fresh target send has no confirmed owner (${hashDedupePart(targetKey)})`);
+            }
+            if (result.ok) {
+              outcomes.push({ ...claim, status: "sent", at: completedAt });
+              continue;
+            }
+            if (isAmbiguousFreshSendResult(result)) {
+              outcomes.push({
+                ...claim,
+                status: "failed",
+                at: completedAt,
+                errorClass: result.errorClass,
+                executionUnknown: true,
+              });
+              continue;
+            }
+            if (result.blocked || !result.retryable) {
+              outcomes.push({
+                ...claim,
+                status: "failed",
+                at: completedAt,
+                errorClass: result.errorClass,
+              });
+              continue;
+            }
+            retryHandoffs.push({ message: entry.item, result, claim, at: completedAt });
+          }
+          if (retryHandoffs.length > 0) {
+            if (!handoffRetryableFreshEffects) {
+              throw new Error("Telegram fresh retry handoff is not configured");
+            }
+            await handoffRetryableFreshEffects(retryHandoffs);
+          }
+          await finalizeFreshTelegramAlertTargetEffects(db, outcomes, signal);
+        },
+      })
     : [];
   const blockedChats = new Set<string>();
   const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];
@@ -491,6 +619,9 @@ export async function deliverFreshAlerts(
   let blockedUsersCleanupFailed = blockedUsersCleanupFailedSeed;
   const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
   const targetStatusUpdates: FreshSendOutcome["targetStatusUpdates"] = [];
+  const pushUnclaimedTargetStatus = (update: FreshSendOutcome["targetStatusUpdates"][number]): void => {
+    if (!freshTargetClaimsByKey.has(update.targetKey)) targetStatusUpdates.push(update);
+  };
   const chatsToResetOnSuccess = new Set<string>();
 
   for (let index = 0; index < sendResults.length; index += 1) {
@@ -498,6 +629,7 @@ export async function deliverFreshAlerts(
     const result = sendResults[index];
     const sendPlan = sendList[index];
     if (!result || !sendPlan) continue;
+    if (result.attempted === false && result.skippedReason === "pre_send") continue;
 
     const existing = resultsByChat.get(result.chatId) ?? [];
     existing.push(result);
@@ -508,7 +640,7 @@ export async function deliverFreshAlerts(
 
     if (result.ok) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: true });
-      targetStatusUpdates.push({ targetKey: buildDedupeKey(sendPlan), status: "sent", at: nowSec });
+      pushUnclaimedTargetStatus({ targetKey: buildDedupeKey(sendPlan), status: "sent", at: nowSec });
       freshSent++;
       chatsToResetOnSuccess.add(result.chatId);
       if (bucket) {
@@ -522,7 +654,7 @@ export async function deliverFreshAlerts(
 
     if (result.blocked) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
-      targetStatusUpdates.push({
+      pushUnclaimedTargetStatus({
         targetKey: buildDedupeKey(sendPlan),
         status: "failed",
         at: nowSec,
@@ -542,10 +674,28 @@ export async function deliverFreshAlerts(
       continue;
     }
 
-    if (result.retryable) {
+    if (isAmbiguousFreshSendResult(result)) {
+      deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: "execution_unknown" });
+      pushUnclaimedTargetStatus({
+        targetKey: buildDedupeKey(sendPlan),
+        status: "failed",
+        at: nowSec,
+        errorClass: `execution_unknown:${result.errorClass ?? "unknown"}`,
+      });
+      freshPermanentFailures++;
+      if (bucket) bucket.failed++;
+      logTelegramEvent({
+        level: "error",
+        message: "Telegram fresh alert outcome is execution-unknown",
+        action: "fresh-target-execution-unknown",
+        module: "dispatch-telegram-routing",
+        errorClass: result.errorClass,
+        targetRef: hashDedupePart(buildDedupeKey(sendPlan)),
+      });
+    } else if (result.retryable) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
       retryableFreshMessages.push({ message: sendPlan, result });
-      targetStatusUpdates.push({
+      pushUnclaimedTargetStatus({
         targetKey: buildDedupeKey(sendPlan),
         status: "queued",
         at: nowSec,
@@ -554,7 +704,7 @@ export async function deliverFreshAlerts(
       if (bucket) bucket.enqueued++;
     } else {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
-      targetStatusUpdates.push({
+      pushUnclaimedTargetStatus({
         targetKey: buildDedupeKey(sendPlan),
         status: "failed",
         at: nowSec,

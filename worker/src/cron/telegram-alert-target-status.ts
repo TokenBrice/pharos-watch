@@ -30,7 +30,8 @@ export async function recordTelegramAlertTargetStatuses(
                   failed_at = COALESCE(failed_at, ?),
                   error_class = COALESCE(?, error_class)
             WHERE pending_dedupe_key = ?
-              AND status <> 'sent'`,
+              AND status <> 'sent'
+              AND effect_state NOT IN ('sending', 'execution_unknown')`,
         )
         .bind(
           update.status,
@@ -90,7 +91,10 @@ export async function loadTerminalTelegramAlertTargetKeys(
         `SELECT pending_dedupe_key
            FROM telegram_alert_job_targets
           WHERE pending_dedupe_key IN (${inClause.sql})
-            AND status IN ('sent', 'expired')`,
+            AND (
+              status IN ('queued', 'sent', 'failed', 'expired')
+              OR effect_state IN ('sending', 'complete', 'execution_unknown')
+            )`,
       )
       .bind(...inClause.binds)
       .all<{ pending_dedupe_key: string }>();

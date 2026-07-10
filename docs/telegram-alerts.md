@@ -107,7 +107,7 @@ The public chart labels snapshot-backed history as daily lifecycle snapshots. Du
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. Subsequent Telegram migrations add launch/snooze/preset/retry/audit/claim/retention/reserve fields and indexes. Migration `0172_worker_effect_fencing.sql` adds pending-delivery effect state and processed-update owner/generation/effect fencing. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) is the complete lineage.
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. Subsequent Telegram migrations add launch/snooze/preset/retry/audit/claim/retention/reserve fields and indexes. Migration `0172_worker_effect_fencing.sql` adds pending-delivery effect state and processed-update owner/generation/effect fencing; `0183_telegram_fresh_target_effect_fencing.sql` adds the matching fresh alert-target lifecycle. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) is the complete lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
@@ -116,7 +116,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch/list time | composite PK `chat_id, preset_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `depeg_worsening_bps_step`, `created_at`, `updated_at` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
 | `telegram_pending_alerts` | Overflow and retry delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts`, retry/dedupe/priority fields, claim fields, `delivery_state`, `delivery_started_at`, `delivery_completed_at` |
-| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and target-level delivery audit | `job_id`, `source_event_id`, `alert_type`, `severity`, `status`, `target_count`, `last_cursor`, target `chat_id`, `chunk_index`, `pending_dedupe_key`, target `status`, `sent_at`, `enqueued_at`, `failed_at`, `error_class` |
+| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and target-level delivery/effect audit | `job_id`, `source_event_id`, `alert_type`, `severity`, `status`, `target_count`, `last_cursor`, target `chat_id`, `chunk_index`, `pending_dedupe_key`, target `status`, `sent_at`, `enqueued_at`, `failed_at`, `error_class`, `effect_state`, `effect_owner`, `effect_generation`, effect timestamps |
 | `telegram_alert_dead_letters` | Expired or permanently failed pending-send audit trail | `pending_id`, `chat_id`, `source_type`, `alert_type`, `created_at`, `expired_at`, `attempts`, `last_error_class`, `reason`, `dedupe_key` |
 | `telegram_processed_updates` | Retry-safe webhook idempotency/effect claims | `update_id`, timestamps/type/chat/status, `effect_state`, `effect_key`, `effect_started_at`, `claim_owner`, `claim_generation`, `error_class` |
 | `telegram_usage_daily` | Privacy-preserving daily command/setup/action aggregates | `day`, `event_type`, `source_category`, `action_detail`, `outcome`, `latency_bucket`, `failure_class`, `count`, `first_seen_at`, `last_seen_at` |
@@ -594,6 +594,8 @@ prioritizing queued delivery while each row remains inside its bounded TTL.
 
 The pending drain is claim-based. It selects only `delivery_state = 'pending'` rows whose target dedupe key is not already terminal, claims them, and compare-and-swap transitions each send batch to `sending` before calling Telegram. Retryable failures return to `pending`; confirmed successes transition to `sent` before best-effort row deletion. A failed delete therefore leaves an authoritative terminal row that later drains cannot resend. A row left in `sending` after an ambiguous crash is intentionally not auto-reclaimed: `/api/status.telegramBot.pendingDeliveryBacklog.executionUnknown` exposes it for operator reconciliation. This at-most-once choice avoids repeating a confirmed external effect at the cost of manual review for the narrow marker-before-send crash window.
 
+Fresh sends use the same at-most-once policy on `telegram_alert_job_targets`. Each exact `(job_id, target_key)` is owner/generation claimed and changed from `claimed` to `sending` before its distinct-chat Bot API wave opens any fetch. Crossing into `sending` also sets the legacy target status to terminal `expired`, so an older Worker restored during rollback cannot replay an in-flight effect; the separate `effect_state` records that this is fencing, not TTL expiry. Only an expired `claimed` row may be taken over because no external effect has started. Once `sending` is durable, owner loss or an attempted timeout/network result becomes `execution_unknown` and is never automatically replayed. Confirmed HTTP retry responses such as `429` or `5xx` atomically enqueue the exact message and owner-finalize the fresh effect as `complete` with target status `queued`; the pending row's independent fence owns later attempts. Confirmed success becomes target `sent`/effect `complete` before snapshot baselines advance. Telegram has no general message idempotency key, so this is a reconciliable at-most-once policy, not exactly-once delivery.
+
 Depeg, DEWS, safety, reserve, and legacy risk pending alerts have a 1-hour TTL (`PENDING_TTL_SEC = 3600`). Launch and admin
 broadcast rows use a 30-minute TTL because they are lower-priority during contention.
 The TTL — not a per-row attempts cap — bounds how long the queue keeps retrying.
@@ -748,7 +750,7 @@ Additional Telegram bot status metrics now include:
 
 - `pendingDeliveries`
 - `oldestPendingDeliveryAgeSec`
-- `pendingDeliveryBacklog` (`due`, `deferred`, `expired`)
+- `pendingDeliveryBacklog` (`due`, `deferred`, `expired`, `nearTtl`, `executionUnknown`; the last count includes pending and fresh target effects)
 - `retryErrorClassCounts`
 - `customPreferenceChats`
 - `quietHoursEnabledChats`

@@ -1,10 +1,37 @@
 import { describe, expect, it } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   getTelegramBotStats,
   loadTelegramMiniAppDailyAggregate,
   mapTelegramBotStats,
+  TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL,
 } from "../status/telegram-bot-stats";
+
+describe("Telegram delivery telemetry SQL", () => {
+  it("counts a fresh execution-unknown target when the pending table is empty", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE telegram_pending_alerts (
+          delivery_state TEXT,
+          created_at INTEGER,
+          expires_at INTEGER,
+          not_before_at INTEGER
+        );
+        CREATE TABLE telegram_alert_job_targets (effect_state TEXT NOT NULL);
+        INSERT INTO telegram_alert_job_targets (effect_state) VALUES ('execution_unknown');
+      `);
+      const bindCount = TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL.match(/\?/g)?.length ?? 0;
+      const row = sqlite
+        .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
+        .get(...new Array(bindCount).fill(0)) as { execution_unknown_count: number };
+      expect(row.execution_unknown_count).toBe(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
 
 describe("mapTelegramBotStats", () => {
   it("coerces aggregate rows into the public Telegram status shape", () => {

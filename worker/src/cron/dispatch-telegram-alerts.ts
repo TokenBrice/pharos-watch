@@ -35,6 +35,7 @@ import {
 } from "./dispatch-telegram-fanout-plan";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
 import {
+  buildFreshTargetJobIdMap,
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "./telegram-alert-jobs";
@@ -692,6 +693,7 @@ async function executeFullFanoutPath({
     },
   });
   const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
+  const freshTargetJobIds = buildFreshTargetJobIdMap(alertJobManifests);
 
   const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
   await reportDigestProgress(reportProgress, {
@@ -772,6 +774,7 @@ async function executeFullFanoutPath({
     chatsInBackoff,
     globalBackoffUntil,
     dispatchStartedAtMs,
+    freshTargetJobIds,
     terminalTargetKeys,
     signal,
     markTelegramDeliveryStarted,

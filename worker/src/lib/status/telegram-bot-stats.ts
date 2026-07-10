@@ -216,7 +216,7 @@ const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?";
 const TELEGRAM_PENDING_DELIVERIES_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE delivery_state = 'pending'";
-const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
+export const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
   SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS pending_count,
   MIN(
     CASE
@@ -264,7 +264,10 @@ const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
       THEN 1 ELSE 0
     END
   ) AS near_ttl_count
-  ,SUM(CASE WHEN delivery_state = 'sending' THEN 1 ELSE 0 END) AS execution_unknown_count
+  ,COALESCE(SUM(CASE WHEN delivery_state = 'sending' THEN 1 ELSE 0 END), 0)
+   + (SELECT COUNT(*)
+        FROM telegram_alert_job_targets
+       WHERE effect_state IN ('sending', 'execution_unknown')) AS execution_unknown_count
   ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS completed_cleanup_count
  FROM telegram_pending_alerts`;
 const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL = `SELECT COUNT(*) AS pending_count

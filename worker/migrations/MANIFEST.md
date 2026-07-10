@@ -126,6 +126,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0180     | `0180_d1_capacity_observations.sql`                      | Add bounded hourly D1 file-size observations for 60/75/90 percent thresholding and exhaustion forecasting                                           |
 | 0181     | `0181_blacklist_reconciliation_and_efficiency.sql`       | Add guarded blacklist reconciliation evidence, event provenance, amount-repair queueing, and bounded provider scan telemetry                        |
 | 0182     | `0182_dews_published_generation_bootstrap.sql`            | Bootstrap the current validated DEWS pointer into the durable generation ledger before tape projection requires published-generation proof          |
+| 0183     | `0183_telegram_fresh_target_effect_fencing.sql`           | Add owner/generation-fenced fresh Telegram target effects with explicit execution-unknown reconciliation                                             |
 
 ## Retired Individual Migrations
 
@@ -190,6 +191,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0180_d1_capacity_observations.sql`: roll back capacity publication by restoring the prior Worker version. Keep the small bounded observation table and cached assessment for forensic trend review; no existing reader depends on it.
 - `0181_blacklist_reconciliation_and_efficiency.sql`: roll back guarded recovery and efficiency writers by restoring the prior Worker version. Keep reconciliation provenance, run evidence, repair queue, and scan telemetry for forensic inspection; do not delete a verified recovery run during rollback.
 - `0182_dews_published_generation_bootstrap.sql`: roll back ledger-gated DEWS tape projection by restoring the prior Worker version. Keep the bootstrapped publication row; it records a generation already proven published by the canonical pointer and is safe for older Workers to ignore.
+- `0183_telegram_fresh_target_effect_fencing.sql`: roll back fresh-target fencing by restoring the prior Worker version. Keep the additive target effect columns and indexes; rows in `sending` or `execution_unknown` require operator reconciliation before any manual resend.
 
 ## Rollback Procedure
 

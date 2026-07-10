@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildFreshTargetJobIdMap,
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "../telegram-alert-jobs";
@@ -57,6 +58,7 @@ describe("telegram alert job manifests", () => {
     expect(manifests.map((manifest) => manifest.alertType).sort()).toEqual(["depeg", "safety"]);
     expect(manifests.find((manifest) => manifest.alertType === "depeg")?.targetCount).toBe(2);
     expect(manifests.find((manifest) => manifest.alertType === "safety")?.targetCount).toBe(1);
+    expect(buildFreshTargetJobIdMap(manifests).size).toBe(3);
 
     const history = db.getHistory();
     const jobInserts = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_jobs"));
@@ -76,7 +78,7 @@ describe("telegram alert job manifests", () => {
 
     await finalizeTelegramAlertJobManifests(
       db,
-      [{ jobId: "telegram:depeg:abc", alertType: "depeg", targetCount: 10 }],
+      [{ jobId: "telegram:depeg:abc", alertType: "depeg", targetCount: 10, targetKeys: [] }],
       perAlertType,
       1_800_000_060,
     );
@@ -91,7 +93,7 @@ describe("telegram alert job manifests", () => {
 });
 
 describe("telegram alert target statuses", () => {
-  it("does not treat failed target keys as terminal for fresh-send idempotency", async () => {
+  it("treats queued, failed, and uncertain effects as terminal for fresh-send idempotency", async () => {
     const db = mockD1([
       { match: "FROM telegram_alert_job_targets", rows: [{ pending_dedupe_key: "sent-key" }] },
     ]);
@@ -100,8 +102,8 @@ describe("telegram alert target statuses", () => {
 
     expect(terminal).toEqual(new Set(["sent-key"]));
     const [query] = db.getHistory();
-    expect(query?.sql).toContain("status IN ('sent', 'expired')");
-    expect(query?.sql).not.toContain("'failed'");
+    expect(query?.sql).toContain("status IN ('queued', 'sent', 'failed', 'expired')");
+    expect(query?.sql).toContain("effect_state IN ('sending', 'complete', 'execution_unknown')");
   });
 
   it("allows a later successful send to replace a previously failed target status", async () => {
@@ -116,6 +118,7 @@ describe("telegram alert target statuses", () => {
     const [update] = db.getHistory();
     expect(update?.sql).toContain("WHERE pending_dedupe_key = ?");
     expect(update?.sql).toContain("AND status <> 'sent'");
+    expect(update?.sql).toContain("effect_state NOT IN ('sending', 'execution_unknown')");
     expect(update?.binds).toEqual([
       "sent",
       1_800_000_100,

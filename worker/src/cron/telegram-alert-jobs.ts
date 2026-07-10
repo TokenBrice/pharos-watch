@@ -21,6 +21,23 @@ export interface TelegramAlertJobManifest {
   jobId: string;
   alertType: TelegramAlertType;
   targetCount: number;
+  targetKeys: readonly string[];
+}
+
+export function buildFreshTargetJobIdMap(
+  manifests: readonly TelegramAlertJobManifest[],
+): Map<string, string> {
+  const jobIdByTargetKey = new Map<string, string>();
+  for (const manifest of manifests) {
+    for (const targetKey of manifest.targetKeys) {
+      const existing = jobIdByTargetKey.get(targetKey);
+      if (existing && existing !== manifest.jobId) {
+        throw new Error(`Telegram fresh target belongs to multiple jobs (${hashDedupePart(targetKey)})`);
+      }
+      jobIdByTargetKey.set(targetKey, manifest.jobId);
+    }
+  }
+  return jobIdByTargetKey;
 }
 
 function severityForAlertType(alertType: TelegramAlertType): "risk" | "info" {
@@ -107,7 +124,7 @@ export async function persistTelegramAlertJobManifests(
           );
       }));
 
-      manifests.push({ jobId, alertType, targetCount: messages.length });
+      manifests.push({ jobId, alertType, targetCount: messages.length, targetKeys });
     } catch (error) {
       const message = toErrorMessage(error);
       logTelegramEvent({
