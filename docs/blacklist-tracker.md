@@ -44,7 +44,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 - **Function:** `syncBlacklist(opts: SyncBlacklistOptions)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
 - **Caller contract:** the 6-hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
-- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, providerCircuitSkips, etherscanCircuitSkips, tronGridCircuitSkips, apiErrorClasses, runtimeBudgetReached, subrequestBudgetReached, runtimeBudgetMs, runtimeBudgetSkippedOkThreshold, runtimeBudgetSkippedWithinTolerance, incompleteRuntimeConfigs, enrichAttempted, enrichSucceeded, enrichFailed, currentBalanceCacheUpdated, currentBalanceCacheDeleted, currentBalanceCacheFailed, tronLedgerUpdated, producerGapMetricSnapshots, producerSummarySnapshot, producerSnapshotSkipped, producerSnapshotError, producerSnapshotWindowMs, producerSnapshotWindowUnavailable, budgetUsed, budgetLimit } }`
+- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, configsAttempted, configsSucceeded, coverageFailures, stateConflicts, coverageOutcomeCounts, blacklistProviderCalls, maxProviderSplitDepth, oldestConfigSuccessAt, oldestConfigSuccessAgeSec, configsNeverSucceeded, rpcLogConfigs, providerCircuitSkips, etherscanCircuitSkips, tronGridCircuitSkips, apiErrorClasses, runtimeBudgetReached, subrequestBudgetReached, runtimeBudgetMs, incompleteRuntimeConfigs, enrichAttempted, enrichSucceeded, enrichFailed, currentBalanceCacheUpdated, currentBalanceCacheDeleted, currentBalanceCacheFailed, tronLedgerUpdated, producerGapMetricSnapshots, producerSummarySnapshot, producerSnapshotSkipped, producerSnapshotError, producerSnapshotWindowMs, producerSnapshotWindowUnavailable, budgetUsed, budgetLimit } }`
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
 
@@ -638,12 +638,24 @@ Provider refresh failures preserve the last successful amount and update status/
 
 ### blacklist_sync_state table
 
-**Migration:** baseline schema in `worker/migrations/0000_baseline.sql`
+**Migrations:** baseline schema in `worker/migrations/0000_baseline.sql`; typed attempt state in `worker/migrations/0174_blacklist_sync_fairness.sql`
 
 ```sql
 CREATE TABLE blacklist_sync_state (
   config_key TEXT PRIMARY KEY,
-  last_block INTEGER NOT NULL DEFAULT 0
+  last_block INTEGER NOT NULL DEFAULT 0,
+  cursor_kind TEXT NOT NULL DEFAULT 'evm_block',
+  cursor_value INTEGER,
+  attempt_generation INTEGER NOT NULL DEFAULT 0,
+  last_attempted_at INTEGER,
+  last_succeeded_at INTEGER,
+  last_skipped_at INTEGER,
+  last_failed_at INTEGER,
+  consecutive_skips INTEGER NOT NULL DEFAULT 0,
+  consecutive_failures INTEGER NOT NULL DEFAULT 0,
+  last_outcome TEXT,
+  last_observed_safe_head INTEGER,
+  last_safe_head_observed_at INTEGER
 );
 ```
 
@@ -656,8 +668,9 @@ CREATE TABLE blacklist_sync_state (
 
 For EVM configs, the stored contract-address segment is canonicalized to lowercase on write. Reads merge both lowercase and legacy mixed-case keys so older cursor rows keep working after contract metadata switches to checksum casing.
 
-**Important:** For EVM chains, `last_block` stores block numbers. For Tron, it stores millisecond timestamps (NOT block numbers).
-For RPC log-scan chains (Base, Optimism, Avalanche, BSC, Gnosis), partial `eth_getLogs` coverage now advances `last_block` to the highest contiguous block that was fully scanned so backlogs catch up across runs instead of restarting from `0`.
+`cursor_kind` discriminates EVM block cursors from Tron millisecond timestamps. `cursor_value` is authoritative for the new runner, while `last_block` is dual-read and dual-written for rollback compatibility with the previous Worker. A claim increments `attempt_generation`; finalization updates the cursor, safe-head observation, success/failure/skip timestamps, and streaks only when both the generation and starting cursor still match. This prevents a late writer from overwriting newer progress.
+
+For EVM configs, partial provider coverage advances only to the minimum contiguous block proven across every required topic. Missing-topic coverage pins the cursor. For Tron, all configured event families must finish before the safe timestamp frontier advances.
 
 ---
 
@@ -665,29 +678,26 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC, Gnosis), partial `eth_g
 
 ### Execution Order (each cron cycle)
 
-1. **Backfill** (runs FIRST to prioritize budget)
-   - Targets non-Tron rows with recoverable/provider/ambiguous amount statuses, plus legacy derived-zero rows that remain below the three-attempt recovery ceiling
-   - Orders newest rows first so fresh gaps clear before archival backlog
-   - Batch size: 100 rows per cycle
-   - Confirmed zero balances are treated as complete and are not retried
-   - Fetches historical balances via RPC or API
-
-2. **Incremental scan** (per contract config)
-   - EVM: fetch logs from `lastBlock + 1` to latest via Etherscan `getLogs` or chain RPC `eth_getLogs`
+1. **Fair incremental event scan** (per contract config)
+   - Partition typed EVM-block and Tron-timestamp states, sort each cohort by oldest `last_attempted_at`, and merge equal timestamps by alternating cohorts. Raw cursor magnitudes are never compared.
+   - Claim the loaded `(config_key, cursor, attempt_generation)` before provider work; a concurrent claim conflict is visible and degrades the run.
+   - EVM: resolve a real chain head, subtract the 15-minute safety margin, and fetch logs from `cursor + 1` only to that safe head via Etherscan `getLogs` or chain RPC `eth_getLogs`.
    - Selected RPC-log configs seed empty cursors from known contract deployment blocks instead of scanning from genesis
-   - RPC-log chains scan in bounded windows per run (provider-aware for Alchemy vs public fallback) so successful empty windows still advance the cursor
-   - Tron: fetch events from `lastTimestamp` via TronGrid `/contracts/{addr}/events`
+   - RPC-log chains scan in bounded windows per run; Arbitrum is also bounded to 25,000,000 explorer/Alchemy-primary blocks or 250,000 fallback-RPC blocks.
+   - Every configured topic reports complete, quiet, partial, provider-error, missing-topic, or incomplete coverage. The shared cursor advances only to the minimum contiguous frontier.
+   - Tron: fetch confirmed events from `lastTimestamp` through `now - 15 minutes` via TronGrid `/contracts/{addr}/events`, using the documented `min_timestamp`, `max_timestamp`, and fingerprint parameters.
+   - TronGrid pagination links must remain on the exact HTTPS TronGrid contract/event endpoint; malformed, cross-origin, cyclic, or overlong links fail the config without forwarding the API key.
    - Parse events into `BlacklistRow` objects
-   - If the runtime guard is nearly exhausted, the cron stops before starting another config and defers the remainder to the next cycle. A small skipped tail within the current bounded threshold (15% of configs, capped at 10 contracts) is reported in metadata but does not degrade the run by itself, which lets producer snapshots refresh when the scan otherwise completed cleanly.
+   - If the runtime guard is nearly exhausted, persist the unstarted tail as `budget_skipped`. Any skipped required config degrades the run; oldest-attempt ordering admits that tail first on the next due run.
 
-3. **Balance enrichment** (in-memory, before DB insertion)
+2. **New-event balance enrichment** (in-memory, before DB insertion)
    - Enrich parsed rows with balances BEFORE inserting into D1
    - All EVM chains: dRPC archive node first when configured, then `getChainRpc()` (Alchemy/public RPC), then Etherscan best-effort -- all at historical block (`blockNumber - 1`)
    - Tron: destroy events keep their native event amount; blacklist/unblacklist events are not assigned historical balances from current-state account reads
    - RPC-log chains reuse persistent block-timestamp cache rows to avoid re-resolving the same blocks every run
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
 
-4. **Freeze-ledger snapshot refresh**
+3. **Freeze-ledger snapshot refresh**
    - Newly blacklisted addresses fetch a latest token balance snapshot and persist it into `blacklist_current_balances`
    - New snapshot writes are contract/config-scoped; legacy rows can use symbol/chain/address fallback identity during remediation
    - Provider refresh failures retain the previous resolved amount while surfacing failure status/provenance
@@ -695,16 +705,25 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC, Gnosis), partial `eth_g
    - Destroy events preserve the row and can replace the stored amount with the emitted seized/burned amount when available
    - This ledger feeds the public tracked frozen-total summary without claiming unsupported event-time precision for blacklist rows
 
-5. **Sync state advancement**
-   - EVM: advance to max block of fetched events, or to the active source's chain head minus safety margin if no events
-   - EVM RPC partial coverage: if `eth_getLogs`/timestamp resolution only completes part of the range, advance to the highest contiguous fully scanned block and retry the remainder next cycle
-   - Tron: advance to max timestamp, or to `now - TRON_SAFETY_MS` if no events
+4. **Generation-fenced state finalization**
+   - Persist event rows before advancing the cursor.
+   - Dual-write `cursor_value` and legacy `last_block` monotonically under the claimed generation.
+   - Record the latest safe head and reset or increment per-config success/failure/skip streaks.
+
+5. **Historical maintenance** (runs after event admission)
+   - Backfill up to 100 non-Tron rows with recoverable/provider/ambiguous amount statuses, plus eligible legacy derived-zero rows.
+   - Reapply the Tron current-balance ledger mirror so newly ingested rows resolve in the same cycle.
+   - Maintenance yields to the event scan and stops under the shared runtime/subrequest budget.
+
+6. **Producer snapshots**
+   - Publish only when every required config has a successful complete/quiet scan, no state conflict occurred, and snapshot tail budget remains.
+   - Stamp freshness with the oldest required config's `last_succeeded_at`, not the cron completion time.
 
 ### Safety Margins
 
 ```
 INDEXING_SAFETY_SEC = 900 (15 minutes)
-TRON_SAFETY_MS = 900,000 ms
+TRON_INDEXING_SAFETY_MS = 900,000 ms
 ```
 
 Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
@@ -836,11 +855,14 @@ Requires Access service-token headers on `ops-api.pharos.watch`.  Rolls back syn
 
 - EVM: subtract 50,000 blocks (~7 days on Ethereum)
 - Tron: subtract 604,800,000 ms (7 days)
+- Rewinds both `cursor_value` and compatibility `last_block`, increments `attempt_generation`, and clears success freshness so late writers cannot restore the old cursor
 - Returns: `{ ok: true, evmReset: N, tronReset: M }`
+
+This global rewind is an emergency tool, not the recovery path for a known missing-event manifest. Reviewed recovery must target exact configs/events and verify identity, balance replay, and safe-head parity without moving unrelated cursors.
 
 ### GET /api/debug-sync-state
 
-Requires Access service-token headers on `ops-api.pharos.watch`.  Returns all sync state rows.
+Requires Access service-token headers on `ops-api.pharos.watch`. Returns the complete config registry joined to typed cursor, generation, attempt/success/skip/failure, safe-head, event-count, and latest-run error telemetry.
 
 ### POST /api/remediate-blacklist-amount-gaps
 

@@ -1,6 +1,16 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` (2026-02-09 -> 2026-07-01).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` plus methodology-neutral ingestion hardening (2026-02-09 -> 2026-07-10).
+
+---
+
+## Operational ingestion hardening (2026-07-10, methodology unchanged)
+
+- **Fair event-first admission** - typed EVM/Tron cursors are scheduled by comparable per-config attempt time, and historical amount maintenance runs after event acquisition.
+- **Generation-fenced state** - cursor/outcome updates require the claimed generation and starting cursor, dual-writing legacy `last_block` for rollback compatibility.
+- **Contiguous safe frontiers** - EVM scans resolve real safe heads, bound Arbitrum ranges, and advance only to the minimum frontier proven across every required topic; the retired 99,999,999 sentinel is gone.
+- **Fail-visible publication** - any required config skip/failure withholds snapshots, whose freshness now follows the oldest successful config scan.
+- **Provider hardening** - TronGrid next links are origin/path/event validated, recursive log scans honor the run deadline, Etherscan pacing matches three requests per second, and bounded call/depth telemetry is retained.
 
 ---
 

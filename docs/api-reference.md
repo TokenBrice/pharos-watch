@@ -735,7 +735,7 @@ When present, `provenance` has:
 
 ### `GET /api/stablecoin-charts`
 
-Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
+Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes; scheduled deliveries share an hourly generation-fenced cadence bucket, and a failed first delivery remains retryable at the second delivery. `/api/health` treats the cache as healthy for up to 1 hour.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. This array response gets freshness headers only; it does not receive a response-body `_meta` envelope.
 
@@ -4737,7 +4737,9 @@ Unhandled pre-enqueue failures are wrapped by the shared error handler and retur
 
 ### `POST /api/reset-blacklist-sync`
 
-Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
+Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. The action rewinds both typed and compatibility cursor columns, increments the attempt generation to fence late writers, and clears successful-scan freshness. Routed through `worker/src/router.ts`.
+
+This is a global emergency rewind, not the recovery path for a known event manifest. Bounded data recovery must use a reviewed config/event-specific reconciliation so unrelated cursors are not moved.
 
 **Response** (`evmReset` / `tronReset` are row-change counts from the `blacklist_sync_state` UPDATE, not block numbers)
 
@@ -4765,8 +4767,20 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
     "chainName": "Ethereum",
     "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "providerSource": "evm-logs",
+    "cursorKind": "evm_block",
+    "cursorValue": 19500000,
     "lastBlock": 19500000,
     "cursorAgeSec": null,
+    "attemptGeneration": 12,
+    "lastAttemptedAt": 1710503000,
+    "lastSucceededAt": 1710503000,
+    "lastSkippedAt": null,
+    "lastFailedAt": null,
+    "consecutiveSkips": 0,
+    "consecutiveFailures": 0,
+    "lastOutcome": "quiet",
+    "lastObservedSafeHead": 19500000,
+    "lastSafeHeadObservedAt": 1710503000,
     "lastEventAt": 1710500000,
     "lastEventAgeSec": 3600,
     "lastEventBlock": 19499999,
