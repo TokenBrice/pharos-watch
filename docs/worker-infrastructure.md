@@ -376,6 +376,8 @@ Operator admin actions are dispatched through `worker/src/router.ts` using share
 
 Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/admin/`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
+Every endpoint with `statusPageAction` metadata is audited at the shared router boundary after its handler returns, including read-only inspections and dry-run previews. The canonical row records only definition-owned action/path/scope metadata, the configured target query parameter (or `batch` / `invalid-target`), HTTP/result status, execution certainty, dry-run/live/inspect mode, and a SHA-256 idempotency identity. It never records request bodies, arbitrary query parameters, auth headers, raw responses, or plaintext tokens. Browser actions use only the normalized email injected from the signature-verified Pages Access JWT; caller-supplied actor headers are not forwarded. A nullable unique `(action, intent_key)` index keeps one row per keyed intent: replay responses insert only when the first audit is missing, while the non-replay original response authoritatively replaces an earlier replay placeholder. If canonical persistence fails, the router returns `503 audit_persistence_failed` while preserving replay metadata; a same-key retry replays the stored action result and backfills the audit without rerunning the effect. A catalog handler that needs richer handler-specific details must set `statusPageAction.auditMode = "handler"` and write its single audit row itself; the canonical router then opts out.
+
 ### Idempotent Admin Actions
 
 **File:** `worker/src/lib/idempotency.ts`
@@ -401,11 +403,18 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
 - `POST /api/bulk-dismiss-discovery-candidates`
+- `POST /api/discovery-candidates/:id/dismiss`
+- `POST /api/api-keys`
+- `POST /api/api-keys/:id/update`
+- `POST /api/api-keys/:id/deactivate`
+- `POST /api/api-keys/:id/rotate`
 - `POST /api/telegram-pending`
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
 
-The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. Reservations have an owner/generation and a separate durable execution-start transition. A stale reservation may be taken over only while execution has not started. Once execution-start is durable, terminal writes are owner/generation compare-and-swap operations and automatic takeover is prohibited: a thrown handler or unconfirmed terminal response returns `503` with `error = "execution_unknown"`, and later requests with that key replay the same operator-reconciliation state without running the mutation again. This deliberately prefers at-most-once behavior for irreversible effects; operators must inspect the action's audit/downstream state before choosing a new key or manual repair.
+API-key create/rotate use the sensitive-response replay mode: the first successful response returns the one-time plaintext token, while the idempotency row and every replay retain only allowlisted public key identity plus `tokenUnavailableOnReplay` recovery guidance. Redaction failure is fail-closed as `execution_unknown`; plaintext tokens are never persisted for replay.
+
+The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409` with `X-Idempotency-Conflict: request-mismatch` and cannot replace the original intent's audit. Reservations have an owner/generation and a separate durable execution-start transition. A stale reservation may be taken over only while execution has not started. Once execution-start is durable, terminal writes are owner/generation compare-and-swap operations and automatic takeover is prohibited: a thrown handler, an explicit unknown-certainty response, or any handler HTTP 5xx returns `503` with `error = "execution_unknown"` plus `X-Execution-Certainty: unknown`. Later requests with that key replay the same operator-reconciliation state without running the mutation again. This deliberately prefers at-most-once behavior for irreversible effects; operators must inspect the action's audit/downstream state before choosing a new key or manual repair.
 
 ### Backfill Query Helper
 

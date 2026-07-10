@@ -119,7 +119,7 @@ The active frontend operator mode is now:
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
   - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints/`
   - Verifies the operator's UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting either `Cf-Access-Jwt-Assertion` or a same-origin `cf-access-token` / `CF_Authorization` session token when the assertion header is absent
-  - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; browser callers never send Access service-token headers directly
+  - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; after signature verification, it injects the normalized human email from the UI Access JWT for audit attribution and ignores browser-supplied actor headers
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
 - Workspace clients own only the queries their route requires. Triage does not mount credential inventory, endpoint matrices, cache tables, or healthy cron rows; Reliability owns endpoint/demand reads, History owns transition and audit reads, and API Management owns credential inventory and audit reads.
@@ -555,6 +555,8 @@ The catalog groups inspect, dry-run, recovery, communication, and destructive be
 Mutations use one stable `Idempotency-Key` per operator intent. Double submission coalesces, known replay reuses the same result, and an uncertain response keeps the same key available for a safe retry; starting a genuinely new intent creates a new key. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`, so the browser can distinguish confirmed, replayed, and unknown outcomes.
 
 Every router-dispatched status-page action is written to `admin_action_audit_log`, including validation failures, handler errors, execution-unknown responses, and idempotent replay. The catalog audit wrapper stores allowlisted metadata only and hashes the idempotency identity; it never stores authorization, tokens, raw request bodies, or raw responses. Migration `0186_admin_action_audit_intent_key.sql` adds the nullable intent identity and a partial unique constraint on `(action, intent_key)` so replay backfills missing audit rows without duplicating authoritative executions.
+
+Any handler response at HTTP 5xx after idempotent execution has started is converted to durable `execution_unknown`; the same key replays that unknown state and never runs the effect again. If the action result exists but its canonical audit write fails, the router returns `503 audit_persistence_failed` with the same idempotency metadata. Retrying that key replays the stored result and attempts to backfill the audit row without repeating the action.
 
 `GET /api/admin-action-log?limit=100` feeds persistent execution history. The Actions and History workspaces reconcile it with current-session state, but session-only results remain explicitly labeled until the deployed backend can return their durable row.
 

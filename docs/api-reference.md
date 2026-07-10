@@ -5304,11 +5304,15 @@ Malformed `days` defaults to `7`; out-of-range `days` is clamped to `1..30`.
 
 ### `GET /api/admin-action-log`
 
-Returns the last N admin mutation actions (action name, actor, target, result, HTTP status, details) for post-incident audit.
+Returns the last N audited operator actions (action name, actor, target, result, HTTP status, details) for post-incident review. This includes every endpoint surfaced by the admin action catalog, including read-only inspections and dry-run previews, plus handler-owned audit events outside that catalog.
 
 **Authentication:** admin. **Optional query:** `?limit=<1-200>` (default 50).
 
 Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
+
+Catalog rows contain only allowlisted operational metadata: canonical path/method, configured scope and target, dry-run/live/inspect mode, result status, HTTP status, execution certainty, result mode, replay state, and an opaque SHA-256 idempotency identity when the request supplied a valid key. Request bodies, arbitrary query parameters, authentication headers, raw handler responses, and plaintext tokens are never stored. Keyed catalog intents are unique by action and opaque intent identity; a same-key replay does not create another row, while a distinct key records a new intent. If the first audit write was transiently missing, a replay can backfill it; the original non-replay outcome remains authoritative over an earlier replay placeholder.
+
+For browser actions, `actor` is the normalized email from the signature-verified operator UI Access JWT; browser-supplied actor headers are ignored. Direct service-token tooling without a verified human claim remains attributed to the internal actor. If canonical audit persistence fails after an idempotent result exists, the router returns `503 audit_persistence_failed`; retrying with the same key replays the result and retries the audit write without rerunning the effect.
 
 **Response**
 
