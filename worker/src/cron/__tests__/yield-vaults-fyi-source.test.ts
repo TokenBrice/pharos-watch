@@ -22,7 +22,13 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   };
 });
 
-import { fetchVaultsFyiSources } from "../yield-sync/vaults-fyi";
+vi.mock("../../lib/circuit-breaker", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/circuit-breaker")>()),
+  shouldAttemptFetch: vi.fn(async () => true),
+  recordOutcomeDecision: vi.fn(async () => undefined),
+}));
+
+import { buildVaultsFyiBudgetPlan, fetchVaultsFyiSources } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 
 function response(body: unknown, status = 200): Response {
@@ -68,10 +74,86 @@ function detailedVault(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function creditLedgerDb(initialValue: string | null) {
+  let value = initialValue;
+  const writes: string[] = [];
+  const db = {
+    prepare: () => ({
+      bind: (...binds: unknown[]) => ({
+        first: async () => value == null ? null : { value, updated_at: 1_782_885_600 },
+        run: async () => {
+          value = String(binds[1]);
+          writes.push(value);
+          return { success: true };
+        },
+      }),
+    }),
+  } as unknown as D1Database;
+  return { db, writes };
+}
+
 describe("fetchVaultsFyiSources", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("throttles an unsafe four-hour run cap below the monthly quota", () => {
+    const plan = buildVaultsFyiBudgetPlan({
+      nowSec: Date.parse("2026-07-01T00:25:00.000Z") / 1000,
+      creditsEstimated: 0,
+      configuredRunCap: 25,
+      monthlyCap: 2_500,
+    });
+
+    expect(plan).toMatchObject({
+      runsRemaining: 186,
+      sustainableRunCap: 13,
+      monthlyCreditsForecast: 2_418,
+      monthlyUnthrottledForecast: 4_650,
+      monthlyBudgetWarning: true,
+      coverageBudgetState: "throttled",
+    });
+    expect(plan.monthlyCreditsForecast).toBeLessThanOrEqual(2_500);
+  });
+
+  it("reserves month-to-date credits before fetching and finalizes actual spend", async () => {
+    const bucket = "2026-07";
+    const { db, writes } = creditLedgerDb(JSON.stringify({
+      version: 1,
+      bucket,
+      creditsEstimated: 100,
+    }));
+    vi.stubGlobal("fetch", vi.fn(async () => response({ data: [detailedVault()] })));
+
+    const result = await fetchVaultsFyiSources({
+      db,
+      config: enabledConfig(),
+      startSec: Date.parse("2026-07-01T00:25:00.000Z") / 1000,
+    });
+
+    expect(writes).toHaveLength(2);
+    expect(JSON.parse(writes[0]!)).toMatchObject({
+      version: 2,
+      bucket,
+      creditsEstimated: 100,
+      creditsReserved: 12,
+    });
+    expect(JSON.parse(writes[1]!)).toMatchObject({
+      version: 2,
+      bucket,
+      creditsEstimated: 104,
+      creditsReserved: 0,
+      reservationId: null,
+    });
+    expect(result.telemetry).toMatchObject({
+      creditsCap: 12,
+      creditsEstimated: 4,
+      monthlyCreditsEstimated: 104,
+      monthlyCreditsReserved: 0,
+      monthlyBudgetWarning: true,
+      coverageBudgetState: "throttled",
+    });
   });
 
   it("skips without fetching when disabled", async () => {
@@ -139,7 +221,7 @@ describe("fetchVaultsFyiSources", () => {
       const url = String(input);
       expect(url).toContain("/v2/detailed-vaults?");
       expect(url).toContain("page=0");
-      expect(url).toContain("perPage=8");
+      expect(url).toContain("perPage=4");
       expect(url).not.toContain("test-placeholder-key");
       expect(new Headers(init?.headers).get("x-api-key")).toBe("test-placeholder-key");
       return response({
@@ -169,7 +251,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("marks bounded audit inventory page caps without treating the provider run as partial", async () => {
-    const rows = Array.from({ length: 8 }, (_, index) =>
+    const rows = Array.from({ length: 4 }, (_, index) =>
       detailedVault({ address: `0x${String(index + 1).padStart(40, "0")}` }),
     );
     vi.stubGlobal(
@@ -190,9 +272,9 @@ describe("fetchVaultsFyiSources", () => {
       pageCount: 1,
       pageCapReached: true,
       creditCapReached: false,
-      creditsEstimated: 25,
-      rawVaultCount: 8,
-      auditOnlyCount: 8,
+      creditsEstimated: 13,
+      rawVaultCount: 4,
+      auditOnlyCount: 4,
     });
   });
 

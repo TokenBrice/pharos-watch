@@ -25,7 +25,14 @@ export interface VaultsFyiTelemetry {
   creditsCap: number;
   creditCapReached: boolean;
   monthlyCreditsEstimated: number | null;
+  monthlyCreditsReserved: number | null;
   monthlyCreditsCap: number;
+  monthlyCreditsForecast: number | null;
+  monthlyUnthrottledForecast: number | null;
+  monthlyBudgetUtilization: number | null;
+  monthlyBudgetWarning: boolean;
+  monthlyRunsRemaining: number | null;
+  coverageBudgetState: "unavailable" | "within-budget" | "warning" | "throttled" | "exhausted";
   rawVaultCount: number;
   rankableCandidateCount: number;
   auditOnlyCount: number;
