@@ -11,10 +11,13 @@ import {
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
 import {
+  buildReserveAuthoritativeHistoryRepairReadbackStatement,
+  buildReserveCompositionHistoryRepairStatement,
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
   buildReserveCompositionUpsertStatement,
   buildReserveSuccessAuthoritativeReadbackStatement,
+  buildReserveSyncAttemptHistoryRepairStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
@@ -71,6 +74,8 @@ export async function didReserveSyncAttemptBecomeAuthoritative(
              ON s.stablecoin_id = c.stablecoin_id
           WHERE c.stablecoin_id = ?
             AND c.attempt_id = ?
+            AND s.last_success_at = c.fetched_at
+            AND s.last_attempt_id = c.attempt_id
             AND s.last_success_attempt_id = c.attempt_id
             AND s.pending_attempt_id IS NULL
           LIMIT 1`,
@@ -79,6 +84,24 @@ export async function didReserveSyncAttemptBecomeAuthoritative(
       .first<{ finalized: number }>(),
   );
   return row?.finalized === 1;
+}
+
+export async function repairAuthoritativeReserveSyncHistory(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): Promise<boolean> {
+  await runWithOverloadRetry(() =>
+    db.batch([
+      buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId),
+      buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
+    ]),
+  );
+  const row = await runWithOverloadRetry(() =>
+    buildReserveAuthoritativeHistoryRepairReadbackStatement(db, stablecoinId, attemptId)
+      .first<{ repaired: number }>(),
+  );
+  return row?.repaired === 1;
 }
 
 export async function finalizeReserveSyncSuccess(

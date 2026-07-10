@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
@@ -311,7 +311,7 @@ describe("syncLiveReserves", () => {
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
-  it("advances past an authoritative item after interruption without replaying its adapter", async () => {
+  it("repairs crash-omitted history before advancing an authoritative item on retry", async () => {
     const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
     expect(lastCoin).toBeDefined();
     const checkpointIdentity = {
@@ -321,6 +321,12 @@ describe("syncLiveReserves", () => {
       attemptNo: 2,
       executionGeneration: 2,
       invocationId: "recovery-owner",
+    };
+    const checkpointAdvanceError = new Error("checkpoint advance interrupted");
+    const checkpointAdvanceConfig: MockTableConfig = {
+      match: "items_done = ?",
+      rows: [],
+      throwError: checkpointAdvanceError,
     };
     const db = mockD1([
       {
@@ -352,11 +358,22 @@ describe("syncLiveReserves", () => {
       },
       {
         match: "FROM reserve_composition c",
-        rows: [{ finalized: 1 }],
+        rows: [{ finalized: 1, repaired: 1 }],
       },
+      checkpointAdvanceConfig,
     ]);
     const { syncLiveReserves } = await import("../sync-live-reserves");
 
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toBe(checkpointAdvanceError);
+
+    delete checkpointAdvanceConfig.throwError;
     const result = await syncLiveReserves(
       db,
       new AbortController().signal,
@@ -368,14 +385,31 @@ describe("syncLiveReserves", () => {
 
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
     expect(result?.itemCount).toBe(0);
-    const checkpointAdvance = db.getHistory().find((entry) => (
+    const history = db.getHistory();
+    const checkpointAdvances = history.filter((entry) => (
       entry.sql.includes("UPDATE worker_scheduled_checkpoints")
       && entry.sql.includes("items_done = ?")
     ));
-    expect(checkpointAdvance?.binds.slice(0, 2)).toEqual([
+    expect(checkpointAdvances).toHaveLength(2);
+    expect(checkpointAdvances[1]?.binds.slice(0, 2)).toEqual([
       null,
       SYNC_ORDERED_CONFIGURED_COINS.length,
     ]);
+    const compositionRepairs = history.filter((entry) => (
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
+      && entry.sql.includes("SELECT c.stablecoin_id")
+    ));
+    const attemptRepairs = history.filter((entry) => (
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history")
+      && entry.sql.includes("SELECT s.stablecoin_id")
+    ));
+    expect(compositionRepairs).toHaveLength(2);
+    expect(attemptRepairs).toHaveLength(2);
+    for (let index = 0; index < checkpointAdvances.length; index += 1) {
+      const advanceIndex = history.indexOf(checkpointAdvances[index]!);
+      expect(history.indexOf(compositionRepairs[index]!)).toBeLessThan(advanceIndex);
+      expect(history.indexOf(attemptRepairs[index]!)).toBeLessThan(advanceIndex);
+    }
   });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {

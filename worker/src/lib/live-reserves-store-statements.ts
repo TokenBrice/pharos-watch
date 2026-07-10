@@ -158,6 +158,124 @@ export function buildReserveSyncAttemptHistoryInsertStatement(
     );
 }
 
+export function buildReserveCompositionHistoryRepairStatement(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT OR IGNORE INTO reserve_composition_history (
+         stablecoin_id,
+         fetched_at,
+         adapter_key,
+         attempt_id,
+         slices,
+         metadata,
+         warnings,
+         warning_count,
+         adapter_source_model,
+         adapter_evidence_class
+       )
+       SELECT c.stablecoin_id,
+              c.fetched_at,
+              c.source,
+              c.attempt_id,
+              c.slices,
+              c.metadata,
+              c.warnings,
+              c.warning_count,
+              c.adapter_source_model,
+              c.adapter_evidence_class
+         FROM reserve_composition c
+         JOIN reserve_sync_state s
+           ON s.stablecoin_id = c.stablecoin_id
+        WHERE c.stablecoin_id = ?
+          AND c.attempt_id = ?
+          AND s.last_success_at = c.fetched_at
+          AND s.last_attempt_id = c.attempt_id
+          AND s.last_success_attempt_id = c.attempt_id
+          AND s.pending_attempt_id IS NULL`,
+    )
+    .bind(stablecoinId, attemptId);
+}
+
+export function buildReserveSyncAttemptHistoryRepairStatement(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT OR IGNORE INTO reserve_sync_attempt_history (
+         stablecoin_id,
+         attempted_at,
+         adapter_key,
+         breaker_key,
+         attempt_id,
+         status,
+         warnings,
+         warning_count,
+         last_error,
+         metadata
+       )
+       SELECT s.stablecoin_id,
+              COALESCE(s.last_attempted_at, c.fetched_at),
+              s.adapter_key,
+              s.breaker_key,
+              c.attempt_id,
+              s.last_status,
+              s.warnings,
+              s.warning_count,
+              s.last_error,
+              s.metadata
+         FROM reserve_composition c
+         JOIN reserve_sync_state s
+           ON s.stablecoin_id = c.stablecoin_id
+        WHERE c.stablecoin_id = ?
+          AND c.attempt_id = ?
+          AND s.last_success_at = c.fetched_at
+          AND s.last_attempt_id = c.attempt_id
+          AND s.last_success_attempt_id = c.attempt_id
+          AND s.pending_attempt_id IS NULL`,
+    )
+    .bind(stablecoinId, attemptId);
+}
+
+export function buildReserveAuthoritativeHistoryRepairReadbackStatement(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `SELECT 1 AS repaired
+         FROM reserve_composition c
+         JOIN reserve_sync_state s
+           ON s.stablecoin_id = c.stablecoin_id
+        WHERE c.stablecoin_id = ?
+          AND c.attempt_id = ?
+          AND s.last_success_at = c.fetched_at
+          AND s.last_attempt_id = c.attempt_id
+          AND s.last_success_attempt_id = c.attempt_id
+          AND s.pending_attempt_id IS NULL
+          AND EXISTS (
+            SELECT 1
+              FROM reserve_composition_history ch
+             WHERE ch.stablecoin_id = c.stablecoin_id
+               AND ch.attempt_id = c.attempt_id
+          )
+          AND EXISTS (
+            SELECT 1
+              FROM reserve_sync_attempt_history ah
+             WHERE ah.stablecoin_id = c.stablecoin_id
+               AND ah.attempt_id = c.attempt_id
+          )
+        LIMIT 1`,
+    )
+    .bind(stablecoinId, attemptId);
+}
+
 export function buildReserveSuccessAuthoritativeReadbackStatement(
   db: D1Database,
   stablecoinId: string,

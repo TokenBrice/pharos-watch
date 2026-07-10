@@ -38,7 +38,10 @@ import {
   markScheduledCheckpointItemStarted,
   type ScheduledCheckpointIdentity,
 } from "../lib/scheduled-recovery-checkpoint";
-import { didReserveSyncAttemptBecomeAuthoritative } from "../lib/live-reserves-store";
+import {
+  didReserveSyncAttemptBecomeAuthoritative,
+  repairAuthoritativeReserveSyncHistory,
+} from "../lib/live-reserves-store";
 import type { ReserveRecoveryFaultInjectionController } from "../lib/reserve-recovery-fault-injection";
 
 interface ReserveCoinQueueResult {
@@ -478,6 +481,16 @@ export async function syncLiveReserves(
       checkpoint.currentDomainAttemptId,
     );
     if (authoritative) {
+      const historyRepaired = await repairAuthoritativeReserveSyncHistory(
+        db,
+        checkpointResumeId,
+        checkpoint.currentDomainAttemptId,
+      );
+      if (!historyRepaired) {
+        throw new Error(
+          `live reserve checkpoint history repair lost authoritative generation for ${checkpointResumeId}`,
+        );
+      }
       const completedIndex = SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === checkpointResumeId);
       if (completedIndex < 0) {
         throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);
