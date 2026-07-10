@@ -311,7 +311,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("advances past an authoritative item after interruption without replaying its adapter", async () => {
-    const lastCoin = SYNC_ORDERED_CONFIGURED_COINS.at(-1);
+    const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
     expect(lastCoin).toBeDefined();
     const checkpointIdentity = {
       scheduleKey: "fourHourlyReserveSync",
