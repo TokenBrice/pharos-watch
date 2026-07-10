@@ -32,12 +32,11 @@ import {
   type SetupWizardTarget,
 } from "./telegram-webhook-shared";
 import {
+  applySubscribeIntent,
   clearPendingDisambiguation,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguationRow,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
   upsertGlobalAlertTypes,
 } from "./telegram-webhook-store";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
@@ -525,8 +524,9 @@ export async function handleSetupConfirm(
   const alertTypes = new Set(state.alertTypes);
 
   if (state.target.kind === "all") {
-    await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes);
-    await clearPendingDisambiguation(context.db, context.chatId);
+    await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes, {
+      clearPending: true,
+    });
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -553,20 +553,14 @@ export async function handleSetupConfirm(
     }
     const coins = result.presets.flatMap((preset) => preset.coins);
     const coinIds = coins.map((coin) => coin.id);
-    await upsertSubscriberAndSubscriptions(
-      context.db,
-      context.chatId,
-      context.username,
+    await applySubscribeIntent(context.db, {
+      chatId: context.chatId,
+      username: context.username,
       alertTypes,
-      coinIds,
-      { clearPending: true },
-    );
-    await upsertPresetSubscriptions(
-      context.db,
-      context.chatId,
-      [state.target.presetId as TelegramPresetId],
-      alertTypes,
-    );
+      stablecoinIds: coinIds,
+      presetIds: [state.target.presetId as TelegramPresetId],
+      clearPending: true,
+    });
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -588,14 +582,13 @@ export async function handleSetupConfirm(
   }
 
   // ticker target
-  await upsertSubscriberAndSubscriptions(
-    context.db,
-    context.chatId,
-    context.username,
+  await applySubscribeIntent(context.db, {
+    chatId: context.chatId,
+    username: context.username,
     alertTypes,
-    [state.target.coinId],
-    { clearPending: true },
-  );
+    stablecoinIds: [state.target.coinId],
+    clearPending: true,
+  });
   await recordTelegramUsageEvent(context.db, {
     eventType: "setup_complete",
     sourceCategory: "custom",

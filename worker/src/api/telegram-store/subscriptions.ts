@@ -1,4 +1,9 @@
-import { batchExecute } from "../../lib/db";
+import {
+  batchExecute,
+  chunkArray,
+  D1_MAX_BOUND_PARAMETERS,
+  D1_SAFE_IN_CLAUSE_BIND_LIMIT,
+} from "../../lib/db";
 import type { ResolvedCoin } from "../../lib/telegram-alerts";
 import type {
   ParsedSetCommand,
@@ -19,6 +24,12 @@ export interface BuiltSubscriptionUpsert {
   sql: string;
   binds: unknown[];
 }
+
+const SUBSCRIPTION_FOLLOW_BIND_COUNT = 8;
+const SUBSCRIPTION_FOLLOWS_PER_STATEMENT = Math.floor(
+  D1_MAX_BOUND_PARAMETERS / SUBSCRIPTION_FOLLOW_BIND_COUNT,
+);
+const SUBSCRIPTION_STATEMENT_COMPACTION_THRESHOLD = 50;
 
 function bindSubscriptionUpsert(db: D1Database, upsert: BuiltSubscriptionUpsert): D1PreparedStatement {
   return db.prepare(upsert.sql).bind(...upsert.binds);
@@ -195,11 +206,29 @@ export function prepareSubscriberAndSubscriptionStatements(
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     );
   }
-  for (const stablecoinId of uniqueStablecoinIds) {
-    const depegStepUpdate =
-      options?.depegWorseningBpsStep === undefined
-        ? "depeg_worsening_bps_step = telegram_subscriptions.depeg_worsening_bps_step"
-        : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
+  const depegStepUpdate =
+    options?.depegWorseningBpsStep === undefined
+      ? "depeg_worsening_bps_step = telegram_subscriptions.depeg_worsening_bps_step"
+      : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
+  // Compact only large bulk-confirm payloads so every tracked-coin intent fits
+  // inside one 100-statement atomic D1 batch.
+  const stablecoinIdChunks = uniqueStablecoinIds.length > SUBSCRIPTION_STATEMENT_COMPACTION_THRESHOLD
+    ? chunkArray(uniqueStablecoinIds, SUBSCRIPTION_FOLLOWS_PER_STATEMENT)
+    : uniqueStablecoinIds.map((stablecoinId) => [stablecoinId]);
+  for (const stablecoinIdChunk of stablecoinIdChunks) {
+    const binds = stablecoinIdChunk.flatMap((stablecoinId) => [
+      chatId,
+      stablecoinId,
+      alertDews,
+      alertDepeg,
+      alertSafety,
+      alertLaunch,
+      alertReserve,
+      options?.depegWorseningBpsStep ?? null,
+    ]);
+    const values = stablecoinIdChunk
+      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
     statements.push(
       db.prepare(`
         INSERT INTO telegram_subscriptions (
@@ -212,7 +241,7 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_reserve,
           depeg_worsening_bps_step
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ${values}
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
           alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
           alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
@@ -220,16 +249,7 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
           alert_reserve = MAX(telegram_subscriptions.alert_reserve, excluded.alert_reserve),
           ${depegStepUpdate}
-      `).bind(
-        chatId,
-        stablecoinId,
-        alertDews,
-        alertDepeg,
-        alertSafety,
-        alertLaunch,
-        alertReserve,
-        options?.depegWorseningBpsStep ?? null,
-      ),
+      `).bind(...binds),
     );
   }
   return statements;
@@ -381,18 +401,40 @@ export function prepareRemoveSubscriptionStatements(
   db: D1Database,
   chatId: string,
   stablecoinIds: string[],
+  options: { touchSubscriber?: boolean } = {},
+): D1PreparedStatement[] {
+  const deletes = prepareRemoveSubscriptionRowStatements(db, chatId, stablecoinIds);
+  if (deletes.length === 0) return [];
+  if (options.touchSubscriber === false) return deletes;
+  return [
+    ...deletes,
+    prepareTouchSubscriberStatement(db, chatId),
+  ];
+}
+
+function prepareRemoveSubscriptionRowStatements(
+  db: D1Database,
+  chatId: string,
+  stablecoinIds: readonly string[],
 ): D1PreparedStatement[] {
   const uniqueIds = Array.from(new Set(stablecoinIds));
   if (uniqueIds.length === 0) return [];
 
-  const now = unixNow();
-  const placeholders = uniqueIds.map(() => "?").join(", ");
-  return [
-    db.prepare(
+  return chunkArray(uniqueIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT - 1).map((idChunk) => {
+    const placeholders = idChunk.map(() => "?").join(", ");
+    return db.prepare(
       `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
-    ).bind(chatId, ...uniqueIds),
-    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
-  ];
+    ).bind(chatId, ...idChunk);
+  });
+}
+
+function prepareTouchSubscriberStatement(
+  db: D1Database,
+  chatId: string,
+): D1PreparedStatement {
+  return db
+    .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+    .bind(unixNow(), chatId);
 }
 
 export async function removeSubscriptions(

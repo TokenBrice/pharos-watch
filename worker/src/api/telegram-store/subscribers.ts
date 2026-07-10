@@ -1,4 +1,5 @@
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { executeAtomicBatch } from "../../lib/db";
 import type { SubscriberRow } from "../telegram-webhook-shared";
 
 export function unixNow(): number {
@@ -336,17 +337,26 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
+  options: { clearPending?: boolean } = {},
 ): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    globalAlertBumps: {
-      dews: alertTypes.has("dews") ? 1 : 0,
-      depeg: alertTypes.has("depeg") ? 1 : 0,
-      safety: alertTypes.has("safety") ? 1 : 0,
-      launch: alertTypes.has("launch") ? 1 : 0,
-      reserve: alertTypes.has("reserve") ? 1 : 0,
-    },
-  });
+  const statements = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: unixNow(),
+      globalAlertBumps: {
+        dews: alertTypes.has("dews") ? 1 : 0,
+        depeg: alertTypes.has("depeg") ? 1 : 0,
+        safety: alertTypes.has("safety") ? 1 : 0,
+        launch: alertTypes.has("launch") ? 1 : 0,
+        reserve: alertTypes.has("reserve") ? 1 : 0,
+      },
+    }),
+  ];
+  if (options.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    );
+  }
+  await executeAtomicBatch(db, statements);
 }

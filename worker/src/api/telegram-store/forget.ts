@@ -1,4 +1,4 @@
-import { batchExecute } from "../../lib/db";
+import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { unixNow } from "./subscribers";
@@ -8,9 +8,13 @@ import { unixNow } from "./subscribers";
  * for the chat. Mirrors the inline SQL the bulk-confirm `unsubscribeAll` path
  * (`telegram-webhook-callbacks.ts:1082-1106`) writes today.
  */
-export async function unsubscribeAll(db: D1Database, chatId: string): Promise<void> {
+export async function unsubscribeAll(
+  db: D1Database,
+  chatId: string,
+  options: { clearPending?: boolean } = {},
+): Promise<void> {
   const now = unixNow();
-  await db.batch([
+  const statements = [
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db
@@ -32,7 +36,13 @@ export async function unsubscribeAll(db: D1Database, chatId: string): Promise<vo
           WHERE chat_id = ?`,
       )
       .bind(now, chatId),
-  ]);
+  ];
+  if (options.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    );
+  }
+  await executeAtomicBatch(db, statements);
 }
 
 /**

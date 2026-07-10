@@ -2,16 +2,14 @@ import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
+  applySubscribeIntent,
+  applyUnsubscribeIntent,
   clearPendingDisambiguation,
   forgetSubscriber,
   loadPendingDisambiguation,
-  removePresetSubscriptions,
-  removeSubscriptions,
   unixNow,
   unsubscribeAll,
   upsertGlobalAlertTypes,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
 } from "../telegram-webhook-store";
 import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
@@ -136,7 +134,7 @@ async function executeConfirmedBulk(
   if (payload.kind === "subscribe") {
     const alertTypes = new Set(payload.alertTypes);
     if (payload.subscribeAll) {
-      await upsertGlobalAlertTypes(db, chatId, username, alertTypes);
+      await upsertGlobalAlertTypes(db, chatId, username, alertTypes, { clearPending: true });
       await recordTelegramUsageEvent(db, {
         eventType: "subscribe",
         actionDetail: "all",
@@ -149,13 +147,16 @@ async function executeConfirmedBulk(
       });
       return;
     }
-    await upsertSubscriberAndSubscriptions(db, chatId, username, alertTypes, payload.coinIds, {
+    await applySubscribeIntent(db, {
+      chatId,
+      username,
+      alertTypes,
+      stablecoinIds: payload.coinIds,
+      presetIds: payload.presetIds,
+      clearPending: true,
       depegWorseningBpsStep: payload.depegWorseningBpsStep,
     });
     if (payload.presetIds.length > 0) {
-      await upsertPresetSubscriptions(db, chatId, payload.presetIds, alertTypes, {
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      });
       await recordTelegramUsageEvent(db, {
         eventType: "preset_follow",
         actionDetail: "preset",
@@ -172,7 +173,7 @@ async function executeConfirmedBulk(
 
   // unsubscribe
   if (payload.unsubscribeAll) {
-    await unsubscribeAll(db, chatId);
+    await unsubscribeAll(db, chatId, { clearPending: true });
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "all",
@@ -185,9 +186,13 @@ async function executeConfirmedBulk(
     });
     return;
   }
-  await removeSubscriptions(db, chatId, payload.coinIds);
+  await applyUnsubscribeIntent(db, {
+    chatId,
+    stablecoinIds: payload.coinIds,
+    presetIds: payload.presetIds,
+    clearPending: true,
+  });
   if (payload.presetIds.length > 0) {
-    await removePresetSubscriptions(db, chatId, payload.presetIds);
     await recordTelegramUsageEvent(db, {
       eventType: "preset_unfollow",
       actionDetail: "preset",
@@ -221,7 +226,7 @@ async function handleBulkConfirmCallback(
   }, action);
   if (!pendingAction) return;
 
-  // Confirm path: execute the deferred action, then clear pending.
+  // The confirmed state change and pending-row clear commit in one store batch.
   const username = callbackUsername(cb);
   try {
     await executeConfirmedBulk(db, chatId, username, pendingAction.payload);
@@ -236,7 +241,6 @@ async function handleBulkConfirmCallback(
     await answerCallbackQuery(cb.id, botToken, { text: "Could not apply changes. Please try again." });
     return;
   }
-  await clearPendingDisambiguation(db, chatId);
   await sendAuditedTelegramReply(db, chatId, "Confirmed.", botToken, {
     actionDetail: "callback_bulk",
   });

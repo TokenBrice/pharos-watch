@@ -24,14 +24,12 @@ import {
 import { runCoinResolutionFlow, type CoinResolutionCompletion } from "../telegram-webhook-resolution";
 import {
   applySettingToSubscriptions,
+  applySubscribeIntent,
+  applyUnsubscribeIntent,
   clearPendingDisambiguation,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingConfirmBulk,
-  removePresetSubscriptions,
-  removeSubscriptions,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
 } from "../telegram-webhook-store";
 import {
   type ConfirmBulkPayload,
@@ -139,21 +137,16 @@ const completionHandlers: CompletionHandlerMap = {
   subscribe: async (context, coins, payload, options) => {
     const alertTypes = new Set(payload.alertTypes);
     const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    await upsertSubscriberAndSubscriptions(
-      context.db,
-      context.chatId,
-      context.username,
+    await applySubscribeIntent(context.db, {
+      chatId: context.chatId,
+      username: context.username,
       alertTypes,
-      coins.map((coin) => coin.id),
-      {
-        clearPending: options.clearPending,
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      },
-    );
+      stablecoinIds: coins.map((coin) => coin.id),
+      presetIds,
+      clearPending: options.clearPending,
+      depegWorseningBpsStep: payload.depegWorseningBpsStep,
+    });
     if (presetIds.length > 0) {
-      await upsertPresetSubscriptions(context.db, context.chatId, presetIds, alertTypes, {
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      });
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_follow",
         actionDetail: "preset",
@@ -180,16 +173,13 @@ const completionHandlers: CompletionHandlerMap = {
   },
   unsubscribe: async (context, coins, payload, options) => {
     const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    if (options.clearPending) {
-      await clearPendingDisambiguation(context.db, context.chatId);
-    }
-    await removeSubscriptions(
-      context.db,
-      context.chatId,
-      coins.map((coin) => coin.id),
-    );
+    await applyUnsubscribeIntent(context.db, {
+      chatId: context.chatId,
+      stablecoinIds: coins.map((coin) => coin.id),
+      presetIds,
+      clearPending: options.clearPending,
+    });
     if (presetIds.length > 0) {
-      await removePresetSubscriptions(context.db, context.chatId, presetIds);
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_unfollow",
         actionDetail: "preset",

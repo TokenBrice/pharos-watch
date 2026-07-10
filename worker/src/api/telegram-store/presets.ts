@@ -1,7 +1,27 @@
-import { batchExecute } from "../../lib/db";
+import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import type { PresetSubscriptionRow } from "../telegram-webhook-shared";
 import { unixNow } from "./subscribers";
-import { prepareSubscriberAndSubscriptionStatements } from "./subscriptions";
+import {
+  prepareRemoveSubscriptionStatements,
+  prepareSubscriberAndSubscriptionStatements,
+} from "./subscriptions";
+
+export interface SubscribeIntentInput {
+  chatId: string;
+  username: string | null;
+  stablecoinIds: readonly string[];
+  presetIds?: readonly string[];
+  alertTypes: Set<string>;
+  clearPending?: boolean;
+  depegWorseningBpsStep?: 100 | 250 | 500 | null;
+}
+
+export interface UnsubscribeIntentInput {
+  chatId: string;
+  stablecoinIds: readonly string[];
+  presetIds?: readonly string[];
+  clearPending?: boolean;
+}
 
 function preparePresetSubscriptionStatements(
   db: D1Database,
@@ -76,6 +96,31 @@ export function prepareSubscriberAndPresetStatements(
   ];
 }
 
+function prepareSubscribeIntentStatements(
+  db: D1Database,
+  input: SubscribeIntentInput,
+): D1PreparedStatement[] {
+  return prepareSubscriberAndPresetStatements(
+    db,
+    input.chatId,
+    input.username,
+    input.presetIds ?? [],
+    [...input.stablecoinIds],
+    input.alertTypes,
+    {
+      clearPending: input.clearPending,
+      depegWorseningBpsStep: input.depegWorseningBpsStep,
+    },
+  );
+}
+
+export async function applySubscribeIntent(
+  db: D1Database,
+  input: SubscribeIntentInput,
+): Promise<void> {
+  await executeAtomicBatch(db, prepareSubscribeIntentStatements(db, input));
+}
+
 export function prepareRemovePresetSubscriptionStatements(
   db: D1Database,
   chatId: string,
@@ -88,6 +133,36 @@ export function prepareRemovePresetSubscriptionStatements(
     db.prepare(`DELETE FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id IN (${placeholders})`)
       .bind(chatId, ...uniquePresetIds),
   ];
+}
+
+function prepareUnsubscribeIntentStatements(
+  db: D1Database,
+  input: UnsubscribeIntentInput,
+): D1PreparedStatement[] {
+  const stablecoinIds = Array.from(new Set(input.stablecoinIds));
+  const presetIds = Array.from(new Set(input.presetIds ?? []));
+  if (stablecoinIds.length === 0 && presetIds.length === 0) return [];
+
+  const statements = [
+    ...prepareRemoveSubscriptionStatements(db, input.chatId, stablecoinIds, { touchSubscriber: false }),
+    ...prepareRemovePresetSubscriptionStatements(db, input.chatId, presetIds),
+    db
+      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+      .bind(unixNow(), input.chatId),
+  ];
+  if (input.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(input.chatId),
+    );
+  }
+  return statements;
+}
+
+export async function applyUnsubscribeIntent(
+  db: D1Database,
+  input: UnsubscribeIntentInput,
+): Promise<void> {
+  await executeAtomicBatch(db, prepareUnsubscribeIntentStatements(db, input));
 }
 
 export async function removePresetSubscriptions(
