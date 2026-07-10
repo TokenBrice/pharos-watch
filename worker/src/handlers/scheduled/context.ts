@@ -473,7 +473,8 @@ export function createScheduledRuntimeContext(
               message: "Failed to persist cron recovery observation",
               error,
             });
-            if (alertBrokerMode === "status" || alertBrokerMode === "alert") throw error;
+            // Cron accounting and any enabled attempt ledger have already
+            // settled. Keep the returned slot outcome in agreement with them.
           }
         }
         return result;

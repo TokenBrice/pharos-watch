@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   heartbeatWorkerJobAttempt: vi.fn(),
   recordWorkerJobAttemptLease: vi.fn(),
   runCronWithLease: vi.fn(),
+  reportAlertCondition: vi.fn(),
+  alertBrokerMode: "off" as "off" | "shadow" | "status" | "alert",
+  cronRunTerminalStatus: null as string | null,
   callbackError: null as unknown,
 }));
 
@@ -41,8 +44,11 @@ vi.mock("../../../lib/cron-logger", () => ({
     fn: (signal: AbortSignal, reportProgress: (update: unknown) => Promise<void>) => Promise<unknown>,
   ) => {
     try {
-      return await fn(new AbortController().signal, async () => {});
+      const result = await fn(new AbortController().signal, async () => {});
+      mocks.cronRunTerminalStatus = (result as { status?: string } | undefined)?.status ?? "ok";
+      return result;
     } catch (error) {
+      mocks.cronRunTerminalStatus = "error";
       mocks.callbackError = error;
       throw error;
     }
@@ -50,11 +56,12 @@ vi.mock("../../../lib/cron-logger", () => ({
 }));
 
 vi.mock("../../../lib/alert-broker", () => ({
-  normalizeAlertBrokerMode: () => "off",
-  reportAlertCondition: vi.fn(async () => {}),
+  normalizeAlertBrokerMode: () => mocks.alertBrokerMode,
+  reportAlertCondition: mocks.reportAlertCondition,
 }));
 
 import { createScheduledRuntimeContext } from "../context";
+import { runSinglePropagatingSlotJob } from "../slot-summary";
 
 function buildRuntime(mode: "shadow" | "write") {
   return createScheduledRuntimeContext(
@@ -76,7 +83,10 @@ function buildRuntime(mode: "shadow" | "write") {
 describe("scheduled runtime job-ledger modes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.alertBrokerMode = "off";
+    mocks.cronRunTerminalStatus = null;
     mocks.callbackError = null;
+    mocks.reportAlertCondition.mockReset().mockResolvedValue(undefined);
     mocks.createWorkerJobAttempt.mockReset().mockResolvedValue({
       attemptId: "attempt-1",
       scheduleKey: "quarterHourly",
@@ -194,6 +204,49 @@ describe("scheduled runtime job-ledger modes", () => {
     expect(mocks.finishWorkerJobAttempt).toHaveBeenCalledTimes(1);
     expect(mocks.callbackError).toBeNull();
   });
+
+  it.each(["status", "alert"] as const)(
+    "keeps slot and durable terminal success aligned when %s-mode recovery reporting fails",
+    async (alertBrokerMode) => {
+      const recoveryError = new Error("recovery observation failed");
+      mocks.alertBrokerMode = alertBrokerMode;
+      mocks.reportAlertCondition.mockImplementation(async (
+        _db: D1Database,
+        input: { active: boolean },
+      ) => {
+        if (!input.active) throw recoveryError;
+      });
+      const runtime = buildRuntime("write");
+
+      const slot = await runSinglePropagatingSlotJob(
+        runtime,
+        "snapshot-supply",
+        async () => ({ status: "ok", itemCount: 1 }),
+      );
+
+      expect(slot.jobs).toEqual([expect.objectContaining({
+        job: "snapshot-supply",
+        outcome: "ok",
+        status: "ok",
+      })]);
+      expect(slot.jobsSucceeded).toBe(1);
+      expect(slot.jobsErrored).toBe(0);
+      expect(mocks.cronRunTerminalStatus).toBe("ok");
+      expect(mocks.finishWorkerJobAttempt).toHaveBeenCalledTimes(1);
+      expect(mocks.finishWorkerJobAttempt).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          result: expect.objectContaining({ status: "ok", itemCount: 1 }),
+        }),
+      );
+      expect(mocks.finishWorkerJobAttempt.mock.calls[0]?.[1]).not.toHaveProperty("error");
+      expect(mocks.callbackError).toBeNull();
+      expect(mocks.reportAlertCondition).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ active: false }),
+      );
+    },
+  );
 
   it("fails inside cron accounting when terminal persistence fails in write mode", async () => {
     const terminalError = new Error("terminal write failed");
