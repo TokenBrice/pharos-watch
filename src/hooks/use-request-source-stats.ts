@@ -13,6 +13,7 @@ const DEFAULT_ROUTE_LIMIT = 5;
 const DEFAULT_API_KEY_LIMIT = 25;
 
 export function useRequestSourceStats(
+  options: { enabled?: boolean } = {},
 ): UseQueryResult<ApiRequestAttributionResponse, Error> {
   return useAdminPollingQuery<ApiRequestAttributionResponse>(
     ["request-source-stats", DEFAULT_HOURS, DEFAULT_BUCKET_SEC, DEFAULT_ROUTE_LIMIT, DEFAULT_API_KEY_LIMIT],
@@ -23,6 +24,6 @@ export function useRequestSourceStats(
       apiKeyLimit: DEFAULT_API_KEY_LIMIT,
     }),
     CRON_1MIN,
-    { schema: ApiRequestAttributionResponseSchema },
+    { enabled: options.enabled, schema: ApiRequestAttributionResponseSchema },
   );
 }

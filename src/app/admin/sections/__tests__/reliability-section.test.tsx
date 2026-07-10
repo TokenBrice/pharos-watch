@@ -142,7 +142,7 @@ describe("ReliabilitySection", () => {
     expect(screen.getByText("Probes, breakers, and cache pressure")).toBeTruthy();
     expect(screen.getByText("Public vs operator impact")).toBeTruthy();
     expect(screen.getByText("No public health surface is currently reporting user-visible impact.")).toBeTruthy();
-    expect(screen.getByText("Admin state is healthy.")).toBeTruthy();
+    expect(screen.getByText("Admin service state is healthy.")).toBeTruthy();
     expect(screen.getAllByText("healthy").length).toBeGreaterThan(0);
     expect(screen.getByText("4/4")).toBeTruthy();
     // No "probe fail" hint when failCount is zero

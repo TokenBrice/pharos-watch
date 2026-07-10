@@ -27,11 +27,12 @@ function buildStatusHistoryPath(window: StatusHistoryWindow): string {
 
 export function useStatusHistory(
   window: StatusHistoryWindow,
+  options: { enabled?: boolean } = {},
 ): UseQueryResult<StatusHistoryResponse, Error> {
   return useAdminPollingQuery<StatusHistoryResponse>(
     ["status-history", window],
     () => buildStatusHistoryPath(window),
     CRON_1MIN,
-    { schema: StatusHistoryResponseSchema },
+    { enabled: options.enabled, schema: StatusHistoryResponseSchema },
   );
 }

@@ -35,10 +35,13 @@ function parseReleaseMetadata(value: unknown): ReleaseMetadata | null {
   };
 }
 
-export function useReleaseMetadata(): ReleaseMetadataState {
+export function useReleaseMetadata(enabled = true): ReleaseMetadataState {
   const [state, setState] = useState<ReleaseMetadataState>({ status: "loading", metadata: null });
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const requests = new RequestSequence();
 
     async function loadReleaseMetadata() {
@@ -67,7 +70,7 @@ export function useReleaseMetadata(): ReleaseMetadataState {
     return () => {
       requests.cancel();
     };
-  }, []);
+  }, [enabled]);
 
-  return state;
+  return enabled ? state : { status: "unavailable", metadata: null };
 }

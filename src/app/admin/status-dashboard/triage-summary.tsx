@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildReserveRecoveryForecast, formatNextRunWindow } from "@/lib/status/admin-ops-insights";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
+import { getAdminWorkspacePathForLegacyHash } from "@/lib/admin-workspaces";
 import {
   type BrowserProbeSummary,
   type DashboardDecision,
@@ -56,12 +57,14 @@ export interface TriageSummaryProps {
   isDiagnosticsOpen: boolean;
   setIsDiagnosticsOpen: (open: boolean) => void;
   browserProbeSummary: BrowserProbeSummary | null;
+  probeCoverageLabel?: string;
   querySyncs: DashboardQuerySync[];
   clientDataAgeSec: number | null;
   clientDataStale: boolean;
   lastUpdated: number;
   handleRefresh: () => void;
-  onSignOut: () => void;
+  onSignOut?: () => void;
+  showSignOut?: boolean;
 }
 
 export function TriageSummary({
@@ -78,12 +81,14 @@ export function TriageSummary({
   isDiagnosticsOpen,
   setIsDiagnosticsOpen,
   browserProbeSummary,
+  probeCoverageLabel = "Browser probes",
   querySyncs,
   clientDataAgeSec,
   clientDataStale,
   lastUpdated,
   handleRefresh,
   onSignOut,
+  showSignOut = true,
 }: TriageSummaryProps) {
   const [areIssuesExpanded, setAreIssuesExpanded] = useState(false);
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
@@ -133,6 +138,7 @@ export function TriageSummary({
         {/* Triage header: status + key metrics + controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
+            <h2 className="mr-1 text-sm font-semibold text-foreground">Triage</h2>
             <span
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em]",
@@ -185,9 +191,11 @@ export function TriageSummary({
               labelPrefix="Dashboard fetch"
             />
             <RefreshControl key={lastUpdated} onRefresh={handleRefresh} />
-            <Button variant="outline" size="sm" onClick={onSignOut}>
-              Sign out
-            </Button>
+            {showSignOut && onSignOut ? (
+              <Button variant="outline" size="sm" onClick={onSignOut}>
+                Sign out
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -364,7 +372,7 @@ export function TriageSummary({
                 attentionSections.slice(0, 4).map((section) => (
                   <a
                     key={section.id}
-                    href={`#${section.id}`}
+                    href={getAdminWorkspacePathForLegacyHash(section.id) ?? "/admin/"}
                     className="pharos-focus-ring flex items-start justify-between gap-3 rounded-md px-1 py-2 text-left hover:bg-background/45"
                   >
                     <span className="min-w-0">
@@ -443,6 +451,7 @@ export function TriageSummary({
               probe={data.probe}
               discrepancy={data.discrepancy}
               browserProbe={browserProbeSummary}
+              browserProbeLabel={probeCoverageLabel}
               error={data.sectionErrors.statusState}
               nowSeconds={data.timestamp}
             />

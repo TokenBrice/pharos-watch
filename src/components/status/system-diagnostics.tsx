@@ -22,6 +22,7 @@ interface SystemDiagnosticsProps {
   probe: StatusResponse["probe"];
   discrepancy: StatusResponse["discrepancy"];
   browserProbe?: BrowserProbeSummary | null;
+  browserProbeLabel?: string;
   error?: StatusSectionError;
   nowSeconds: number;
 }
@@ -32,6 +33,7 @@ export function SystemDiagnostics({
   probe,
   discrepancy,
   browserProbe,
+  browserProbeLabel = "Browser Probe Loop",
   error,
   nowSeconds,
 }: SystemDiagnosticsProps) {
@@ -89,7 +91,7 @@ export function SystemDiagnostics({
       </Card>
       <Card>
         <CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Browser Probe Loop</div>
+          <div className="text-xs text-muted-foreground">{browserProbeLabel}</div>
           <div className="font-mono text-sm">
             {browserProbe ? `${browserProbe.passCount}/${browserProbe.sampleCount} (${browserProbe.status ?? "—"})` : "—"}
           </div>

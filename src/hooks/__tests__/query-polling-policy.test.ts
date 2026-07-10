@@ -278,6 +278,19 @@ describe("query polling policy", () => {
     expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
+  it("lets route workspaces disable status polling without changing the shared policy", () => {
+    useStatus({ enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      staleTime: number;
+      refetchInterval: number;
+    };
+
+    expect(options.enabled).toBe(false);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+  });
+
   it("useRequestSourceStats uses the ops proxy and shared polling policy", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
@@ -337,6 +350,21 @@ describe("query polling policy", () => {
     expect((publicCall[1] as RequestInit).headers).toBeUndefined();
     expect(adminCall[0]).toBe("/api/admin/status");
     expect((adminCall[1] as RequestInit).headers).toBeUndefined();
+  });
+
+  it("gives critical operator probes a distinct cache key and supports disabling them", () => {
+    useEndpointProbes({ mode: "critical", enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      queryKey: unknown[];
+      staleTime: number;
+      refetchInterval: number;
+    };
+
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy", "critical"]);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
   });
 
   it("gives admin probes a longer timeout budget than public probes", async () => {

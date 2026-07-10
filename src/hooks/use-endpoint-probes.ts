@@ -26,6 +26,9 @@ export const ENDPOINT_GROUPS = {
  *  action paths and must NOT be auto-probed from the dashboard loop. */
 const ALL_ENDPOINTS = [...ENDPOINT_GROUPS.public, ...ENDPOINT_GROUPS.admin];
 const PUBLIC_ENDPOINTS = ENDPOINT_GROUPS.public;
+const CRITICAL_ENDPOINTS = [...getEndpointProbeDescriptors("public"), ...getEndpointProbeDescriptors("admin")]
+  .filter((descriptor) => descriptor.probeSemanticKind === "health" || descriptor.probeSemanticKind === "status")
+  .map((descriptor) => descriptor.path);
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
@@ -284,20 +287,28 @@ export async function collectEndpointProbes(
  * Probes all API endpoints in parallel.
  * Auto-refreshes every 60s.
  */
-export function useEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
+export type EndpointProbeMode = "full" | "critical";
+
+export function useEndpointProbes(
+  options: { enabled?: boolean; mode?: EndpointProbeMode } = {},
+): UseQueryResult<EndpointProbeResult[], Error> {
+  const mode = options.mode ?? "full";
+  const paths = mode === "critical" ? CRITICAL_ENDPOINTS : ALL_ENDPOINTS;
   return usePollingQuery(
-    ["endpoint-probes", "ops-proxy"],
-    ({ signal }) => collectEndpointProbes(ALL_ENDPOINTS, signal),
+    mode === "critical" ? ["endpoint-probes", "ops-proxy", "critical"] : ["endpoint-probes", "ops-proxy"],
+    ({ signal }) => collectEndpointProbes(paths, signal),
     CRON_1MIN,
-    { enabled: true, retry: 0 },
+    { enabled: options.enabled ?? true, retry: 0 },
   );
 }
 
-export function usePublicEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
+export function usePublicEndpointProbes(
+  options: { enabled?: boolean } = {},
+): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", "public"],
     ({ signal }) => collectEndpointProbes(PUBLIC_ENDPOINTS, signal),
     CRON_1MIN,
-    { enabled: true, retry: 0 },
+    { enabled: options.enabled ?? true, retry: 0 },
   );
 }

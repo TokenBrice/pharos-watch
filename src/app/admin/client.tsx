@@ -1,41 +1,50 @@
 "use client";
 
-import { OpsHostGateShell } from "@/components/ops-host-gate-shell";
-import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
-import { StatusDashboard } from "./status-dashboard";
+import { NoticeRail } from "@/components/status/page-primitives";
+import { useCriticalOpsModel } from "@/hooks/use-critical-ops-model";
+import { TriageSummary } from "./status-dashboard/triage-summary";
+import { useAutoExpand } from "./use-auto-expand";
+import { WorkspaceStatusBoundary } from "./workspace-status-boundary";
 
-const ADMIN_SHELL_PROPS = {
-  breadcrumbName: "Admin",
-  path: "/admin/",
-  title: "Operator Admin",
-  variant: "auth-gated" as const,
-  containerClassName: "mx-auto w-full max-w-[92rem] space-y-6",
-};
-
-export default function StatusClient() {
-  const handleOpsSignOut = () => {
-    window.location.assign("/cdn-cgi/access/logout");
-  };
+export default function TriageClient() {
+  const { data, handleRefresh, healthData, initialLoadError, isLoading, lastUpdated, model } = useCriticalOpsModel();
+  const diagnosticsSignal =
+    data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
 
   return (
-    <OpsHostGateShell
-      {...ADMIN_SHELL_PROPS}
-      leadParagraphs={[
-        "Access-protected operator panel for monitoring pipeline health, endpoint reliability, incident state transitions, and manual recovery flows.",
-      ]}
-      loadingLabel="Loading status access..."
-      publicLeadParagraph="This route exists, but the operator control plane only runs on the Access-protected ops host."
-      publicTitle="Operator tooling is no longer available on the public host."
-      publicDescription={
-        <>
-          Operator actions, credentials, messaging telemetry, and deep status evidence now run behind the
-          Access-protected ops host. The public `/status/` page is read-only.
-        </>
-      }
-    >
-      <AdminActionExecutionProvider>
-        <StatusDashboard onSignOut={handleOpsSignOut} />
-      </AdminActionExecutionProvider>
-    </OpsHostGateShell>
+    <WorkspaceStatusBoundary data={data} error={initialLoadError} isLoading={isLoading} onRetry={handleRefresh}>
+      {(status) => {
+        if (!model) return null;
+
+        return (
+          <div className="space-y-4">
+            <TriageSummary
+              data={status}
+              healthData={healthData}
+              overallTone={model.overallTone}
+              statusHoldingAge={model.statusHoldingAge}
+              issueGroups={model.issueGroups}
+              evidence={model.evidence}
+              decision={model.decision}
+              latestTransition={model.latestTransition}
+              attentionSections={model.attentionSections}
+              recommendedActions={model.recommendedActions}
+              isDiagnosticsOpen={isDiagnosticsOpen}
+              setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+              browserProbeSummary={model.browserProbeSummary}
+              probeCoverageLabel="Critical Browser Probes"
+              querySyncs={model.querySyncs}
+              clientDataAgeSec={model.clientDataAgeSec}
+              clientDataStale={model.clientDataStale}
+              lastUpdated={lastUpdated}
+              handleRefresh={handleRefresh}
+              showSignOut={false}
+            />
+            <NoticeRail notices={model.notices} />
+          </div>
+        );
+      }}
+    </WorkspaceStatusBoundary>
   );
 }

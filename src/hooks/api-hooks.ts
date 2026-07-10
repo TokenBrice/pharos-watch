@@ -192,10 +192,10 @@ export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotRe
   );
 }
 
-export function useHealth(): UseQueryResult<HealthResponse, Error> {
+export function useHealth(overrides?: QueryControlOverrides): UseQueryResult<HealthResponse, Error> {
   return useRegisteredApiQuery<HealthResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.health,
-    { retry: 1 },
+    { retry: 1, ...overrides },
   );
 }
 

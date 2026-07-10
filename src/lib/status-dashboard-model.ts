@@ -29,6 +29,10 @@ export interface DashboardSection {
   summary: string;
 }
 
+export type DashboardCronGroup = (typeof CRON_GROUPS)[number] & {
+  entries: Array<[string, StatusResponse["crons"][string]]>;
+};
+
 export interface DashboardNotice {
   id: string;
   title: string;
@@ -270,6 +274,18 @@ export function buildBrowserProbeSummary(
     status,
     updatedAt: updatedAtMs > 0 ? Math.floor(updatedAtMs / 1000) : null,
   };
+}
+
+export function buildDashboardCronGroups(data: Pick<StatusResponse, "crons">): DashboardCronGroup[] {
+  const cronEntries = Object.entries(data.crons);
+  return CRON_GROUPS.map((group) => ({
+    ...group,
+    entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
+  })).filter((group) => group.entries.length > 0);
+}
+
+export function countRunningDashboardCrons(data: Pick<StatusResponse, "crons">): number {
+  return Object.values(data.crons).filter((cron) => cron.inFlight && !cron.inFlight.stale).length;
 }
 
 /** Status-dashboard-scoped timestamp formatter. Not a candidate for shared extraction. */
@@ -769,7 +785,7 @@ function buildDashboardSections({
   decision: DashboardDecision;
   statusHoldingAge: number;
   browserProbeSummary: BrowserProbeSummary | null;
-  cronGroups: Array<(typeof CRON_GROUPS)[number] & { entries: Array<[string, StatusResponse["crons"][string]]> }>;
+  cronGroups: DashboardCronGroup[];
   runningCrons: number;
   recommendedActions: readonly StatusActionRecommendation[];
 }): DashboardSection[] {
@@ -882,6 +898,7 @@ interface BuildStatusDashboardOptions {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
   probes: EndpointProbeResult[] | undefined;
+  probeLabel?: string;
   querySyncs: {
     statusUpdatedAt: number;
     healthUpdatedAt: number;
@@ -907,6 +924,7 @@ export function buildStatusDashboardData({
   data,
   healthData,
   probes,
+  probeLabel = "Browser probes",
   querySyncs,
   nowMs,
   statusError = null,
@@ -939,7 +957,7 @@ export function buildStatusDashboardData({
     }),
     buildQuerySync({
       key: "probes",
-      label: "Browser probes",
+      label: probeLabel,
       required: true,
       hasData: probes !== undefined,
       updatedAtMs: querySyncs.probesUpdatedAt,
@@ -972,12 +990,8 @@ export function buildStatusDashboardData({
   const freshnessFloorMs = evidence.oldestRequiredSuccessAtMs;
   const clientDataAgeSec = evidence.oldestRequiredAgeSec;
   const browserProbeSummary = buildBrowserProbeSummary(probes, querySyncs.probesUpdatedAt);
-  const cronEntries = Object.entries(data.crons);
-  const cronGroups = CRON_GROUPS.map((group) => ({
-    ...group,
-    entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
-  })).filter((group) => group.entries.length > 0);
-  const runningCrons = cronEntries.filter(([, cron]) => cron.inFlight && !cron.inFlight.stale).length;
+  const cronGroups = buildDashboardCronGroups(data);
+  const runningCrons = countRunningDashboardCrons(data);
   const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
   const publicHealthNeedsCallout = healthData != null && (healthData.status !== "healthy" || healthDiffersFromStatus);
   const allTransitions = historyTransitions ?? data.timeline;

@@ -19,8 +19,8 @@ export function CommsSection({ data }: CommsSectionProps) {
       accentClassName="border-l-teal-500"
       summary={
         <>
-          <SummaryBadge label="Alert-ready Chats" value={String(data.telegramBot?.deliverableChats ?? 0)} />
-          <SummaryBadge label="Pending Deliveries" value={String(data.telegramBot?.pendingDeliveries ?? 0)} />
+          <SummaryBadge label="Alert-ready Chats" value={data.telegramBot ? String(data.telegramBot.deliverableChats) : "unknown"} />
+          <SummaryBadge label="Pending Deliveries" value={data.telegramBot ? String(data.telegramBot.pendingDeliveries) : "unknown"} />
           <SummaryBadge label="Latest Dispatch" value={dispatchCron?.lastRun?.status ?? "—"} />
           {dispatchMeta?.cappedAtLimit ? <SummaryBadge label="Dispatch Cap" value="hit" /> : null}
         </>
