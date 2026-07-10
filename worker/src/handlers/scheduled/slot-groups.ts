@@ -24,12 +24,14 @@ export interface ScheduledSlotGroup {
   label: string;
   tasks: readonly ScheduledSlotTask[];
   stopOnFailure?: boolean;
+  stopOnNonNeutralSkip?: boolean;
 }
 
 export interface ScheduledSlotTaskChain {
   label: string;
   tasks: readonly ScheduledSlotTask[];
   stopOnFailure?: boolean;
+  stopOnNonNeutralSkip?: boolean;
 }
 
 export interface ScheduledSlotParallelSerialGroup {
@@ -63,25 +65,34 @@ async function runSerialScheduledJobs(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
   tasks: readonly ScheduledSlotTask[],
-  options: { stopOnFailure?: boolean } = {},
+  options: { stopOnFailure?: boolean; stopOnNonNeutralSkip?: boolean } = {},
 ): Promise<ScheduledSlotJobSummary[]> {
   const outcomes: ScheduledSlotJobSummary[] = [];
   for (let index = 0; index < tasks.length; index++) {
     const task = tasks[index];
     const summary = (await runSingleScheduledJobWithOutcome(runtime, slotLabel, task)).summary;
     outcomes.push(summary);
-    if (options.stopOnFailure && summary.outcome === "error") {
+    const terminalChainFailure = options.stopOnFailure && summary.outcome === "error";
+    const terminalChainSkip =
+      options.stopOnNonNeutralSkip
+      && summary.outcome === "skipped"
+      && summary.neutral !== true;
+    if (terminalChainFailure || terminalChainSkip) {
       const skippedTasks = tasks.slice(index + 1);
+      const reason = terminalChainFailure
+        ? `upstream-failure:${task.job}`
+        : `upstream-blocked:${task.job}`;
       for (const skippedTask of skippedTasks) {
         await logSkippedCronRun(runtime, {
           job: skippedTask.job,
-          reason: `upstream-failure:${task.job}`,
-          message: `${skippedTask.job} did not start because ${task.job} failed`,
+          reason,
+          message: `${skippedTask.job} did not start because ${task.job} did not complete`,
+          metadata: { childDisposition: "not_started" },
         });
       }
       outcomes.push(
         ...skippedTasks.map((skippedTask) =>
-          summarizeSkippedScheduledJob(skippedTask.job, `upstream-failure:${task.job}`),
+          summarizeSkippedScheduledJob(skippedTask.job, reason),
         ),
       );
       break;
@@ -112,6 +123,7 @@ export async function runScheduledSlotGroups(
         group.chains.map((chain) =>
           runSerialScheduledJobs(runtime, slotLabel, chain.tasks, {
             stopOnFailure: chain.stopOnFailure,
+            stopOnNonNeutralSkip: chain.stopOnNonNeutralSkip,
           }),
         ),
       );
@@ -129,6 +141,7 @@ export async function runScheduledSlotGroups(
 
     outcomes.push(...(await runSerialScheduledJobs(runtime, slotLabel, group.tasks, {
       stopOnFailure: group.stopOnFailure,
+      stopOnNonNeutralSkip: group.stopOnNonNeutralSkip,
     })));
   }
   return buildScheduledSlotSummary(outcomes);

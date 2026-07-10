@@ -156,6 +156,41 @@ describe("scheduled slot groups", () => {
     ]);
   });
 
+  it("skips dependent serial tasks after a non-neutral lease skip when configured", async () => {
+    const runLeasedCron = vi.fn(async (job: string, fn) => {
+      if (job === "snapshot-supply") {
+        return { status: "skipped_locked" as const };
+      }
+      return fn(new AbortController().signal, async () => {});
+    }) as ScheduledRuntimeContext["runLeasedCron"];
+
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
+      {
+        mode: "serial",
+        label: "dependent-serial",
+        stopOnNonNeutralSkip: true,
+        tasks: [
+          { job: "snapshot-supply", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-safety-grade-history", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-psi", run: async () => ({ status: "ok" }) },
+        ],
+      },
+    ]);
+
+    expect(runLeasedCron).toHaveBeenCalledTimes(1);
+    expect(summary).toMatchObject({
+      jobsAttempted: 0,
+      jobsSkipped: 3,
+      jobsNeutralSkipped: 0,
+      jobsErrored: 0,
+    });
+    expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
+      ["snapshot-supply", "skipped", "lease-locked"],
+      ["snapshot-safety-grade-history", "skipped", "upstream-blocked:snapshot-supply"],
+      ["snapshot-psi", "skipped", "upstream-blocked:snapshot-supply"],
+    ]);
+  });
+
   it("flattens mixed group shapes for preflight accounting", () => {
     const tasks = flattenScheduledSlotGroupTasks([
       {

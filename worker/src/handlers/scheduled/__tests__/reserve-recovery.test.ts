@@ -70,7 +70,7 @@ describe("reserve recovery mode", () => {
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
     mocks.claim.mockResolvedValue(null);
-    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0 });
+    mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
   });
 
   it("does not scan, reconcile, or claim when off", async () => {
@@ -132,5 +132,33 @@ describe("reserve recovery mode", () => {
       expectedQueueHash: expect.any(String),
     }));
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a contended recovery as degraded so the active checkpoint can retry", async () => {
+    mocks.claim.mockResolvedValue({
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 800,
+      attemptNo: 2,
+      executionGeneration: 2,
+      sourceAttemptNo: 1,
+      childDispositions: {},
+    });
+    mocks.runReserveSlot.mockResolvedValue({
+      jobsErrored: 0,
+      jobsDegraded: 0,
+      jobsSkipped: 1,
+    });
+
+    const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+
+    expect(result).toMatchObject({
+      jobsDegraded: 1,
+      jobsErrored: 0,
+      jobs: [expect.objectContaining({
+        job: "reserve-recovery",
+        outcome: "degraded",
+        status: "degraded",
+      })],
+    });
   });
 });

@@ -114,12 +114,17 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
   });
   recoveryRuntime.slotSignal = signal;
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
+  const recoveryDeferred = summary.jobsSkipped > 0;
   return {
-    status: summary.jobsErrored > 0 ? "error" as const : summary.jobsDegraded > 0 ? "degraded" as const : "ok" as const,
+    status: summary.jobsErrored > 0
+      ? "error" as const
+      : summary.jobsDegraded > 0 || recoveryDeferred
+        ? "degraded" as const
+        : "ok" as const,
     itemCount: 1,
     error: summary.jobsErrored > 0 ? "reserve recovery child failed" : undefined,
     metadata: JSON.stringify({
-      disposition: "recovery-executed",
+      disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
       mode,
       checkpointsClaimed: 1,
       originalScheduleKey: checkpoint.scheduleKey,

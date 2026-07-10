@@ -500,8 +500,19 @@ async function loadCompletedCronJobsForSlot(
   const completed = new Set<string>();
   for (const row of rows.results ?? []) {
     if (row.status !== "ok" && row.status !== "degraded") continue;
-    if (row.metadata?.includes('"childDisposition":"not_started"')) continue;
-    if (row.metadata?.includes('"reason":"stale-slot-reconciled"')) continue;
+    let metadata: Record<string, unknown> | null = null;
+    try {
+      const parsed = row.metadata ? JSON.parse(row.metadata) as unknown : null;
+      metadata = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : null;
+    } catch {
+      metadata = null;
+    }
+    if (metadata?.childDisposition === "not_started") continue;
+    if (metadata?.runBudgetTruncated === true) continue;
+    if (typeof metadata?.skippedReason === "string") continue;
+    if (metadata?.reason === "stale-slot-reconciled") continue;
     completed.add(row.job);
   }
   return completed;
@@ -573,14 +584,23 @@ async function prepareCheckpointAttemptForRecovery(
   const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt, childJobs);
   const abandonedChildDispositions = { ...checkpoint.childDispositions };
   const recoveryChildDispositions = { ...checkpoint.childDispositions };
+  const queueExhausted = checkpoint.nextItemKey === null && checkpoint.itemsDone === checkpoint.itemsTotal;
+  let upstreamCompleted = queueExhausted;
   for (const childJob of childJobs) {
-    if (completedJobs.has(childJob) || checkpoint.childDispositions[childJob] === "completed") {
+    const childCompleted =
+      completedJobs.has(childJob)
+      || checkpoint.childDispositions[childJob] === "completed";
+    if (
+      upstreamCompleted
+      && childCompleted
+    ) {
       abandonedChildDispositions[childJob] = "completed";
       recoveryChildDispositions[childJob] = "completed";
     } else {
       abandonedChildDispositions[childJob] = "platform_abandoned";
       recoveryChildDispositions[childJob] = "not_started";
     }
+    upstreamCompleted = upstreamCompleted && childCompleted;
   }
 
   const recoveryAttemptNo = checkpoint.attemptNo + 1;
@@ -731,7 +751,10 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
         blockers.push("slot-missing");
       } else if (row.slot_state === "running" || row.slot_state === "reconciling") {
         if ((row.slot_updated_at ?? timestamp) >= staleBefore) blockers.push("slot-heartbeat-active");
-      } else if (row.slot_state !== "finished" || row.slot_result_status !== "error") {
+      } else if (
+        row.slot_state !== "finished"
+        || (row.slot_result_status !== "error" && row.slot_result_status !== "degraded")
+      ) {
         blockers.push("slot-not-abandoned");
       }
       if (

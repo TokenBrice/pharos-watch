@@ -206,10 +206,26 @@ describe("scheduled recovery checkpoint", () => {
       childJobs: CHILD_JOBS,
       nowSec: 1_501,
     });
+    await advanceScheduledCheckpoint(db, checkpoint, {
+      nextItemKey: null,
+      itemsDone: 276,
+      nowSec: 1_509,
+    });
     await setScheduledCheckpointChildDisposition(db, checkpoint, "sync-live-reserves", "completed", 1_510);
     sqlite.prepare(
       "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'ok', ?, ?)",
     ).run("sync-live-reserves", 1_505, JSON.stringify({ childDisposition: "completed" }), 1_500);
+    sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'degraded', ?, ?)",
+    ).run(
+      "sync-redemption-backstops",
+      1_506,
+      JSON.stringify({
+        skippedReason: "upstream-blocked:sync-live-reserves",
+        childDisposition: "not_started",
+      }),
+      1_500,
+    );
 
     await expect(prepareScheduledCheckpointRecoveryForSlot(db, {
       scheduleKey: checkpoint.scheduleKey,
@@ -295,6 +311,78 @@ describe("scheduled recovery checkpoint", () => {
 
     expect(claims.filter((claim) => claim != null)).toHaveLength(1);
     expect(claims.find((claim) => claim != null)?.state).toBe("recovering");
+  });
+
+  it("prepares and claims the exact suffix after a budget-truncated degraded slot", async () => {
+    const { sqlite, db } = harness();
+    const checkpoint = await beginScheduledCheckpoint(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_800,
+      job: "sync-live-reserves",
+      invocationId: "slot-owner-1",
+      queueHash: "queue-a",
+      nextItemKey: "coin-a",
+      itemsTotal: 100,
+      childJobs: CHILD_JOBS,
+      nowSec: 1_801,
+    });
+    await advanceScheduledCheckpoint(db, checkpoint, {
+      nextItemKey: "coin-z",
+      itemsDone: 99,
+      nowSec: 1_805,
+    });
+    await setScheduledCheckpointChildDisposition(
+      db,
+      checkpoint,
+      "sync-live-reserves",
+      "completed",
+      1_806,
+    );
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, result_status, execution_owner,
+         execution_generation, started_at, finished_at, updated_at
+       ) VALUES ('fourHourlyReserveSync', 1800, 'finished', 'degraded', 'slot-owner-1', 1, 1800, 1810, 1810)`,
+    ).run();
+    sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'degraded', ?, ?)",
+    ).run(
+      "sync-live-reserves",
+      1_805,
+      JSON.stringify({ runBudgetTruncated: true, deferredCoins: 1 }),
+      1_800,
+    );
+
+    const prepared = await prepareEligibleScheduledCheckpointRecoveries(db, {
+      scheduleKey: checkpoint.scheduleKey,
+      job: checkpoint.job,
+      childJobs: CHILD_JOBS,
+      expectedQueueHash: "queue-a",
+      staleAfterSec: 120,
+      nowSec: 1_820,
+    });
+
+    expect(prepared.prepared).toEqual([expect.objectContaining({
+      abandonedAttemptNo: 1,
+      recoveryAttemptNo: 2,
+    })]);
+    const claimed = await claimNextScheduledCheckpointRecovery(db, {
+      job: checkpoint.job,
+      childJobs: CHILD_JOBS,
+      owner: "recovery-owner-2",
+      leaseSec: 60,
+      expectedQueueHash: "queue-a",
+      nowSec: 1_821,
+    });
+    expect(claimed).toMatchObject({
+      attemptNo: 2,
+      state: "recovering",
+      nextItemKey: "coin-z",
+      itemsDone: 99,
+      childDispositions: expect.objectContaining({
+        "sync-live-reserves": "not_started",
+      }),
+    });
   });
 
   it("does not let a late duplicate producer invocation adopt an existing checkpoint", async () => {

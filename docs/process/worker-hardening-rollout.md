@@ -174,7 +174,13 @@ Promotion drill:
    dispositions. A duplicate poll must prepare nothing.
 4. Set the preview version to `recover`. Require the next attempt number,
    unchanged queue hash, no duplicate authoritative reserve write, terminal
-   child accounting exactly once, and no pending/ownership ghost.
+   child accounting exactly once, and no pending/ownership ghost. A forced
+   lease contention, budget truncation, or retryable upstream/sidecar error must
+   leave the affected child and every downstream sidecar nonterminal, report
+   the recovery as degraded/error, and claim the saved work on
+   a later poll. On completion it may CAS-retire only the exact source cohort's
+   owned global cursor after an acceptable reserve result; error outcomes and a
+   newer normal-run cursor must remain byte-for-byte unchanged.
 5. Repeat `shadow -> reconcile -> recover` in production. Hold each promotion
    until its evidence is captured. Roll back immediately to `reconcile` to stop
    claims, `shadow` to stop mutation, or `off` to stop scans; checkpoint dual

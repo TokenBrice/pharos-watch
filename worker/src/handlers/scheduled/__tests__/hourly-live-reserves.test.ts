@@ -53,9 +53,9 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
     updatedAt: 0,
     completedAt: null,
   })),
+  loadScheduledCheckpoint: vi.fn(),
   setScheduledCheckpointChildDisposition: vi.fn(async () => {}),
   finishScheduledCheckpoint: vi.fn(async () => {}),
-  checkpointErrorMetadata: vi.fn(() => "error"),
 }));
 vi.mock("../../../lib/reserve-recovery-fault-injection", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../../lib/reserve-recovery-fault-injection")>();
@@ -79,7 +79,12 @@ import {
   ReserveRecoveryFaultInjectionTermination,
   type ReserveRecoveryFaultKillPoint,
 } from "../../../lib/reserve-recovery-fault-injection";
-import { finishScheduledCheckpoint } from "../../../lib/scheduled-recovery-checkpoint";
+import {
+  finishScheduledCheckpoint,
+  loadScheduledCheckpoint,
+  setScheduledCheckpointChildDisposition,
+  type ScheduledRecoveryCheckpoint,
+} from "../../../lib/scheduled-recovery-checkpoint";
 
 describe("runFourHourlyReserveSyncSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -123,6 +128,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       oldestFreshAgeSec: null,
     });
     vi.mocked(loadReserveRecoveryFaultInjectionController).mockResolvedValue(null);
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(recoveryCheckpoint());
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     runLeasedCron = vi.fn(async (_job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {
@@ -135,7 +141,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     errorSpy.mockRestore();
   });
 
-  function buildRuntime(): ScheduledRuntimeContext {
+  function buildRuntime(recoveryCheckpoint?: ScheduledRecoveryCheckpoint): ScheduledRuntimeContext {
     return {
       db: {} as D1Database,
       env: {} as ScheduledRuntimeContext["env"],
@@ -151,11 +157,100 @@ describe("runFourHourlyReserveSyncSlot", () => {
       alertWebhookUrl: null,
       chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
+      ...(recoveryCheckpoint ? { recoveryCheckpoint } : {}),
     };
   }
 
-  it("skips downstream reserve tasks but still runs drift check when sync-live-reserves throws", async () => {
+  function recoveryCheckpoint(
+    childDispositions: ScheduledRecoveryCheckpoint["childDispositions"] = {},
+    attemptNo = 2,
+  ): ScheduledRecoveryCheckpoint {
+    return {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 0,
+      job: "sync-live-reserves",
+      attemptNo,
+      executionGeneration: attemptNo,
+      invocationId: `recovery-owner-${attemptNo}`,
+      workerVersion: "preview-v1",
+      queueHash: "test",
+      state: "recovering",
+      nextItemKey: null,
+      currentItemKey: null,
+      currentDomainAttemptId: null,
+      itemsDone: 0,
+      itemsTotal: 0,
+      childDispositions,
+      recoveryOwner: `recovery-owner-${attemptNo}`,
+      recoveryLeaseUntil: 1_000,
+      sourceAttemptNo: attemptNo - 1,
+      error: null,
+      createdAt: 0,
+      updatedAt: 0,
+      completedAt: null,
+    };
+  }
+
+  it("keeps every sidecar pending when sync-live-reserves throws", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue({
+      ...recoveryCheckpoint(),
+      nextItemKey: "unfinished-coin",
+      itemsDone: 0,
+      itemsTotal: 20,
+    });
+
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
+      jobsRun: 0,
+      jobsErrored: 1,
+      jobsSkipped: 3,
+    });
+
+    expect(syncLiveReserves).toHaveBeenCalledTimes(1);
+    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
+    expect(checkCollateralDrift).not.toHaveBeenCalled();
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Live reserves sync failed"),
+      expect.any(Error),
+    );
+  });
+
+  it("terminalizes an exhausted all-error queue without running stale sidecars", async () => {
+    const exhaustedCheckpoint = {
+      ...recoveryCheckpoint({}, 2),
+      nextItemKey: null,
+      itemsDone: 20,
+      itemsTotal: 20,
+    };
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(syncLiveReserves).mockResolvedValue({
+      status: "error",
+      error: "all reserve adapters failed",
+    });
+
+    const summary = await runFourHourlyReserveSyncSlot(buildRuntime(exhaustedCheckpoint));
+
+    expect(summary).toMatchObject({ jobsErrored: 1, jobsSkipped: 3 });
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
+    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
+    expect(checkCollateralDrift).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 2 }),
+      {
+        state: "failed",
+        error: "live reserve queue exhausted without a successful result",
+      },
+    );
+  });
+
+  it("keeps later sidecars pending when redemption backstops throws", async () => {
+    vi.mocked(syncRedemptionBackstops).mockRejectedValue(new Error("rb blew up"));
+    vi.mocked(syncKinesisSupply).mockRejectedValue(new Error("ks blew up"));
 
     await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
       jobsRun: 1,
@@ -163,29 +258,9 @@ describe("runFourHourlyReserveSyncSlot", () => {
       jobsSkipped: 2,
     });
 
-    expect(syncLiveReserves).toHaveBeenCalledTimes(1);
-    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).not.toHaveBeenCalled();
-    expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
-    expect(runLeasedCron).toHaveBeenCalledWith("reserve-post-sync-watchdog", expect.any(Function));
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Live reserves sync failed"),
-      expect.any(Error),
-    );
-  });
-
-  it("skips kinesis but still runs drift check when redemption backstops throws", async () => {
-    vi.mocked(syncRedemptionBackstops).mockRejectedValue(new Error("rb blew up"));
-    vi.mocked(syncKinesisSupply).mockRejectedValue(new Error("ks blew up"));
-
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
-      jobsRun: 2,
-      jobsErrored: 1,
-      jobsSkipped: 1,
-    });
-
-    expect(syncKinesisSupply).not.toHaveBeenCalled();
-    expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
+    expect(checkCollateralDrift).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Redemption backstops sync failed"),
       expect.any(Error),
@@ -219,6 +294,293 @@ describe("runFourHourlyReserveSyncSlot", () => {
       conditionKey: "reserve:live-reserve-sync-stale",
       active: false,
     }));
+  });
+
+  it.each([
+    "sync-live-reserves",
+    "sync-redemption-backstops",
+    "sync-kinesis-supply",
+    "reserve-post-sync-watchdog",
+  ] as const)("keeps a checkpoint recoverable when %s is lease-contended", async (contendedJob) => {
+    runLeasedCron.mockImplementation(async (
+      job: string,
+      fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>,
+    ) => {
+      if (job === contendedJob) return { status: "skipped_locked" };
+      return fn(new AbortController().signal, async () => {});
+    });
+
+    const summary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+
+    expect(summary.jobsSkipped).toBeGreaterThan(0);
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+    expect(vi.mocked(setScheduledCheckpointChildDisposition).mock.calls).not.toContainEqual([
+      expect.anything(),
+      expect.anything(),
+      contendedJob,
+      "completed",
+    ]);
+    const expectedJobsThroughContention = {
+      "sync-live-reserves": ["sync-live-reserves"],
+      "sync-redemption-backstops": ["sync-live-reserves", "sync-redemption-backstops"],
+      "sync-kinesis-supply": [
+        "sync-live-reserves",
+        "sync-redemption-backstops",
+        "sync-kinesis-supply",
+      ],
+      "reserve-post-sync-watchdog": [
+        "sync-live-reserves",
+        "sync-redemption-backstops",
+        "sync-kinesis-supply",
+        "reserve-post-sync-watchdog",
+      ],
+    } as const;
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(
+      expectedJobsThroughContention[contendedJob],
+    );
+  });
+
+  it("retries an unfinished sidecar without replaying completed checkpoint children", async () => {
+    let redemptionContended = true;
+    runLeasedCron.mockImplementation(async (
+      job: string,
+      fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>,
+    ) => {
+      if (job === "sync-redemption-backstops" && redemptionContended) {
+        return { status: "skipped_locked" };
+      }
+      return fn(new AbortController().signal, async () => {});
+    });
+
+    const firstSummary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+
+    expect(firstSummary.jobsSkipped).toBe(3);
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+
+    redemptionContended = false;
+    runLeasedCron.mockClear();
+    vi.mocked(finishScheduledCheckpoint).mockClear();
+    const successor = recoveryCheckpoint({
+      "sync-live-reserves": "completed",
+      "sync-redemption-backstops": "not_started",
+      "sync-kinesis-supply": "not_started",
+      "reserve-post-sync-watchdog": "not_started",
+    }, 3);
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(successor);
+
+    const retrySummary = await runFourHourlyReserveSyncSlot(buildRuntime(successor));
+
+    expect(retrySummary.jobsSkipped).toBe(0);
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
+      "sync-redemption-backstops",
+      "sync-kinesis-supply",
+      "reserve-post-sync-watchdog",
+    ]);
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 3 }),
+      { state: "completed", error: null },
+    );
+  });
+
+  it("retries a failed sidecar and runs the watchdog only after the retry succeeds", async () => {
+    vi.mocked(syncRedemptionBackstops).mockRejectedValueOnce(new Error("redemption failed"));
+
+    const firstSummary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+
+    expect(firstSummary).toMatchObject({ jobsErrored: 1, jobsSkipped: 2 });
+    expect(checkCollateralDrift).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+
+    const successor = recoveryCheckpoint({
+      "sync-live-reserves": "completed",
+      "sync-redemption-backstops": "not_started",
+      "sync-kinesis-supply": "not_started",
+      "reserve-post-sync-watchdog": "not_started",
+    }, 3);
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(successor);
+    runLeasedCron.mockClear();
+
+    const retrySummary = await runFourHourlyReserveSyncSlot(buildRuntime(successor));
+
+    expect(retrySummary).toMatchObject({ jobsErrored: 0, jobsSkipped: 0 });
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
+      "sync-redemption-backstops",
+      "sync-kinesis-supply",
+      "reserve-post-sync-watchdog",
+    ]);
+    expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 3 }),
+      { state: "completed", error: null },
+    );
+  });
+
+  it("resets a child to not_started when its body reports a lease skip", async () => {
+    vi.mocked(syncKinesisSupply).mockResolvedValue({ status: "skipped_locked" } as never);
+
+    const summary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+
+    expect(summary.jobsSkipped).toBe(2);
+    expect(setScheduledCheckpointChildDisposition).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "sync-kinesis-supply",
+      "not_started",
+    );
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("keeps a budget-truncated queue and child nonterminal until a suffix attempt exhausts it", async () => {
+    const partialCheckpoint = {
+      ...recoveryCheckpoint({}, 2),
+      nextItemKey: "deferred-coin",
+      itemsDone: 10,
+      itemsTotal: 20,
+    };
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(partialCheckpoint);
+    vi.mocked(syncLiveReserves).mockResolvedValue({
+      status: "degraded",
+      metadata: JSON.stringify({
+        runBudgetTruncated: true,
+        deferredCoins: 10,
+        nextCursorStablecoinId: "deferred-coin",
+      }),
+    });
+
+    const firstSummary = await runFourHourlyReserveSyncSlot(
+      buildRuntime(recoveryCheckpoint({}, 2)),
+    );
+
+    expect(firstSummary.jobsDegraded).toBe(1);
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
+    expect(setScheduledCheckpointChildDisposition).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "sync-live-reserves",
+      "not_started",
+    );
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+
+    const exhaustedCheckpoint = {
+      ...recoveryCheckpoint({
+        "sync-live-reserves": "not_started",
+        "sync-redemption-backstops": "not_started",
+        "sync-kinesis-supply": "not_started",
+        "reserve-post-sync-watchdog": "not_started",
+      }, 3),
+      nextItemKey: null,
+      itemsDone: 20,
+      itemsTotal: 20,
+    };
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(syncLiveReserves).mockResolvedValue({ status: "ok" });
+    vi.mocked(finishScheduledCheckpoint).mockClear();
+    runLeasedCron.mockClear();
+
+    const retrySummary = await runFourHourlyReserveSyncSlot(
+      buildRuntime(exhaustedCheckpoint),
+    );
+
+    expect(retrySummary.jobsErrored).toBe(0);
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
+      "sync-live-reserves",
+      "sync-redemption-backstops",
+      "sync-kinesis-supply",
+      "reserve-post-sync-watchdog",
+    ]);
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 3 }),
+      { state: "completed", error: null },
+    );
+  });
+
+  it("reopens a legacy completed queue child when its durable frontier is unfinished", async () => {
+    const legacyCheckpoint = {
+      ...recoveryCheckpoint({
+        "sync-live-reserves": "completed",
+        "sync-redemption-backstops": "completed",
+        "sync-kinesis-supply": "completed",
+        "reserve-post-sync-watchdog": "completed",
+      }, 2),
+      nextItemKey: "deferred-coin",
+      itemsDone: 10,
+      itemsTotal: 20,
+    };
+    const exhaustedCheckpoint = {
+      ...legacyCheckpoint,
+      nextItemKey: null,
+      itemsDone: 20,
+    };
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(exhaustedCheckpoint);
+    vi.mocked(syncLiveReserves).mockResolvedValue({ status: "ok" });
+
+    await runFourHourlyReserveSyncSlot(buildRuntime(legacyCheckpoint));
+
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
+      "sync-live-reserves",
+      "sync-redemption-backstops",
+      "sync-kinesis-supply",
+      "reserve-post-sync-watchdog",
+    ]);
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 2 }),
+      { state: "completed", error: null },
+    );
+  });
+
+  it("reopens legacy completed sidecars downstream of a failed child", async () => {
+    const legacyCheckpoint = {
+      ...recoveryCheckpoint({
+        "sync-live-reserves": "completed",
+        "sync-redemption-backstops": "failed",
+        "sync-kinesis-supply": "completed",
+        "reserve-post-sync-watchdog": "completed",
+      }, 2),
+      nextItemKey: null,
+      itemsDone: 20,
+      itemsTotal: 20,
+    };
+    vi.mocked(loadScheduledCheckpoint).mockResolvedValue(legacyCheckpoint);
+
+    await runFourHourlyReserveSyncSlot(buildRuntime(legacyCheckpoint));
+
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual([
+      "sync-redemption-backstops",
+      "sync-kinesis-supply",
+      "reserve-post-sync-watchdog",
+    ]);
+    expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
+    expect(finishScheduledCheckpoint).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ attemptNo: 2 }),
+      { state: "completed", error: null },
+    );
+  });
+
+  it("leaves sidecars retryable when orchestration fails after queue exhaustion", async () => {
+    const exhaustedCheckpoint = {
+      ...recoveryCheckpoint({}, 2),
+      nextItemKey: null,
+      itemsDone: 20,
+      itemsTotal: 20,
+    };
+    const orchestrationError = new Error("checkpoint reload unavailable");
+    vi.mocked(loadScheduledCheckpoint)
+      .mockResolvedValueOnce(exhaustedCheckpoint)
+      .mockRejectedValueOnce(orchestrationError);
+
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime(exhaustedCheckpoint)))
+      .rejects.toBe(orchestrationError);
+
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
+    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
+    expect(checkCollateralDrift).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
   });
 
   function armFaultAt(killPoint: ReserveRecoveryFaultKillPoint) {

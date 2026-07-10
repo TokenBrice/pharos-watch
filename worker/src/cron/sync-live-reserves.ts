@@ -24,6 +24,7 @@ import {
   loadLiveReserveCursorState,
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
+  type LiveReserveGlobalCursorOwner,
   type LiveReserveCursorTailState,
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
@@ -265,6 +266,8 @@ async function runReserveCoinQueue(args: {
   faultInjection?: ReserveRecoveryFaultInjectionController | null;
   startIndex: number;
   fullQueue: readonly ConfiguredCoin[];
+  manageGlobalCursor: boolean;
+  globalCursorOwner: LiveReserveGlobalCursorOwner | null;
 }): Promise<ReserveCoinQueueResult> {
   let synced = 0;
   let failed = 0;
@@ -306,6 +309,10 @@ async function runReserveCoinQueue(args: {
         args.orderedCoins.slice(index),
         Math.floor(Date.now() / 1000),
         args.signal,
+        {
+          manageGlobalCursor: args.manageGlobalCursor,
+          globalCursorOwner: args.globalCursorOwner,
+        },
       );
       for (const key of deferred.additionalBreakerKeys) {
         breakerKeys.add(key);
@@ -461,7 +468,6 @@ export async function syncLiveReserves(
   const runStartedAt = Math.floor(Date.now() / 1000);
   const runStartedMs = Date.now();
   const budgetConfig = resolveLiveReserveSyncBudgetConfig(budgetOverrides);
-  const cursorState: LoadedLiveReserveCursorState | null = await loadLiveReserveCursorState(db);
   let checkpoint = checkpointIdentity
     ? await loadScheduledCheckpoint(db, checkpointIdentity)
     : null;
@@ -473,6 +479,21 @@ export async function syncLiveReserves(
       `live reserve queue hash changed (${checkpoint.queueHash} -> ${LIVE_RESERVE_QUEUE_HASH}); refusing unsafe suffix replay`,
     );
   }
+  const recoveryCheckpointOwned = checkpoint?.state === "recovering" || checkpoint?.sourceAttemptNo != null;
+  const manageGlobalCursor = !recoveryCheckpointOwned;
+  const checkpointCursorOwner: LiveReserveGlobalCursorOwner | null = checkpoint
+    ? {
+        scheduleKey: checkpoint.scheduleKey,
+        slotStartedAt: checkpoint.slotStartedAt,
+        attemptNo: checkpoint.attemptNo,
+        executionGeneration: checkpoint.executionGeneration,
+        invocationId: checkpoint.invocationId,
+        queueHash: checkpoint.queueHash,
+      }
+    : null;
+  const cursorState: LoadedLiveReserveCursorState | null = manageGlobalCursor
+    ? await loadLiveReserveCursorState(db)
+    : null;
   let checkpointResumeId = checkpoint?.nextItemKey ?? null;
   if (checkpoint && checkpointResumeId && checkpoint.currentDomainAttemptId) {
     const authoritative = await didReserveSyncAttemptBecomeAuthoritative(
@@ -515,18 +536,39 @@ export async function syncLiveReserves(
   // next scheduled run starts again from the top of the priority queue. If the
   // cursor coin is no longer in the queue (order or coverage changed between
   // deploys), fall back to starting from the top of the ordered queue.
-  const resumeId = checkpoint ? checkpointResumeId : cursorState?.nextStablecoinId ?? null;
-  const startIndex = resumeId
-    ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === resumeId)
-    : checkpoint && checkpoint.itemsDone >= SYNC_ORDERED_CONFIGURED_COINS.length
-      ? SYNC_ORDERED_CONFIGURED_COINS.length
+  const fullQueueTotal = SYNC_ORDERED_CONFIGURED_COINS.length;
+  const checkpointResumeIndex = checkpointResumeId
+    ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === checkpointResumeId)
+    : checkpoint && checkpoint.itemsDone >= fullQueueTotal
+      ? fullQueueTotal
       : 0;
-  if (resumeId && startIndex < 0) {
-    throw new Error(`live reserve checkpoint item ${resumeId} no longer exists in the queue`);
+  if (checkpointResumeId && checkpointResumeIndex < 0) {
+    throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);
   }
-  const orderedCoins = checkpoint && !resumeId && startIndex >= SYNC_ORDERED_CONFIGURED_COINS.length
+  const globalResumeId = cursorState?.nextStablecoinId ?? null;
+  const globalResumeIndex = globalResumeId
+    ? SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === globalResumeId)
+    : -1;
+  const checkpointHasUnfinishedAttempt = checkpoint?.currentDomainAttemptId != null;
+  const startIndex = recoveryCheckpointOwned || checkpointHasUnfinishedAttempt
+    ? checkpointResumeIndex
+    : Math.max(checkpointResumeIndex, Math.max(0, globalResumeIndex));
+  const frontierItemId = SYNC_ORDERED_CONFIGURED_COINS[startIndex]?.id ?? null;
+  if (
+    checkpoint
+    && manageGlobalCursor
+    && (checkpoint.nextItemKey !== frontierItemId || checkpoint.itemsDone !== startIndex)
+  ) {
+    await advanceScheduledCheckpoint(db, checkpointIdentity!, {
+      nextItemKey: frontierItemId,
+      itemsDone: startIndex,
+    });
+    checkpoint = { ...checkpoint, nextItemKey: frontierItemId, itemsDone: startIndex };
+  }
+  const effectiveResumeId = startIndex > 0 ? frontierItemId : null;
+  const orderedCoins = startIndex >= fullQueueTotal
     ? []
-    : selectConfiguredCoinRunQueue(SYNC_ORDERED_CONFIGURED_COINS, resumeId);
+    : selectConfiguredCoinRunQueue(SYNC_ORDERED_CONFIGURED_COINS, effectiveResumeId);
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const setupPhaseMs = Date.now() - runStartedMs;
   const effectiveAdapterCtx: AdapterContext = {
@@ -535,15 +577,15 @@ export async function syncLiveReserves(
     nowSec: runStartedAt,
     requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
   };
-  const total = SYNC_ORDERED_CONFIGURED_COINS.length;
+  const cohortTotal = orderedCoins.length;
 
   await reportLiveReserveProgress(reportProgress, {
     stage: "setup",
-    message: resumeId
-      ? `Loaded live reserve sync state (resuming at ${resumeId})`
+    message: effectiveResumeId
+      ? `Loaded live reserve sync state (resuming at ${effectiveResumeId})`
       : "Loaded live reserve sync state",
     itemsDone: Math.max(0, startIndex),
-    itemsTotal: total,
+    itemsTotal: fullQueueTotal,
     synced: 0,
     failed: 0,
     skipped: 0,
@@ -567,17 +609,22 @@ export async function syncLiveReserves(
     faultInjection,
     startIndex: Math.max(0, startIndex),
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
+    manageGlobalCursor,
+    globalCursorOwner: manageGlobalCursor ? checkpointCursorOwner : null,
   });
 
   return finalizeReserveSyncRun({
     db,
     signal,
-    total,
+    total: cohortTotal,
     runStartedAt,
     runStartedMs,
     reportProgress,
     budgetConfig,
     loadedCursorState: cursorState,
+    manageGlobalCursor,
+    checkpointOwned: checkpoint != null,
+    recoveryCursorOwner: recoveryCheckpointOwned ? checkpointCursorOwner : null,
     setupPhaseMs,
     queuePhaseMs: Date.now() - runStartedMs - setupPhaseMs,
     cohortItemsDoneBeforeRun: Math.max(0, startIndex),
