@@ -19,6 +19,11 @@ interface ReservationToken {
   generation: number;
 }
 
+export interface IdempotentAdminActionOptions {
+  /** Persist a secret-free replay body while leaving the first live response untouched. */
+  sensitiveReplayBody?: (responseBody: string, responseStatus: number) => string;
+}
+
 const PENDING_RESPONSE_STATUS = -1;
 const EXECUTION_UNKNOWN_RESPONSE_STATUS = -2;
 const EXECUTION_UNKNOWN_HTTP_STATUS = 503;
@@ -247,6 +252,7 @@ export async function runIdempotentAdminAction(
   action: string,
   request: Request | undefined,
   execute: () => Promise<Response>,
+  options: IdempotentAdminActionOptions = {},
 ): Promise<Response> {
   const key = getIdempotencyKey(request);
   if (!key || !request) return execute();
@@ -340,6 +346,34 @@ export async function runIdempotentAdminAction(
   }
 
   const responseBody = await response.clone().text();
+  let replayBody = responseBody;
+  if (options.sensitiveReplayBody) {
+    try {
+      replayBody = options.sensitiveReplayBody(responseBody, response.status);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "admin",
+        level: "error",
+        event: "idempotency_sensitive_replay_redaction_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Sensitive response redaction failed after execution; returning execution_unknown",
+        error,
+      });
+      const failureBody = buildExecutionUnknownBody();
+      await persistTerminalResponse(
+        db,
+        action,
+        key,
+        fingerprint,
+        token,
+        EXECUTION_UNKNOWN_RESPONSE_STATUS,
+        failureBody,
+        Math.floor(Date.now() / 1000),
+      );
+      return withIdempotencyHeaders(buildExecutionUnknownResponse(failureBody), key, false);
+    }
+  }
   const persisted = await persistTerminalResponse(
     db,
     action,
@@ -347,7 +381,7 @@ export async function runIdempotentAdminAction(
     fingerprint,
     token,
     response.status,
-    responseBody,
+    replayBody,
     Math.floor(Date.now() / 1000),
   );
   if (!persisted) {

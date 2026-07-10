@@ -50,6 +50,12 @@ function renderPanel(keys: ApiKeySummary[], refetch = vi.fn().mockResolvedValue(
   return { refetch };
 }
 
+function requestIdempotencyKey(callIndex: number): string | null {
+  const fetchMock = vi.mocked(fetch);
+  const [, init] = fetchMock.mock.calls[callIndex] ?? [];
+  return new Headers(init?.headers).get("Idempotency-Key");
+}
+
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
 });
@@ -82,6 +88,7 @@ describe("ApiKeysPanel", () => {
     const body = JSON.parse(String((init as RequestInit).body));
 
     expect(body).not.toHaveProperty("expiresAt");
+    expect(requestIdempotencyKey(0)).toBeTruthy();
     expect(await screen.findByText(token)).toBeTruthy();
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
   });
@@ -119,7 +126,96 @@ describe("ApiKeysPanel", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(token));
   });
 
-  it("does not render a blank created-token panel when the create response omits the token", async () => {
+  it("requires explicit token acknowledgement and restores focus to the create trigger", async () => {
+    const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ key: makeKey({ id: 2, name: "Digest Key" }), token }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderPanel([]);
+
+    const createTrigger = screen.getByRole("button", { name: /create read key/i });
+    fireEvent.click(createTrigger);
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    await screen.findByRole("dialog");
+    const finish = screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement;
+    expect(finish.disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText(/I copied this token/i));
+    expect(finish.disabled).toBe(false);
+    fireEvent.click(finish);
+
+    await waitFor(() => expect(screen.queryByText(token)).toBeNull());
+    expect(document.activeElement).toBe(createTrigger);
+  });
+
+  it("coalesces a double create click into one request", async () => {
+    const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let resolveResponse!: (response: Response) => void;
+    const responseGate = new Promise<Response>((resolve) => {
+      resolveResponse = resolve;
+    });
+    const fetchMock = vi.mocked(fetch).mockReturnValue(responseGate);
+    renderPanel([]);
+
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
+    const createButton = screen.getByRole("button", { name: /create key/i });
+    fireEvent.click(createButton);
+    fireEvent.click(createButton);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    resolveResponse(
+      new Response(JSON.stringify({ key: makeKey({ id: 2, name: "Digest Key" }), token }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    expect(await screen.findByText(token)).toBeTruthy();
+  });
+
+  it("retries an uncertain create with the same key and routes a redacted replay to recovery", async () => {
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockRejectedValueOnce(new TypeError("connection closed"))
+      .mockImplementationOnce(async (_input, init) => {
+        const idempotencyKey = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+        return new Response(
+          JSON.stringify({
+            key: makeKey({ id: 2, name: "Digest Key" }),
+            tokenUnavailableOnReplay: true,
+            recovery: "Rotate the identified API key to issue a new token.",
+          }),
+          {
+            status: 201,
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": idempotencyKey,
+              "X-Idempotent-Replay": "true",
+            },
+          },
+        );
+      });
+    renderPanel([]);
+
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Digest Key" } });
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    await screen.findByText("Outcome unknown");
+    const originalKey = requestIdempotencyKey(0);
+    fireEvent.click(screen.getByRole("button", { name: "Retry same intent" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(requestIdempotencyKey(1)).toBe(originalKey);
+    expect(await screen.findByRole("heading", { name: /confirmed; token unavailable/i })).toBeTruthy();
+    expect(screen.getByText(/replay yes/i)).toBeTruthy();
+  });
+
+  it("opens focused recovery when a successful replay cannot return the one-time token", async () => {
     const fetchMock = vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
       key: makeKey({ id: 2, name: "Digest Key" }),
     }), {
@@ -133,9 +229,10 @@ describe("ApiKeysPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /create key/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
-    expect(await screen.findByText(/plaintext token was not returned/i)).toBeTruthy();
-    expect(screen.queryByText("Created Digest Key")).toBeNull();
-    expect(refetch).not.toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: /Created Digest Key confirmed; token unavailable/i })).toBeTruthy();
+    expect(screen.getByText(/plaintext token was not returned/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Rotate Digest Key \(ID 2\) now/i })).toBeTruthy();
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it("sends explicit null for a non-expiring create exception", async () => {
@@ -172,15 +269,162 @@ describe("ApiKeysPanel", () => {
 
     renderPanel([makeKey()]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
     fireEvent.change(screen.getByLabelText("Expires At"), { target: { value: "2026-04-10T12:30" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const body = JSON.parse(String((init as RequestInit).body));
 
     expect(body.expiresAt).toBe(expectedEpoch);
+    expect(requestIdempotencyKey(0)).toBeTruthy();
+  });
+
+  it("confirms rotate and deactivate with exact object effects and unique accessible names", async () => {
+    const first = makeKey({ id: 1, name: "Ops Key" });
+    const second = makeKey({
+      id: 2,
+      name: "Digest Key",
+      keyPrefix: "fedcba9876543210",
+      maskedToken: "ph_live_fedcba9876543210_********",
+    });
+    const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ key: first, token }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderPanel([first, second]);
+
+    expect(screen.getByRole("button", { name: /^Rotate Ops Key .*ID 1/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Rotate Digest Key .*ID 2/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Deactivate Ops Key .*ID 1/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Deactivate Digest Key .*ID 2/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Rotate Ops Key .*ID 1/ }));
+    expect(screen.getByText(/Replaces the secret and prefix immediately/i)).toBeTruthy();
+    expect(screen.getByText(/If it is lost, rotate again/i)).toBeTruthy();
+    expect(screen.getByText(/High.*live credential mutation/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Confirm rotate of Ops Key \(ID 1\)/i }));
+
+    expect(await screen.findByText(token)).toBeTruthy();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/api-keys/1/rotate");
+    expect(requestIdempotencyKey(0)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText(/intentionally dismissing this token/i));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss token" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Deactivate Ops Key .*ID 1/ }));
+    expect(screen.getByText(/Sets this key inactive immediately/i)).toBeTruthy();
+    expect(screen.getByText(/Set isActive=true through the audited API-key update endpoint/i)).toBeTruthy();
+    expect(screen.getByText(/Moderate.*live credential mutation/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Confirm deactivate of Ops Key \(ID 1\)/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/admin/api-keys/1/deactivate");
+    expect(requestIdempotencyKey(1)).toBeTruthy();
+  });
+
+  it("reconciles an uncertain rotation with the same key and opens exact-key recovery", async () => {
+    const apiKey = makeKey();
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockRejectedValueOnce(new TypeError("connection closed"))
+      .mockImplementationOnce(async (_input, init) => {
+        const key = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+        return new Response(
+          JSON.stringify({
+            key: apiKey,
+            tokenUnavailableOnReplay: true,
+            recovery: "Rotate the identified API key to issue a new token.",
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": key,
+              "X-Idempotent-Replay": "true",
+            },
+          },
+        );
+      });
+    renderPanel([apiKey]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Rotate Ops Key/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Confirm rotate of Ops Key/i }));
+    await screen.findByText("Outcome unknown");
+    const originalKey = requestIdempotencyKey(0);
+    fireEvent.click(screen.getByRole("button", { name: "Retry same intent" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(requestIdempotencyKey(1)).toBe(originalKey);
+    expect(await screen.findByRole("heading", { name: /Rotated Ops Key confirmed; token unavailable/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Rotate Ops Key (ID 1) now" })).toBeTruthy();
+  });
+
+  it("retries an uncertain update with its original payload and idempotency key", async () => {
+    const updated = makeKey({ tier: "partner" });
+    const fetchMock = vi
+      .mocked(fetch)
+      .mockRejectedValueOnce(new TypeError("connection closed"))
+      .mockImplementationOnce(async (_input, init) => {
+        const key = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+        return new Response(JSON.stringify({ key: updated }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": key,
+            "X-Idempotent-Replay": "true",
+          },
+        });
+      });
+    renderPanel([makeKey()]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
+    fireEvent.change(screen.getByLabelText("Tier"), { target: { value: "partner" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
+    await screen.findByText("Outcome unknown");
+    const originalKey = requestIdempotencyKey(0);
+    const originalBody = vi.mocked(fetch).mock.calls[0]?.[1]?.body;
+    fireEvent.click(screen.getByRole("button", { name: "Retry same intent" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(requestIdempotencyKey(1)).toBe(originalKey);
+    expect(vi.mocked(fetch).mock.calls[1]?.[1]?.body).toBe(originalBody);
+    expect(await screen.findByText("Updated Ops Key.")).toBeTruthy();
+  });
+
+  it("shows definite failures separately from uncertain outcomes", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ error: "API key name is invalid" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderPanel([]);
+
+    fireEvent.click(screen.getByRole("button", { name: /create read key/i }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Bad" } });
+    fireEvent.click(screen.getByRole("button", { name: /create key/i }));
+
+    expect(await screen.findByText("Action failed")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry same intent" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Start new create intent" })).toBeTruthy();
+  });
+
+  it("offers a local retry when API key inventory loading fails", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    useApiKeysMock.mockReturnValue({
+      data: null,
+      error: new Error("inventory unavailable"),
+      isLoading: false,
+      isFetching: false,
+      refetch,
+    });
+    render(<ApiKeysPanel />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry API key inventory" }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it("renders expired, expiring soon, inactive, and non-expiring states distinctly", () => {

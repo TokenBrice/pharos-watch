@@ -232,6 +232,11 @@ export function handleDiscoveryCandidateDismiss(
       request,
       trustedAdmin,
     },
-    () => handleDismissCandidate(db, candidateId),
+    () => runIdempotentAdminAction(
+      db,
+      "discovery-candidate-dismiss",
+      request,
+      () => handleDismissCandidate(db, candidateId, request),
+    ),
   );
 }

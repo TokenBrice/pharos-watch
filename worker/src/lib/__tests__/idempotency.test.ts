@@ -195,6 +195,69 @@ describe("runIdempotentAdminAction", () => {
     expect(calls).toBe(1);
   });
 
+  it("keeps one-time secrets out of stored and replayed sensitive responses", async () => {
+    const db = makeIdempotencyDb();
+    const plaintextToken = "ph_live_secret_that_must_not_be_persisted";
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return Response.json({ key: { id: 7, name: "Ops Key" }, token: plaintextToken }, { status: 201 });
+    };
+    const options = {
+      sensitiveReplayBody: (body: string) => {
+        const parsed = JSON.parse(body) as { key: unknown };
+        return JSON.stringify({
+          key: parsed.key,
+          tokenUnavailableOnReplay: true,
+          recovery: "Rotate the identified API key.",
+        });
+      },
+    };
+
+    const first = await runIdempotentAdminAction(db, "api-key-create", request("sensitive"), execute, options);
+    const replay = await runIdempotentAdminAction(db, "api-key-create", request("sensitive"), execute, options);
+    const storedBody = db.getRecord("api-key-create", "sensitive")?.response_body ?? "";
+
+    expect(await first.json()).toMatchObject({ token: plaintextToken });
+    expect(storedBody).not.toContain(plaintextToken);
+    expect(JSON.parse(storedBody)).toMatchObject({ tokenUnavailableOnReplay: true, key: { id: 7 } });
+    await expect(replay.json()).resolves.toMatchObject({
+      tokenUnavailableOnReplay: true,
+      key: { id: 7, name: "Ops Key" },
+    });
+    expect(calls).toBe(1);
+  });
+
+  it("fails closed when sensitive replay redaction throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = makeIdempotencyDb();
+    const plaintextToken = "ph_live_secret_that_must_never_escape_redaction_failure";
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return Response.json({ key: { id: 9 }, token: plaintextToken }, { status: 201 });
+    };
+    const options = {
+      sensitiveReplayBody: () => {
+        throw new Error("redactor failed");
+      },
+    };
+
+    const first = await runIdempotentAdminAction(db, "api-key-rotate", request("redactor-failure"), execute, options);
+    const replay = await runIdempotentAdminAction(db, "api-key-rotate", request("redactor-failure"), execute, options);
+    const stored = db.getRecord("api-key-rotate", "redactor-failure");
+
+    expect(first.status).toBe(503);
+    expect(await first.json()).toMatchObject({ error: "execution_unknown" });
+    expect(stored?.response_status).toBe(-2);
+    expect(stored?.response_body).not.toContain(plaintextToken);
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(await replay.text()).not.toContain(plaintextToken);
+    expect(calls).toBe(1);
+    errorSpy.mockRestore();
+  });
+
   it("does not replay while an execution is in flight", async () => {
     const db = makeIdempotencyDb();
     let started!: () => void;
