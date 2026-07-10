@@ -7,19 +7,21 @@ compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
 
-[[rules]]
-type = "Data"
-globs = ["**/*.ttf"]
-
-[[rules]]
-type = "CompiledWasm"
-globs = ["**/*.wasm"]
-
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
   { pattern = "site-api.pharos.watch", custom_domain = true },
   { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
+
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf"]
+fallthrough = true
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
 
 [limits]
 # cpu_ms = total CPU milliseconds per invocation (not wall-clock time).

@@ -126,6 +126,12 @@ export const VALIDATION_COMMAND_DESCRIPTORS = [
     paths: ["scripts/ci/check-cron-schedule-sync.ts"],
   },
   {
+    command: "npm run check:worker-config",
+    tier: "blocking",
+    deployImpact: "worker",
+    paths: ["scripts/ci/check-worker-wrangler-config.ts", "worker/wrangler.toml"],
+  },
+  {
     command: "npm run check:dependency-coverage",
     tier: "full",
     deployImpact: "full",

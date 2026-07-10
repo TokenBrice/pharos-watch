@@ -69,6 +69,7 @@ Telegram load protection has two local shapes: `npm run check:telegram-load` is 
 Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
+- Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
 - Worker fetch-body timeout guardrail: `npm run check:fetch-body-timeouts` blocks new raw `fetchWithRetry()` response-body reads unless they are explicitly tracked as migration debt.
 - Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
