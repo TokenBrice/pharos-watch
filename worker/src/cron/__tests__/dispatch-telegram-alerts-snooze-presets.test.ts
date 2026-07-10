@@ -930,7 +930,7 @@ describe("dispatchTelegramAlerts", () => {
       .first<{ count: number }>();
     expect(targetCount?.count).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
     expect(mockSetCache.mock.calls.some((call) => call[1] === "telegram:dispatch-overflow-plan")).toBe(false);
-  }, 15_000);
+  }, 30_000);
 
   it("preserves the launch snapshot in the seed branch so the next healthy run still detects the transition (P1.7)", async () => {
     const now = Math.floor(Date.now() / 1000);

@@ -918,7 +918,7 @@ describe("worker.scheduled", () => {
       accessToken: "tw-token",
       accessTokenSecret: "tw-token-secret",
     });
-    expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateWeeklyRecap).not.toHaveBeenCalled();
     expect(cronMocks.runDiscoveryScan).not.toHaveBeenCalled();
   });
 
@@ -938,6 +938,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncBluechip).not.toHaveBeenCalled();
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
   });
