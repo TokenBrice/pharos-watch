@@ -370,7 +370,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/compliance-regime-state.ts` - GENIUS_REGIME_STATE, GeniusRegimeState, GeniusRulemakingPhase, isGeniusRegimeEffective
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/csv.ts` - CsvColumn, buildCsv, buildCsvBody, escapeCsvField
-- `shared/lib/d1-capacity.ts` - D1CapacityObservation, D1_CAPACITY_FORECAST_WINDOW_SEC, D1_CAPACITY_MIN_FORECAST_SPAN_SEC, D1_PAID_MAX_DATABASE_SIZE_BYTES, assessD1Capacity, getD1CapacityImpactStatus
+- `shared/lib/d1-capacity.ts` - D1CapacityObservation, D1_CAPACITY_FORECAST_WINDOW_SEC, D1_PAID_MAX_DATABASE_SIZE_BYTES, assessD1Capacity, getD1CapacityImpactStatus
 - `shared/lib/data-dependency-registry.ts` - DATA_DEPENDENCY_BY_ID, DATA_DEPENDENCY_REGISTRY, DataDependencyDefinition
 - `shared/lib/data-surface-descriptors.ts` - DATA_SURFACE_DESCRIPTORS, DATA_SURFACE_DESCRIPTOR_LIST, DataSurfaceDescriptor, DataSurfaceDescriptorKey, YieldHistoryMode
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
@@ -611,7 +611,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-resolver/utils.ts` - abortIf, allocateDdrRunId, eligibleAt, fallbackIncidentForEvent, fallbackStructural, formatDdrrFailure
 - `worker/src/cron/detect-depegs.ts` - detectDepegEvents, shouldCloseOrphanedDepeg
 - `worker/src/cron/dews/contracts.ts` - BlacklistCountByStablecoinId, ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState
-- `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults
+- `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults, reconcileDailyDewsHistorySnapshot
 - `worker/src/cron/dews/progress.ts` - DewsProgressMetadata, buildStablecoinsCacheFailureResult, reportDewsProgress
 - `worker/src/cron/dews/scoring.ts` - buildDewsScoringResult
 - `worker/src/cron/dews/source-state.ts` - loadDewsSourceState
