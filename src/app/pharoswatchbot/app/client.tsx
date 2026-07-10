@@ -5,6 +5,7 @@ import { ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { pluralizeCount } from "@shared/lib/telegram-metrics";
 import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
@@ -134,8 +135,9 @@ export function PharosWatchBotMiniAppClient() {
     if (!displayState) return "";
     const activeGlobalCount = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => displayState.subscriber.globalAlerts[type]).length;
     const presetCount = displayState.presets.length;
-    const presetClause = presetCount > 0 ? `, ${presetCount} presets` : "";
-    return `${activeGlobalCount} global alert families, ${displayState.subscriptions.length} explicit coins${presetClause}.`;
+    const presetClause = presetCount > 0 ? `, ${presetCount} ${pluralizeCount(presetCount, "preset")}` : "";
+    const coinCount = displayState.subscriptions.length;
+    return `${activeGlobalCount} ${pluralizeCount(activeGlobalCount, "global alert family", "global alert families")}, ${coinCount} explicit ${pluralizeCount(coinCount, "coin")}${presetClause}.`;
   }, [displayState]);
 
   // Translate bridge resolution into our session-level status and kick off the initial fetch.

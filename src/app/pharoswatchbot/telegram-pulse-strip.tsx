@@ -10,6 +10,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
@@ -107,7 +108,7 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
           <Area
             type="monotone"
             dataKey="activeWatchers"
-            name="Active Telegram chats"
+            name={TELEGRAM_METRIC_SEMANTICS.activeWatchers.label}
             stroke="var(--brand-accent)"
             fill={`url(#${gradientId})`}
             strokeWidth={2}
@@ -268,13 +269,17 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
 
       <dl className="mt-6 grid gap-x-8 sm:grid-cols-3">
         <div className="border-t border-border/55 py-4">
-          <dt className="pharos-kicker !tracking-normal">Active Telegram chats</dt>
+          <dt className="pharos-kicker !tracking-normal" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
+            {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label}
+          </dt>
           <dd className="mt-2 pharos-numeric text-3xl font-semibold leading-none text-foreground sm:text-4xl">
             {formatCount(data.activeWatchers)}
           </dd>
         </div>
         <div className="border-t border-border/55 py-4">
-          <dt className="pharos-kicker !tracking-normal">Alert follows</dt>
+          <dt className="pharos-kicker !tracking-normal" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
+            {TELEGRAM_METRIC_SEMANTICS.coinFollows.label}
+          </dt>
           <dd className="mt-2 pharos-numeric text-3xl font-semibold leading-none text-foreground sm:text-4xl">
             {formatCount(data.coinSubscriptions)}
           </dd>

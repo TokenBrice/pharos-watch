@@ -1,6 +1,7 @@
 "use client";
 
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { TELEGRAM_METRIC_SEMANTICS, pluralizeCount } from "@shared/lib/telegram-metrics";
 import type { HealthResponse } from "@shared/types";
 import { StatusSection, StatusSummaryBadge } from "@/components/status/page-primitives";
 import { PublicSignalCard } from "@/components/status/public-signal-card";
@@ -182,8 +183,12 @@ export function PublicServiceSummarySection({
         >
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <div className="border-t border-border/60 pt-3">
-              <div className="pharos-kicker">Subscribers</div>
-              <div className="mt-1.5 pharos-numeric text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
+              <div className="pharos-kicker" title={TELEGRAM_METRIC_SEMANTICS.registeredChats.description}>
+                {TELEGRAM_METRIC_SEMANTICS.registeredChats.label}
+              </div>
+              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
+                {telegramSummary.totalChats} {pluralizeCount(telegramSummary.totalChats, "chat")} registered
+              </div>
             </div>
             <div className="border-t border-border/60 pt-3">
               <div className="pharos-kicker">Last Dispatch</div>
@@ -196,7 +201,7 @@ export function PublicServiceSummarySection({
           </div>
           {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
             <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
-              {telegramSummary.pendingDeliveries} alert{telegramSummary.pendingDeliveries !== 1 ? "s" : ""} pending delivery
+              {telegramSummary.pendingDeliveries} {pluralizeCount(telegramSummary.pendingDeliveries ?? 0, "alert")} pending delivery
             </div>
           )}
           {telegramSummary.safetyAlertsSuppressed && (

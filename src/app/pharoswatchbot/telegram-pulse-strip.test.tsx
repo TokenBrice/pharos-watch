@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TelegramPulseBoard } from "./telegram-pulse-strip";
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
+import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
 
 vi.mock("@/hooks/use-telegram-pulse", () => ({
@@ -106,7 +107,7 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    const activeChats = screen.getByText("Active Telegram chats");
+    const activeChats = screen.getByText(TELEGRAM_METRIC_SEMANTICS.activeWatchers.label);
     const board = screen.getByLabelText("Live Telegram adoption metrics");
     expect(board.getAttribute("aria-live")).toBe("polite");
     expect(board.getAttribute("aria-busy")).toBe("false");
@@ -144,7 +145,7 @@ describe("TelegramPulseBoard", () => {
 
     expect(details?.open).toBe(true);
     const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
-    expect(within(pulseDetails).queryByText("Active Telegram chats")).toBeNull();
+    expect(within(pulseDetails).queryByText(TELEGRAM_METRIC_SEMANTICS.activeWatchers.label)).toBeNull();
     expect(within(pulseDetails).queryByText("Alert follows")).toBeNull();
     expect(within(pulseDetails).getByText("Most followed")).toBeTruthy();
     expect(within(pulseDetails).getByText("Follow composition")).toBeTruthy();
