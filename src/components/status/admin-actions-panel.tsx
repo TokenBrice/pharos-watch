@@ -382,8 +382,8 @@ export function AdminActionsPanel({
               </h3>
             </div>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-              Persisted audit coverage is limited to handlers that currently emit admin audit records. Session-only
-              catalog actions may not appear after reload.
+              Every catalog action that reaches the API is audited server-side, including failures and unknown
+              outcomes. Executions that never reached the API stay session-only and may not appear after reload.
             </p>
           </div>
           {actionLog.isLoading || actionLog.isFetching ? (

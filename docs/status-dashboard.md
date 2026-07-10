@@ -568,6 +568,13 @@ Any handler response at HTTP 5xx after idempotent execution has started is conve
 
 `GET /api/admin-action-log?limit=100` feeds persistent execution history. The Actions and History workspaces reconcile it with current-session state, but session-only results remain explicitly labeled until the deployed backend can return their durable row.
 
+Persisted audit coverage boundary (intentional):
+
+- Every catalog action (`statusPageAction` endpoints) is audited canonically at the router, success or failure, so the Actions workbench catalog has complete server-side coverage once a request reaches the Worker.
+- Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
+- Non-catalog operator mutations (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/broadcast, bulk discovery dismissal) emit handler-level `admin_action_audit_log` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces.
+- `POST /api/admin/reserve-recovery-fault-injection` deliberately writes no admin audit record: it is a workers.dev preview-host-only test harness that returns `403` on production hosts.
+
 `POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 
 Mutating admin paths are protected by method guardrails:

@@ -127,7 +127,7 @@ describe("AdminActionsPanel", () => {
     expect(screen.getByText("The matching lane is unhealthy.")).toBeTruthy();
     expect(screen.getByText("1 audited records loaded")).toBeTruthy();
     expect(screen.getByText("operator@example.com", { exact: false })).toBeTruthy();
-    expect(screen.getByText(/Persisted audit coverage is limited/)).toBeTruthy();
+    expect(screen.getByText(/Every catalog action that reaches the API is audited server-side/)).toBeTruthy();
     expect(screen.getByText("1m ago")).toBeTruthy();
     expect(screen.getByText("succeeded")).toBeTruthy();
   });
