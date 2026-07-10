@@ -29,10 +29,11 @@ Detection signals:
    ```
 
    Check the returned payload for:
-   - `subscriber.snooze.active === true` (user snoozed; `subscriber.snooze.untilTs` is the expiry)
-   - `subscriber.quietHours.enabled === true` AND current UTC hour inside `subscriber.quietHours.startHourUtc`..`subscriber.quietHours.endHourUtc`
-   - subscriber auto-disabled after two 403s within 24h (the `consecutive_block_count >= 2` strike counter is internal to dispatch and not returned by this endpoint; check the D1 table directly with `SELECT consecutive_block_count FROM telegram_subscribers WHERE chat_id = ?`)
+   - `subscriber.deliveryControls.snooze.active === true` (user snoozed; `untilTs` is the expiry)
+   - `subscriber.deliveryControls.quietHours.enabled === true` and current UTC hour inside the returned start/end window
+   - `subscriber.deliveryControls.blockStrikes.count >= 2` (subscriber auto-disabled after repeated Telegram 403s)
    - empty subscriptions / global flags all 0
+   - `subscriber: null` with retained pending/dead-letter/target history, which means registration was deleted but bounded operational evidence remains
 6. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`, especially if the secret was recently rotated.
 
 ## Remediation
@@ -43,9 +44,9 @@ Detection signals:
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
 6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type.
-7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `npx tsx scripts/maintenance/register-telegram.ts --action webhook` only if reconciliation is also failing.
-8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch|reserve", "stablecoinId": "<id>" }`. The endpoint rebuilds a `synthetic_current_state` alert from current data, uses the same formatter and `sendToChat` path as the dispatch cron, and bypasses the pending queue. It is not exact historical replay. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
-9. **Announce a maintenance window or recovery to subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "deliverable-watchers" | "global-subscribers", "dryRun": true | false }`. Prefer `deliverable-watchers` for ordinary recovery notices; use `all` only when intentionally targeting every subscriber row. Run `dryRun: true` first to confirm `targetChatCount`, `targetMessageCount`, and `deliveryEstimate`; then follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md) before the live call. The endpoint enqueues low-priority `admin_broadcast` rows into `telegram_pending_alerts`, so risk alerts stay ahead of broadcasts during contention. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
+7. **Webhook drift.** Inspect `/api/status.budgetOnlySurfaces` for `telegram-registration-reconciliation`. Every tokened tick checks all four units and reports per-unit `skipped`, `succeeded`, or `failed`; a missing bot token is an error signal across registration/transport, not a healthy skip. Force `npx tsx scripts/maintenance/register-telegram.ts --action webhook` only when the webhook unit is failing and automatic repair cannot wait.
+8. **Replay one proven historical target.** Preview `POST /api/admin-telegram-resend` with `{ "source": { "kind": "target", "jobId": "<job>", "targetKey": "<key>" } }` (or an authoritative dead-letter ID). The default dry-run verifies the exact stored plan payload. Live replay requires `dryRun: false`, a unique `Idempotency-Key`, and `operatorReason`; it refuses `accepted`/`execution_unknown` outcomes and enqueues `admin_replay` rather than sending inline. Never use replay to work around an unresolved external effect.
+9. **Announce a maintenance window or recovery to subscribers.** Dry-run `POST /api/admin-telegram-broadcast` with the narrowest scope and a known private `canaryChatId`. Go live only when `deliveryEstimate.hasMaterialTtlReserve` is true. Live execution sends every chunk to the canary first and enqueues low-priority `admin_broadcast` rows only after the canary succeeds; there is no backlog-risk override. Follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md).
 
 ## Cross-References
 
@@ -53,6 +54,6 @@ Detection signals:
 - [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) — per-trigger 6-connection cap and rate-limit context.
 - [`docs/architecture.md`](../architecture.md) — Worker/D1 topology.
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) — when the backlog is growing fast.
-- [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending age approaches the 1-hour TTL.
+- [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending age approaches its alert-family TTL.
 - [`telegram-webhook-retry-dedupe.md`](./telegram-webhook-retry-dedupe.md) — when commands or callbacks disappear after webhook retries.
 - [`db-connectivity.md`](./db-connectivity.md) — when the dispatcher's D1 reads fail.

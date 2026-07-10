@@ -631,7 +631,18 @@ Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strik
 `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple
 HTML entities (`amp`, `lt`, `gt`, `quot`, `apos`, and numeric entities) are accepted.
 Malformed tags, unsupported attributes, unsupported entities, or unbalanced tags return
-`422` and write an admin-audit error without enqueueing rows.
+`422` and write an admin-audit error without enqueueing rows. A live broadcast also requires
+a known private `canaryChatId`, an available admin transport permit, and at least 15 minutes
+of projected reserve inside the 45-minute TTL. Every chunk must succeed against the silent
+canary before any non-canary fleet row is enqueued; an acknowledgement flag cannot override
+the reserve gate.
+
+Admin resend is historical replay, not current-state reconstruction. Dry-run is the default
+and verifies the exact target-plan payload plus digest (dead letters must resolve to that same
+authoritative target). Live replay requires `Idempotency-Key`, an 8-500 character
+`operatorReason`, and a currently registered chat. Targets already `accepted` or
+`execution_unknown` are refused, and eligible exact payloads enter the normal queue as
+`source_type = 'admin_replay'` rather than calling Telegram inline.
 Operator clears through `POST /api/telegram-pending` should be previewed with
 `?dry_run=1` first. Dry-runs write only the matched count to admin audit; live clears
 use the same audit path with `reason = 'manual_clear'` before deleting filtered live rows.
@@ -775,6 +786,7 @@ Additional Telegram bot status metrics now include:
 - `quietHoursEnabledChats`
 - `lifecycleSnapshot` (daily active watchers, new/churned/reactivated watchers, explicit vs preset-implied follows, active preset followers, alert-type opt-ins, quiet-hours chats, and pending deliveries)
 - `quality` (`complete` or `partial`, with unavailable optional telemetry fields and raw error strings for operators)
+- `deliverySli`, a bounded 24-hour event/target-ledger rollup with explicit `availability`, aggregate evidence `quality`, and evidence `freshness`. Its acceptance fields mean that Telegram's Bot API accepted the send request; they do not claim that the recipient received, opened, or read the message. Query failure returns `availability: "unavailable"`, `quality: "unavailable"`, `freshness: "unknown"`, and `rollup: null` rather than fabricated zeroes.
 - `presetQueryFailures` (consecutive aborted dispatch runs since the last clean preset-subscriber load; only set when > 0)
 - dispatch breakdown fields such as `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingDroppedTtlExpired`, `pendingDroppedPermanentFailure`, and `pendingDroppedMaxAttemptsFallback`
 
@@ -862,13 +874,13 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 ## Operational Notes
 
-- The dedicated 5-minute Telegram trigger reconciles webhook registration, native slash-command suggestions, profile metadata, and the default Mini App menu button through `worker/src/lib/telegram-webhook-registration.ts`. After deploying a command-list change, the production bot menu users see when typing `/` should update on the next Telegram slot.
+- The dedicated 5-minute Telegram trigger checks webhook, commands, profile, and menu reconciliation serially on every tick through `worker/src/lib/telegram-webhook-registration.ts`. Each unit may skip independently on its 15-minute fresh-cache/rate-limit marker. After deploying a command-list change, the production `/` menu should update on the next tick whose command unit is not skipped.
 - The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a group-safe list under `scope: { type: "all_group_chats" }`. The group menu includes read-only commands and group-valid subscription/settings controls, but intentionally omits `/start` and `/forget` because setup deep links and destructive data deletion stay private-chat only. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Current Bot API versions expose `setMyProfilePhoto`, but Pharos does not yet reconcile it; until that path is reviewed, set the avatar manually through @BotFather using `public/pharos-icon.png`.
-- The cron connection-budget check includes the command/profile/menu/webhook reconciliation as a budget-only entry on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job, but its serial Bot API calls are still visible to `npm run check:cron-connections`.
+- The cron connection-budget check includes the four serial command/profile/menu/webhook reconciliation checks as one budget-only surface on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job. `/api/status.budgetOnlySurfaces` records each unit as skipped, succeeded, or failed, including stable skip reasons; the serial Bot API call budget remains visible to `npm run check:cron-connections`.
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
-- The dedicated 5-minute Telegram trigger runs registration/menu reconciliation first, then subscriber alert fan-out through `dispatch-telegram-alerts`.
+- The dedicated 5-minute Telegram trigger runs subscriber dispatch (when a bot token exists), watchdog, disambiguation cleanup, and pulse publication first; it then runs all four registration checks and the alert-broker drain. Without the bot token, dispatch is recorded as skipped and registration/transport as an error while watchdog, cleanup, pulse, and broker delivery continue.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
 
 ## Runbooks

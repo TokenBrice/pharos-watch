@@ -4254,6 +4254,14 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
 
+`telegramBot.deliverySli` is the bounded operational delivery read model from Telegram source-event and authoritative target ledgers. Its envelope is always fail-visible:
+
+- `availability` is `available` only when the complete SLI query succeeds; otherwise it is `unavailable`.
+- `quality` is `complete`, `partial`, or `empty` for an available rollup, and `unavailable` on query failure.
+- `freshness` is `fresh`, `stale`, or `empty` for an available rollup, and `unknown` on query failure.
+- `acceptanceDefinition` is the literal `telegram_bot_api_accepted_not_user_receipt`. Fields such as `planToTelegramAcceptance`, `telegramAccepted`, and `telegramAcceptanceRate` mean Telegram's Bot API accepted a send request. They are not evidence that an end user received, opened, or read the message.
+- `rollup` contains the bounded window, evidence age, detection-to-plan and plan-to-acceptance latency, acceptance-before-TTL coverage, authoritative outcomes, preference-change cancellations, unresolved backlog buckets, observed errors, execution-unknown outcomes, and dead letters. It is `null` on query failure; failure never becomes an all-zero or healthy rollup.
+
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
@@ -5346,83 +5354,83 @@ For browser actions, `actor` is the normalized email from the signature-verified
 
 ### `GET /api/admin-telegram-chat/:chatId`
 
-Returns the consolidated state PharosWatchBot holds for a single Telegram chat: subscriber row, per-coin and preset subscriptions, any pending ticker disambiguation, pending-alert queue aggregates plus the most recent retry error class, and the quiet-hours / snooze state. Used for incident triage and `/forgetme`-style audits. Each inspection writes a non-PII summary to `admin_action_audit`.
+Returns the versioned, redacted incident-diagnostic contract for one Telegram chat. It includes the current subscriber/default/global intent, reserve flags, timezone, quiet hours, snooze, preference generation, block strikes, every per-coin override marker, preset intent, disambiguation shape, mutually exclusive pending lifecycle counts, bounded recent pending/dead-letter rows, chat delivery diagnostics, and bounded authoritative job/target outcomes. Each inspection writes counts only to `admin_action_audit`.
 
 **Authentication:** admin. **Path param:** `:chatId` (signed integer; negative for groups/supergroups).
 
-Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegram_subscribers` row exists.
+The endpoint still returns `200` with `subscriber: null` when a subscriber was deleted but retained queue, dead-letter, diagnostic, or target history exists. It returns `404` only when no current or retained state exists.
 
 **Response**
 
 ```json
 {
+  "contractVersion": 2,
+  "generatedAt": 1700002100,
   "chatId": "12345",
   "subscriber": {
-    "chatId": "12345",
-    "username": "alice",
+    "registered": true,
+    "usernamePresent": true,
     "createdAt": 1700000000,
     "lastActiveAt": 1700001000,
+    "preferenceGeneration": 9,
     "globalAlerts": {
-      "dews": 1,
-      "depeg": 0,
-      "safety": 0,
-      "launch": 1,
+      "dews": true,
+      "depeg": false,
+      "safety": false,
+      "launch": true,
+      "reserve": true,
       "depegWorseningBpsStep": 250
     },
-    "perCoinAlertFlags": { "dews": 1, "depeg": 0, "safety": 1, "launch": 0 },
-    "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
-    "snooze": { "active": true, "untilTs": 1700001600 }
+    "directAlertDefaults": { "dews": true, "depeg": false, "safety": true, "launch": false, "reserve": true },
+    "deliveryControls": {
+      "timezone": "Europe/Belgrade",
+      "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
+      "snooze": { "active": true, "untilTs": 1700001600 },
+      "blockStrikes": { "count": 1, "firstAt": 1700001200 }
+    }
   },
   "subscriptions": [
     {
-      "stablecoin_id": "usdc-circle",
-      "alert_dews": 1,
-      "alert_depeg": 1,
-      "alert_safety": 0,
-      "alert_launch": 0,
-      "dews_min_band": "WARNING",
-      "safety_mode": null,
-      "depeg_worsening_bps_step": 250,
-      "alert_snooze_until_ts": null
+      "stablecoinId": "usdc-circle",
+      "alerts": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
+      "explicitOverrides": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
+      "dewsMinBand": "WARNING",
+      "safetyMode": null,
+      "depegWorseningBpsStep": 250,
+      "snooze": { "active": false, "untilTs": null }
     }
   ],
-  "presets": [
-    {
-      "preset_id": "usd-top25",
-      "alert_dews": 1,
-      "alert_depeg": 1,
-      "alert_safety": 0,
-      "depeg_worsening_bps_step": null,
-      "created_at": 1700000500,
-      "updated_at": 1700000500
-    }
-  ],
-  "pendingDisambiguation": {
-    "alertTypes": "dews",
-    "resolvedIds": "[]",
-    "ambiguousTicker": "USD",
-    "candidates": "[]",
-    "remainingTickers": "[]",
-    "expiresAt": 1700002000,
-    "actionType": "subscribe",
-    "actionPayload": "{}",
-    "initiatorUserId": "user-1"
-  },
+  "presets": [],
+  "pendingDisambiguation": null,
   "pendingAlerts": {
-    "count": 3,
-    "oldestCreatedAt": 1700000100,
-    "newestCreatedAt": 1700000800,
-    "earliestNotBeforeAt": 1700000900,
-    "recentRetryErrorClass": "telegram-429"
+    "lifecycle": {
+      "totalRows": 6,
+      "claimable": 1,
+      "deferred": 1,
+      "sending": 1,
+      "executionUnknown": 1,
+      "sentCleanup": 1,
+      "expired": 1
+    },
+    "recent": []
+  },
+  "deadLetters": { "count": 1, "oldestExpiredAt": 1700000100, "newestExpiredAt": 1700000800, "recent": [] },
+  "deliveryDiagnostics": null,
+  "targetHistory": [],
+  "redaction": {
+    "username": "presence-only",
+    "messageHtml": "length-only",
+    "disambiguationPayloads": "shape-only",
+    "dedupeAndOwnerKeys": "omitted"
   }
 }
 ```
 
-`pendingDisambiguation` is `null` when no pending row exists. `pendingAlerts.count` is `0` and the timestamp fields are `null` when the queue is empty for the chat.
+Recent pending and dead-letter lists are capped at 20 rows; target history is capped at 50 rows. They expose payload length/presence metadata, never message HTML, usernames, dedupe keys, or claim/effect owners.
 
 ### `POST /api/admin-telegram-resend`
 
-Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch/reserve), and invokes the same `sendToChat` path as the dispatch cron. Validated resend attempts that reach subscriber lookup, source lookup, or delivery are recorded in `admin_action_audit`; malformed requests and missing configuration can return before audit logging.
+Previews or queues an exact historical authoritative target replay. It never reconstructs current state and never calls Telegram synchronously. The handler verifies the target row against its target-plan JSON and SHA-256 digest; dead letters must resolve through the same authoritative `(source_event_id, pending_dedupe_key)` target. Legacy/incomplete history is refused rather than approximated.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -5430,31 +5438,28 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 
 ```json
 {
-  "chatId": "12345",
-  "alertType": "dews",
-  "stablecoinId": "usdc-circle"
+  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
+  "dryRun": true
 }
 ```
 
-`alertType` must be one of `dews`, `depeg`, `safety`, `launch`, `reserve`. `stablecoinId` must match a tracked stablecoin ID. `chatId` is a signed integer string.
+Alternatively use `{ "source": { "kind": "dead-letter", "deadLetterId": 42 } }`. `dryRun` defaults to `true`. Live enqueue requires `dryRun: false`, an `Idempotency-Key` header of 8-128 characters, and `operatorReason` of 8-500 characters. Live replay also requires the chat to remain registered. Targets with `accepted` or `execution_unknown` final state are refused until their effect is reconciled separately.
 
 **Response**
 
 ```json
 {
-  "ok": true,
-  "mode": "synthetic_current_state",
-  "chunkCount": 1,
-  "chunksAttempted": 1,
-  "statusCode": 200,
-  "errorClass": null,
-  "retryAfterSec": null
+  "mode": "exact_historical_outbox_replay",
+  "dryRun": true,
+  "enqueued": 0,
+  "chatId": "12345",
+  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
+  "payload": { "sha256": "...", "messageLength": 512, "hasReplyMarkup": true },
+  "historicalOutcome": { "finalDeliveryState": "failed", "finalDeliveryError": "rate_limit" }
 }
 ```
 
-`mode` is always `synthetic_current_state`: the endpoint rebuilds the alert from current source data and does not replay exact historical message HTML. `chunkCount` is the number of rendered Telegram chunks, and `chunksAttempted` stops at the first failed chunk. `errorClass` is one of `blocked`, `chat_not_found`, `chat_migrated`, `formatting_error`, `payload_too_large`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. A `chat_migrated` result also carries the numeric `migrateToChatId`. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header or JSON `parameters.retry_after` value.
-
-**Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.
+Live success returns `202` and `enqueued: 1`. The new pending row uses `source_type = "admin_replay"`, a replay-specific dedupe identity, the exact HTML/notification/markup policy, admin delivery pause semantics, and a fresh 45-minute TTL. It never mutates the original target outcome. `404` means the source identity is absent, `422` means exact persisted payload proof is incomplete/corrupt, and `409` covers unsafe terminal state or an unregistered historical chat.
 
 ### `POST /api/admin-telegram-broadcast`
 
@@ -5469,11 +5474,11 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
   "messageHtml": "<b>Pharos maintenance</b>\nThe bot will be offline 10:00-10:15 UTC.",
   "scope": "all",
   "dryRun": true,
-  "acknowledgeBacklogRisk": false
+  "canaryChatId": "123456789"
 }
 ```
 
-`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 45-minute admin TTL window. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities. Live requests require `canaryChatId`, an operator-controlled private-chat ID, and exclude that ID from the fleet enqueue after sending every chunk to it silently with link previews disabled. The legacy optional `acknowledgeBacklogRisk` boolean is accepted for rolling-client compatibility but cannot bypass the TTL-reserve gate.
 
 **Dry-run response (`dryRun: true`)**
 
@@ -5501,7 +5506,9 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
     "drainBudgetPerRun": 1800,
     "adminBroadcastTtlSec": 2700,
     "estimatedDrainTimeSec": 300,
-    "requiresAcknowledgement": false,
+    "minimumTtlReserveSec": 900,
+    "remainingTtlReserveSec": 2400,
+    "hasMaterialTtlReserve": true,
     "fitsWithinMinutes": {
       "5": true,
       "15": true,
@@ -5510,28 +5517,39 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
     }
   },
   "htmlPreflight": "ok",
+  "canary": {
+    "requiredForLive": true,
+    "chatId": "123456789",
+    "wouldSendChunkCount": 1
+  },
   "sample": ["100", "200", "300", "400", "500"]
 }
 ```
 
-`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. No rows are enqueued. Successful dry-runs and HTML preflight failures both write admin audit entries.
+`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. `targetMessageCount` covers only the fleet rows; when the supplied canary is also in the selected scope, it is excluded from that count. No Bot API call or queue write occurs during dry-run. Successful dry-runs and HTML preflight failures both write admin audit entries.
 
 **Live response (`dryRun: false`)**
 
 ```json
 {
   "enqueued": 1247,
+  "canary": {
+    "chatId": "123456789",
+    "chunksSent": 1
+  },
   "deliveryEstimate": {
     "projectedPendingMessages": 1247,
     "estimatedDrainTimeSec": 600,
-    "requiresAcknowledgement": false
+    "minimumTtlReserveSec": 900,
+    "remainingTtlReserveSec": 2100,
+    "hasMaterialTtlReserve": true
   }
 }
 ```
 
-`enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
+Before enqueue, live execution requires the admin-delivery pause to be inactive and the bot-wide transport circuit to be closed, claims one admin transport permit, and sends the exact chunks to the private canary. A rejected, uncertain, or incomplete canary prevents all fleet enqueue. `enqueued` reports the number of non-canary chat/chunk messages submitted to the pending queue (`fleetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `422` for malformed or unsupported Telegram HTML, with the response body carrying the offending character position. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set; the response includes `targetChatCount`, `chunkCount`, `targetMessageCount`, `pendingCapacity`, and `deliveryEstimate` so operators can rerun as a dry-run or explicitly acknowledge the backlog risk.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure, and `500` means the live Worker has no bot token. Canary failures report `fleetEnqueued: 0`.
 
 ### `GET /api/admin-telegram-adoption-report`
 
