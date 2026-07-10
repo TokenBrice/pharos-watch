@@ -116,6 +116,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0170     | `0170_dex_liquidity_history_unique_snapshot.sql`         | Deduplicate DEX liquidity daily history rows and enforce one row per stablecoin/day so repair writes replace stale snapshots                       |
 | 0171     | `0171_tape_methodology_source_url_repair.sql`            | Repair persisted Tape methodology source URLs for the Liquidity Score and PSI changelog route renames                                             |
 | 0172     | `0172_worker_effect_fencing.sql`                         | Add Worker effect fencing, retry-safe cron telemetry, and public blacklist pagination indexes                                                       |
+| 0173     | `0173_scheduled_recovery_checkpoints.sql`                | Add generation-fenced scheduled-job checkpoints for replay-safe platform-abandonment recovery                                                       |
+| 0174     | `0174_blacklist_sync_fairness.sql`                       | Add typed dual-written blacklist cursors, generation-fenced attempt state, fair-scheduling timestamps, and safe-head observations                   |
 
 ## Retired Individual Migrations
 
@@ -170,6 +172,8 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0167_worker_canary_runs.sql`: roll back canary writes with `WORKER_CANARY_MODE=off`. The table is append/upsert telemetry only, pruned by `prune-cron-history`, and does not need schema rollback for Worker-code rollback.
 - `0168_surface_publication_generations.sql`: roll back migrated publication writers or status readers to their previous surface-specific sources. Keep the additive generic table/indexes in place unless a coordinated D1 restore is required.
 - `0172_worker_effect_fencing.sql`: roll back runtime fencing by restoring the prior Worker version. Keep the additive columns/indexes; uncertain admin/Telegram effects require operator reconciliation before manual retry.
+- `0173_scheduled_recovery_checkpoints.sql`: roll back reserve recovery by restoring the prior Worker version and removing the isolated recovery trigger. Keep the additive checkpoint table/indexes for forensic inspection; do not delete ready or recovering rows during rollback.
+- `0174_blacklist_sync_fairness.sql`: roll back the fair scheduler by restoring the prior Worker version. The new Worker dual-writes `last_block`, so the legacy reader remains compatible; keep the additive cursor and attempt columns for later re-enablement and forensic inspection.
 
 ## Rollback Procedure
 
