@@ -121,6 +121,10 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0175     | `0175_durable_alert_broker.sql`                          | Add durable alert condition episodes, transition delivery claims, retries, recoveries, and explicit enforcement modes                               |
 | 0176     | `0176_scheduler_execution_history.sql`                   | Add path/version-attributed producer invocation and productivity histories, publication attribution, hardening modes, and detail-cache generations  |
 | 0177     | `0177_pricing_provider_and_dex_coverage_state.sql`       | Add provider availability/fairness state, resumable DEX pagination cursors, and exact deployment coverage outcomes                                  |
+| 0178     | `0178_historical_data_debt_closure.sql`                  | Add resumable historical mint-price repair state and ledger the reviewed BRLA DDR repair events through explicit authorizations                    |
+| 0179     | `0179_measured_hot_query_indexes.sql`                    | Add measured global cron-time, blacklist chain-ID pagination, and yield-decision time-order indexes                                                  |
+| 0180     | `0180_d1_capacity_observations.sql`                      | Add bounded hourly D1 file-size observations for 60/75/90 percent thresholding and exhaustion forecasting                                           |
+| 0181     | `0181_blacklist_reconciliation_and_efficiency.sql`       | Add guarded blacklist reconciliation evidence, event provenance, amount-repair queueing, and bounded provider scan telemetry                        |
 
 ## Retired Individual Migrations
 
@@ -180,6 +184,10 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0175_durable_alert_broker.sql`: roll back broker enforcement with `ALERT_BROKER_MODE=off` or by restoring the prior Worker version. Keep incident and delivery rows for forensic inspection and retry reconciliation; no existing alert table is altered.
 - `0176_scheduler_execution_history.sql`: roll back producer-history writers and readers by restoring the prior Worker version. Keep additive attribution columns, histories, heads, and generation rows for forensic inspection; legacy cron and publication readers remain compatible.
 - `0177_pricing_provider_and_dex_coverage_state.sql`: roll back provider suppression and DEX coverage writers by restoring the prior Worker version. Keep the additive state and outcome tables for later re-enablement and forensic inspection.
+- `0178_historical_data_debt_closure.sql`: roll back the historical mint-price operator by restoring the prior Worker version. Keep the additive event repair columns and completed DDR authorization/link/revision records; those records are provenance and must not be deleted during code rollback.
+- `0179_measured_hot_query_indexes.sql`: roll back query hints and seek readers by restoring the prior Worker version. Keep the additive indexes until a separately measured cleanup release proves their storage/write cost outweighs the observed read reduction.
+- `0180_d1_capacity_observations.sql`: roll back capacity publication by restoring the prior Worker version. Keep the small bounded observation table and cached assessment for forensic trend review; no existing reader depends on it.
+- `0181_blacklist_reconciliation_and_efficiency.sql`: roll back guarded recovery and efficiency writers by restoring the prior Worker version. Keep reconciliation provenance, run evidence, repair queue, and scan telemetry for forensic inspection; do not delete a verified recovery run during rollback.
 
 ## Rollback Procedure
 
