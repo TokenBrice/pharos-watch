@@ -45,11 +45,13 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">What We Collect</h2>
           <p>
-            When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, Pharos collects
-            anonymized usage analytics such as page views, session duration, approximate geographic region, device or
-            browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
-            in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
-            subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
+            When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, public Pharos
+            website routes collect anonymized usage analytics such as page views, session duration, approximate
+            geographic region, device or browser type, and a small set of product-interaction events. The embedded
+            PharosWatchBot Mini App is excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
+            or X handle in the feedback form, that handle is included in the GitHub issue created for the submission.
+            Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours,
+            snooze state,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
             access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
@@ -138,8 +140,11 @@ export default function PrivacyPage() {
             For the PharosWatchBot Mini App, the signed Telegram{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. It is
             validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
-            5-minute auth window plus a per-user cooldown, while read-only session launches accept a Telegram-signed
-            launch up to 24 hours old so an open panel stays usable across the day.
+            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session launches accept a
+            Telegram-signed launch up to 24 hours old so an open panel stays usable across the day. The embedded route does not load
+            Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
+            low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
+            aggregate rows contain no chat ID.
           </p>
         </section>
 
@@ -154,10 +159,12 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Cookies</h2>
           <p>
-            When analytics is enabled, the only cookies set by Pharos are those required by Google Analytics 4 (e.g.,{" "}
+            On GA4-enabled public website routes, the only cookies set by Pharos are those required by Google Analytics
+            4 (e.g.,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga</code>,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga_*</code>) for distinguishing unique visitors. No
-            advertising or tracking cookies are used.
+            advertising or tracking cookies are used. The embedded PharosWatchBot Mini App does not load GA4 or set
+            GA4 cookies.
           </p>
         </section>
 
@@ -181,7 +188,8 @@ export default function PrivacyPage() {
           <h2 className="pharos-section-title">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
-            processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
+            processed by Google (GA4) only when analytics is enabled for the current deployment and never from the
+            embedded PharosWatchBot Mini App route. Feedback submissions
             are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are echoed publicly in
             those GitHub issues. API request verification emails are sent through Resend. API key issuance records stay
             in private operator storage and structured Worker logs; requester details and key material are not published

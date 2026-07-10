@@ -1,3 +1,5 @@
+import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
+
 // Extend Window to include gtag
 declare global {
   interface Window {
@@ -46,7 +48,11 @@ type EventMap = {
 // ---------------------------------------------------------------------------
 
 export function trackEvent<K extends keyof EventMap>(name: K, params: EventMap[K]): void {
-  if (typeof window !== "undefined" && window.gtag) {
+  if (
+    typeof window !== "undefined"
+    && !isTelegramMiniAppPath(window.location?.pathname ?? "")
+    && window.gtag
+  ) {
     window.gtag("event", name, params);
   }
 }

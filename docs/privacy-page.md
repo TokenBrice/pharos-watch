@@ -37,7 +37,7 @@ The page renders through `FeaturePageShell` with:
 
 The current policy copy covers:
 
-1. optional GA4-based anonymized analytics when `NEXT_PUBLIC_GA_ID` is configured at build time
+1. optional GA4-based anonymized analytics when `NEXT_PUBLIC_GA_ID` is configured at build time, excluding the embedded `/pharoswatchbot/app` route
 2. no website accounts or wallet connections
 3. GA4 cookies only, and only when analytics is enabled
 4. 14-month GA4 retention when GA4 is enabled
@@ -46,7 +46,7 @@ The current policy copy covers:
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state and no Telegram activity for 180 days are automatically purged on a weekly cleanup
 9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
-10. the Mini App auth note: `initData` is never persisted — it is validated request-locally (HMAC signature + freshness window); mutations use a 5-minute auth window plus a per-user mutation cooldown, and session reads use a 24-hour read-only window
+10. the Mini App privacy boundary: `initData` is never persisted; the embedded route loads no GA4 and reports no Web Vitals; after signed auth, first-party low-cardinality adoption, outcome, and error counters contain no chat ID
 11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
 12. homepage saved shortcuts store only a browser-local ordered list of route hrefs in `pharos-shortcuts`
 13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
@@ -98,7 +98,9 @@ The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutat
 
 ### Telemetry Contract
 
-- `src/app/layout.tsx` injects the GA4 script only when `NEXT_PUBLIC_GA_ID` is set. When that env var is unset, Pharos does not load Google Analytics and `src/lib/analytics.ts` becomes a no-op wrapper around `window.gtag`.
+- `src/app/layout.tsx` renders the telemetry clients only when `NEXT_PUBLIC_GA_ID` is set. `src/components/google-analytics.tsx`, `src/components/web-vitals-reporter.tsx`, and `src/lib/analytics.ts` all exclude `/pharoswatchbot/app` and its descendants while leaving the public `/pharoswatchbot` page unchanged. When the env var is unset, Pharos does not load Google Analytics anywhere.
+- `shared/lib/site-csp.ts` removes Google script, image, and connection origins from the Mini App policy. `npm run check:site-csp-sync` keeps the exact and descendant route entries in `public/_headers` aligned with that policy.
+- Mini App adoption and error measurement remains first-party: the Worker writes low-cardinality daily `telegram_usage_daily` counters only after signed Telegram authentication. Those aggregate rows do not contain chat IDs; invalid pre-auth requests do not write them.
 - `src/lib/analytics.ts` is the typed event catalog for custom telemetry. Current events cover feature adoption (`stress_test_run`, `comparison_*`), engagement (`search_performed`, `filter_applied`, `time_range_changed`, `sort_changed`, `contract_copied`), portfolio actions, UI toggles (`theme_toggled`, `panel_toggled`), and Web Vitals (`web_vital` — CLS, FCP, INP, LCP, TTFB, FID, and Next.js render metrics).
 - The policy page is static and frontend-only, but its analytics claims must stay aligned with both `src/app/layout.tsx` and `src/lib/analytics.ts`.
 
