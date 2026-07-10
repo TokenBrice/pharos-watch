@@ -68,6 +68,8 @@ export function OpsShell({ children }: { children: ReactNode }) {
   }, [opsUiHost, router]);
 
   useEffect(() => {
+    if (!opsUiHost) return;
+
     const scroller = navScrollerRef.current;
     const activeTab = activeTabRef.current;
     if (!scroller || !activeTab) return;
@@ -80,7 +82,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
     } else {
       scroller.scrollLeft = left;
     }
-  }, [pathname]);
+  }, [opsUiHost, pathname]);
 
   if (opsUiHost == null) {
     return <div className="py-20 text-center text-sm text-muted-foreground">Loading operator access...</div>;
@@ -111,7 +113,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-2 py-1 text-[11px] font-medium text-green-700 dark:text-green-300">
+            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-2 py-1 text-[11px] font-medium text-green-800 dark:text-green-200">
               <span className="size-1.5 rounded-full bg-green-500" aria-hidden="true" />
               <span className="sm:hidden">Prod</span>
               <span className="hidden sm:inline">Production</span>

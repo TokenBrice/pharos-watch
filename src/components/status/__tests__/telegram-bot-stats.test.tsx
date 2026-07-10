@@ -35,7 +35,7 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
   topStablecoins: [],
   oldestPendingDeliveryAgeSec: 240,
   pendingDeliveryBacklog: { due: 4, deferred: 2, expired: 1 },
-  retryErrorClassCounts: { rate_limit: 5, auth_error: 1 },
+  retryErrorClassCounts: { gateway_timeout_after_fixture_retry_budget: 5, auth_error: 1 },
   presetQueryFailures: 2,
   inactiveSubscribersCleanedThisWeek: 6,
   lifecycleSnapshot: {
@@ -100,7 +100,9 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText("Preset-implied follows")).toBeTruthy();
     expect(screen.getByText("Inactive cleaned 7d")).toBeTruthy();
     expect(screen.getByText("Pending retry classes")).toBeTruthy();
-    expect(screen.getByText("rate_limit")).toBeTruthy();
+    const longRetryClass = screen.getByText("gateway_timeout_after_fixture_retry_budget");
+    expect(longRetryClass.className).toContain("break-words");
+    expect(longRetryClass.parentElement?.parentElement?.className).toContain("min-w-0");
     expect(screen.getByText("auth_error")).toBeTruthy();
     expect(screen.queryByText(/snapshot stale/i)).toBeNull();
   });

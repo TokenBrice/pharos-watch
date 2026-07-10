@@ -25,7 +25,7 @@ interface TelegramBotStatsProps {
 function renderMetric(label: string, value: string | number | null | undefined) {
   return (
     <div className="grid min-w-0 grid-cols-1 items-start gap-x-4 gap-y-0.5 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
-      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 break-words text-muted-foreground">{label}</span>
       <span className="min-w-0 max-w-full break-words text-left font-mono tabular-nums sm:text-right">
         {value ?? "—"}
       </span>
@@ -190,7 +190,9 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 <div className="mb-2 text-xs font-medium text-muted-foreground">Pending retry classes</div>
                 <div className="space-y-1.5">
                   {retryErrorClasses.map(([errorClass, count]) => (
-                    <div key={errorClass}>{renderMetric(errorClass, count)}</div>
+                    <div key={errorClass} className="min-w-0">
+                      {renderMetric(errorClass, count)}
+                    </div>
                   ))}
                 </div>
               </div>

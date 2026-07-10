@@ -141,7 +141,11 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
   const qualityTone = getStatusTone(data.dataQualityStatus);
 
   return (
-    <section id="pipeline" aria-labelledby="pipeline-title" className="space-y-5 scroll-mt-[var(--ops-sticky-offset)]">
+    <section
+      id="pipeline"
+      aria-labelledby="pipeline-title"
+      className="min-w-0 max-w-full space-y-5 scroll-mt-[var(--ops-sticky-offset)]"
+    >
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Data Pipeline</p>

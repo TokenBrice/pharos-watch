@@ -70,6 +70,7 @@
     "serve:static-export": "tsx scripts/maintenance/serve-static-export.mjs",
     "test:a11y": "playwright test tests/visual/a11y/axe-routes.spec.ts",
     "test:a11y:hydrated": "playwright test tests/visual/a11y/axe-routes-hydrated.spec.ts",
+    "test:ops-browser": "playwright test --config playwright.ops.config.ts",
     "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",

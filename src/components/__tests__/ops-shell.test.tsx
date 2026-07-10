@@ -55,11 +55,52 @@ describe("OpsShell", () => {
       </OpsShell>,
     );
 
-    expect(screen.getByText("Production")).toBeTruthy();
+    const productionBadge = screen.getByText("Production").parentElement;
+    expect(productionBadge?.className).toContain("text-green-800");
+    expect(productionBadge?.className).toContain("dark:text-green-200");
     expect(screen.getByRole("link", { name: "Reliability" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Triage" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByText("Reliability body")).toBeTruthy();
     expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" }));
+  });
+
+  it("scrolls the active workspace into view after the ops host gate resolves", async () => {
+    useOpsUiHostMock.mockReturnValue(null);
+    const view = render(
+      <OpsShell>
+        <div>Reliability body</div>
+      </OpsShell>,
+    );
+    expect(scrollToMock).not.toHaveBeenCalled();
+
+    useOpsUiHostMock.mockReturnValue(true);
+    view.rerender(
+      <OpsShell>
+        <div>Reliability body</div>
+      </OpsShell>,
+    );
+
+    await waitFor(() => expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" })));
+  });
+
+  it("repositions the workspace nav when the route changes", async () => {
+    usePathnameMock.mockReturnValue("/admin/");
+    const view = render(
+      <OpsShell>
+        <div>Workspace body</div>
+      </OpsShell>,
+    );
+    scrollToMock.mockClear();
+
+    usePathnameMock.mockReturnValue("/admin/history/");
+    view.rerender(
+      <OpsShell>
+        <div>Workspace body</div>
+      </OpsShell>,
+    );
+
+    await waitFor(() => expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" })));
+    expect(screen.getByRole("link", { name: "History" }).getAttribute("aria-current")).toBe("page");
   });
 
   it("host-gates workspace content on public origins", () => {
