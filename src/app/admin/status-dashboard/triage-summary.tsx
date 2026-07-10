@@ -60,10 +60,11 @@ export interface TriageSummaryProps {
   recommendedActions: StatusActionRecommendation[];
   isDiagnosticsOpen: boolean;
   setIsDiagnosticsOpen: (open: boolean) => void;
+  diagnosticsHasNewSignal?: boolean;
   browserProbeSummary: BrowserProbeSummary | null;
   probeCoverageLabel?: string;
   querySyncs: DashboardQuerySync[];
-  clientDataAgeSec: number | null;
+  freshnessFloorMs: number | null;
   clientDataStale: boolean;
   lastUpdated: number;
   handleRefresh: () => void;
@@ -84,10 +85,11 @@ export function TriageSummary({
   recommendedActions,
   isDiagnosticsOpen,
   setIsDiagnosticsOpen,
+  diagnosticsHasNewSignal = false,
   browserProbeSummary,
   probeCoverageLabel = "Browser probes",
   querySyncs,
-  clientDataAgeSec,
+  freshnessFloorMs,
   clientDataStale,
   lastUpdated,
   handleRefresh,
@@ -449,8 +451,13 @@ export function TriageSummary({
           onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
           className="border-y border-border/60 py-1"
         >
-          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center gap-2 rounded-md text-sm font-medium text-foreground">
             State machine, probe, and discrepancy diagnostics
+            {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                New signal
+              </span>
+            ) : null}
           </summary>
           {isDiagnosticsOpen ? (
             <div className="mt-3 space-y-4 pb-3">
@@ -461,10 +468,10 @@ export function TriageSummary({
                 <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
                 <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
                 <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
-                <SummaryBadge
-                  label="Sync Floor"
-                  value={clientDataAgeSec == null ? "unknown" : `${clientDataAgeSec}s`}
-                  className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+                <FreshnessIndicator
+                  updatedAtMs={freshnessFloorMs ?? 0}
+                  staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
+                  labelPrefix="Sync floor"
                 />
               </div>
               <SystemDiagnostics

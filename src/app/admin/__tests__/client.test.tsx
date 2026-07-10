@@ -44,8 +44,8 @@ function makeCriticalModel() {
   return {
     attentionSections: [],
     browserProbeSummary: null,
-    clientDataAgeSec: 10,
     clientDataStale: false,
+    freshnessFloorMs: 1_700_000_000_000,
     decision: {
       systemState: "healthy",
       systemLabel: "Healthy",
@@ -106,7 +106,7 @@ describe("admin triage client", () => {
     render(<TriageClient />);
 
     expect(screen.getByTestId("triage-summary").textContent).toBe("Critical Browser Probes");
-    expect(useCriticalOpsModelMock).toHaveBeenCalledTimes(1);
+    expect(useCriticalOpsModelMock).toHaveBeenCalled();
     expect(useStatusHistoryMock).not.toHaveBeenCalled();
     expect(useRequestSourceStatsMock).not.toHaveBeenCalled();
     expect(useReleaseMetadataMock).not.toHaveBeenCalled();

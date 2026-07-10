@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { STATUS_DASHBOARD_FRESHNESS_POLICY } from "@/lib/status-dashboard-model";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const { useStatusMock, useHealthMock, useEndpointProbesMock } = vi.hoisted(() => ({
@@ -43,6 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
@@ -59,5 +61,34 @@ describe("useCriticalOpsModel", () => {
     expect(result.current.model?.querySyncs.find((sync) => sync.key === "probes")?.label).toBe(
       "Critical browser probes",
     );
+  });
+
+  it("keeps the memoized model stable across wall-clock ticks and rebuilds only at the staleness boundary", () => {
+    vi.mocked(Date.now).mockRestore();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    const { result, rerender } = renderHook(() => useCriticalOpsModel());
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    const initialModel = result.current.model;
+    expect(initialModel?.evidence.state).toBe("current");
+
+    // A free-running root clock would rebuild the model here; the isolated
+    // clock must not (relative-time labels live in leaf components instead).
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    rerender();
+    expect(result.current.model).toBe(initialModel);
+
+    // Crossing the staleness boundary is the only wall-clock event that can
+    // change evidence state, so the model rebuilds exactly there.
+    act(() => {
+      vi.advanceTimersByTime(STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs);
+    });
+    expect(result.current.model).not.toBe(initialModel);
+    expect(result.current.model?.evidence.state).toBe("stale");
   });
 });

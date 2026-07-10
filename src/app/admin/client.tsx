@@ -9,8 +9,10 @@ import { WorkspaceStatusBoundary } from "./workspace-status-boundary";
 export default function TriageClient() {
   const { data, handleRefresh, healthData, initialLoadError, isLoading, lastUpdated, model } = useCriticalOpsModel();
   const diagnosticsSignal =
-    data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
-  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
+    data == null || model == null
+      ? null
+      : data.overallStatus !== "healthy" || model.notices.length > 0 || model.healthDiffersFromStatus;
+  const diagnostics = useAutoExpand(diagnosticsSignal);
 
   return (
     <WorkspaceStatusBoundary data={data} error={initialLoadError} isLoading={isLoading} onRetry={handleRefresh}>
@@ -30,12 +32,13 @@ export default function TriageClient() {
               latestTransition={model.latestTransition}
               attentionSections={model.attentionSections}
               recommendedActions={model.recommendedActions}
-              isDiagnosticsOpen={isDiagnosticsOpen}
-              setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+              isDiagnosticsOpen={diagnostics.isOpen}
+              setIsDiagnosticsOpen={diagnostics.setIsOpen}
+              diagnosticsHasNewSignal={diagnostics.hasNewSignal}
               browserProbeSummary={model.browserProbeSummary}
               probeCoverageLabel="Critical Browser Probes"
               querySyncs={model.querySyncs}
-              clientDataAgeSec={model.clientDataAgeSec}
+              freshnessFloorMs={model.freshnessFloorMs}
               clientDataStale={model.clientDataStale}
               lastUpdated={lastUpdated}
               handleRefresh={handleRefresh}
