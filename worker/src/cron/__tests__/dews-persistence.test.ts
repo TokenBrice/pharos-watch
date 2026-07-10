@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { persistDewsResults } from "../dews/persistence";
 import type { DewsComputedRow } from "../dews/contracts";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 function buildDewsRow(stablecoinId: string): DewsComputedRow {
   return {
@@ -66,6 +67,12 @@ describe("persistDewsResults", () => {
     expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-current-upsert"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("pharos:dews:stress-latest-upsert"))).toBe(true);
     expect(history.some((entry) => entry.binds.includes("dews:published-generation"))).toBe(true);
+    const pointerWrite = history.find((entry) => entry.binds.includes("dews:published-generation"));
+    expect(JSON.parse(String(pointerWrite?.binds[1]))).toMatchObject({
+      coverageVersion: 2,
+      expectedRowCount: 1,
+      stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether"]),
+    });
     expect(result).toMatchObject({
       currentGenerationRows: 1,
       latestGenerationRows: 1,

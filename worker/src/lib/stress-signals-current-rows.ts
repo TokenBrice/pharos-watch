@@ -1,4 +1,7 @@
-import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
+import {
+  buildDewsStablecoinIdsDigest,
+  readDewsPublishedGenerationResult,
+} from "./dews-publication-pointer";
 
 export interface StressSignalCurrentRow {
   stablecoin_id: string;
@@ -37,7 +40,12 @@ interface SingleRowQueries {
 }
 
 type CompletedDewsScope =
-  | { status: "scoped"; completedAt: number }
+  | {
+      status: "scoped";
+      completedAt: number;
+      expectedRowCount: number | null;
+      stablecoinIdsDigest: string | null;
+    }
   | { status: "no-pointer" }
   | { status: "unavailable"; reason: string };
 
@@ -194,13 +202,18 @@ function areStressSignalRowsStale(
   return newestComputedAt <= 0 || nowSec - newestComputedAt > staleAfterSec;
 }
 
-function isCompleteLatestGeneration<Row extends { computed_at: number }>(
+function isCompleteLatestGeneration<Row extends { stablecoin_id: string; computed_at: number }>(
   rows: readonly Row[],
   completedAt: number | null,
+  expectedRowCount: number | null,
+  stablecoinIdsDigest: string | null,
 ): boolean {
   return completedAt != null
-    && rows.length > 0
-    && rows.every((row) => row.computed_at === completedAt);
+    && expectedRowCount != null
+    && stablecoinIdsDigest != null
+    && rows.length === expectedRowCount
+    && rows.every((row) => row.computed_at === completedAt)
+    && buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)) === stablecoinIdsDigest;
 }
 
 export function mergeNewestStressSignalRows<Row extends { stablecoin_id: string; computed_at: number }>(
@@ -224,7 +237,12 @@ async function loadCompletedDewsScope(db: D1Database, nowSec: number): Promise<C
   const result = await readDewsPublishedGenerationResult(db, nowSec);
   switch (result.status) {
     case "ok":
-      return { status: "scoped", completedAt: result.computedAt };
+      return {
+        status: "scoped",
+        completedAt: result.computedAt,
+        expectedRowCount: result.expectedRowCount,
+        stablecoinIdsDigest: result.stablecoinIdsDigest,
+      };
     case "no-pointer":
       return { status: "no-pointer" };
     case "invalid-pointer":
@@ -259,6 +277,8 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
     return [];
   }
   const completedAt = completedScope.status === "scoped" ? completedScope.completedAt : null;
+  const expectedRowCount = completedScope.status === "scoped" ? completedScope.expectedRowCount : null;
+  const stablecoinIdsDigest = completedScope.status === "scoped" ? completedScope.stablecoinIdsDigest : null;
   let latestRows: Row[] = [];
   try {
     const latestStmt = prepareCompletedAtScoped(
@@ -274,12 +294,11 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
     options.onLatestReadError?.(error);
   }
 
-  // A scoped publication pointer is written only after the latest table has
-  // passed its exact generation-count check. When every returned row belongs
-  // to that generation, canonical history cannot add a newer or legacy-only
-  // row, so avoid the retained-history GROUP BY scan entirely.
+  // A current publication pointer proves the completed row count and ID set.
+  // Only that exact generation can bypass the retained-history GROUP BY scan;
+  // legacy pointers and partial chunk replacements keep the canonical merge.
   if (
-    isCompleteLatestGeneration(latestRows, completedAt)
+    isCompleteLatestGeneration(latestRows, completedAt, expectedRowCount, stablecoinIdsDigest)
     && !areStressSignalRowsStale(latestRows, nowSec, options.staleAfterSec)
   ) {
     return latestRows;

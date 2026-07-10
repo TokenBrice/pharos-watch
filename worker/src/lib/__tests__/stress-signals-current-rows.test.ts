@@ -6,6 +6,7 @@ import {
   mergeNewestStressSignalRows,
   type StressSignalCurrentRow,
 } from "../stress-signals-current-rows";
+import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const nowSec = 1_778_400_000;
 const signalsJson = JSON.stringify({ supply: { value: 10, available: true } });
@@ -72,6 +73,14 @@ describe("stress-signal current-row helpers", () => {
       row("usdt-tether", completedAt, 12),
       row("usdc-circle", completedAt, 30),
     ];
+    pointer.value = JSON.stringify({
+      updatedAt: completedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: latestRows.length,
+      stablecoinIdsDigest: buildDewsStablecoinIdsDigest(latestRows.map((latestRow) => latestRow.stablecoin_id)),
+    });
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -90,6 +99,89 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded.results).toEqual(latestRows);
     expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-all"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("merges canonical history when chunked staging hides part of the published latest set", async () => {
+    const completedAt = nowSec - 60;
+    const publishedIds = ["usdt-tether", "usdc-circle"];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: publishedIds.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
+      }),
+      updated_at: completedAt,
+    };
+    const untouchedOldSubset = row("usdc-circle", completedAt, 30);
+    const canonicalRows = [
+      row("usdt-tether", completedAt, 12),
+      untouchedOldSubset,
+    ];
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...untouchedOldSubset }],
+      },
+      {
+        match: "pharos:stress-signals:legacy-latest-all",
+        matchBinds: [completedAt],
+        rows: canonicalRows.map((canonicalRow) => ({ ...canonicalRow })),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual(canonicalRows);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("keeps the canonical merge for legacy pointers without exact-set proof", async () => {
+    const completedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }),
+      updated_at: completedAt,
+    };
+    const latest = row("usdt-tether", completedAt, 20);
+    const canonical = row("usdt-tether", completedAt, 22);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...latest }],
+      },
+      {
+        match: "pharos:stress-signals:legacy-latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...canonical }],
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
+
+    expect(loaded.results).toEqual([latest]);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 

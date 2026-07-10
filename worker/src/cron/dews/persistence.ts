@@ -361,7 +361,12 @@ export async function persistDewsResults(params: {
         `DEWS publication incomplete: stress_signals_latest has ${latestGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
       );
     }
-    const pointerWrite = await writeDewsPublishedGeneration(params.db, params.nowSec, params.signal);
+    const pointerWrite = await writeDewsPublishedGeneration(
+      params.db,
+      params.nowSec,
+      params.results.map((result) => result.stablecoinId),
+      params.signal,
+    );
     publicationPointerWritten = pointerWrite.written;
     publishedGeneration = pointerWrite.written ? params.nowSec : null;
   }

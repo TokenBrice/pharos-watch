@@ -1,26 +1,46 @@
 import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
+import { sha256Hex } from "@shared/lib/sha256";
 
 const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
 const DEWS_PUBLICATION_POINTER_STATUS = "published";
+const DEWS_PUBLICATION_POINTER_COVERAGE_VERSION = 2;
 
 interface DewsPublicationPointerPayload {
   updatedAt: number;
   source: typeof DEWS_PUBLICATION_POINTER_SOURCE;
   publishStatus: typeof DEWS_PUBLICATION_POINTER_STATUS;
+  coverageVersion: typeof DEWS_PUBLICATION_POINTER_COVERAGE_VERSION;
+  expectedRowCount: number;
+  stablecoinIdsDigest: string;
 }
 
 export type DewsPublishedGenerationResult =
-  | { status: "ok"; computedAt: number }
+  | {
+      status: "ok";
+      computedAt: number;
+      expectedRowCount: number | null;
+      stablecoinIdsDigest: string | null;
+    }
   | { status: "no-pointer" }
   | { status: "invalid-pointer"; reason: string }
   | { status: "read-failed"; error: string };
 
-function buildDewsPublicationPointerPayload(updatedAt: number): DewsPublicationPointerPayload {
+export function buildDewsStablecoinIdsDigest(stablecoinIds: Iterable<string>): string {
+  return sha256Hex([...new Set(stablecoinIds)].sort().join("\n"));
+}
+
+function buildDewsPublicationPointerPayload(
+  updatedAt: number,
+  stablecoinIds: readonly string[],
+): DewsPublicationPointerPayload {
   return {
     updatedAt,
     source: DEWS_PUBLICATION_POINTER_SOURCE,
     publishStatus: DEWS_PUBLICATION_POINTER_STATUS,
+    coverageVersion: DEWS_PUBLICATION_POINTER_COVERAGE_VERSION,
+    expectedRowCount: stablecoinIds.length,
+    stablecoinIdsDigest: buildDewsStablecoinIdsDigest(stablecoinIds),
   };
 }
 
@@ -56,7 +76,36 @@ function parseDewsPublishedGeneration(
     if (parsed.updatedAt !== cached.updatedAt) {
       return { status: "invalid-pointer", reason: "payload updatedAt does not match cache updated_at" };
     }
-    return { status: "ok", computedAt: parsed.updatedAt };
+    if (parsed.coverageVersion == null) {
+      return {
+        status: "ok",
+        computedAt: parsed.updatedAt,
+        expectedRowCount: null,
+        stablecoinIdsDigest: null,
+      };
+    }
+    if (parsed.coverageVersion !== DEWS_PUBLICATION_POINTER_COVERAGE_VERSION) {
+      return { status: "invalid-pointer", reason: "payload coverageVersion is unsupported" };
+    }
+    if (
+      typeof parsed.expectedRowCount !== "number"
+      || !Number.isInteger(parsed.expectedRowCount)
+      || parsed.expectedRowCount <= 0
+    ) {
+      return { status: "invalid-pointer", reason: "payload expectedRowCount is not a positive integer" };
+    }
+    if (
+      typeof parsed.stablecoinIdsDigest !== "string"
+      || !/^[a-f0-9]{64}$/.test(parsed.stablecoinIdsDigest)
+    ) {
+      return { status: "invalid-pointer", reason: "payload stablecoinIdsDigest is not SHA-256" };
+    }
+    return {
+      status: "ok",
+      computedAt: parsed.updatedAt,
+      expectedRowCount: parsed.expectedRowCount,
+      stablecoinIdsDigest: parsed.stablecoinIdsDigest,
+    };
   } catch (error) {
     return { status: "invalid-pointer", reason: `payload is not valid JSON: ${errorToMessage(error)}` };
   }
@@ -82,12 +131,13 @@ export async function readDewsPublishedGeneration(db: D1Database, nowSec: number
 export async function writeDewsPublishedGeneration(
   db: D1Database,
   updatedAt: number,
+  stablecoinIds: readonly string[],
   signal?: AbortSignal,
 ): Promise<CacheWriteResult> {
   return setCacheIfNewer(
     db,
     DEWS_PUBLICATION_POINTER_CACHE_KEY,
-    JSON.stringify(buildDewsPublicationPointerPayload(updatedAt)),
+    JSON.stringify(buildDewsPublicationPointerPayload(updatedAt, stablecoinIds)),
     updatedAt,
     signal,
   );
