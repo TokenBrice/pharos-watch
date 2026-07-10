@@ -28,6 +28,7 @@ const statusHistoryResponse: StatusHistoryResponse = {
   probe: statusResponse.probe,
   discrepancy: statusResponse.discrepancy,
   transitions: statusResponse.timeline,
+  hasMore: false,
   reserveComposition: statusResponse.reserveComposition,
 };
 
