@@ -68,6 +68,30 @@ binding = "DB"
 database_name = "stablecoin-db"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
+[[ratelimits]]
+name = "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
+namespace_id = "2026071001"
+
+  [ratelimits.simple]
+  limit = 2400
+  period = 60
+
+[[ratelimits]]
+name = "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
+namespace_id = "2026071002"
+
+  [ratelimits.simple]
+  limit = 1600
+  period = 60
+
+[[ratelimits]]
+name = "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT"
+namespace_id = "2026071003"
+
+  [ratelimits.simple]
+  limit = 9600
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

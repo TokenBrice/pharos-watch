@@ -6,6 +6,9 @@ export interface WorkerVersionMetadata {
 
 export interface Env {
   DB: D1Database;
+  TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
   CF_VERSION_METADATA: WorkerVersionMetadata;
   CORS_ORIGIN: string;
   SELF_URL?: string;
