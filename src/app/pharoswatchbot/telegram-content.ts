@@ -1,8 +1,15 @@
 import { Bell, MessageSquareText, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { FaqItem } from "@/lib/faq";
+import type { TelegramAlertType } from "@shared/types/status";
+import {
+  TELEGRAM_ALERT_FAMILIES,
+  TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS,
+  TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
+} from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot sends stablecoin Telegram alerts for DEWS threat bands, depegs, reasoned safety-grade shifts, launches, and live reserve-mix drift.";
+  `PharosWatchBot sends stablecoin Telegram alerts for ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`;
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -115,70 +122,41 @@ export const RECOMMENDED_SETUPS = [
   icon: LucideIcon;
 }[];
 
-export const TELEGRAM_ALERT_EXAMPLES = [
-  {
-    key: "dews",
-    label: "DEWS Threat Level",
+// Page-specific presentation for each alert-family example; keys, labels, and
+// the message bodies themselves derive from the shared manifests so the
+// bubbles stay exactly what the bot sends (worker contract test enforced).
+const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string; time: string }> = {
+  dews: {
     tagline:
       "Fires when a coin crosses into a worse band of DEWS, Pharos's Depeg Early Warning System. Shows the two highest-stress sub-signals.",
-    content: `DEWS
-
-USDT — WATCH → ALERT (score: 42)
-Top signals: pool_balance_drift (61%), supply_velocity (48%)
-
-View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     time: "09:41",
   },
-  {
-    key: "depeg",
-    label: "Depeg Events",
+  depeg: {
     tagline: "Fires on depegs that meet your step (100/250/500 bps), worsening milestones, and resolution.",
-    content: `Depeg Detected
-
-USDC — below peg by 1.2% (120 bps)
-Price: $0.988 (peg: $1.00)
-
-View on Pharos: pharos.watch/stablecoin/usdc-circle`,
     time: "09:43",
   },
-  {
-    key: "safety",
-    label: "Safety Grade Changes",
+  safety: {
     tagline: "Fires on live grade shifts and points to the driver. Re-scores from methodology changes don't page you.",
-    content: `Safety Grade Change
-
-USDR — B → F
-Score: 70 → 39
-
-Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39). Now: Safety F 39 · Liquidity 57, DEX TVL $1.2M · Supply $13.1M
-
-View on Pharos: pharos.watch/stablecoin/usdr-tangible`,
     time: "09:45",
   },
-  {
-    key: "launch",
-    label: "Launch Promotions",
+  launch: {
     tagline: "Fires when a tracked pre-launch asset goes live. Must be subscribed by ticker; presets don't apply here.",
-    content: `Stablecoin Launched
-
-USDPT — US Dollar Payment Token has launched and is now tracked by Pharos
-
-View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
     time: "09:47",
   },
-  {
-    key: "reserve",
-    label: "Reserve Drift",
+  reserve: {
     tagline:
       "Fires when a live-reserve-tracked coin newly diverges from its curated reserve profile. Entering drift only.",
-    content: `Reserve Drift
-
-USDC — Circle USD Coin live reserve mix has drifted from its curated profile
-
-View on Pharos: pharos.watch/stablecoin/usdc-circle`,
     time: "09:49",
   },
-] as const;
+};
+
+export const TELEGRAM_ALERT_EXAMPLES = TELEGRAM_ALERT_FAMILIES.map((family) => ({
+  key: family.key,
+  label: family.label,
+  tagline: ALERT_EXAMPLE_PRESENTATION[family.key].tagline,
+  content: TELEGRAM_PUBLIC_ALERT_SAMPLES[family.key].message,
+  time: ALERT_EXAMPLE_PRESENTATION[family.key].time,
+}));
 
 export const TELEGRAM_COMMAND_GROUPS = [
   {
@@ -376,7 +354,7 @@ export const TELEGRAM_COMMAND_COUNT = TELEGRAM_COMMAND_GROUPS.reduce(
 );
 
 export const TELEGRAM_PARAM_LEGEND = [
-  { token: "<types>", meaning: "Comma-separated: dews, depeg, safety, launch, reserve" },
+  { token: "<types>", meaning: `Comma-separated: ${TELEGRAM_ALERT_FAMILY_COMMAND_TOKENS}` },
   { token: "<targets>", meaning: "Space-separated tickers, coin-ids, or presets" },
   { token: "<ticker>", meaning: "Symbol (USDC) or coin-id (usdc-circle)" },
   { token: "<value>", meaning: "Setting-specific; see the /set rows" },

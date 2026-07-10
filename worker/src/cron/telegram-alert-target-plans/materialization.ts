@@ -9,6 +9,7 @@ import {
   TELEGRAM_TARGET_PLAN_MAX_ITEMS,
   type SerializedTelegramTargetPlan,
 } from "../telegram-alert-target-plan-contract";
+import { strictestAlertTtlSec, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import { markTelegramTargetPlanDegraded } from "./source-state";
 import {
   TELEGRAM_TARGET_PLAN_CLAIM_TTL_SEC,
@@ -49,20 +50,27 @@ async function serializePlanningDecision(
   if (decision.routed.length === 0) {
     throw new Error("Eligible Telegram planning decision has no rendered target plan");
   }
-  const plans = await Promise.all(decision.routed.map((routed) => {
-    if (
-      routed.chatId !== decision.subscriber.chatId ||
-      routed.sourceEventId !== claim.sourceEventId ||
-      routed.preferenceGeneration !== decision.currentPreferenceGeneration
-    ) {
-      throw new Error("Telegram routed plan does not match its captured subscriber decision");
-    }
-    return serializeTelegramTargetPlan(
-      routed,
-      decision.targetExpiresAt ?? claim.detectedAt + TELEGRAM_ALERT_TTL_SEC[routed.alertType],
-    );
-  }));
+  const plans = await Promise.all(
+    decision.routed.map((routed) => {
+      if (
+        routed.chatId !== decision.subscriber.chatId ||
+        routed.sourceEventId !== claim.sourceEventId ||
+        routed.preferenceGeneration !== decision.currentPreferenceGeneration
+      ) {
+        throw new Error("Telegram routed plan does not match its captured subscriber decision");
+      }
+      return serializeTelegramTargetPlan(routed, resolveTelegramTargetExpiresAt(claim, decision, routed));
+    }),
+  );
   return { outcome, plans };
+}
+
+export function resolveTelegramTargetExpiresAt(
+  claim: Pick<TelegramTargetPlanningClaim, "detectedAt">,
+  decision: Pick<TelegramPlanningDecision, "targetExpiresAt">,
+  routed: Pick<RoutedSubscriberAlert, "alertType" | "alertTypes">,
+): number {
+  return decision.targetExpiresAt ?? claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
 }
 
 async function persistNonTargetOutcome(
@@ -202,13 +210,7 @@ async function persistOneTargetPlan(args: {
       `INSERT OR IGNORE INTO telegram_alert_target_plan_items (
          source_event_id, plan_generation, plan_key, item_key, created_at
        )`,
-      plan.payload.itemKeys.map((itemKey) => [
-        claim.sourceEventId,
-        claim.generation,
-        plan.planKey,
-        itemKey,
-        nowSec,
-      ]),
+      plan.payload.itemKeys.map((itemKey) => [claim.sourceEventId, claim.generation, plan.planKey, itemKey, nowSec]),
     ),
     db
       .prepare(
@@ -242,14 +244,7 @@ async function persistOneTargetPlan(args: {
          (SELECT COUNT(*) FROM telegram_alert_target_plan_items
            WHERE source_event_id = ? AND plan_generation = ? AND plan_key = ?) AS items`,
     )
-    .bind(
-      claim.sourceEventId,
-      claim.generation,
-      plan.planKey,
-      claim.sourceEventId,
-      claim.generation,
-      plan.planKey,
-    )
+    .bind(claim.sourceEventId, claim.generation, plan.planKey, claim.sourceEventId, claim.generation, plan.planKey)
     .first<{ targets: number; items: number }>();
   if (
     Number(counts?.targets ?? -1) !== plan.payload.messages.length ||
@@ -274,8 +269,7 @@ export async function materializeTelegramTargetPlanPage(
     throw new Error("Telegram target plan page size is invalid");
   }
   assertTelegramPlanMaterializationFitsD1Batch();
-  const serialized = await Promise.all(decisions.map((decision) =>
-    serializePlanningDecision(claim, decision)));
+  const serialized = await Promise.all(decisions.map((decision) => serializePlanningDecision(claim, decision)));
   const planCount = serialized.reduce((sum, entry) => sum + entry.plans.length, 0);
   const targetCount = serialized.reduce(
     (sum, entry) => sum + entry.plans.reduce((inner, plan) => inner + plan.payload.messages.length, 0),
@@ -330,9 +324,7 @@ export async function materializeTelegramTargetPlanPage(
     )
     .bind(claim.sourceEventId, claim.generation, pageIndex)
     .first<{ maximum: number | null }>();
-  let nextPlanOrdinal = ordinalRow?.maximum == null
-    ? pageIndex * 10_000
-    : Number(ordinalRow.maximum) + 1;
+  let nextPlanOrdinal = ordinalRow?.maximum == null ? pageIndex * 10_000 : Number(ordinalRow.maximum) + 1;
   for (const [decisionIndex, decision] of decisions.entries()) {
     const entry = serialized[decisionIndex];
     if (entry.outcome !== "target_planned") {
@@ -378,21 +370,15 @@ export async function materializeTelegramTargetPlanPage(
         WHERE source_event_id = ? AND plan_generation = ?
           AND chat_id >= ? AND chat_id <= ? AND planning_outcome = 'pending'`,
     )
-    .bind(
-      claim.sourceEventId,
-      claim.generation,
-      persistedPage.first_chat_id,
-      persistedPage.last_chat_id,
-    )
+    .bind(claim.sourceEventId, claim.generation, persistedPage.first_chat_id, persistedPage.last_chat_id)
     .first<{ count: number }>();
   const pendingSubscribers = Number(pendingRow?.count ?? -1);
   if (
     actualPlans > Number(persistedPage.expected_plan_count) ||
     actualTargets > Number(persistedPage.expected_target_count) ||
-    (pendingSubscribers === 0 && (
-      actualPlans !== Number(persistedPage.expected_plan_count) ||
-      actualTargets !== Number(persistedPage.expected_target_count)
-    ))
+    (pendingSubscribers === 0 &&
+      (actualPlans !== Number(persistedPage.expected_plan_count) ||
+        actualTargets !== Number(persistedPage.expected_target_count)))
   ) {
     await markTelegramTargetPlanDegraded(db, claim, "target_page_count_mismatch", nowSec);
     throw new Error("Telegram target plan page did not reconcile");

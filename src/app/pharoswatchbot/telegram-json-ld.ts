@@ -1,3 +1,7 @@
+import {
+  TELEGRAM_ALERT_FAMILIES,
+  TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
+} from "@shared/lib/telegram-alert-families";
 import { RECOMMENDED_SETUP_COMMAND } from "./telegram-route-constants";
 
 const TELEGRAM_HOW_TO_STEPS = [
@@ -18,12 +22,9 @@ const TELEGRAM_HOW_TO_STEPS = [
   },
 ] as const;
 
+// One feature line per canonical alert family, then the non-alert features.
 const TELEGRAM_FEATURE_LIST = [
-  "Depeg alerts (triggered, worsening milestones, resolved)",
-  "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
-  "Safety grade alerts with reason lines for live score drivers",
-  "Pre-launch stablecoin launch alerts",
-  "Live reserve-mix drift alerts for covered stablecoins",
+  ...TELEGRAM_ALERT_FAMILIES.map((family) => family.featureLine),
   "On-demand market brief, top rankings, Safety Score explanations, and coverage checks",
   "Dynamic preset watchlists that keep tracking current cohorts",
   "Per-coin thresholds, timezone-aware quiet hours, and inline snooze",
@@ -38,8 +39,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       "@context": "https://schema.org",
       "@type": "HowTo",
       name: "Set up Pharos stablecoin alerts on Telegram",
-      description:
-        "Subscribe to depeg, DEWS threat-level, safety-grade, launch, and reserve-drift alerts for tracked stablecoins from the Pharos Telegram bot.",
+      description: `Subscribe to Telegram alerts covering ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST} for tracked stablecoins from the Pharos Telegram bot.`,
       totalTime: "PT2M",
       tool: [{ "@type": "HowToTool", name: "Telegram" }],
       step: TELEGRAM_HOW_TO_STEPS.map((step) => ({
@@ -57,7 +57,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: `${siteUrl}/pharoswatchbot/`,
       installUrl: "https://t.me/PharosWatchBot",
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, launch, and reserve-drift alerts.",
+      description: `Opt-in Telegram bot for stablecoin alerts: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`,
       featureList: TELEGRAM_FEATURE_LIST,
       publisher: { "@id": `${siteUrl}#organization` },
     },

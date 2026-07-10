@@ -57,6 +57,16 @@ interface UnknownRow {
   older_than_15m_count: number | string | null;
 }
 
+interface FamilyAttributionRow {
+  dews: number | string | null;
+  depeg: number | string | null;
+  safety: number | string | null;
+  launch: number | string | null;
+  reserve: number | string | null;
+  mixed: number | string | null;
+  unknown: number | string | null;
+}
+
 interface DeadLetterSummaryRow {
   count: number | string | null;
   total_attempts: number | string | null;
@@ -110,7 +120,10 @@ function latency(
   };
 }
 
-function reasons(rows: readonly ReasonRow[], limit: number): {
+function reasons(
+  rows: readonly ReasonRow[],
+  limit: number,
+): {
   values: TelegramDeliverySliReasonCount[];
   truncated: boolean;
 } {
@@ -153,8 +166,9 @@ export async function loadTelegramDeliverySliRollup(
   const startsAt = nowSec - lookbackSec;
   const reasonQueryLimit = reasonLimit + 1;
 
-  const core = await db.prepare(
-    `WITH recent_sources AS (
+  const core = await db
+    .prepare(
+      `WITH recent_sources AS (
        SELECT source_event_id, detected_at, expires_at, target_plan_completed_at
          FROM telegram_alert_source_events
         WHERE detected_at >= ? AND detected_at <= ?
@@ -198,10 +212,45 @@ export async function loadTelegramDeliverySliRollup(
        (SELECT MAX(detected_at) FROM recent_sources) AS latest_source_at,
        MAX(final_delivery_at) AS latest_target_at
      FROM recent_targets`,
-  ).bind(startsAt, nowSec).first<CoreRow>();
+    )
+    .bind(startsAt, nowSec)
+    .first<CoreRow>();
 
-  const backlogRows = await db.prepare(
-    `SELECT ${priorityCaseSql()} AS priority,
+  const familyAttribution = await db
+    .prepare(
+      `WITH family_flags AS (
+       SELECT target.job_id, target.target_key,
+              COALESCE(MAX(item.item_key LIKE 'dews:%'), 0) AS dews,
+              COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
+              COALESCE(MAX(item.item_key LIKE 'safety:%'), 0) AS safety,
+              COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
+              COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve
+         FROM telegram_alert_job_targets target
+         JOIN telegram_alert_source_events source ON source.source_event_id = target.source_event_id
+         LEFT JOIN telegram_alert_job_target_items item
+           ON item.job_id = target.job_id
+          AND item.target_key = target.target_key
+        WHERE source.detected_at >= ? AND source.detected_at <= ?
+        GROUP BY target.job_id, target.target_key
+     ), attributed AS (
+       SELECT *, dews + depeg + safety + launch + reserve AS family_count FROM family_flags
+     )
+     SELECT
+       SUM(CASE WHEN family_count = 1 AND dews = 1 THEN 1 ELSE 0 END) AS dews,
+       SUM(CASE WHEN family_count = 1 AND depeg = 1 THEN 1 ELSE 0 END) AS depeg,
+       SUM(CASE WHEN family_count = 1 AND safety = 1 THEN 1 ELSE 0 END) AS safety,
+       SUM(CASE WHEN family_count = 1 AND launch = 1 THEN 1 ELSE 0 END) AS launch,
+       SUM(CASE WHEN family_count = 1 AND reserve = 1 THEN 1 ELSE 0 END) AS reserve,
+       SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
+       SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown
+      FROM attributed`,
+    )
+    .bind(startsAt, nowSec)
+    .first<FamilyAttributionRow>();
+
+  const backlogRows = await db
+    .prepare(
+      `SELECT ${priorityCaseSql()} AS priority,
             CASE
               WHEN target.created_at > ? - 300 THEN 'lt_5m'
               WHEN target.created_at > ? - 900 THEN '5m_15m'
@@ -217,10 +266,13 @@ export async function loadTelegramDeliverySliRollup(
         AND target.created_at >= ? AND target.created_at <= ?
       GROUP BY priority, age_bucket
       ORDER BY priority, oldest_created_at`,
-  ).bind(nowSec, nowSec, nowSec, nowSec, startsAt, nowSec).all<BacklogRow>();
+    )
+    .bind(nowSec, nowSec, nowSec, nowSec, startsAt, nowSec)
+    .all<BacklogRow>();
 
-  const cancellationRows = await db.prepare(
-    `SELECT COALESCE(NULLIF(cancellation_reason, ''), NULLIF(final_delivery_error, ''),
+  const cancellationRows = await db
+    .prepare(
+      `SELECT COALESCE(NULLIF(cancellation_reason, ''), NULLIF(final_delivery_error, ''),
                     NULLIF(error_class, ''), 'unknown') AS reason,
             COUNT(*) AS count, SUM(COUNT(*)) OVER () AS total_count
        FROM telegram_alert_job_targets
@@ -235,10 +287,13 @@ export async function loadTelegramDeliverySliRollup(
       GROUP BY reason
       ORDER BY count DESC, reason
       LIMIT ?`,
-  ).bind(startsAt, nowSec, reasonQueryLimit).all<ReasonRow>();
+    )
+    .bind(startsAt, nowSec, reasonQueryLimit)
+    .all<ReasonRow>();
 
-  const targetErrorRows = await db.prepare(
-    `SELECT COALESCE(NULLIF(final_delivery_error, ''), NULLIF(error_class, ''), 'unknown') AS reason,
+  const targetErrorRows = await db
+    .prepare(
+      `SELECT COALESCE(NULLIF(final_delivery_error, ''), NULLIF(error_class, ''), 'unknown') AS reason,
             COUNT(*) AS count
        FROM telegram_alert_job_targets
       WHERE created_at >= ? AND created_at <= ?
@@ -246,35 +301,49 @@ export async function loadTelegramDeliverySliRollup(
       GROUP BY reason
       ORDER BY count DESC, reason
       LIMIT ?`,
-  ).bind(startsAt, nowSec, reasonQueryLimit).all<ReasonRow>();
+    )
+    .bind(startsAt, nowSec, reasonQueryLimit)
+    .all<ReasonRow>();
 
-  const unknown = await db.prepare(
-    `SELECT COUNT(*) AS count, MIN(final_delivery_at) AS oldest_at,
+  const unknown = await db
+    .prepare(
+      `SELECT COUNT(*) AS count, MIN(final_delivery_at) AS oldest_at,
             SUM(CASE WHEN final_delivery_at <= ? - 900 THEN 1 ELSE 0 END) AS older_than_15m_count
        FROM telegram_alert_job_targets
       WHERE final_delivery_state = 'execution_unknown'
         AND created_at >= ? AND created_at <= ?`,
-  ).bind(nowSec, startsAt, nowSec).first<UnknownRow>();
+    )
+    .bind(nowSec, startsAt, nowSec)
+    .first<UnknownRow>();
 
-  const deadSummary = await db.prepare(
-    `SELECT COUNT(*) AS count, SUM(attempts) AS total_attempts, MAX(expired_at) AS latest_at
+  const deadSummary = await db
+    .prepare(
+      `SELECT COUNT(*) AS count, SUM(attempts) AS total_attempts, MAX(expired_at) AS latest_at
        FROM telegram_alert_dead_letters
       WHERE expired_at >= ? AND expired_at <= ?`,
-  ).bind(startsAt, nowSec).first<DeadLetterSummaryRow>();
-  const deadReasonRows = await db.prepare(
-    `SELECT COALESCE(NULLIF(reason, ''), 'unknown') AS reason, COUNT(*) AS count
+    )
+    .bind(startsAt, nowSec)
+    .first<DeadLetterSummaryRow>();
+  const deadReasonRows = await db
+    .prepare(
+      `SELECT COALESCE(NULLIF(reason, ''), 'unknown') AS reason, COUNT(*) AS count
        FROM telegram_alert_dead_letters
       WHERE expired_at >= ? AND expired_at <= ?
       GROUP BY reason ORDER BY count DESC, reason LIMIT ?`,
-  ).bind(startsAt, nowSec, reasonQueryLimit).all<ReasonRow>();
-  const deadErrorRows = await db.prepare(
-    `SELECT COALESCE(NULLIF(last_error_class, ''), 'unknown') AS reason, COUNT(*) AS count
+    )
+    .bind(startsAt, nowSec, reasonQueryLimit)
+    .all<ReasonRow>();
+  const deadErrorRows = await db
+    .prepare(
+      `SELECT COALESCE(NULLIF(last_error_class, ''), 'unknown') AS reason, COUNT(*) AS count
        FROM telegram_alert_dead_letters
       WHERE expired_at >= ? AND expired_at <= ?
       GROUP BY reason ORDER BY count DESC, reason LIMIT ?`,
-  ).bind(startsAt, nowSec, reasonQueryLimit).all<ReasonRow>();
+    )
+    .bind(startsAt, nowSec, reasonQueryLimit)
+    .all<ReasonRow>();
 
-  const row = core ?? {} as CoreRow;
+  const row = core ?? ({} as CoreRow);
   const sourceCount = integer(row.source_count);
   const plannedSourceCount = integer(row.planned_source_count);
   const targetCount = integer(row.target_count);
@@ -309,12 +378,7 @@ export async function loadTelegramDeliverySliRollup(
       freshness: evidenceAgeSec == null ? "empty" : evidenceAgeSec <= freshnessSec ? "fresh" : "stale",
       freshnessThresholdSec: freshnessSec,
     },
-    detectionToPlan: latency(
-      sourceCount,
-      plannedSourceCount,
-      row.detection_plan_sum_sec,
-      row.detection_plan_max_sec,
-    ),
+    detectionToPlan: latency(sourceCount, plannedSourceCount, row.detection_plan_sum_sec, row.detection_plan_max_sec),
     planToTelegramAcceptance: latency(
       acceptedCount,
       acceptedWithPlanCount,
@@ -338,6 +402,15 @@ export async function loadTelegramDeliverySliRollup(
       executionUnknown: integer(row.execution_unknown_count),
       unresolved: integer(row.unresolved_count),
       telegramAcceptanceRate: ratio(acceptedCount, targetCount),
+    },
+    familyAttribution: {
+      dews: integer(familyAttribution?.dews),
+      depeg: integer(familyAttribution?.depeg),
+      safety: integer(familyAttribution?.safety),
+      launch: integer(familyAttribution?.launch),
+      reserve: integer(familyAttribution?.reserve),
+      mixed: integer(familyAttribution?.mixed),
+      unknown: integer(familyAttribution?.unknown),
     },
     preferenceChangeCancellations: {
       count: integer((cancellationRows.results ?? [])[0]?.total_count),

@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
+import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+
+// Retention prose derives from the shared delivery policy so the public
+// inventory cannot drift from production TTL constants (TGB-028).
+const RISK_ALERT_TTL_HOURS = PENDING_TTL_SEC / 3600;
+const LAUNCH_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.launch / 60;
+const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 
 export const metadata: Metadata = {
   title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
@@ -106,15 +113,15 @@ export default function PrivacyPage() {
               confirmations): 5-minute TTL.
             </li>
             <li>
-              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 2-hour TTL for depeg, DEWS,
-              safety, reserve, and legacy alerts; 90-minute TTL for launch alerts and 45-minute TTL for admin
-              broadcasts.
+              <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
+              for depeg, DEWS, safety, reserve, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
+              alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.
             </li>
             <li>
               <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
-              rows, planning snapshots, rendered target plans, and transport-failure observations; aggregate job
-              manifests remain until their normal prune.
+              rows and per-target item lineage, planning snapshots, rendered target plans, and transport-failure
+              observations; aggregate job manifests remain until their normal prune.
             </li>
             <li>
               <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,

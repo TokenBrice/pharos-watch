@@ -113,6 +113,15 @@ export interface TelegramDeliverySliRollup {
     unresolved: number;
     telegramAcceptanceRate: number | null;
   };
+  familyAttribution: {
+    dews: number;
+    depeg: number;
+    safety: number;
+    launch: number;
+    reserve: number;
+    mixed: number;
+    unknown: number;
+  };
   preferenceChangeCancellations: {
     count: number;
     reasons: TelegramDeliverySliReasonCount[];

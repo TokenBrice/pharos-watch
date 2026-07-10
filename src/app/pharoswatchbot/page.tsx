@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import {
+  PENDING_TTL_SEC,
+  TELEGRAM_ALERT_TTL_SEC,
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+} from "@shared/lib/telegram-delivery-policy";
 import "./telegram-carousel.css";
 import {
   MINI_APP_FEATURES,
@@ -47,6 +52,22 @@ export const metadata: Metadata = buildPageMetadata({
 
 const PROSE_LINK_CLASS =
   "pharos-focus-ring rounded-sm underline underline-offset-4 transition-colors hover:text-foreground";
+
+// Reliability copy derives from the shared delivery policy so the public
+// contract cannot drift from production TTL/cadence constants (TGB-028).
+function formatPolicyDuration(seconds: number): string {
+  if (seconds % 3600 === 0) {
+    const hours = seconds / 3600;
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  }
+  const minutes = Math.round(seconds / 60);
+  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+}
+
+const DISPATCH_CADENCE_LABEL = formatPolicyDuration(TELEGRAM_DISPATCH_INTERVAL_SEC);
+const RISK_ALERT_TTL_LABEL = formatPolicyDuration(PENDING_TTL_SEC);
+const LAUNCH_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.launch);
+const ADMIN_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.adminBroadcast);
 
 function CommandLine({ command }: { command: string }) {
   return (
@@ -295,8 +316,8 @@ function ReliabilityContract() {
             <Radio className="h-4 w-4" aria-hidden="true" /> Source cadence
           </dt>
           <dd className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            The dispatcher runs every 5 minutes. Safety follows the live report-card publish path; reserve drift follows
-            the four-hour live-reserve producer and only fires for supported live-reserve coins.
+            The dispatcher runs every {DISPATCH_CADENCE_LABEL}. Safety follows the live report-card publish path;
+            reserve drift follows the four-hour live-reserve producer and only fires for supported live-reserve coins.
           </dd>
         </div>
         <div className="border-t border-border/55 py-4">
@@ -304,9 +325,9 @@ function ReliabilityContract() {
             <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Bounded delivery
           </dt>
           <dd className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Eligible alerts can send immediately or enter a retry queue. Risk alerts expire after 1 hour; launch and
-            admin alerts after 30 minutes. Terminal and ambiguous outcomes stay visible to operators rather than being
-            silently replayed.
+            Eligible alerts can send immediately or enter a retry queue. Risk alerts expire after {RISK_ALERT_TTL_LABEL};
+            launch alerts after {LAUNCH_ALERT_TTL_LABEL} and admin broadcasts after {ADMIN_ALERT_TTL_LABEL}. Terminal
+            and ambiguous outcomes stay visible to operators rather than being silently replayed.
           </dd>
         </div>
         <div className="border-t border-border/55 py-4">

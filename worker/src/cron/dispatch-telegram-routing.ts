@@ -5,12 +5,7 @@ import {
   splitMessage,
   type ConsolidatedAlerts,
 } from "../lib/telegram-alerts";
-import {
-  sendBatch,
-  type BatchMessage,
-  type BatchResult,
-  type PreSendBatchResult,
-} from "../lib/telegram";
+import { sendBatch, type BatchMessage, type BatchResult, type PreSendBatchResult } from "../lib/telegram";
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
@@ -26,11 +21,8 @@ import {
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
 } from "../lib/telegram-constants";
-import type {
-  PerAlertTypeDelivery,
-  PerAlertTypeDeliveryStats,
-  TelegramAlertType,
-} from "@shared/types/status";
+import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+import type { PerAlertTypeDelivery, PerAlertTypeDeliveryStats, TelegramAlertType } from "@shared/types/status";
 import {
   claimFreshTelegramAlertTargets,
   createTelegramFreshTargetOwner,
@@ -40,10 +32,7 @@ import {
   type TelegramFreshTargetEffectOutcome,
 } from "./telegram-alert-target-effects";
 import { logTelegramEvent } from "../lib/telegram-log";
-import {
-  buildPendingAlertScope,
-  type PendingAlertScopeItem,
-} from "../lib/telegram-pending-provenance";
+import { buildPendingAlertScope, type PendingAlertScopeItem } from "../lib/telegram-pending-provenance";
 import {
   claimTelegramTransportPermit,
   recordTelegramTransportOutcomes as recordTelegramBotWideTransportOutcomes,
@@ -88,6 +77,22 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
 }
 
+export function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertType[] {
+  const types: TelegramAlertType[] = [];
+  if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0)
+    types.push("depeg");
+  if (alerts.dews.length > 0) types.push("dews");
+  if (alerts.safety.length > 0) types.push("safety");
+  if (alerts.launch.length > 0) types.push("launch");
+  if (alerts.reserve.length > 0) types.push("reserve");
+  return types;
+}
+
+export function strictestAlertTtlSec(alertTypes: readonly TelegramAlertType[]): number {
+  if (alertTypes.length === 0) return TELEGRAM_ALERT_TTL_SEC.legacy;
+  return Math.min(...alertTypes.map((type) => TELEGRAM_ALERT_TTL_SEC[type]));
+}
+
 export interface SubscriberRow {
   chat_id: string;
   last_active_at: number;
@@ -128,6 +133,7 @@ export interface RoutedSubscriberAlert {
   chunks: string[];
   disableNotification: boolean;
   alertType: TelegramAlertType;
+  alertTypes?: readonly TelegramAlertType[];
   sourceEventId?: string;
   preferenceGeneration?: number;
   alertScope?: PendingAlertScopeItem[];
@@ -205,10 +211,7 @@ function addAlertToChat<T>(
   const existing = alertsByChat.get(sub.chat_id);
   if (existing) {
     existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
-    existing.preferenceGeneration = Math.min(
-      existing.preferenceGeneration ?? 0,
-      preferenceGeneration,
-    );
+    existing.preferenceGeneration = Math.min(existing.preferenceGeneration ?? 0, preferenceGeneration);
     append(existing.alerts).push(event);
     if (viaGlobal) existing.globalCount += 1;
     else existing.specificCount += 1;
@@ -364,6 +367,7 @@ export interface PlannedSubscriberAlert {
   chatId: string;
   entry: AlertsByChatEntry;
   alertType: TelegramAlertType;
+  alertTypes?: readonly TelegramAlertType[];
   sourceEventId?: string;
   /** Cheap chunk-count estimate (no formatting); see `estimateChatChunks`. */
   estimatedChunks: number;
@@ -388,10 +392,7 @@ function countChatAlerts(alerts: ConsolidatedAlerts): number {
  * mirroring the load-harness `ALERTS_PER_MESSAGE_CHUNK` model. Always >= 1.
  */
 function estimateChatChunks(alerts: ConsolidatedAlerts): number {
-  return Math.max(
-    1,
-    Math.ceil(countChatAlerts(alerts) / TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE),
-  );
+  return Math.max(1, Math.ceil(countChatAlerts(alerts) / TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE));
 }
 
 /**
@@ -408,6 +409,7 @@ export function planSubscriberQueue(
       chatId,
       entry,
       alertType: dominantAlertType(entry.alerts),
+      alertTypes: alertTypesForConsolidated(entry.alerts),
       sourceEventId,
       estimatedChunks: estimateChatChunks(entry.alerts),
     }))
@@ -457,6 +459,7 @@ export function formatPlannedSubscriber(
     chunks: splitMessage(canonicalHtml),
     disableNotification: resolveDisableNotification(plan.entry),
     alertType: plan.alertType,
+    alertTypes: plan.alertTypes,
   };
   if (plan.sourceEventId) {
     routed.sourceEventId = plan.sourceEventId;
@@ -536,7 +539,9 @@ export function expandSubscriberChunks(
         disableNotification: sub.disableNotification,
         replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex, { privateChat }),
         chunkIndex,
-        alertType: sub.alertType,
+        ...((sub.alertTypes ?? [sub.alertType]).length === 1
+          ? { alertType: (sub.alertTypes ?? [sub.alertType])[0] }
+          : {}),
         ...(sub.sourceEventId && sub.preferenceGeneration != null && sub.alertScope
           ? {
               sourceEventId: sub.sourceEventId,
@@ -568,117 +573,108 @@ export async function deliverFreshAlerts(
   const transportOwner = `fresh-transport:${freshEffectOwner}`;
   let waveTransportPermit: TelegramTransportPermit | null = null;
   const freshTargetClaimsByKey = new Map<string, TelegramFreshTargetClaim>();
-  const sendResults = sendList.length > 0
-    ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, {
-        softDeadlineAtMs,
-        beforeSendBatch: async (entries) => {
-          throwIfAborted(signal);
-          const permitNowSec = Math.floor(Date.now() / 1000);
-          waveTransportPermit = await claimTelegramTransportPermit(db, {
-            mode: "fresh",
-            owner: transportOwner,
-            nowSec: permitNowSec,
-            requestedDistinctChats: entries.length,
-          });
-          if (!waveTransportPermit.allowed) {
+  const sendResults =
+    sendList.length > 0
+      ? await sendBatch(sendList, botToken, SEND_BATCH_SIZE, signal, {
+          softDeadlineAtMs,
+          beforeSendBatch: async (entries) => {
+            throwIfAborted(signal);
+            const permitNowSec = Math.floor(Date.now() / 1000);
+            waveTransportPermit = await claimTelegramTransportPermit(db, {
+              mode: "fresh",
+              owner: transportOwner,
+              nowSec: permitNowSec,
+              requestedDistinctChats: entries.length,
+            });
+            if (!waveTransportPermit.allowed) {
+              const skipped = new Map<number, PreSendBatchResult>();
+              const skip = telegramTransportPermitSkip(waveTransportPermit, permitNowSec);
+              for (const entry of entries) skipped.set(entry.index, skip);
+              return skipped;
+            }
+            const identities = entries.map(({ item }) => {
+              const targetKey = buildDedupeKey(item);
+              const jobId = freshTargetJobIds.get(targetKey);
+              if (!jobId) {
+                throw new Error("Telegram fresh target has no durable manifest identity");
+              }
+              return { jobId, targetKey };
+            });
+            const { claims, skippedTargetKeys } = await claimFreshTelegramAlertTargets(
+              db,
+              identities,
+              freshEffectOwner,
+              Math.floor(Date.now() / 1000),
+              signal,
+            );
+            await markFreshTelegramAlertTargetsSending(db, [...claims.values()], Math.floor(Date.now() / 1000), signal);
+            for (const [targetKey, claim] of claims) freshTargetClaimsByKey.set(targetKey, claim);
+            if (skippedTargetKeys.size === 0) return;
             const skipped = new Map<number, PreSendBatchResult>();
-            const skip = telegramTransportPermitSkip(waveTransportPermit, permitNowSec);
-            for (const entry of entries) skipped.set(entry.index, skip);
+            for (const entry of entries) {
+              if (skippedTargetKeys.has(buildDedupeKey(entry.item))) {
+                skipped.set(entry.index, buildPreSendFenceSkip());
+              }
+            }
             return skipped;
-          }
-          const identities = entries.map(({ item }) => {
-            const targetKey = buildDedupeKey(item);
-            const jobId = freshTargetJobIds.get(targetKey);
-            if (!jobId) {
-              throw new Error("Telegram fresh target has no durable manifest identity");
+          },
+          afterSendBatch: async (entries, results) => {
+            const completedAt = Math.floor(Date.now() / 1000);
+            const outcomes: TelegramFreshTargetEffectOutcome[] = [];
+            const retryHandoffs: FreshRetryEffectHandoff[] = [];
+            for (const [index, entry] of entries.entries()) {
+              const result = results[index];
+              if (!result || result.attempted === false) continue;
+              const targetKey = buildDedupeKey(entry.item);
+              const claim = freshTargetClaimsByKey.get(targetKey);
+              if (!claim) {
+                throw new Error("Telegram fresh target send has no confirmed owner");
+              }
+              if (result.ok) {
+                outcomes.push({ ...claim, status: "sent", at: completedAt });
+                continue;
+              }
+              if (isAmbiguousFreshSendResult(result)) {
+                outcomes.push({
+                  ...claim,
+                  status: "failed",
+                  at: completedAt,
+                  errorClass: result.errorClass,
+                  executionUnknown: true,
+                });
+                continue;
+              }
+              if (result.blocked || !result.retryable) {
+                outcomes.push({
+                  ...claim,
+                  status: "failed",
+                  at: completedAt,
+                  errorClass: result.errorClass,
+                });
+                continue;
+              }
+              retryHandoffs.push({ message: entry.item, result, claim, at: completedAt });
             }
-            return { jobId, targetKey };
-          });
-          const { claims, skippedTargetKeys } = await claimFreshTelegramAlertTargets(
-            db,
-            identities,
-            freshEffectOwner,
-            Math.floor(Date.now() / 1000),
-            signal,
-          );
-          await markFreshTelegramAlertTargetsSending(
-            db,
-            [...claims.values()],
-            Math.floor(Date.now() / 1000),
-            signal,
-          );
-          for (const [targetKey, claim] of claims) freshTargetClaimsByKey.set(targetKey, claim);
-          if (skippedTargetKeys.size === 0) return;
-          const skipped = new Map<number, PreSendBatchResult>();
-          for (const entry of entries) {
-            if (skippedTargetKeys.has(buildDedupeKey(entry.item))) {
-              skipped.set(entry.index, buildPreSendFenceSkip());
+            if (retryHandoffs.length > 0) {
+              if (!handoffRetryableFreshEffects) {
+                throw new Error("Telegram fresh retry handoff is not configured");
+              }
+              await handoffRetryableFreshEffects(retryHandoffs);
             }
-          }
-          return skipped;
-        },
-        afterSendBatch: async (entries, results) => {
-          const completedAt = Math.floor(Date.now() / 1000);
-          const outcomes: TelegramFreshTargetEffectOutcome[] = [];
-          const retryHandoffs: FreshRetryEffectHandoff[] = [];
-          for (const [index, entry] of entries.entries()) {
-            const result = results[index];
-            if (!result || result.attempted === false) continue;
-            const targetKey = buildDedupeKey(entry.item);
-            const claim = freshTargetClaimsByKey.get(targetKey);
-            if (!claim) {
-              throw new Error("Telegram fresh target send has no confirmed owner");
+            await finalizeFreshTelegramAlertTargetEffects(db, outcomes, signal);
+            const transportPermit = waveTransportPermit;
+            waveTransportPermit = null;
+            if (transportPermit?.allowed) {
+              const attemptedOutcomes = results
+                .filter((result) => result.attempted !== false)
+                .map((result) => ({ chatId: result.chatId, result }));
+              if (attemptedOutcomes.length > 0) {
+                await recordTelegramBotWideTransportOutcomes(db, transportPermit, attemptedOutcomes, completedAt);
+              }
             }
-            if (result.ok) {
-              outcomes.push({ ...claim, status: "sent", at: completedAt });
-              continue;
-            }
-            if (isAmbiguousFreshSendResult(result)) {
-              outcomes.push({
-                ...claim,
-                status: "failed",
-                at: completedAt,
-                errorClass: result.errorClass,
-                executionUnknown: true,
-              });
-              continue;
-            }
-            if (result.blocked || !result.retryable) {
-              outcomes.push({
-                ...claim,
-                status: "failed",
-                at: completedAt,
-                errorClass: result.errorClass,
-              });
-              continue;
-            }
-            retryHandoffs.push({ message: entry.item, result, claim, at: completedAt });
-          }
-          if (retryHandoffs.length > 0) {
-            if (!handoffRetryableFreshEffects) {
-              throw new Error("Telegram fresh retry handoff is not configured");
-            }
-            await handoffRetryableFreshEffects(retryHandoffs);
-          }
-          await finalizeFreshTelegramAlertTargetEffects(db, outcomes, signal);
-          const transportPermit = waveTransportPermit;
-          waveTransportPermit = null;
-          if (transportPermit?.allowed) {
-            const attemptedOutcomes = results
-              .filter((result) => result.attempted !== false)
-              .map((result) => ({ chatId: result.chatId, result }));
-            if (attemptedOutcomes.length > 0) {
-              await recordTelegramBotWideTransportOutcomes(
-                db,
-                transportPermit,
-                attemptedOutcomes,
-                completedAt,
-              );
-            }
-          }
-        },
-      })
-    : [];
+          },
+        })
+      : [];
   const blockedChats = new Set<string>();
   const retryableFreshMessages: Array<{ message: BatchMessage; result: BatchResult }> = [];
   const resultsByChat = new Map<string, BatchResult[]>();

@@ -13,10 +13,7 @@ import {
   isValidPendingSourceEventId,
   type PendingAlertScopeItem,
 } from "../lib/telegram-pending-provenance";
-import {
-  expandSubscriberChunks,
-  type RoutedSubscriberAlert,
-} from "./dispatch-telegram-routing";
+import { expandSubscriberChunks, type RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
 import { buildDedupeKey } from "./telegram-pending";
 
@@ -38,6 +35,7 @@ export interface PersistedTelegramTargetPlanV1 {
   sourceEventId: string;
   chatId: string;
   alertType: TelegramAlertType;
+  alertTypes: TelegramAlertType[];
   preferenceGeneration: number;
   canonicalHtml: string;
   disableNotification: boolean;
@@ -55,8 +53,7 @@ export interface SerializedTelegramTargetPlan {
 }
 
 export type ParsedTelegramTargetPlan =
-  | { kind: "ok"; value: PersistedTelegramTargetPlanV1 }
-  | { kind: "invalid"; reason: string };
+  { kind: "ok"; value: PersistedTelegramTargetPlanV1 } | { kind: "invalid"; reason: string };
 
 function isSafeNonNegativeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && Number(value) >= 0;
@@ -70,8 +67,9 @@ function normalizedItemKeys(value: unknown): string[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS) {
     return null;
   }
-  const keys = value.filter((item): item is string =>
-    isBoundedString(item, 200) && !/[\u0000-\u001f\u007f]/.test(item));
+  const keys = value.filter(
+    (item): item is string => isBoundedString(item, 200) && !/[\u0000-\u001f\u007f]/.test(item),
+  );
   if (keys.length !== value.length) return null;
   const normalized = [...new Set(keys)].sort();
   return normalized.length === keys.length ? normalized : null;
@@ -95,9 +93,7 @@ export async function serializeTelegramTargetPlan(
 
   const messages = expandSubscriberChunks([routed]);
   if (messages.length === 0 || messages.length > TELEGRAM_TARGET_PLAN_MAX_CHUNKS) {
-    throw new Error(
-      `Telegram target plan chunk count is outside 1-${TELEGRAM_TARGET_PLAN_MAX_CHUNKS}`,
-    );
+    throw new Error(`Telegram target plan chunk count is outside 1-${TELEGRAM_TARGET_PLAN_MAX_CHUNKS}`);
   }
   if (
     routed.canonicalHtml.length === 0 ||
@@ -108,9 +104,7 @@ export async function serializeTelegramTargetPlan(
 
   const itemKeys = listTelegramAlertItemKeys(routed.alerts);
   if (itemKeys.length === 0 || itemKeys.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS) {
-    throw new Error(
-      `Telegram target plan item count is outside 1-${TELEGRAM_TARGET_PLAN_MAX_ITEMS}`,
-    );
+    throw new Error(`Telegram target plan item count is outside 1-${TELEGRAM_TARGET_PLAN_MAX_ITEMS}`);
   }
   const alertScopeJson = serializePendingAlertScope(routed.alertScope);
   const payload: PersistedTelegramTargetPlanV1 = {
@@ -118,6 +112,7 @@ export async function serializeTelegramTargetPlan(
     sourceEventId: routed.sourceEventId,
     chatId: routed.chatId,
     alertType: routed.alertType,
+    alertTypes: [...(routed.alertTypes ?? [routed.alertType])],
     preferenceGeneration: routed.preferenceGeneration!,
     canonicalHtml: routed.canonicalHtml,
     disableNotification: routed.disableNotification,
@@ -158,7 +153,7 @@ export async function parseTelegramTargetPlan(
     if (!/^[0-9a-f]{64}$/.test(expectedDigest)) {
       return { kind: "invalid", reason: "target_plan_digest_invalid" };
     }
-    if (await sha256Hex(payloadJson) !== expectedDigest) {
+    if ((await sha256Hex(payloadJson)) !== expectedDigest) {
       return { kind: "invalid", reason: "target_plan_digest_mismatch" };
     }
   }
@@ -184,6 +179,14 @@ export async function parseTelegramTargetPlan(
     Number(value.targetExpiresAt) <= 0
   ) {
     return { kind: "invalid", reason: "target_plan_shape_invalid" };
+  }
+  const alertTypes = value.alertTypes == null ? [value.alertType] : value.alertTypes;
+  if (!Array.isArray(alertTypes) || alertTypes.length === 0 || alertTypes.some((type) => !isTelegramAlertType(type))) {
+    return { kind: "invalid", reason: "target_plan_alert_types_invalid" };
+  }
+  const normalizedAlertTypes = [...new Set(alertTypes as TelegramAlertType[])];
+  if (normalizedAlertTypes.length !== alertTypes.length || !normalizedAlertTypes.includes(value.alertType)) {
+    return { kind: "invalid", reason: "target_plan_alert_types_invalid" };
   }
   const alertScope = parsePendingAlertScope(value.alertScopeJson);
   if (alertScope.kind !== "ok" || alertScope.value.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS) {
@@ -241,6 +244,7 @@ export async function parseTelegramTargetPlan(
       sourceEventId: value.sourceEventId,
       chatId: value.chatId,
       alertType: value.alertType,
+      alertTypes: normalizedAlertTypes,
       preferenceGeneration: value.preferenceGeneration,
       canonicalHtml: value.canonicalHtml,
       disableNotification: value.disableNotification,
@@ -267,7 +271,7 @@ export function targetPlanMessageToBatchMessage(
     canonicalHtml: plan.canonicalHtml,
     disableNotification: plan.disableNotification,
     chunkIndex: message.chunkIndex,
-    alertType: plan.alertType,
+    ...(plan.alertTypes.length === 1 ? { alertType: plan.alertTypes[0] } : {}),
     sourceEventId: plan.sourceEventId,
     preferenceGeneration: plan.preferenceGeneration,
     alertScope: scope.value as PendingAlertScopeItem[],

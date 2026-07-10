@@ -27,6 +27,12 @@ import {
   TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "@shared/lib/telegram-bot-registration";
+import {
+  TELEGRAM_ALERT_FAMILIES,
+  TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
+} from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
+import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 vi.mock("next/image", () => ({
   default: ({
@@ -100,15 +106,21 @@ function findJsonLdNode(nodes: readonly JsonLdRecord[], type: string): JsonLdRec
 describe("PharosWatchBotPage", () => {
   it("keeps public metadata and copy current", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
+    // Metadata and registration copy derive from the canonical family manifest.
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
+    expect(TELEGRAM_BOT_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
     expect(TELEGRAM_PAGE_DESCRIPTION).toContain("reasoned safety-grade shifts");
     expect(TELEGRAM_PAGE_DESCRIPTION).toContain("live reserve-mix drift");
     expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
     expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
-    expect(TELEGRAM_BOT_DESCRIPTION).toContain("live reserve-mix drift");
   });
 
   it("keeps the public alert and command contracts complete", () => {
     expect(TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.key)).toEqual(["dews", "depeg", "safety", "launch", "reserve"]);
+    // Example bubbles must be the canonical formatter-verified samples.
+    for (const example of TELEGRAM_ALERT_EXAMPLES) {
+      expect(example.content).toBe(TELEGRAM_PUBLIC_ALERT_SAMPLES[example.key].message);
+    }
 
     const publicCommands = new Set(
       TELEGRAM_COMMAND_GROUPS.flatMap((group) =>
@@ -173,7 +185,9 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
-    expect(screen.getByText(/Risk alerts expire after 1 hour/i)).toBeTruthy();
+    // The reliability contract derives its TTLs from the shared delivery policy.
+    const riskTtlClaim = `Risk alerts expire after ${PENDING_TTL_SEC / 3600} hours`;
+    expect(screen.getByText((content) => content.includes(riskTtlClaim))).toBeTruthy();
     expect(screen.getByText(/reserve drift follows the four-hour live-reserve producer/i)).toBeTruthy();
     const examples = screen.getByRole("heading", { name: "What lands in your chat" });
     const setup = screen.getByRole("heading", { name: "Start in two minutes" });
@@ -210,13 +224,14 @@ describe("PharosWatchBotPage", () => {
       operatingSystem: "Telegram",
       url: "https://pharos.watch/pharoswatchbot/",
       installUrl: PHAROSWATCHBOT_BOT_URL,
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, launch, and reserve-drift alerts.",
+      description: `Opt-in Telegram bot for stablecoin alerts: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": "https://pharos.watch#organization" },
     });
     expect(application.featureList).toHaveLength(9);
-    expect(application.featureList).toContain("Safety grade alerts with reason lines for live score drivers");
-    expect(application.featureList).toContain("Live reserve-mix drift alerts for covered stablecoins");
+    for (const family of TELEGRAM_ALERT_FAMILIES) {
+      expect(application.featureList).toContain(family.featureLine);
+    }
     expect(application.featureList).toContain(
       "Telegram Mini App for visual watchlist, settings, and presets management",
     );

@@ -1,3 +1,5 @@
+import { TELEGRAM_ALERT_FAMILY_PHRASE_LIST } from "./telegram-alert-families";
+
 export const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
 
 // Canonical @-handle for the bot. Single source of truth for the dispatch
@@ -12,8 +14,10 @@ export const TELEGRAM_BOT_USERNAME = "PharosWatchBot";
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
   "Stablecoin risk alerts and a visual control panel for watchlists, quiet hours, and tuning.";
+// The family list derives from the canonical alert-family manifest so the
+// profile copy stays count-free and cannot drift from the runtime families.
 export const TELEGRAM_BOT_DESCRIPTION =
-  "Pharos Watch pushes alerts across the tracked stablecoin universe: DEWS stress bands, depeg events, safety grade changes, new launches, and live reserve-mix drift. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/";
+  `Pharos Watch pushes alerts across the tracked stablecoin universe: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/`;
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
