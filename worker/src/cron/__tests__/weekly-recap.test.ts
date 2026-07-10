@@ -6,8 +6,9 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
 
-vi.mock("../../lib/telegram", () => ({
-  postDigestToTelegram: vi.fn(),
+vi.mock("../../lib/telegram-digest-outbox", () => ({
+  enqueueTelegramDigestEdition: vi.fn(),
+  deliverTelegramDigestEdition: vi.fn(),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({
@@ -17,7 +18,10 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 import { generateWeeklyRecap } from "../weekly-recap";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { postDigestToTelegram } from "../../lib/telegram";
+import {
+  deliverTelegramDigestEdition,
+  enqueueTelegramDigestEdition,
+} from "../../lib/telegram-digest-outbox";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DIGEST_MODEL } from "../../lib/constants";
 
@@ -140,7 +144,23 @@ describe("generateWeeklyRecap", () => {
     vi.setSystemTime(new Date("2026-03-30T12:00:00.000Z"));
     vi.clearAllMocks();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(postDigestToTelegram).mockResolvedValue(undefined);
+    vi.mocked(enqueueTelegramDigestEdition).mockResolvedValue({
+      created: true,
+      payloadMatched: true,
+      editionKey: "weekly:2026-03-30",
+      state: "pending",
+      chunks: ["stored weekly payload"],
+    });
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValue({
+      editionKey: "weekly:2026-03-30",
+      state: "sent",
+      outcome: "sent",
+      chunksSent: 1,
+      nextChunkIndex: 1,
+      chunkCount: 1,
+      errorClass: null,
+      retryAfterSec: null,
+    });
   });
 
   afterEach(() => {
@@ -160,12 +180,23 @@ describe("generateWeeklyRecap", () => {
     expect(result.itemCount).toBe(1);
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("telegram: ok");
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
-    expect(postDigestToTelegram).toHaveBeenCalledWith(
-      "Weekly Recap: Weekly Calm",
-      VALID_WEEKLY_EXTENDED,
-      "2026-03-30-weekly",
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        editionKey: "weekly:2026-03-30",
+        digestKind: "weekly",
+        targetChatId: "chat",
+        title: "Weekly Recap: Weekly Calm",
+        extended: VALID_WEEKLY_EXTENDED,
+        date: "2026-03-30-weekly",
+      }),
+      undefined,
+    );
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
       { botToken: "bot", chatId: "chat" },
+      "weekly:2026-03-30",
+      undefined,
     );
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
@@ -274,7 +305,7 @@ describe("generateWeeklyRecap", () => {
       },
     });
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
   it("returns a neutral skipped result when this week's recap already exists", async () => {
@@ -308,13 +339,22 @@ describe("generateWeeklyRecap", () => {
       existingGeneratedAt,
     });
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
-    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
+      editionKey: "weekly:2026-03-30",
+      state: "pending",
+      outcome: "pending",
+      chunksSent: 0,
+      nextChunkIndex: 0,
+      chunkCount: 1,
+      errorClass: "server_error",
+      retryAfterSec: null,
+    });
 
     const result = await generateWeeklyRecap(
       db,
@@ -323,7 +363,8 @@ describe("generateWeeklyRecap", () => {
     );
 
     expect(result.metadata).toContain("telegram: failed:");
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
 
     const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
     const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
@@ -370,11 +411,14 @@ describe("generateWeeklyRecap", () => {
     expect(result.metadata).toContain("telegram: ok");
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
-    expect(postDigestToTelegram).toHaveBeenCalledWith(
-      "Weekly Recap: Weekly Calm",
-      VALID_WEEKLY_EXTENDED,
-      "2026-03-30-weekly",
-      { botToken: "bot", chatId: "chat" },
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        title: "Weekly Recap: Weekly Calm",
+        extended: VALID_WEEKLY_EXTENDED,
+        date: "2026-03-30-weekly",
+      }),
+      undefined,
     );
     const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
     const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
@@ -650,6 +694,6 @@ describe("generateWeeklyRecap", () => {
 
     expect(result).toEqual({ metadata: "skipped: anthropic circuit open" });
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 });

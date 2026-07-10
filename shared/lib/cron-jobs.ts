@@ -499,10 +499,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     label: "Weekly recap",
     group: "daily",
     intervalSec: 604800,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0810Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Telegram post (sequential)
-    connectionGroup: "digest-chain",
+    connectionGroup: "weekly-recap",
   },
   {
     job: "discovery-scan",
@@ -510,7 +510,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     intervalSec: 604800,
     scheduleKey: "daily0810Utc",
-    triggerMode: "isolated",
+    triggerMode: "shared",
     maxConnections: 1, // CoinGecko stablecoins market list fetch
   },
   {
@@ -618,6 +618,16 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
     statusTracked: false,
     notes:
       "Retries due durable webhook deliveries serially after the status-tracked Telegram chain, independent of Telegram bot configuration.",
+  },
+  {
+    job: "telegram-digest-outbox-drain",
+    label: "Telegram digest outbox drain",
+    scheduleKey: "digestTriggerPoll",
+    maxConnections: 1,
+    connectionGroup: "digest-trigger-poll-chain",
+    statusTracked: false,
+    notes:
+      "Retries immutable Telegram daily/weekly digest editions without regenerating copy and surfaces ambiguous sends for operator reconciliation.",
   },
   {
     job: "digest-trigger-poll",

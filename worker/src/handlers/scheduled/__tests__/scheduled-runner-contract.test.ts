@@ -63,6 +63,20 @@ describe("scheduled runner contract", () => {
     expect(timeoutMs - PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS).toBeGreaterThanOrEqual(2 * 60_000);
   });
 
+  it("gives Monday daily and weekly digest generation independent trigger budgets", () => {
+    expect(SCHEDULED_SLOT_PLANS.daily0805Utc.jobChains).toContainEqual(["daily-digest"]);
+    expect(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0805Utc)).not.toContain("weekly-recap");
+    expect(SCHEDULED_SLOT_PLANS.daily0810Utc.jobChains).toContainEqual(["weekly-recap"]);
+    expect(SCHEDULED_SLOT_PLANS.daily0810Utc.jobChains).toContainEqual(["discovery-scan"]);
+
+    const daily = CRON_JOB_DEFINITIONS.find((definition) => definition.job === "daily-digest");
+    const weekly = CRON_JOB_DEFINITIONS.find((definition) => definition.job === "weekly-recap");
+    expect(daily?.scheduleKey).toBe("daily0805Utc");
+    expect(weekly?.scheduleKey).toBe("daily0810Utc");
+    expect(CRON_TIMEOUT_MS["daily-digest"]).toBe(14 * 60_000);
+    expect(CRON_TIMEOUT_MS["weekly-recap"]).toBe(12 * 60_000);
+  });
+
   it("keeps shared cron job identities explicit", () => {
     const schedulesByJob = new Map<string, CronScheduleKey[]>();
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {

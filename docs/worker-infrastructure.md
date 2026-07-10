@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 20 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 48 `CRON_JOB_DEFINITIONS` jobs across 19 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces for Telegram registration reconciliation, durable alert-broker delivery draining, and the separate `*/5 * * * *` digest-trigger poll slot. The isolated five-minute reserve-recovery lane is the 20th expression and the final slot under the current trigger soft cap.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 20 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 48 `CRON_JOB_DEFINITIONS` jobs across 19 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces for Telegram registration reconciliation, durable alert-broker delivery draining, exact-payload Telegram digest retries, and the separate `*/5 * * * *` digest-trigger poll slot. The isolated five-minute reserve-recovery lane is the 20th expression and the final slot under the current trigger soft cap.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
 
@@ -590,13 +590,14 @@ Safety-grade fan-out on this lane is now gated by the generation-aware live sour
 
 ### Trigger 14: `*/5 * * * *` (manual digest trigger poll)
 
-| Job surface                   | Function                     | File                                                   | Documentation                           |
-| ----------------------------- | ---------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| `daily-digest` lease consumer | `runDigestTriggerPollSlot()` | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
+| Job surface                           | Function                            | File                                                   | Documentation                           |
+| ------------------------------------- | ----------------------------------- | ------------------------------------------------------ | --------------------------------------- |
+| `telegram-digest-outbox-drain`        | `drainTelegramDigestOutbox()`       | `worker/src/lib/telegram-digest-outbox.ts`             | [Digest Pipeline](./digest-pipeline.md) |
+| `daily-digest` lease consumer         | `runDigestTriggerPollSlot()`        | `worker/src/handlers/scheduled/digest-trigger-poll.ts` | [Digest Pipeline](./digest-pipeline.md) |
 
-This slot polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. When a request is pending, it runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal, reportProgress)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. It also records every poll, including the expected no-pending-request path, under the budget-only `digest-trigger-poll` telemetry key surfaced by `/api/status.budgetOnlySurfaces`. It is a runner slot, not a separate status-tracked cron job. `npm run check:cron-connections` still models it as the budget-only `digest-trigger-poll` entry with the same one-connection peak used by the daily digest chain.
+This slot first drains up to four due immutable Telegram digest editions, then polls the `digest:force-run-request` cache key written by `POST /api/trigger-digest`. Both stages are serial one-connection budget-only surfaces, so the trigger remains at a 1/6 peak. The outbox drain retries stored chunks without invoking Anthropic, honors Bot API `retry_after`, and leaves ambiguous/permanent outcomes for operator reconciliation. When a force request is pending, the slot runs `generateDailyDigest(db, anthropicApiKey, buildTwitterCreds(env), true, buildTelegramCreds(env), signal, reportProgress)` under the existing `daily-digest` lease, clears or preserves the flag according to the lease outcome, and writes `digest:last-trigger-result` for the ops UI. Both surfaces publish compact telemetry under `/api/status.budgetOnlySurfaces` and do not create separate status-tracked cron jobs.
 
-Forced digest runs inherit the `daily-digest` progress stream, including preflight, input collection, Anthropic generation, persistence, and delivery stages. Twitter/X and Telegram digest delivery both atomically claim same-day idempotency markers before posting and roll those markers back only when delivery fails; if a marker claim fails, the channel aborts before sending so a cache outage cannot create duplicate digests on the next run.
+Forced digest runs inherit the `daily-digest` progress stream, including preflight, input collection, Anthropic generation, persistence, and delivery stages. Twitter/X keeps its same-day marker. Telegram instead inserts the exact rendered edition before sending; an immutable-key payload mismatch degrades the run, and any uncertain post-acceptance state is fenced from automatic replay.
 
 ### Trigger 15: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -617,19 +618,19 @@ Forced digest runs inherit the `daily-digest` progress stream, including preflig
 | --------------- | ----------------------- | ---------------------------------- | --------------------------------------- |
 | `sync-bluechip` | `syncBluechip()`        | `worker/src/cron/sync-bluechip.ts` | This doc (below)                        |
 | `daily-digest`  | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts`  | [Digest Pipeline](./digest-pipeline.md) |
-| `weekly-recap`  | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`  | [Digest Pipeline](./digest-pipeline.md) |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections) and `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest) use <=4 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` runs Monday-only and returns immediately on other days. Reliability is failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, or `weekly-recap` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections) and `daily-digest` (1 long-lived Anthropic/API connection at a time) use <=4 concurrent external connections. The 5-minute offset from Trigger 14 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. Weekly recap no longer consumes this invocation's wall-clock budget.
 
 `daily-digest` and `weekly-recap` report digest-specific in-flight stages for preflight, input collection, Anthropic generation, persistence, Telegram/Twitter delivery, skips, and completion. Metadata includes provider family, phase, prompt/input counts, quality issue counts, delivery status, and weekly cursor boundaries where relevant.
 
-### Trigger 17: `10 8 * * *` (daily at 08:10 UTC — coverage discovery)
+### Trigger 17: `10 8 * * *` (daily at 08:10 UTC — weekly work)
 
-| Job              | Function             | File                                | Documentation                       |
-| ---------------- | -------------------- | ----------------------------------- | ----------------------------------- |
-| `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md) |
+| Job              | Function                | File                                | Documentation                           |
+| ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
+| `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
+| `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 
-**Connection budget:** isolated daily trigger for the weekly CoinGecko stablecoin category scan. The job runs Monday-only and returns immediately on other days; isolating it keeps the 08:05 digest/Bluechip lane at 4/6 peak connections.
+**Connection budget:** `discovery-scan` and `weekly-recap` run as independent parallel Monday-only jobs at a 2/6 peak. The weekly recap therefore receives its full 12-minute wrapper budget instead of starting after the daily digest inside the 08:05 invocation.
 
 ### Trigger 18: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
@@ -670,7 +671,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 `npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
 
-Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `digest-trigger-poll`, Telegram registration reconciliation, and alert-broker delivery drain entries even though those surfaces do not create separate `/api/status` job rows.
+Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `telegram-digest-outbox-drain`, `digest-trigger-poll`, Telegram registration reconciliation, and alert-broker delivery drain entries even though those surfaces do not create separate `/api/status` job rows.
 
 Fetch-heavy provider phases should use `worker/src/lib/provider-execution.ts` for lane permits, provider-local permits, timeout signal composition, circuit gating, and response-body policy. `createProviderExecutionContextForJob()` derives the lane ceiling from `CRON_CONNECTION_BUDGET_ENTRIES` and refuses budgets above the repo's 5/6 headroom-full limit. The first production pilot is the `sync-dex-liquidity` direct API phase: it keeps the existing two-provider fetch cap, wraps each protocol provider in a provider policy, and records circuit outcomes through the existing `circuit:<source>` breaker keys.
 
@@ -801,7 +802,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-dex-liquidity`       | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                                     |
 | `sync-dex-discovery`       | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                              |
 | `sync-blacklist`           | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                                        |
-| `weekly-recap`             | 12 min  | Weekly Anthropic recap, chained after the daily digest on Mondays                                                                                                                                                      |
+| `weekly-recap`             | 12 min  | Weekly Anthropic recap on the independent 08:10 Monday trigger                                                                                                                                                         |
 | `sync-live-reserves`       | 12 min  | Multi-adapter reserve fetching with per-adapter timeouts                                                                                                                                                               |
 | `sync-mint-burn`           | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime, with a 9-minute internal guard before the wrapper timeout                                                                                       |
 | `sync-mint-burn-extended`  | 10 min  | Long-tail mint/burn lane with its own run-state and the same 9-minute internal guard                                                                                                                                   |
@@ -1275,7 +1276,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, budget-only surface telemetry, publication-generation health, provider circuit health, data-invariant canaries, derived dependency health, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 48 cron jobs across 19 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections` and in the top-level `budgetOnlySurfaces` array for observability. That includes Telegram registration reconciliation, durable alert-broker delivery draining, and the `*/5 * * * *` digest-trigger poll slot:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, stale progress/lease artifacts, latest cron event markers, budget-only surface telemetry, publication-generation health, provider circuit health, data-invariant canaries, derived dependency health, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 48 cron jobs across 19 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections` and in the top-level `budgetOnlySurfaces` array for observability. That includes Telegram registration reconciliation, durable alert-broker delivery draining, exact-payload Telegram digest outbox draining, and the `*/5 * * * *` digest-trigger poll slot:
 
 Default reads use the raw status snapshot produced by `status-self-check` and recompute only the lightweight response wrappers, current status-state/probe/timeline views, and admin supplements. Publication health is one of those live admin supplements: it reads existing `dex_liquidity_publication_generations` and `yield_publication_generations` rows into `publicationHealth`, reads migrated `surface_publication_generations` rows when present, and falls back to the validated canonical `stablecoins` cache, exact `cache["dews:published-generation"]` plus canonical DEWS rows, `stability_index_samples`, and `cache["report_card_cache"]` for stablecoins, DEWS, PSI, and report-card cache publication status until writers are migrated. DEWS dataset freshness likewise uses the validated publication pointer rather than raw table maxima. `providerCircuitHealth` reads authoritative `circuit:<source>` cache rows for the bounded active provider allowlist into open/half-open breaker counts by provider family; loader failures surface as `sectionErrors.providerCircuitHealth` and do not change availability. `canaries` reads the latest row per check from `worker_canary_runs`; loader failures surface as `sectionErrors.canaries` and do not change availability. `dependencyHealth` is then derived in-process from the raw cache/cron maps, `publicationHealth`, and `shared/lib/data-dependency-registry.ts`; it performs no additional D1 reads and is advisory only. Snapshot age is bounded to 30 minutes; operators can force the previous live raw computation path with `GET /api/status?refresh=live`.
 
@@ -1322,7 +1323,7 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `reserve-post-sync-watchdog`      | 14,400s (4h)     | `11 */4 * * *`                                              |
 | `sync-bluechip`                   | 86,400s (24h)    | `5 8 * * *`                                                 |
 | `daily-digest`                    | 86,400s (24h)    | `5 8 * * *`                                                 |
-| `weekly-recap`                    | 604,800s (7d)    | `5 8 * * *`                                                 |
+| `weekly-recap`                    | 604,800s (7d)    | `10 8 * * *` (Monday-only)                                  |
 | `discovery-scan`                  | 604,800s (7d)    | `10 8 * * *` (Monday-only)                                  |
 | `prune-status-probe-runs`         | 86,400s (24h)    | `0 3 * * *`                                                 |
 | `prune-cron-history`              | 86,400s (24h)    | `0 3 * * *`                                                 |

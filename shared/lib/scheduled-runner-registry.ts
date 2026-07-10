@@ -78,7 +78,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   digestTriggerPoll: {
     jobChains: [["daily-digest"]],
-    budgetOnlyJobs: ["digest-trigger-poll"],
+    budgetOnlyJobs: ["telegram-digest-outbox-drain", "digest-trigger-poll"],
   },
   daily0300Utc: {
     jobChains: [[
@@ -102,11 +102,11 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   daily0805Utc: {
     jobChains: [
       ["sync-bluechip"],
-      ["daily-digest", "weekly-recap"],
+      ["daily-digest"],
     ],
   },
   daily0810Utc: {
-    jobChains: [["discovery-scan"]],
+    jobChains: [["discovery-scan"], ["weekly-recap"]],
   },
   monthlyYieldAudit: {
     jobChains: [["yield-coverage-audit"]],

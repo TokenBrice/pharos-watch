@@ -714,7 +714,7 @@ Rollback must not require schema rollback. Keep the old pending sender readable 
 - First run seeds the current cemetery and tracked identity sets only when there is no queued tracked-addition state to drain.
 - Invalid snapshot payloads are reseeded; if queued tracked additions exist, those are still appended before the tracked snapshot is rewritten.
 - Pending additions are appended to the next successful Telegram daily digest post.
-- Snapshot advancement for pending additions is deferred until after Telegram accepts the digest post. Already-sent same-day retries skip both the Telegram post and appendix commit, so the next genuine digest still carries any pending appendix notices.
+- Snapshot advancement actions are stored with the exact digest edition and committed only when all persisted Telegram chunks are accepted. Retryable delivery reuses those chunks; ambiguous delivery stops for operator reconciliation without consuming the appendix notices.
 
 Stablecoin identity for cemetery diffs uses the stable dead-coin `id` from `shared/data/dead-stablecoins.json`. Legacy `llama:*` and `symbol|deathDate|name` snapshot entries are still treated as equivalent during migration, but new snapshots are rewritten to stable dead-coin IDs only. Tracked-coin diffs use the canonical Pharos stablecoin ID.
 

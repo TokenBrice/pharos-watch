@@ -13,9 +13,16 @@ import { toErrorMessage } from "../../lib/error-utils";
 // `ctx.waitUntil` was abandoned.
 import { generateDailyDigest } from "../../cron/daily-digest";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { drainTelegramDigestOutbox } from "../../lib/telegram-digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
-import { getRuntimeProducerIdentity, type ScheduledRuntimeContext } from "./context";
+import {
+  getRuntimeProducerIdentity,
+  runRuntimeBudgetOnlyTask,
+  type ScheduledRuntimeContext,
+} from "./context";
 import type { CronResult } from "../../lib/cron-logger";
 import { recordBudgetSurfaceTelemetry, type BudgetSurfaceOutcome } from "../../lib/budget-surface-telemetry";
 import {
@@ -27,6 +34,78 @@ import {
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
 const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
+const TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE = "telegram-digest-outbox-drain";
+
+async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): Promise<void> {
+  const startedMs = Date.now();
+  const creds = buildTelegramCreds(runtime.env);
+  if (!creds) {
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "skipped",
+      skippedReason: "missing-telegram-credentials",
+      metadata: { telegramCredentialsConfigured: false },
+      producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
+    });
+    return;
+  }
+  try {
+    if (!(await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.TELEGRAM_API))) {
+      await recordBudgetSurfaceTelemetry(runtime.db, {
+        surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
+        durationMs: Date.now() - startedMs,
+        dueCount: 0,
+        processedCount: 0,
+        outcome: "skipped",
+        skippedReason: "telegram-circuit-open",
+        metadata: { telegramCredentialsConfigured: true },
+        producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
+      });
+      return;
+    }
+    const summary = await runRuntimeBudgetOnlyTask(
+      runtime,
+      TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
+      (signal) => drainTelegramDigestOutbox(runtime.db, creds, { signal }),
+    );
+    const currentAttemptFailures = summary.pending
+      + summary.executionUnknown
+      + summary.failedPermanent;
+    const unresolved = currentAttemptFailures
+      + summary.retainedExecutionUnknown
+      + summary.retainedFailedPermanent;
+    if (summary.attempted > 0) {
+      await recordOutcomeSafe(runtime.db, CIRCUIT_SOURCE.TELEGRAM_API, currentAttemptFailures === 0);
+    }
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: summary.due,
+      processedCount: summary.sent,
+      outcome: unresolved > 0 ? "degraded" : "ok",
+      error: unresolved > 0
+        ? `${summary.pending} retryable, ${summary.retainedExecutionUnknown} ambiguous, ${summary.retainedFailedPermanent} permanent`
+        : null,
+      metadata: { ...summary },
+      producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
+    });
+  } catch (err) {
+    const error = toErrorMessage(err);
+    console.error("[telegram-digest-outbox] Drain failed:", err);
+    await recordBudgetSurfaceTelemetry(runtime.db, {
+      surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
+      durationMs: Date.now() - startedMs,
+      dueCount: 0,
+      processedCount: 0,
+      outcome: "error",
+      error,
+      producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
+    });
+  }
+}
 
 interface DigestForceRunRequest {
   requestedAt: number;
@@ -47,6 +126,7 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
 
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
+  await runTelegramDigestOutboxDrain(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
     await recordBudgetSurfaceTelemetry(runtime.db, {
@@ -61,7 +141,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
-    ], { budgetOnlyJobs: 1 });
+    ], { budgetOnlyJobs: 2 });
   }
 
   const payload = parseForceRunPayload(pending.value);
@@ -82,7 +162,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
-    ], { budgetOnlyJobs: 1 });
+    ], { budgetOnlyJobs: 2 });
   }
 
   let result: CronResult | null = null;
@@ -184,5 +264,5 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     caught
       ? summarizeThrownScheduledJob("daily-digest", caught)
       : summarizeCronResult("daily-digest", result),
-  ], { budgetOnlyJobs: 1 });
+  ], { budgetOnlyJobs: 2 });
 }
