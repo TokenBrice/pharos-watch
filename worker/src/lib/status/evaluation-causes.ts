@@ -42,6 +42,7 @@ export const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoins_cache_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoin_publication_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
@@ -419,6 +420,13 @@ export function buildDataQualityCauses(input: {
       metric: "missingActiveStablecoins",
       value: missing.length,
       threshold: 1,
+    });
+  } else if (input.dataQuality.stablecoinPublication?.status === "unknown") {
+    pushCause(dataQualityCauses, {
+      code: "stablecoin_publication_unknown",
+      layer: "data-quality",
+      severity: "warning",
+      message: "Exact stablecoin publication coverage evidence is unavailable.",
     });
   }
 

@@ -118,7 +118,8 @@ export function deriveDataQualityStatus(input: {
     input.reserveCompositionStatus === "stale"
     ? "stale"
     : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
-        input.dataQuality.stablecoinPublication?.status === "incomplete" ||
+        (input.dataQuality.stablecoinPublication != null &&
+          input.dataQuality.stablecoinPublication.status !== "complete") ||
         input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
         input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded ||
         input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { handleHealth } from "../health";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
@@ -11,6 +12,27 @@ type HealthDbOptions = {
   statusStartedAt?: number;
   extras?: MockTableConfig[];
 };
+
+function completePublicationEntry(now: number): MockTableConfig {
+  return {
+    match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+    rows: [],
+    first: {
+      started_at: now - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: {
+          complete: true,
+          expectedActiveCount: ACTIVE_IDS.size,
+          presentActiveCount: ACTIVE_IDS.size,
+          waivedActiveCount: 0,
+          missingActiveIds: [],
+          waivedActiveIds: [],
+          expiredWaiverIds: [],
+        },
+      }),
+    },
+  };
+}
 
 function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
   const {
@@ -23,6 +45,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
   } = options;
 
   return mockD1([
+    completePublicationEntry(now),
     {
       match: "cache WHERE key IN",
       rows: [
@@ -52,6 +75,7 @@ describe("handleHealth", () => {
   it("returns 200 with health status", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
+      completePublicationEntry(now),
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },

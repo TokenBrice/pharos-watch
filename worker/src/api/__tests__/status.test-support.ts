@@ -180,7 +180,33 @@ function cleanupStatusTest() {
   vi.restoreAllMocks();
 }
 
-const fixtureMockD1 = mockD1;
+function fixtureMockD1(
+  tables: Parameters<typeof mockD1>[0] = [],
+  options: Parameters<typeof mockD1>[1] = {},
+): ReturnType<typeof mockD1> {
+  const hasPublicationFixture = tables.some((table) =>
+    table.match.includes("job = 'sync-stablecoins' AND metadata IS NOT NULL")
+  );
+  const publicationFixture = {
+    match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+    rows: [],
+    first: {
+      started_at: Math.floor(Date.now() / 1000) - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: {
+          complete: true,
+          expectedActiveCount: ACTIVE_STABLECOINS.length,
+          presentActiveCount: ACTIVE_STABLECOINS.length,
+          waivedActiveCount: 0,
+          missingActiveIds: [],
+          waivedActiveIds: [],
+          expiredWaiverIds: [],
+        },
+      }),
+    },
+  };
+  return mockD1(hasPublicationFixture ? tables : [publicationFixture, ...tables], options);
+}
 const fixtureMakeApiRequest = makeApiRequest;
 const fixtureMockFetch = mockFetch;
 const fixtureCRON_INTERVALS = CRON_INTERVALS;

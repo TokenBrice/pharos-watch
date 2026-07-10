@@ -680,8 +680,10 @@ describe("handleStatus", () => {
       causes: { dataQuality: DataQualityCause[] };
     };
 
-    it("stays healthy at 32 missing out of 181 active canonical (17.68% — just below the 18% degraded threshold)", async () => {
-      const db = buildBaselineDb(181, 32);
+    it("stays healthy just below the 18% degraded threshold", async () => {
+      const total = fixtureACTIVE_STABLECOINS.length;
+      const missing = Math.floor(total * 0.18);
+      const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -691,8 +693,10 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("degrades at 33 missing out of 181 active canonical (18.23%) with threshold=0.18", async () => {
-      const db = buildBaselineDb(181, 33);
+    it("degrades just above the 18% threshold", async () => {
+      const total = fixtureACTIVE_STABLECOINS.length;
+      const missing = Math.floor(total * 0.18) + 1;
+      const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -703,8 +707,10 @@ describe("handleStatus", () => {
       expect(degradedCause?.severity).toBe("warning");
     });
 
-    it("stays healthy and emits missing_prices_elevated info cause at 29 missing out of 181 (16.02% — in the elevated band)", async () => {
-      const db = buildBaselineDb(181, 29);
+    it("stays healthy and emits missing_prices_elevated in the 15-18% band", async () => {
+      const total = fixtureACTIVE_STABLECOINS.length;
+      const missing = Math.ceil(total * 0.16);
+      const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -715,8 +721,10 @@ describe("handleStatus", () => {
       expect(elevatedCause?.threshold).toBe(0.15);
     });
 
-    it("does not emit missing_prices_elevated when ratio is below the 15% elevated floor", async () => {
-      const db = buildBaselineDb(181, 20);
+    it("does not emit missing_prices_elevated below the 15% elevated floor", async () => {
+      const total = fixtureACTIVE_STABLECOINS.length;
+      const missing = Math.floor(total * 0.14);
+      const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -727,8 +735,10 @@ describe("handleStatus", () => {
       expect(codes).not.toContain("missing_prices_stale");
     });
 
-    it("goes stale at 82 missing out of 181 (45.30%) with threshold=0.45", async () => {
-      const db = buildBaselineDb(181, 82);
+    it("goes stale just above the 45% threshold", async () => {
+      const total = fixtureACTIVE_STABLECOINS.length;
+      const missing = Math.floor(total * 0.45) + 1;
+      const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as StatusBody;
@@ -824,11 +834,11 @@ describe("handleStatus", () => {
     };
 
     it("excludes DL residuals from the denominator even when they are all unpriced", async () => {
-      // 10 active canonical (all priced) + 100 DL residuals (all unpriced).
-      // Pre-follow-up: ratio = 100/110 = 90.9% → stale.
-      // Post-follow-up: ratio = 0/10 = 0% → healthy.
+      const canonicalTotal = fixtureACTIVE_STABLECOINS.length;
+      // The exact active universe is fully priced while 100 DL residuals are
+      // unpriced. Residual rows must not enter the canonical denominator.
       const db = buildMixedCacheDb({
-        canonicalTotal: 10,
+        canonicalTotal,
         canonicalMissing: 0,
         residuals: 100,
         residualsMissing: 100,
@@ -837,7 +847,7 @@ describe("handleStatus", () => {
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as CanonicalScopeBody;
       expect(body.dataQualityStatus).toBe("healthy");
-      expect(body.dataQuality.totalStablecoins).toBe(10);
+      expect(body.dataQuality.totalStablecoins).toBe(canonicalTotal);
       expect(body.dataQuality.missingPrices).toBe(0);
       const codes = body.causes.dataQuality.map((c) => c.code);
       expect(codes).not.toContain("missing_prices_degraded");
@@ -845,13 +855,12 @@ describe("handleStatus", () => {
     });
 
     it("counts canonical missing prices without double-counting residuals", async () => {
-      // 10 active canonical (2 missing = 20%) + 50 DL residuals (all priced).
-      // Pre-follow-up: ratio = 2/60 = 3.3% → healthy (accidentally).
-      // Post-follow-up: ratio = 2/10 = 20% → degraded.
-      // The DL residuals being priced doesn't dilute a real canonical issue.
+      const canonicalTotal = fixtureACTIVE_STABLECOINS.length;
+      const canonicalMissing = Math.ceil(canonicalTotal * 0.2);
+      // Priced residuals must not dilute a real canonical missing-price issue.
       const db = buildMixedCacheDb({
-        canonicalTotal: 10,
-        canonicalMissing: 2,
+        canonicalTotal,
+        canonicalMissing,
         residuals: 50,
         residualsMissing: 0,
       });
@@ -859,8 +868,8 @@ describe("handleStatus", () => {
       const res = await handleStatus(db, true, request);
       const body = (await res.json()) as CanonicalScopeBody;
       expect(body.dataQualityStatus).toBe("degraded");
-      expect(body.dataQuality.totalStablecoins).toBe(10);
-      expect(body.dataQuality.missingPrices).toBe(2);
+      expect(body.dataQuality.totalStablecoins).toBe(canonicalTotal);
+      expect(body.dataQuality.missingPrices).toBe(canonicalMissing);
       const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
       expect(degradedCause).toBeDefined();
     });

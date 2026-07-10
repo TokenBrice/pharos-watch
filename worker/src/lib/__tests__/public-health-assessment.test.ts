@@ -216,6 +216,16 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.overallStatus).not.toBe("healthy");
     expect(result.warnings).toContain(`stablecoin-publication-incomplete:${missingId}`);
   });
+
+  it("fails closed when exact active-universe coverage evidence is unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await assessPublicHealth(makeMinimalDb(nowSec), nowSec, { logPrefix: "test" });
+
+    expect(result.stablecoinPublication.status).toBe("unknown");
+    expect(result.stablecoinPublicationImpactStatus).toBe("degraded");
+    expect(result.overallStatus).not.toBe("healthy");
+    expect(result.warnings).toContain("stablecoin-publication-unknown");
+  });
 });
 
 describe("assessPublicHealth mint/burn subquery failures", () => {

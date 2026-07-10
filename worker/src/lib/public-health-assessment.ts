@@ -493,13 +493,15 @@ export async function assessPublicHealth(
     warnings.push(`alert-delivery-missing-target:${alertBroker.missingTargetCount}`);
   }
 
-  const stablecoinPublicationImpactStatus = stablecoinPublication.status === "incomplete"
-    ? "degraded"
-    : "healthy";
+  const stablecoinPublicationImpactStatus = stablecoinPublication.status === "complete"
+    ? "healthy"
+    : "degraded";
   if (stablecoinPublication.status === "incomplete") {
     warnings.push(
       `stablecoin-publication-incomplete:${stablecoinPublication.missingActiveIds.join(",") || "count-mismatch"}`,
     );
+  } else if (stablecoinPublication.status === "unknown") {
+    warnings.push("stablecoin-publication-unknown");
   }
 
   const blacklistImpactStatus = blacklistResult.error

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { buildAvailabilityCauses, buildDataQualityCauses } from "../status/evaluation-causes";
-import { deriveAvailabilityStatus, deriveReserveCompositionStatus } from "../status/evaluation-state";
+import {
+  deriveAvailabilityStatus,
+  deriveDataQualityStatus,
+  deriveReserveCompositionStatus,
+} from "../status/evaluation-state";
 
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
@@ -498,6 +502,44 @@ describe("status cause text", () => {
       severity: "warning",
       metric: "ddrRepairDebtCount",
       value: 2,
+    }));
+  });
+
+  it("degrades and explains unavailable exact publication evidence", () => {
+    const dataQuality = makeDataQuality({
+      stablecoinPublication: {
+        status: "unknown",
+        expectedActiveCount: 364,
+        presentActiveCount: 0,
+        waivedActiveCount: 0,
+        missingActiveIds: [],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+        observedAt: null,
+      },
+    });
+    const status = deriveDataQualityStatus({
+      dataQuality,
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessment: { status: "healthy", causes: [], representative: false },
+      reserveCompositionStatus: "healthy",
+    });
+    const causes = buildDataQualityCauses({
+      dataQuality,
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    });
+
+    expect(status).toBe("degraded");
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "stablecoin_publication_unknown",
+      severity: "warning",
     }));
   });
 
