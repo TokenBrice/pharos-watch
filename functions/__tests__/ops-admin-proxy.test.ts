@@ -230,12 +230,13 @@ describe("ops admin proxy", () => {
     );
   });
 
-  it("proxies self-serve reject actions with admin and idempotency headers", async () => {
+  it("proxies self-serve reject actions with admin and execution metadata headers", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ status: "rejected" }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "idem-123",
+        "X-Execution-Certainty": "unknown",
         "X-Idempotent-Replay": "true",
       },
     }));
@@ -256,6 +257,7 @@ describe("ops admin proxy", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Idempotency-Key")).toBe("idem-123");
+    expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
     expect(response.headers.get("X-Idempotent-Replay")).toBe("true");
     const [, init] = fetchSpy.mock.calls[0] ?? [];
     const headers = init?.headers as Headers;

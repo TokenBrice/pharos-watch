@@ -36,6 +36,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "Idempotency-Key",
   "Warning",
   "X-Data-Age",
+  "X-Execution-Certainty",
   "X-Idempotent-Replay",
 ] as const;
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
