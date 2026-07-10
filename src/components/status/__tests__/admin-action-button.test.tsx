@@ -6,6 +6,15 @@ import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
 
+const ASSET_SCOPE: StatusPageAction["scope"] = {
+  type: "asset-or-batch",
+  assetIdentifier: "stablecoin-id",
+  assetLabel: "Stablecoin ID",
+  assetPlaceholder: "e.g. usdt-tether",
+  batchLabel: "Bounded registry batch",
+  queryParam: "stablecoin",
+};
+
 function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
     label: "Backfill Supply",
@@ -13,8 +22,16 @@ function makeAction(overrides: Partial<StatusPageAction> = {}): StatusPageAction
     confirm: "Backfill supply history snapshots?",
     destructive: false,
     method: "POST",
-    acceptsStablecoinFilter: true,
+    acceptsStablecoinFilter: false,
     group: "recovery",
+    kind: "backfill",
+    risk: "read-only",
+    scope: { type: "global", label: "Test scope" },
+    dryRun: { supported: false, default: false, liveSupported: true },
+    expectedDuration: "Seconds",
+    preconditions: [],
+    blockedBy: [],
+    resultMode: "immediate",
     ...overrides,
   };
 }
@@ -55,10 +72,10 @@ describe("AdminActionButton", () => {
   });
 
   it("adds non-USD fallback query for backfill supply when toggle is enabled", async () => {
-    renderActions([makeAction()]);
+    renderActions([makeAction({ acceptsStablecoinFilter: true, scope: ASSET_SCOPE, risk: "moderate" })]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
-    fireEvent.change(screen.getByLabelText(/Stablecoin ID/i), {
+    fireEvent.change(screen.getByLabelText("Stablecoin ID"), {
       target: { value: "cadd-cad-digital" },
     });
     fireEvent.click(screen.getByLabelText(/Allow constant-price fallback for non-USD backfill/i));
@@ -87,6 +104,164 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Backfill CG Prices" }));
 
     expect(screen.queryByLabelText(/Allow constant-price fallback for non-USD backfill/i)).toBeNull();
+  });
+
+  it("requires an explicit asset or acknowledged batch scope", async () => {
+    renderActions([
+      makeAction({
+        acceptsStablecoinFilter: true,
+        scope: ASSET_SCOPE,
+        risk: "moderate",
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByLabelText("Batch"));
+    const acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i);
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(acknowledgement);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/backfill-supply-history");
+  });
+
+  it("uses the configured dry-run query contract by default", async () => {
+    renderActions([
+      makeAction({
+        label: "Remediate Blacklist Gaps",
+        path: "/api/remediate-blacklist-amount-gaps",
+        confirm: "Run remediation?",
+        risk: "moderate",
+        dryRun: {
+          supported: true,
+          default: true,
+          liveSupported: true,
+          queryParam: "dryRun",
+        },
+        expectedDuration: "Up to one minute",
+        preconditions: ["Review candidate counts."],
+        blockedBy: ["Live mode requires chain RPCs."],
+        runbookPath: "docs/data-pipeline.md",
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remediate Blacklist Gaps" }));
+    expect((screen.getByLabelText(/^Dry run/) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("Moderate risk")).toBeTruthy();
+    expect(screen.getByText("Up to one minute")).toBeTruthy();
+    expect(screen.getByText("Review candidate counts.")).toBeTruthy();
+    expect(screen.getByText("Live mode requires chain RPCs.")).toBeTruthy();
+    const runbookLink = screen.getByRole("link", {
+      name: /Open operator reference.*opens in a new tab/i,
+    });
+    expect(runbookLink.getAttribute("href")).toBe(
+      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/data-pipeline.md",
+    );
+    expect(runbookLink.getAttribute("target")).toBe("_blank");
+    expect(runbookLink.getAttribute("rel")).toBe("noopener noreferrer");
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/remediate-blacklist-amount-gaps?dryRun=true");
+  });
+
+  it("switches a dual-mode dry run to its live method only after acknowledgement", async () => {
+    renderActions([
+      makeAction({
+        label: "Audit Depegs",
+        path: "/api/audit-depeg-history?dry-run=true",
+        confirm: "Audit depegs?",
+        method: "GET",
+        risk: "high",
+        dryRun: {
+          supported: true,
+          default: true,
+          liveSupported: true,
+          queryParam: "dry-run",
+          dryRunMethod: "GET",
+          liveMethod: "POST",
+        },
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Audit Depegs" }));
+    fireEvent.click(screen.getByLabelText(/^Dry run/));
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText(/I acknowledge this live action affects/i));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("/api/admin/audit-depeg-history?dry-run=false");
+    expect(init?.method).toBe("POST");
+  });
+
+  it("resets broad acknowledgement when scope or execution mode changes", () => {
+    renderActions([
+      makeAction({
+        acceptsStablecoinFilter: true,
+        scope: ASSET_SCOPE,
+        risk: "high",
+        dryRun: {
+          supported: true,
+          default: true,
+          liveSupported: true,
+          queryParam: "dry-run",
+        },
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByLabelText("Batch"));
+    fireEvent.click(screen.getByLabelText(/^Dry run/));
+    let acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
+    fireEvent.click(acknowledgement);
+    expect(acknowledgement.checked).toBe(true);
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByLabelText("Single asset"));
+    fireEvent.click(screen.getByLabelText("Batch"));
+    acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
+    expect(acknowledgement.checked).toBe(false);
+    expect((screen.getByRole("button", { name: "Confirm" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(acknowledgement);
+    fireEvent.click(screen.getByLabelText(/^Dry run/));
+    expect(screen.queryByLabelText(/I acknowledge this live action affects/i)).toBeNull();
+    fireEvent.click(screen.getByLabelText(/^Dry run/));
+    acknowledgement = screen.getByLabelText(/I acknowledge this live action affects/i) as HTMLInputElement;
+    expect(acknowledgement.checked).toBe(false);
+  });
+
+  it("keeps preview-only actions on their dry-run request contract", async () => {
+    renderActions([
+      makeAction({
+        label: "Preview Mint/Burn Price Repair",
+        path: "/api/backfill-mint-burn-prices",
+        confirm: "Preview repairs?",
+        kind: "inspect",
+        risk: "high",
+        dryRun: {
+          supported: true,
+          default: true,
+          liveSupported: false,
+          queryParam: "dry-run",
+        },
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview Mint/Burn Price Repair" }));
+    expect(screen.getByText("Dry run only from this dashboard control.")).toBeTruthy();
+    expect(screen.queryByLabelText(/^Dry run/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("/api/admin/backfill-mint-burn-prices?dry-run=true");
+    expect(init?.method).toBe("POST");
   });
 
   it("retries a timed-out execution with the original idempotency key", async () => {
@@ -197,6 +372,26 @@ describe("AdminActionButton", () => {
     await screen.findByText("Outcome unknown");
     expect(screen.getByRole("button", { name: "Retry same execution" })).toBeTruthy();
     expect(screen.queryByText("Failed")).toBeNull();
+    expect(screen.getByText(/Idempotency reservation ownership was lost/).className).toContain("bg-amber-500/10");
+  });
+
+  it("keeps a payload-reuse 409 as a definite failure", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "Idempotency key reuse with different request payload" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    renderActions([makeAction()]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await screen.findByText("Failed");
+    expect(screen.queryByText("Outcome unknown")).toBeNull();
+    expect(screen.getByText(/Idempotency key reuse with different request payload/).className).toContain(
+      "bg-red-500/10",
+    );
   });
 
   it("coalesces a double confirmation into one request", async () => {

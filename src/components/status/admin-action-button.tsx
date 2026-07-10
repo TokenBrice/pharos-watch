@@ -35,40 +35,116 @@ const STATUS_LABEL: Record<AdminActionExecution["status"], string> = {
   unknown: "Outcome unknown",
 };
 
-function appendQuery(path: string, name: string, value: string): string {
-  return `${path}${path.includes("?") ? "&" : "?"}${name}=${encodeURIComponent(value)}`;
+const KIND_LABEL: Record<StatusPageAction["kind"], string> = {
+  inspect: "Inspection",
+  backfill: "Backfill",
+  repair: "Repair",
+  reset: "Reset",
+  communication: "Communication",
+};
+
+const RISK_LABEL: Record<StatusPageAction["risk"], string> = {
+  "read-only": "Read only",
+  low: "Low risk",
+  moderate: "Moderate risk",
+  high: "High risk",
+};
+
+const RISK_CLASS: Record<StatusPageAction["risk"], string> = {
+  "read-only": "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300",
+  low: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  moderate: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  high: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+};
+
+const RESULT_MODE_LABEL: Record<StatusPageAction["resultMode"], string> = {
+  immediate: "Immediate JSON result",
+  queued: "Queued acknowledgement",
+  continuation: "Continuation result",
+};
+
+const PHAROS_REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
+
+function getRunbookUrl(runbookPath: NonNullable<StatusPageAction["runbookPath"]>): string {
+  return `${PHAROS_REPOSITORY_BLOB_URL}/${runbookPath}`;
+}
+
+function setQueryParameter(path: string, name: string, value: string): string {
+  const [pathname, query = ""] = path.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set(name, value);
+  const serialized = params.toString();
+  return serialized ? `${pathname}?${serialized}` : pathname;
 }
 
 export function AdminActionButton({ action, buttonClassName, fullWidth = true, onFinished }: AdminActionButtonProps) {
-  const stablecoinInputId = useId();
+  const assetInputId = useId();
+  const singleScopeId = useId();
+  const batchScopeId = useId();
+  const dryRunInputId = useId();
   const fallbackInputId = useId();
+  const acknowledgementInputId = useId();
   const isSupplyBackfillAction = action.path === API_PATHS.backfillSupplyHistory();
+  const assetScope = action.scope.type === "asset-or-batch" ? action.scope : null;
+  const fixedScopeLabel = action.scope.type === "asset-or-batch" ? null : action.scope.label;
+  const dryRunConfig = action.dryRun.supported ? action.dryRun : null;
   const [open, setOpen] = useState(false);
-  const [stablecoinFilter, setStablecoinFilter] = useState("");
+  const [scopeMode, setScopeMode] = useState<"single" | "batch">("single");
+  const [assetFilter, setAssetFilter] = useState("");
+  const [dryRun, setDryRun] = useState(action.dryRun.supported ? action.dryRun.default : false);
   const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
-  const trimmedFilter = stablecoinFilter.trim();
-  const pathWithStablecoin =
-    action.acceptsStablecoinFilter && trimmedFilter
-      ? appendQuery(action.path, "stablecoin", trimmedFilter)
-      : action.path;
-  const requestPath =
-    isSupplyBackfillAction && allowConstantPriceFallback
-      ? appendQuery(pathWithStablecoin, "allow-constant-price-fallback", "true")
-      : pathWithStablecoin;
-  const baseScopeKey = action.acceptsStablecoinFilter ? `stablecoin:${trimmedFilter || "batch"}` : "global";
-  const scopeKey = isSupplyBackfillAction
-    ? `${baseScopeKey}|constant-price-fallback:${allowConstantPriceFallback ? "allowed" : "off"}`
-    : baseScopeKey;
-  const scopeLabel = action.acceptsStablecoinFilter
-    ? trimmedFilter
-      ? `stablecoin ${trimmedFilter}`
+  const [broadScopeAcknowledged, setBroadScopeAcknowledged] = useState(false);
+  const trimmedAssetFilter = assetFilter.trim();
+
+  let requestPath = action.path;
+  if (assetScope && scopeMode === "single" && trimmedAssetFilter) {
+    requestPath = setQueryParameter(requestPath, assetScope.queryParam, trimmedAssetFilter);
+  }
+  if (dryRunConfig) {
+    requestPath = setQueryParameter(requestPath, dryRunConfig.queryParam, dryRun ? "true" : "false");
+  }
+  if (isSupplyBackfillAction && allowConstantPriceFallback) {
+    requestPath = setQueryParameter(requestPath, "allow-constant-price-fallback", "true");
+  }
+
+  const requestMethod = dryRunConfig
+    ? dryRun
+      ? (dryRunConfig.dryRunMethod ?? action.method)
+      : (dryRunConfig.liveMethod ?? action.method)
+    : action.method;
+  const baseScopeKey = assetScope
+    ? scopeMode === "single"
+      ? `${assetScope.queryParam}:${trimmedAssetFilter || "missing"}`
       : "batch"
-    : "global";
-  const request: AdminActionExecutionRequest = { action, requestPath, scopeKey, scopeLabel };
+    : action.scope.type;
+  const executionModeKey = dryRunConfig ? (dryRun ? "dry-run" : "live") : "execute";
+  const fallbackScopeKey = isSupplyBackfillAction
+    ? `|constant-price-fallback:${allowConstantPriceFallback ? "allowed" : "off"}`
+    : "";
+  const scopeKey = `${baseScopeKey}|mode:${executionModeKey}${fallbackScopeKey}`;
+  const baseScopeLabel = assetScope
+    ? scopeMode === "single"
+      ? `${assetScope.assetLabel.toLowerCase()} ${trimmedAssetFilter || "not selected"}`
+      : assetScope.batchLabel
+    : (fixedScopeLabel ?? "Unknown scope");
+  const scopeLabel = dryRunConfig && dryRun ? `${baseScopeLabel} (dry run)` : baseScopeLabel;
+  const request: AdminActionExecutionRequest = {
+    action,
+    requestPath,
+    requestMethod,
+    scopeKey,
+    scopeLabel,
+  };
   const { execution, execute, retry, startNew } = useAdminActionExecution(action.path, scopeKey);
   const loading = execution?.requestInFlight === true;
   const hasTerminalResult = Boolean(execution && execution.status !== "ready" && !execution.requestInFlight);
   const inputsLocked = Boolean(execution && execution.status !== "ready");
+  const hasValidAssetScope = !assetScope || scopeMode === "batch" || trimmedAssetFilter.length > 0;
+  const isLiveMutation = !dryRun && action.risk !== "read-only";
+  const requiresBroadScopeAcknowledgement = isLiveMutation && (!assetScope || scopeMode === "batch");
+  const canConfirm = hasValidAssetScope && (!requiresBroadScopeAcknowledgement || broadScopeAcknowledged);
+  const highRiskLiveMutation = isLiveMutation && action.risk === "high";
+  const confirmVariant = action.destructive || highRiskLiveMutation ? "destructive" : "default";
 
   const notifyWhenFinished = async (operation: Promise<{ execution: AdminActionExecution; didStart: boolean }>) => {
     const result = await operation;
@@ -76,12 +152,18 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
   };
 
   const handleConfirm = () => {
+    if (!canConfirm) return;
     void notifyWhenFinished(execute(request));
   };
 
   const handleRetry = () => {
     if (!execution) return;
     void notifyWhenFinished(retry(execution.executionKey));
+  };
+
+  const handleStartNew = () => {
+    setBroadScopeAcknowledged(false);
+    startNew(request);
   };
 
   return (
@@ -105,6 +187,7 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
         </Button>
       </DialogTrigger>
       <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
         showCloseButton={!loading}
         onEscapeKeyDown={(event) => {
           if (loading) event.preventDefault();
@@ -117,22 +200,133 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
           <DialogTitle>{action.label}</DialogTitle>
           <DialogDescription>{action.confirm}</DialogDescription>
         </DialogHeader>
-        {action.acceptsStablecoinFilter && (
-          <div className="space-y-1">
-            <label htmlFor={stablecoinInputId} className="text-xs font-medium text-muted-foreground">
-              Stablecoin ID <span className="font-normal">(optional — leave empty for batch)</span>
-            </label>
-            <input
-              id={stablecoinInputId}
-              type="text"
-              value={stablecoinFilter}
-              onChange={(event) => setStablecoinFilter(event.target.value)}
-              placeholder="e.g. usdt-tether"
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
-              disabled={inputsLocked}
-            />
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-y border-border/60 py-3 text-xs sm:grid-cols-4">
+          <div>
+            <div className="text-muted-foreground">Kind</div>
+            <div className="mt-0.5 font-medium text-foreground">{KIND_LABEL[action.kind]}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Risk</div>
+            <span
+              className={`mt-0.5 inline-flex rounded-full border px-2 py-0.5 font-medium ${RISK_CLASS[action.risk]}`}
+            >
+              {RISK_LABEL[action.risk]}
+            </span>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Duration</div>
+            <div className="mt-0.5 font-medium text-foreground">{action.expectedDuration}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Result</div>
+            <div className="mt-0.5 font-medium text-foreground">{RESULT_MODE_LABEL[action.resultMode]}</div>
+          </div>
+        </div>
+
+        {assetScope ? (
+          <fieldset className="space-y-3" disabled={inputsLocked}>
+            <legend className="text-xs font-medium text-muted-foreground">Execution scope</legend>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                htmlFor={singleScopeId}
+                className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                  scopeMode === "single" ? "border-foreground bg-muted" : "border-input bg-background"
+                }`}
+              >
+                <input
+                  id={singleScopeId}
+                  type="radio"
+                  name={`${assetInputId}-scope`}
+                  value="single"
+                  checked={scopeMode === "single"}
+                  onChange={() => {
+                    setScopeMode("single");
+                    setBroadScopeAcknowledged(false);
+                  }}
+                />
+                Single asset
+              </label>
+              <label
+                htmlFor={batchScopeId}
+                className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                  scopeMode === "batch" ? "border-foreground bg-muted" : "border-input bg-background"
+                }`}
+              >
+                <input
+                  id={batchScopeId}
+                  type="radio"
+                  name={`${assetInputId}-scope`}
+                  value="batch"
+                  checked={scopeMode === "batch"}
+                  onChange={() => {
+                    setScopeMode("batch");
+                    setBroadScopeAcknowledged(false);
+                  }}
+                />
+                Batch
+              </label>
+            </div>
+            {scopeMode === "single" && (
+              <div className="space-y-1">
+                <label htmlFor={assetInputId} className="text-xs font-medium text-muted-foreground">
+                  {assetScope.assetLabel}
+                </label>
+                <input
+                  id={assetInputId}
+                  type="text"
+                  value={assetFilter}
+                  onChange={(event) => setAssetFilter(event.target.value)}
+                  placeholder={assetScope.assetPlaceholder}
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  disabled={inputsLocked}
+                  required
+                />
+                {!trimmedAssetFilter && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">Required for single-asset scope.</p>
+                )}
+              </div>
+            )}
+            {scopeMode === "batch" && (
+              <p className="text-xs text-muted-foreground">Batch scope: {assetScope.batchLabel}.</p>
+            )}
+          </fieldset>
+        ) : (
+          <div className="text-sm">
+            <span className="text-muted-foreground">Execution scope: </span>
+            <span className="font-medium text-foreground">{fixedScopeLabel}</span>
           </div>
         )}
+
+        {dryRunConfig &&
+          (dryRunConfig.liveSupported ? (
+            <label
+              htmlFor={dryRunInputId}
+              className="flex items-start gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <input
+                id={dryRunInputId}
+                type="checkbox"
+                checked={dryRun}
+                onChange={(event) => {
+                  setDryRun(event.target.checked);
+                  setBroadScopeAcknowledged(false);
+                }}
+                disabled={inputsLocked}
+              />
+              <span>
+                <span className="font-medium text-foreground">Dry run</span>
+                <span className="block text-xs text-muted-foreground">
+                  Preview the selected scope without live writes.
+                </span>
+              </span>
+            </label>
+          ) : (
+            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-800 dark:text-green-200">
+              Dry run only from this dashboard control.
+            </div>
+          ))}
+
         {isSupplyBackfillAction && (
           <label
             htmlFor={fallbackInputId}
@@ -142,12 +336,77 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
               id={fallbackInputId}
               type="checkbox"
               checked={allowConstantPriceFallback}
-              onChange={(event) => setAllowConstantPriceFallback(event.target.checked)}
+              onChange={(event) => {
+                setAllowConstantPriceFallback(event.target.checked);
+                setBroadScopeAcknowledged(false);
+              }}
               disabled={inputsLocked}
             />
             Allow constant-price fallback for non-USD backfill
           </label>
         )}
+
+        {(action.preconditions.length > 0 || action.blockedBy.length > 0 || action.rollback || action.runbookPath) && (
+          <div className="space-y-3 border-t border-border/60 pt-3 text-xs">
+            {action.preconditions.length > 0 && (
+              <div>
+                <div className="font-medium text-foreground">Prerequisites</div>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-muted-foreground">
+                  {action.preconditions.map((precondition) => (
+                    <li key={precondition}>{precondition}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {action.blockedBy.length > 0 && (
+              <div>
+                <div className="font-medium text-foreground">Blocked when</div>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-muted-foreground">
+                  {action.blockedBy.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {action.rollback && (
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">Recovery: </span>
+                {action.rollback}
+              </p>
+            )}
+            {action.runbookPath && (
+              <a
+                href={getRunbookUrl(action.runbookPath)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Open operator reference<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            )}
+          </div>
+        )}
+
+        {requiresBroadScopeAcknowledgement && (
+          <label
+            htmlFor={acknowledgementInputId}
+            className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+              action.risk === "high"
+                ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100"
+            }`}
+          >
+            <input
+              id={acknowledgementInputId}
+              type="checkbox"
+              checked={broadScopeAcknowledged}
+              onChange={(event) => setBroadScopeAcknowledged(event.target.checked)}
+              disabled={inputsLocked}
+            />
+            I acknowledge this live action affects {baseScopeLabel}.
+          </label>
+        )}
+
         {execution && execution.status !== "ready" && (
           <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
             <span>
@@ -175,9 +434,11 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
         {execution?.output && (
           <pre
             className={`max-h-60 overflow-auto rounded p-3 text-xs ${
-              execution.status === "failed" || execution.status === "unknown"
+              execution.status === "failed"
                 ? "bg-red-500/10 text-red-700 dark:text-red-400"
-                : "bg-muted"
+                : execution.status === "unknown"
+                  ? "bg-amber-500/10 text-amber-900 dark:text-amber-100"
+                  : "bg-muted"
             }`}
           >
             {execution.output}
@@ -188,22 +449,22 @@ export function AdminActionButton({ action, buttonClassName, fullWidth = true, o
             {hasTerminalResult ? "Close" : "Cancel"}
           </Button>
           {hasTerminalResult && (
-            <Button variant="outline" onClick={() => startNew(request)}>
+            <Button variant="outline" onClick={handleStartNew}>
               Start new execution
             </Button>
           )}
           {(execution?.status === "failed" || execution?.status === "unknown") && (
-            <Button variant={action.destructive ? "destructive" : "default"} onClick={handleRetry}>
+            <Button variant={confirmVariant} onClick={handleRetry}>
               Retry same execution
             </Button>
           )}
           {(!execution || execution.status === "ready") && (
-            <Button variant={action.destructive ? "destructive" : "default"} onClick={handleConfirm}>
+            <Button variant={confirmVariant} onClick={handleConfirm} disabled={!canConfirm}>
               Confirm
             </Button>
           )}
           {loading && (
-            <Button variant={action.destructive ? "destructive" : "default"} disabled aria-busy>
+            <Button variant={confirmVariant} disabled aria-busy>
               Running...
             </Button>
           )}

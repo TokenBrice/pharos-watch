@@ -24,7 +24,13 @@ export {
   type EndpointPublicApiAccess,
   type EndpointSiteDataAccess,
   type StatusPageAction,
+  type StatusPageActionDryRun,
   type StatusPageActionGroup,
+  type StatusPageActionKind,
+  type StatusPageActionResultMode,
+  type StatusPageActionRisk,
+  type StatusPageActionRunbookPath,
+  type StatusPageActionScope,
 } from "./definitions";
 export {
   getPublicApiAccess,

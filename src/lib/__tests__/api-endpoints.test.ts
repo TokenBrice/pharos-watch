@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
@@ -131,11 +133,15 @@ describe("api endpoint registry", () => {
       "/api/yield-source-decisions",
     ];
 
-    const actualPaths = [...new Set(ENDPOINT_DEFINITIONS.flatMap((endpoint) => [
-      endpoint.path,
-      endpoint.probePath,
-      endpoint.statusPageAction?.path,
-    ].filter((path): path is string => typeof path === "string")))].sort();
+    const actualPaths = [
+      ...new Set(
+        ENDPOINT_DEFINITIONS.flatMap((endpoint) =>
+          [endpoint.path, endpoint.probePath, endpoint.statusPageAction?.path].filter(
+            (path): path is string => typeof path === "string",
+          ),
+        ),
+      ),
+    ].sort();
 
     expect(actualPaths).toEqual(expectedPaths);
   });
@@ -222,9 +228,9 @@ describe("api endpoint registry", () => {
   });
 
   it("derives static route definitions from literal endpoint paths", () => {
-    const expectedStaticKeys = ENDPOINT_DEFINITIONS
-      .filter((endpoint) => isStaticEndpointPath(endpoint.path))
-      .map((endpoint) => endpoint.key);
+    const expectedStaticKeys = ENDPOINT_DEFINITIONS.filter((endpoint) => isStaticEndpointPath(endpoint.path)).map(
+      (endpoint) => endpoint.key,
+    );
 
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).toEqual(expectedStaticKeys);
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.every((endpoint) => isStaticEndpointPath(endpoint.path))).toBe(true);
@@ -281,22 +287,22 @@ describe("api endpoint registry", () => {
   });
 
   it("derives public API endpoint definitions for static and dynamic public routes", () => {
-    const staticPublicKeys = STATIC_ENDPOINT_ROUTE_DEFINITIONS
-      .filter((endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"))
-      .map((endpoint) => endpoint.key);
-    const dynamicPublicKeys = DYNAMIC_ENDPOINT_DESCRIPTORS
-      .filter((descriptor) => !descriptor.adminRequired)
-      .map((descriptor) => descriptor.key);
+    const staticPublicKeys = STATIC_ENDPOINT_ROUTE_DEFINITIONS.filter(
+      (endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"),
+    ).map((endpoint) => endpoint.key);
+    const dynamicPublicKeys = DYNAMIC_ENDPOINT_DESCRIPTORS.filter((descriptor) => !descriptor.adminRequired).map(
+      (descriptor) => descriptor.key,
+    );
 
     expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS
-        .filter((definition) => definition.scope === "static")
-        .map((definition) => definition.key),
+      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "static").map(
+        (definition) => definition.key,
+      ),
     ).toEqual(staticPublicKeys);
     expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS
-        .filter((definition) => definition.scope === "dynamic")
-        .map((definition) => definition.key),
+      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "dynamic").map(
+        (definition) => definition.key,
+      ),
     ).toEqual(dynamicPublicKeys);
     expect(PUBLIC_API_ENDPOINT_DEFINITIONS).toContainEqual(
       expect.objectContaining({ scope: "dynamic", key: "og-image", publicApiAccess: "exempt" }),
@@ -346,13 +352,11 @@ describe("api endpoint registry", () => {
 
   it("declares semantic probe metadata only for health and status", () => {
     expect(
-      ENDPOINT_DEFINITIONS
-        .filter((endpoint) => endpoint.probeSemanticKind)
-        .map((endpoint) => ({
-          key: endpoint.key,
-          path: endpoint.path,
-          probeSemanticKind: endpoint.probeSemanticKind,
-        })),
+      ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.probeSemanticKind).map((endpoint) => ({
+        key: endpoint.key,
+        path: endpoint.path,
+        probeSemanticKind: endpoint.probeSemanticKind,
+      })),
     ).toEqual([
       { key: "health", path: "/api/health", probeSemanticKind: "health" },
       { key: "status", path: "/api/status", probeSemanticKind: "status" },
@@ -538,7 +542,9 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests/verify"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "POST")).toBeNull();
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "POST"),
+    ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/mutate"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "GET")).toBeNull();
@@ -550,17 +556,27 @@ describe("api endpoint registry", () => {
       allowedMethods: ["GET"],
     });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST")).toBeNull();
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST"),
+    ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/deactivate"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "POST")).toBeNull();
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject"), "POST")).toBeNull();
+    expect(
+      validateEndpointMethod(
+        new URL("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject"),
+        "POST",
+      ),
+    ).toBeNull();
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "GET")).toBeNull();
     expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true"), "GET"),
+      validateEndpointMethod(
+        new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true"),
+        "GET",
+      ),
     ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "POST")).toBeNull();
 
@@ -602,7 +618,9 @@ describe("api endpoint registry", () => {
       message: "Method not allowed",
       allowedMethods: ["GET"],
     });
-    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "GET")).toEqual({
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "GET"),
+    ).toEqual({
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });
@@ -655,7 +673,7 @@ describe("api endpoint registry", () => {
   });
 
   it("provides status-page actions in UI order", () => {
-    expect(getStatusPageActions()).toEqual([
+    expect(getStatusPageActions()).toMatchObject([
       {
         label: "Trigger Digest",
         path: "/api/trigger-digest",
@@ -689,16 +707,16 @@ describe("api endpoint registry", () => {
         confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
+        acceptsStablecoinFilter: true,
         group: "recovery",
       },
       {
         label: "Backfill Blacklist Balances",
         path: "/api/backfill-blacklist-current-balances",
-        confirm: "Backfill current-balance cache for coins missing balance rows? Prefer dry-run first (?dryRun=true).",
+        confirm: "Backfill current-balance cache for coins missing balance rows?",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
+        acceptsStablecoinFilter: true,
         group: "recovery",
       },
       {
@@ -747,13 +765,13 @@ describe("api endpoint registry", () => {
         group: "recovery",
       },
       {
-        label: "Backfill Mint/Burn Prices",
+        label: "Preview Mint/Burn Price Repair",
         path: "/api/backfill-mint-burn-prices",
-        confirm: "Backfill mint/burn USD prices for NULL events?",
+        confirm: "Preview historical mint/burn USD price repairs for NULL events?",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
+        acceptsStablecoinFilter: true,
+        group: "audit",
       },
       {
         label: "Backfill Mint/Burn",
@@ -767,7 +785,7 @@ describe("api endpoint registry", () => {
       {
         label: "Backfill Tape",
         path: "/api/backfill-tape",
-        confirm: "Re-run tape projectors for selected classes? Prefer dry-run first (?dryRun=true).",
+        confirm: "Re-run tape projectors for selected classes?",
         destructive: false,
         method: "POST",
         acceptsStablecoinFilter: false,
@@ -779,28 +797,136 @@ describe("api endpoint registry", () => {
         confirm: "Reclassify atomic roundtrips in mint/burn data?",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
+        acceptsStablecoinFilter: true,
         group: "audit",
       },
       {
         label: "Audit Depegs",
         path: "/api/audit-depeg-history?dry-run=true",
-        confirm: "Run depeg history audit (dry-run)?",
+        confirm: "Audit depeg history and review possible provenance repairs?",
+        destructive: false,
+        method: "GET",
+        acceptsStablecoinFilter: true,
+        group: "audit",
+      },
+      {
+        label: "Validate DEWS History",
+        path: "/api/backfill-dews",
+        confirm: "Run the read-only DEWS historical backtest?",
         destructive: false,
         method: "GET",
         acceptsStablecoinFilter: false,
         group: "audit",
       },
-      {
-        label: "Backfill DEWS",
-        path: "/api/backfill-dews",
-        confirm: "Run DEWS historical backfill validation?",
-        destructive: false,
-        method: "GET",
-        acceptsStablecoinFilter: false,
-        group: "recovery",
-      },
     ]);
+  });
+
+  it("requires structured operator metadata for every status-page action", () => {
+    const actions = getStatusPageActions();
+    expect(actions).toHaveLength(16);
+
+    for (const action of actions) {
+      expect(action.kind).toMatch(/^(inspect|backfill|repair|reset|communication)$/);
+      expect(action.risk).toMatch(/^(read-only|low|moderate|high)$/);
+      expect(action.expectedDuration.length).toBeGreaterThan(0);
+      expect(action.preconditions).toBeInstanceOf(Array);
+      expect(action.blockedBy).toBeInstanceOf(Array);
+      expect(action.resultMode).toMatch(/^(immediate|queued|continuation)$/);
+      expect(action.acceptsStablecoinFilter).toBe(action.scope.type === "asset-or-batch");
+      if (action.dryRun.supported) {
+        expect(action.dryRun.default).toBe(true);
+        expect(action.dryRun.queryParam).toMatch(/^(dry-run|dryRun)$/);
+      } else {
+        expect(action.dryRun.default).toBe(false);
+      }
+    }
+  });
+
+  it("limits status-action runbooks to known repository documents", () => {
+    const allowedRunbookPaths = new Set([
+      "docs/data-pipeline.md",
+      "docs/depeg-detection.md",
+      "docs/dews.md",
+      "docs/mint-burn-flows.md",
+      "docs/pricing-pipeline.md",
+      "docs/stability-index.md",
+      "docs/yield-intelligence.md",
+    ]);
+    const referencedRunbooks = getStatusPageActions().flatMap((action) =>
+      action.runbookPath ? [action.runbookPath] : [],
+    );
+
+    expect(referencedRunbooks.length).toBeGreaterThan(0);
+    for (const runbookPath of referencedRunbooks) {
+      expect(allowedRunbookPaths.has(runbookPath)).toBe(true);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is constrained by the allowlist above.
+      expect(existsSync(resolve(process.cwd(), runbookPath))).toBe(true);
+    }
+  });
+
+  it("matches status-action dry-run metadata to implemented query and method contracts", () => {
+    const dryRunContracts = Object.fromEntries(
+      getStatusPageActions().flatMap((action) => {
+        if (!action.dryRun.supported) return [];
+        const dryRun = action.dryRun;
+        return [
+          [
+            action.path,
+            {
+              queryParam: dryRun.queryParam,
+              liveSupported: dryRun.liveSupported,
+              dryRunMethod: dryRun.dryRunMethod ?? action.method,
+              liveMethod: dryRun.liveMethod ?? action.method,
+            },
+          ],
+        ];
+      }),
+    );
+
+    expect(dryRunContracts).toEqual({
+      "/api/remediate-blacklist-amount-gaps": {
+        queryParam: "dryRun",
+        liveSupported: true,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/backfill-blacklist-current-balances": {
+        queryParam: "dryRun",
+        liveSupported: true,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/backfill-depegs": {
+        queryParam: "dry-run",
+        liveSupported: true,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/backfill-stability-index": {
+        queryParam: "dry-run",
+        liveSupported: true,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/backfill-mint-burn-prices": {
+        queryParam: "dry-run",
+        liveSupported: false,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/backfill-tape": {
+        queryParam: "dryRun",
+        liveSupported: true,
+        dryRunMethod: "POST",
+        liveMethod: "POST",
+      },
+      "/api/audit-depeg-history?dry-run=true": {
+        queryParam: "dry-run",
+        liveSupported: true,
+        dryRunMethod: "GET",
+        liveMethod: "POST",
+      },
+    });
   });
 
   it("does not infer status-page action paths from probe paths", () => {

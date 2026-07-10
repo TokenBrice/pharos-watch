@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import type { StatusPageAction } from "@shared/lib/api-endpoints";
+import type { EndpointMethod, StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
 import { RequestFailure } from "@/lib/request";
 
@@ -11,6 +11,7 @@ export type AdminActionExecutionStatus =
 export interface AdminActionExecutionRequest {
   action: StatusPageAction;
   requestPath: string;
+  requestMethod: EndpointMethod;
   scopeKey: string;
   scopeLabel: string;
 }
@@ -21,6 +22,7 @@ export interface AdminActionExecution {
   intentId: string;
   idempotencyKey: string;
   requestPath: string;
+  requestMethod: EndpointMethod;
   scopeKey: string;
   scopeLabel: string;
   status: AdminActionExecutionStatus;
@@ -221,6 +223,7 @@ export function AdminActionExecutionProvider({
         intentId: idempotencyKey,
         idempotencyKey,
         requestPath: request.requestPath,
+        requestMethod: request.requestMethod,
         scopeKey: request.scopeKey,
         scopeLabel: request.scopeLabel,
         status: "ready",
@@ -279,7 +282,7 @@ export function AdminActionExecutionProvider({
       let finished: AdminActionExecution;
       try {
         const response = await adminMutation(running.requestPath, {
-          method: running.action.method,
+          method: running.requestMethod,
           idempotencyKey: running.idempotencyKey,
         });
         const status = statusFromSuccessfulResponse(response);
