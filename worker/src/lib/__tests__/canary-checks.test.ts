@@ -30,15 +30,24 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
 }
 
 function reportCardPayload(updatedAt = NOW - 60) {
+  const scoreIds = [...ACTIVE_IDS].sort();
+  const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
   return JSON.stringify({
     generation: REPORT_CARD_CACHE_GENERATION,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     payload: {
       updatedAt,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores: {
-        "usdt-tether": { score: 92, grade: "A" },
+      publicationGenerationId,
+      completeness: {
+        generationId: publicationGenerationId,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: scoreIds.length,
+        scoredCount: scoreIds.length,
+        notRatedCount: 0,
+        notRatedIds: [],
       },
+      scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
     },
   });
 }

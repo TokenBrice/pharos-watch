@@ -100,6 +100,10 @@ describe("buildYieldSyncMetadata", () => {
           coveredCount: 1,
           trackedCount: 1,
           reason: null,
+          source: "report-card-cache",
+          publicationGenerationId: "report-cards:v8.299:1800000000",
+          methodologyVersion: "v8.299",
+          publishedAt: START_SEC,
         },
         resolvedYieldBearingCount: 1,
         expectedYieldBearingCount: 1,
@@ -157,6 +161,12 @@ describe("buildYieldSyncMetadata", () => {
         onChainEnvelopeRejectionsTruncated: boolean;
         comparisonAnchorFreshness: typeof comparisonAnchorFreshness;
         previousTvlRowsTruncated: boolean;
+        safetySnapshot: {
+          source: string;
+          publicationGenerationId: string;
+          methodologyVersion: string;
+          publishedAt: number;
+        };
       };
     };
 
@@ -167,5 +177,11 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionsTruncated).toBe(true);
     expect(metadata.sourceCoverage.comparisonAnchorFreshness).toEqual(comparisonAnchorFreshness);
     expect(metadata.sourceCoverage.previousTvlRowsTruncated).toBe(true);
+    expect(metadata.sourceCoverage.safetySnapshot).toMatchObject({
+      source: "report-card-cache",
+      publicationGenerationId: "report-cards:v8.299:1800000000",
+      methodologyVersion: "v8.299",
+      publishedAt: START_SEC,
+    });
   });
 });

@@ -5,6 +5,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import type { ReportCard } from "@shared/types/report-cards";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 export interface ReportCardScoreEntry {
   score: number;
@@ -44,6 +45,8 @@ export type ReportCardCacheFailureReason =
   | "invalid-envelope"
   | "generation-mismatch"
   | "methodology-mismatch"
+  | "completeness-missing"
+  | "completeness-mismatch"
   | "stale-cache";
 
 export type ReportCardCacheLoadResult =
@@ -52,6 +55,7 @@ export type ReportCardCacheLoadResult =
 
 export interface LoadReportCardCacheOptions {
   maxAgeMs?: number;
+  requireCompleteness?: boolean;
 }
 
 export interface WriteReportCardCacheOptions {
@@ -133,6 +137,48 @@ function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardC
     && typeof parsed.redemptionStale === "boolean"
     && Array.isArray(parsed.staleInputs)
     && parsed.staleInputs.every((entry) => typeof entry === "string");
+}
+
+function hasExactReportCardCacheCompleteness(payload: ReportCardCachePayload): boolean {
+  const completeness = payload.completeness;
+  if (!payload.publicationGenerationId || !completeness) return false;
+  if (
+    completeness.generationId !== payload.publicationGenerationId
+    || completeness.generationId !== `report-cards:${payload.methodologyVersion}:${payload.updatedAt}`
+    || completeness.methodologyVersion !== payload.methodologyVersion
+    || completeness.expectedCount !== ACTIVE_IDS.size
+  ) {
+    return false;
+  }
+
+  const scoreIds = Object.keys(payload.scores);
+  const notRatedIds = completeness.notRatedIds;
+  const notRatedIdSet = new Set(notRatedIds);
+  if (
+    scoreIds.length !== completeness.scoredCount
+    || notRatedIds.length !== completeness.notRatedCount
+    || new Set(scoreIds).size !== scoreIds.length
+    || notRatedIdSet.size !== notRatedIds.length
+  ) {
+    return false;
+  }
+  const publishedIds = new Set([...scoreIds, ...notRatedIds]);
+  if (publishedIds.size !== ACTIVE_IDS.size) return false;
+  for (const id of ACTIVE_IDS) {
+    if (!publishedIds.has(id)) return false;
+  }
+  for (const [id, score] of Object.entries(payload.scores)) {
+    if (
+      notRatedIdSet.has(id)
+      || typeof score.score !== "number"
+      || !Number.isFinite(score.score)
+      || typeof score.grade !== "string"
+      || score.grade.length === 0
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isReportCardCacheEnvelope(value: unknown): value is ParsedReportCardCacheEnvelope {
@@ -222,6 +268,15 @@ export async function loadReportCardCache(
     ...decoded.payload,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   };
+
+  if (options.requireCompleteness) {
+    if (!payload.publicationGenerationId || !payload.completeness) {
+      return { kind: "error", reason: "completeness-missing", updatedAt: payload.updatedAt };
+    }
+    if (!hasExactReportCardCacheCompleteness(payload)) {
+      return { kind: "error", reason: "completeness-mismatch", updatedAt: payload.updatedAt };
+    }
+  }
 
   if (options.maxAgeMs != null) {
     const ageMs = Date.now() - payload.updatedAt * 1000;

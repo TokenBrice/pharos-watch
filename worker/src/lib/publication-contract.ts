@@ -597,7 +597,7 @@ async function loadReportCardCachePublicationSurface(
   const genericSurface = await loadGenericPublicationSurface(db, now, REPORT_CARD_CACHE_SURFACE);
   if (genericSurface) return genericSurface;
 
-  const result = await loadReportCardCache(db);
+  const result = await loadReportCardCache(db, { requireCompleteness: true });
   if (result.kind === "ok") {
     const publishedRow = publishedFallbackRow(
       `report-card-cache:${result.updatedAt}`,

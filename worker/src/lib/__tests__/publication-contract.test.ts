@@ -3,6 +3,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadPublicationHealth } from "../publication-contract";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const NOW = 1_775_890_000;
 
@@ -398,6 +399,8 @@ describe("loadPublicationHealth", () => {
     const dewsAt = NOW - 300;
     const psiAt = NOW - 240;
     const reportCardsAt = NOW - 180;
+    const reportCardIds = [...ACTIVE_IDS].sort();
+    const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
     const dewsRows = [
       { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
       { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
@@ -436,9 +439,15 @@ describe("loadPublicationHealth", () => {
           {
             key: "report_card_cache",
             value: JSON.stringify({
-              scores: {
-                "usdt-tether": { score: 92, grade: "A" },
-                "usdc-circle": { score: 91, grade: "A" },
+              scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
+              publicationGenerationId: reportCardGenerationId,
+              completeness: {
+                generationId: reportCardGenerationId,
+                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+                expectedCount: reportCardIds.length,
+                scoredCount: reportCardIds.length,
+                notRatedCount: 0,
+                notRatedIds: [],
               },
               updatedAt: reportCardsAt,
               methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -472,7 +481,7 @@ describe("loadPublicationHealth", () => {
       lastPublishedGeneration: {
         generationId: `report-card-cache:${reportCardsAt}`,
         state: "published",
-        publishedRows: 2,
+        publishedRows: ACTIVE_IDS.size,
       },
     });
   });

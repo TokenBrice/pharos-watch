@@ -352,6 +352,10 @@ const YieldSafetySnapshotMetaSchema = z.object({
   coveredCount: z.number(),
   trackedCount: z.number(),
   reason: z.string().nullable(),
+  source: z.literal("report-card-cache").optional(),
+  publicationGenerationId: z.string().nullable().optional(),
+  methodologyVersion: z.string().nullable().optional(),
+  publishedAt: z.number().nullable().optional(),
 });
 
 const YieldRankingProvenanceSchema = z.object({

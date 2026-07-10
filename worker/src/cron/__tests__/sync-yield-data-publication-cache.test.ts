@@ -68,7 +68,7 @@ describe("syncYieldData", () => {
     );
   });
 
-  it("reuses the stablecoins cache load for supply gates and safety scores", async () => {
+  it("loads stablecoin supply once and requests the published safety generation", async () => {
     const db = makeDb();
     const updatedAt = Math.floor(Date.now() / 1000);
     vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
@@ -89,12 +89,8 @@ describe("syncYieldData", () => {
     expect(stablecoinsReads).toHaveLength(1);
     expect(safetyCall?.[0]).toBe(db);
     expect(safetyCall?.[1]).toMatchObject({
-      includeNavTokens: true,
       outputMode: "map",
-      preloadedStablecoinsCache: {
-        kind: "ok",
-        updatedAt,
-      },
+      sourceMode: "published-cache",
     });
   });
 

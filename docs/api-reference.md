@@ -2730,7 +2730,17 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
       "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
     },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
-    "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
+    "safetySnapshot": {
+      "kind": "ok",
+      "coverageRatio": 0.8462,
+      "coveredCount": 308,
+      "trackedCount": 364,
+      "reason": null,
+      "source": "report-card-cache",
+      "publicationGenerationId": "report-cards:8.13:1771999800",
+      "methodologyVersion": "8.13",
+      "publishedAt": 1771999800
+    }
   },
   "warnings": [],
   "publication": {
@@ -2772,6 +2782,10 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `publication.schemaVersion`              | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Payload-generation schema version                                                                                                                                                 |
 | `publication.status`                     | rankings/history root       | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                                                                                                        | Public cache payloads should expose `published`; failed or CAS-skipped generations do not replace current `yield_data` rows                                                       |
 | `warnings[]`                             | rankings root               | `YieldResponseWarning[] \| undefined`                                                                                                                                                                             | Body-level degraded-response advisories; row source warnings remain in `warningSignals`                                                                                           |
+| `provenance.safetySnapshot.source`       | rankings root               | `"report-card-cache" \| undefined`                                                                                                                                                                               | Safety input source used by the hourly publisher; current generation-aware payloads use the exact compact report-card projection                                                  |
+| `provenance.safetySnapshot.publicationGenerationId` | rankings root      | `string \| null \| undefined`                                                                                                                                                                                     | Report-card publication generation consumed for PYS; `null` when no exact projection was accepted                                                                                 |
+| `provenance.safetySnapshot.methodologyVersion` | rankings root           | `string \| null \| undefined`                                                                                                                                                                                     | Safety Score methodology pinned by the consumed report-card projection                                                                                                            |
+| `provenance.safetySnapshot.publishedAt`  | rankings root               | `number \| null \| undefined`                                                                                                                                                                                     | Unix seconds for the compact report-card projection consumed by the hourly publisher                                                                                              |
 | `publicationGenerationId`                | ranking/history rows        | `string \| null \| undefined`                                                                                                                                                                                     | Row-to-generation join identifier; `null` on legacy rows                                                                                                                          |
 | `publishedRank`                          | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Stable rank from the published cache order before live Safety Score hydration                                                                                                     |
 | `liveRank`                               | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Post-hydration rank assigned after live Safety Score recomputation                                                                                                                |

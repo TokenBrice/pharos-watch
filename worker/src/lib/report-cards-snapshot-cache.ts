@@ -7,6 +7,7 @@ import {
   type VersionedSnapshotCacheLoadResult,
   type VersionedSnapshotCacheOptions,
 } from "./versioned-snapshot-cache";
+import { buildReportCardPublicationPlan } from "./report-card-publication";
 
 export const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
 export const REPORT_CARDS_SNAPSHOT_CACHE_GENERATION = 3;
@@ -17,7 +18,9 @@ export type ReportCardsSnapshotCacheFailureReason =
   | "invalid-payload"
   | "invalid-envelope"
   | "generation-mismatch"
-  | "methodology-mismatch";
+  | "methodology-mismatch"
+  | "completeness-missing"
+  | "completeness-mismatch";
 
 export type ReportCardsSnapshotCacheLoadResult = VersionedSnapshotCacheLoadResult<
   ReportCardsResponse,
@@ -42,14 +45,39 @@ const REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<
     methodologyMismatch: "methodology-mismatch",
   },
   getUpdatedAt: (payload) => payload.updatedAt,
-  validatePayload: (payload) => (
-    payload.methodology.version === SAFETY_SCORE_METHODOLOGY_VERSION
-      ? null
-      : {
-          reason: "methodology-mismatch",
-          message: `Report-cards snapshot methodology ${payload.methodology.version} does not match ${SAFETY_SCORE_METHODOLOGY_VERSION}`,
-        }
-  ),
+  validatePayload: (payload) => {
+    if (payload.methodology.version !== SAFETY_SCORE_METHODOLOGY_VERSION) {
+      return {
+        reason: "methodology-mismatch",
+        message: `Report-cards snapshot methodology ${payload.methodology.version} does not match ${SAFETY_SCORE_METHODOLOGY_VERSION}`,
+      };
+    }
+    if (!payload.publication) {
+      return {
+        reason: "completeness-missing",
+        message: "Report-cards snapshot has no publication completeness manifest",
+      };
+    }
+    try {
+      const expected = buildReportCardPublicationPlan(
+        payload.cards,
+        payload.methodology.version,
+        payload.updatedAt,
+      ).completeness;
+      if (JSON.stringify(payload.publication) !== JSON.stringify(expected)) {
+        return {
+          reason: "completeness-mismatch",
+          message: "Report-cards snapshot publication completeness does not match its card identities",
+        };
+      }
+    } catch (error) {
+      return {
+        reason: "completeness-mismatch",
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+    return null;
+  },
 };
 
 export async function loadPublishedReportCardsSnapshot(

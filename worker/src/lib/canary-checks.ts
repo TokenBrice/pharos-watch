@@ -462,9 +462,14 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
 }
 
 async function checkReportCardCacheMethodology(db: D1Database) {
-  const cache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  const cache = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
   if (cache.kind === "error") {
-    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch" || cache.reason === "methodology-mismatch"
+    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch"
+      || cache.reason === "methodology-mismatch"
+      || cache.reason === "completeness-mismatch"
       ? "error"
       : "warning";
     return {

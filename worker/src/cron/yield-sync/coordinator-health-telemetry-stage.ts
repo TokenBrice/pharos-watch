@@ -56,6 +56,10 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     coveredCount: fetched.safetySnapshot.coveredCount,
     trackedCount: fetched.safetySnapshot.trackedCount,
     reason: fetched.safetySnapshot.reason ?? null,
+    source: fetched.safetySnapshot.source,
+    publicationGenerationId: fetched.safetySnapshot.publicationGenerationId,
+    methodologyVersion: fetched.safetySnapshot.methodologyVersion,
+    publishedAt: fetched.safetySnapshot.publishedAt,
   });
   const { previewRankingsPayload } = buildPreviewYieldRankingsArtifacts({
     evaluatedSources: normalized.evaluatedSources,

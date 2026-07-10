@@ -70,6 +70,10 @@ export function buildYieldSafetySnapshotMeta(input: {
   coveredCount: number;
   trackedCount: number;
   reason: string | null;
+  source: "report-card-cache";
+  publicationGenerationId: string | null;
+  methodologyVersion: string | null;
+  publishedAt: number | null;
 }): YieldSafetySnapshotMeta {
   return {
     kind: input.kind,
@@ -77,6 +81,10 @@ export function buildYieldSafetySnapshotMeta(input: {
     coveredCount: input.coveredCount,
     trackedCount: input.trackedCount,
     reason: input.reason,
+    source: input.source,
+    publicationGenerationId: input.publicationGenerationId,
+    methodologyVersion: input.methodologyVersion,
+    publishedAt: input.publishedAt,
   };
 }
 
@@ -183,6 +191,7 @@ export function buildYieldSyncMetadata(input: {
       safetyScoresComputed: input.safetySnapshot.coveredCount,
       safetyScoresExpected: input.safetySnapshot.trackedCount,
       safetyCoverageRatio: input.safetySnapshot.coverageRatio,
+      safetySnapshot: input.safetySnapshot,
       resolvedYieldBearingCount: input.resolvedYieldBearingCount,
       expectedYieldBearingCount: input.expectedYieldBearingCount,
       publishedYieldBearingCount: input.publishedYieldBearingCount,
