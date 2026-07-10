@@ -1,5 +1,3 @@
-import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
-import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
@@ -7,7 +5,13 @@ import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/st
 import { createTelegramAuthoritativePlanningCallbacks } from "./dispatch-telegram-authoritative-planning";
 import type { buildTelegramDispatchEvents } from "./dispatch-telegram-events";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
-import { type DispatchResult, emptyResult } from "./dispatch-telegram-result";
+import {
+  type DispatchResult,
+  emptyResult,
+  pendingDispatchFields,
+  reserveSourceFields,
+  safetySourceFields,
+} from "./dispatch-telegram-result";
 import type { buildDispatchSnapshotState } from "./dispatch-telegram-state";
 import { reportDigestProgress } from "./digest/progress";
 import {
@@ -18,7 +22,6 @@ import {
   readPendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   type PendingCapacitySnapshot,
-  type PendingDrainResult,
 } from "./telegram-pending";
 import {
   commitTelegramAlertSourceBaseline,
@@ -71,61 +74,6 @@ export function hasDeferredTelegramAuthoritativeWork(
   if (planner.state === "delivery_open") return planner.remainingTargets > 0;
   if (planner.state === "expired") return !planner.expiryComplete;
   return true;
-}
-
-function pendingFields(
-  drain: PendingDrainResult,
-  expiredCount: number,
-  pendingEnqueued: number,
-): Pick<
-  DispatchResult,
-  | "pendingAttempted"
-  | "pendingDrained"
-  | "pendingSent"
-  | "pendingRetryQueued"
-  | "pendingDropped"
-  | "pendingDroppedTtlExpired"
-  | "pendingDroppedPermanentFailure"
-  | "pendingDroppedMaxAttemptsFallback"
-  | "pendingDeferred"
-  | "pendingRateLimited"
-  | "pendingRetryAfterSec"
-  | "pendingEnqueued"
-  | "pendingExpired"
-> {
-  return {
-    pendingAttempted: drain.attempted,
-    pendingDrained: drain.sent,
-    pendingSent: drain.sent,
-    pendingRetryQueued: drain.retryQueued,
-    pendingDropped: drain.dropped,
-    pendingDroppedTtlExpired: expiredCount,
-    pendingDroppedPermanentFailure: drain.droppedPermanentFailure,
-    pendingDroppedMaxAttemptsFallback: drain.droppedMaxAttemptsFallback,
-    pendingDeferred: drain.deferred,
-    pendingRateLimited: drain.rateLimited,
-    pendingRetryAfterSec: drain.retryAfterSec,
-    pendingEnqueued,
-    pendingExpired: expiredCount,
-  };
-}
-
-function safetyFields(assessment: AlertSafetySourceAssessment, suppressed: boolean) {
-  return {
-    safetyAlertSourceState: assessment.state,
-    safetyAlertSourceAgeSeconds: assessment.ageSeconds,
-    safetyAlertsSuppressed: suppressed,
-    safetyAlertSourceGeneration: assessment.generation,
-  };
-}
-
-function reserveFields(assessment: AlertReserveSourceAssessment) {
-  return {
-    reserveAlertSourceState: assessment.state,
-    reserveAlertSourceAgeSeconds: assessment.ageSeconds,
-    reserveAlertsSuppressed: assessment.state !== "ok",
-    reserveAlertSourceGeneration: assessment.generation,
-  };
 }
 
 export async function executeAuthoritativeFanoutPath(
@@ -249,7 +197,7 @@ export async function executeAuthoritativeFanoutPath(
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
     cappedAtLimit: hasDeferredTelegramAuthoritativeWork(sourceResolution.allComplete, planner),
-    ...pendingFields(drainResult, expiredCount, planner?.enqueued ?? 0),
+    ...pendingDispatchFields(drainResult, { expiredCount, pendingEnqueued: planner?.enqueued ?? 0 }),
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore: context.pendingCapacityBefore,
     pendingCapacityAfter,
@@ -263,8 +211,8 @@ export async function executeAuthoritativeFanoutPath(
     fanoutBuildMs: 0,
     fanoutTotalMs: fanoutMs,
     reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
-    ...reserveFields(snapshotState.reserveSourceAssessment),
-    ...safetyFields(
+    ...reserveSourceFields(snapshotState.reserveSourceAssessment),
+    ...safetySourceFields(
       snapshotState.safetySourceAssessment,
       snapshotState.safetySourceAssessment.state !== "ok" || snapshotState.safetySnapshotNeedsSeed,
     ),

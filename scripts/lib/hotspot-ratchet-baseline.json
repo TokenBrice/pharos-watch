@@ -396,16 +396,16 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1127,
-    "maxFunctionLines": 338,
-    "branchCount": 26,
-    "disposition": "deferred",
+    "fileLines": 388,
+    "maxFunctionLines": 300,
+    "branchCount": 9,
+    "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 540,
       "maxFunctionLines": 260,
       "branchCount": 55
     },
-    "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
+    "notes": "TGB-036 split landed: queue-only paths, source-event lifecycle, result field mappers, and dispatch-state policy live in sibling modules. Keep this entrypoint orchestration-plus-progress only; new path bodies belong in the responsibility modules."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
     "fileLines": 478,

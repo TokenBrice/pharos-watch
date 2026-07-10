@@ -10,8 +10,10 @@ import {
   type AlertSafetySourceAssessment,
   type AlertSafetySourceSnapshot,
 } from "../lib/alert-safety-source-cache";
-import { getCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
+import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
+import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   ALERT_RESERVE_SOURCE_GENERATION,
   assessAlertReserveSourceCache,
@@ -37,6 +39,44 @@ import {
 type CachedValue = { value: string; updatedAt: number } | null;
 
 const TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC = 2 * 3600;
+const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
+
+export interface TelegramDispatchSharedState {
+  pendingCapacitySnapshot?: PendingCapacitySnapshot;
+  safetySourceAssessment?: AlertSafetySourceAssessment;
+}
+
+export function assignSharedDispatchState(
+  sharedState: TelegramDispatchSharedState | undefined,
+  updates: Partial<TelegramDispatchSharedState>,
+): void {
+  if (!sharedState) return;
+  Object.assign(sharedState, updates);
+}
+
+export async function readPresetFailureCount(db: D1Database): Promise<number> {
+  try {
+    const cached = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
+    if (!cached) return 0;
+    const parsed = Number(cached.value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function writePresetFailureCount(db: D1Database, value: number): Promise<void> {
+  try {
+    await setCache(db, PRESET_QUERY_FAILURE_CACHE_KEY, String(Math.max(0, Math.floor(value))));
+  } catch {
+    logTelegramEvent({
+      level: "warn",
+      message: "failed to persist preset failure count",
+      action: "write-preset-failure-count",
+      module: "dispatch-telegram-alerts",
+    });
+  }
+}
 
 export async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
   return loadTelegramDewsCurrentRows(db, nowSec, {
