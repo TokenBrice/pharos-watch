@@ -25,6 +25,7 @@ import {
   type PerAlertTypeTargets,
 } from "./dispatch-telegram-result";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
+import { removeHandledTelegramAlertItems } from "./telegram-alert-event-lineage";
 
 export type TelegramFanoutPlanEvents = Pick<
   TelegramDispatchEvents,
@@ -58,14 +59,33 @@ export interface TelegramFanoutPlan {
   presetQueryFailures: number;
   presetResolutionFailures: number;
   presetFailure: boolean;
+  handledItemsPruned: number;
 }
 
 export function summarizePresetFanoutFailures(
   inputs: Pick<FanoutSubscriptionInputs, "presetDewsResult" | "presetDepegResult" | "presetSafetyResult">,
 ): PresetFanoutFailureSummary {
   const presetResults = [inputs.presetDewsResult, inputs.presetDepegResult, inputs.presetSafetyResult];
-  const presetQueryFailures = presetResults.filter((result) => result.kind === "query-failed").length;
-  const presetResolutionFailures = presetResults.filter((result) => result.kind === "resolution-failed").length;
+  const presetQueryFailures = presetResults.reduce(
+    (count, result) => count + (
+      result.kind === "query-failed"
+        ? 1
+        : result.kind === "partial"
+          ? result.queryFailures
+          : 0
+    ),
+    0,
+  );
+  const presetResolutionFailures = presetResults.reduce(
+    (count, result) => count + (
+      result.kind === "resolution-failed"
+        ? 1
+        : result.kind === "partial"
+          ? result.resolutionFailures
+          : 0
+    ),
+    0,
+  );
   return {
     presetQueryFailures,
     presetResolutionFailures,
@@ -81,6 +101,8 @@ export function buildTelegramFanoutPlan(args: {
   nowSec: number;
   formatBudget?: number;
   presetFailureSummary?: PresetFanoutFailureSummary;
+  handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
+  collapseBursts?: boolean;
 }): TelegramFanoutPlan {
   const {
     events,
@@ -90,15 +112,17 @@ export function buildTelegramFanoutPlan(args: {
     nowSec,
     formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
     presetFailureSummary = summarizePresetFanoutFailures(inputs),
+    handledItemsByChat = new Map(),
+    collapseBursts = true,
   } = args;
 
-  const presetDewsSubs = inputs.presetDewsResult.kind === "ok"
+  const presetDewsSubs = inputs.presetDewsResult.kind === "ok" || inputs.presetDewsResult.kind === "partial"
     ? inputs.presetDewsResult.rows
     : new Map<string, SubscriberRow[]>();
-  const presetDepegSubs = inputs.presetDepegResult.kind === "ok"
+  const presetDepegSubs = inputs.presetDepegResult.kind === "ok" || inputs.presetDepegResult.kind === "partial"
     ? inputs.presetDepegResult.rows
     : new Map<string, SubscriberRow[]>();
-  const presetSafetySubs = inputs.presetSafetyResult.kind === "ok"
+  const presetSafetySubs = inputs.presetSafetyResult.kind === "ok" || inputs.presetSafetyResult.kind === "partial"
     ? inputs.presetSafetyResult.rows
     : new Map<string, SubscriberRow[]>();
   const dewsSubs = mergeSubscriberMaps(inputs.directDewsSubs, presetDewsSubs);
@@ -177,7 +201,10 @@ export function buildTelegramFanoutPlan(args: {
     inputs.perCoinExplicitlyOffMaps.reserve,
   );
 
-  const burstOutcome = collapseBurstChats(alertsByChat, burstMarkers, nowSec);
+  const handledItemsPruned = removeHandledTelegramAlertItems(alertsByChat, handledItemsByChat);
+  const burstOutcome = collapseBursts
+    ? collapseBurstChats(alertsByChat, burstMarkers, nowSec)
+    : { markers: burstMarkers, collapsedChats: 0, deltaSuppressed: 0 };
   const {
     plannedQueue,
     subscriberQueue,
@@ -199,6 +226,7 @@ export function buildTelegramFanoutPlan(args: {
     freshCandidateCount: plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0),
     formattedChats: subscriberQueue.length,
     burstOutcome,
+    handledItemsPruned,
     ...presetFailureSummary,
   };
 }

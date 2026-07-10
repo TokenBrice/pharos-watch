@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   mockGetCache,
-  mockSetCache,
   mockSendToChat,
   dispatchTelegramAlerts,
   makeSafetySourceCache,
@@ -876,9 +875,11 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.subscribersNotified).toBe(0);
     expect(mockSendToChat).not.toHaveBeenCalled();
 
-    const safetySnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:safety-snapshot");
-    expect(safetySnapshotCall?.[2]).toContain('"bold-liquity"');
-    expect(safetySnapshotCall?.[2]).toContain('"usdc-circle"');
+    const safetySnapshotCall = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "alert:safety-snapshot",
+    );
+    expect(String(safetySnapshotCall?.binds[1])).toContain('"bold-liquity"');
+    expect(String(safetySnapshotCall?.binds[1])).toContain('"usdc-circle"');
   });
 
   it("does not alert on historical rows missing from a partial legacy safety snapshot", async () => {
@@ -954,9 +955,11 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.messagesSent).toBe(0);
     expect(mockSendToChat).not.toHaveBeenCalled();
 
-    const safetySnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:safety-snapshot");
-    expect(safetySnapshotCall?.[2]).toContain('"bold-liquity"');
-    expect(safetySnapshotCall?.[2]).toContain('"usdc-circle"');
+    const safetySnapshotCall = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "alert:safety-snapshot",
+    );
+    expect(String(safetySnapshotCall?.binds[1])).toContain('"bold-liquity"');
+    expect(String(safetySnapshotCall?.binds[1])).toContain('"usdc-circle"');
   });
 
   it("ignores DEWS transitions to CALM/WATCH", async () => {
@@ -1035,9 +1038,9 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.messagesSent).toBe(0);
     expect(mockSendToChat).not.toHaveBeenCalled();
 
-    const dewsAlertableSnapshotCall = mockSetCache.mock.calls.find(
-      (call) => call[1] === "alert:dews-alertable-snapshot",
+    const dewsAlertableSnapshotCall = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "alert:dews-alertable-snapshot",
     );
-    expect(dewsAlertableSnapshotCall?.[2]).toContain('"uusd-youves":"ALERT"');
+    expect(String(dewsAlertableSnapshotCall?.binds[1])).toContain('"uusd-youves":"ALERT"');
   });
 });

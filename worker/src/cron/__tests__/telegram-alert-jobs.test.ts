@@ -84,11 +84,13 @@ describe("telegram alert job manifests", () => {
     );
 
     const update = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_alert_jobs"));
-    expect(update?.binds[0]).toBe("degraded");
-    expect(update?.binds[1]).toBe(7);
-    expect(update?.binds[2]).toBe(2);
-    expect(update?.binds[3]).toBe(1);
-    expect(update?.binds[5]).toBe("telegram:depeg:abc");
+    expect(update?.sql).toContain("SELECT COUNT(*) FROM telegram_alert_job_targets");
+    expect(JSON.parse(String(update?.binds[0]))).toEqual({
+      finalizedAt: 1_800_000_060,
+      latestAttempt: { sent: 7, enqueued: 2, failed: 1 },
+      countersSource: "target-rows",
+    });
+    expect(update?.binds[1]).toBe("telegram:depeg:abc");
   });
 });
 

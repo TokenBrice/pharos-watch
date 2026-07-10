@@ -12,6 +12,12 @@ export interface AlertStablecoinIds {
 
 export type PresetSubscriberLoadResult =
   | { kind: "ok"; rows: Map<string, SubscriberRow[]> }
+  | {
+      kind: "partial";
+      rows: Map<string, SubscriberRow[]>;
+      queryFailures: number;
+      resolutionFailures: number;
+    }
   | { kind: "query-failed"; error: unknown }
   | { kind: "resolution-failed" };
 

@@ -168,6 +168,14 @@ export async function runTelegramRetentionCleanup(
   );
   throwIfAborted(signal);
 
+  const jobTargetItems = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_alert_job_target_items WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_target_items WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
   const jobTargets = await deleteOlderThanCapped(
     db,
     "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
@@ -179,6 +187,38 @@ export async function runTelegramRetentionCleanup(
   const jobs = await deleteOlderThanCapped(
     db,
     "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const sourceResolutionTargets = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_alert_source_resolution_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const sourceResolutionMemberships = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_alert_source_resolution_memberships WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_memberships WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const sourceResolutionPages = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_alert_source_resolution_pages WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_pages WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const sourceEvents = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_alert_source_events WHERE detected_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_events WHERE detected_at < ? ORDER BY detected_at ASC, rowid ASC LIMIT ?)",
     nowSec - ALERT_AUDIT_RETENTION_SEC,
     signal,
   );
@@ -270,8 +310,13 @@ export async function runTelegramRetentionCleanup(
   const totalPruned =
     processedUpdates.pruned +
     deadLetters.pruned +
+    jobTargetItems.pruned +
     jobTargets.pruned +
     jobs.pruned +
+    sourceResolutionTargets.pruned +
+    sourceResolutionMemberships.pruned +
+    sourceResolutionPages.pruned +
+    sourceEvents.pruned +
     usageDaily.pruned +
     watcherLifecycle.pruned +
     diagnostics.pruned +
@@ -289,8 +334,13 @@ export async function runTelegramRetentionCleanup(
     metadata: {
       processedUpdatesPruned: processedUpdates.pruned,
       deadLettersPruned: deadLetters.pruned,
+      jobTargetItemsPruned: jobTargetItems.pruned,
       jobTargetsPruned: jobTargets.pruned,
       jobsPruned: jobs.pruned,
+      sourceResolutionTargetsPruned: sourceResolutionTargets.pruned,
+      sourceResolutionMembershipsPruned: sourceResolutionMemberships.pruned,
+      sourceResolutionPagesPruned: sourceResolutionPages.pruned,
+      sourceEventsPruned: sourceEvents.pruned,
       usageDailyPruned: usageDaily.pruned,
       watcherLifecyclePruned: watcherLifecycle.pruned,
       diagnosticsPruned: diagnostics.pruned,
@@ -319,8 +369,13 @@ export async function runTelegramRetentionCleanup(
       cappedAtLimit: {
         processedUpdates: processedUpdates.cappedAtLimit,
         deadLetters: deadLetters.cappedAtLimit,
+        jobTargetItems: jobTargetItems.cappedAtLimit,
         jobTargets: jobTargets.cappedAtLimit,
         jobs: jobs.cappedAtLimit,
+        sourceResolutionTargets: sourceResolutionTargets.cappedAtLimit,
+        sourceResolutionMemberships: sourceResolutionMemberships.cappedAtLimit,
+        sourceResolutionPages: sourceResolutionPages.cappedAtLimit,
+        sourceEvents: sourceEvents.cappedAtLimit,
         usageDaily: usageDaily.cappedAtLimit,
         watcherLifecycle: watcherLifecycle.cappedAtLimit,
         diagnostics: diagnostics.cappedAtLimit,

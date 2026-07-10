@@ -387,6 +387,22 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM telegram_pending_alerts p", rows: [] },
       {
+        match: "SELECT source_event_id, page_key, alert_type, page_index",
+        rows: [{
+          source_event_id: "test-source",
+          page_key: "dews:0",
+          alert_type: "dews",
+          page_index: 0,
+          cursor_chat_id: null,
+          cursor_preset_id: null,
+          memberships_resolved: 0,
+          status: "pending",
+          attempt_count: 0,
+        }],
+      },
+      { match: "SELECT COUNT(*) AS count\n         FROM telegram_alert_source_resolution_pages", rows: [{ count: 1 }] },
+      { match: "SELECT DISTINCT alert_type\n           FROM telegram_alert_source_resolution_pages", rows: [{ alert_type: "dews" }] },
+      {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
@@ -419,7 +435,7 @@ describe("dispatchTelegramAlerts", () => {
       expect(presetQueryLog).toMatchObject({
         scope: "telegram",
         level: "warn",
-        module: "dispatch-telegram-subscribers",
+        module: "telegram-alert-source-events",
         failureKind: "query-failed",
         alertType: "dews",
         requestedStablecoinCount: 1,
@@ -429,7 +445,7 @@ describe("dispatchTelegramAlerts", () => {
       const snapshotWrites = mockSetCache.mock.calls.filter(
         ([_db, key]) => typeof key === "string" && key.startsWith("alert:"),
       );
-      expect(snapshotWrites.length).toBeGreaterThan(0);
+      expect(snapshotWrites).toHaveLength(0);
 
       // The failure counter is persisted.
       const counterWrite = mockSetCache.mock.calls.find(([_db, key]) => key === "telegram:preset-query-failure-count");
@@ -537,6 +553,22 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM telegram_pending_alerts p", rows: [] },
       {
+        match: "SELECT source_event_id, page_key, alert_type, page_index",
+        rows: [{
+          source_event_id: "test-source",
+          page_key: "dews:0",
+          alert_type: "dews",
+          page_index: 0,
+          cursor_chat_id: null,
+          cursor_preset_id: null,
+          memberships_resolved: 0,
+          status: "pending",
+          attempt_count: 0,
+        }],
+      },
+      { match: "SELECT COUNT(*) AS count\n         FROM telegram_alert_source_resolution_pages", rows: [{ count: 1 }] },
+      { match: "SELECT DISTINCT alert_type\n           FROM telegram_alert_source_resolution_pages", rows: [{ alert_type: "dews" }] },
+      {
         match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle", now, now],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "direct-chat", last_active_at: now }],
@@ -581,7 +613,7 @@ describe("dispatchTelegramAlerts", () => {
       expect(presetResolutionLog).toMatchObject({
         scope: "telegram",
         level: "warn",
-        module: "dispatch-telegram-subscribers",
+        module: "telegram-alert-source-events",
         failureKind: "resolution-failed",
         alertType: "dews",
         reason: "stablecoins-cache-unavailable",

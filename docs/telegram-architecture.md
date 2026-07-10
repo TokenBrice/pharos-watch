@@ -237,6 +237,9 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_pending_disambiguation` — short-lived disambiguation, bulk-confirm, and setup-wizard state
   - `telegram_pending_alerts` — overflow + retry queue (owned by Queue, but the schema lives here)
   - `telegram_alert_jobs` / `telegram_alert_job_targets` — discovery + delivery audit (Dispatch)
+  - `telegram_alert_source_events` / `telegram_alert_source_resolution_pages` — immutable event and resumable preset-resolution state (Dispatch)
+  - `telegram_alert_source_resolution_memberships` / `telegram_alert_source_resolution_targets` — normalized preset membership/follower page lineage, revalidated against current intent before routing (Dispatch)
+  - `telegram_alert_job_target_items` — normalized source-item coverage for consolidated target chunks (Dispatch)
   - `telegram_alert_dead_letters` — terminal failure audit (Queue)
   - `telegram_processed_updates` — webhook idempotency (Ingress)
   - `telegram_usage_daily` — privacy-preserving aggregates (Action handlers + Dispatch)

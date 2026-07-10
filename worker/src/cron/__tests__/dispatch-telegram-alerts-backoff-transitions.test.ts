@@ -353,10 +353,13 @@ describe("dispatchTelegramAlerts", () => {
 
     await dispatchTelegramAlerts(db, "bot-token");
 
-    // Snapshots are written with the NEW state (WARNING), not held back
-    const dewsSnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:dews-snapshot");
+    // The source baseline commits with the NEW state (WARNING) after targets
+    // are durable, even when part of the subscriber queue overflows.
+    const dewsSnapshotCall = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "alert:dews-snapshot",
+    );
     expect(dewsSnapshotCall).toBeDefined();
-    expect(dewsSnapshotCall?.[2]).toContain("WARNING");
+    expect(String(dewsSnapshotCall?.binds[1])).toContain("WARNING");
   });
 
   it("cleans up expired pending alerts", async () => {

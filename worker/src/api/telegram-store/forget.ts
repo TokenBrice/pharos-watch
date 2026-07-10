@@ -56,6 +56,7 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
@@ -384,6 +385,11 @@ function preparePendingDedupeMigrationStatements(
       oldChatId,
       newChatId,
     ),
+    db.prepare(`
+        UPDATE OR IGNORE telegram_alert_job_target_items
+           SET target_key = ? || substr(target_key, length(?) + 1)
+         WHERE ${targetKeyPredicate}
+      `).bind(newChatId, oldChatId, oldChatId, oldChatId, oldChatId),
     bindDedupePrefixRewrite(
       db.prepare(`
         UPDATE OR IGNORE telegram_alert_job_targets
@@ -394,6 +400,10 @@ function preparePendingDedupeMigrationStatements(
       oldChatId,
       newChatId,
     ),
+    db.prepare(`
+        DELETE FROM telegram_alert_job_target_items
+         WHERE ${targetKeyPredicate}
+      `).bind(oldChatId, oldChatId, oldChatId),
   ];
 }
 
@@ -518,6 +528,9 @@ export async function migrateTelegramChatId(
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_alert_source_resolution_targets SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(oldChatId),
     db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
