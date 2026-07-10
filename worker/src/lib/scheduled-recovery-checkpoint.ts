@@ -1,6 +1,7 @@
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
+import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
 
 export type ScheduledCheckpointState =
   | "running"
@@ -95,6 +96,44 @@ export interface AbandonedCheckpointPreparation {
   recoveryAttemptNo: number;
   currentItemKey: string | null;
   currentDomainAttemptId: string | null;
+}
+
+export type ScheduledRecoveryBlocker =
+  | "active-child-lease"
+  | "active-recovery-lease"
+  | "queue-hash-drift"
+  | "slot-heartbeat-active"
+  | "slot-missing"
+  | "slot-not-abandoned";
+
+export interface ScheduledRecoveryEligibilityCandidate {
+  scheduleKey: string;
+  slotStartedAt: number;
+  attemptNo: number;
+  executionGeneration: number;
+  state: "running" | "recovering" | "ready";
+  queueHash: string;
+  slotState: string | null;
+  slotResultStatus: string | null;
+  slotUpdatedAt: number | null;
+  currentItemKey: string | null;
+  currentDomainAttemptId: string | null;
+  blockers: ScheduledRecoveryBlocker[];
+  eligible: boolean;
+}
+
+export interface ScheduledRecoveryEligibilityInspection {
+  observedAt: number;
+  staleBefore: number;
+  readyCheckpointCount: number;
+  eligibleCheckpointCount: number;
+  candidates: ScheduledRecoveryEligibilityCandidate[];
+}
+
+interface ScheduledRecoveryEligibilityRow extends ScheduledCheckpointRow {
+  slot_state: string | null;
+  slot_result_status: string | null;
+  slot_updated_at: number | null;
 }
 
 const CHECKPOINT_COLUMNS = [
@@ -250,6 +289,9 @@ export async function beginScheduledCheckpoint(
   });
   if (!checkpoint) {
     throw new Error(`failed to create scheduled checkpoint for ${input.scheduleKey}@${input.slotStartedAt}`);
+  }
+  if (checkpoint.invocationId !== input.invocationId || checkpoint.state !== "running") {
+    throw new ScheduledCheckpointOwnershipLostError(checkpoint);
   }
   return checkpoint;
 }
@@ -446,17 +488,18 @@ async function loadCompletedCronJobsForSlot(
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT job, metadata
+        `SELECT job, status, metadata
            FROM cron_runs
           WHERE slot_started_at = ?
             AND job IN (${jobs.map(() => "?").join(", ")})
           ORDER BY started_at DESC`,
       )
       .bind(slotStartedAt, ...jobs)
-      .all<{ job: string; metadata: string | null }>(),
+      .all<{ job: string; status: string; metadata: string | null }>(),
   );
   const completed = new Set<string>();
   for (const row of rows.results ?? []) {
+    if (row.status !== "ok" && row.status !== "degraded") continue;
     if (row.metadata?.includes('"childDisposition":"not_started"')) continue;
     if (row.metadata?.includes('"reason":"stale-slot-reconciled"')) continue;
     completed.add(row.job);
@@ -630,6 +673,131 @@ export async function prepareScheduledCheckpointRecoveryForSlot(
   return prepareCheckpointAttemptForRecovery(db, checkpoint, input.childJobs, timestamp);
 }
 
+export async function inspectScheduledCheckpointRecoveryEligibility(
+  db: D1Database,
+  input: {
+    scheduleKey: string;
+    job: string;
+    expectedQueueHash: string;
+    staleAfterSec: number;
+    nowSec?: number;
+    limit?: number;
+  },
+): Promise<ScheduledRecoveryEligibilityInspection> {
+  const timestamp = input.nowSec ?? nowSec();
+  const staleBefore = timestamp - Math.max(60, input.staleAfterSec);
+  const limit = Math.max(1, Math.min(input.limit ?? 5, 25));
+  const [rows, readyRow] = await Promise.all([
+    runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT ${CHECKPOINT_COLUMNS.split(", ").map((column) => `c.${column}`).join(", ")},
+                  s.state AS slot_state, s.result_status AS slot_result_status,
+                  s.updated_at AS slot_updated_at
+             FROM worker_scheduled_checkpoints c
+             LEFT JOIN cron_slot_executions s
+               ON s.slot_key = c.schedule_key
+              AND s.slot_started_at = c.slot_started_at
+            WHERE c.schedule_key = ? AND c.job = ?
+              AND c.state IN ('running', 'recovering', 'ready')
+            ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
+            LIMIT ?`,
+        )
+        .bind(input.scheduleKey, input.job, limit)
+        .all<ScheduledRecoveryEligibilityRow>(),
+    ),
+    runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT COUNT(*) AS count
+             FROM worker_scheduled_checkpoints
+            WHERE schedule_key = ? AND job = ? AND state = 'ready'`,
+        )
+        .bind(input.scheduleKey, input.job)
+        .first<{ count: number }>(),
+    ),
+  ]);
+
+  const candidates: ScheduledRecoveryEligibilityCandidate[] = [];
+  for (const row of rows.results ?? []) {
+    const checkpoint = mapCheckpointRow(row);
+    const blockers: ScheduledRecoveryBlocker[] = [];
+    if (checkpoint.queueHash !== input.expectedQueueHash) blockers.push("queue-hash-drift");
+    if (checkpoint.state === "recovering" && (checkpoint.recoveryLeaseUntil ?? 0) >= timestamp) {
+      blockers.push("active-recovery-lease");
+    }
+    if (checkpoint.state !== "ready") {
+      if (!row.slot_state) {
+        blockers.push("slot-missing");
+      } else if (row.slot_state === "running" || row.slot_state === "reconciling") {
+        if ((row.slot_updated_at ?? timestamp) >= staleBefore) blockers.push("slot-heartbeat-active");
+      } else if (row.slot_state !== "finished" || row.slot_result_status !== "error") {
+        blockers.push("slot-not-abandoned");
+      }
+      if (
+        !blockers.includes("slot-missing")
+        && await hasActiveChildLeaseForScheduledSlot(db, checkpoint.scheduleKey, checkpoint.slotStartedAt, timestamp)
+      ) {
+        blockers.push("active-child-lease");
+      }
+    }
+    candidates.push({
+      scheduleKey: checkpoint.scheduleKey,
+      slotStartedAt: checkpoint.slotStartedAt,
+      attemptNo: checkpoint.attemptNo,
+      executionGeneration: checkpoint.executionGeneration,
+      state: checkpoint.state as "running" | "recovering" | "ready",
+      queueHash: checkpoint.queueHash,
+      slotState: row.slot_state,
+      slotResultStatus: row.slot_result_status,
+      slotUpdatedAt: row.slot_updated_at,
+      currentItemKey: checkpoint.currentItemKey,
+      currentDomainAttemptId: checkpoint.currentDomainAttemptId,
+      blockers,
+      eligible: blockers.length === 0,
+    });
+  }
+
+  return {
+    observedAt: timestamp,
+    staleBefore,
+    readyCheckpointCount: readyRow?.count ?? 0,
+    eligibleCheckpointCount: candidates.filter((candidate) => candidate.eligible).length,
+    candidates,
+  };
+}
+
+export async function prepareEligibleScheduledCheckpointRecoveries(
+  db: D1Database,
+  input: {
+    scheduleKey: string;
+    job: string;
+    childJobs: readonly string[];
+    expectedQueueHash: string;
+    staleAfterSec: number;
+    nowSec?: number;
+    limit?: number;
+  },
+): Promise<{
+  inspection: ScheduledRecoveryEligibilityInspection;
+  prepared: AbandonedCheckpointPreparation[];
+}> {
+  const inspection = await inspectScheduledCheckpointRecoveryEligibility(db, input);
+  const prepared: AbandonedCheckpointPreparation[] = [];
+  for (const candidate of inspection.candidates) {
+    if (!candidate.eligible || candidate.state === "ready") continue;
+    const result = await prepareScheduledCheckpointRecoveryForSlot(db, {
+      scheduleKey: candidate.scheduleKey,
+      slotStartedAt: candidate.slotStartedAt,
+      job: input.job,
+      childJobs: input.childJobs,
+      nowSec: inspection.observedAt,
+    });
+    if (result) prepared.push(result);
+  }
+  return { inspection, prepared };
+}
+
 async function requeueExpiredRecoveries(
   db: D1Database,
   job: string,
@@ -660,6 +828,7 @@ export async function claimNextScheduledCheckpointRecovery(
     childJobs: readonly string[];
     owner: string;
     leaseSec: number;
+    expectedQueueHash?: string;
     nowSec?: number;
   },
 ): Promise<ScheduledRecoveryCheckpoint | null> {
@@ -680,6 +849,7 @@ export async function claimNextScheduledCheckpointRecovery(
 
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
+    if (input.expectedQueueHash && checkpoint.queueHash !== input.expectedQueueHash) continue;
     await clearExactAbandonedReserveAttempt(db, checkpoint, timestamp);
     const leaseUntil = timestamp + Math.max(60, input.leaseSec);
     const result = await runWithOverloadRetry(() =>

@@ -6,7 +6,6 @@ import {
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { markWorkerJobAttemptsAbandonedForSlot } from "./job-ledger";
-import { prepareScheduledCheckpointRecoveryForSlot } from "./scheduled-recovery-checkpoint";
 import { recordProducerOutcome } from "./producer-history";
 
 export interface StaleSlotExecutionArtifact {
@@ -325,17 +324,6 @@ async function reconcileStaleSlotArtifacts(
         err,
       );
     }
-  }
-
-  const recovery = await prepareScheduledCheckpointRecoveryForSlot(db, {
-    scheduleKey: slot.slot_key,
-    slotStartedAt: slot.slot_started_at,
-    job: "sync-live-reserves",
-    childJobs: expectedJobs,
-    nowSec,
-  });
-  if (recovery) {
-    summary.recoveryCheckpointsPrepared++;
   }
 
   for (const job of noProgressJobs) {

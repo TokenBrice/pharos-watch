@@ -22,6 +22,7 @@ import {
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
+import { isReserveRecoveryFaultInjectionTermination } from "../lib/reserve-recovery-fault-injection";
 
 export type ReserveCoinSyncStatus = "synced" | "failed" | "skipped";
 
@@ -64,6 +65,8 @@ export async function syncReserveCoin(args: {
   previousState: ReserveSyncStateRecord | null;
   d1FinalizeTimeoutMs: number;
   onAttemptStarted?: (attemptId: string) => Promise<void>;
+  onAttemptPending?: (attemptId: string) => Promise<void>;
+  onAuthoritativeWrite?: (attemptId: string) => Promise<void>;
 }): Promise<ReserveCoinSyncResult> {
   throwIfAborted(args.signal);
 
@@ -133,6 +136,7 @@ export async function syncReserveCoin(args: {
     d1DurationMs += Date.now() - beginStartedMs;
   }
   attemptStarted = true;
+  await args.onAttemptPending?.(attemptId);
 
   try {
     const canFetch = breakerCanFetch.has(breakerKey)
@@ -236,6 +240,7 @@ export async function syncReserveCoin(args: {
           compositionRecord,
           successState,
           Date.now() + args.d1FinalizeTimeoutMs,
+          args.onAuthoritativeWrite ? () => args.onAuthoritativeWrite!(attemptId) : undefined,
         ),
         args.d1FinalizeTimeoutMs,
         `D1 write timeout for ${coin.id}`,
@@ -246,6 +251,7 @@ export async function syncReserveCoin(args: {
         console.warn(`[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
       }
     } catch (error) {
+      if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
       if (!(error instanceof Error) || error.message !== timeoutMessage) {
         throw error;
@@ -302,6 +308,7 @@ export async function syncReserveCoin(args: {
       hasWarnings: warningMessages.length > 0,
     });
   } catch (error) {
+    if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
     const extras: Record<string, unknown> = {};
     let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;

@@ -57,6 +57,13 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   finishScheduledCheckpoint: vi.fn(async () => {}),
   checkpointErrorMetadata: vi.fn(() => "error"),
 }));
+vi.mock("../../../lib/reserve-recovery-fault-injection", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../lib/reserve-recovery-fault-injection")>();
+  return {
+    ...original,
+    loadReserveRecoveryFaultInjectionController: vi.fn(async () => null),
+  };
+});
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
@@ -67,6 +74,12 @@ import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
 import { reportAlertCondition } from "../../../lib/alert-broker";
+import {
+  loadReserveRecoveryFaultInjectionController,
+  ReserveRecoveryFaultInjectionTermination,
+  type ReserveRecoveryFaultKillPoint,
+} from "../../../lib/reserve-recovery-fault-injection";
+import { finishScheduledCheckpoint } from "../../../lib/scheduled-recovery-checkpoint";
 
 describe("runFourHourlyReserveSyncSlot", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -109,6 +122,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     });
+    vi.mocked(loadReserveRecoveryFaultInjectionController).mockResolvedValue(null);
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     runLeasedCron = vi.fn(async (_job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {
@@ -205,5 +219,46 @@ describe("runFourHourlyReserveSyncSlot", () => {
       conditionKey: "reserve:live-reserve-sync-stale",
       active: false,
     }));
+  });
+
+  function armFaultAt(killPoint: ReserveRecoveryFaultKillPoint) {
+    const spec = {
+      workerVersion: "preview-v1",
+      scheduleKey: "fourHourlyReserveSync" as const,
+      slotStartedAt: 0,
+      attemptNo: 1,
+      killPoint,
+      targetItemKey: null,
+      armedAt: 0,
+      expiresAt: 1_000,
+    };
+    vi.mocked(loadReserveRecoveryFaultInjectionController).mockResolvedValue({
+      spec,
+      trigger: vi.fn(async (point) => {
+        if (point === killPoint) throw new ReserveRecoveryFaultInjectionTermination(spec);
+      }),
+    });
+  }
+
+  it("leaves the checkpoint nonterminal when preview injection fires after checkpoint creation", async () => {
+    armFaultAt("after_checkpoint");
+
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime()))
+      .rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+    expect(runLeasedCron).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["before_sync-redemption-backstops", syncRedemptionBackstops],
+    ["before_sync-kinesis-supply", syncKinesisSupply],
+    ["before_reserve-post-sync-watchdog", checkCollateralDrift],
+  ] as const)("bypasses checkpoint finalization at %s", async (killPoint, blockedSidecar) => {
+    armFaultAt(killPoint);
+
+    await expect(runFourHourlyReserveSyncSlot(buildRuntime()))
+      .rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+    expect(blockedSidecar).not.toHaveBeenCalled();
+    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
   });
 });

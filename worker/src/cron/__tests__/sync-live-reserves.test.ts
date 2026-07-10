@@ -6,6 +6,7 @@ import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
+import { ReserveRecoveryFaultInjectionTermination } from "../../lib/reserve-recovery-fault-injection";
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
@@ -1138,6 +1139,9 @@ describe("syncLiveReserves", () => {
       && typeof update.metadata?.currentAdapter === "string"
       && typeof update.metadata?.currentBreakerKey === "string"
     ))).toBe(true);
+    const syncingCalls = progressCalls.filter(([update]) => update.stage === "syncing");
+    expect(syncingCalls.length).toBeLessThanOrEqual(Math.ceil(configuredCoinCount / 10));
+    expect(progressCalls.length).toBeLessThanOrEqual(Math.ceil(configuredCoinCount / 10) + 2);
     const finalUpdate = progressCalls[progressCalls.length - 1]?.[0];
     expect(finalUpdate).toMatchObject({
       stage: "finalizing",
@@ -1631,6 +1635,72 @@ describe("syncLiveReserves", () => {
       lastSuccessAt,
     });
     expect(scoringMap.has(coin.id)).toBe(false);
+  });
+
+  function abruptFault(killPoint: "after_pending_begin" | "after_authoritative_write", targetItemKey: string) {
+    return new ReserveRecoveryFaultInjectionTermination({
+      workerVersion: "preview-v1",
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      attemptNo: 1,
+      killPoint,
+      targetItemKey,
+      armedAt: 900,
+      expiresAt: 1_200,
+    });
+  }
+
+  it("leaves the exact domain attempt pending when injection fires after pending begin", async () => {
+    const coin = getIndependentConfiguredCoin();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockD1();
+
+    await expect(syncReserveCoin({
+      db,
+      coin,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin),
+      runAdapter: vi.fn(),
+      breakerCanFetch: new Map(),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+      onAttemptPending: async () => {
+        throw abruptFault("after_pending_begin", coin.id);
+      },
+    })).rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = excluded.pending_attempt_id"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = NULL"))).toBe(false);
+  });
+
+  it("leaves the authoritative write intact and skips history finalization at its kill point", async () => {
+    const coin = getIndependentConfiguredCoin();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockD1();
+
+    await expect(syncReserveCoin({
+      db,
+      coin,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin),
+      runAdapter: async () => ({
+        slices: [{ name: "Preview reserve", pct: 100, risk: "low" as const }],
+        metadata: { freshnessMode: "not-applicable" as const },
+      }),
+      breakerCanFetch: new Map([[
+        `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`,
+        true,
+      ]]),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+      onAuthoritativeWrite: async () => {
+        throw abruptFault("after_authoritative_write", coin.id);
+      },
+    })).rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_attempt_history"))).toBe(false);
   });
 
   it("preserves prior reserve detail and skips scoring when the circuit is open", async () => {

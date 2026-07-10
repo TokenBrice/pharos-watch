@@ -66,6 +66,22 @@ describe("auth helpers", () => {
     expect(result).toBe(true);
   });
 
+  it("accepts Access-authenticated Worker preview requests for preview-only admin controls", async () => {
+    const request = new Request("https://stablecoin-api.preview.workers.dev/api/admin/reserve-recovery-fault-injection", {
+      headers: { "Cf-Access-Jwt-Assertion": "valid-jwt" },
+    });
+    const result = await hasValidAdminCredential(request, false, TEST_ENV);
+    expect(result).toBe(true);
+  });
+
+  it("does not accept Access admin credentials on the public production API host", async () => {
+    const request = new Request("https://api.pharos.watch/api/admin/reserve-recovery-fault-injection", {
+      headers: { "Cf-Access-Jwt-Assertion": "valid-jwt" },
+    });
+    const result = await hasValidAdminCredential(request, false, TEST_ENV);
+    expect(result).toBe(false);
+  });
+
   it("accepts trustedAdmin=true regardless of headers", async () => {
     const request = new Request("https://x/admin");
     expect(await hasValidAdminCredential(request, true)).toBe(true);

@@ -33,6 +33,12 @@ import {
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { reportAlertCondition } from "../../lib/alert-broker";
+import {
+  isReserveRecoveryFaultInjectionTermination,
+  loadReserveRecoveryFaultInjectionController,
+  type ReserveRecoveryFaultInjectionController,
+  type ReserveRecoveryFaultKillPoint,
+} from "../../lib/reserve-recovery-fault-injection";
 
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
@@ -234,10 +240,17 @@ function checkpointTask(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledRecoveryCheckpoint,
   task: ScheduledSlotGroup["tasks"][number],
+  faultInjection: ReserveRecoveryFaultInjectionController | null,
 ): ScheduledSlotGroup["tasks"][number] {
   return {
     ...task,
     run: async (signal, reportProgress) => {
+      const sidecarKillPoint = ({
+        "sync-redemption-backstops": "before_sync-redemption-backstops",
+        "sync-kinesis-supply": "before_sync-kinesis-supply",
+        "reserve-post-sync-watchdog": "before_reserve-post-sync-watchdog",
+      } as Partial<Record<string, ReserveRecoveryFaultKillPoint>>)[task.job];
+      if (sidecarKillPoint) await faultInjection?.trigger(sidecarKillPoint);
       const identity = checkpointIdentity(checkpoint);
       await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "running");
       try {
@@ -250,6 +263,7 @@ function checkpointTask(
         );
         return result;
       } catch (error) {
+        if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
         try {
           await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "failed");
         } catch (checkpointError) {
@@ -264,6 +278,7 @@ function checkpointTask(
 function buildReserveSyncSlotGroups(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledRecoveryCheckpoint,
+  faultInjection: ReserveRecoveryFaultInjectionController | null,
 ): ScheduledSlotGroup[] {
   const groups: ScheduledSlotGroup[] = [
     {
@@ -287,6 +302,7 @@ function buildReserveSyncSlotGroups(
               reportProgress,
               undefined,
               checkpointIdentity(checkpoint),
+              faultInjection,
             ),
         },
         {
@@ -317,7 +333,7 @@ function buildReserveSyncSlotGroups(
     ...group,
     tasks: group.tasks
       .filter((task) => checkpoint.childDispositions[task.job] !== "completed")
-      .map((task) => checkpointTask(runtime, checkpoint, task)),
+      .map((task) => checkpointTask(runtime, checkpoint, task, faultInjection)),
   }));
 }
 
@@ -335,10 +351,12 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   });
   const identity = checkpointIdentity(checkpoint);
   try {
+    const faultInjection = await loadReserveRecoveryFaultInjectionController(runtime.db, checkpoint);
+    await faultInjection?.trigger("after_checkpoint");
     const summary = await runScheduledSlotGroups(
       runtime,
       "four-hourly reserve sync slot",
-      buildReserveSyncSlotGroups(runtime, checkpoint),
+      buildReserveSyncSlotGroups(runtime, checkpoint, faultInjection),
     );
     await finishScheduledCheckpoint(runtime.db, identity, {
       state: summary.jobsErrored > 0 ? "failed" : "completed",
@@ -346,6 +364,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     });
     return summary;
   } catch (error) {
+    if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
     try {
       await finishScheduledCheckpoint(runtime.db, identity, {
         state: "failed",

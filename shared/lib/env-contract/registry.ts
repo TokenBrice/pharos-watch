@@ -590,7 +590,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_JOB_LEDGER_MODE",
     valueType: "string",
-    description: "Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution; `write` is reserved for later promotion and currently behaves like `shadow`.",
+    description: "Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 45, status: "optional" },
@@ -615,9 +615,18 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_RESERVE_RECOVERY_MODE",
+    valueType: "string",
+    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 49, status: "optional" },
+    },
+  },
+  {
     key: "WORKER_CANARY_MODE",
     valueType: "string",
-    description: "Worker data-invariant canary mode. Unset or `off` skips writes; `shadow`, `status`, and `alert` record structural canary telemetry without changing producer behavior.",
+    description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 48, status: "optional" },

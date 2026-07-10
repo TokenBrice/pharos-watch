@@ -86,6 +86,7 @@ export async function finalizeReserveSyncSuccess(
   composition: ReserveCompositionRecord,
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
+  onAuthoritativeWrite?: () => Promise<void>,
 ): Promise<{ finalized: boolean; historyRecorded: boolean; historyError?: string }> {
   let compositionApplied = false;
   let finalized = false;
@@ -126,6 +127,8 @@ export async function finalizeReserveSyncSuccess(
       return { finalized: false, historyRecorded: false };
     }
   }
+
+  await onAuthoritativeWrite?.();
 
   try {
     await runWithOverloadRetry(() =>
