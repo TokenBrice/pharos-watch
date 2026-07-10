@@ -286,7 +286,12 @@ describe("API key inventory workbench model", () => {
       const current = expected[index];
       const previousStatus = getApiKeyInventoryStatus(previous, NOW_SECONDS);
       const currentStatus = getApiKeyInventoryStatus(current, NOW_SECONDS);
-      expect(priorities.get(previousStatus)).toBeLessThanOrEqual(priorities.get(currentStatus));
+      const previousPriority = priorities.get(previousStatus);
+      const currentPriority = priorities.get(currentStatus);
+      if (previousPriority == null || currentPriority == null) {
+        throw new Error("Missing API key status priority fixture");
+      }
+      expect(previousPriority).toBeLessThanOrEqual(currentPriority);
       if (previousStatus === currentStatus) {
         expect(previous.id).toBeLessThan(current.id);
       }
