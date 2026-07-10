@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiquidityStats } from "@/components/liquidity-stats";
-import type { DexLiquidityData } from "@shared/types";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 vi.mock("next/image", () => ({
@@ -29,7 +29,7 @@ describe("LiquidityStats", () => {
           avgOrganic: null,
         },
         liquidityMap: {
-          [DEX_GLOBAL_KEY]: {
+          [DEX_GLOBAL_KEY]: makeDexLiquidityData({
             totalTvlUsd: 10_000,
             totalVolume24hUsd: 2_500,
             protocolTvl: {
@@ -48,7 +48,7 @@ describe("LiquidityStats", () => {
             },
             poolCount: 42,
             concentrationHhi: 0.31,
-          } as DexLiquidityData,
+          }),
         },
       }),
     );
@@ -88,7 +88,7 @@ describe("LiquidityStats", () => {
           avgOrganic: 63,
         },
         liquidityMap: {
-          [DEX_GLOBAL_KEY]: {
+          [DEX_GLOBAL_KEY]: makeDexLiquidityData({
             totalTvlUsd: 10_000,
             totalVolume24hUsd: 2_500,
             protocolTvl: {
@@ -103,7 +103,7 @@ describe("LiquidityStats", () => {
             concentrationHhi: 0.31,
             weightedBalanceRatio: 0.72,
             organicFraction: 0.63,
-          } as DexLiquidityData,
+          }),
         },
       }),
     );

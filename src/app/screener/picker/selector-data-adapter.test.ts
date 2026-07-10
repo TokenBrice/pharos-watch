@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
+import {
+  StressSignalsAllResponseSchema,
+  YieldRankingsResponseSchema,
+} from "@shared/types";
 import type {
   PegSummaryResponse,
   RedemptionBackstopsResponse,
   ReportCard,
   ReportCardsResponse,
   StablecoinListResponse,
-  StressSignalsAllResponse,
-  YieldRankingsResponse,
 } from "@shared/types";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "./selector-data-adapter";
 
@@ -52,6 +54,18 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => {
 
 const NOW_MS = 1_700_000_000_000;
 const NOW_SEC = NOW_MS / 1000;
+
+function methodology(version: string) {
+  return {
+    version,
+    versionLabel: `v${version}`,
+    currentVersion: version,
+    currentVersionLabel: `v${version}`,
+    changelogPath: "/methodology/test-changelog/",
+    asOf: NOW_SEC,
+    isCurrent: true,
+  };
+}
 
 function baseArgs(overrides: Partial<BuildSelectorRowsArgs> = {}): BuildSelectorRowsArgs {
   return {
@@ -279,7 +293,7 @@ describe("buildSelectorRows", () => {
 
   it("maps yield ranking risk, benchmark, provenance, and freshness fields", () => {
     const result = buildSelectorRows(baseArgs({
-      yieldData: {
+      yieldData: YieldRankingsResponseSchema.parse({
         rankings: [
           {
             id: "usdc-usd-coin",
@@ -341,8 +355,8 @@ describe("buildSelectorRows", () => {
         scalingFactor: 1,
         medianApy: 5,
         updatedAt: NOW_SEC,
-        methodology: { version: "8.1" },
-      } as YieldRankingsResponse,
+        methodology: methodology("8.1"),
+      }),
     }));
 
     const row = result.rows.get("usdc-usd-coin");
@@ -373,7 +387,7 @@ describe("buildSelectorRows", () => {
 
   it("preserves Yield altSources for engine venue/risk/freshness selection", () => {
     const result = buildSelectorRows(baseArgs({
-      yieldData: {
+      yieldData: YieldRankingsResponseSchema.parse({
         rankings: [
           {
             id: "usdc-usd-coin",
@@ -457,8 +471,8 @@ describe("buildSelectorRows", () => {
         scalingFactor: 1,
         medianApy: 5,
         updatedAt: NOW_SEC,
-        methodology: { version: "8.1" },
-      } as YieldRankingsResponse,
+        methodology: methodology("8.1"),
+      }),
     }));
 
     const sources = result.rows.get("usdc-usd-coin")?.yieldSources ?? [];
@@ -479,7 +493,7 @@ describe("buildSelectorRows", () => {
 
   it("uses opportunity-level safety for selected structured tranche yield rows", () => {
     const result = buildSelectorRows(baseArgs({
-      yieldData: {
+      yieldData: YieldRankingsResponseSchema.parse({
         rankings: [
           {
             id: "usdc-usd-coin",
@@ -518,6 +532,9 @@ describe("buildSelectorRows", () => {
               usedLegacyHistory: false,
               usedDefaultSafety: false,
               safetyProvenance: "opportunity-safety",
+              benchmarkRecordDate: null,
+              benchmarkIsFallback: false,
+              benchmarkFallbackMode: null,
               anomalies: [],
             },
             sourceRisk: {
@@ -536,8 +553,8 @@ describe("buildSelectorRows", () => {
         scalingFactor: 1,
         medianApy: 5,
         updatedAt: NOW_SEC,
-        methodology: { version: "8.19" },
-      } as YieldRankingsResponse,
+        methodology: methodology("8.19"),
+      }),
     }));
 
     const row = result.rows.get("usdc-usd-coin");
@@ -581,7 +598,7 @@ describe("buildSelectorRows", () => {
           updatedAt: NOW_SEC - 120,
         },
       } as never,
-      stressData: {
+      stressData: StressSignalsAllResponseSchema.parse({
         signals: {
           "usdc-usd-coin": {
             score: 18,
@@ -592,8 +609,8 @@ describe("buildSelectorRows", () => {
           },
         },
         updatedAt: NOW_SEC - 30,
-        methodology: { version: "5.0" },
-      } as StressSignalsAllResponse,
+        methodology: methodology("5.0"),
+      }),
     }));
 
     const row = result.rows.get("usdc-usd-coin");

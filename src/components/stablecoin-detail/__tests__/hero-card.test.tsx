@@ -146,6 +146,8 @@ const liquidityData: DexLiquidityData = {
     durability: 85,
     pairDiversity: 78,
   },
+  lockedLiquidityPct: null,
+  methodologyVersion: "test",
 };
 
 const reportCardWithInheritedBlacklistRisk: ReportCard = {
