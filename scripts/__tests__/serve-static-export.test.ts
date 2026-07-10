@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createStaticExportServer } from "../maintenance/serve-static-export.mjs";
+import { createStaticExportServer, resolveMissingYieldWorkbenchLocation } from "../maintenance/serve-static-export.mjs";
 
 const roots: string[] = [];
 const servers: Server[] = [];
@@ -56,6 +56,34 @@ function directive(csp: string, name: string): string {
 }
 
 describe("serve-static-export", () => {
+  it("mirrors the Pages fallback for intentionally omitted yield workbenches", async () => {
+    expect(
+      resolveMissingYieldWorkbenchLocation(
+        new URL("https://pharos.watch/stablecoin/usdc-circle/yield/?days=90"),
+        new Set(["usdc-circle"]),
+      ),
+    ).toBe("/yield/?days=90&compare=usdc-circle&from=detail-fallback");
+    expect(
+      resolveMissingYieldWorkbenchLocation(
+        new URL("https://pharos.watch/stablecoin/not-tracked/yield/"),
+        new Set(["usdc-circle"]),
+      ),
+    ).toBeNull();
+
+    const app = createStaticExportServer({
+      port: 0,
+      rootDir: await makeRoot(),
+    });
+    const baseUrl = await listen(app.server);
+    const response = await fetch(`${baseUrl}/stablecoin/usdc-circle/yield/?days=90`, {
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/yield/?days=90&compare=usdc-circle&from=detail-fallback");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
   it("serves exact /api and /api/ from the static API access page", async () => {
     const root = await makeRoot();
     await mkdir(path.join(root, "api"), { recursive: true });
@@ -181,10 +209,12 @@ describe("serve-static-export", () => {
   it("proxies nested admin API paths during local static-export smoke runs", async () => {
     const upstream = createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({
-        url: req.url,
-        adminHeader: req.headers["x-pharos-admin"] ?? null,
-      }));
+      res.end(
+        JSON.stringify({
+          url: req.url,
+          adminHeader: req.headers["x-pharos-admin"] ?? null,
+        }),
+      );
     });
     const upstreamBaseUrl = await listen(upstream);
 
@@ -209,10 +239,12 @@ describe("serve-static-export", () => {
   it("proxies allowlisted /_site-data paths to their API upstream paths", async () => {
     const upstream = createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({
-        url: req.url,
-        siteSecret: req.headers["x-pharos-site-proxy-secret"] ?? null,
-      }));
+      res.end(
+        JSON.stringify({
+          url: req.url,
+          siteSecret: req.headers["x-pharos-site-proxy-secret"] ?? null,
+        }),
+      );
     });
     const upstreamBaseUrl = await listen(upstream);
 
@@ -255,12 +287,14 @@ describe("serve-static-export", () => {
           "Content-Type": "application/json; charset=utf-8",
           "X-Upstream-Method": req.method ?? "",
         });
-        res.end(JSON.stringify({
-          method: req.method,
-          url: req.url,
-          contentType: req.headers["content-type"],
-          body,
-        }));
+        res.end(
+          JSON.stringify({
+            method: req.method,
+            url: req.url,
+            contentType: req.headers["content-type"],
+            body,
+          }),
+        );
       });
     });
     const upstreamBaseUrl = await listen(upstream);

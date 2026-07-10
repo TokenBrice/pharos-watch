@@ -48,9 +48,8 @@ describe("design invariants", () => {
   it("resolves the display font token from the body-level font bridge", () => {
     const globals = readFileSync(APP_GLOBALS, "utf8");
 
-    expect(globals).toMatch(
-      /body\s*{[^}]*--font-pharos-display:[^}]*"ABC Whyte Inktrap"[^}]*var\(--font-bricolage,/s,
-    );
+    expect(globals).toMatch(/body\s*{[^}]*--font-pharos-display:\s*var\(\s*--font-bricolage,/s);
+    expect(globals).not.toMatch(/ABC Whyte Inktrap|abc-whyte-inktrap/);
     expect(globals).not.toMatch(/:root\s*{[^}]*--font-pharos-display:/s);
   });
 

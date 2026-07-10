@@ -11,11 +11,8 @@ export const jetbrainsMono = localFont({
   fallback: ["SFMono-Regular", "ui-monospace", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
 });
 
-// Bricolage Grotesque — tracked OFL fallback for the licensed ABC Whyte
-// Inktrap webfonts loaded from public/fonts/abc-whyte-inktrap in globals.css.
-// Dinamo's terms prohibit committing the commercial font binaries to public
-// repositories, so this fallback keeps clean builds functional when the ignored
-// licensed files have not been installed.
+// Bricolage Grotesque is the tracked display face. Licensed ABC Whyte files can
+// still be staged locally, but clean builds never emit references to them.
 export const bricolageDisplay = localFont({
   src: [{ path: "../../assets/fonts/BricolageGrotesque-Variable.woff2", weight: "200 800", style: "normal" }],
   display: "swap",

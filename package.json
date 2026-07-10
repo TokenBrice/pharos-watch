@@ -74,6 +74,7 @@
     "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",
+    "test:smoke-pages-assets": "node scripts/maintenance/smoke-pages-assets.mjs",
     "test:smoke-ui": "node scripts/maintenance/smoke-ui.mjs",
     "test:smoke-ui:mobile": "node scripts/maintenance/smoke-mobile-ui.mjs --strict-touch-targets",
     "check:worker-boundary": "node scripts/ci/check-worker-import-boundary.mjs",

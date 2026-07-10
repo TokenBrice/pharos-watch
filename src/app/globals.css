@@ -16,54 +16,6 @@
 @import "../styles/tokens/primitives.css";
 @import "../styles/tokens/semantic.css";
 
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-RegularItalic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-MediumItalic.woff2") format("woff2");
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ABC Whyte Inktrap";
-  src: url("/fonts/abc-whyte-inktrap/ABCWhyteInktrap-BoldItalic.woff2") format("woff2");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
 @custom-variant dark (&:is(.dark *));
 
 .pharos-font-sans {
@@ -260,8 +212,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    --font-pharos-display:
-      "ABC Whyte Inktrap", var(--font-bricolage, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    --font-pharos-display: var(--font-bricolage, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     text-rendering: optimizeLegibility;
     min-height: 100vh;
     line-height: 1.45;
@@ -495,10 +446,7 @@
     --mini-text: var(--telegram-text, var(--text-primary));
     --mini-panel: var(--telegram-secondary-bg, color-mix(in oklab, var(--mini-bg) 90%, var(--mini-text) 10%));
     --mini-card: var(--telegram-section-bg, var(--mini-panel));
-    --mini-control: var(
-      --telegram-control-bg,
-      color-mix(in oklab, var(--mini-card) 88%, var(--mini-text) 12%)
-    );
+    --mini-control: var(--telegram-control-bg, color-mix(in oklab, var(--mini-card) 88%, var(--mini-text) 12%));
     --mini-accent: var(--telegram-accent-text, var(--telegram-button, var(--brand-accent)));
     --mini-accent-fill: color-mix(in oklab, var(--mini-accent) 12%, transparent);
     --mini-accent-border: color-mix(in oklab, var(--mini-accent) 34%, transparent);
@@ -556,9 +504,7 @@
     line-height: 1.05;
   }
 
-  /* Editorial display face for hero/section headings carried over from the
-     Figma redesign. ABC Whyte Inktrap loads when licensed webfonts are present;
-     Bricolage Grotesque remains the tracked fallback. */
+  /* Tracked display face for hero and section headings. */
   .pharos-display {
     font-family: var(--font-pharos-display);
     letter-spacing: -0.01em;

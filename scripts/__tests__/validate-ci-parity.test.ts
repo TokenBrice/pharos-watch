@@ -607,7 +607,11 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain("Run local pre-publish checks in parallel");
     expect(consolidatedPagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
+    expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_WORKERS: "3"');
     expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
+    expect(consolidatedPagesReleaseJob).toContain(
+      "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
+    );
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
     expect(consolidatedPagesReleaseJob).toContain("Wait for validation gate");
     expect(consolidatedPagesReleaseJob).toContain("if: ${{ inputs.wait_for_validate_job }}");
@@ -627,9 +631,13 @@ describe("validate-ci parity", () => {
       "OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}",
     );
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
+    expect(consolidatedPagesReleaseJob).toContain(
+      "npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live",
+    );
     expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
+    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.asset_status != 'success'");
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ops_status != 'success'");
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.transport_status != 'success'");
     expectTextInOrder(consolidatedPagesReleaseJob, [

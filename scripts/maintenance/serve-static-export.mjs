@@ -12,6 +12,7 @@ import {
   createCspNonce,
   isTelegramMiniAppPath,
 } from "../../shared/lib/site-csp.ts";
+import canonicalOrder from "../../shared/data/stablecoins/canonical-order.json" with { type: "json" };
 import origins from "../../shared/lib/runtime-origins.json" with { type: "json" };
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -34,6 +35,7 @@ const CONTENT_TYPES = {
 
 const brotliCompressAsync = promisify(brotliCompress);
 const gzipAsync = promisify(gzip);
+const KNOWN_STABLECOIN_IDS = new Set(canonicalOrder);
 
 const COMPRESSIBLE_CONTENT_TYPES = [
   "application/javascript",
@@ -97,6 +99,21 @@ export function resolveStaticFilePath(rootDir, requestPathname) {
   }
 
   return candidate;
+}
+
+export function resolveMissingYieldWorkbenchLocation(requestUrl, knownStablecoinIds = KNOWN_STABLECOIN_IDS) {
+  const parts = requestUrl.pathname.split("/").filter(Boolean);
+  if (parts.length !== 3 || parts[0] !== "stablecoin" || parts[2] !== "yield" || !knownStablecoinIds.has(parts[1])) {
+    return null;
+  }
+
+  // Mirrors functions/stablecoin/[[path]].ts so local artifact smoke exercises
+  // the same outcome for intentionally omitted workbench routes.
+  const target = new URL("/yield/", requestUrl);
+  target.search = requestUrl.search;
+  if (!target.searchParams.has("compare")) target.searchParams.set("compare", parts[1]);
+  if (!target.searchParams.has("from")) target.searchParams.set("from", "detail-fallback");
+  return `${target.pathname}${target.search}`;
 }
 
 function buildContentType(filePath, requestPathname = "") {
@@ -183,7 +200,7 @@ async function sendStaticExportFile(req, res, method, { file, filePath }, reques
   const contentType = buildContentType(filePath, requestPathname);
   const headers = {
     "Content-Type": contentType,
-    "Vary": "Accept-Encoding",
+    Vary: "Accept-Encoding",
   };
   let body = file;
 
@@ -251,10 +268,7 @@ export function createStaticExportServer({
       }
     }
 
-    if (
-      isNestedApiPath
-      || isSiteDataPath
-    ) {
+    if (isNestedApiPath || isSiteDataPath) {
       if (isSiteDataPath && !canServeStaticMethod) {
         res.writeHead(405, { Allow: "GET, HEAD" });
         res.end();
@@ -262,12 +276,8 @@ export function createStaticExportServer({
       }
 
       try {
-        const resolveSiteDataUpstreamPath = isSiteDataPath
-          ? await getSiteDataResolver()
-          : null;
-        const upstreamPath = isSiteDataPath
-          ? resolveSiteDataUpstreamPath(requestUrl.pathname)
-          : requestUrl.pathname;
+        const resolveSiteDataUpstreamPath = isSiteDataPath ? await getSiteDataResolver() : null;
+        const upstreamPath = isSiteDataPath ? resolveSiteDataUpstreamPath(requestUrl.pathname) : requestUrl.pathname;
         if (!upstreamPath) {
           res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ error: "Not found" }));
@@ -277,13 +287,11 @@ export function createStaticExportServer({
         const siteProxySecret = (process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET ?? "").trim();
         const proxyHeaders = buildForwardedRequestHeaders(
           req,
-          isSiteDataPath && siteProxySecret
-            ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret }
-            : {},
+          isSiteDataPath && siteProxySecret ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret } : {},
         );
         const requestBody = await readRequestBody(req, method);
         const upstream = await proxyApiRequest(
-          `${(isSiteDataPath ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
+          `${isSiteDataPath ? siteApiBaseUrl : apiBaseUrl}${upstreamPath}${requestUrl.search}`,
           method,
           proxyHeaders,
           requestBody,
@@ -328,6 +336,15 @@ export function createStaticExportServer({
       if (isPathEscapeError(error)) {
         res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
         res.end("Forbidden");
+        return;
+      }
+      const redirectLocation = resolveMissingYieldWorkbenchLocation(requestUrl);
+      if (redirectLocation) {
+        res.writeHead(302, {
+          "Cache-Control": "no-store",
+          Location: redirectLocation,
+        });
+        res.end();
         return;
       }
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });

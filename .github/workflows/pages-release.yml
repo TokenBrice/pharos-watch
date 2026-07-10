@@ -211,6 +211,7 @@ jobs:
           SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_UI_OVERFLOW_WORKERS: "6"
+          SMOKE_PAGES_ASSET_WORKERS: "3"
           SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
           SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
@@ -235,6 +236,9 @@ jobs:
           npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local &
           ui_pid=$!
 
+          npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local &
+          asset_pid=$!
+
           mobile_pid=""
           if [ "${PAGES_UI_CHANGED}" = "true" ]; then
             npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173 &
@@ -247,6 +251,8 @@ jobs:
           a11y_status=$?
           wait "$ui_pid"
           ui_status=$?
+          wait "$asset_pid"
+          asset_status=$?
 
           mobile_status=0
           if [ -n "$mobile_pid" ]; then
@@ -254,8 +260,8 @@ jobs:
             mobile_status=$?
           fi
 
-          if [ "$seo_status" -ne 0 ] || [ "$a11y_status" -ne 0 ] || [ "$ui_status" -ne 0 ] || [ "$mobile_status" -ne 0 ]; then
-            echo "local pre-publish statuses: seo=${seo_status}, a11y=${a11y_status}, ui=${ui_status}, mobile=${mobile_status}"
+          if [ "$seo_status" -ne 0 ] || [ "$a11y_status" -ne 0 ] || [ "$ui_status" -ne 0 ] || [ "$asset_status" -ne 0 ] || [ "$mobile_status" -ne 0 ]; then
+            echo "local pre-publish statuses: seo=${seo_status}, a11y=${a11y_status}, ui=${ui_status}, assets=${asset_status}, mobile=${mobile_status}"
             exit 1
           fi
       # Mythos P1-14 (second half): the bare-server scan above covers the
@@ -333,6 +339,8 @@ jobs:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_ROUTES: /depeg/
+          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          SMOKE_PAGES_ASSET_WORKERS: "4"
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
@@ -348,6 +356,7 @@ jobs:
 
           if [ "$marker_status" -ne 0 ]; then
             echo "ui_status=failure" >> "$GITHUB_OUTPUT"
+            echo "asset_status=failure" >> "$GITHUB_OUTPUT"
             echo "ops_status=failure" >> "$GITHUB_OUTPUT"
             echo "transport_status=failure" >> "$GITHUB_OUTPUT"
             echo "post-publish smoke statuses: release-marker=failure"
@@ -356,6 +365,8 @@ jobs:
 
           npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!
+          npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live &
+          asset_pid=$!
           OPS_SMOKE_CF_ACCESS_CLIENT_ID='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}' \
             OPS_SMOKE_CF_ACCESS_CLIENT_SECRET='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}' \
             npm run test:smoke-ops &
@@ -365,6 +376,8 @@ jobs:
 
           wait "$ui_pid"
           ui_status=$?
+          wait "$asset_pid"
+          asset_status=$?
           wait "$ops_pid"
           ops_status=$?
           wait "$transport_pid"
@@ -379,10 +392,12 @@ jobs:
           }
 
           UI_STATUS="$(to_result "$ui_status")"
+          ASSET_STATUS="$(to_result "$asset_status")"
           OPS_STATUS="$(to_result "$ops_status")"
           TRANSPORT_STATUS="$(to_result "$transport_status")"
 
           echo "ui_status=${UI_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "asset_status=${ASSET_STATUS}" >> "$GITHUB_OUTPUT"
           echo "ops_status=${OPS_STATUS}" >> "$GITHUB_OUTPUT"
           echo "transport_status=${TRANSPORT_STATUS}" >> "$GITHUB_OUTPUT"
 
@@ -392,12 +407,13 @@ jobs:
             echo "| Check | Status | Rollback trigger |"
             echo "| --- | --- | --- |"
             echo "| Live public UI | ${UI_STATUS} | yes |"
+            echo "| Yield deep-route assets | ${ASSET_STATUS} | yes |"
             echo "| Ops canary | ${OPS_STATUS} | yes |"
             echo "| Transport redirects | ${TRANSPORT_STATUS} | yes |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
-            echo "post-publish smoke statuses: ui=${UI_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
+          if [ "$ui_status" -ne 0 ] || [ "$asset_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
+            echo "post-publish smoke statuses: ui=${UI_STATUS}, assets=${ASSET_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
             exit 1
           fi
       - name: Roll back Pages production to previous successful deployment
@@ -408,6 +424,7 @@ jobs:
             && steps.capture-pages.outputs.deployment_id != ''
             && (
               steps.post-publish-smokes.outputs.ui_status != 'success'
+              || steps.post-publish-smokes.outputs.asset_status != 'success'
               || steps.post-publish-smokes.outputs.ops_status != 'success'
               || steps.post-publish-smokes.outputs.transport_status != 'success'
             )

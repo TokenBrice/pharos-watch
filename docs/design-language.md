@@ -49,10 +49,10 @@ Visible slash-separated breadcrumb trails are retired from page headers. Routes 
 
 ### Root + Fonts
 
-- Body carries four font variables/classes: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`. The display token `--font-pharos-display` is resolved on `body` so it can see the Next-provided `--font-bricolage` fallback variable.
+- Body carries four font variables/classes: `geistSans`, `geistMono`, `jetbrainsMono`, `bricolageDisplay` (+ `antialiased`); scoped utilities `pharos-font-sans` / `pharos-font-mono`. The display token `--font-pharos-display` is resolved on `body` so it can see the Next-provided `--font-bricolage` variable.
 - Sans / UI token: Geist Sans (system-first fallback)
 - Mono / data token: **JetBrains Mono** (Figma redesign), folded into `--font-geist-mono` so every `.pharos-numeric` / table figure inherits it
-- Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **ABC Whyte Inktrap** for headings + the top-nav wordmark when licensed files are installed at `public/fonts/abc-whyte-inktrap/`; **Bricolage Grotesque** remains the tracked fallback for clean builds.
+- Display token (`--font-display`, `.pharos-display`, `.pharos-page-title`): **Bricolage Grotesque** for headings and the top-nav wordmark. Clean and production builds reference only the tracked font asset, so absent licensed files cannot create font 404s.
 - Default corner radius token: `--radius: .5rem`
 - Body background wires two radial-glow layers via `--page-glow-top` and `--page-glow-bottom`; both tokens are currently set to `none` in every theme, so no glow renders (disabled in the June 2026 chrome refresh)
 
@@ -82,7 +82,10 @@ Public pages use this shell:
 <div className="flex min-h-screen">
   {/* No sidebar / no sidebar spacer — content is full-width */}
   <div className="flex-1 flex flex-col min-w-0">
-    <main id="main-content" className="pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9">
+    <main
+      id="main-content"
+      className="pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9"
+    >
       {/* route content */}
     </main>
 
@@ -144,11 +147,11 @@ Reference-group hero calls (owner-settled 2026-07-01):
 - **`/coverage/`** — a **full-width signature hero** (no `FeatureHeroSplit`; the 10-row feature-breadth bar list is too tall and would strand dead space beside a sparse left column, the documented `/liquidity/` failure). Compact header strip carries the frost "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics; the existing feature-breadth stacked-bar chart is reused full-width beneath as the drawn metaphor, and the MatrixTable stays the workbench. The sort control stays a `<select>` (grouped options) but is reskinned to the pill/token visual; filter quick-picks already use `pharos-control-pill`.
 - **`/about/`** — a **modest hero** (light/editorial page; no metaphor): a single frost "One Beam" = `TRACKED_STABLECOIN_COUNT`, the editorial lede preserved verbatim, and a neutral `.pharos-numeric` stat strip. The former `AboutReferenceModule` reference-card block was removed so the signature leads under the intro (see `docs/about-page.md`).
 - **`/funding/`** — a **full-width hero strip**: the frost "One Beam" = the monthly running cost (`costs.json` total); the coverage % stays neutral (a directional funding-progress figure, never recolored frost). The resting `shadow-sm` was neutralized to flat `pharos-card-shell`, previous-month chips adopt the pill control visual, and figures use `.pharos-numeric`. The progress-bar fill and the Giveth "recommended" tile are the sanctioned frost keeps.
-- **`/methodology/`** — **no hero**: it stays a longform carve-out (see below). Only its control + numeric *grammar* was aligned — the reader/analyst and show-your-work toggles adopt the pill control language and stray figures move to `.pharos-numeric` — while the 76rem measure, section shells, and `LongformScrollspyNav` are untouched.
+- **`/methodology/`** — **no hero**: it stays a longform carve-out (see below). Only its control + numeric _grammar_ was aligned — the reader/analyst and show-your-work toggles adopt the pill control language and stray figures move to `.pharos-numeric` — while the 76rem measure, section shells, and `LongformScrollspyNav` are untouched.
 
 Learn-group hero calls (owner-settled 2026-07-01):
 
-- **Shared shell:** the Learn hubs use `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`) — a lighter flat `pharos-card-shell` header band (frost "One Beam" figure + muted sub-metrics + optional full-width slot), **not** `FeatureHeroSplit`. These are Category-C editorial surfaces where a drawn metaphor is not forced, so the split shell would strand dead space (the `/liquidity/` lesson). Titles were brought to homepage parity: `LearnPageShell`'s `h1` now uses `.pharos-page-title` (ABC Whyte Inktrap display face, fixed scale) and its section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale — previously Geist Sans at a fluid clamp. This shell is shared, so the face change also reaches the mechanism and case-study detail pages.
+- **Shared shell:** the Learn hubs use `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`) — a lighter flat `pharos-card-shell` header band (frost "One Beam" figure + muted sub-metrics + optional full-width slot), **not** `FeatureHeroSplit`. These are Category-C editorial surfaces where a drawn metaphor is not forced, so the split shell would strand dead space (the `/liquidity/` lesson). Titles were brought to homepage parity: `LearnPageShell`'s `h1` now uses `.pharos-page-title` (Bricolage Grotesque display face, fixed scale) and its section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale — previously Geist Sans at a fluid clamp. This shell is shared, so the face change also reaches the mechanism and case-study detail pages.
 - **`/learn/`** — the `OutcomeLedger` is promoted into a flat `pharos-card-shell` hero band and deliberately **opts out** of the One Beam: its survived/wounded/died figures keep the semantic ramp (a directional death count, never recolored frost). The three numbered module links are the workbench beneath.
 - **`/learn/mechanisms/`** — `LearnHero` with the neutral active-coin total as the frost beam plus a restrained active-coins-by-mechanism distribution bar (reuses the flat proportional-bar idiom; non-frost `CHART_PALETTE` sequence tones, index 0 skipped because it resolves to frost). The six mechanism diagrams and the "at a glance" comparison matrix remain the workbench.
 - **`/learn/glossary/`** — `LearnHero` with the term count as the frost beam; the A–Z jump rail restyled to a cohesive pill chip rail. Keeps the `FeaturePageShell` longform narrow measure.

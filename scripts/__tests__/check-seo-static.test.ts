@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { collectSeoStaticCheckResult } from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
-const BASELINE_HEADERS = `/*.txt
+const BASELINE_HEADERS = `/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.txt
   X-Robots-Tag: noindex, nofollow
 
 /stablecoin/*/yield/
@@ -70,7 +73,7 @@ async function writePage(
     title = `${h1} | Pharos`,
     description = `${h1} description`,
     extraHead = "",
-    quote = "\"",
+    quote = '"',
   }: {
     h1?: string;
     links?: string[];
@@ -82,7 +85,7 @@ async function writePage(
     title?: string;
     description?: string;
     extraHead?: string;
-    quote?: "\"" | "'";
+    quote?: '"' | "'";
   } = {},
 ) {
   const filePath = pagePath(root, route);
@@ -211,8 +214,7 @@ describe("check-seo-static", () => {
     });
     await writePage(root, "/stability-index/", {
       h1: "Stability Index",
-      title:
-        "This Stability Index Title Is Deliberately Too Long For The Static Search Snippet Envelope | Pharos",
+      title: "This Stability Index Title Is Deliberately Too Long For The Static Search Snippet Envelope | Pharos",
       description:
         "This description is deliberately much longer than the envelope used by Pharos because it keeps adding terms until the static SEO check catches it as snippet bloat, prevents vague search results, and asks the author to tighten the value proposition.",
     });
@@ -431,6 +433,29 @@ describe("check-seo-static", () => {
     );
   });
 
+  it("fails when document caching can outlive deployment chunks", async () => {
+    const root = await makeOutDir();
+    await writeFile(
+      path.join(root, "_headers"),
+      BASELINE_HEADERS.replace(
+        "Cache-Control: public, max-age=0, must-revalidate",
+        "Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+      ),
+    );
+    await writeBaselinePages(root);
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("missing Cache-Control directive must-revalidate"),
+        expect.stringContaining("must not use Cache-Control directive s-maxage"),
+        expect.stringContaining("must not use Cache-Control directive stale-while-revalidate"),
+      ]),
+    );
+  });
+
   it("fails indexable pages whose canonical does not match their local route", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", { h1: "Home", links: ["/stability-index/"] });
@@ -515,7 +540,9 @@ describe("check-seo-static", () => {
 
     const result = collectFixtureSeoResult(root);
 
-    expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
+    expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(
+      false,
+    );
   });
 
   it("fails sitemap URLs that conflict with _headers noindex rules", async () => {
@@ -539,7 +566,8 @@ describe("check-seo-static", () => {
     );
     expect(
       result.errors.some(
-        (error) => error.startsWith("sitemap.xml URL https://pharos.watch/stability-index/") && error.includes("conflicts"),
+        (error) =>
+          error.startsWith("sitemap.xml URL https://pharos.watch/stability-index/") && error.includes("conflicts"),
       ),
     ).toBe(false);
   });
@@ -572,8 +600,12 @@ describe("check-seo-static", () => {
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("/: internal anchor href omits canonical trailing slash: /stability-index (use /stability-index/)"),
-        expect.stringContaining("/: internal anchor href omits canonical trailing slash: https://pharos.watch/about#sources (use /about/#sources)"),
+        expect.stringContaining(
+          "/: internal anchor href omits canonical trailing slash: /stability-index (use /stability-index/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href omits canonical trailing slash: https://pharos.watch/about#sources (use /about/#sources)",
+        ),
       ]),
     );
   });
@@ -582,11 +614,7 @@ describe("check-seo-static", () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
       h1: "Home",
-      links: [
-        "/stability-index/",
-        "/blacklist/usdt-tether?view=issuer#top",
-        "https://pharos.watch/tape?event=depeg",
-      ],
+      links: ["/stability-index/", "/blacklist/usdt-tether?view=issuer#top", "https://pharos.watch/tape?event=depeg"],
     });
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
@@ -761,8 +789,12 @@ describe("check-seo-static", () => {
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.name"),
-        expect.stringContaining("/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.url"),
+        expect.stringContaining(
+          "/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.name",
+        ),
+        expect.stringContaining(
+          "/safety-scores/: safety scores Dataset structured data missing includedInDataCatalog.url",
+        ),
       ]),
     );
   });
