@@ -130,6 +130,29 @@ describe("scheduled runtime job-ledger modes", () => {
     expect(mocks.callbackError).toBe(bootstrapError);
   });
 
+  it("does not create a queued attempt when fetch-budget waiting is aborted", async () => {
+    const runtime = buildRuntime("write");
+    const releaseBudget = await runtime.fetchBudget!.acquire(runtime.fetchBudget!.capacity);
+    const controller = new AbortController();
+    const allocationAbort = new Error("slot allocation aborted");
+    const runJob = vi.fn(async () => ({ status: "ok" as const }));
+    runtime.slotSignal = controller.signal;
+
+    try {
+      const pendingRun = runtime.runLeasedCron("sync-stablecoins", runJob);
+      expect(runtime.fetchBudget!.snapshot().waiting).toBe(1);
+
+      controller.abort(allocationAbort);
+
+      await expect(pendingRun).rejects.toBe(allocationAbort);
+      expect(mocks.createWorkerJobAttempt).not.toHaveBeenCalled();
+      expect(mocks.finishWorkerJobAttempt).not.toHaveBeenCalled();
+      expect(runJob).not.toHaveBeenCalled();
+    } finally {
+      releaseBudget();
+    }
+  });
+
   it("makes acquisition lease-state persistence required only in write mode", async () => {
     const leaseWriteError = new Error("lease state failed");
     mocks.recordWorkerJobAttemptLease.mockRejectedValue(leaseWriteError);

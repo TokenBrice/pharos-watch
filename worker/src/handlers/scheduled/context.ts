@@ -281,33 +281,32 @@ export function createScheduledRuntimeContext(
         allowlist: workerJobLedgerAllowlist,
         job,
       });
-      const ledgerStartedAtMs = Date.now();
-      let ledgerIdentity: WorkerJobAttemptIdentity | null = null;
-      let ledgerBootstrapError: unknown = null;
-      if (ledgerEnabled) {
-        try {
-          ledgerIdentity = await createWorkerJobAttempt(db, {
-            scheduleKey: scheduled.scheduleKey,
-            job,
-            slotStartedAt: scheduled.slotStartedAt,
-            producerPath: descriptor.producerPath,
-            attemptNo: jobAttemptNo,
-            producerKind,
-            invocationId,
-            workerVersion,
-          });
-        } catch (err) {
-          logJobLedgerWriteFailure(job, "worker_job_attempt_create_failed", err);
-          if (workerJobLedgerMode === "write") ledgerBootstrapError = err;
-        }
-      }
-
       const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
         : runtime.slotSignal ?? slotAbortSignal;
 
       return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
+        const ledgerStartedAtMs = Date.now();
+        let ledgerIdentity: WorkerJobAttemptIdentity | null = null;
+        let ledgerBootstrapError: unknown = null;
         try {
+          if (ledgerEnabled) {
+            try {
+              ledgerIdentity = await createWorkerJobAttempt(db, {
+                scheduleKey: scheduled.scheduleKey,
+                job,
+                slotStartedAt: scheduled.slotStartedAt,
+                producerPath: descriptor.producerPath,
+                attemptNo: jobAttemptNo,
+                producerKind,
+                invocationId,
+                workerVersion,
+              });
+            } catch (err) {
+              logJobLedgerWriteFailure(job, "worker_job_attempt_create_failed", err);
+              if (workerJobLedgerMode === "write") ledgerBootstrapError = err;
+            }
+          }
           const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
           if (ledgerBootstrapError) throw ledgerBootstrapError;
           const slotMeta = {
