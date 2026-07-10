@@ -1022,11 +1022,11 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
               run: async () => {
                 throw new Error(`simulated D1 cache write failure for ${failKey}`);
               },
-            } as MockPreparedStatement;
+            } as unknown as MockPreparedStatement;
           },
-        } as MockPreparedStatement;
+        } as unknown as MockPreparedStatement;
       },
-    } as MockD1Database;
+    } as unknown as MockD1Database;
   }
 
   function buildRebuildSourceDb(): MockD1Database {

@@ -504,7 +504,7 @@ The no-work branch is not used when snapshots need seeding, the safety source is
 
 ### Failure Modes
 
-If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, preset-backed delivery is marked degraded rather than treated as an empty subscriber list. Direct and global subscribers continue when they can be resolved safely, snapshot writes still proceed for the current run, and structured metadata/logging records whether the failure was query or resolution related. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed preset-resolution runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
+If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, the source event remains incomplete and delivery stays closed rather than treating preset-backed recipients as an empty list. Direct, global, and preset targets materialize only after source resolution is complete, and snapshot baselines do not advance while any planned target remains unresolved. Structured metadata and logging record whether the failure was query- or resolution-related so a later run can resume the same source event without replaying terminal targets. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed preset-resolution runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
 
 ### Alert Detection Rules
 
