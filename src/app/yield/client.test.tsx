@@ -14,6 +14,7 @@ const {
   replaceParamsMock,
   setParamMock,
   pushMock,
+  leaderboardPropsMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsMock: vi.fn(),
@@ -21,6 +22,7 @@ const {
   replaceParamsMock: vi.fn(),
   setParamMock: vi.fn(),
   pushMock: vi.fn(),
+  leaderboardPropsMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -53,7 +55,10 @@ vi.mock("@/components/yield-scatter-plot", () => ({
 }));
 
 vi.mock("@/components/yield-leaderboard", () => ({
-  YieldLeaderboard: () => <div data-testid="yield-leaderboard" />,
+  YieldLeaderboard: (props: unknown) => {
+    leaderboardPropsMock(props);
+    return <div data-testid="yield-leaderboard" />;
+  },
 }));
 
 vi.mock("@/app/yield/source-board", () => ({
@@ -129,6 +134,19 @@ describe("YieldClient", () => {
 
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.queryByTestId("yield-scatter-plot")).toBeNull();
+  });
+
+  it("resolves comparison rows independently of the current filters", () => {
+    searchParamsMock.set("q", "zzzz-no-match");
+
+    render(<YieldClient />);
+
+    const props = leaderboardPropsMock.mock.calls.at(-1)?.[0] as {
+      rows: unknown[];
+      comparisonRows: Array<{ id: string }>;
+    };
+    expect(props.rows).toHaveLength(0);
+    expect(props.comparisonRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
   });
 
   it("renders both the risk budget slider and scatter plot when yield rows are visible", () => {

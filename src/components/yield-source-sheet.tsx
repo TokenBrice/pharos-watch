@@ -22,6 +22,7 @@ import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -93,7 +94,17 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
             </p>
             <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
               <div className="flex items-center gap-2">
-                <TableSourceLink href={selectedSource.url} className="text-sm font-medium text-foreground">
+                <TableSourceLink
+                  href={selectedSource.url}
+                  className="text-sm font-medium text-foreground"
+                  onClick={() => {
+                    trackEvent("yield_row_action", {
+                      action: "provider_opened",
+                      coin_id: ranking.id,
+                      warning_count: ranking.warningSignals.length,
+                    });
+                  }}
+                >
                   {selectedSource.displayLabel}
                 </TableSourceLink>
                 <Badge variant="outline" className={cn("text-xs", YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "")}>
@@ -295,7 +306,14 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
           <Link
             href={deepDiveHref}
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              trackEvent("yield_row_action", {
+                action: "deep_dive_opened",
+                coin_id: ranking.id,
+                warning_count: ranking.warningSignals.length,
+              });
+              onOpenChange(false);
+            }}
           >
             Deep dive yield &rarr;
           </Link>

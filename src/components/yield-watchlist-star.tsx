@@ -2,6 +2,7 @@
 
 import { Star } from "lucide-react";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 interface YieldWatchlistStarProps {
@@ -23,6 +24,10 @@ export function YieldWatchlistStar({ stablecoinId, symbol, className }: YieldWat
       onClick={(event) => {
         event.stopPropagation();
         toggle(stablecoinId);
+        trackEvent("yield_watchlist_changed", {
+          action: active ? "removed" : "added",
+          coin_id: stablecoinId,
+        });
       }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") event.stopPropagation();

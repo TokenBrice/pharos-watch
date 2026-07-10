@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowUpRight } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, DownloadIcon } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
@@ -24,11 +24,7 @@ import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
-import {
-  computePysBreakdown,
-  formatYieldWarningSignal,
-  getPysColor,
-} from "@/lib/yield-constants";
+import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
@@ -43,6 +39,8 @@ import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
+import { trackEvent } from "@/lib/analytics";
+import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
@@ -66,10 +64,16 @@ function LeaderboardHeading({
   summary,
   sortKey,
   sortDirection,
+  exportRows,
+  updatedAt,
+  methodologyLabel,
 }: {
   summary: YieldLeaderboardFilterSummary;
   sortKey: YieldTableSortKey;
   sortDirection: "asc" | "desc";
+  exportRows: readonly YieldViewModelRow[];
+  updatedAt: number;
+  methodologyLabel: string;
 }) {
   const { copied, copy } = useCopyToClipboard();
   const sortLabel = SORT_KEY_LABELS[sortKey] ?? sortKey;
@@ -80,6 +84,16 @@ function LeaderboardHeading({
   const handleCopy = useCallback(async () => {
     await copy(window.location.href);
   }, [copy]);
+  const handleExport = useCallback(() => {
+    const exportData = exportRows.map((row, index) => ({ rank: index + 1, row }));
+    downloadCsvWithPreamble(exportData, YIELD_EXPORT_COLUMNS, "pharos-yield-rankings", {
+      endpoint: "yield-rankings",
+      asOfISO: new Date(updatedAt * 1000).toISOString(),
+      sourceUrl: window.location.href,
+      methodologyLabel,
+    });
+    trackEvent("yield_exported", { scope: "ranking", row_count: exportData.length });
+  }, [exportRows, methodologyLabel, updatedAt]);
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -89,47 +103,84 @@ function LeaderboardHeading({
           Yield Leaderboard
         </h2>
       </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="pharos-focus-ring inline-flex min-h-11 max-w-full items-center rounded-md py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-8 sm:py-1"
-            aria-label="Filter summary; click for details"
-          >
-            <span className="truncate">{sentence}</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-[320px] border border-border bg-popover p-3 text-foreground">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Active filters
-          </p>
-          {summary.activeFilters.length > 0 ? (
-            <ul className="mt-1 space-y-0.5 text-[11px] text-foreground">
-              {summary.activeFilters.map((filter) => (
-                <li key={filter.key}>{filter.label}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-1 text-[11px] text-muted-foreground">No filters applied.</p>
-          )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
-          >
-            <span
-              className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
-              aria-live="polite"
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="pharos-focus-ring inline-flex min-h-11 min-w-0 items-center rounded-md py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-8 sm:py-1"
+              aria-label="Filter summary; click for details"
             >
-              {copied ? "Copied!" : "Copy URL"}
-            </span>
-            {copied ? <span key="copy-ring" className="pharos-copy-ring" aria-hidden="true" /> : null}
-          </button>
-        </TooltipContent>
-      </Tooltip>
+              <span className="truncate">{sentence}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[320px] border border-border bg-popover p-3 text-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Active filters
+            </p>
+            {summary.activeFilters.length > 0 ? (
+              <ul className="mt-1 space-y-0.5 text-[11px] text-foreground">
+                {summary.activeFilters.map((filter) => (
+                  <li key={filter.key}>{filter.label}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-[11px] text-muted-foreground">No filters applied.</p>
+            )}
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
+            >
+              <span
+                className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+                aria-live="polite"
+              >
+                {copied ? "Copied!" : "Copy URL"}
+              </span>
+              {copied ? <span key="copy-ring" className="pharos-copy-ring" aria-hidden="true" /> : null}
+            </button>
+          </TooltipContent>
+        </Tooltip>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exportRows.length === 0}
+          className="pharos-focus-ring inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 sm:py-1"
+          aria-label={`Export ${exportRows.length} yield rows as CSV`}
+        >
+          <DownloadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>CSV</span>
+        </button>
+      </div>
     </div>
   );
 }
+
+interface YieldExportRow {
+  rank: number;
+  row: YieldViewModelRow;
+}
+
+const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
+  { header: "Rank", accessor: (entry) => entry.rank },
+  { header: "ID", accessor: (entry) => entry.row.id },
+  { header: "Symbol", accessor: (entry) => entry.row.symbol },
+  { header: "Name", accessor: (entry) => entry.row.name },
+  { header: "APY 30d (%)", accessor: (entry) => entry.row.apy30d },
+  { header: "PYS", accessor: (entry) => entry.row.pharosYieldScore ?? "NR" },
+  { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
+  { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
+  { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
+  { header: "Yield type", accessor: (entry) => entry.row.yieldType },
+  { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
+  { header: "Source confidence", accessor: (entry) => entry.row.provenance?.confidenceTier ?? "unknown" },
+  { header: "Benchmark", accessor: (entry) => entry.row.benchmarkLabel ?? "unknown" },
+  { header: "TVL USD", accessor: (entry) => entry.row.sourceTvlUsd ?? "unknown" },
+  { header: "Stability", accessor: (entry) => entry.row.yieldStability ?? "unknown" },
+  { header: "Warnings", accessor: (entry) => entry.row.warningSignals.join(" | ") },
+  { header: "Provider URL", accessor: (entry) => entry.row.yieldSourceUrl ?? "" },
+];
 
 const MOBILE_SORT_OPTIONS: Array<{ key: YieldTableSortKey; label: string }> = [
   { key: "pys", label: "PYS" },
@@ -147,6 +198,9 @@ interface YieldLeaderboardProps {
   scalingFactor: number;
   emptyMessage?: string;
   filterSummary?: YieldLeaderboardFilterSummary;
+  comparisonRows?: readonly YieldViewModelRow[];
+  updatedAt?: number;
+  methodologyLabel?: string;
 }
 
 export function YieldLeaderboard({
@@ -157,13 +211,19 @@ export function YieldLeaderboard({
   scalingFactor,
   emptyMessage,
   filterSummary,
+  comparisonRows = rows,
+  updatedAt = Math.floor(Date.now() / 1000),
+  methodologyLabel = "Pharos Yield Score current",
 }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
   const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
   const compare = useYieldCompareSelection();
+  const initialCompareDeepLink = useRef(compare.ids.length >= 2);
+  const initialCompareProcessed = useRef(false);
+  const rowsById = useMemo(() => new Map(comparisonRows.map((row) => [row.id, row] as const)), [comparisonRows]);
   const sheetRanking = useMemo(
-    () => (sheetRankingId ? rows.find((r) => r.id === sheetRankingId) ?? null : null),
+    () => (sheetRankingId ? (rows.find((r) => r.id === sheetRankingId) ?? null) : null),
     [rows, sheetRankingId],
   );
 
@@ -193,9 +253,52 @@ export function YieldLeaderboard({
     () => (expandedId !== null && paginated.some((row) => row.id === expandedId) ? expandedId : null),
     [expandedId, paginated],
   );
-  const handleToggleExpanded = useCallback((stablecoinId: string) => {
-    setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
-  }, []);
+  const handleToggleExpanded = useCallback(
+    (stablecoinId: string) => {
+      if (expandedId !== stablecoinId) {
+        const row = rowsById.get(stablecoinId);
+        trackEvent("yield_row_action", {
+          action: "history_opened",
+          coin_id: stablecoinId,
+          warning_count: row?.warningSignals.length ?? 0,
+        });
+      }
+      setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
+    },
+    [expandedId, rowsById],
+  );
+  const handleOpenSourceSheet = useCallback(
+    (stablecoinId: string) => {
+      const row = rowsById.get(stablecoinId);
+      trackEvent("yield_row_action", {
+        action: "source_opened",
+        coin_id: stablecoinId,
+        warning_count: row?.warningSignals.length ?? 0,
+      });
+      setSheetRankingId(stablecoinId);
+    },
+    [rowsById],
+  );
+  const handleToggleSort = useCallback(
+    (key: YieldTableSortKey) => {
+      const direction = sortKey === key && sortDirection === "desc" ? "asc" : "desc";
+      trackEvent("yield_sort_changed", { sort_by: key, direction });
+      toggleSort(key);
+    },
+    [sortDirection, sortKey, toggleSort],
+  );
+  const handleOpenCompare = useCallback(() => {
+    setCompareDrawerOpen(true);
+    trackEvent("yield_compare_opened", { source: "tray", coin_count: compare.ids.length });
+  }, [compare.ids.length]);
+
+  useEffect(() => {
+    if (initialCompareProcessed.current) return;
+    initialCompareProcessed.current = true;
+    if (!initialCompareDeepLink.current) return;
+    setCompareDrawerOpen(true);
+    trackEvent("yield_compare_opened", { source: "deep_link", coin_count: compare.ids.length });
+  }, [compare.ids.length]);
 
   return (
     <TooltipProvider>
@@ -204,6 +307,9 @@ export function YieldLeaderboard({
           summary={filterSummary}
           sortKey={sortKey}
           sortDirection={sortDirection}
+          exportRows={sorted}
+          updatedAt={updatedAt}
+          methodologyLabel={methodologyLabel}
         />
       ) : null}
       <div className="space-y-3 md:hidden">
@@ -212,7 +318,7 @@ export function YieldLeaderboard({
             options={MOBILE_SORT_OPTIONS}
             sortKey={sortKey}
             sortDirection={sortDirection}
-            onSort={toggleSort}
+            onSort={handleToggleSort}
             ariaLabel="Sort yield leaderboard"
           />
         </MobileSortPanel>
@@ -238,7 +344,7 @@ export function YieldLeaderboard({
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
                     onToggleExpanded={handleToggleExpanded}
-                    onOpenSourceSheet={setSheetRankingId}
+                    onOpenSourceSheet={handleOpenSourceSheet}
                     onToggleCompare={compare.toggle}
                   />
                 );
@@ -270,26 +376,30 @@ export function YieldLeaderboard({
           pageStartIndex={pageStartIndex}
           sortKey={sortKey}
           sortDirection={sortDirection}
-          onToggleSort={toggleSort}
+          onToggleSort={handleToggleSort}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           total={totalRows}
-          pagination={sorted.length > 0 ? {
-            page: effectivePage,
-            totalPages,
-            rangeStart,
-            rangeEnd,
-            total: totalRows,
-            onPrevious: onPreviousPage,
-            onNext: onNextPage,
-            noun: "coins",
-          } : undefined}
+          pagination={
+            sorted.length > 0
+              ? {
+                  page: effectivePage,
+                  totalPages,
+                  rangeStart,
+                  rangeEnd,
+                  total: totalRows,
+                  onPrevious: onPreviousPage,
+                  onNext: onNextPage,
+                  noun: "coins",
+                }
+              : undefined
+          }
           expandedId={visibleExpandedId}
           compareHas={compare.has}
           compareCanAdd={compare.canAdd}
           onPrefetch={prefetch}
           onToggleExpanded={handleToggleExpanded}
-          onOpenSourceSheet={setSheetRankingId}
+          onOpenSourceSheet={handleOpenSourceSheet}
           onToggleCompare={compare.toggle}
           emptyMessage={emptyMessage}
         />
@@ -300,14 +410,18 @@ export function YieldLeaderboard({
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
         open={sheetRankingId !== null}
-        onOpenChange={(open) => { if (!open) setSheetRankingId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setSheetRankingId(null);
+        }}
       />
-      <YieldCompareTray rows={rows} logos={logos} onOpenDrawer={() => setCompareDrawerOpen(true)} />
+      <YieldCompareTray rows={comparisonRows} logos={logos} onOpenDrawer={handleOpenCompare} />
       <YieldCompareDrawer
         open={compareDrawerOpen}
         onOpenChange={setCompareDrawerOpen}
-        rows={rows}
+        rows={comparisonRows}
         logos={logos}
+        updatedAt={updatedAt}
+        methodologyLabel={methodologyLabel}
       />
     </TooltipProvider>
   );
@@ -345,9 +459,7 @@ export function YieldMobileCard({
   const benchmarkReferenceText = getYieldBenchmarkReferenceText(row);
   const altSourceCount = row.altSources?.length ?? 0;
   const availableSources = [
-    ...(row.provenance?.sourceKey
-      ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }]
-      : []),
+    ...(row.provenance?.sourceKey ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }] : []),
     ...(row.altSources ?? []).map((source) => ({
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
@@ -379,26 +491,25 @@ export function YieldMobileCard({
   });
 
   return (
-    <article className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}>
+    <article
+      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md">
+          <Link
+            href={buildStablecoinUrl(row.id)}
+            className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md"
+          >
             <StablecoinLogo src={logo} name={row.name} size={30} />
             <span className="min-w-0">
               <span className="flex items-baseline gap-2">
                 <span className="font-semibold text-foreground">{row.symbol}</span>
                 <span className="truncate text-xs text-muted-foreground">{row.name}</span>
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                {row.yieldSource}
-              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{row.yieldSource}</span>
             </span>
           </Link>
-          <YieldWatchlistStar
-            stablecoinId={row.id}
-            symbol={row.symbol}
-            className="h-11 w-11 min-w-11"
-          />
+          <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-11 w-11 min-w-11" />
           <button
             type="button"
             aria-pressed={isCompared}
@@ -439,7 +550,9 @@ export function YieldMobileCard({
                     <TooltipContent className="max-w-[240px] text-[11px]">
                       <span className="block">{rankChip.long}</span>
                       {rankChip.pysDeltaLabel ? (
-                        <span className="block font-mono tabular-nums text-muted-foreground">{rankChip.pysDeltaLabel}</span>
+                        <span className="block font-mono tabular-nums text-muted-foreground">
+                          {rankChip.pysDeltaLabel}
+                        </span>
                       ) : null}
                     </TooltipContent>
                   </Tooltip>
@@ -461,11 +574,12 @@ export function YieldMobileCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {confidenceStyle && confidenceLabel ? (
-          <span className={confidenceStyle.pill}>{confidenceLabel}</span>
-        ) : null}
+        {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
         {grade && grade !== "NR" ? (
-          <Badge variant="outline" className={`px-1.5 py-0.5 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}>
+          <Badge
+            variant="outline"
+            className={`px-1.5 py-0.5 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+          >
             {grade}
           </Badge>
         ) : null}
@@ -498,9 +612,7 @@ export function YieldMobileCard({
               <span className="inline-flex cursor-help items-center gap-1 text-amber-700 dark:text-amber-400">
                 <AlertTriangle
                   className={
-                    warningCount >= 2
-                      ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500"
-                      : "h-3.5 w-3.5 text-amber-500"
+                    warningCount >= 2 ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500" : "h-3.5 w-3.5 text-amber-500"
                   }
                   aria-hidden="true"
                 />
@@ -571,6 +683,13 @@ export function YieldMobileCard({
         </button>
         <TableSourceLink
           href={row.yieldSourceUrl}
+          onClick={() => {
+            trackEvent("yield_row_action", {
+              action: "provider_opened",
+              coin_id: row.id,
+              warning_count: warningCount,
+            });
+          }}
           className="min-h-11 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium"
           iconClassName="h-3.5 w-3.5"
         >
@@ -579,6 +698,13 @@ export function YieldMobileCard({
         <Link
           href={`${buildStablecoinUrl(row.id)}yield/`}
           prefetch={false}
+          onClick={() => {
+            trackEvent("yield_row_action", {
+              action: "deep_dive_opened",
+              coin_id: row.id,
+              warning_count: warningCount,
+            });
+          }}
           aria-label={`Open full yield analysis for ${row.symbol}`}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
         >

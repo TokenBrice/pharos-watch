@@ -9,6 +9,7 @@ import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
+import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
@@ -22,6 +23,7 @@ import type {
 } from "@/lib/yield-source-risk";
 import type { YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { trackEvent } from "@/lib/analytics";
 
 // These presentational parts are chassis-agnostic: each returns inline content
 // (no `<TableCell>`/`<TableRow>` wrapper) so the yield instrument board can place
@@ -450,6 +452,13 @@ export function YieldExpandedDetails({
                   href={row.yieldSourceUrl}
                   className="text-sm font-medium text-foreground"
                   stopPropagation
+                  onClick={() => {
+                    trackEvent("yield_row_action", {
+                      action: "provider_opened",
+                      coin_id: row.id,
+                      warning_count: row.warningSignals.length,
+                    });
+                  }}
                 >
                   {row.yieldSource}
                 </TableSourceLink>
@@ -468,6 +477,7 @@ export function YieldExpandedDetails({
                 {totalSourceCount} {totalSourceCount === 1 ? "source" : "sources"} tracked
               </p>
             </ExpandedMetricSection>
+            <YieldAccessStructure sourceRisk={row.sourceRisk} compact />
             {row.warningSignals.length > 0 ? (
               <ExpandedMetricSection title="Signals">
                 <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">

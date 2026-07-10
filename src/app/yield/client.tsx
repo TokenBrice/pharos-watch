@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +33,7 @@ import {
 } from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
+import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import type { YieldRankingsResponse } from "@shared/types";
@@ -76,12 +77,13 @@ interface HeroHighlightRowProps {
   symbol: string;
   value: string;
   unit: string;
+  context: string;
   onClick: () => void;
 }
 
 // A folded KPI tile: the standalone interchangeable-tile grid is retired in
 // favour of these compact, click-to-scroll metric rows in the hero sub-slot.
-function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }: HeroHighlightRowProps) {
+function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, onClick }: HeroHighlightRowProps) {
   return (
     <button
       type="button"
@@ -93,6 +95,7 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }
         <span className="min-w-0">
           <span className="block truncate text-[11px] uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
           <span className="block truncate text-sm font-semibold text-foreground">{symbol}</span>
+          <span className="block truncate text-[11px] text-muted-foreground">{context}</span>
         </span>
       </span>
       <span className="shrink-0 text-right">
@@ -101,6 +104,27 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, onClick }
       </span>
     </button>
   );
+}
+
+function formatHeroRiskContext(row: YieldViewModelRow): string {
+  const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} safety` : "Safety NR";
+  const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
+  const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
+  const warningCount = row.warningSignals.length;
+  return `${safety} · ${pys} · ${posture} · ${warningCount} warning${warningCount === 1 ? "" : "s"}`;
+}
+
+const MAX_DEFAULT_SCATTER_ROWS = 48;
+
+function selectDefaultScatterRows(rows: readonly YieldViewModelRow[]): YieldViewModelRow[] {
+  if (rows.length <= MAX_DEFAULT_SCATTER_ROWS) return [...rows];
+  const selected = new Map<string, YieldViewModelRow>();
+  for (const row of rows.slice(0, 36)) selected.set(row.id, row);
+  for (const row of [...rows].sort((a, b) => b.apy30d - a.apy30d)) {
+    selected.set(row.id, row);
+    if (selected.size >= MAX_DEFAULT_SCATTER_ROWS) break;
+  }
+  return [...selected.values()];
 }
 
 function YieldApiWarnings({ warnings }: { warnings: YieldRankingsResponse["warnings"] }) {
@@ -214,8 +238,25 @@ export function YieldClient() {
       }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
   );
+  const comparisonViewModel = useMemo<YieldViewModel>(
+    () =>
+      buildYieldViewModel(
+        rankings,
+        {},
+        {
+          benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
+          fallbackBenchmark: data?.provenance?.benchmark ?? null,
+          watchlistIds: watchlist.idSet,
+        },
+      ),
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, watchlist.idSet],
+  );
   const visibleRows = viewModel.visibleRows;
+  const scatterRows = useMemo(() => selectDefaultScatterRows(visibleRows), [visibleRows]);
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
+  const activeFilterSummaries = useMemo(() => getActiveFilterSummaries(viewModel), [viewModel]);
+  const lastZeroResultSignature = useRef<string | null>(null);
+  const exposedWarningCodes = useRef(new Set<string>());
 
   // The hero beam ("One Beam" frost figure) is the headline APY of the best
   // risk-adjusted opportunity in the current view — the row with the highest
@@ -295,25 +336,61 @@ export function YieldClient() {
     });
   }, [replaceParams, viewModel.invalidParamKeys, viewModel.normalizedParams]);
 
+  useEffect(() => {
+    if (!viewModel.emptyState.isEmpty) {
+      lastZeroResultSignature.current = null;
+      return;
+    }
+    const signature = activeFilterSummaries
+      .map((filter) => filter.key)
+      .sort()
+      .join(",");
+    if (lastZeroResultSignature.current === signature) return;
+    lastZeroResultSignature.current = signature;
+    trackEvent("yield_zero_results", { active_filter_count: activeFilterSummaries.length });
+  }, [activeFilterSummaries, viewModel.emptyState.isEmpty]);
+
+  useEffect(() => {
+    for (const warning of data?.warnings ?? []) {
+      if (exposedWarningCodes.current.has(warning.code)) continue;
+      exposedWarningCodes.current.add(warning.code);
+      trackEvent("yield_degraded_exposure", { warning_code: warning.code });
+    }
+  }, [data?.warnings]);
+
   const handleFilterChange = useCallback(
     (key: string, value: string) => {
       setParam(key, value);
+      const trackedValue = key === "q" ? (value.trim() ? "non-empty" : "empty") : value || "all";
+      trackEvent("yield_filter_changed", {
+        filter_type: key,
+        filter_value: trackedValue,
+        action: trackedValue === "all" || trackedValue === "empty" ? "cleared" : "applied",
+      });
     },
     [setParam],
   );
 
   const handleClearFilters = useCallback(() => {
+    trackEvent("yield_filters_cleared", { filter_count: activeFilterSummaries.length });
     replaceParams((params) => {
       for (const key of Object.keys(viewModel.normalizedParams)) {
         params.delete(key);
       }
     });
-  }, [replaceParams, viewModel.normalizedParams]);
+  }, [activeFilterSummaries.length, replaceParams, viewModel.normalizedParams]);
 
   const handleApplyPreset = useCallback(
     (presetKey: YieldPresetKey) => {
       const spec = YIELD_PRESET_SPECS.find((entry) => entry.key === presetKey);
       if (!spec) return;
+      const clearing = viewModel.matchingPreset === presetKey;
+      const presetState = viewModel.presets.find((entry) => entry.key === presetKey);
+      trackEvent("yield_preset_selected", {
+        preset: presetKey,
+        action: clearing ? "cleared" : "applied",
+        result_count: clearing ? viewModel.totalRows : (presetState?.count ?? 0),
+      });
       // Stackable presets: merge spec.overrides on top of current params.
       // Re-clicking the active preset clears just that preset's keys.
       replaceParams((params) => {
@@ -336,6 +413,11 @@ export function YieldClient() {
     (key: YieldRiskBudgetKey) => {
       const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
       if (!spec) return;
+      const stop = viewModel.riskBudget.stops.find((entry) => entry.key === key);
+      trackEvent("yield_risk_budget_selected", {
+        risk_budget: key,
+        result_count: stop?.count ?? 0,
+      });
       replaceParams((params) => {
         for (const paramKey of RISK_BUDGET_FILTER_KEYS) {
           params.delete(paramKey);
@@ -346,7 +428,7 @@ export function YieldClient() {
         }
       });
     },
-    [replaceParams],
+    [replaceParams, viewModel.riskBudget.stops],
   );
 
   const handleNavigate = useCallback(
@@ -391,89 +473,117 @@ export function YieldClient() {
       <SelectorHandoffNotice visible={arrivedFromSelector} />
 
       <div className="flex flex-col gap-6">
-        <FeatureHeroSplit
-          ariaLabel="Yield landscape overview"
-          beamLabel={
-            topPysRow ? (
-              <>
-                Top risk-adjusted yield <span className="text-foreground/70">· {topPysRow.symbol}</span>
-              </>
-            ) : (
-              "Top risk-adjusted yield"
-            )
-          }
-          beamValue={topPysRow ? formatPercent(topPysRow.apy30d) : "—"}
-          beamTitle={
-            topPysRow && topPysRow.pharosYieldScore != null
-              ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}`
-              : undefined
-          }
-          expand={{ href: "#data", label: "Jump to the full yield leaderboard" }}
-          subKicker="This week's leaders"
-          sub={
-            exhibitTiles ? (
-              <div className="divide-y divide-border/50">
-                {exhibitTiles.topYield ? (
-                  <HeroHighlightRow
-                    label="Top yield"
-                    logoSrc={logos?.[exhibitTiles.topYield.id]}
-                    name={exhibitTiles.topYield.name}
-                    symbol={exhibitTiles.topYield.symbol}
-                    value={formatPercent(exhibitTiles.topYield.apy30d)}
-                    unit="APY"
-                    onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
-                  />
-                ) : null}
-                {exhibitTiles.mostStable ? (
-                  <HeroHighlightRow
-                    label="Most stable A+"
-                    logoSrc={logos?.[exhibitTiles.mostStable.id]}
-                    name={exhibitTiles.mostStable.name}
-                    symbol={exhibitTiles.mostStable.symbol}
-                    value={formatPercent(exhibitTiles.mostStable.apy30d)}
-                    unit="APY"
-                    onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
-                  />
-                ) : null}
-                {exhibitTiles.largestMarket ? (
-                  <HeroHighlightRow
-                    label="Largest market"
-                    logoSrc={logos?.[exhibitTiles.largestMarket.id]}
-                    name={exhibitTiles.largestMarket.name}
-                    symbol={exhibitTiles.largestMarket.symbol}
-                    value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
-                    unit="TVL"
-                    onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
-                  />
+        <section aria-label="Risk tolerance" className="order-1 lg:order-2">
+          <YieldRiskBudgetSlider stops={viewModel.riskBudget.stops} onSelect={handleApplyRiskBudget} />
+        </section>
+
+        <section className="order-2 lg:order-1">
+          <FeatureHeroSplit
+            ariaLabel="Yield landscape overview"
+            mobileSubBeforeVisual
+            beamLabel={
+              topPysRow ? (
+                <span className="space-y-1">
+                  <span className="block">
+                    Top risk-adjusted yield <span className="text-foreground/70">· {topPysRow.symbol}</span>
+                  </span>
+                  <span className="block text-[11px] font-normal text-muted-foreground">
+                    {formatHeroRiskContext(topPysRow)}
+                  </span>
+                </span>
+              ) : (
+                "Top risk-adjusted yield"
+              )
+            }
+            beamValue={topPysRow ? formatPercent(topPysRow.apy30d) : "—"}
+            beamTitle={
+              topPysRow && topPysRow.pharosYieldScore != null
+                ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}`
+                : undefined
+            }
+            expand={{ href: "#data", label: "Jump to the full yield leaderboard" }}
+            subKicker="This week's leaders"
+            sub={
+              exhibitTiles ? (
+                <div className="divide-y divide-border/50">
+                  {exhibitTiles.topYield ? (
+                    <HeroHighlightRow
+                      label="Highest APY"
+                      logoSrc={logos?.[exhibitTiles.topYield.id]}
+                      name={exhibitTiles.topYield.name}
+                      symbol={exhibitTiles.topYield.symbol}
+                      value={formatPercent(exhibitTiles.topYield.apy30d)}
+                      unit="APY"
+                      context={formatHeroRiskContext(exhibitTiles.topYield)}
+                      onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
+                    />
+                  ) : null}
+                  {exhibitTiles.mostStable ? (
+                    <HeroHighlightRow
+                      label="Most stable A+"
+                      logoSrc={logos?.[exhibitTiles.mostStable.id]}
+                      name={exhibitTiles.mostStable.name}
+                      symbol={exhibitTiles.mostStable.symbol}
+                      value={formatPercent(exhibitTiles.mostStable.apy30d)}
+                      unit="APY"
+                      context={formatHeroRiskContext(exhibitTiles.mostStable)}
+                      onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
+                    />
+                  ) : null}
+                  {exhibitTiles.largestMarket ? (
+                    <HeroHighlightRow
+                      label="Largest market"
+                      logoSrc={logos?.[exhibitTiles.largestMarket.id]}
+                      name={exhibitTiles.largestMarket.name}
+                      symbol={exhibitTiles.largestMarket.symbol}
+                      value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
+                      unit="TVL"
+                      context={formatHeroRiskContext(exhibitTiles.largestMarket)}
+                      onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No rows match your filters.</p>
+              )
+            }
+          >
+            {visibleRows.length > 0 ? (
+              <div>
+                <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-[11px] text-muted-foreground">
+                  <span>X: Safety score · Y: APY · outliers are capped</span>
+                  <a
+                    href="#data"
+                    className="pharos-focus-ring shrink-0 rounded-sm font-medium text-foreground underline underline-offset-2"
+                  >
+                    Full list
+                  </a>
+                </div>
+                <YieldScatterPlot
+                  rankings={scatterRows}
+                  benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
+                  benchmarkLabel={stats.referenceBenchmark?.label}
+                  benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+                  showBenchmarkReference
+                  usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
+                  logos={logos}
+                  onDotClick={handleNavigate}
+                  compact
+                  frame="bare"
+                />
+                {scatterRows.length < visibleRows.length ? (
+                  <p className="border-t border-border/50 px-4 py-2 text-[11px] text-muted-foreground">
+                    Showing {scatterRows.length} top-ranked and APY-outlier opportunities; all {visibleRows.length}{" "}
+                    remain in the leaderboard.
+                  </p>
                 ) : null}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No rows match your filters.</p>
-            )
-          }
-        >
-          {visibleRows.length > 0 ? (
-            <YieldScatterPlot
-              rankings={visibleRows}
-              benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
-              benchmarkLabel={stats.referenceBenchmark?.label}
-              benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
-              showBenchmarkReference
-              usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
-              logos={logos}
-              onDotClick={handleNavigate}
-              compact
-              frame="bare"
-            />
-          ) : (
-            <div className="flex h-[420px] items-center justify-center p-6 text-center text-sm text-muted-foreground">
-              No rows match your filters
-            </div>
-          )}
-        </FeatureHeroSplit>
-
-        <section aria-label="Risk tolerance" className="order-2">
-          <YieldRiskBudgetSlider stops={viewModel.riskBudget.stops} onSelect={handleApplyRiskBudget} />
+              <div className="flex h-[420px] items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                No rows match your filters
+              </div>
+            )}
+          </FeatureHeroSplit>
         </section>
 
         <section className="order-3" aria-label="Yield filters">
@@ -494,11 +604,14 @@ export function YieldClient() {
               medianApy={data.medianApy ?? 0}
               scalingFactor={data.scalingFactor}
               emptyMessage={viewModel.emptyState.description}
+              comparisonRows={comparisonViewModel.visibleRows}
+              updatedAt={data.updatedAt}
+              methodologyLabel={data.methodology?.versionLabel ?? "Pharos Yield Score current"}
               filterSummary={{
                 visibleCount: visibleRows.length,
                 totalCount: viewModel.totalRows,
                 comparisonLabel: viewModel.comparisonLabel,
-                activeFilters: getActiveFilterSummaries(viewModel),
+                activeFilters: activeFilterSummaries,
               }}
             />
           </div>

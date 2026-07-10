@@ -29,6 +29,7 @@ import {
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
+import { trackEvent } from "@/lib/analytics";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -86,13 +87,7 @@ function scaleApy(apy: number): number {
   return clampScore((apy / 20) * 100);
 }
 
-function ApyBenchmarkBar({
-  apy30d,
-  benchmarkRate,
-}: {
-  apy30d: number;
-  benchmarkRate: number | null;
-}) {
+function ApyBenchmarkBar({ apy30d, benchmarkRate }: { apy30d: number; benchmarkRate: number | null }) {
   const fillWidth = Math.max(3, scaleApy(apy30d));
   const benchPos = benchmarkRate != null ? clampScore(scaleApy(benchmarkRate)) : null;
   const excess = benchmarkRate != null ? apy30d - benchmarkRate : null;
@@ -452,7 +447,14 @@ function YieldInstrumentRowBase({
           <Link
             href={`${buildStablecoinUrl(row.id)}yield/`}
             prefetch={false}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              trackEvent("yield_row_action", {
+                action: "deep_dive_opened",
+                coin_id: row.id,
+                warning_count: warningCount,
+              });
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             }}
@@ -475,7 +477,9 @@ function YieldInstrumentRowBase({
             aria-controls={`yield-row-${row.id}-details`}
             title={expanded ? "Hide yield history" : "Show yield history"}
           >
-            <ChevronDown className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"} />
+            <ChevronDown
+              className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"}
+            />
           </button>
         </div>
       </div>
@@ -554,10 +558,7 @@ export function YieldInstrumentBoard({
   emptyMessage,
 }: YieldInstrumentBoardProps) {
   return (
-    <div
-      data-testid="yield-instrument-board"
-      className="pharos-table-shell"
-    >
+    <div data-testid="yield-instrument-board" className="pharos-table-shell">
       {/* Sort pills + range summary */}
       <div className="pharos-table-toolbar flex-row flex-wrap items-center justify-between">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Sort yield leaderboard">
@@ -600,10 +601,18 @@ export function YieldInstrumentBoard({
         <HeaderCell label="Coin" />
         <HeaderCell label="APY 30d" title="30-day average annual percentage yield" />
         <HeaderCell label="Safety" title="Pharos Safety Grade / Score" />
-        <HeaderCell label="PYS" adornment={<MethodologyHint topic="pys" />} title="Pharos Yield Score: risk-adjusted yield ranking" />
+        <HeaderCell
+          label="PYS"
+          adornment={<MethodologyHint topic="pys" />}
+          title="Pharos Yield Score: risk-adjusted yield ranking"
+        />
         <HeaderCell label="Source" />
         <HeaderCell label="TVL" title="Total value locked in yield source" />
-        <HeaderCell label="Stability" adornment={<MethodologyHint topic="yieldStability" />} title="Yield stability over 30 days" />
+        <HeaderCell
+          label="Stability"
+          adornment={<MethodologyHint topic="yieldStability" />}
+          title="Yield stability over 30 days"
+        />
         <HeaderCell label="30d Range" className="hidden xl:flex" />
         <HeaderCell label="" className="justify-end" />
       </div>
