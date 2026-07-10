@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { HealthResponse, StatusCause, StatusResponse, StatusTransition } from "@shared/types";
+import type { HealthResponse, StatusResponse, StatusTransition } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
@@ -13,19 +13,33 @@ import { buildReserveRecoveryForecast, formatNextRunWindow } from "@/lib/status/
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import {
   type BrowserProbeSummary,
+  type DashboardDecision,
+  type DashboardEvidence,
+  type DashboardIssueGroups,
   type DashboardQuerySync,
   type DashboardSection,
+  STATUS_DASHBOARD_FRESHNESS_POLICY,
+  buildDashboardDecision,
+  buildDashboardEvidence,
   formatTransitionLabel,
   formatTimestampSeconds,
+  getIssueKindBadgeClass,
   getStatusTone,
-  getSeverityBadgeClass,
+  groupDashboardIssues,
+  normalizeStatusIssues,
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 
-const ADMIN_STALE_AFTER_MS = 180_000;
-
 function formatReserveCoverage(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function getEvidenceBadgeClass(state: DashboardEvidence["state"]): string {
+  if (state === "current") return "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+  if (state === "stale" || state === "unavailable") {
+    return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+  }
+  return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
 }
 
 export interface TriageSummaryProps {
@@ -33,9 +47,9 @@ export interface TriageSummaryProps {
   healthData: HealthResponse | null | undefined;
   overallTone: ReturnType<typeof getStatusTone>;
   statusHoldingAge: number;
-  overallCauseCount: number;
-  watchCauseCount: number;
-  blockerCauses: StatusCause[];
+  issueGroups?: DashboardIssueGroups;
+  evidence?: DashboardEvidence;
+  decision?: DashboardDecision;
   latestTransition: StatusTransition | null;
   attentionSections: DashboardSection[];
   recommendedActions: StatusActionRecommendation[];
@@ -43,7 +57,7 @@ export interface TriageSummaryProps {
   setIsDiagnosticsOpen: (open: boolean) => void;
   browserProbeSummary: BrowserProbeSummary | null;
   querySyncs: DashboardQuerySync[];
-  clientDataAgeSec: number;
+  clientDataAgeSec: number | null;
   clientDataStale: boolean;
   lastUpdated: number;
   handleRefresh: () => void;
@@ -55,9 +69,9 @@ export function TriageSummary({
   healthData,
   overallTone,
   statusHoldingAge,
-  overallCauseCount,
-  watchCauseCount,
-  blockerCauses,
+  issueGroups,
+  evidence,
+  decision,
   latestTransition,
   attentionSections,
   recommendedActions,
@@ -71,9 +85,28 @@ export function TriageSummary({
   handleRefresh,
   onSignOut,
 }: TriageSummaryProps) {
-  const [isBlockersExpanded, setIsBlockersExpanded] = useState(false);
+  const [areIssuesExpanded, setAreIssuesExpanded] = useState(false);
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
   const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
+  const resolvedIssueGroups = issueGroups ?? groupDashboardIssues(normalizeStatusIssues(data.causes));
+  const resolvedEvidence = evidence ?? buildDashboardEvidence(querySyncs);
+  const resolvedDecision =
+    decision ??
+    buildDashboardDecision({
+      data,
+      healthData,
+      evidence: resolvedEvidence,
+      issueGroups: resolvedIssueGroups,
+      recommendedActions,
+    });
+  const activeIssues = [
+    ...resolvedIssueGroups.impacting,
+    ...resolvedIssueGroups.warnings,
+    ...resolvedIssueGroups.maintenance,
+    ...resolvedIssueGroups.watches,
+  ];
+  const evidenceNeedsRefresh =
+    resolvedDecision.nextStep === "refresh-evidence" || resolvedDecision.nextStep === "action-blocked";
   const statusSync = querySyncs.find((s) => s.key === "status");
   const healthSync = querySyncs.find((s) => s.key === "health");
   const probeSync = querySyncs.find((s) => s.key === "probes");
@@ -109,14 +142,22 @@ export function TriageSummary({
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  data.overallStatus === "stale"
+                  resolvedDecision.systemState === "stale" || resolvedDecision.systemState === "unknown"
                     ? "bg-[var(--severity-severe)]"
-                    : data.overallStatus === "degraded"
+                    : resolvedDecision.systemState === "degraded"
                       ? "bg-[var(--severity-mild)]"
                       : "bg-[var(--severity-healthy)]",
                 )}
               />
-              {overallTone.label}
+              {resolvedDecision.systemLabel}
+            </span>
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                getEvidenceBadgeClass(resolvedEvidence.state),
+              )}
+            >
+              Evidence: {resolvedEvidence.label}
             </span>
             {isRecoveryHold && (
               <TooltipProvider>
@@ -134,13 +175,13 @@ export function TriageSummary({
               </TooltipProvider>
             )}
             <span className="text-sm text-muted-foreground">
-              {topFoldCopy.eyebrow} · holding {formatElapsedSeconds(statusHoldingAge)}
+              Admin state holding {formatElapsedSeconds(statusHoldingAge)}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <FreshnessIndicator
               updatedAtMs={lastUpdated}
-              staleAfterMs={ADMIN_STALE_AFTER_MS}
+              staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
               labelPrefix="Dashboard fetch"
             />
             <RefreshControl key={lastUpdated} onRefresh={handleRefresh} />
@@ -150,31 +191,37 @@ export function TriageSummary({
           </div>
         </div>
 
+        <p className="max-w-4xl text-sm font-medium leading-relaxed text-foreground">{resolvedDecision.summary}</p>
+
         {/* Tier 1: the numbers that decide "do I act?" */}
         <div className="flex flex-wrap gap-2">
           <SummaryBadge
-            label="Blockers"
-            value={String(overallCauseCount)}
+            label="Impacting"
+            value={String(resolvedIssueGroups.impacting.length)}
             className={
-              overallCauseCount > 0
+              resolvedIssueGroups.impacting.length > 0
+                ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                : undefined
+            }
+          />
+          <SummaryBadge label="Warnings" value={String(resolvedIssueGroups.warnings.length)} />
+          <SummaryBadge label="Maintenance" value={String(resolvedIssueGroups.maintenance.length)} />
+          <SummaryBadge label="Watches" value={String(resolvedIssueGroups.watches.length)} />
+          <SummaryBadge
+            label="Cron last-run errors"
+            value={String(data.summary.cronErrors)}
+            className={
+              data.summary.availabilityImpactingCronErrors > 0
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                 : undefined
             }
           />
           <SummaryBadge
-            label="Cron Errors"
-            value={String(data.summary.cronErrors)}
-            className={
-              data.summary.cronErrors > 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : undefined
-            }
-          />
-          <SummaryBadge
             label="Public Health"
-            value={healthData?.status ?? "—"}
+            value={healthData?.status ?? "unknown"}
             className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
           />
           <span className="mx-1 hidden self-center border-l border-border/40 py-2 sm:block" />
-          <SummaryBadge label="Watch" value={String(watchCauseCount)} />
           <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
           <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
         </div>
@@ -237,41 +284,36 @@ export function TriageSummary({
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)_minmax(18rem,0.7fr)]">
           <div className="rounded-xl border border-border/60 bg-background/35 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Blockers</h3>
+              <h3 className="text-sm font-semibold text-foreground">Current issues</h3>
               <span className="text-[11px] text-muted-foreground">
-                {overallCauseCount > 0
-                  ? isBlockersExpanded
-                    ? `${overallCauseCount} shown`
-                    : `${Math.min(overallCauseCount, 3)} of ${overallCauseCount}`
-                  : watchCauseCount > 0
-                    ? "watch-only"
-                    : "clear"}
+                {activeIssues.length > 0
+                  ? areIssuesExpanded
+                    ? `${activeIssues.length} shown`
+                    : `${Math.min(activeIssues.length, 4)} of ${activeIssues.length}`
+                  : "clear"}
               </span>
             </div>
 
             <div className="mt-3 space-y-2">
-              {blockerCauses.length > 0 ? (
-                (isBlockersExpanded ? blockerCauses : blockerCauses.slice(0, 3)).map((cause) => (
-                  <div
-                    key={`${cause.layer}-${cause.code}-${cause.message}`}
-                    className="rounded-lg border border-border/60 bg-background/30 p-3"
-                  >
+              {activeIssues.length > 0 ? (
+                (areIssuesExpanded ? activeIssues : activeIssues.slice(0, 4)).map((issue) => (
+                  <div key={issue.id} className="rounded-lg border border-border/60 bg-background/30 p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                          getSeverityBadgeClass(cause.severity),
+                          getIssueKindBadgeClass(issue.kind),
                         )}
                       >
-                        {cause.severity}
+                        {issue.impactLabel}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">{cause.layer}</span>
-                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{cause.code}</span>
+                      <span className="text-[11px] text-muted-foreground">{issue.affectedSurface}</span>
+                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{issue.code}</span>
                     </div>
-                    <div className="mt-1.5 text-sm leading-relaxed text-foreground">{cause.message}</div>
-                    {cause.runbookUrl && (
+                    <div className="mt-1.5 text-sm leading-relaxed text-foreground">{issue.message}</div>
+                    {issue.runbookUrl && (
                       <a
-                        href={cause.runbookUrl}
+                        href={issue.runbookUrl}
                         target="_blank"
                         rel="noreferrer noopener"
                         className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline underline-offset-2"
@@ -283,18 +325,16 @@ export function TriageSummary({
                 ))
               ) : (
                 <div className="rounded-lg border border-border/60 bg-background/45 p-3 text-sm text-muted-foreground">
-                  {watchCauseCount > 0
-                    ? `No active blockers. ${watchCauseCount} watch item(s) remain.`
-                    : "No active blockers."}
+                  No active incidents, warnings, maintenance debt, or informational watches.
                 </div>
               )}
-              {overallCauseCount > 3 && (
+              {activeIssues.length > 4 && (
                 <button
                   type="button"
-                  onClick={() => setIsBlockersExpanded((v) => !v)}
+                  onClick={() => setAreIssuesExpanded((value) => !value)}
                   className="pharos-focus-ring mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                 >
-                  {isBlockersExpanded ? "Show top 3" : `+${overallCauseCount - 3} more`}
+                  {areIssuesExpanded ? "Show top 4" : `+${activeIssues.length - 4} more`}
                 </button>
               )}
             </div>
@@ -346,7 +386,33 @@ export function TriageSummary({
             </div>
           </div>
 
-          <RecommendedActionStrip recommendations={recommendedActions} onActionFinished={handleRefresh} />
+          {evidenceNeedsRefresh ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <p className="pharos-kicker">Recommended now</p>
+              <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Required status evidence is {resolvedEvidence.state}. Current operational actions remain secondary until
+                the missing or delayed signals refresh.
+              </p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
+                Refresh evidence
+              </Button>
+            </div>
+          ) : resolvedDecision.nextStep === "manual-action" ? (
+            <RecommendedActionStrip recommendations={recommendedActions} onActionFinished={handleRefresh} />
+          ) : (
+            <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+              <p className="pharos-kicker">Recommended now</p>
+              <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {resolvedDecision.nextStep === "observe-next-run"
+                  ? "Keep the current schedule in place and confirm whether the warning clears on the next producer run."
+                  : resolvedDecision.nextStep === "investigate"
+                    ? "Inspect the highest-severity source lane before promoting a production mutation."
+                    : "No production mutation is promoted from the current state and evidence."}
+              </p>
+            </div>
+          )}
         </div>
 
         <details
@@ -367,7 +433,7 @@ export function TriageSummary({
               <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
               <SummaryBadge
                 label="Sync Floor"
-                value={`${clientDataAgeSec}s`}
+                value={clientDataAgeSec == null ? "unknown" : `${clientDataAgeSec}s`}
                 className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
               />
             </div>

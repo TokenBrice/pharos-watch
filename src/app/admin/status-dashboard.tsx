@@ -22,11 +22,11 @@ import { TriageSummary } from "./status-dashboard/triage-summary";
 export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const {
     data,
-    error,
     handleRefresh,
     healthData,
     historyLoading,
     historyWindow,
+    initialLoadError,
     isLoading,
     lastUpdated,
     model,
@@ -70,10 +70,10 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
     );
   }
 
-  if (error) {
+  if (initialLoadError) {
     return (
       <div className="py-20 text-center">
-        <div className="text-red-600 dark:text-red-400">{error.message}</div>
+        <div className="text-red-600 dark:text-red-400">{initialLoadError.message}</div>
         <Button variant="outline" className="mt-4" onClick={onSignOut}>
           Sign out
         </Button>
@@ -87,14 +87,14 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const {
     allTransitions,
     attentionSections,
-    blockerCauses,
     browserProbeSummary,
     clientDataAgeSec,
     clientDataStale,
+    decision,
+    evidence,
+    issueGroups,
     latestTransition,
     notices,
-    overallCauseCount,
-    watchCauseCount,
     overallTone,
     querySyncs,
     recommendedActions,
@@ -182,9 +182,9 @@ export function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
         healthData={healthData}
         overallTone={overallTone}
         statusHoldingAge={statusHoldingAge}
-        overallCauseCount={overallCauseCount}
-        watchCauseCount={watchCauseCount}
-        blockerCauses={blockerCauses}
+        issueGroups={issueGroups}
+        evidence={evidence}
+        decision={decision}
         latestTransition={latestTransition}
         attentionSections={attentionSections}
         recommendedActions={recommendedActions}

@@ -35,21 +35,45 @@ describe("FreshnessIndicator", () => {
   it("marks stale when age exceeds staleAfterMs", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 180_000} staleAfterMs={120_000} />);
-    expect(screen.getByRole("status").getAttribute("data-stale")).toBe("true");
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
   });
 
   it("does NOT mark stale when within window", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
-    expect(screen.getByRole("status").getAttribute("data-stale")).toBe("false");
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
   });
 
   it("increments age via internal timer", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
     expect(screen.getByText(/30s ago/i)).toBeDefined();
-    act(() => { vi.advanceTimersByTime(5000); });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(screen.getByText(/35s ago/i)).toBeDefined();
+  });
+
+  it("keeps ticking age text out of live regions", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
+    const absoluteLabel = screen.getByRole("time").getAttribute("aria-label");
+
+    expect(screen.queryByRole("status")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText(/35s ago/i)).toBeDefined();
+    expect(screen.getByRole("time").getAttribute("aria-label")).toBe(absoluteLabel);
+  });
+
+  it("renders a missing timestamp as unavailable rather than extremely old", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    render(<FreshnessIndicator updatedAtMs={0} staleAfterMs={120_000} labelPrefix="Dashboard fetch" />);
+
+    expect(screen.getByText("Dashboard fetch: not loaded")).toBeDefined();
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("unavailable");
+    expect(screen.getByRole("time").getAttribute("aria-label")).toBe("Dashboard fetch has not loaded");
   });
 
   it("can label browser/dashboard fetch freshness explicitly", () => {

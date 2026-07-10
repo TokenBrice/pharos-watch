@@ -457,7 +457,8 @@ describe("admin status client", () => {
       vi.advanceTimersByTime(50);
     });
 
-    expect(screen.getAllByText("Blockers").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Impacting").length).toBeGreaterThan(0);
+    expect(screen.getByText("Current issues")).toBeTruthy();
     expect(screen.getByText("Needs attention")).toBeTruthy();
     expect(screen.getByText("Operator warning")).toBeTruthy();
     expect(screen.getByText("API Mix Fetch")).toBeTruthy();
@@ -486,5 +487,39 @@ describe("admin status client", () => {
       configurable: true,
       value: originalLocation,
     });
+  });
+
+  it("keeps last-good triage visible when a background status refresh fails", async () => {
+    const backgroundError = new Error("background refresh failed");
+    isOpsUiHostMock.mockReturnValue(true);
+    useStatusDashboardModelMock.mockReturnValue({
+      data: BASE_STATUS,
+      error: backgroundError,
+      initialLoadError: null,
+      backgroundStatusError: backgroundError,
+      hasRetainedStatusData: true,
+      handleRefresh: vi.fn(),
+      healthData: BASE_HEALTH,
+      historyLoading: false,
+      historyWindow: "24h",
+      isLoading: false,
+      lastUpdated: 1_700_000_000_000,
+      model: makeModel(),
+      probes: PROBES,
+      probesLoading: false,
+      requestSourceError: null,
+      requestSourceLoading: false,
+      requestSourceStats: REQUEST_SOURCE_STATS,
+      setHistoryWindow: vi.fn(),
+    });
+
+    render(<StatusClient />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("Current issues")).toBeTruthy();
+    expect(screen.getByText("Needs attention")).toBeTruthy();
+    expect(screen.queryByText("background refresh failed")).toBeNull();
   });
 });
