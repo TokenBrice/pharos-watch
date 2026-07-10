@@ -520,7 +520,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(resolvedLookupQueries[0]?.binds).toHaveLength(2);
   });
 
-  it("chunks resolved depeg and fan-out IN queries above 100 changed coins", async () => {
+  it("chunks resolved depeg IN queries above 100 changed coins", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ids = Array.from({ length: 101 }, (_, index) => `synthetic-${index}`);
     const previousDepegSnapshot = Object.fromEntries(
@@ -577,7 +577,9 @@ describe("dispatchTelegramAlerts", () => {
           entry.sql.includes("sub.alert_depeg = 1") ||
           entry.sql.includes("FROM telegram_subscriptions\n          WHERE stablecoin_id IN"),
       );
-    expect(inQueries.length).toBeGreaterThanOrEqual(6);
+    // With no captured subscribers the authoritative planner skips fan-out
+    // lookups entirely; the two producer reads still prove the D1 bind cap.
+    expect(inQueries).toHaveLength(2);
     expect(inQueries.every((entry) => entry.binds.length <= 100)).toBe(true);
     const resolvedLookupQueries = inQueries.filter((entry) => entry.sql.includes("FROM depeg_events event"));
     expect(resolvedLookupQueries.map((entry) => entry.binds.length)).toEqual([90, 11]);

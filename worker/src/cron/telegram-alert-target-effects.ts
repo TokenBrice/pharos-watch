@@ -194,7 +194,6 @@ export async function markFreshTelegramAlertTargetsSending(
         .prepare(
           `UPDATE telegram_alert_job_targets
               SET effect_state = 'sending',
-                  status = 'expired',
                   effect_started_at = ?,
                   effect_claim_expires_at = ?
             WHERE job_id = ?
@@ -233,10 +232,17 @@ export async function finalizeFreshTelegramAlertTargetEffects(
       const effectState: TelegramFreshTargetEffectState = outcome.executionUnknown
         ? "execution_unknown"
         : "complete";
-      const status = outcome.executionUnknown ? "expired" : outcome.status;
+      const status = outcome.executionUnknown ? "planned" : outcome.status;
+      const finalDeliveryState = outcome.executionUnknown
+        ? "execution_unknown"
+        : outcome.status === "sent"
+          ? "accepted"
+          : outcome.status === "failed"
+            ? "failed"
+            : null;
       const sentAt = status === "sent" ? outcome.at : null;
       const enqueuedAt = status === "queued" ? outcome.at : null;
-      const failedAt = status === "failed" || outcome.executionUnknown ? outcome.at : null;
+      const failedAt = status === "failed" ? outcome.at : null;
       return db
         .prepare(
           `UPDATE telegram_alert_job_targets
@@ -247,11 +253,14 @@ export async function finalizeFreshTelegramAlertTargetEffects(
                   sent_at = COALESCE(sent_at, ?),
                   enqueued_at = COALESCE(enqueued_at, ?),
                   failed_at = COALESCE(failed_at, ?),
+                  final_delivery_state = COALESCE(final_delivery_state, ?),
+                  final_delivery_at = COALESCE(final_delivery_at, ?),
+                  final_delivery_error = COALESCE(final_delivery_error, ?),
                   error_class = COALESCE(?, error_class)
             WHERE job_id = ?
               AND target_key = ?
               AND effect_state = 'sending'
-              AND status = 'expired'
+              AND status = 'planned'
               AND effect_owner = ?
               AND effect_generation = ?`,
         )
@@ -262,6 +271,9 @@ export async function finalizeFreshTelegramAlertTargetEffects(
           sentAt,
           enqueuedAt,
           failedAt,
+          finalDeliveryState,
+          finalDeliveryState ? outcome.at : null,
+          finalDeliveryState ? outcome.errorClass ?? (outcome.executionUnknown ? "execution_unknown" : null) : null,
           outcome.errorClass ?? (outcome.executionUnknown ? "execution_unknown" : null),
           outcome.jobId,
           outcome.targetKey,
@@ -297,7 +309,7 @@ export async function handoffFreshTelegramAlertTargetsToPending(
             FROM telegram_alert_job_targets
            WHERE job_id = ?
              AND target_key = ?
-             AND status = 'expired'
+             AND status = 'planned'
              AND effect_state = 'sending'
              AND effect_owner = ?
              AND effect_generation = ?
@@ -322,7 +334,7 @@ export async function handoffFreshTelegramAlertTargetsToPending(
                   error_class = COALESCE(?, error_class)
             WHERE job_id = ?
               AND target_key = ?
-              AND status = 'expired'
+              AND status = 'planned'
               AND effect_state = 'sending'
               AND effect_owner = ?
               AND effect_generation = ?`,
@@ -356,8 +368,9 @@ export async function reconcileUnknownFreshTelegramAlertTargets(
           SET effect_state = 'execution_unknown',
               effect_completed_at = COALESCE(effect_completed_at, ?),
               effect_claim_expires_at = NULL,
-              status = 'expired',
-              failed_at = COALESCE(failed_at, ?),
+              final_delivery_state = COALESCE(final_delivery_state, 'execution_unknown'),
+              final_delivery_at = COALESCE(final_delivery_at, ?),
+              final_delivery_error = COALESCE(final_delivery_error, 'fresh_effect_owner_lost'),
               error_class = COALESCE(error_class, 'fresh_effect_owner_lost')
         WHERE effect_state = 'sending'
           AND effect_claim_expires_at IS NOT NULL

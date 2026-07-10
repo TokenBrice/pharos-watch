@@ -25,7 +25,7 @@ export async function setTelegramGlobalBackoff(db: D1Database, notBeforeAt: numb
     const nowSec = Math.floor(Date.now() / 1000);
     const existing = await readTelegramGlobalBackoff(db, nowSec);
     await setCache(db, TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.max(existing ?? 0, notBeforeAt)));
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to set global Telegram backoff",
@@ -41,7 +41,7 @@ export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number):
     if (!cached) return null;
     const parsed = Number(cached.value);
     return Number.isFinite(parsed) && parsed > nowSec ? Math.floor(parsed) : null;
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to read global Telegram backoff",

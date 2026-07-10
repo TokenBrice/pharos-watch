@@ -2,6 +2,10 @@ import type { TelegramAlertType } from "@shared/types/status";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 
+interface FanoutSubscriberLoadOptions {
+  chatIds?: readonly string[];
+}
+
 export interface AlertStablecoinIds {
   dewsIds: string[];
   depegIds: string[];
@@ -45,6 +49,7 @@ interface FanoutSubscriptionLoaders {
     stablecoinIds: string[],
     type: TelegramAlertType,
     nowSec: number,
+    options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, SubscriberRow[]>>;
   loadPresetSubscriberRowsBatch: (
     db: D1Database,
@@ -52,16 +57,23 @@ interface FanoutSubscriptionLoaders {
     type: Exclude<TelegramAlertType, "launch" | "reserve">,
     nowSec: number,
   ) => Promise<PresetSubscriberLoadResult>;
-  loadGlobalSubscriberRows: (db: D1Database, type: TelegramAlertType, nowSec: number) => Promise<SubscriberRow[]>;
+  loadGlobalSubscriberRows: (
+    db: D1Database,
+    type: TelegramAlertType,
+    nowSec: number,
+    options?: FanoutSubscriberLoadOptions,
+  ) => Promise<SubscriberRow[]>;
   loadPerCoinSnoozeMap: (
     db: D1Database,
     stablecoinIds: readonly string[],
     nowSec: number,
+    options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, Set<string>>>;
   loadPerCoinExplicitlyOffMap: (
     db: D1Database,
     stablecoinIds: readonly string[],
     type: TelegramAlertType,
+    options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, Set<string>>>;
 }
 
@@ -96,6 +108,7 @@ export async function loadFanoutSubscriptionInputs(
   ids: AlertStablecoinIds,
   loaders: FanoutSubscriptionLoaders,
   nowSec: number,
+  options: FanoutSubscriberLoadOptions = {},
 ): Promise<FanoutSubscriptionInputs> {
   const {
     dewsIds,
@@ -125,25 +138,25 @@ export async function loadFanoutSubscriptionInputs(
     perCoinLaunchExplicitlyOffMap,
     perCoinReserveExplicitlyOffMap,
   ] = await Promise.all([
-    loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
-    loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
-    loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
-    loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec),
-    loaders.loadSubscriberRowsBatch(db, reserveIds, "reserve", nowSec),
+    loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec, options),
+    loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec, options),
+    loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec, options),
+    loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec, options),
+    loaders.loadSubscriberRowsBatch(db, reserveIds, "reserve", nowSec, options),
     loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
     loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
     loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "dews", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "depeg", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "safety", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "launch", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "reserve", nowSec),
-    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds], nowSec),
-    loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews"),
-    loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg"),
-    loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety"),
-    loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch"),
-    loaders.loadPerCoinExplicitlyOffMap(db, reserveIds, "reserve"),
+    loaders.loadGlobalSubscriberRows(db, "dews", nowSec, options),
+    loaders.loadGlobalSubscriberRows(db, "depeg", nowSec, options),
+    loaders.loadGlobalSubscriberRows(db, "safety", nowSec, options),
+    loaders.loadGlobalSubscriberRows(db, "launch", nowSec, options),
+    loaders.loadGlobalSubscriberRows(db, "reserve", nowSec, options),
+    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds], nowSec, options),
+    loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews", options),
+    loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg", options),
+    loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety", options),
+    loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch", options),
+    loaders.loadPerCoinExplicitlyOffMap(db, reserveIds, "reserve", options),
   ]);
 
   return {

@@ -930,21 +930,16 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   ];
 }
 
-// Minimum number of migrations expected to seed the in-memory plan database
-// (baseline + all telegram_* migrations). Bump this when a new Telegram
-// migration is added so a future directory-read regression fails loudly
-// instead of silently shrinking the validated schema.
-const MIN_TELEGRAM_PLAN_MIGRATIONS = 15;
+// Telegram migrations depend on shared Worker schema (for example effect
+// fencing depends on scheduler tables), so this fixture replays the same full
+// ordered stream as production instead of guessing dependencies by filename.
+const MIN_TELEGRAM_PLAN_MIGRATIONS = 120;
 
 function selectTelegramPlanMigrations(migrationsDir: string): string[] {
-  // Seed from the baseline plus every Telegram migration discovered on disk so
-  // new telegram_* migrations are picked up automatically (previously this list
-  // was hardcoded and silently went stale; see audit S-001). Mirrors
-  // getMigrationFiles() in check-worker-migrations.mjs, inlined to avoid pulling
-  // that module's top-level await into this tsx-transformed CLI.
+  // Mirrors getMigrationFiles() in check-worker-migrations.mjs, inlined to
+  // avoid pulling that module's top-level await into this tsx-transformed CLI.
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
-    .filter((file) => file.startsWith("0000_baseline") || /telegram/.test(file))
     .sort();
 }
 

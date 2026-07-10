@@ -1,7 +1,7 @@
 import { throwIfAborted } from "../lib/abort";
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportDigestProgress } from "./digest/progress";
 
@@ -11,76 +11,42 @@ import { writeSnapshots } from "./telegram-alert-snapshots";
 import { buildDispatchSnapshotState, loadDispatchSourceData } from "./dispatch-telegram-state";
 import {
   drainPendingQueue,
+  archiveAgedExecutionUnknownPendingAlerts,
   cleanupExpiredPendingAlerts,
   emptyDrainResult,
-  loadChatsInBackoff,
   readPendingCapacitySnapshot,
-  readTelegramGlobalBackoff,
   type PendingDrainResult,
   type PendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
-  TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending";
-import {
-  type BurstMarkerMap,
-  type PlannedSubscriberAlert,
-} from "./dispatch-telegram-routing";
-import {
-  loadFanoutSubscriptionInputs,
-  pendingCapacityFields,
-} from "./dispatch-telegram-alerts-fanout";
-import {
-  buildTelegramFanoutPlan,
-  summarizePresetFanoutFailures,
-} from "./dispatch-telegram-fanout-plan";
-import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
-import {
-  buildFreshTargetJobIdMap,
-  finalizeTelegramAlertJobManifests,
-  persistTelegramAlertJobManifests,
-} from "./telegram-alert-jobs";
+import type { PlannedSubscriberAlert } from "./dispatch-telegram-routing";
+import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
   drainOverflowBacklogOnly,
   persistEventlessOverflowBacklog,
-  persistFanoutOverflowBacklog,
-  readOverflowPlanBacklog,
 } from "./dispatch-telegram-overflow";
-import { pruneAlreadyTerminalSubscribers } from "./dispatch-telegram-terminal-targets";
 import { logTelegramEvent } from "../lib/telegram-log";
-import {
-  TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-  TELEGRAM_MAX_MESSAGES_PER_RUN,
-} from "../lib/telegram-constants";
-import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
-import { recordSystemicFreshFailure } from "./dispatch-telegram-alerts-observability";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
 } from "./dispatch-telegram-events";
 import {
   buildTelegramAlertSourceEvent,
-  commitTelegramAlertSourceBaseline,
   completeTelegramAlertSourceEvent,
   expireTelegramAlertSourceEvent,
   loadOldestIncompleteTelegramAlertSourceEvent,
-  markTelegramAlertSourceEventPlanned,
   persistTelegramAlertSourceEvent,
-  resolveTelegramAlertSourcePresetPages,
   type TelegramAlertSourceEvent,
 } from "./telegram-alert-source-events";
-import { loadHandledTelegramAlertItemsByChat } from "./telegram-alert-event-lineage";
 import { getSymbol } from "./dispatch-telegram-predicates";
 import {
   emptyResult,
   type DispatchResult,
 } from "./dispatch-telegram-result";
-import {
-  loadGlobalSubscriberRows,
-  loadPerCoinExplicitlyOffMap,
-  loadPerCoinSnoozeMap,
-  loadSubscriberRowsBatch,
-} from "./dispatch-telegram-subscribers";
+import { executeAuthoritativeFanoutPath } from "./dispatch-telegram-authoritative-path";
+import { expireTelegramTargetPlanSource } from "./telegram-alert-target-plans";
+import { inspectAndImportLegacyOverflowBacklog } from "./telegram-legacy-overflow-import";
 
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
@@ -118,7 +84,7 @@ async function readPresetFailureCount(db: D1Database): Promise<number> {
 async function writePresetFailureCount(db: D1Database, value: number): Promise<void> {
   try {
     await setCache(db, PRESET_QUERY_FAILURE_CACHE_KEY, String(Math.max(0, Math.floor(value))));
-  } catch (err) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "failed to persist preset failure count",
@@ -230,6 +196,7 @@ function pendingQueueChanged(
     drainResult.sent > 0 ||
     drainResult.blocked > 0 ||
     drainResult.retryQueued > 0 ||
+    drainResult.executionUnknown > 0 ||
     drainResult.dropped > 0 ||
     drainResult.deferred > 0 ||
     expiredCount > 0 ||
@@ -414,6 +381,7 @@ async function executeCircuitOpenQueuePath({
       softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
     })
     : emptyDrainResult();
+  const archivedExecutionUnknownCount = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
@@ -423,6 +391,7 @@ async function executeCircuitOpenQueuePath({
     pendingCapacityBefore,
     drainResult,
     expiredCount,
+    { forceRefresh: archivedExecutionUnknownCount > 0 },
   );
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
 
@@ -497,6 +466,7 @@ async function executeEventlessFastPath({
       markTelegramDeliveryStarted,
     });
   }
+  const archivedExecutionUnknownCount = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
@@ -518,7 +488,7 @@ async function executeEventlessFastPath({
     expiredCount,
     {
       pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
-      forceRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0,
+      forceRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0 || archivedExecutionUnknownCount > 0,
     },
   );
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
@@ -572,380 +542,72 @@ async function executeEventlessFastPath({
   return result;
 }
 
-async function executeFullFanoutPath({
-  db,
-  botToken,
-  snapshotState,
-  events,
-  sourceEvent,
-  suppressedSafetyChangesAtSeed,
-  pendingCapacityBefore,
-  overflowBacklog,
-  nowSec,
-  dispatchStartedAtMs,
-  chatsWithActiveSnooze,
-  signal,
-  sharedState,
-  reportProgress,
-  markTelegramDeliveryStarted,
-}: FullFanoutPathContext): Promise<DispatchResult> {
-  const {
-    dewsChanges,
-    depegTriggered,
-    depegResolved,
-    depegWorsening,
-    safetyChanges,
-    launchPromoted,
-    reservePromoted,
-    suppressedMethodologyChanges,
-    dewsIds,
-    depegIds,
-    safetyIds,
-    launchIds,
-    reserveIds,
-  } = events;
-  const { safetySnapshotNeedsSeed, safetySourceAssessment } = snapshotState;
-
-  await reportDigestProgress(reportProgress, {
-    stage: "fanout-load",
-    message: "Loading Telegram fanout subscriber inputs",
-    providerFamily: "telegram-dispatch",
-    itemsDone: 0,
-    itemsTotal: Math.max(dewsIds.length + depegIds.length + safetyIds.length + launchIds.length + reserveIds.length, 1),
-    metadata: {
-      countTotals: {
-        dewsIds: dewsIds.length,
-        depegIds: depegIds.length,
-        safetyIds: safetyIds.length,
-        launchIds: launchIds.length,
-        reserveIds: reserveIds.length,
-      },
+async function executeFullFanoutPath(
+  context: FullFanoutPathContext,
+): Promise<DispatchResult> {
+  return executeAuthoritativeFanoutPath(context, {
+    updatePresetFailureState: async (failed) => {
+      if (!failed) {
+        await writePresetFailureCount(context.db, 0);
+        return;
+      }
+      await writePresetFailureCount(
+        context.db,
+        (await readPresetFailureCount(context.db)) + 1,
+      );
     },
   });
-  const fanoutQueryStartedAtMs = Date.now();
-  let presetStablecoinsCacheResult: Promise<StablecoinsCacheLoadResult> | null = null;
-  const getPresetStablecoinsCacheResult = () => {
-    presetStablecoinsCacheResult ??= loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-    return presetStablecoinsCacheResult;
-  };
-  const sourceResolution = await resolveTelegramAlertSourcePresetPages(db, sourceEvent, nowSec, {
-    getStablecoinsCacheResult: getPresetStablecoinsCacheResult,
-  });
-  const fanoutInputs = await loadFanoutSubscriptionInputs(
-    db,
-    { dewsIds, depegIds, safetyIds, launchIds, reserveIds },
-    {
-      loadSubscriberRowsBatch,
-      loadPresetSubscriberRowsBatch: async (_fanoutDb, _stablecoinIds, type) =>
-        sourceResolution.presetResults[type],
-      loadGlobalSubscriberRows,
-      loadPerCoinSnoozeMap,
-      loadPerCoinExplicitlyOffMap,
-    },
-    nowSec,
-  );
-  const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
-  const fanoutBuildStartedAtMs = Date.now();
-
-  const summarizedPresetFailures = summarizePresetFanoutFailures(fanoutInputs);
-  const presetFailureSummary = {
-    ...summarizedPresetFailures,
-    presetFailure: summarizedPresetFailures.presetFailure || !sourceResolution.allComplete,
-  };
-  const { presetQueryFailures, presetResolutionFailures } = presetFailureSummary;
-
-  if (presetQueryFailures > 0 || presetResolutionFailures > 0) {
-    const failureCount = (await readPresetFailureCount(db)) + 1;
-    await writePresetFailureCount(db, failureCount);
-  }
-
-  throwIfAborted(signal);
-
-  const handledItemsByChat = await loadHandledTelegramAlertItemsByChat(db, sourceEvent.sourceEventId);
-  const inputsForPlan = sourceResolution.allComplete
-    ? fanoutInputs
-    : {
-        ...fanoutInputs,
-        presetDewsResult: { kind: "ok" as const, rows: new Map() },
-        presetDepegResult: { kind: "ok" as const, rows: new Map() },
-        presetSafetyResult: { kind: "ok" as const, rows: new Map() },
-      };
-
-  const burstMarkersCached = await getCache(db, "telegram:burst-markers");
-  let burstMarkers: BurstMarkerMap = {};
-  if (burstMarkersCached) {
-    try {
-      const parsed = JSON.parse(burstMarkersCached.value) as unknown;
-      if (parsed && typeof parsed === "object") burstMarkers = parsed as BurstMarkerMap;
-    } catch {
-      burstMarkers = {};
-    }
-  }
-
-  const formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE;
-  const {
-    subscriberQueue,
-    overflowPlanned,
-    combinedOverflowPlanned,
-    overflowFormatBudget,
-    resolveDisableNotification,
-    perAlertTypeTargets,
-    freshCandidateChats,
-    freshCandidateCount,
-    formattedChats,
-    burstOutcome,
-    handledItemsPruned,
-  } = buildTelegramFanoutPlan({
-    sourceEventId: sourceEvent.sourceEventId,
-    events: {
-      dewsChanges,
-      depegTriggered,
-      depegResolved,
-      depegWorsening,
-      safetyChanges,
-      launchPromoted,
-      reservePromoted,
-    },
-    inputs: inputsForPlan,
-    overflowBacklog,
-    burstMarkers,
-    nowSec,
-    formatBudget,
-    presetFailureSummary,
-    handledItemsByChat,
-    collapseBursts: sourceResolution.allComplete && sourceEvent.attemptCount === 0,
-  });
-  const fanoutBuildMs = Math.max(0, Date.now() - fanoutBuildStartedAtMs);
-  await reportDigestProgress(reportProgress, {
-    stage: "fanout-built",
-    message: "Built Telegram subscriber fanout queue",
-    providerFamily: "telegram-dispatch",
-    itemsDone: freshCandidateCount,
-    itemsTotal: Math.max(freshCandidateCount, 1),
-    metadata: {
-      countTotals: {
-        freshCandidateChats,
-        freshCandidateCount,
-        formattedChats,
-        presetQueryFailures,
-        presetResolutionFailures,
-        sourceResolutionPendingPages: sourceResolution.pendingPages,
-        sourceResolutionPagesCompleted: sourceResolution.pagesCompletedThisRun,
-        handledItemsPruned,
-      },
-      cursor: {
-        fanoutQueryMs,
-        fanoutBuildMs,
-      },
-      perAlertTypeTargets,
-      deferredTail: pendingTailState(pendingCapacityBefore),
-    },
-  });
-  const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec, {
-    sourceEventId: sourceEvent.sourceEventId,
-    sourceDetectedAt: sourceEvent.detectedAt,
-  });
-  if (sourceResolution.allComplete) {
-    await markTelegramAlertSourceEventPlanned(db, sourceEvent.sourceEventId, nowSec);
-  }
-  const freshTargetJobIds = buildFreshTargetJobIdMap(alertJobManifests);
-
-  const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
-  await reportDigestProgress(reportProgress, {
-    stage: "pending-drain",
-    message: "Draining Telegram pending queue before fresh sends",
-    providerFamily: "telegram-api",
-    itemsDone: 0,
-    itemsTotal: Math.max(pendingCapacityBefore.due, 1),
-    metadata: {
-      cursor: {
-        maxPriority: drainOnlyRiskPriority,
-      },
-      deferredTail: pendingTailState(pendingCapacityBefore),
-    },
-  });
-  const drainResult = await drainPendingQueue(
-    db,
-    botToken,
-    TELEGRAM_PENDING_DRAIN_BUDGET,
-    signal,
-    {
-      maxPriority: drainOnlyRiskPriority,
-      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-      markTelegramDeliveryStarted,
-    },
-  );
-
-  const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
-    loadChatsInBackoff(db, nowSec),
-    readTelegramGlobalBackoff(db, nowSec),
-  ]);
-
-  await reportDigestProgress(reportProgress, {
-    stage: "delivery",
-    message: "Sending Telegram subscriber alerts",
-    providerFamily: "telegram-api",
-    itemsDone: drainResult.attempted,
-    itemsTotal: Math.max(drainResult.attempted + freshCandidateCount, 1),
-    metadata: {
-      countTotals: {
-        pendingAttempted: drainResult.attempted,
-        pendingSent: drainResult.sent,
-        freshCandidateChats,
-        freshCandidateCount,
-      },
-      cursor: {
-        globalBackoffUntil,
-        chatsInBackoff: chatsInBackoff.size,
-      },
-      deferredTail: pendingTailState(pendingCapacityBefore),
-    },
-  });
-  const terminalTargetKeys = await pruneAlreadyTerminalSubscribers(db, subscriberQueue);
-  const {
-    subscribersNotified,
-    freshSent,
-    freshPermanentFailures,
-    blockedUsersCleanedUp,
-    blockedUsersCleanupFailed,
-    freshAttempted,
-    freshRetryQueued,
-    freshOverflow,
-    freshDeferredPerChat,
-    pendingEnqueued,
-    cappedAtLimit,
-    perAlertType,
-    remainingOverflowPlanned,
-  } = await deliverTelegramSubscriberQueue({
-    db,
-    botToken,
-    subscriberQueue,
-    overflowPlanned: combinedOverflowPlanned,
-    overflowFormatBudget,
-    resolveDisableNotification,
-    drainResult,
-    maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
-    nowSec,
-    chatsInBackoff,
-    globalBackoffUntil,
-    dispatchStartedAtMs,
-    freshTargetJobIds,
-    terminalTargetKeys,
-    signal,
-    markTelegramDeliveryStarted,
-  });
-  await persistFanoutOverflowBacklog(db, remainingOverflowPlanned, overflowBacklog, overflowPlanned, nowSec);
-  await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
-
-  if (sourceResolution.allComplete) {
-    await commitTelegramAlertSourceBaseline(db, sourceEvent, nowSec, signal);
-    await completeTelegramAlertSourceEvent(db, sourceEvent.sourceEventId, nowSec);
-  }
-  if (
-    burstOutcome.collapsedChats > 0 ||
-    burstOutcome.deltaSuppressed > 0 ||
-    Object.keys(burstOutcome.markers).length > 0
-  ) {
-    await setCache(db, "telegram:burst-markers", JSON.stringify(burstOutcome.markers));
-  } else if (burstMarkersCached) {
-    await deleteCache(db, "telegram:burst-markers");
-  }
-  const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
-    db,
-    nowSec,
-    pendingCapacityBefore,
-    drainResult,
-    expiredCount,
-    { pendingEnqueued },
-  );
-  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
-  if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
-    await writePresetFailureCount(db, 0);
-  }
-
-  const result: DispatchResult = {
-    eventsDetected: {
-      dews: dewsChanges.length,
-      depeg: depegTriggered.length + depegResolved.length + depegWorsening.length,
-      depegTriggered: depegTriggered.length,
-      depegResolved: depegResolved.length,
-      depegWorsening: depegWorsening.length,
-      safety: safetyChanges.length,
-      launch: launchPromoted.length,
-      reserve: reservePromoted.length,
-      suppressedMethodologyChanges,
-    },
-    subscribersNotified,
-    messagesSent: freshSent + drainResult.sent,
-    blockedUsersCleanedUp,
-    blockedUsersCleanupFailed,
-    cappedAtLimit,
-    snapshotSeeded: false,
-    burstCollapsedChats: burstOutcome.collapsedChats,
-    burstDeltaSuppressed: burstOutcome.deltaSuppressed,
-    ...pendingDispatchFields(drainResult, { expiredCount, pendingEnqueued }),
-    ...pendingCapacityFields(pendingCapacityAfter),
-    pendingCapacityBefore,
-    pendingCapacityAfter,
-    reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
-    ...reserveSourceFields(snapshotState.reserveSourceAssessment),
-    freshAttempted,
-    freshSent,
-    freshRetryQueued,
-    freshPermanentFailures,
-    freshDeferredPerChat,
-    freshCandidateChats,
-    freshCandidateCount,
-    freshOverflow,
-    chatsWithActiveSnooze,
-    ...safetySourceFields(
-      safetySourceAssessment,
-      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-    ),
-    presetQueryFailures,
-    presetResolutionFailures,
-    presetFailure: presetFailureSummary.presetFailure,
-    perAlertType,
-    perAlertTypeTargets,
-    fanoutQueryMs,
-    fanoutBuildMs,
-    fanoutTotalMs: fanoutQueryMs + fanoutBuildMs,
-    suppressedSafetyChangesAtSeed,
-  };
-
-  const attemptedMessages = result.pendingAttempted + result.freshAttempted;
-  const hasSuccessfulEffect =
-    result.messagesSent > 0 || result.blockedUsersCleanedUp > 0 || attemptedMessages === 0;
-  const systemicFreshFailure = recordSystemicFreshFailure(result);
-  await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect && !systemicFreshFailure);
-  await reportDigestProgress(reportProgress, {
-    stage: "complete",
-    message: "Completed Telegram subscriber dispatch",
-    providerFamily: "telegram-dispatch",
-    itemsDone: result.messagesSent,
-    itemsTotal: Math.max(result.pendingAttempted + result.freshAttempted, 1),
-    metadata: {
-      countTotals: {
-        messagesSent: result.messagesSent,
-        subscribersNotified,
-        freshAttempted,
-        freshSent,
-        freshRetryQueued,
-        freshOverflow,
-        ...pendingCountTotals(drainResult),
-        pendingDrained: drainResult.sent,
-        pendingEnqueued,
-      },
-      cappedAtLimit,
-      systemicFreshFailure,
-      deferredTail: pendingTailState(pendingCapacityAfter),
-    },
-  });
-
-  return result;
 }
 
+async function executeSourceRecoveryQueueSidecar(args: {
+  db: D1Database;
+  botToken: string;
+  nowSec: number;
+  dispatchStartedAtMs: number;
+  pendingCapacityBefore: PendingCapacitySnapshot;
+  chatsWithActiveSnooze: number;
+  reserveSourceUnavailable: boolean;
+  reserveSourceAssessment: AlertReserveSourceAssessment;
+  safetySourceAssessment: AlertSafetySourceAssessment;
+  signal?: AbortSignal;
+  sharedState?: TelegramDispatchSharedState;
+  markTelegramDeliveryStarted?: () => void;
+}): Promise<DispatchResult> {
+  const drainResult = args.pendingCapacityBefore.due > 0
+    ? await drainPendingQueue(args.db, args.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, args.signal, {
+      softDeadlineAtMs: args.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+      markTelegramDeliveryStarted: args.markTelegramDeliveryStarted,
+    })
+    : emptyDrainResult();
+  const archivedUnknown = await archiveAgedExecutionUnknownPendingAlerts(args.db, args.nowSec);
+  const expiredCount = await cleanupExpiredPendingAlerts(args.db, args.nowSec);
+  const pendingCapacityAfter =
+    drainResult.attempted > 0 || archivedUnknown > 0 || expiredCount > 0
+      ? await readPendingCapacitySnapshot(args.db, args.nowSec)
+      : args.pendingCapacityBefore;
+  assignSharedDispatchState(args.sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+  if (drainResult.attempted > 0) {
+    await recordOutcome(
+      args.db,
+      CIRCUIT_SOURCE.TELEGRAM_API,
+      drainResult.sent > 0 || drainResult.blockedCleanedUp > 0,
+    );
+  }
+  return {
+    ...emptyResult(false, args.chatsWithActiveSnooze),
+    messagesSent: drainResult.sent,
+    subscribersNotified: drainResult.acceptedChats,
+    blockedUsersCleanedUp: drainResult.blockedCleanedUp,
+    blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+    ...pendingDispatchFields(drainResult, { expiredCount }),
+    ...pendingCapacityFields(pendingCapacityAfter),
+    pendingCapacityBefore: args.pendingCapacityBefore,
+    pendingCapacityAfter,
+    reserveSourceUnavailable: args.reserveSourceUnavailable,
+    ...reserveSourceFields(args.reserveSourceAssessment),
+    ...safetySourceFields(args.safetySourceAssessment, args.safetySourceAssessment.state !== "ok"),
+  };
+}
 export async function dispatchTelegramAlerts(
   db: D1Database,
   botToken: string,
@@ -961,9 +623,11 @@ export async function dispatchTelegramAlerts(
     itemsTotal: 1,
   });
   const dispatchStartedAtMs = Date.now();
+  const dispatchNowSec = Math.floor(dispatchStartedAtMs / 1000);
+  const legacyOverflowImport = await inspectAndImportLegacyOverflowBacklog(db, dispatchNowSec);
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = dispatchNowSec;
     const result = await executeCircuitOpenQueuePath({
       db,
       botToken,
@@ -1010,7 +674,7 @@ export async function dispatchTelegramAlerts(
 
     throwIfAborted(signal);
 
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = dispatchNowSec;
     const snapshotState = buildDispatchSnapshotState(sourceData, nowSec);
     const {
       currentSnapshots,
@@ -1022,7 +686,7 @@ export async function dispatchTelegramAlerts(
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
-    const overflowBacklog = await readOverflowPlanBacklog(db, nowSec);
+    const overflowBacklog: readonly PlannedSubscriberAlert[] = [];
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
     await reportDigestProgress(reportProgress, {
       stage: "source-loaded",
@@ -1039,6 +703,8 @@ export async function dispatchTelegramAlerts(
           reserveDriftIds: snapshotState.currentReserveDriftIds.length,
           chatsWithActiveSnooze,
           overflowBacklogChats: overflowBacklog.length,
+          legacyOverflowImportState: legacyOverflowImport.state,
+          legacyOverflowImportCursor: legacyOverflowImport.importCursor,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
@@ -1053,29 +719,98 @@ export async function dispatchTelegramAlerts(
     let sourceEvent = await loadOldestIncompleteTelegramAlertSourceEvent(db);
     const resumedSourceEvent = sourceEvent != null;
     if (sourceEvent?.status === "baseline_committed") {
-      await completeTelegramAlertSourceEvent(db, sourceEvent.sourceEventId, nowSec);
-      sourceEvent = null;
+      const recovery = await db
+        .prepare(
+          `SELECT target_plan_state, target_plan_generation,
+                  (SELECT COUNT(*) FROM telegram_alert_job_targets target
+                    WHERE target.source_event_id = telegram_alert_source_events.source_event_id
+                      AND target.plan_generation = telegram_alert_source_events.target_plan_generation
+                      AND target.status = 'planned') AS planned_targets
+             FROM telegram_alert_source_events
+            WHERE source_event_id = ?`,
+        )
+        .bind(sourceEvent.sourceEventId)
+        .first<{ target_plan_state: string; target_plan_generation: number; planned_targets: number }>();
+      if (recovery?.target_plan_state === "delivery_open" && Number(recovery.planned_targets) === 0) {
+        await completeTelegramAlertSourceEvent(db, sourceEvent.sourceEventId, nowSec);
+        sourceEvent = null;
+      } else if (recovery?.target_plan_state !== "expired") {
+        await db
+          .prepare(
+            `UPDATE telegram_alert_source_events
+                SET target_plan_state = 'degraded',
+                    last_error_class = 'baseline_committed_before_manifest_ready',
+                    last_attempt_at = ?
+              WHERE source_event_id = ? AND status = 'baseline_committed'
+                AND target_plan_state <> 'expired'`,
+          )
+          .bind(nowSec, sourceEvent.sourceEventId)
+          .run();
+        const sidecar = await executeSourceRecoveryQueueSidecar({
+          db,
+          botToken,
+          nowSec,
+          dispatchStartedAtMs,
+          pendingCapacityBefore,
+          chatsWithActiveSnooze,
+          reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+          reserveSourceAssessment: snapshotState.reserveSourceAssessment,
+          safetySourceAssessment,
+          signal,
+          sharedState,
+          markTelegramDeliveryStarted,
+        });
+        const result = {
+          ...sidecar,
+          skipped: "source-event-backfill-required" as const,
+          sourceEventId: sourceEvent.sourceEventId,
+        };
+        return { itemCount: sidecar.messagesSent, metadata: JSON.stringify(result) };
+      }
     }
     if (sourceEvent && sourceEvent.expiresAt <= nowSec) {
-      await expireTelegramAlertSourceEvent(db, sourceEvent, nowSec, signal);
+      const planningState = await db
+        .prepare(
+          `SELECT target_plan_generation FROM telegram_alert_source_events
+            WHERE source_event_id = ?`,
+        )
+        .bind(sourceEvent.sourceEventId)
+        .first<{ target_plan_generation: number }>();
+      const expiry = await expireTelegramTargetPlanSource(
+        db,
+        sourceEvent.sourceEventId,
+        Number(planningState?.target_plan_generation ?? 0),
+        nowSec,
+      );
+      if (expiry.complete) {
+        await expireTelegramAlertSourceEvent(db, sourceEvent, nowSec, signal);
+      }
+      const sidecar = await executeSourceRecoveryQueueSidecar({
+        db,
+        botToken,
+        nowSec,
+        dispatchStartedAtMs,
+        pendingCapacityBefore,
+        chatsWithActiveSnooze,
+        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+        reserveSourceAssessment: snapshotState.reserveSourceAssessment,
+        safetySourceAssessment,
+        signal,
+        sharedState,
+        markTelegramDeliveryStarted,
+      });
       const result = {
-        ...emptyResult(false, chatsWithActiveSnooze),
+        ...sidecar,
         skipped: "source-event-expired" as const,
         expiredSourceEventId: sourceEvent.sourceEventId,
-        pendingCapacityBefore,
-        pendingCapacityAfter: pendingCapacityBefore,
-        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
-        ...reserveSourceFields(snapshotState.reserveSourceAssessment),
-        ...pendingCapacityFields(pendingCapacityBefore),
-        ...safetySourceFields(
-          safetySourceAssessment,
-          safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-        ),
+        expiryComplete: expiry.complete,
+        expiryRemaining: expiry.remaining,
       };
-      assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
       await reportDigestProgress(reportProgress, {
         stage: "skipped",
-        message: "Expired unresolved Telegram source event and advanced its stored baseline",
+        message: expiry.complete
+          ? "Expired unresolved Telegram source event and advanced its stored baseline"
+          : "Advanced bounded Telegram source expiry cleanup",
         providerFamily: "telegram-dispatch",
         itemsDone: 0,
         itemsTotal: 1,
@@ -1084,7 +819,7 @@ export async function dispatchTelegramAlerts(
           sourceEventId: sourceEvent.sourceEventId,
         },
       });
-      return { itemCount: 0, metadata: JSON.stringify(result) };
+      return { itemCount: sidecar.messagesSent, metadata: JSON.stringify(result) };
     }
 
     if (mustSeedSnapshots && !sourceEvent) {

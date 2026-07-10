@@ -287,8 +287,9 @@ export async function loadOldestIncompleteTelegramAlertSourceEvent(
       `SELECT source_event_id, schema_version, status, detected_at, expires_at,
               event_payload, baseline_payload, attempt_count, last_attempt_at,
               last_error_class, baseline_committed_at, completed_at
-         FROM telegram_alert_source_events
+        FROM telegram_alert_source_events
         WHERE status IN ('resolving', 'planned', 'baseline_committed')
+          AND source_event_id NOT LIKE 'telegram-source:legacy-overflow:v1:%'
         ORDER BY detected_at ASC, source_event_id ASC
         LIMIT 1`,
     )
@@ -371,7 +372,7 @@ async function resolveMemberships(
       .bind(...presetClause.binds, nowSec)
       .first<{ has_row: number }>();
     hasCandidates = candidate != null;
-  } catch (error) {
+  } catch {
     await recordPageFailure(db, page, nowSec, "query_failed");
     logTelegramEvent({
       level: "warn",
@@ -460,7 +461,7 @@ async function resolveMemberships(
       .bind(nowSec, source.sourceEventId, page.page_key)
       .run();
     return "ok";
-  } catch (error) {
+  } catch {
     await recordPageFailure(db, page, nowSec, "persistence_failed");
     logTelegramEvent({
       level: "warn",
@@ -540,7 +541,7 @@ async function resolveFollowerPage(
       .bind(...presetClause.binds, nowSec, ...cursorBinds, PRESET_PAGE_SIZE + 1)
       .all<ResolutionTargetRow>();
     rows = result.results ?? [];
-  } catch (error) {
+  } catch {
     await recordPageFailure(db, page, nowSec, "query_failed");
     logTelegramEvent({
       level: "warn",
@@ -616,7 +617,7 @@ async function resolveFollowerPage(
   try {
     await executeAtomicBatch(db, statements);
     return "ok";
-  } catch (error) {
+  } catch {
     await recordPageFailure(db, page, nowSec, "persistence_failed");
     logTelegramEvent({
       level: "warn",
@@ -713,11 +714,89 @@ async function loadResolutionMaps(
   return maps;
 }
 
+/** Load one captured chat page from immutable source membership/follower rows. */
+export async function loadTelegramSourcePresetSubscribersForChats(
+  db: D1Database,
+  sourceEventId: string,
+  type: PresetAlertType,
+  chatIds: readonly string[],
+  nowSec: number,
+): Promise<PresetSubscriberLoadResult> {
+  const uniqueChatIds = [...new Set(chatIds)];
+  if (uniqueChatIds.length === 0) return { kind: "ok", rows: new Map() };
+  const chatClause = buildInClause(uniqueChatIds);
+  const alertColumn = PRESET_ALERT_COLUMN[type];
+  try {
+    const rows = await db
+      .prepare(
+        `SELECT membership.stablecoin_id,
+                target.preset_id,
+                target.chat_id,
+                subscriber.last_active_at,
+                NULL AS dews_min_band,
+                NULL AS safety_mode,
+                preset.depeg_worsening_bps_step,
+                subscriber.quiet_hours_enabled,
+                subscriber.quiet_hours_start_utc,
+                subscriber.quiet_hours_end_utc,
+                subscriber.timezone,
+                subscriber.preference_generation
+           FROM telegram_alert_source_resolution_targets target
+           JOIN telegram_alert_source_resolution_pages page
+             ON page.source_event_id = target.source_event_id
+            AND page.page_key = target.page_key
+           JOIN telegram_alert_source_resolution_memberships membership
+             ON membership.source_event_id = target.source_event_id
+            AND membership.alert_type = page.alert_type
+            AND membership.preset_id = target.preset_id
+           JOIN telegram_preset_subscriptions preset
+             ON preset.chat_id = target.chat_id
+            AND preset.preset_id = target.preset_id
+           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
+          WHERE target.source_event_id = ?
+            AND page.status = 'complete'
+            AND page.alert_type = ?
+            AND target.chat_id IN (${chatClause.sql})
+            AND preset.${alertColumn} = 1
+            AND (subscriber.alert_snooze_until_ts IS NULL OR subscriber.alert_snooze_until_ts <= ?)`,
+      )
+      .bind(sourceEventId, type, ...chatClause.binds, nowSec)
+      .all<CurrentResolutionTargetRow & { stablecoin_id: string }>();
+    const map = new Map<string, SubscriberRow[]>();
+    for (const row of rows.results ?? []) {
+      addPresetSubscriber(map, row.stablecoin_id, {
+        chat_id: row.chat_id,
+        last_active_at: Number(row.last_active_at),
+        dews_min_band: row.dews_min_band ?? null,
+        safety_mode: row.safety_mode ?? null,
+        depeg_worsening_bps_step: row.depeg_worsening_bps_step ?? null,
+        quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
+        quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
+        quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+        timezone: row.timezone ?? null,
+        preference_generation: row.preference_generation ?? 0,
+        isGlobal: false,
+        hasLocalOverride: false,
+      });
+    }
+    return { kind: "ok", rows: map };
+  } catch (error) {
+    logTelegramEvent({
+      level: "warn",
+      message: "failed to load source-scoped preset subscriber page",
+      action: "source-preset-page-load",
+      module: "telegram-alert-source-events",
+      alertType: type,
+    });
+    return { kind: "query-failed", error };
+  }
+}
+
 export async function resolveTelegramAlertSourcePresetPages(
   db: D1Database,
   source: TelegramAlertSourceEvent,
   nowSec: number,
-  options: TelegramPresetResolveOptions = {},
+  options: TelegramPresetResolveOptions & { includeSubscriberMaps?: boolean } = {},
 ): Promise<TelegramAlertSourceResolution> {
   const pendingResult = await db
     .prepare(
@@ -769,7 +848,10 @@ export async function resolveTelegramAlertSourcePresetPages(
     .bind(source.sourceEventId)
     .first<{ count: number }>();
   const pendingPages = Number(pendingRow?.count ?? 0);
-  const maps = await loadResolutionMaps(db, source.sourceEventId, nowSec);
+  const maps: Record<PresetAlertType, Map<string, SubscriberRow[]>> =
+    options.includeSubscriberMaps === false
+      ? { dews: new Map(), depeg: new Map(), safety: new Map() }
+      : await loadResolutionMaps(db, source.sourceEventId, nowSec);
   const familyHasPending = new Set<PresetAlertType>();
   if (pendingPages > 0) {
     const pendingFamilies = await db
@@ -926,7 +1008,7 @@ export async function expireTelegramAlertSourceEvent(
                 completed_at = ?,
                 last_attempt_at = ?,
                 last_error_class = 'source_event_expired'
-          WHERE source_event_id = ? AND status IN ('resolving', 'planned')`,
+          WHERE source_event_id = ? AND status IN ('resolving', 'planned', 'baseline_committed')`,
       )
       .bind(nowSec, nowSec, nowSec, source.sourceEventId),
   );

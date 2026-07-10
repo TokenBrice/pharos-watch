@@ -79,23 +79,49 @@ export async function loadHandledTelegramAlertItemsByChat(
 ): Promise<Map<string, Set<string>>> {
   const rows = await db
     .prepare(
-      `SELECT target.chat_id, item.item_key
-         FROM telegram_alert_job_target_items item
-         JOIN telegram_alert_job_targets target
-           ON target.job_id = item.job_id
-          AND target.target_key = item.target_key
-        WHERE item.source_event_id = ?
-        GROUP BY target.job_id, target.chat_id, item.item_key
-       HAVING SUM(
-         CASE
-           WHEN target.status IN ('queued', 'sent', 'failed', 'expired')
-             OR target.effect_state IN ('sending', 'complete', 'execution_unknown')
-           THEN 0
-           ELSE 1
-         END
-       ) = 0`,
+      `SELECT chat_id, item_key
+         FROM (
+           SELECT target.chat_id, item.item_key
+             FROM telegram_alert_job_target_items item
+             JOIN telegram_alert_job_targets target
+               ON target.job_id = item.job_id
+              AND target.target_key = item.target_key
+            WHERE item.source_event_id = ?
+            GROUP BY target.job_id, target.chat_id, item.item_key
+           HAVING SUM(
+             CASE
+               WHEN target.status IN ('queued', 'sent', 'failed', 'expired')
+                 OR target.effect_state IN ('sending', 'complete', 'execution_unknown')
+                 OR target.final_delivery_state IS NOT NULL
+               THEN 0 ELSE 1
+             END
+           ) = 0
+           UNION ALL
+           SELECT plan.chat_id, item.item_key
+             FROM telegram_alert_target_plan_items item
+             JOIN telegram_alert_target_plans plan
+               ON plan.source_event_id = item.source_event_id
+              AND plan.plan_generation = item.plan_generation
+              AND plan.plan_key = item.plan_key
+             JOIN telegram_alert_job_targets target
+               ON target.source_event_id = plan.source_event_id
+              AND target.plan_generation = plan.plan_generation
+              AND target.plan_key = plan.plan_key
+            WHERE item.source_event_id = ?
+            GROUP BY plan.source_event_id, plan.plan_generation, plan.plan_key,
+                     plan.chat_id, item.item_key
+           HAVING SUM(
+             CASE
+               WHEN target.status IN ('queued', 'sent', 'failed', 'expired')
+                 OR target.effect_state IN ('sending', 'complete', 'execution_unknown')
+                 OR target.final_delivery_state IS NOT NULL
+               THEN 0 ELSE 1
+             END
+           ) = 0
+         ) handled
+        GROUP BY chat_id, item_key`,
     )
-    .bind(sourceEventId)
+    .bind(sourceEventId, sourceEventId)
     .all<HandledTargetItemRow>();
 
   const handledByChat = new Map<string, Set<string>>();

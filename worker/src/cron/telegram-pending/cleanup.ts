@@ -1,5 +1,8 @@
 import { recordTelegramAlertTargetStatuses } from "../telegram-alert-target-status";
-import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
+import {
+  PENDING_TTL_SEC,
+  TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC,
+} from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import {
   deadLetterTerminalPendingRows,
@@ -7,11 +10,17 @@ import {
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import type { DeadLetterPendingRow } from "./types";
+import {
+  recordTelegramJobTargetFinalDelivery,
+  type TelegramTargetFinalDeliveryState,
+} from "../telegram-alert-job-target-outcomes";
 
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
 type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
 type PendingAlertFilterClause = {
-  whereSql: "chat_id = ?" | "created_at < ?";
+  whereSql:
+    | "chat_id = ? AND delivery_state = 'pending'"
+    | "created_at < ? AND delivery_state = 'pending'";
   binds: readonly [string] | readonly [number];
 };
 
@@ -36,15 +45,99 @@ const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
   "alert_scope_json",
   "preference_generation",
   "markup_policy_json",
+  "delivery_state",
+  "delivery_owner",
+  "delivery_generation",
+  "delivery_started_at",
+  "delivery_completed_at",
+  "delivery_claim_expires_at",
 ] as const;
 const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
 export const EXPIRED_PENDING_CLEANUP_BATCH_LIMIT = PENDING_DELETE_CHUNK_SIZE;
 
+async function projectTerminalPendingRows(
+  db: D1Database,
+  rows: readonly DeadLetterPendingRow[],
+  state: TelegramTargetFinalDeliveryState,
+  nowSec: number,
+  error: string,
+): Promise<void> {
+  for (const row of rows) {
+    if (!row.dedupe_key || !row.source_event_id) continue;
+    await recordTelegramJobTargetFinalDelivery(
+      db,
+      { pendingDedupeKey: row.dedupe_key, sourceEventId: row.source_event_id },
+      { state, at: nowSec, error },
+    );
+  }
+}
+
+export async function archiveAgedExecutionUnknownPendingAlerts(
+  db: D1Database,
+  nowSec: number,
+): Promise<number> {
+  const rows = await db
+    .prepare(
+      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+         FROM telegram_pending_alerts
+        WHERE delivery_state = 'execution_unknown'
+          AND COALESCE(delivery_completed_at, delivery_started_at, created_at) <= ?
+        ORDER BY COALESCE(delivery_completed_at, delivery_started_at, created_at) ASC, id ASC
+        LIMIT ?`,
+    )
+    .bind(
+      nowSec - TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC,
+      EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+    )
+    .all<DeadLetterPendingRow>();
+  const aged = rows.results ?? [];
+  if (aged.length === 0) return 0;
+  const deadLettered = await deadLetterTerminalPendingRows(
+    db,
+    aged,
+    nowSec,
+    "execution_unknown_archived",
+  );
+  if (!deadLettered) return 0;
+  await projectTerminalPendingRows(
+    db,
+    aged,
+    "execution_unknown",
+    nowSec,
+    "execution_unknown_archived",
+  );
+  let deleted = 0;
+  for (const row of aged) {
+    const archivedAt = row.delivery_completed_at ?? row.delivery_started_at ?? row.created_at;
+    const result = await db
+      .prepare(
+        `DELETE FROM telegram_pending_alerts
+          WHERE id = ?
+            AND delivery_state = 'execution_unknown'
+            AND delivery_owner IS ?
+            AND delivery_generation = ?
+            AND COALESCE(delivery_completed_at, delivery_started_at, created_at) = ?`,
+      )
+      .bind(
+        row.id,
+        row.delivery_owner ?? null,
+        row.delivery_generation ?? 0,
+        archivedAt,
+      )
+      .run();
+    deleted += Number(result.meta?.changes ?? 0);
+  }
+  return deleted;
+}
+
 function pendingAlertFilterClause(filter: PendingAlertAdminFilter): PendingAlertFilterClause {
   if ("chatId" in filter) {
-    return { whereSql: "chat_id = ?", binds: [filter.chatId] };
+    return { whereSql: "chat_id = ? AND delivery_state = 'pending'", binds: [filter.chatId] };
   }
-  return { whereSql: "created_at < ?", binds: [filter.olderThanCutoffSec] };
+  return {
+    whereSql: "created_at < ? AND delivery_state = 'pending'",
+    binds: [filter.olderThanCutoffSec],
+  };
 }
 
 function normalizeFiniteNumber(value: unknown): number | null {
@@ -124,6 +217,7 @@ export async function clearPendingAlertsForAdmin(
     if (!deadLettered) {
       throw new Error("Failed to dead-letter Telegram pending alerts before manual clear");
     }
+    await projectTerminalPendingRows(db, rows, "cancelled", nowSec, "manual_clear");
 
     await recordTelegramAlertTargetStatuses(
       db,
@@ -168,6 +262,7 @@ export async function clearPendingAlertsForDisabledChat(
              FROM telegram_pending_alerts
             WHERE chat_id = ?
               AND id > ?
+              AND delivery_state = 'pending'
             ORDER BY id ASC
             LIMIT ?`,
         )
@@ -183,6 +278,7 @@ export async function clearPendingAlertsForDisabledChat(
         if (!deadLettered) {
           throw new Error("Failed to dead-letter disabled-chat pending alerts");
         }
+        await projectTerminalPendingRows(db, rowsToDelete, "failed", nowSec, "blocked_disabled");
         const deletedRows = await deletePendingAlertsByIds(db, rowsToDelete.map((row) => row.id));
         deleted += deletedRows;
         if (deletedRows < rowsToDelete.length) {
@@ -195,7 +291,7 @@ export async function clearPendingAlertsForDisabledChat(
       if (rows.length < PENDING_DELETE_CHUNK_SIZE) break;
     }
     return { deleted, failed: false };
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to clear pending alerts for disabled chat",
@@ -216,7 +312,8 @@ export async function cleanupExpiredPendingAlerts(
     .prepare(
       `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
          FROM telegram_pending_alerts
-        WHERE COALESCE(expires_at, created_at + ?) <= ?
+        WHERE delivery_state = 'pending'
+          AND COALESCE(expires_at, created_at + ?) <= ?
         ORDER BY id ASC
         LIMIT ?`,
     )
@@ -228,6 +325,9 @@ export async function cleanupExpiredPendingAlerts(
     const deadLettered = await deadLetterTerminalPendingRows(db, rows, nowSec, "ttl_expired");
     if (!deadLettered) {
       logExpiredPendingDeadLetterBypass(rows);
+    }
+    if (deadLettered) {
+      await projectTerminalPendingRows(db, rows, "expired", nowSec, "ttl_expired");
     }
     await recordTelegramAlertTargetStatuses(
       db,

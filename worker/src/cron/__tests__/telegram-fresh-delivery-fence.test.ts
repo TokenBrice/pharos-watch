@@ -19,6 +19,9 @@ interface StoredTarget {
   effect_started_at: number | null;
   effect_completed_at: number | null;
   error_class: string | null;
+  final_delivery_state: string | null;
+  final_delivery_at: number | null;
+  failed_at: number | null;
 }
 
 function subscriber(): RoutedSubscriberAlert {
@@ -69,6 +72,9 @@ function createHarness(): {
       effect_started_at INTEGER,
       effect_completed_at INTEGER,
       effect_claim_expires_at INTEGER,
+      final_delivery_state TEXT,
+      final_delivery_at INTEGER,
+      final_delivery_error TEXT,
       PRIMARY KEY (job_id, target_key)
     );
     CREATE TABLE telegram_subscribers (
@@ -105,8 +111,15 @@ function createHarness(): {
       processing_started_at INTEGER,
       processing_expires_at INTEGER,
       delivery_state TEXT NOT NULL DEFAULT 'pending',
+      delivery_owner TEXT,
+      delivery_generation INTEGER NOT NULL DEFAULT 0,
       delivery_started_at INTEGER,
-      delivery_completed_at INTEGER
+      delivery_completed_at INTEGER,
+      delivery_claim_expires_at INTEGER,
+      source_event_id TEXT,
+      alert_scope_json TEXT,
+      preference_generation INTEGER,
+      markup_policy_json TEXT
     );
     INSERT INTO telegram_subscribers (chat_id) VALUES ('42');
   `);
@@ -127,7 +140,8 @@ function loadTarget(sqlite: DatabaseSync): StoredTarget {
   return sqlite
     .prepare(
       `SELECT status, effect_state, effect_owner, effect_generation,
-              effect_started_at, effect_completed_at, error_class
+              effect_started_at, effect_completed_at, error_class,
+              final_delivery_state, final_delivery_at, failed_at
          FROM telegram_alert_job_targets
         WHERE job_id = 'job-1'`,
     )
@@ -246,9 +260,11 @@ describe("fresh Telegram delivery effect fence", () => {
     expect(terminal).toEqual(new Set([targetKey]));
     expect(replayQueue).toEqual([]);
     expect(loadTarget(sqlite)).toMatchObject({
-      status: "failed",
+      status: "planned",
       effect_state: "execution_unknown",
       error_class: "fresh_effect_owner_lost",
+      final_delivery_state: "execution_unknown",
+      failed_at: null,
     });
   });
 
@@ -272,9 +288,11 @@ describe("fresh Telegram delivery effect fence", () => {
     expect(outcome.retryableFreshMessages).toEqual([]);
     expect(outcome).toMatchObject({ freshAttempted: 1, freshPermanentFailures: 1 });
     expect(loadTarget(sqlite)).toMatchObject({
-      status: "failed",
+      status: "planned",
       effect_state: "execution_unknown",
       error_class: "timeout",
+      final_delivery_state: "execution_unknown",
+      failed_at: null,
     });
   });
 

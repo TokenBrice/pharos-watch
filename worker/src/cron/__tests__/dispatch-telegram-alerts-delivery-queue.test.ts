@@ -4,6 +4,7 @@ import {
   mockSetCache,
   mockShouldAttemptFetch,
   mockRecordOutcome,
+  mockInspectLegacyOverflowBacklog,
   mockSendToChat,
   mockSendBatch,
   formatConsolidatedMessageSpy,
@@ -481,9 +482,18 @@ describe("dispatchTelegramAlerts", () => {
     expect(history.some((entry) => entry.sql.includes("FROM telegram_pending_alerts p"))).toBe(false);
   });
 
-  it("drains stored overflow plans during an eventless run", async () => {
+  it("drains a pending target produced by the legacy importer during an eventless run", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const overflowPlan = makeDewsOverflowPlan(now);
+    mockInspectLegacyOverflowBacklog.mockResolvedValue({
+      state: "imported",
+      digest: "a".repeat(64),
+      sourceEventId: "telegram-source:legacy-overflow:v1:imported",
+      observedBytes: 1_024,
+      observedPlanCount: 1,
+      importCursor: 1,
+      importedTargetCount: 1,
+      errorClass: null,
+    });
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
@@ -505,16 +515,6 @@ describe("dispatchTelegramAlerts", () => {
           now - 60,
         );
       }
-      if (key === "telegram:dispatch-overflow-plan") {
-        return {
-          value: JSON.stringify({
-            version: 1,
-            writtenAt: now - 60,
-            plans: [{ ...overflowPlan, expiresAt: now + 3600 }],
-          }),
-          updatedAt: now - 60,
-        };
-      }
       return null;
     });
 
@@ -525,42 +525,50 @@ describe("dispatchTelegramAlerts", () => {
       },
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
-      { match: "GROUP BY chat_id", rows: [] },
-      { match: "SELECT s.chat_id", rows: [{ chat_id: overflowPlan.chatId, dews_active: 1 }] },
-      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
-      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      {
+        match: "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
+        rows: [],
+        first: {
+          total: 1,
+          expired: 0,
+          due: 1,
+          deferred: 0,
+          near_ttl: 0,
+          oldest_pending_created_at: now - 120,
+          oldest_due_created_at: now - 120,
+        },
+      },
+      {
+        match: "FROM telegram_pending_alerts p",
+        rows: [fixtureBuildPendingAlertRow({
+          id: 1,
+          chatId: "chat-imported",
+          html: "<b>Imported overflow alert</b>",
+          createdAt: now - 120,
+          sourceType: "legacy",
+        })],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
     ]);
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
       eventlessFastPath?: boolean;
-      pendingEnqueued: number;
-      freshOverflow: number;
-      cappedAtLimit: boolean;
+      pendingAttempted: number;
+      pendingDrained: number;
+      messagesSent: number;
     };
 
-    expect(result.itemCount).toBe(0);
+    expect(result.itemCount).toBe(1);
     expect(metadata.eventlessFastPath).toBe(true);
-    expect(metadata.pendingEnqueued).toBe(1);
-    expect(metadata.freshOverflow).toBe(1);
-    expect(metadata.cappedAtLimit).toBe(true);
-    expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(1);
-    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(metadata.pendingAttempted).toBe(1);
+    expect(metadata.pendingDrained).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(true);
-    const activeOverflowQuery = history.find((entry) => entry.sql.includes("SELECT s.chat_id"));
-    expect(activeOverflowQuery?.sql).toContain("preset.alert_dews = 1");
-    expect(activeOverflowQuery?.sql).toContain("preset.alert_depeg = 1");
-    expect(activeOverflowQuery?.sql).toContain("preset.alert_safety = 1");
-    expect(activeOverflowQuery?.sql).not.toContain("preset.alert_launch");
-    expect(activeOverflowQuery?.sql).not.toContain("preset.alert_reserve");
-
-    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) => call[1] === "telegram:dispatch-overflow-plan");
-    expect(overflowBacklogWrite).toBeDefined();
-    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
-      plans: unknown[];
-    };
-    expect(overflowBacklog.plans).toHaveLength(0);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"))).toBe(false);
+    expect(mockInspectLegacyOverflowBacklog).toHaveBeenCalledWith(db, now);
   });
 
   it("prunes forgotten chats from the stored overflow plan backlog", async () => {
@@ -662,7 +670,15 @@ describe("dispatchTelegramAlerts", () => {
         },
         rows: [],
       },
-      { match: "FROM telegram_pending_alerts p", rows: [] },
+      {
+        match: "FROM telegram_pending_alerts p",
+        rows: [fixtureBuildPendingAlertRow({
+          id: 1,
+          chatId: "eventless-due",
+          html: "<b>Due during eventless run</b>",
+          createdAt: now - 120,
+        })],
+      },
     ]);
 
     const progressUpdates: CronProgressUpdate[] = [];
@@ -677,8 +693,8 @@ describe("dispatchTelegramAlerts", () => {
     };
 
     expect(metadata.eventlessFastPath).toBe(true);
-    expect(metadata.pendingTotal).toBe(1);
-    expect(result.itemCount).toBe(0);
+    expect(metadata.pendingTotal).toBe(0);
+    expect(result.itemCount).toBe(1);
     expect(progressUpdates.find((update) => update.stage === "source-loading")).toMatchObject({
       itemsTotal: 5,
       metadata: {
@@ -721,17 +737,152 @@ describe("dispatchTelegramAlerts", () => {
         providerFamily: "telegram-dispatch",
         phase: "complete",
         countTotals: {
-          pendingAttempted: 0,
-          pendingSent: 0,
+          pendingAttempted: 1,
+          pendingSent: 1,
           pendingDeferred: 0,
           pendingDropped: 0,
         },
         deferredTail: {
-          total: 1,
-          due: 1,
+          total: 0,
+          due: 0,
         },
       },
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_alerts p"))).toBe(true);
+  });
+
+  it.each([
+    {
+      label: "source-event-backfill-required",
+      sourceStatus: "baseline_committed",
+      expiresAtOffset: 600,
+      recoveryMatch: "AS planned_targets",
+      recoveryRow: {
+        target_plan_state: "planning",
+        target_plan_generation: 1,
+        planned_targets: 1,
+      },
+    },
+    {
+      label: "source-event-expired",
+      sourceStatus: "planned",
+      expiresAtOffset: -1,
+      recoveryMatch: "SELECT target_plan_generation FROM telegram_alert_source_events",
+      recoveryRow: { target_plan_generation: 1 },
+    },
+  ])("drains due pending rows before the $label early return", async (scenario) => {
+    const now = Math.floor(Date.now() / 1000);
+    mockGetCache.mockResolvedValue(null);
+    const emptyEvents = JSON.stringify({
+      dewsChanges: [],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [],
+      safetyChanges: [],
+      launchPromoted: [],
+      reservePromoted: [],
+      suppressedMethodologyChanges: 0,
+      dewsIds: [],
+      depegIds: [],
+      safetyIds: [],
+      launchIds: [],
+      reserveIds: [],
+    });
+    const emptyBaseline = JSON.stringify({
+      dews: {},
+      dewsAlertable: {},
+      depeg: {},
+      safety: {},
+      launch: [],
+      reserveDispatched: [],
+    });
+    const sourceEventId = `telegram-source:test:v1:${scenario.label}`;
+    const db = fixtureMockD1([
+      {
+        match: "FROM telegram_legacy_overflow_state WHERE singleton = 1",
+        rows: [],
+        first: {
+          state: "absent",
+          blob_digest: null,
+          synthetic_source_event_id: null,
+          observed_bytes: 0,
+          observed_plan_count: null,
+          import_cursor: 0,
+          imported_target_count: 0,
+          last_error_class: null,
+        },
+      },
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      {
+        match: "SUM(CASE WHEN delivery_state = 'pending' THEN 1 ELSE 0 END) AS total",
+        rows: [],
+        first: {
+          total: 1,
+          expired: 0,
+          due: 1,
+          deferred: 0,
+          near_ttl: 0,
+          oldest_pending_created_at: now - 120,
+          oldest_due_created_at: now - 120,
+        },
+      },
+      {
+        match: "WHERE status IN ('resolving', 'planned', 'baseline_committed')",
+        rows: [],
+        first: {
+          source_event_id: sourceEventId,
+          schema_version: 1,
+          status: scenario.sourceStatus,
+          detected_at: now - 120,
+          expires_at: now + scenario.expiresAtOffset,
+          event_payload: emptyEvents,
+          baseline_payload: emptyBaseline,
+          attempt_count: 0,
+          last_attempt_at: null,
+          last_error_class: null,
+          baseline_committed_at: scenario.sourceStatus === "baseline_committed" ? now - 30 : null,
+          completed_at: null,
+        },
+      },
+      {
+        match: scenario.recoveryMatch,
+        rows: [],
+        first: scenario.recoveryRow,
+      },
+      {
+        match: "FROM telegram_pending_alerts p",
+        rows: [
+          fixtureBuildPendingAlertRow({
+            id: 1,
+            chatId: `pending-${scenario.label}`,
+            html: "<b>Queued recovery alert</b>",
+            createdAt: now - 120,
+          }),
+        ],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      skipped: string;
+      pendingAttempted: number;
+      pendingDrained: number;
+      messagesSent: number;
+      subscribersNotified: number;
+    };
+
+    expect(metadata).toMatchObject({
+      skipped: scenario.label,
+      pendingAttempted: 1,
+      pendingDrained: 1,
+      messagesSent: 1,
+      subscribersNotified: 1,
+    });
+    expect(result.itemCount).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockRecordOutcome).toHaveBeenCalledWith(db, "telegram-api", true);
   });
 });

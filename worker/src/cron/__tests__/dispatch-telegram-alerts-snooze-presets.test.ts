@@ -5,7 +5,6 @@ import {
   STABLECOINS_CACHE_WITH_USDC,
   mockRecordOutcome,
   mockSendToChat,
-  mockSendBatch,
   dispatchTelegramAlerts,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   makeSafetySourceCache,
@@ -61,19 +60,15 @@ describe("dispatchTelegramAlerts", () => {
 
     await dispatchTelegramAlerts(db, "bot-token");
 
-    // sendBatch is mocked at file scope — inspect the BatchMessage array for the
-    // per-message replyMarkup. The third positional is the batch size.
-    const calls = mockSendBatch.mock.calls;
-    const lastCall = calls[calls.length - 1];
-    const messages = lastCall?.[0] as Array<{
+    const sendOptions = mockSendToChat.mock.calls[mockSendToChat.mock.calls.length - 1]?.[3] as {
       replyMarkup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
-    }>;
-    const callbackData = messages?.[0]?.replyMarkup?.inline_keyboard?.flat().map((button) => button.callback_data);
+    };
+    const callbackData = sendOptions.replyMarkup?.inline_keyboard?.flat().map((button) => button.callback_data);
     expect(callbackData).toContain("status:usdc-circle");
     expect(callbackData).toContain("snooze:4h");
     // P1-U10: compact per-coin snooze control on single-coin alerts.
     expect(callbackData).toContain("coinsnooze:usdc-circle:4h");
-    expect(messages?.[0]?.replyMarkup?.inline_keyboard?.length).toBeLessThanOrEqual(2);
+    expect(sendOptions.replyMarkup?.inline_keyboard?.length).toBeLessThanOrEqual(2);
   });
 
   it("attaches link_preview_options to the first chunk of single-coin alerts", async () => {
@@ -117,12 +112,10 @@ describe("dispatchTelegramAlerts", () => {
 
     await dispatchTelegramAlerts(db, "bot-token");
 
-    const lastCall = mockSendBatch.mock.calls[mockSendBatch.mock.calls.length - 1];
-    const messages = lastCall?.[0] as Array<{
-      chunkIndex?: number;
+    const sendOptions = mockSendToChat.mock.calls[mockSendToChat.mock.calls.length - 1]?.[3] as {
       linkPreviewOptions?: { is_disabled: boolean; url: string; prefer_small_media: boolean; show_above_text: boolean };
-    }>;
-    expect(messages?.[0]?.linkPreviewOptions).toEqual({
+    };
+    expect(sendOptions.linkPreviewOptions).toEqual({
       is_disabled: false,
       url: "https://pharos.watch/stablecoin/usdc-circle",
       prefer_small_media: true,
@@ -349,7 +342,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.blockedUsersCleanedUp).toBe(1);
   });
 
-  it("degrades preset delivery when the preset-subscribers query fails but still sends direct/global alerts", async () => {
+  it("holds direct targets durably when the preset-subscribers query must resume", async () => {
     const now = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -428,9 +421,12 @@ describe("dispatchTelegramAlerts", () => {
       expect(metadata.presetQueryFailures).toBeGreaterThanOrEqual(1);
       expect(metadata.presetResolutionFailures).toBe(0);
       expect(metadata.snapshotSeeded).toBe(false);
-      expect(metadata.subscribersNotified).toBe(1);
-      expect(metadata.messagesSent).toBe(1);
-      expect(mockSendToChat).toHaveBeenCalledTimes(1);
+      expect(metadata.subscribersNotified).toBe(0);
+      expect(metadata.messagesSent).toBe(0);
+      expect(mockSendToChat).not.toHaveBeenCalled();
+      expect(await db
+        .prepare("SELECT status, target_plan_state FROM telegram_alert_source_events")
+        .first()).toMatchObject({ status: "resolving", target_plan_state: "unstarted" });
 
       const presetQueryLog = parseLogRecords(warnSpy).find((record) => record.action === "preset-query");
       expect(presetQueryLog).toMatchObject({
@@ -440,7 +436,6 @@ describe("dispatchTelegramAlerts", () => {
         failureKind: "query-failed",
         alertType: "dews",
         requestedStablecoinCount: 1,
-        err: "D1_ERROR: connection reset",
       });
 
       const snapshotWrites = mockSetCache.mock.calls.filter(
@@ -453,9 +448,8 @@ describe("dispatchTelegramAlerts", () => {
       expect(counterWrite).toBeTruthy();
       expect(counterWrite?.[2]).toBe("1");
 
-      // Preset failure no longer poisons the Telegram API circuit when direct
-      // delivery succeeds.
-      expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
+      // Source-resolution failures do not create a Telegram transport outcome.
+      expect(mockRecordOutcome).not.toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();
     }
@@ -525,7 +519,7 @@ describe("dispatchTelegramAlerts", () => {
     }
   });
 
-  it("degrades preset delivery when dynamic preset resolution fails but keeps direct delivery", async () => {
+  it("holds direct targets durably when dynamic preset resolution must resume", async () => {
     const now = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -605,10 +599,12 @@ describe("dispatchTelegramAlerts", () => {
       expect(metadata.presetFailure).toBe(true);
       expect(metadata.presetQueryFailures).toBe(0);
       expect(metadata.presetResolutionFailures).toBe(1);
-      expect(metadata.subscribersNotified).toBe(1);
-      expect(metadata.messagesSent).toBe(1);
-      expect(mockSendToChat).toHaveBeenCalledTimes(1);
-      expect(mockSendToChat.mock.calls[0]?.[0]).toBe("direct-chat");
+      expect(metadata.subscribersNotified).toBe(0);
+      expect(metadata.messagesSent).toBe(0);
+      expect(mockSendToChat).not.toHaveBeenCalled();
+      expect(await db
+        .prepare("SELECT status, target_plan_state FROM telegram_alert_source_events")
+        .first()).toMatchObject({ status: "resolving", target_plan_state: "unstarted" });
 
       const presetResolutionLog = parseLogRecords(warnSpy).find((record) => record.action === "preset-resolution");
       expect(presetResolutionLog).toMatchObject({
@@ -618,7 +614,6 @@ describe("dispatchTelegramAlerts", () => {
         failureKind: "resolution-failed",
         alertType: "dews",
         reason: "stablecoins-cache-unavailable",
-        presetIds: expect.arrayContaining(["usd-top25"]),
         presetCount: 10,
         requestedStablecoinCount: 1,
       });
@@ -684,7 +679,7 @@ describe("dispatchTelegramAlerts", () => {
     const counterWrite = mockSetCache.mock.calls.find(([_db, key]) => key === "telegram:preset-query-failure-count");
     expect(counterWrite?.[2]).toBe("0");
   });
-  it("attributes per-alert-type delivery stats by dominant category", async () => {
+  it("attributes authoritative target delivery by dominant category", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     // Subscriber A receives only a DEWS change → dominant = dews.
@@ -733,22 +728,19 @@ describe("dispatchTelegramAlerts", () => {
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
-      perAlertType: Record<
-        string,
-        { sent: number; enqueued: number; failed: number; blocked: number; firstSendLatencyMs: number | null }
-      >;
       messagesSent: number;
     };
 
     expect(metadata.messagesSent).toBe(2);
-    expect(metadata.perAlertType.dews.sent).toBe(1);
-    expect(metadata.perAlertType.depeg.sent).toBe(1);
-    expect(metadata.perAlertType.safety.sent).toBe(0);
-    expect(metadata.perAlertType.launch.sent).toBe(0);
-    expect(metadata.perAlertType.dews.firstSendLatencyMs).not.toBeNull();
-    expect(metadata.perAlertType.depeg.firstSendLatencyMs).not.toBeNull();
-    expect(metadata.perAlertType.safety.firstSendLatencyMs).toBeNull();
-    expect(metadata.perAlertType.launch.firstSendLatencyMs).toBeNull();
+    expect((await db
+      .prepare(
+        `SELECT alert_type, status, final_delivery_state
+           FROM telegram_alert_job_targets ORDER BY alert_type`,
+      )
+      .all()).results).toEqual([
+      { alert_type: "depeg", status: "sent", final_delivery_state: "accepted" },
+      { alert_type: "dews", status: "sent", final_delivery_state: "accepted" },
+    ]);
   });
 
   it("buckets blocked/failed/enqueued by alert type", async () => {
@@ -756,9 +748,8 @@ describe("dispatchTelegramAlerts", () => {
 
     // One DEWS-only subscriber whose send returns blocked → blocked++.
     // One depeg-only subscriber whose send returns a permanent failure → failed++.
-    mockSendBatch.mockResolvedValueOnce([
-      {
-        chatId: "A",
+    mockSendToChat.mockImplementation(async (chatId: string) =>
+      chatId === "A" ? {
         ok: false,
         blocked: true,
         retryable: false,
@@ -767,9 +758,7 @@ describe("dispatchTelegramAlerts", () => {
         errorClass: "blocked",
         delivery: "blocked",
         retryAfterSec: null,
-      },
-      {
-        chatId: "B",
+      } : {
         ok: false,
         blocked: false,
         retryable: false,
@@ -778,8 +767,7 @@ describe("dispatchTelegramAlerts", () => {
         errorClass: "permanent",
         delivery: "permanent_failure",
         retryAfterSec: null,
-      },
-    ]);
+      });
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
@@ -824,18 +812,16 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
-      perAlertType: Record<
-        string,
-        { sent: number; enqueued: number; failed: number; blocked: number; firstSendLatencyMs: number | null }
-      >;
-    };
-
-    expect(metadata.perAlertType.dews.blocked).toBe(1);
-    expect(metadata.perAlertType.dews.sent).toBe(0);
-    expect(metadata.perAlertType.depeg.failed).toBe(1);
-    expect(metadata.perAlertType.depeg.sent).toBe(0);
+    await dispatchTelegramAlerts(db, "bot-token");
+    expect((await db
+      .prepare(
+        `SELECT alert_type, status, error_class
+           FROM telegram_alert_job_targets ORDER BY alert_type`,
+      )
+      .all()).results).toEqual([
+      { alert_type: "depeg", status: "failed", error_class: "permanent" },
+      { alert_type: "dews", status: "failed", error_class: "blocked" },
+    ]);
   });
 
   it("chunks a 120-coin depeg fan-out for one chat and preserves overflow past the format budget", async () => {
@@ -904,61 +890,47 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
+    type BurstMetadata = {
       eventsDetected: { depeg: number; depegTriggered: number };
       cappedAtLimit: boolean;
       pendingEnqueued: number;
       messagesSent: number;
       freshAttempted: number;
     };
+    let metadata: BurstMetadata | undefined;
+    for (let cycle = 0; cycle < 10; cycle++) {
+      if (cycle > 0) vi.advanceTimersByTime(121_000);
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      metadata = JSON.parse(result.metadata) as BurstMetadata;
+      if (!metadata.cappedAtLimit) break;
+    }
 
     // All 120 depeg events were detected and routed as fresh triggers.
-    expect(metadata.eventsDetected.depeg).toBe(120);
-    expect(metadata.eventsDetected.depegTriggered).toBe(120);
+    expect(metadata?.eventsDetected.depeg).toBe(120);
+    expect(metadata?.eventsDetected.depegTriggered).toBe(120);
+    expect(metadata?.cappedAtLimit).toBe(false);
 
-    // sendBatch is invoked at least once; locate the call carrying mega-chat
-    // messages and confirm the consolidated body was split into >1 chunks.
-    expect(mockSendBatch).toHaveBeenCalled();
-    const allSentMessages = mockSendBatch.mock.calls.flatMap(
-      ([messages]) => messages as Array<{ chatId: string; html: string; chunkIndex?: number; canonicalHtml?: string }>,
-    );
-    const megaMessages = allSentMessages.filter((msg) => msg.chatId === megaChatId);
+    const megaMessages = (await db
+      .prepare(
+        `SELECT message_html AS html, chunk_index
+           FROM telegram_alert_job_targets
+          WHERE chat_id = ? ORDER BY chunk_index`,
+      )
+      .bind(megaChatId)
+      .all<{ html: string; chunk_index: number }>()).results;
     expect(megaMessages.length).toBeGreaterThan(1); // split into multiple chunks
-    // Each chunk respects the 4000-char cap.
     for (const msg of megaMessages) {
       expect(msg.html.length).toBeLessThanOrEqual(4000);
     }
-    // The canonical pre-split body is shared across mega's chunks and is the
-    // SAME body, so all chunks reference the same canonicalHtml.
-    const canonicals = new Set(megaMessages.map((m) => m.canonicalHtml));
-    expect(canonicals.size).toBe(1);
-    // chunkIndex covers [0, megaMessages.length - 1] without gaps.
-    const indices = megaMessages.map((m) => m.chunkIndex ?? 0).sort((a, b) => a - b);
+    const indices = megaMessages.map((m) => m.chunk_index).sort((a, b) => a - b);
     expect(indices[0]).toBe(0);
     expect(indices[indices.length - 1]).toBe(megaMessages.length - 1);
-
-    // Cap and overflow: the queue is capped and excess subscribers are accounted
-    // for without formatting the whole deferred tail in this invocation.
-    expect(metadata.cappedAtLimit).toBe(true);
-    // freshAttempted is bounded by the cap.
-    expect(metadata.freshAttempted).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN);
-
-    // The residual overflow was persisted as an unformatted plan for a later
-    // bounded enqueue pass.
-    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) => call[1] === "telegram:dispatch-overflow-plan");
-    expect(overflowBacklogWrite).toBeDefined();
-    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
-      plans: unknown[];
-    };
-    expect(overflowBacklog.plans.length).toBeGreaterThan(0);
-
-    // Mega chat is among the chats that got at least one fresh attempt — the
-    // multi-chunk consumer did not prevent other chats from being processed.
-    const sentChatIds = new Set(allSentMessages.map((m) => m.chatId));
-    expect(sentChatIds.has(megaChatId)).toBe(true);
-    expect(sentChatIds.size).toBeGreaterThan(1);
-  });
+    const targetCount = await db
+      .prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets")
+      .first<{ count: number }>();
+    expect(targetCount?.count).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
+    expect(mockSetCache.mock.calls.some((call) => call[1] === "telegram:dispatch-overflow-plan")).toBe(false);
+  }, 15_000);
 
   it("preserves the launch snapshot in the seed branch so the next healthy run still detects the transition (P1.7)", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -1186,16 +1158,13 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.subscribersNotified).toBe(1);
     expect(metadata.messagesSent).toBe(1);
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
-    expect(
-      db
-        .getHistory()
-        .some((entry) => entry.sql.includes("INSERT INTO telegram_alert_jobs") && entry.binds[1] === "reserve"),
-    ).toBe(true);
-    expect(
-      db
-        .getHistory()
-        .some((entry) => entry.sql.includes("INSERT INTO telegram_alert_job_targets") && entry.binds[4] === "reserve"),
-    ).toBe(true);
+    expect(await db
+      .prepare("SELECT alert_type, status, final_delivery_state FROM telegram_alert_job_targets")
+      .first()).toMatchObject({
+      alert_type: "reserve",
+      status: "sent",
+      final_delivery_state: "accepted",
+    });
   });
 
   it("emits only the new trigger when an active depeg closes and reopens within one window", async () => {

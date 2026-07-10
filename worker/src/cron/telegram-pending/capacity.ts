@@ -80,14 +80,16 @@ export async function readPendingCapacity(
                       THEN 1 ELSE 0
                     END) AS pending_sending
                ,SUM(CASE
-                      WHEN delivery_state = 'sending'
-                       AND COALESCE(delivery_started_at, created_at) <= ?
+                      WHEN (delivery_state = 'sending'
+                        AND COALESCE(delivery_started_at, created_at) <= ?)
+                        OR delivery_state = 'execution_unknown'
                       THEN 1 ELSE 0
                     END) AS pending_execution_unknown
                ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS sent_cleanup
                ,MIN(CASE
-                      WHEN delivery_state = 'sending'
-                       AND COALESCE(delivery_started_at, created_at) <= ?
+                      WHEN (delivery_state = 'sending'
+                        AND COALESCE(delivery_started_at, created_at) <= ?)
+                        OR delivery_state = 'execution_unknown'
                       THEN COALESCE(delivery_started_at, created_at)
                     END) AS oldest_pending_execution_unknown_at
                ,(SELECT SUM(CASE
@@ -212,7 +214,7 @@ export async function readPendingCapacity(
       drainBudgetPerRun,
       dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
     } };
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to read pending capacity snapshot",

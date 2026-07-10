@@ -69,7 +69,7 @@ describe("telegram alert job manifests", () => {
     expect(targetInserts.map((entry) => entry.binds[2]).sort()).toEqual(["100", "100", "200"]);
   });
 
-  it("finalizes job counters from per-alert-type delivery stats", async () => {
+  it("finalizes job counters exclusively from authoritative target rows", async () => {
     const db = mockD1();
     const perAlertType = emptyDelivery();
     perAlertType.depeg.sent = 7;
@@ -84,13 +84,17 @@ describe("telegram alert job manifests", () => {
     );
 
     const update = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_alert_jobs"));
-    expect(update?.sql).toContain("SELECT COUNT(*) FROM telegram_alert_job_targets");
-    expect(JSON.parse(String(update?.binds[0]))).toEqual({
-      finalizedAt: 1_800_000_060,
-      latestAttempt: { sent: 7, enqueued: 2, failed: 1 },
-      countersSource: "target-rows",
-    });
-    expect(update?.binds[1]).toBe("telegram:depeg:abc");
+    expect(update?.sql).toContain("WITH target_buckets AS");
+    expect(update?.sql).toContain("target.final_delivery_state IS NOT NULL");
+    expect(update?.sql).toContain("SUM(CASE WHEN bucket = 'execution_unknown' THEN 1 ELSE 0 END)");
+    expect(update?.sql).toContain("'$.countersSource', 'authoritative-target-rows'");
+    expect(update?.sql).not.toContain("latestAttempt");
+    expect(update?.binds).toEqual([
+      "telegram:depeg:abc",
+      1_800_000_060,
+      1_800_000_060,
+      "telegram:depeg:abc",
+    ]);
   });
 });
 

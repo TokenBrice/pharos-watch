@@ -104,7 +104,26 @@ function createHarness(): Harness {
       effect_started_at INTEGER,
       effect_completed_at INTEGER,
       effect_claim_expires_at INTEGER,
+      source_event_id TEXT,
+      plan_generation INTEGER,
+      plan_key TEXT,
+      final_delivery_state TEXT,
       PRIMARY KEY (job_id, target_key)
+    );
+    CREATE TABLE telegram_alert_target_plans (
+      source_event_id TEXT NOT NULL,
+      plan_generation INTEGER NOT NULL,
+      plan_key TEXT NOT NULL,
+      chat_id TEXT NOT NULL,
+      PRIMARY KEY (source_event_id, plan_generation, plan_key)
+    );
+    CREATE TABLE telegram_alert_target_plan_items (
+      source_event_id TEXT NOT NULL,
+      plan_generation INTEGER NOT NULL,
+      plan_key TEXT NOT NULL,
+      item_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (source_event_id, plan_generation, plan_key, item_key)
     );
   `);
   sqlite.exec(MIGRATION_SQL);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DewsChange } from "../../lib/telegram-alerts";
 import {
+  buildTelegramAlertsByChat,
   buildTelegramFanoutPlan,
   summarizePresetFanoutFailures,
   type TelegramFanoutPlanEvents,
@@ -170,5 +171,23 @@ describe("dispatch telegram fanout planning", () => {
     expect(plan.overflowFormatBudget).toBe(1);
     expect(plan.perAlertTypeTargets.dews).toEqual({ chats: 1, chunks: 1 });
     expect(plan.presetFailure).toBe(false);
+  });
+
+  it("exposes capture eligibility from routing without building rendered messages", () => {
+    const routing = buildTelegramAlertsByChat({
+      events: fanoutEvents({ dewsChanges: [DEWS_WARNING] }),
+      inputs: fanoutInputs({
+        directDewsSubs: new Map([
+          ["usdc-circle", [subscriber({ chat_id: "eligible" })]],
+        ]),
+      }),
+      burstMarkers: {},
+      nowSec: NOW_SEC,
+      collapseBursts: false,
+    });
+
+    expect([...routing.alertsByChat.keys()]).toEqual(["eligible"]);
+    expect(routing.alertsByChat.get("eligible")?.alerts.dews).toEqual([DEWS_WARNING]);
+    expect("subscriberQueue" in routing).toBe(false);
   });
 });

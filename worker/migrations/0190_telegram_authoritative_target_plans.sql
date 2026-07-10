@@ -311,13 +311,19 @@ ALTER TABLE telegram_alert_jobs
 CREATE TABLE IF NOT EXISTS telegram_legacy_overflow_state (
   singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
   state TEXT NOT NULL
-    CHECK (state IN ('absent', 'importing', 'imported', 'corrupt', 'oversized')),
+    CHECK (state IN ('absent', 'importing', 'imported', 'corrupt', 'oversized', 'degraded')),
   blob_digest TEXT
     CHECK (blob_digest IS NULL OR length(blob_digest) = 64),
   observed_bytes INTEGER NOT NULL DEFAULT 0
     CHECK (observed_bytes >= 0),
   observed_plan_count INTEGER
     CHECK (observed_plan_count IS NULL OR observed_plan_count >= 0),
+  expected_item_count INTEGER
+    CHECK (expected_item_count IS NULL OR expected_item_count >= 0),
+  synthetic_source_event_id TEXT
+    CHECK (synthetic_source_event_id IS NULL OR length(synthetic_source_event_id) <= 200),
+  import_cursor INTEGER NOT NULL DEFAULT 0
+    CHECK (import_cursor >= 0),
   imported_target_count INTEGER NOT NULL DEFAULT 0
     CHECK (imported_target_count >= 0),
   last_error_class TEXT

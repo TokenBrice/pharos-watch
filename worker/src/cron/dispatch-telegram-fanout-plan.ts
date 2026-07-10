@@ -93,25 +93,31 @@ export function summarizePresetFanoutFailures(
   };
 }
 
-export function buildTelegramFanoutPlan(args: {
+interface TelegramFanoutRoutingArgs {
   events: TelegramFanoutPlanEvents;
   inputs: FanoutSubscriptionInputs;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
   burstMarkers: BurstMarkerMap;
   nowSec: number;
-  formatBudget?: number;
   presetFailureSummary?: PresetFanoutFailureSummary;
   handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
   collapseBursts?: boolean;
-  sourceEventId?: string;
-}): TelegramFanoutPlan {
+}
+
+export interface TelegramFanoutRoutingResult extends PresetFanoutFailureSummary {
+  alertsByChat: Map<string, AlertsByChatEntry>;
+  burstOutcome: ReturnType<typeof collapseBurstChats>;
+  handledItemsPruned: number;
+}
+
+/** Route and filter one subscriber page without formatting any message HTML. */
+export function buildTelegramAlertsByChat(
+  args: TelegramFanoutRoutingArgs,
+): TelegramFanoutRoutingResult {
   const {
     events,
     inputs,
-    overflowBacklog,
     burstMarkers,
     nowSec,
-    formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
     presetFailureSummary = summarizePresetFanoutFailures(inputs),
     handledItemsByChat = new Map(),
     collapseBursts = true,
@@ -206,6 +212,33 @@ export function buildTelegramFanoutPlan(args: {
   const burstOutcome = collapseBursts
     ? collapseBurstChats(alertsByChat, burstMarkers, nowSec)
     : { markers: burstMarkers, collapsedChats: 0, deltaSuppressed: 0 };
+  return {
+    alertsByChat,
+    burstOutcome,
+    handledItemsPruned,
+    ...presetFailureSummary,
+  };
+}
+
+export function buildTelegramFanoutPlan(args: {
+  events: TelegramFanoutPlanEvents;
+  inputs: FanoutSubscriptionInputs;
+  overflowBacklog: readonly PlannedSubscriberAlert[];
+  burstMarkers: BurstMarkerMap;
+  nowSec: number;
+  formatBudget?: number;
+  presetFailureSummary?: PresetFanoutFailureSummary;
+  handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
+  collapseBursts?: boolean;
+  sourceEventId?: string;
+}): TelegramFanoutPlan {
+  const {
+    overflowBacklog,
+    nowSec,
+    formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
+  } = args;
+  const routing = buildTelegramAlertsByChat(args);
+  const { alertsByChat } = routing;
   const {
     plannedQueue,
     subscriberQueue,
@@ -232,8 +265,10 @@ export function buildTelegramFanoutPlan(args: {
     freshCandidateChats: plannedQueue.length,
     freshCandidateCount: plannedQueue.reduce((sum, plan) => sum + plan.estimatedChunks, 0),
     formattedChats: subscriberQueue.length,
-    burstOutcome,
-    handledItemsPruned,
-    ...presetFailureSummary,
+    burstOutcome: routing.burstOutcome,
+    handledItemsPruned: routing.handledItemsPruned,
+    presetQueryFailures: routing.presetQueryFailures,
+    presetResolutionFailures: routing.presetResolutionFailures,
+    presetFailure: routing.presetFailure,
   };
 }

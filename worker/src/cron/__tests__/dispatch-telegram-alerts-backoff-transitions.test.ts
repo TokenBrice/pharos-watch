@@ -3,14 +3,12 @@ import {
   mockGetCache,
   mockSetCache,
   mockSendToChat,
-  mockSendBatch,
   formatConsolidatedMessageSpy,
   dispatchTelegramAlerts,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   makeSafetySourceCache,
   makeSafetySnapshotCache,
-  countPendingAlertInsertBatches,
   parseLogRecords,
   resetDispatchTelegramAlertsTest,
   cleanupDispatchTelegramAlertsTest,
@@ -185,7 +183,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat).toHaveBeenCalledTimes(2);
   });
 
-  it("enqueues overflow subscribers to pending queue", async () => {
+  it("captures overflow subscribers durably before bounded materialization", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
@@ -235,11 +233,14 @@ describe("dispatchTelegramAlerts", () => {
     };
 
     expect(metadata.cappedAtLimit).toBe(true);
-    expect(metadata.pendingEnqueued).toBeGreaterThan(0);
-    expect(metadata.freshCandidateChats).toBe(subscriberCount);
-    expect(metadata.freshCandidateCount).toBe(subscriberCount);
-    expect(metadata.freshOverflow).toBe(50);
-    expect(metadata.perAlertTypeTargets.dews).toEqual({ chats: subscriberCount, chunks: subscriberCount });
+    expect(metadata.pendingEnqueued).toBe(0);
+    expect(metadata.freshCandidateChats).toBe(0);
+    expect(metadata.freshCandidateCount).toBe(0);
+    const captured = await db
+      .prepare("SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers")
+      .first<{ count: number }>();
+    expect(captured?.count).toBeGreaterThan(0);
+    expect(captured?.count).toBeLessThan(subscriberCount);
     expect(metadata.fanoutQueryMs).toBeGreaterThanOrEqual(0);
     expect(metadata.fanoutBuildMs).toBeGreaterThanOrEqual(0);
     // freshBudget = TELEGRAM_MAX_MESSAGES_PER_RUN (no pending drained), so max fresh cap + 50 enqueued.
@@ -247,7 +248,7 @@ describe("dispatchTelegramAlerts", () => {
     // C102: candidates fit within the format budget (MAX + allowance), so every
     // candidate is formatted exactly once — the budget-before-format reorder is
     // byte-identical to the pre-reorder behavior here.
-    expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(subscriberCount);
+    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
   });
 
   it("C102: caps hot-path formatting at the fresh budget under a market-wide burst", async () => {
@@ -285,41 +286,32 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
+    type BurstMetadata = {
+      cappedAtLimit: boolean;
       freshCandidateChats: number;
       freshCandidateCount: number;
       freshOverflow: number;
       pendingEnqueued: number;
-      perAlertTypeTargets: Record<string, { chats: number; chunks: number }>;
     };
+    let metadata: BurstMetadata | undefined;
+    for (let cycle = 0; cycle < 10; cycle++) {
+      if (cycle > 0) vi.advanceTimersByTime(121_000);
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      metadata = JSON.parse(result.metadata) as BurstMetadata;
+      if (!metadata.cappedAtLimit) break;
+    }
 
-    // The hot fresh-send path (formatPlannedSubscribers) formats only the selected
-    // slice — bounded by the format budget, NOT once per candidate. The residual
-    // overflow tail is persisted unformatted for a later bounded enqueue pass, so
-    // no alert is dropped and formatting does not scale with all subscribers.
-    const totalFormats = formatConsolidatedMessageSpy.mock.calls.length;
-    expect(totalFormats).toBe(formatBudget);
-    // perAlertTypeTargets cover only the formatted-selected (hot-path) set, which
-    // is capped at the format budget even though all candidates are accounted for.
-    expect(metadata.perAlertTypeTargets.dews.chats).toBe(formatBudget);
-    expect(metadata.perAlertTypeTargets.dews.chats).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
-    // Candidate metrics still reflect ALL routed chats via the cheap estimate.
-    expect(metadata.freshCandidateChats).toBe(subscriberCount);
-    expect(metadata.freshCandidateCount).toBe(subscriberCount);
-    // Every candidate beyond the fresh send budget is accounted for: the selected
-    // allowance is enqueued now, and the residual tail is durably planned.
-    expect(metadata.freshOverflow).toBe(subscriberCount - TELEGRAM_MAX_MESSAGES_PER_RUN);
-    expect(metadata.pendingEnqueued).toBe(TELEGRAM_FORMAT_BUDGET_ALLOWANCE);
-    const overflowBacklogWrite = mockSetCache.mock.calls.find((call) => call[1] === "telegram:dispatch-overflow-plan");
-    expect(overflowBacklogWrite).toBeDefined();
-    const overflowBacklog = JSON.parse(String(overflowBacklogWrite?.[2])) as {
-      version: number;
-      plans: unknown[];
-    };
-    expect(overflowBacklog.version).toBe(1);
-    expect(overflowBacklog.plans).toHaveLength(overflowTail);
-  });
+    expect(metadata).toBeDefined();
+    const completed = metadata as BurstMetadata;
+    expect(completed.cappedAtLimit).toBe(false);
+    // Capture is route-only; materialization is the sole formatter, so every
+    // durable target is rendered exactly once across resumptions.
+    expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(subscriberCount);
+    expect(completed.freshCandidateChats).toBe(subscriberCount);
+    expect(completed.freshCandidateCount).toBe(subscriberCount);
+    expect(completed.freshOverflow).toBe(0);
+    expect(mockSetCache.mock.calls.some((call) => call[1] === "telegram:dispatch-overflow-plan")).toBe(false);
+  }, 15_000);
 
   it("writes snapshots even when subscriber queue is capped", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -404,7 +396,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.pendingExpired).toBe(5);
   });
 
-  it("queues retryable fresh-send failures instead of dropping them", async () => {
+  it("keeps retryable authoritative targets queued instead of dropping them", async () => {
     const now = Math.floor(Date.now() / 1000);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -443,34 +435,30 @@ describe("dispatchTelegramAlerts", () => {
     try {
       const result = await dispatchTelegramAlerts(db, "bot-token");
       const metadata = JSON.parse(result.metadata) as {
-        freshAttempted: number;
-        freshSent: number;
-        freshRetryQueued: number;
-        freshPermanentFailures: number;
+        pendingAttempted: number;
+        pendingRetryQueued: number;
+        pendingDropped: number;
         pendingEnqueued: number;
+        pendingTotal: number;
         messagesSent: number;
       };
 
-      expect(metadata.freshAttempted).toBe(1);
-      expect(metadata.freshSent).toBe(0);
-      expect(metadata.freshRetryQueued).toBe(1);
-      expect(metadata.freshPermanentFailures).toBe(0);
+      expect(metadata.pendingAttempted).toBe(1);
+      expect(metadata.pendingRetryQueued).toBe(1);
+      expect(metadata.pendingDropped).toBe(0);
       expect(metadata.pendingEnqueued).toBe(1);
+      expect(metadata.pendingTotal).toBe(1);
       expect(metadata.messagesSent).toBe(0);
-
-      const systemicLog = parseLogRecords(errorSpy).find(
-        (record) => record.action === "dispatch-systemic-fresh-failure",
-      );
-      expect(systemicLog).toMatchObject({
-        scope: "telegram",
-        level: "error",
-        module: "dispatch-telegram-alerts",
-        attemptedCount: 1,
-        sentCount: 0,
-        queuedCount: 1,
-        permanentFailureCount: 0,
-        pendingEnqueuedCount: 1,
+      expect(await db
+        .prepare("SELECT delivery_state, attempts, last_error_class FROM telegram_pending_alerts")
+        .first()).toMatchObject({
+        delivery_state: "pending",
+        attempts: 1,
+        last_error_class: "server_error",
       });
+      expect(parseLogRecords(errorSpy).some(
+        (record) => record.action === "dispatch-systemic-fresh-failure",
+      )).toBe(false);
     } finally {
       errorSpy.mockRestore();
     }
@@ -530,14 +518,14 @@ describe("dispatchTelegramAlerts", () => {
       pendingEnqueued: number;
     };
 
-    // old-chat: rate-limited pending drain, retry-queued
-    expect(metadata.pendingAttempted).toBe(1);
+    // Both the pre-existing row and the newly materialized target pass through
+    // the same authoritative pending drain.
+    expect(metadata.pendingAttempted).toBe(2);
     expect(metadata.pendingRetryQueued).toBe(1);
-    // fresh-chat: NOT in backoff (different chat), proceeds against fresh budget
-    expect(metadata.freshAttempted).toBe(1);
-    expect(metadata.freshSent).toBe(1);
+    expect(metadata.freshAttempted).toBe(0);
+    expect(metadata.freshSent).toBe(0);
     expect(metadata.freshDeferredPerChat).toBe(0);
-    expect(mockSendBatch).toHaveBeenCalled();
+    expect(mockSendToChat.mock.calls.map((call) => call[0]).sort()).toEqual(["fresh-chat", "old-chat"]);
     expect(
       db
         .getHistory()
@@ -580,127 +568,38 @@ describe("dispatchTelegramAlerts", () => {
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
-      freshAttempted: number;
-      freshSent: number;
-      freshDeferredPerChat: number;
+      pendingAttempted: number;
+      pendingSent: number;
       pendingEnqueued: number;
-      perAlertType: Record<string, { enqueued: number }>;
+      pendingTotal: number;
     };
 
-    // chat-B fresh send proceeds, chat-A is deferred and not sent
-    expect(metadata.freshAttempted).toBe(1);
-    expect(metadata.freshSent).toBe(1);
-    expect(metadata.freshDeferredPerChat).toBe(1);
-    expect(metadata.pendingEnqueued).toBe(1);
-    expect(metadata.perAlertType.dews.enqueued).toBe(1);
+    expect(metadata.pendingAttempted).toBe(1);
+    expect(metadata.pendingSent).toBe(1);
+    expect(metadata.pendingEnqueued).toBe(2);
+    expect(metadata.pendingTotal).toBe(2);
 
-    // Only chat-B was sent in this run
-    const sendBatchCalls = mockSendBatch.mock.calls;
-    const sentChatIds = sendBatchCalls.flatMap((call) => (call[0] as Array<{ chatId: string }>).map((m) => m.chatId));
-    expect(sentChatIds).toEqual(["chat-B"]);
+    expect(mockSendToChat.mock.calls.map((call) => call[0])).toEqual(["chat-B"]);
+    expect(await db
+      .prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = 'chat-A' AND not_before_at > ?")
+      .bind(now)
+      .first<{ count: number }>()).toMatchObject({ count: 2 });
   });
 
-  it("requeues globally rate-limited fresh sends without per-chat not_before_at", async () => {
+  it("hands global rate limits to the pending transport controller", async () => {
     const now = Math.floor(Date.now() / 1000);
 
-    mockSendBatch.mockResolvedValue([
-      {
-        chatId: "chat-1",
-        ok: true,
-        blocked: false,
-        retryable: false,
-        permanentFailure: false,
-        statusCode: 200,
-        errorClass: null,
-        delivery: "sent",
-        retryAfterSec: null,
-      },
-      {
-        chatId: "chat-2",
-        ok: true,
-        blocked: false,
-        retryable: false,
-        permanentFailure: false,
-        statusCode: 200,
-        errorClass: null,
-        delivery: "sent",
-        retryAfterSec: null,
-      },
-      {
-        chatId: "chat-3",
-        ok: true,
-        blocked: false,
-        retryable: false,
-        permanentFailure: false,
-        statusCode: 200,
-        errorClass: null,
-        delivery: "sent",
-        retryAfterSec: null,
-      },
-      {
-        chatId: "chat-4",
-        ok: true,
-        blocked: false,
-        retryable: false,
-        permanentFailure: false,
-        statusCode: 200,
-        errorClass: null,
-        delivery: "sent",
-        retryAfterSec: null,
-      },
-      {
-        chatId: "chat-5",
-        ok: false,
-        blocked: false,
-        retryable: true,
-        permanentFailure: false,
-        statusCode: 429,
-        errorClass: "rate_limit",
-        delivery: "retryable_failure",
-        retryAfterSec: 45,
-        rateLimitScope: "global",
-        attempted: true,
-      },
-      {
-        chatId: "chat-6",
-        ok: false,
-        blocked: false,
-        retryable: true,
-        permanentFailure: false,
-        statusCode: 429,
-        errorClass: "rate_limit",
-        delivery: "retryable_failure",
-        retryAfterSec: 45,
-        rateLimitScope: "global",
-        attempted: false,
-      },
-      {
-        chatId: "chat-7",
-        ok: false,
-        blocked: false,
-        retryable: true,
-        permanentFailure: false,
-        statusCode: 429,
-        errorClass: "rate_limit",
-        delivery: "retryable_failure",
-        retryAfterSec: 45,
-        rateLimitScope: "global",
-        attempted: false,
-      },
-      {
-        chatId: "chat-8",
-        ok: false,
-        blocked: false,
-        retryable: true,
-        permanentFailure: false,
-        statusCode: 429,
-        errorClass: "rate_limit",
-        delivery: "retryable_failure",
-        retryAfterSec: 45,
-        rateLimitScope: "global",
-        attempted: false,
-      },
-    ]);
+    mockSendToChat.mockResolvedValueOnce({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+      retryAfterSec: 45,
+      rateLimitScope: "global",
+    });
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot")
@@ -728,27 +627,25 @@ describe("dispatchTelegramAlerts", () => {
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
-    const pendingInsertBatchCount = countPendingAlertInsertBatches(db);
-
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
-      freshAttempted: number;
-      freshSent: number;
-      freshRetryQueued: number;
+      pendingAttempted: number;
+      pendingSent: number;
+      pendingRetryQueued: number;
+      pendingRateLimited: boolean;
       pendingEnqueued: number;
       messagesSent: number;
     };
 
-    expect(metadata.freshAttempted).toBe(5);
-    expect(metadata.freshSent).toBe(4);
-    expect(metadata.freshRetryQueued).toBe(4);
-    expect(metadata.pendingEnqueued).toBe(4);
-    expect(metadata.messagesSent).toBe(4);
+    expect(metadata.pendingAttempted).toBeGreaterThanOrEqual(1);
+    expect(metadata.pendingRetryQueued).toBeGreaterThanOrEqual(1);
+    expect(metadata.pendingRateLimited).toBe(true);
+    expect(metadata.pendingEnqueued).toBe(8);
+    expect(metadata.messagesSent).toBe(metadata.pendingSent);
     expect(mockSetCache).toHaveBeenCalledWith(db, "telegram:global-send-backoff-until", String(now + 45));
-    const pendingInserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
-    expect(pendingInserts).toHaveLength(4);
-    expect(pendingInsertBatchCount()).toBe(1);
-    expect(pendingInserts.every((entry) => entry.binds[4] == null)).toBe(true);
+    expect(await db
+      .prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE not_before_at IS NULL")
+      .first<{ count: number }>()).toMatchObject({ count: metadata.pendingEnqueued - metadata.pendingSent });
   });
 
   it("emits worsening depeg alerts when the configured bps step is crossed", async () => {

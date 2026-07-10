@@ -1,7 +1,6 @@
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import type { PerAlertTypeDelivery, TelegramAlertType } from "@shared/types/status";
 import {
-  batchExecute,
   executeAtomicBatch,
   prepareMultiRowInsertStatements,
 } from "../lib/db";
@@ -21,6 +20,7 @@ import {
   type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
+import { reconcileTelegramAlertJobCounters } from "./telegram-alert-job-target-outcomes";
 
 export interface TelegramAlertJobManifest {
   jobId: string;
@@ -201,71 +201,18 @@ export async function persistTelegramAlertJobManifests(
 export async function finalizeTelegramAlertJobManifests(
   db: D1Database,
   manifests: TelegramAlertJobManifest[],
-  perAlertType: PerAlertTypeDelivery,
+  _perAlertType: PerAlertTypeDelivery,
   nowSec: number,
 ): Promise<void> {
   if (manifests.length === 0) return;
 
   try {
-    await batchExecute(db, manifests.map((manifest) => {
-      const stats = perAlertType[manifest.alertType];
-      const failedCount = stats.failed + stats.blocked;
-      const metadata = JSON.stringify({
-        finalizedAt: nowSec,
-        latestAttempt: {
-          sent: stats.sent,
-          enqueued: stats.enqueued,
-          failed: failedCount,
-        },
-        countersSource: "target-rows",
-      });
-      return db
-        .prepare(
-          `UPDATE telegram_alert_jobs
-              SET status = CASE
-                    WHEN EXISTS (
-                      SELECT 1 FROM telegram_alert_job_targets target
-                       WHERE target.job_id = telegram_alert_jobs.job_id
-                         AND target.status IN ('failed', 'expired')
-                    ) THEN 'degraded'
-                    WHEN EXISTS (
-                      SELECT 1 FROM telegram_alert_job_targets target
-                       WHERE target.job_id = telegram_alert_jobs.job_id
-                         AND target.status = 'planned'
-                    ) THEN 'discovered'
-                    WHEN EXISTS (
-                      SELECT 1 FROM telegram_alert_job_targets target
-                       WHERE target.job_id = telegram_alert_jobs.job_id
-                         AND target.status = 'queued'
-                    ) THEN 'queued'
-                    ELSE 'sent'
-                  END,
-                  target_count = (
-                    SELECT COUNT(*) FROM telegram_alert_job_targets target
-                     WHERE target.job_id = telegram_alert_jobs.job_id
-                  ),
-                  sent_count = (
-                    SELECT COUNT(*) FROM telegram_alert_job_targets target
-                     WHERE target.job_id = telegram_alert_jobs.job_id AND target.status = 'sent'
-                  ),
-                  enqueued_count = (
-                    SELECT COUNT(*) FROM telegram_alert_job_targets target
-                     WHERE target.job_id = telegram_alert_jobs.job_id AND target.status = 'queued'
-                  ),
-                  failed_count = (
-                    SELECT COUNT(*) FROM telegram_alert_job_targets target
-                     WHERE target.job_id = telegram_alert_jobs.job_id
-                       AND target.status IN ('failed', 'expired')
-                  ),
-                  metadata = ?
-            WHERE job_id = ?`,
-        )
-        .bind(
-          metadata,
-          manifest.jobId,
-        );
-    }));
-  } catch (error) {
+    await reconcileTelegramAlertJobCounters(
+      db,
+      manifests.map((manifest) => manifest.jobId),
+      nowSec,
+    );
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to finalize Telegram alert job manifests",

@@ -152,6 +152,10 @@ export function buildPendingAlertEnqueueStatement(
   const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
   const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
   const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
+  const deliveryOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_owner");
+  const deliveryStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_started_at");
+  const deliveryCompletedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_completed_at");
+  const deliveryClaimExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_claim_expires_at");
   const sourceEventRefresh = refreshExistingRowCase(
     "excluded.source_event_id",
     "telegram_pending_alerts.source_event_id",
@@ -176,6 +180,10 @@ export function buildPendingAlertEnqueueStatement(
     processingOwnerRefresh,
     processingStartedRefresh,
     processingExpiresRefresh,
+    deliveryOwnerRefresh,
+    deliveryStartedRefresh,
+    deliveryCompletedRefresh,
+    deliveryClaimExpiresRefresh,
     sourceEventRefresh,
     alertScopeRefresh,
     preferenceGenerationRefresh,
@@ -240,10 +248,25 @@ export function buildPendingAlertEnqueueStatement(
            processing_owner = ${processingOwnerRefresh.sql},
            processing_started_at = ${processingStartedRefresh.sql},
            processing_expires_at = ${processingExpiresRefresh.sql},
+           delivery_owner = ${deliveryOwnerRefresh.sql},
+           delivery_started_at = ${deliveryStartedRefresh.sql},
+           delivery_completed_at = ${deliveryCompletedRefresh.sql},
+           delivery_claim_expires_at = ${deliveryClaimExpiresRefresh.sql},
            source_event_id = ${sourceEventRefresh.sql},
            alert_scope_json = ${alertScopeRefresh.sql},
            preference_generation = ${preferenceGenerationRefresh.sql},
-           markup_policy_json = ${markupPolicyRefresh.sql}`,
+           markup_policy_json = ${markupPolicyRefresh.sql}
+         WHERE telegram_pending_alerts.delivery_state = 'pending'
+           AND (
+             telegram_pending_alerts.processing_owner IS NULL
+             OR telegram_pending_alerts.processing_expires_at IS NULL
+             OR telegram_pending_alerts.processing_expires_at <= excluded.created_at
+             OR COALESCE(
+                  telegram_pending_alerts.expires_at,
+                  telegram_pending_alerts.created_at + ${PENDING_TTL_SEC}
+                ) <= excluded.created_at
+             OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}
+           )`,
     )
     .bind(...values, ...(guard?.binds ?? []), ...refreshBinds);
 }
