@@ -370,6 +370,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/compliance-regime-state.ts` - GENIUS_REGIME_STATE, GeniusRegimeState, GeniusRulemakingPhase, isGeniusRegimeEffective
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/csv.ts` - CsvColumn, buildCsv, buildCsvBody, escapeCsvField
+- `shared/lib/d1-capacity.ts` - D1CapacityObservation, D1_CAPACITY_FORECAST_WINDOW_SEC, D1_CAPACITY_MIN_FORECAST_SPAN_SEC, D1_PAID_MAX_DATABASE_SIZE_BYTES, assessD1Capacity, getD1CapacityImpactStatus
 - `shared/lib/data-dependency-registry.ts` - DATA_DEPENDENCY_BY_ID, DATA_DEPENDENCY_REGISTRY, DataDependencyDefinition
 - `shared/lib/data-surface-descriptors.ts` - DATA_SURFACE_DESCRIPTORS, DATA_SURFACE_DESCRIPTOR_LIST, DataSurfaceDescriptor, DataSurfaceDescriptorKey, YieldHistoryMode
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
@@ -378,8 +379,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
-- `shared/lib/depeg-resolver-review/review.ts` - buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall, reviewDuration
-- ... 266 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 268 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -434,7 +434,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/routes/ops-routes.ts` - OPS_STATIC_ROUTES
 - `worker/src/routes/public-routes.ts` - PUBLIC_STATIC_ROUTES
 - `worker/src/routes/registry.ts` - ROUTER_STATIC_PATHS, getRouteDependencies, getRouteMatch
-- `worker/src/routes/shared.ts` - AlchemyRouteFields, ApiKeySelfServeRouteFields, ApiKeysRouteFields, ChainRpcRouteFields, CloudflareD1StatusRouteFields, CoingeckoRouteFields
+- `worker/src/routes/shared.ts` - AlchemyRouteFields, AlertWebhookRouteFields, ApiKeySelfServeRouteFields, ApiKeysRouteFields, ChainRpcRouteFields, CloudflareD1StatusRouteFields
 
 ## Worker handlers
 
@@ -445,8 +445,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/http/gates.ts` - checkCachedPublicApiReadFastRateLimit, evaluateAccessGate, evaluateCachedPublicApiReadFastGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce
 - `worker/src/handlers/http/request-dispatch.ts` - handleHttpRequestImpl
 - `worker/src/handlers/http/request-source.ts` - createRequestSourceRecorder, isApiKeyRequestAttributionDisabled, isRequestSourceAttributionDisabled
-- `worker/src/handlers/scheduled.ts` - SLOT_RUNNER_BY_KEY, SLOT_RUNNER_LOADER_BY_KEY, handleScheduledEvent
-- `worker/src/handlers/scheduled/context.ts` - ScheduledRuntimeContext, ScheduledRuntimeInit, createScheduledRuntimeContext, parseStablecoinsCapabilities
+- `worker/src/handlers/scheduled.ts` - SLOT_RUNNER_BY_KEY, SLOT_RUNNER_LOADER_BY_KEY, ScheduledSlotAggregateError, handleScheduledEvent
+- `worker/src/handlers/scheduled/context.ts` - ScheduledRuntimeContext, ScheduledRuntimeInit, createScheduledRuntimeContext, getRuntimeProducerIdentity, parseStablecoinsCapabilities, runRuntimeBudgetOnlyTask
 - `worker/src/handlers/scheduled/daily-0300.ts` - runDaily0300Slot
 - `worker/src/handlers/scheduled/daily-0800.ts` - runDaily0800Slot
 - `worker/src/handlers/scheduled/daily-0805.ts` - runDaily0805Slot
@@ -457,12 +457,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/handlers/scheduled/half-hourly-charts.ts` - runHalfHourlyChartsSlot
 - `worker/src/handlers/scheduled/half-hourly.ts` - runHalfHourlySlot
 - `worker/src/handlers/scheduled/hourly-blacklist.ts` - runSixHourlyBlacklistSlot
-- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - runFourHourlyReserveSyncSlot
+- `worker/src/handlers/scheduled/hourly-live-reserves.ts` - LIVE_RESERVE_SLOT_JOBS, runFourHourlyReserveSyncSlot
 - `worker/src/handlers/scheduled/hourly-yield.ts` - runHourlyYieldSlot
-- `worker/src/handlers/scheduled/mint-burn-slot.ts` - runMintBurnSlot
+- `worker/src/handlers/scheduled/mint-burn-slot.ts` - MintBurnSidecarOutcome, runMintBurnSlot
 - `worker/src/handlers/scheduled/monthly-yield-audit.ts` - runMonthlyYieldAuditSlot
 - `worker/src/handlers/scheduled/preflight-skip.ts` - logSkippedCronRun
 - `worker/src/handlers/scheduled/quarter-hourly.ts` - runQuarterHourlySlot
+- `worker/src/handlers/scheduled/reserve-recovery.ts` - runFiveMinuteReserveRecoverySlot
 - `worker/src/handlers/scheduled/run-best-effort-job.ts` - BestEffortScheduledJobOutcome, runBestEffortScheduledJobWithOutcome
 - `worker/src/handlers/scheduled/run-circuit-gated-job.ts` - runCircuitGatedLeasedScheduledJob
 - `worker/src/handlers/scheduled/slot-groups.ts` - ScheduledSlotGroup, ScheduledSlotGroupDefinition, ScheduledSlotGroupMode, ScheduledSlotParallelSerialGroup, ScheduledSlotTask, ScheduledSlotTaskChain
@@ -477,8 +478,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `worker/src/api/admin-action-log.ts` - handleAdminActionLog
 - `worker/src/api/admin-actions.ts` - DIGEST_FORCE_RUN_CACHE_KEY, handleDebugSyncState, handleDiscoveryCandidateDismiss, handleResetBlacklistSync, handleTriggerDigest
+- `worker/src/api/admin-alert-broker-canary.ts` - handleAlertBrokerCanary
 - `worker/src/api/admin-bulk-dismiss-discovery-candidates.ts` - handleBulkDismissDiscoveryCandidates
 - `worker/src/api/admin-kill-cron-in-flight.ts` - handleKillCronInFlight
+- `worker/src/api/admin-reserve-recovery-fault-injection.ts` - handleArmReserveRecoveryFaultInjection
 - `worker/src/api/admin-reset-circuit-breaker.ts` - handleResetCircuitBreaker
 - `worker/src/api/admin-reset-cron-lease.ts` - handleResetCronLease
 - `worker/src/api/admin-telegram-broadcast.ts` - handleAdminTelegramBroadcast
@@ -514,7 +517,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/backfill-depegs/persistence.ts` - BackfillConfidenceTier, BackfillEventProvenanceInput, BackfillRunInput, buildBackfillEventsFingerprint, buildInsertProvenanceStmt, buildReplayRunId
 - `worker/src/api/backfill-depegs/planning.ts` - BackfillPlan, PreparedBackfillCoin, buildBackfillPlan
 - `worker/src/api/backfill-dews.ts` - handleBackfillDEWS
-- `worker/src/api/backfill-mint-burn-prices.ts` - handleBackfillMintBurnPrices
+- `worker/src/api/backfill-mint-burn-prices.ts` - BackfillMintBurnPricesOptions, handleBackfillMintBurnPrices
 - `worker/src/api/backfill-mint-burn.ts` - handleBackfillMintBurn
 - `worker/src/api/backfill-price-sources.ts` - HistoricalMarketBackfillGranularity, HistoricalMarketBackfillRange, HistoricalMarketMergeReason, HistoricalMarketPolicyAdjustment, HistoricalMarketPriceSeriesResult, HistoricalMarketSeriesStats
 - `worker/src/api/backfill-stability-index.ts` - handleBackfillStabilityIndex
@@ -531,25 +534,27 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/depeg-resolver.ts` - handleDepegResolver
 - `worker/src/api/dex-liquidity-evidence.ts` - LiquidityEvidenceClassification, classifyLiquidityEvidence, isTrendworthyLiquiditySnapshot
 - `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
-- `worker/src/api/dex-liquidity-response.ts` - DexHistoryRow, DexLiquidityCronRow, DexLiquidityRow, DexPriceRow, buildDexLiquidityWarning, getDexLiquidityTrendTolerances
+- `worker/src/api/dex-liquidity-response.ts` - DexDeploymentOutcomeRow, DexHistoryRow, DexLiquidityCronRow, DexLiquidityRow, DexPriceRow, buildDexDeploymentCoverage
 - `worker/src/api/dex-liquidity.ts` - handleDexLiquidity
-- `worker/src/api/digest-archive.ts` - handleDigestArchive
-- `worker/src/api/digest-intelligence-summary.ts` - DigestIntelligenceSummary, selectDigestIntelligence
-- ... 126 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 128 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
 - `worker/src/cron/blacklist/amount-recovery.ts` - BlacklistRecoveryErrorClass, BlacklistRecoveryProvider, RecoverBlacklistAmountForRowOptions, RecoverBlacklistAmountForRowResult, backfillAmounts, backfillTronFromLedger
+- `worker/src/cron/blacklist/amount-repair-queue.ts` - BlacklistAmountRepairQueueOutcome, buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue
 - `worker/src/cron/blacklist/balance-providers.ts` - fetchEvmTokenBalance, fetchEvmTokenCurrentBalance, fetchTronTokenCurrentBalance
 - `worker/src/cron/blacklist/current-balance-cache.ts` - SyncCurrentBalanceCacheResult, syncCurrentBalanceCacheForRows
-- `worker/src/cron/blacklist/evm-source.ts` - FetchEvmEventsIncrementalResult, RPC_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, parseEvmLogs, resolveRpcLogTarget, shouldPreferRpcLogScan
+- `worker/src/cron/blacklist/evm-source.ts` - EXPLORER_LOG_SCAN_WINDOWS, FetchEvmEventsIncrementalResult, RPC_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, getEvmSafeHead, parseEvmLogs
+- `worker/src/cron/blacklist/legacy-identity-migration.ts` - BlacklistLegacyIdentityMigrationResult, migrateLegacyBlacklistIdentities
 - `worker/src/cron/blacklist/persistence.ts` - insertBlacklistRows
 - `worker/src/cron/blacklist/post-fetch.ts` - BlacklistPostFetchCounters, CurrentBalanceCacheCounters, processFetchedBlacklistRows
+- `worker/src/cron/blacklist/provider-telemetry.ts` - BlacklistProviderScanTelemetry, boundBlacklistProviderFailureSamples, persistBlacklistProviderScanTelemetry
 - `worker/src/cron/blacklist/row-preparation.ts` - buildCurrentBalanceSnapshotRows, buildLatestBlacklistRows, fetchBlacklistAssetPriceFromCache
 - `worker/src/cron/blacklist/run-budget.ts` - BlacklistRunBudget, blacklistRuntimeBudgetReached, blacklistShouldStopBeforeNextConfig, blacklistSubrequestBudgetReached, createBlacklistRunBudget
-- `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanResult, buildBlacklistRow, shouldSuppressAsMirrorZero
-- `worker/src/cron/blacklist/sync-support.ts` - SyncBlacklistApiErrorConfig, applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, getRuntimeBudgetSkippedOkThreshold, loadBlacklistConfigStates, recordApiErrorConfig
-- `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
+- `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanCoverageOutcome, BlacklistScanResult, buildBlacklistRow, shouldSuppressAsMirrorZero
+- `worker/src/cron/blacklist/state.ts` - BlacklistConfigAttempt, BlacklistConfigOutcome, BlacklistConfigState, BlacklistCursorKind, claimBlacklistConfigAttempt, finalizeBlacklistConfigAttempt
+- `worker/src/cron/blacklist/sync-support.ts` - SyncBlacklistApiErrorConfig, applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
+- `worker/src/cron/blacklist/tron-source.ts` - FetchTronEventsIncrementalResult, fetchTronEventsIncremental, parseTronEvent, validateTronPaginationUrl
 - `worker/src/cron/compute-depeg-resolver-review.ts` - ComputeDepegResolverReviewOptions, DdrrV2ReviewSource, buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
 - `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
@@ -615,11 +620,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
 - `worker/src/cron/dex-discovery/crawl-coingecko-tickers.ts` - CoinGeckoTickersStageDependencies, crawlCoinGeckoTickersStage
-- `worker/src/cron/dex-discovery/crawl-dexscreener-pools.ts` - DexScreenerPoolsStageDependencies, DexScreenerPoolsStageResult, crawlDexScreenerPoolsStage, selectDexScreenerTargets
-- `worker/src/cron/dex-discovery/crawl-geckoterminal-pools.ts` - GeckoTerminalPoolsStageDependencies, crawlGeckoTerminalPoolsStage
-- `worker/src/cron/dex-discovery/crawl-sources.ts` - CrawlResult, crawlCoin
-- `worker/src/cron/dex-discovery/orchestrator.ts` - DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS, DEX_DISCOVERY_RUN_BUDGET_MS, EffectiveTier, compareDiscoveryMeta, computeEffectiveTier, isEligibleThisRun
-- ... 356 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 362 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -635,7 +636,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/address-price-providers/types.ts` - AddressPriceAssetLike, AddressPriceProviderCollectionResult, AddressPriceProviderKey, AddressPriceProviderRunResult, AddressPriceProviderRuntimeConfig, AddressPriceQuote
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
-- `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionContextBatch, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache
+- `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTopicFilter, AlchemyTransactionContextBatch, AlchemyTransactionEntry, AlchemyTransactionReceipt
+- `worker/src/lib/alert-broker.ts` - AlertBrokerConditionInput, AlertBrokerConditionResult, AlertBrokerEpisodeDelivery, AlertBrokerMode, AlertBrokerSeverity, AlertBrokerSummary
 - `worker/src/lib/alert-marker.ts` - readAlertMarker
 - `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetyDimensionSnapshot, AlertSafetyExplainSnapshot, AlertSafetyRawInputSnapshot, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
@@ -676,14 +678,13 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/blacklist-coverage-manifest.ts` - BlacklistCoverageManifestEntry, BlacklistCoverageManifestStatus, BlacklistDeferredCoverageEntry, buildBlacklistCoverageManifest, getDeferredBlacklistCoverage, getSupportedBlacklistChainIds
 - `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
 - `worker/src/lib/blacklist-gaps.ts` - BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC, BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC, BlacklistGapMetrics, BlacklistGapMetricsOptions, materializeBlacklistGapMetrics, queryBlacklistGapMetrics
+- `worker/src/lib/blacklist-reconciliation-status.ts` - EMPTY_BLACKLIST_RECONCILIATION_STATUS, loadBlacklistReconciliationStatus
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
+- `worker/src/lib/cadence-bucket.ts` - CadenceBucketClaim, CadenceBucketClaimResult, appendCadenceResultMetadata, cadenceBucketFor, claimCadenceBucket, completeCadenceBucket
 - `worker/src/lib/canary-checks.ts` - CanaryCheckResult, CanaryRunSummary, RunCanaryChecksOptions, WORKER_CANARY_RUN_RETENTION_SEC, WorkerCanaryMode, loadCanaryStatus
-- `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
-- `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
-- `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPricesDetailed, pickBestTicker
-- ... 253 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 272 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -723,6 +724,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-telegram-load.test.ts`
 - `scripts/__tests__/check-test-typecheck.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
+- `scripts/__tests__/check-worker-wrangler-config.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
 - `scripts/__tests__/cli-args.test.ts`
 - `scripts/__tests__/client-registry-field-contract.test.ts`
@@ -746,5 +748,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
 - `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/generated-artifact-entrypoints.test.ts`
-- `scripts/__tests__/helpers/gsc-zip.ts` - writeStoredZip
-- ... 236 more files omitted; use `rg --files scripts` for the full list.
+- ... 240 more files omitted; use `rg --files scripts` for the full list.
