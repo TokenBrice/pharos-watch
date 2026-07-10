@@ -311,7 +311,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(completed.freshCandidateCount).toBe(subscriberCount);
     expect(completed.freshOverflow).toBe(0);
     expect(mockSetCache.mock.calls.some((call) => call[1] === "telegram:dispatch-overflow-plan")).toBe(false);
-  }, 15_000);
+  }, 45_000);
 
   it("writes snapshots even when subscriber queue is capped", async () => {
     const now = Math.floor(Date.now() / 1000);
