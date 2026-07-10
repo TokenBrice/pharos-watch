@@ -1,73 +1,28 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import type { EndpointMethod, StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionExecutionDialog } from "@/components/status/admin-action-execution-dialog";
+import type {
+  AdminActionDialogRequest,
+  AdminActionDialogState,
+  AdminActionExecution,
+  AdminActionExecutionController,
+  AdminActionExecutionRequest,
+  AdminActionExecutionStatus,
+  AdminActionRunResult,
+} from "@/components/status/admin-action-execution-types";
 import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
-import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { RequestFailure } from "@/lib/request";
 
-export type AdminActionExecutionStatus =
-  "ready" | "running" | "accepted" | "queued" | "succeeded" | "failed" | "unknown";
-
-export interface AdminActionExecutionRequest {
-  action: StatusPageAction;
-  requestPath: string;
-  requestMethod: EndpointMethod;
-  scopeKey: string;
-  scopeLabel: string;
-}
-
-export interface AdminActionExecution {
-  action: StatusPageAction;
-  executionKey: string;
-  intentId: string;
-  idempotencyKey: string;
-  requestPath: string;
-  requestMethod: EndpointMethod;
-  scopeKey: string;
-  scopeLabel: string;
-  status: AdminActionExecutionStatus;
-  requestInFlight: boolean;
-  ok: boolean;
-  output: string;
-  resultData: unknown;
-  error: string | null;
-  attempts: number;
-  createdAt: number;
-  startedAt: number | null;
-  completedAt: number | null;
-  executedAt: number | null;
-  httpStatus: number | null;
-  idempotentReplay: boolean | null;
-  responseIdempotencyKey: string | null;
-  executionCertainty: string | null;
-  warning: string | null;
-}
-
-export interface AdminActionRunResult {
-  execution: AdminActionExecution;
-  didStart: boolean;
-}
-
-export interface AdminActionDialogRequest {
-  action: StatusPageAction;
-  initialDryRun?: boolean;
-  readinessChecks?: readonly ActionReadinessCheck[];
-  onFinished?: (execution: AdminActionExecution) => void;
-}
-
-export interface AdminActionDialogState extends AdminActionDialogRequest {
-  dialogId: number;
-}
-
-export interface AdminActionExecutionController {
-  current: Readonly<Record<string, AdminActionExecution>>;
-  executions: readonly AdminActionExecution[];
-  execute: (request: AdminActionExecutionRequest) => Promise<AdminActionRunResult>;
-  retry: (executionKey: string) => Promise<AdminActionRunResult>;
-  startNew: (request: AdminActionExecutionRequest) => AdminActionExecution;
-}
+export type {
+  AdminActionDialogRequest,
+  AdminActionDialogState,
+  AdminActionExecution,
+  AdminActionExecutionController,
+  AdminActionExecutionRequest,
+  AdminActionExecutionStatus,
+  AdminActionRunResult,
+} from "@/components/status/admin-action-execution-types";
 
 interface AdminActionExecutionContextValue extends AdminActionExecutionController {
   openDialog: (request: AdminActionDialogRequest) => void;

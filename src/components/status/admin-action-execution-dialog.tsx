@@ -7,7 +7,7 @@ import type {
   AdminActionExecution,
   AdminActionExecutionController,
   AdminActionExecutionRequest,
-} from "@/components/status/admin-action-execution-provider";
+} from "@/components/status/admin-action-execution-types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
