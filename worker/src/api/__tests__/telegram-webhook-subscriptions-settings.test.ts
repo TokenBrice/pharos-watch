@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
+import { MAX_WATCHLIST_TOKEN_CHARS } from "../../lib/telegram-watchlist-token";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -225,6 +228,74 @@ describe("handleTelegramWebhook", () => {
     expect(body.text).toContain("(1 no longer tracked and were skipped.)");
     expect(body.text).not.toContain("(2 no longer tracked");
     expect(body.reply_markup).toBeDefined();
+  });
+
+  it("refuses a maximum-current-registry /export instead of emitting an unimportable token", async () => {
+    const subscriptions = [...TRACKED_META_BY_ID.keys()].map((stablecoinId) => ({
+      stablecoin_id: stablecoinId,
+      alert_dews: 1,
+      alert_depeg: 1,
+      alert_safety: 0,
+      alert_launch: 0,
+      alert_reserve: 0,
+      dews_min_band: null,
+      safety_mode: null,
+      depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: null,
+    }));
+    const unsafeToken = encodeWatchlistToken({
+      coinIds: subscriptions.map((row) => row.stablecoin_id),
+      alertTypes: ["dews", "depeg"],
+      presetIds: [],
+    });
+    expect(unsafeToken.length).toBeGreaterThan(MAX_WATCHLIST_TOKEN_CHARS);
+
+    const db = fixtureMockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscriptions", rows: subscriptions },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
+
+    const body = sentMessageBody();
+    expect(body.text).toContain("too large for the current copy-paste export format");
+    expect(body.text).toContain(`${subscriptions.length} explicit coin follows`);
+    expect(body.text).toContain("no token was sent");
+    expect(body.text).not.toContain("<pre>");
+  });
+
+  it("refuses a decodable token when its copyable /export block would be split", async () => {
+    const stablecoinId = "x".repeat(2_960);
+    const token = encodeWatchlistToken({ coinIds: [stablecoinId], alertTypes: ["dews"], presetIds: [] });
+    expect(token.length).toBeLessThanOrEqual(MAX_WATCHLIST_TOKEN_CHARS);
+    expect(token.length + "<pre></pre>".length).toBeGreaterThan(TELEGRAM_MESSAGE_CHUNK_LIMIT);
+
+    const db = fixtureMockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [{
+          stablecoin_id: stablecoinId,
+          alert_dews: 1,
+          alert_depeg: 0,
+          alert_safety: 0,
+          alert_launch: 0,
+          alert_reserve: 0,
+          dews_min_band: null,
+          safety_mode: null,
+          depeg_worsening_bps_step: null,
+          alert_snooze_until_ts: null,
+        }],
+      },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
+
+    const body = sentMessageBody();
+    expect(body.text).toContain("too large for the current copy-paste export format");
+    expect(body.text).not.toContain(token);
   });
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {

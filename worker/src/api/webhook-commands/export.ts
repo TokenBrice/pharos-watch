@@ -1,6 +1,10 @@
 import { escapeHtml } from "../../lib/telegram";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { encodeWatchlistToken } from "../../lib/telegram-watchlist-token";
+import {
+  encodeWatchlistToken,
+  MAX_WATCHLIST_TOKEN_CHARS,
+} from "../../lib/telegram-watchlist-token";
 import { loadPresetSubscriptions, loadSubscriptionRowsByChat } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 
@@ -40,12 +44,32 @@ export const handleExport: WebhookCommandHandler = async (ctx) => {
   }
 
   const token = encodeWatchlistToken({ coinIds, alertTypes: [...alertTypes], presetIds });
-  await ctx.replyToChat(
-    [
-      `Your watchlist token (${coinIds.length} coins, ${presetIds.length} presets):`,
-      `<pre>${escapeHtml(token)}</pre>`,
-      "Send it to another chat as <code>/import &lt;token&gt;</code> to copy these follows.",
-    ].join("\n"),
-  );
+  const tokenBlock = `<pre>${escapeHtml(token)}</pre>`;
+  const message = [
+    `Your watchlist token (${coinIds.length} coins, ${presetIds.length} presets):`,
+    tokenBlock,
+    "Send it to another chat as <code>/import &lt;token&gt;</code> to copy these follows.",
+  ].join("\n");
+
+  // A long reply may split around newline boundaries, but the copyable <pre>
+  // line itself must fit one chunk. Otherwise the generic splitter fragments
+  // the token even when it remains just below /import's decoder ceiling.
+  if (token.length > MAX_WATCHLIST_TOKEN_CHARS || tokenBlock.length > TELEGRAM_MESSAGE_CHUNK_LIMIT) {
+    await ctx.replyToChat(
+      [
+        `Your watchlist is too large for the current copy-paste export format (${coinIds.length} explicit coin follows, ${presetIds.length} presets), so no token was sent.`,
+        "Your follows were not changed. For now, use <code>/list</code> as a reference, recreate preset follows with <code>/presets</code>, and add explicit coins in smaller <code>/subscribe</code> batches.",
+      ].join("\n"),
+    );
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "export",
+      outcome: "blocked",
+      failureClass: "token-too-large",
+    });
+    return;
+  }
+
+  await ctx.replyToChat(message);
   await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "export", outcome: "success" });
 };
