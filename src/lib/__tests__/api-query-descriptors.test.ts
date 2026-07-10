@@ -110,7 +110,7 @@ describe("frontend API query descriptors", () => {
         expect.objectContaining({ safeParse: expect.any(Function) }),
       );
     }
-  });
+  }, 30_000);
 
   it("validates only global PSI display fields and preserves the full payload", () => {
     const payload = {

@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import {
-  StressSignalsAllResponseSchema,
-  YieldRankingsResponseSchema,
-} from "@shared/types";
+import { StressSignalsAllResponseSchema } from "@shared/types/market";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import type {
   PegSummaryResponse,
   RedemptionBackstopsResponse,

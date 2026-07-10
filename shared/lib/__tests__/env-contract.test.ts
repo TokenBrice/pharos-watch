@@ -9,6 +9,7 @@ import {
 describe("env contract manifest", () => {
   it("keeps the worker required binding order stable", () => {
     expect(getRuntimeEnvKeys("worker", "required")).toEqual([
+      "CF_VERSION_METADATA",
       "DB",
       "CORS_ORIGIN",
       "GITHUB_PAT",

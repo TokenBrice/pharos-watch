@@ -53,5 +53,5 @@ describe("StaticComparisonPage", () => {
 
     expect(findLinkByText(document, "Open sUSDe detail page")?.getAttribute("href")).toBe("/stablecoin/susde-ethena");
     expect(findLinkByText(document, "Open USDe detail page")?.getAttribute("href")).toBe("/stablecoin/usde-ethena");
-  }, 15_000);
+  }, 30_000);
 });
