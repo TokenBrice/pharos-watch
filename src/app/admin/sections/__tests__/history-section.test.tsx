@@ -76,7 +76,8 @@ function baseProps() {
     historyEvidence: {
       source: "history" as const,
       state: "ready" as const,
-      message: "Showing persisted transitions for the selected history window.",
+      completeness: "complete" as const,
+      message: "Showing the complete persisted transition window.",
     },
   };
 }
@@ -143,6 +144,7 @@ describe("HistorySection", () => {
         historyEvidence={{
           source: "status-fallback",
           state: "error",
+          completeness: "unknown",
           message: "History query failed; showing recent status transitions only.",
         }}
       />,
@@ -152,6 +154,58 @@ describe("HistorySection", () => {
     expect(screen.getByText("Recent fallback")).toBeTruthy();
     expect(screen.getByText(/selected history window is unavailable/i)).toBeTruthy();
     expect(screen.getByText(/correlation is Unknown because only recent status fallback/i)).toBeTruthy();
+    expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
+  });
+
+  it("labels row-limited history as bounded and keeps negative deployment correlation unknown", () => {
+    const props = baseProps();
+    const boundedTransitions = Array.from({ length: 100 }, (_, index) => ({
+      ...transition,
+      id: index + 1,
+      from: "healthy" as const,
+      to: "healthy" as const,
+      rawStatus: "healthy" as const,
+      transitionType: "hold" as const,
+      at: transition.at - index,
+    }));
+    render(
+      <HistorySection
+        {...props}
+        allTransitions={boundedTransitions}
+        latestTransition={boundedTransitions[0] ?? null}
+        historyEvidence={{
+          source: "history",
+          state: "ready",
+          completeness: "truncated",
+          message: "The history result reached its row limit; older transitions are omitted.",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Bounded history")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("row limit");
+    expect(screen.getByText(/correlation is Unknown because the history result reached its row limit/i)).toBeTruthy();
+    expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
+  });
+
+  it("does not infer complete coverage when the API cannot determine hasMore", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        allTransitions={[]}
+        latestTransition={null}
+        historyEvidence={{
+          source: "history",
+          state: "ready",
+          completeness: "unknown",
+          message: "History loaded, but completeness could not be determined.",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Coverage unknown")).toBeTruthy();
+    expect(screen.getByText(/complete coverage of the selected history window is unproven/i)).toBeTruthy();
     expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
   });
 });

@@ -69,27 +69,44 @@ export default function HistoryClient() {
         const hasHistoryData = historyQuery.data != null;
         const historyError = historyQuery.error instanceof Error ? historyQuery.error : null;
         const allTransitions = hasHistoryData ? historyQuery.data.transitions : data.timeline;
+        const historyCompleteness =
+          hasHistoryData && !historyError
+            ? historyQuery.data.hasMore === false
+              ? ("complete" as const)
+              : historyQuery.data.hasMore === true
+                ? ("truncated" as const)
+                : ("unknown" as const)
+            : ("unknown" as const);
         const historyEvidence = hasHistoryData
           ? historyError
             ? {
                 source: "history" as const,
                 state: "stale" as const,
+                completeness: historyCompleteness,
                 message: `History refresh failed; showing retained history data. ${historyError.message}`,
               }
             : {
                 source: "history" as const,
                 state: "ready" as const,
-                message: "Showing persisted transitions for the selected history window.",
+                completeness: historyCompleteness,
+                message:
+                  historyCompleteness === "complete"
+                    ? "Showing the complete persisted transition window."
+                    : historyCompleteness === "truncated"
+                      ? "The history result reached its row limit; older transitions in the selected window are omitted."
+                      : "History loaded, but the API could not determine whether the selected window is complete.",
               }
           : historyError
             ? {
                 source: "status-fallback" as const,
                 state: "error" as const,
+                completeness: "unknown" as const,
                 message: `History query failed; showing only transitions included in the current status response. ${historyError.message}`,
               }
             : {
                 source: "status-fallback" as const,
                 state: "loading" as const,
+                completeness: "unknown" as const,
                 message: "History is loading; showing only transitions included in the current status response.",
               };
         const workerVersionEvidence = deriveWorkerVersionEvidence(data);

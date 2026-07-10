@@ -1355,7 +1355,7 @@ The status handler now surfaces per-subsection loader failures through `sectionE
 
 ### GET /api/status-history
 
-Admin timeline feed for machine consumers. Returns persisted status state, status-system staleness, latest synthetic probe aggregate, discrepancy summary, and recent status transitions.
+Admin timeline feed for machine consumers. Returns persisted status state, status-system staleness, latest synthetic probe aggregate, discrepancy summary, recent status transitions, and `hasMore` completeness evidence. The handler reads one sentinel row beyond the requested page (up to 201 rows for the public 200-row maximum), removes that sentinel from the response, and returns `hasMore: null` when the transition query fails so consumers cannot mistake missing evidence for a complete window.
 
 ---
 

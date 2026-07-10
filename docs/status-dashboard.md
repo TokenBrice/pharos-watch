@@ -490,6 +490,9 @@ Response includes:
 3. latest probe aggregate
 4. discrepancy summary
 5. transition list (`limit` query param, max 200)
+6. `hasMore` completeness evidence (`true` when another matching row exists, `false` for a complete matching window, and `null` when completeness could not be determined)
+
+The incident-history workspace only makes negative deployment-correlation statements for a fresh response with `hasMore === false`. Row-limited, retained, fallback, and indeterminate results remain visibly partial and keep correlation Unknown.
 
 ---
 

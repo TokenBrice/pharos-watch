@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
@@ -75,6 +75,7 @@ describe("handleStatusHistoryRoute", () => {
       probe: { status: string; sampleCount: number };
       discrepancy: { hasDivergence: boolean };
       transitions: Array<{ id: number; transitionType: string }>;
+      hasMore: boolean | null;
       reserveComposition: {
         deferredCoins: number;
         runBudgetTruncated: boolean;
@@ -88,12 +89,63 @@ describe("handleStatusHistoryRoute", () => {
     expect(body.probe.sampleCount).toBe(10);
     expect(body.discrepancy.hasDivergence).toBe(false);
     expect(body.transitions[0]?.transitionType).toBe("recover");
+    expect(body.hasMore).toBe(false);
     expect(body.reserveComposition).toMatchObject({
       deferredCoins: 0,
       runBudgetTruncated: false,
       cursorTailState: null,
       historyWriteGaps: [],
     });
+  });
+
+  it("returns one page plus truthful hasMore evidence", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const rows = Array.from({ length: 201 }, (_, index) => ({
+      id: index + 1,
+      scope: "global",
+      previous_status: "healthy",
+      next_status: "healthy",
+      raw_status: "healthy",
+      transition_type: "hold",
+      reason: "fixture",
+      confidence: 1,
+      causes_json: "[]",
+      created_at: now - index,
+    }));
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null },
+      { match: "FROM status_probe_runs", rows: [], first: null },
+      { match: "FROM status_discrepancy_state", rows: [], first: null },
+      { match: "FROM status_transitions", rows },
+    ]);
+
+    const request = makeApiRequest("/api/status-history?limit=200", { adminKey: "secret-key" });
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as { transitions: unknown[]; hasMore: boolean | null };
+    const transitionQuery = db.getHistory().find((entry) => entry.sql.includes("FROM status_transitions"));
+
+    expect(body.transitions).toHaveLength(200);
+    expect(body.hasMore).toBe(true);
+    expect(transitionQuery?.binds[transitionQuery.binds.length - 1]).toBe(201);
+  });
+
+  it("returns indeterminate completeness when the transition query fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null },
+      { match: "FROM status_probe_runs", rows: [], first: null },
+      { match: "FROM status_discrepancy_state", rows: [], first: null },
+      { match: "FROM status_transitions", rows: [], throwError: new Error("history unavailable") },
+    ]);
+
+    const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
+    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as { transitions: unknown[]; hasMore: boolean | null };
+
+    expect(res.status).toBe(200);
+    expect(body.transitions).toEqual([]);
+    expect(body.hasMore).toBeNull();
+    errorSpy.mockRestore();
   });
 
   it("applies from/to transition filters when provided", async () => {

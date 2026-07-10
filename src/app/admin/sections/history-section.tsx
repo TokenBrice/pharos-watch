@@ -31,6 +31,7 @@ export interface HistorySectionProps {
   historyEvidence: {
     source: "history" | "status-fallback";
     state: "loading" | "ready" | "stale" | "error";
+    completeness: "complete" | "truncated" | "unknown";
     message: string;
   };
 }
@@ -40,11 +41,13 @@ function PagesReleaseCorrelation({
   releaseMetadataState,
   nowSeconds,
   historyComplete,
+  historyCoverage,
 }: {
   transitions: StatusResponse["timeline"];
   releaseMetadataState: ReleaseMetadataState;
   nowSeconds: number;
   historyComplete: boolean;
+  historyCoverage: "complete" | "truncated" | "unknown" | "status-fallback";
 }) {
   const release = releaseMetadataState.metadata;
   const firstDegrade = findFirstDegradationAfter(transitions, release?.createdAtSec ?? null);
@@ -99,7 +102,11 @@ function PagesReleaseCorrelation({
               </p>
             ) : !historyComplete ? (
               <p className="text-muted-foreground">
-                Pages transition correlation is Unknown because only recent status fallback transitions are available.
+                {historyCoverage === "status-fallback"
+                  ? "Pages transition correlation is Unknown because only recent status fallback transitions are available."
+                  : historyCoverage === "truncated"
+                    ? "Pages transition correlation is Unknown because the history result reached its row limit and may omit older transitions."
+                    : "Pages transition correlation is Unknown because complete coverage of the selected history window is unproven."}
               </p>
             ) : (
               <p className="text-muted-foreground">
@@ -167,12 +174,14 @@ function ReleaseCorrelationPanel({
   workerVersionEvidence,
   nowSeconds,
   historyComplete,
+  historyCoverage,
 }: {
   transitions: StatusResponse["timeline"];
   releaseMetadataState: ReleaseMetadataState;
   workerVersionEvidence: WorkerVersionEvidence;
   nowSeconds: number;
   historyComplete: boolean;
+  historyCoverage: "complete" | "truncated" | "unknown" | "status-fallback";
 }) {
   return (
     <section aria-labelledby="deployment-correlation-title" className="space-y-4 border-y border-border/60 py-4">
@@ -190,6 +199,7 @@ function ReleaseCorrelationPanel({
           releaseMetadataState={releaseMetadataState}
           nowSeconds={nowSeconds}
           historyComplete={historyComplete}
+          historyCoverage={historyCoverage}
         />
         <WorkerReleaseCorrelation evidence={workerVersionEvidence} />
       </div>
@@ -215,6 +225,9 @@ export function HistorySection({
   historyEvidence,
 }: HistorySectionProps) {
   const isFlapping = transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD;
+  const historyComplete = historyEvidence.source === "history" && historyEvidence.completeness === "complete";
+  const historyCoverage =
+    historyEvidence.source === "status-fallback" ? "status-fallback" : historyEvidence.completeness;
 
   return (
     <StatusSection
@@ -233,12 +246,18 @@ export function HistorySection({
             value={
               historyEvidence.source === "status-fallback"
                 ? "Recent fallback"
+                : historyEvidence.completeness === "truncated"
+                  ? "Bounded history"
+                  : historyEvidence.completeness === "unknown"
+                    ? "Coverage unknown"
                 : historyEvidence.state === "stale"
                   ? "Retained history"
                   : "Full history"
             }
             className={
-              historyEvidence.state === "error" || historyEvidence.state === "stale"
+              historyEvidence.state === "error" ||
+              historyEvidence.state === "stale" ||
+              historyEvidence.completeness !== "complete"
                 ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
                 : undefined
             }
@@ -261,13 +280,19 @@ export function HistorySection({
         </>
       }
     >
-      {historyEvidence.state !== "ready" ? (
+      {historyEvidence.state !== "ready" || historyEvidence.completeness !== "complete" ? (
         <div
           role={historyEvidence.state === "error" ? "alert" : "status"}
           className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100"
         >
           <p className="font-medium">
-            {historyEvidence.source === "history" ? "Retained history evidence" : "Partial history evidence"}
+            {historyEvidence.source === "status-fallback"
+              ? "Partial history evidence"
+              : historyEvidence.completeness === "truncated"
+                ? "Bounded history evidence"
+                : historyEvidence.state === "stale"
+                  ? "Retained history evidence"
+                  : "History completeness unknown"}
           </p>
           <p>{historyEvidence.message}</p>
         </div>
@@ -289,7 +314,8 @@ export function HistorySection({
         releaseMetadataState={releaseMetadataState}
         workerVersionEvidence={workerVersionEvidence}
         nowSeconds={nowSeconds}
-        historyComplete={historyEvidence.source === "history"}
+        historyComplete={historyComplete}
+        historyCoverage={historyCoverage}
       />
       {reserveComposition.runBudgetTruncated ? (
         <div className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100">

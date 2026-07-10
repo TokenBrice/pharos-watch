@@ -324,7 +324,8 @@ export async function listRecentStatusTransitions(
   range?: { from?: number | null; to?: number | null },
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<StatusTransition[]> {
-  const bounded = Math.max(1, Math.min(200, Math.floor(limit)));
+  // Admin history fetches one sentinel row beyond its public 200-row page cap.
+  const bounded = Math.max(1, Math.min(201, Math.floor(limit)));
   try {
     let sql = `SELECT id, scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at
          FROM status_transitions

@@ -176,6 +176,8 @@ export interface StatusHistoryResponse {
   probe: StatusProbeSummary;
   discrepancy: StatusDiscrepancy;
   transitions: StatusTransition[];
+  /** Whether additional matching transitions exist beyond this response; null when completeness could not be determined. */
+  hasMore: boolean | null;
   reserveComposition: StatusResponse["reserveComposition"] | null;
 }
 
@@ -352,5 +354,6 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
   probe: StatusProbeSummarySchema,
   discrepancy: StatusDiscrepancySchema,
   transitions: z.array(StatusTransitionSchema),
+  hasMore: z.boolean().nullable().default(null),
   reserveComposition: StatusReserveCompositionSchema.nullable(),
 });

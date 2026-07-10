@@ -198,6 +198,7 @@ describe("StatusResponseSchema reserve composition contract", () => {
       probe: statusResponse().probe,
       discrepancy: statusResponse().discrepancy,
       transitions: [],
+      hasMore: false,
       reserveComposition: reserveComposition(),
     });
 

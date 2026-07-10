@@ -55,7 +55,7 @@ beforeEach(() => {
     refetch: vi.fn().mockResolvedValue(undefined),
   });
   useStatusHistoryMock.mockReturnValue({
-    data: { transitions: [] },
+    data: { transitions: [], hasMore: false },
     isLoading: false,
     refetch: vi.fn().mockResolvedValue(undefined),
   });
@@ -183,7 +183,7 @@ describe("HistoryClient", () => {
   it("retains cached history while exposing a refresh failure", async () => {
     const retainedTransitions = [{ ...status.timeline[0], id: 999 }].filter(Boolean);
     useStatusHistoryMock.mockReturnValue({
-      data: { transitions: retainedTransitions },
+      data: { transitions: retainedTransitions, hasMore: false },
       error: new Error("refresh failed"),
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
@@ -199,5 +199,34 @@ describe("HistoryClient", () => {
     expect(props.allTransitions).toEqual(retainedTransitions);
     expect(props.historyEvidence).toMatchObject({ source: "history", state: "stale" });
     expect(props.historyEvidence.message).toContain("refresh failed");
+  });
+
+  it("propagates truncated and indeterminate history completeness truthfully", async () => {
+    useStatusHistoryMock.mockReturnValue({
+      data: { transitions: [], hasMore: true },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    const view = render(<HistoryClient />);
+    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+    expect(
+      (historySectionPropsMock.mock.calls.at(-1)?.[0] as { historyEvidence: { completeness: string } })
+        .historyEvidence.completeness,
+    ).toBe("truncated");
+
+    useStatusHistoryMock.mockReturnValue({
+      data: { transitions: [], hasMore: null },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    view.rerender(<HistoryClient />);
+    await waitFor(() =>
+      expect(
+        (historySectionPropsMock.mock.calls.at(-1)?.[0] as { historyEvidence: { completeness: string } })
+          .historyEvidence.completeness,
+      ).toBe("unknown"),
+    );
   });
 });
