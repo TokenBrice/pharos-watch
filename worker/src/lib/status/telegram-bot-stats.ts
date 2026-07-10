@@ -11,10 +11,12 @@ import {
 } from "../telegram-usage-analytics";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
+  PENDING_OLD_AGE_ALERT_SEC,
   PENDING_TTL_SEC,
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "../telegram-constants";
+import { EXECUTION_UNKNOWN_SAMPLE_LIMIT } from "../../cron/telegram-pending";
 
 interface TelegramBotAggregateRow {
   total_chats: number | string | null;
@@ -49,6 +51,13 @@ interface TelegramBotPendingDeliveryTelemetryRow {
   deferred_count: number | string | null;
   expired_count: number | string | null;
   near_ttl_count: number | string | null;
+  pending_sending_count?: number | string | null;
+  pending_execution_unknown_count?: number | string | null;
+  fresh_sending_count?: number | string | null;
+  fresh_execution_unknown_count?: number | string | null;
+  oldest_pending_execution_unknown_at?: number | string | null;
+  oldest_fresh_execution_unknown_at?: number | string | null;
+  execution_unknown_sample_count?: number | string | null;
   execution_unknown_count?: number | string | null;
   completed_cleanup_count?: number | string | null;
 }
@@ -264,10 +273,63 @@ export const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
       THEN 1 ELSE 0
     END
   ) AS near_ttl_count
-  ,COALESCE(SUM(CASE WHEN delivery_state = 'sending' THEN 1 ELSE 0 END), 0)
-   + (SELECT COUNT(*)
-        FROM telegram_alert_job_targets
-       WHERE effect_state IN ('sending', 'execution_unknown')) AS execution_unknown_count
+  ,SUM(CASE
+         WHEN delivery_state = 'sending'
+          AND COALESCE(delivery_started_at, created_at) > ?
+         THEN 1 ELSE 0
+       END) AS pending_sending_count
+  ,SUM(CASE
+         WHEN delivery_state = 'sending'
+          AND COALESCE(delivery_started_at, created_at) <= ?
+         THEN 1 ELSE 0
+       END) AS pending_execution_unknown_count
+  ,(SELECT SUM(CASE
+                 WHEN effect_state = 'sending' AND effect_at > ?
+                 THEN 1 ELSE 0
+               END)
+      FROM (
+        SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
+          FROM telegram_alert_job_targets
+         WHERE effect_state IN ('sending', 'execution_unknown')
+         ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
+         LIMIT ?
+      )) AS fresh_sending_count
+  ,(SELECT SUM(CASE
+                 WHEN effect_state = 'execution_unknown'
+                   OR (effect_state = 'sending' AND effect_at <= ?)
+                 THEN 1 ELSE 0
+               END)
+      FROM (
+        SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
+          FROM telegram_alert_job_targets
+         WHERE effect_state IN ('sending', 'execution_unknown')
+         ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
+         LIMIT ?
+      )) AS fresh_execution_unknown_count
+  ,MIN(CASE
+         WHEN delivery_state = 'sending'
+          AND COALESCE(delivery_started_at, created_at) <= ?
+         THEN COALESCE(delivery_started_at, created_at)
+       END) AS oldest_pending_execution_unknown_at
+  ,(SELECT MIN(CASE
+                 WHEN effect_state = 'execution_unknown'
+                   OR (effect_state = 'sending' AND effect_at <= ?)
+                 THEN effect_at
+               END)
+      FROM (
+        SELECT effect_state, COALESCE(effect_started_at, effect_completed_at, created_at) AS effect_at
+          FROM telegram_alert_job_targets
+         WHERE effect_state IN ('sending', 'execution_unknown')
+         ORDER BY COALESCE(effect_started_at, effect_completed_at, created_at) ASC
+         LIMIT ?
+      )) AS oldest_fresh_execution_unknown_at
+  ,(SELECT COUNT(*)
+      FROM (
+        SELECT 1
+          FROM telegram_alert_job_targets
+         WHERE effect_state IN ('sending', 'execution_unknown')
+         LIMIT ?
+      )) AS execution_unknown_sample_count
   ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS completed_cleanup_count
  FROM telegram_pending_alerts`;
 const TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL = `SELECT COUNT(*) AS pending_count
@@ -388,6 +450,16 @@ async function loadTelegramPendingDeliveryTelemetry(
       now,
       PENDING_TTL_SEC,
       now + PENDING_NEAR_TTL_WINDOW_SEC,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      now - PENDING_OLD_AGE_ALERT_SEC,
+      EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+      EXECUTION_UNKNOWN_SAMPLE_LIMIT,
     )
     .first<TelegramBotPendingDeliveryTelemetryRow>();
 }
@@ -486,7 +558,9 @@ export function mapTelegramBotStats(input: {
   const telemetryErrors = input.telemetryErrors ?? {};
   const now = input.now ?? Math.floor(Date.now() / 1000);
 
-  const pendingCount = coerceCount(pendingDeliveries?.pending_count ?? pendingDeliveryTelemetry?.pending_count);
+  const pendingCount = pendingDeliveryTelemetry
+    ? coerceCount(pendingDeliveryTelemetry.due_count) + coerceCount(pendingDeliveryTelemetry.deferred_count)
+    : coerceCount(pendingDeliveries?.pending_count);
   const oldestCreatedAt = coerceNullableTimestamp(pendingDeliveryTelemetry?.oldest_created_at);
   const oldestDueCreatedAt = coerceNullableTimestamp(pendingDeliveryTelemetry?.oldest_due_created_at);
   const retryErrorClassCounts = retryErrorClasses?.reduce<Record<string, number>>((acc, row) => {
@@ -554,6 +628,21 @@ export function mapTelegramBotStats(input: {
   }
 
   if (pendingDeliveryTelemetry) {
+    const pendingExecutionUnknown = coerceCount(pendingDeliveryTelemetry.pending_execution_unknown_count);
+    const freshExecutionUnknown = coerceCount(pendingDeliveryTelemetry.fresh_execution_unknown_count);
+    const sending = coerceCount(pendingDeliveryTelemetry.pending_sending_count)
+      + coerceCount(pendingDeliveryTelemetry.fresh_sending_count);
+    const executionUnknown = pendingExecutionUnknown + freshExecutionUnknown;
+    const oldestPendingExecutionUnknownAt = coerceNullableTimestamp(
+      pendingDeliveryTelemetry.oldest_pending_execution_unknown_at,
+    );
+    const oldestFreshExecutionUnknownAt = coerceNullableTimestamp(
+      pendingDeliveryTelemetry.oldest_fresh_execution_unknown_at,
+    );
+    const oldestExecutionUnknownAt = [oldestPendingExecutionUnknownAt, oldestFreshExecutionUnknownAt]
+      .filter((value): value is number => value != null)
+      .sort((a, b) => a - b)[0] ?? null;
+    const sentCleanup = coerceCount(pendingDeliveryTelemetry.completed_cleanup_count);
     stats.oldestPendingDeliveryAgeSec =
       pendingCount > 0 && oldestCreatedAt != null ? Math.max(0, now - oldestCreatedAt) : null;
     stats.oldestDuePendingAgeSec = oldestDueCreatedAt != null ? Math.max(0, now - oldestDueCreatedAt) : null;
@@ -561,12 +650,23 @@ export function mapTelegramBotStats(input: {
       coerceCount(pendingDeliveryTelemetry.due_count) + coerceCount(pendingDeliveryTelemetry.deferred_count),
     );
     stats.pendingDeliveryBacklog = {
+      claimable: coerceCount(pendingDeliveryTelemetry.due_count),
       due: coerceCount(pendingDeliveryTelemetry.due_count),
       deferred: coerceCount(pendingDeliveryTelemetry.deferred_count),
       expired: coerceCount(pendingDeliveryTelemetry.expired_count),
       nearTtl: coerceCount(pendingDeliveryTelemetry.near_ttl_count),
-      executionUnknown: coerceCount(pendingDeliveryTelemetry.execution_unknown_count),
-      completedPendingCleanup: coerceCount(pendingDeliveryTelemetry.completed_cleanup_count),
+      sending,
+      executionUnknown,
+      pendingExecutionUnknown,
+      freshExecutionUnknown,
+      oldestExecutionUnknownAgeSec: oldestExecutionUnknownAt == null
+        ? null
+        : Math.max(0, now - oldestExecutionUnknownAt),
+      executionUnknownSampleLimit: EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+      executionUnknownLowerBound:
+        coerceCount(pendingDeliveryTelemetry.execution_unknown_sample_count) >= EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+      sentCleanup,
+      completedPendingCleanup: sentCleanup,
     };
   }
   if (webhookEffectUnknown) {

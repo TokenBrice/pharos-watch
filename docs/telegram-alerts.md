@@ -763,7 +763,7 @@ Additional Telegram bot status metrics now include:
 
 - `pendingDeliveries`
 - `oldestPendingDeliveryAgeSec`
-- `pendingDeliveryBacklog` (`due`, `deferred`, `expired`, `nearTtl`, `executionUnknown`; the last count includes pending and fresh target effects)
+- `pendingDeliveryBacklog` (`claimable`/`due`, `deferred`, `sending`, `executionUnknown`, `sentCleanup`, `expired`, and `nearTtl`). Recent `sending` work stays separate; `executionUnknown` contains explicit fresh-target unknown outcomes plus pending/fresh sends older than 15 minutes. Source-split counts, oldest unknown age, and bounded-sample saturation metadata are included for reconciliation.
 - `retryErrorClassCounts`
 - `customPreferenceChats`
 - `quietHoursEnabledChats`
@@ -774,11 +774,13 @@ Additional Telegram bot status metrics now include:
 
 ### Alerting on degraded delivery
 
-`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reuses the same-slot pending-capacity snapshot and safety-source assessment when dispatch produced them, falls back to live reads when they are unavailable, reads fresh dispatch metadata, and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any degraded-delivery condition holds; each condition emits a single "recovered" alert and clears its cache flag when it clears:
+`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reuses the same-slot pending-capacity snapshot and safety-source assessment when dispatch produced them, falls back to live reads when they are unavailable, reads fresh dispatch metadata, and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any degraded-delivery condition holds; each condition emits a single "recovered" alert and clears its cache flag when it clears. Capacity reads return an explicit `available` or `unknown` result. An unknown D1 read degrades watchdog telemetry and preserves the existing onset/alert keys unchanged; it never fabricates an empty queue or emits a recovery:
 
-- Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, or any row is inside the 15-minute near-TTL window. Count/age/drain breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
+- Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, any row is inside the 15-minute near-TTL window, or execution-unknown work is at least 15 minutes old. Count/age/drain/execution-unknown breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
 - `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
-- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive runs (cache key `telegram:degradation:zero-send-streak`).
+- The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive distinct runs (cache key `telegram:degradation:zero-send-streak`). The cached JSON stores both the streak and the last evaluated `cron_runs.id`, so repeated watchdog evaluation of one row cannot advance the streak; legacy integer values remain readable during rollout.
+
+`GET /api/health.telegramSummary` uses the same lifecycle vocabulary and returns `pendingDeliveries: null` with `pendingDeliveryLifecycleStatus: "unknown"` if the capacity query fails. `/api/status.telegramBot.pendingDeliveries` counts only active claimable plus deferred rows rather than expired or in-flight cleanup states.
 
 The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered`, `recovered`, and `alertSent` flags per condition for admin inspection via `cron_runs`.
 

@@ -17,16 +17,23 @@ describe("Telegram delivery telemetry SQL", () => {
           delivery_state TEXT,
           created_at INTEGER,
           expires_at INTEGER,
-          not_before_at INTEGER
+          not_before_at INTEGER,
+          delivery_started_at INTEGER
         );
-        CREATE TABLE telegram_alert_job_targets (effect_state TEXT NOT NULL);
-        INSERT INTO telegram_alert_job_targets (effect_state) VALUES ('execution_unknown');
+        CREATE TABLE telegram_alert_job_targets (
+          effect_state TEXT NOT NULL,
+          created_at INTEGER,
+          effect_started_at INTEGER,
+          effect_completed_at INTEGER
+        );
+        INSERT INTO telegram_alert_job_targets (effect_state, created_at)
+        VALUES ('execution_unknown', 100);
       `);
       const bindCount = TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL.match(/\?/g)?.length ?? 0;
       const row = sqlite
         .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
-        .get(...new Array(bindCount).fill(0)) as { execution_unknown_count: number };
-      expect(row.execution_unknown_count).toBe(1);
+        .get(...new Array(bindCount).fill(5_001)) as { fresh_execution_unknown_count: number };
+      expect(row.fresh_execution_unknown_count).toBe(1);
     } finally {
       sqlite.close();
     }
@@ -67,7 +74,13 @@ describe("mapTelegramBotStats", () => {
         deferred_count: "3",
         expired_count: "1",
         near_ttl_count: "2",
-        execution_unknown_count: "2",
+        pending_sending_count: "1",
+        pending_execution_unknown_count: "1",
+        fresh_sending_count: "2",
+        fresh_execution_unknown_count: "1",
+        oldest_pending_execution_unknown_at: "1710000010",
+        oldest_fresh_execution_unknown_at: "1710000020",
+        execution_unknown_sample_count: "2",
         completed_cleanup_count: "1",
       },
       webhookEffectUnknown: { pending_count: "3" },
@@ -120,7 +133,7 @@ describe("mapTelegramBotStats", () => {
       activePresetFollowers: 2,
       avgSubscriptionsPerSubscribedChat: 3.5,
       pendingDisambiguations: 11,
-      pendingDeliveries: 12,
+      pendingDeliveries: 11,
       quality: {
         status: "complete",
         unavailableFields: [],
@@ -181,11 +194,19 @@ describe("mapTelegramBotStats", () => {
         server_error: 2,
       },
       pendingDeliveryBacklog: {
+        claimable: 8,
         due: 8,
         deferred: 3,
         expired: 1,
         nearTtl: 2,
+        sending: 3,
         executionUnknown: 2,
+        pendingExecutionUnknown: 1,
+        freshExecutionUnknown: 1,
+        oldestExecutionUnknownAgeSec: 90,
+        executionUnknownSampleLimit: 5001,
+        executionUnknownLowerBound: false,
+        sentCleanup: 1,
         completedPendingCleanup: 1,
       },
       webhookEffectUnknown: 3,
@@ -328,11 +349,19 @@ describe("getTelegramBotStats", () => {
     expect(result.oldestDuePendingAgeSec).toBe(30);
     expect(result.estimatedDrainTimeSec).toBe(300);
     expect(result.pendingDeliveryBacklog).toEqual({
+      claimable: 1,
       due: 1,
       deferred: 1,
       expired: 0,
       nearTtl: 0,
+      sending: 0,
       executionUnknown: 0,
+      pendingExecutionUnknown: 0,
+      freshExecutionUnknown: 0,
+      oldestExecutionUnknownAgeSec: null,
+      executionUnknownSampleLimit: 5001,
+      executionUnknownLowerBound: false,
+      sentCleanup: 0,
       completedPendingCleanup: 0,
     });
     expect(result.webhookEffectUnknown).toBe(1);

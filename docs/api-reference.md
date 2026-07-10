@@ -2022,6 +2022,16 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
   "telegramSummary": {
     "totalChats": 142,
     "pendingDeliveries": 0,
+    "pendingDeliveryLifecycleStatus": "available",
+    "pendingDeliveryBacklog": {
+      "claimable": 0,
+      "due": 0,
+      "deferred": 0,
+      "sending": 0,
+      "executionUnknown": 0,
+      "sentCleanup": 0,
+      "expired": 0
+    },
     "lastDispatchAt": 1771856400,
     "lastDispatchStatus": "ok",
     "safetyAlertSourceState": "ok",
@@ -2046,7 +2056,9 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `blacklist.missingRatio`                      | `number`                                                                  | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `telegramSummary`                             | `TelegramHealthSummary \| null`                                           | Lightweight Telegram delivery health summary. `null` when the Telegram tables are unavailable or not yet migrated                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `telegramSummary.totalChats`                  | `number`                                                                  | Total subscribed Telegram chats currently stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `telegramSummary.pendingDeliveries`           | `number`                                                                  | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `telegramSummary.pendingDeliveries`           | `number \| null`                                                          | Active claimable plus deferred Telegram deliveries. `null` when lifecycle capacity is unavailable; it never reports a fabricated zero on query failure.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `telegramSummary.pendingDeliveryLifecycleStatus` | `"available" \| "unknown"`                                           | Whether the lifecycle counts are authoritative for this response. An `unknown` result also adds `telegram-delivery-lifecycle:unknown` to `warnings`.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `telegramSummary.pendingDeliveryBacklog`      | `TelegramPendingDeliveryBacklog`                                          | Present when lifecycle data is available. Separates claimable/due, deferred, recent sending, execution-unknown, sent-cleanup, expired, and near-TTL work, with source splits and bounded-sample saturation metadata for execution-unknown rows.                                                                                                                                                                                                                                                                                                                           |
 | `telegramSummary.lastDispatchAt`              | `number \| null`                                                          | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `telegramSummary.lastDispatchStatus`          | `string \| null`                                                          | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `telegramSummary.safetyAlertSourceState`      | `"ok" \| "missing" \| "corrupt" \| "stale" \| "wrong-generation" \| null` | Live safety-alert source-cache state from the most recent Telegram dispatch run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -3905,9 +3917,17 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "activePresetFollowers": 8,
     "avgSubscriptionsPerSubscribedChat": 4.9,
     "pendingDisambiguations": 1,
-    "pendingDeliveries": 6,
+    "pendingDeliveries": 5,
     "oldestPendingDeliveryAgeSec": 240,
-    "pendingDeliveryBacklog": { "due": 4, "deferred": 1, "expired": 1 },
+    "pendingDeliveryBacklog": {
+      "claimable": 4,
+      "due": 4,
+      "deferred": 1,
+      "sending": 0,
+      "executionUnknown": 0,
+      "sentCleanup": 0,
+      "expired": 1
+    },
     "retryErrorClassCounts": { "rate_limit": 2, "server_error": 1 },
     "lastSubscriberActivityAt": 1771856420,
     "customPreferenceChats": 47,

@@ -47,6 +47,12 @@ interface FakeDbConfig {
   pendingCount?: number;
   oldestPendingAgeSec?: number | null;
   nearTtl?: number;
+  sending?: number;
+  pendingExecutionUnknown?: number;
+  freshExecutionUnknown?: number;
+  oldestExecutionUnknownAgeSec?: number | null;
+  capacityError?: boolean;
+  dispatchRunId?: number;
   dispatchMetadata?: Record<string, unknown> | null;
 }
 
@@ -69,12 +75,22 @@ function makePendingCapacityRow(config: FakeDbConfig = {}) {
     near_ttl: config.nearTtl ?? 0,
     oldest_pending_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
     oldest_due_created_at: oldestPendingAgeSec == null ? null : nowSec - oldestPendingAgeSec,
+    pending_sending: config.sending ?? 0,
+    pending_execution_unknown: config.pendingExecutionUnknown ?? 0,
+    sent_cleanup: 0,
+    oldest_pending_execution_unknown_at: config.oldestExecutionUnknownAgeSec == null
+      ? null
+      : nowSec - config.oldestExecutionUnknownAgeSec,
+    fresh_sending: 0,
+    fresh_execution_unknown: config.freshExecutionUnknown ?? 0,
+    oldest_fresh_execution_unknown_at: null,
+    fresh_uncertain_sample_count: config.freshExecutionUnknown ?? 0,
   };
 }
 
-function makeDispatchMetadataRow(meta: Record<string, unknown> | null) {
+function makeDispatchMetadataRow(meta: Record<string, unknown> | null, id = 1) {
   if (meta === null) return null;
-  return { metadata: JSON.stringify(meta) };
+  return { id, metadata: JSON.stringify(meta) };
 }
 
 function makeDb(config: FakeDbConfig = {}): D1Database {
@@ -82,10 +98,11 @@ function makeDb(config: FakeDbConfig = {}): D1Database {
     const bind = vi.fn(() => statement);
     const first = vi.fn(async () => {
       if (isPendingCapacityQuery(sql)) {
+        if (config.capacityError) throw new Error("capacity unavailable");
         return makePendingCapacityRow(config);
       }
       if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
-        const row = makeDispatchMetadataRow(config.dispatchMetadata ?? null);
+        const row = makeDispatchMetadataRow(config.dispatchMetadata ?? null, config.dispatchRunId ?? 1);
         return row;
       }
       return null;
@@ -123,6 +140,55 @@ afterEach(() => {
 });
 
 describe("runTelegramDegradationWatchdog · pending backlog", () => {
+  it("preserves an active incident when capacity is unavailable", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 3600), updatedAt: nowSec - 3600 });
+    store.values.set(WATCHDOG_KEYS.pendingAlerted, { value: "1", updatedAt: nowSec - 1800 });
+
+    const result = await runTelegramDegradationWatchdog(
+      makeDb({ capacityError: true }),
+      "https://hooks.example/x",
+    );
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.status).toBe("degraded");
+    expect(meta.pendingBacklog.availability).toBe("unknown");
+    expect(meta.pendingBacklog.detail).toContain("incident state preserved");
+    expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
+    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(true);
+    expect(mockSendAlert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "Telegram pending backlog recovered",
+      expect.anything(),
+    );
+  });
+
+  it("treats aged execution-unknown work as delivery risk", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
+      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
+    });
+
+    const result = await runTelegramDegradationWatchdog(makeDb({
+      pendingExecutionUnknown: 1,
+      oldestExecutionUnknownAgeSec: 1800,
+    }), "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.executionUnknown).toBe(1);
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      "https://hooks.example/x",
+      "Telegram pending delivery risk",
+      expect.stringContaining("executionUnknown=1"),
+    );
+  });
+
   it("uses a preloaded pending capacity snapshot instead of rereading the queue", async () => {
     const store = installCacheStore();
     const prepare = vi.fn((sql: string) => {
@@ -152,6 +218,14 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
           deferred: 0,
           expired: 0,
           nearTtl: 0,
+          sending: 0,
+          pendingExecutionUnknown: 0,
+          freshExecutionUnknown: 0,
+          executionUnknown: 0,
+          sentCleanup: 0,
+          oldestExecutionUnknownAgeSec: null,
+          executionUnknownSampleLimit: 5_001,
+          executionUnknownLowerBound: false,
           oldestPendingAgeSec: 60,
           oldestDuePendingAgeSec: 60,
           estimatedDrainTimeSec: 300,
@@ -434,6 +508,30 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 });
 
 describe("runTelegramDegradationWatchdog · zero-send streak", () => {
+  it("does not increment the same dispatch cron run twice", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    const db = makeDb({
+      dispatchRunId: 77,
+      dispatchMetadata: {
+        eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0, reserve: 0 },
+        messagesSent: 0,
+        freshCandidateChats: 1,
+      },
+    });
+
+    await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const second = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(second.metadata ?? "{}");
+    const state = JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}");
+
+    expect(state).toEqual({ streak: 1, lastRunIdentity: "77" });
+    expect(meta.zeroSend.streak).toBe(1);
+    expect(meta.zeroSend.evaluated).toBe(false);
+    expect(meta.zeroSend.runIdentity).toBe("77");
+  });
+
   it("does not alert before reaching streak threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
@@ -619,6 +717,7 @@ describe("runTelegramDegradationWatchdog · abort", () => {
 
 describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
   interface CronRunRow {
+    id?: number;
     status: "ok" | "degraded" | "error" | "skipped_locked";
     metadata: Record<string, unknown> | null;
   }
@@ -639,7 +738,7 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
             : null;
           const row = rows.find((r) => (allowed == null ? true : allowed.has(r.status)));
           if (!row) return null;
-          return { metadata: row.metadata == null ? null : JSON.stringify(row.metadata) };
+          return { id: row.id ?? 1, metadata: row.metadata == null ? null : JSON.stringify(row.metadata) };
         }
         return null;
       });
@@ -670,7 +769,10 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
 
     // The completed run sent messages, so the streak resets.
     expect(meta.zeroSend.streak).toBe(0);
-    expect(store.values.has(WATCHDOG_KEYS.zeroSendStreak)).toBe(false);
+    expect(JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}")).toEqual({
+      streak: 0,
+      lastRunIdentity: "1",
+    });
   });
 
   it("preserves the streak when every recent run aborted (no metadata)", async () => {

@@ -9,11 +9,20 @@ interface TelegramBotTopStablecoin {
 }
 
 export interface TelegramPendingDeliveryBacklog {
+  claimable?: number;
   due: number;
   deferred: number;
   expired: number;
   nearTtl?: number;
+  sending?: number;
   executionUnknown?: number;
+  pendingExecutionUnknown?: number;
+  freshExecutionUnknown?: number;
+  oldestExecutionUnknownAgeSec?: number | null;
+  executionUnknownSampleLimit?: number;
+  executionUnknownLowerBound?: boolean;
+  sentCleanup?: number;
+  /** @deprecated Use `sentCleanup`. */
   completedPendingCleanup?: number;
 }
 

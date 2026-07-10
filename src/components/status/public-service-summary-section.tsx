@@ -48,7 +48,7 @@ export function PublicServiceSummarySection({
               status="degraded"
             />
           )}
-          {telegramSummary && telegramSummary.pendingDeliveries > 0 && (
+          {telegramSummary && (telegramSummary.pendingDeliveries ?? 0) > 0 && (
             <StatusSummaryBadge
               label="Alert Queue"
               value={String(telegramSummary.pendingDeliveries)}
@@ -151,11 +151,11 @@ export function PublicServiceSummarySection({
         <PublicSignalCard
           title="Telegram Bot Health"
           badges={
-            telegramSummary.pendingDeliveries > 0
+            (telegramSummary.pendingDeliveries ?? 0) > 0
             || telegramSummary.safetyAlertsSuppressed
             || (telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok") ? (
               <div className="flex flex-wrap gap-2">
-                {telegramSummary.pendingDeliveries > 0 && (
+                {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
                   <StatusSummaryBadge
                     label="Pending"
                     value={String(telegramSummary.pendingDeliveries)}
@@ -194,7 +194,7 @@ export function PublicServiceSummarySection({
               </div>
             </div>
           </div>
-          {telegramSummary.pendingDeliveries > 0 && (
+          {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
             <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
               {telegramSummary.pendingDeliveries} alert{telegramSummary.pendingDeliveries !== 1 ? "s" : ""} pending delivery
             </div>

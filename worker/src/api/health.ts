@@ -7,6 +7,7 @@ import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { CACHE_PROFILES } from "../lib/constants";
 import { logWorkerEvent } from "../lib/structured-log";
+import { readPendingCapacity } from "../cron/telegram-pending";
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -16,9 +17,9 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
   let telegramSummary: TelegramHealthSummary | null = null;
   if (assessment.dbHealthy) {
     try {
-      const [chatCount, pendingCount, lastDispatch] = await Promise.all([
+      const [chatCount, pendingCapacity, lastDispatch] = await Promise.all([
         db.prepare("SELECT COUNT(*) AS n FROM telegram_subscribers").first<{ n: number }>(),
-        db.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").first<{ n: number }>(),
+        readPendingCapacity(db, now),
         db
           .prepare(
             "SELECT started_at, status, metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",
@@ -42,7 +43,24 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
       }
       telegramSummary = {
         totalChats: chatCount?.n ?? 0,
-        pendingDeliveries: pendingCount?.n ?? 0,
+        pendingDeliveries: pendingCapacity.status === "available" ? pendingCapacity.value.active : null,
+        pendingDeliveryLifecycleStatus: pendingCapacity.status,
+        pendingDeliveryBacklog: pendingCapacity.status === "available" ? {
+          claimable: pendingCapacity.value.due,
+          due: pendingCapacity.value.due,
+          deferred: pendingCapacity.value.deferred,
+          expired: pendingCapacity.value.expired,
+          nearTtl: pendingCapacity.value.nearTtl,
+          sending: pendingCapacity.value.sending,
+          executionUnknown: pendingCapacity.value.executionUnknown,
+          pendingExecutionUnknown: pendingCapacity.value.pendingExecutionUnknown,
+          freshExecutionUnknown: pendingCapacity.value.freshExecutionUnknown,
+          oldestExecutionUnknownAgeSec: pendingCapacity.value.oldestExecutionUnknownAgeSec,
+          executionUnknownSampleLimit: pendingCapacity.value.executionUnknownSampleLimit,
+          executionUnknownLowerBound: pendingCapacity.value.executionUnknownLowerBound,
+          sentCleanup: pendingCapacity.value.sentCleanup,
+          completedPendingCleanup: pendingCapacity.value.sentCleanup,
+        } : undefined,
         lastDispatchAt: lastDispatch?.started_at ?? null,
         lastDispatchStatus: lastDispatch?.status ?? null,
         safetyAlertSourceState: dispatchMeta?.safetyAlertSourceState ?? null,
@@ -54,6 +72,9 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         reserveAlertsSuppressed: dispatchMeta?.reserveAlertsSuppressed ?? false,
         reserveAlertSourceGeneration: dispatchMeta?.reserveAlertSourceGeneration ?? null,
       };
+      if (pendingCapacity.status === "unknown") {
+        assessment.warnings.push("telegram-delivery-lifecycle:unknown");
+      }
       if (dispatchMeta?.safetyAlertsSuppressed) {
         assessment.warnings.push(
           `telegram-safety-alerts-suppressed:${dispatchMeta.safetyAlertSourceState ?? "missing"}`,
@@ -79,7 +100,10 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
   }
 
   const body: HealthResponse = {
-    status: assessment.overallStatus,
+    status: telegramSummary?.pendingDeliveryLifecycleStatus === "unknown"
+      && assessment.overallStatus === "healthy"
+      ? "degraded"
+      : assessment.overallStatus,
     timestamp: now,
     warnings: assessment.warnings,
     caches: assessment.caches,

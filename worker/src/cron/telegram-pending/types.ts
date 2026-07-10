@@ -78,12 +78,24 @@ export interface PendingCapacitySnapshot {
   deferred: number;
   expired: number;
   nearTtl: number;
+  sending: number;
+  pendingExecutionUnknown: number;
+  freshExecutionUnknown: number;
+  executionUnknown: number;
+  sentCleanup: number;
+  oldestExecutionUnknownAgeSec: number | null;
+  executionUnknownSampleLimit: number;
+  executionUnknownLowerBound: boolean;
   oldestPendingAgeSec: number | null;
   oldestDuePendingAgeSec: number | null;
   estimatedDrainTimeSec: number;
   drainBudgetPerRun: number;
   dispatchIntervalSec: number;
 }
+
+export type PendingCapacityReadResult =
+  | { status: "available"; value: PendingCapacitySnapshot }
+  | { status: "unknown"; errorClass: "query_failed" };
 
 export interface PendingRetryUpdate {
   id: number;

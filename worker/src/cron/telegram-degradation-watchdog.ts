@@ -14,7 +14,11 @@ import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
 } from "../lib/telegram-constants";
-import { readPendingCapacitySnapshot, type PendingCapacitySnapshot } from "./telegram-pending";
+import {
+  readPendingCapacity,
+  type PendingCapacityReadResult,
+  type PendingCapacitySnapshot,
+} from "./telegram-pending";
 import { throwIfAborted } from "../lib/abort";
 
 /**
@@ -46,13 +50,25 @@ interface WatchdogAlertOutcome {
 
 interface WatchdogResult {
   pendingBacklog: WatchdogAlertOutcome & {
+    availability: "available" | "unknown";
     count: number | null;
     oldestAgeSec: number | null;
     estimatedDrainTimeSec: number | null;
     nearTtl: number | null;
+    sending: number | null;
+    executionUnknown: number | null;
+    pendingExecutionUnknown: number | null;
+    freshExecutionUnknown: number | null;
+    oldestExecutionUnknownAgeSec: number | null;
+    sentCleanup: number | null;
+    executionUnknownLowerBound: boolean | null;
   };
   safetySource: WatchdogAlertOutcome & { state: string | null };
-  zeroSend: WatchdogAlertOutcome & { streak: number };
+  zeroSend: WatchdogAlertOutcome & {
+    streak: number;
+    evaluated: boolean;
+    runIdentity: string | null;
+  };
 }
 
 export interface TelegramDegradationWatchdogOptions {
@@ -90,31 +106,22 @@ async function clearEpisodeIfAlerted(
   return { recovered: true, alertSent };
 }
 
-async function readPendingCapacity(db: D1Database, nowSec: number): Promise<PendingCapacitySnapshot | null> {
-  try {
-    return await readPendingCapacitySnapshot(db, nowSec);
-  } catch (err) {
-    logTelegramEvent({
-      level: "warn",
-      message: "pending capacity unavailable",
-      action: "read-pending-capacity",
-      module: "telegram-degradation-watchdog",
-    });
-    return null;
-  }
-}
-
 async function readLatestDispatchMetadata(db: D1Database) {
   try {
     // Exclude aborted/locked runs (error, skipped_locked) so a canceled dispatch
     // does not falsely reset the zero-send streak (post-release-review E.6).
     const row = await db
       .prepare(
-        "SELECT metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' AND status IN ('ok', 'degraded') ORDER BY started_at DESC LIMIT 1",
+        "SELECT id, metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' AND status IN ('ok', 'degraded') ORDER BY started_at DESC, id DESC LIMIT 1",
       )
-      .first<{ metadata: string | null }>();
+      .first<{ id: number | string; metadata: string | null }>();
     if (!row?.metadata) return null;
-    return parseTelegramDispatchCronMetadata(JSON.parse(row.metadata));
+    const metadata = parseTelegramDispatchCronMetadata(JSON.parse(row.metadata));
+    if (!metadata) return null;
+    return {
+      runIdentity: String(row.id),
+      metadata,
+    };
   } catch (err) {
     logTelegramEvent({
       level: "warn",
@@ -133,11 +140,34 @@ async function readCachedTimestamp(db: D1Database, key: string): Promise<number 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function readCachedInteger(db: D1Database, key: string): Promise<number> {
-  const cached = await getCache(db, key);
-  if (!cached) return 0;
-  const parsed = Number(cached.value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+interface ZeroSendState {
+  streak: number;
+  lastRunIdentity: string | null;
+}
+
+async function readZeroSendState(db: D1Database): Promise<ZeroSendState> {
+  const cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
+  if (!cached) return { streak: 0, lastRunIdentity: null };
+  try {
+    const parsed = JSON.parse(cached.value) as unknown;
+    if (typeof parsed !== "object" || parsed == null) throw new Error("legacy zero-send state");
+    const state = parsed as Partial<ZeroSendState>;
+    const streak = Number(state.streak);
+    return {
+      streak: Number.isFinite(streak) && streak > 0 ? Math.floor(streak) : 0,
+      lastRunIdentity: typeof state.lastRunIdentity === "string" ? state.lastRunIdentity : null,
+    };
+  } catch {
+    const legacyStreak = Number(cached.value);
+    return {
+      streak: Number.isFinite(legacyStreak) && legacyStreak > 0 ? Math.floor(legacyStreak) : 0,
+      lastRunIdentity: null,
+    };
+  }
+}
+
+async function writeZeroSendState(db: D1Database, state: ZeroSendState): Promise<void> {
+  await setCache(db, WATCHDOG_KEYS.zeroSendStreak, JSON.stringify(state));
 }
 
 async function readCachedFlag(db: D1Database, key: string): Promise<boolean> {
@@ -152,7 +182,10 @@ async function evaluatePendingBacklog(
   preloadedCapacity?: PendingCapacitySnapshot | null,
   alertBrokerMode?: string,
 ): Promise<WatchdogResult["pendingBacklog"]> {
-  const capacity = preloadedCapacity ?? await readPendingCapacity(db, nowSec);
+  const capacityRead: PendingCapacityReadResult = preloadedCapacity
+    ? { status: "available", value: preloadedCapacity }
+    : await readPendingCapacity(db, nowSec);
+  const capacity = capacityRead.status === "available" ? capacityRead.value : null;
   const count = capacity?.active ?? null;
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.pendingSince);
   const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.pendingAlerted);
@@ -161,13 +194,22 @@ async function evaluatePendingBacklog(
   const nearTtl = capacity?.nearTtl ?? null;
   const outcome: WatchdogResult["pendingBacklog"] = {
     ...emptyOutcome(),
+    availability: capacityRead.status,
     count,
     oldestAgeSec,
     estimatedDrainTimeSec,
     nearTtl,
+    sending: capacity?.sending ?? null,
+    executionUnknown: capacity?.executionUnknown ?? null,
+    pendingExecutionUnknown: capacity?.pendingExecutionUnknown ?? null,
+    freshExecutionUnknown: capacity?.freshExecutionUnknown ?? null,
+    oldestExecutionUnknownAgeSec: capacity?.oldestExecutionUnknownAgeSec ?? null,
+    sentCleanup: capacity?.sentCleanup ?? null,
+    executionUnknownLowerBound: capacity?.executionUnknownLowerBound ?? null,
   };
 
   if (!capacity || count == null) {
+    outcome.detail = "capacity unavailable; existing incident state preserved";
     return outcome;
   }
 
@@ -175,12 +217,17 @@ async function evaluatePendingBacklog(
   const oldestBreached = (oldestAgeSec ?? 0) >= PENDING_OLD_AGE_ALERT_SEC;
   const drainBreached = (estimatedDrainTimeSec ?? 0) >= PENDING_DRAIN_TIME_ALERT_SEC;
   const nearTtlBreached = (nearTtl ?? 0) > 0;
-  const breached = countBreached || oldestBreached || drainBreached || nearTtlBreached;
+  const executionUnknownBreached = capacity.executionUnknown > 0
+    && (capacity.oldestExecutionUnknownAgeSec ?? 0) >= PENDING_OLD_AGE_ALERT_SEC;
+  const breached = countBreached || oldestBreached || drainBreached || nearTtlBreached || executionUnknownBreached;
   const breachReasons = [
     countBreached ? `pending=${count}>${PENDING_BACKLOG_THRESHOLD}` : null,
     oldestBreached ? `oldestAgeSec=${oldestAgeSec}>=${PENDING_OLD_AGE_ALERT_SEC}` : null,
     drainBreached ? `estimatedDrainTimeSec=${estimatedDrainTimeSec}>=${PENDING_DRAIN_TIME_ALERT_SEC}` : null,
     nearTtlBreached ? `nearTtl=${nearTtl} within ${PENDING_NEAR_TTL_WINDOW_SEC}s of expiry` : null,
+    executionUnknownBreached
+      ? `executionUnknown=${capacity.executionUnknown}, oldestExecutionUnknownAgeSec=${capacity.oldestExecutionUnknownAgeSec}`
+      : null,
   ].filter((reason): reason is string => reason != null);
 
   if (breached) {
@@ -203,7 +250,19 @@ async function evaluatePendingBacklog(
           recoveryTitle: "Telegram pending backlog recovered",
           recoveryMessage: `pending=${count} (cleared after sustained breach)`,
           fingerprint: { condition: "telegram-pending-delivery-risk" },
-          metadata: { count, oldestAgeSec, estimatedDrainTimeSec, nearTtl },
+          metadata: {
+            count,
+            oldestAgeSec,
+            estimatedDrainTimeSec,
+            nearTtl,
+            sending: capacity.sending,
+            executionUnknown: capacity.executionUnknown,
+            pendingExecutionUnknown: capacity.pendingExecutionUnknown,
+            freshExecutionUnknown: capacity.freshExecutionUnknown,
+            oldestExecutionUnknownAgeSec: capacity.oldestExecutionUnknownAgeSec,
+            sentCleanup: capacity.sentCleanup,
+            executionUnknownLowerBound: capacity.executionUnknownLowerBound,
+          },
           webhookUrl: alertWebhookUrl,
           brokerMode: alertBrokerMode,
         });
@@ -340,14 +399,28 @@ async function evaluateZeroSendStreak(
   alertWebhookUrl: string | null,
   alertBrokerMode?: string,
 ): Promise<WatchdogResult["zeroSend"]> {
-  const metadata = await readLatestDispatchMetadata(db);
-  const priorStreak = await readCachedInteger(db, WATCHDOG_KEYS.zeroSendStreak);
+  const latestRun = await readLatestDispatchMetadata(db);
+  const priorState = await readZeroSendState(db);
+  const priorStreak = priorState.streak;
   const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.zeroSendAlerted);
-  const outcome: WatchdogResult["zeroSend"] = { ...emptyOutcome(), streak: priorStreak };
+  const outcome: WatchdogResult["zeroSend"] = {
+    ...emptyOutcome(),
+    streak: priorStreak,
+    evaluated: false,
+    runIdentity: latestRun?.runIdentity ?? null,
+  };
 
-  if (!metadata) {
+  if (!latestRun) {
+    outcome.detail = "dispatch metadata unavailable; streak preserved";
     return outcome;
   }
+  if (priorState.lastRunIdentity === latestRun.runIdentity) {
+    outcome.detail = `run=${latestRun.runIdentity} already evaluated`;
+    return outcome;
+  }
+
+  outcome.evaluated = true;
+  const metadata = latestRun.metadata;
 
   const events = sumEvents(metadata);
   const messagesSent = metadata.messagesSent ?? 0;
@@ -356,7 +429,7 @@ async function evaluateZeroSendStreak(
 
   if (zeroSendRun) {
     const nextStreak = priorStreak + 1;
-    await setCache(db, WATCHDOG_KEYS.zeroSendStreak, String(nextStreak));
+    await writeZeroSendState(db, { streak: nextStreak, lastRunIdentity: latestRun.runIdentity });
     outcome.streak = nextStreak;
     if (nextStreak >= ZERO_SEND_STREAK_THRESHOLD) {
       outcome.triggered = true;
@@ -371,7 +444,13 @@ async function evaluateZeroSendStreak(
           recoveryTitle: "Telegram dispatch zero-send streak recovered",
           recoveryMessage: `messagesSent=${messagesSent}, eventsDetected=${events}`,
           fingerprint: { condition: "telegram-zero-send-with-events" },
-          metadata: { events, freshCandidateChats, messagesSent, streak: nextStreak },
+          metadata: {
+            events,
+            freshCandidateChats,
+            messagesSent,
+            streak: nextStreak,
+            dispatchRunIdentity: latestRun.runIdentity,
+          },
           webhookUrl: alertWebhookUrl,
           brokerMode: alertBrokerMode,
         });
@@ -413,9 +492,11 @@ async function evaluateZeroSendStreak(
   }
 
   if (priorStreak > 0) {
-    await deleteCache(db, WATCHDOG_KEYS.zeroSendStreak);
+    await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
     outcome.streak = 0;
     outcome.detail = `streak reset (priorStreak=${priorStreak})`;
+  } else {
+    await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
   }
   return outcome;
 }
@@ -447,7 +528,10 @@ export async function runTelegramDegradationWatchdog(
   const zeroSend = await evaluateZeroSendStreak(db, alertWebhookUrl, options.alertBrokerMode);
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
-  const degraded = pendingBacklog.triggered || safetySource.triggered || zeroSend.triggered;
+  const degraded = pendingBacklog.availability === "unknown"
+    || pendingBacklog.triggered
+    || safetySource.triggered
+    || zeroSend.triggered;
 
   return {
     status: degraded ? "degraded" : "ok",

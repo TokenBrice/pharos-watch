@@ -76,7 +76,9 @@ export type CircuitRecord = z.infer<typeof CircuitRecordSchema>;
 
 export interface TelegramHealthSummary extends SafetyAlertFieldsNullable, Partial<ReserveAlertFieldsNullable> {
   totalChats: number;
-  pendingDeliveries: number;
+  pendingDeliveries: number | null;
+  pendingDeliveryLifecycleStatus?: "available" | "unknown";
+  pendingDeliveryBacklog?: import("./telegram").TelegramPendingDeliveryBacklog;
   lastDispatchAt: number | null;
   lastDispatchStatus: string | null;
 }
@@ -122,7 +124,24 @@ export interface HealthResponse {
 
 const TelegramHealthSummarySchema = z.object({
   totalChats: z.number(),
-  pendingDeliveries: z.number(),
+  pendingDeliveries: z.number().nullable(),
+  pendingDeliveryLifecycleStatus: z.enum(["available", "unknown"]).optional(),
+  pendingDeliveryBacklog: z.object({
+    claimable: z.number(),
+    due: z.number(),
+    deferred: z.number(),
+    expired: z.number(),
+    nearTtl: z.number().optional(),
+    sending: z.number().optional(),
+    executionUnknown: z.number().optional(),
+    pendingExecutionUnknown: z.number().optional(),
+    freshExecutionUnknown: z.number().optional(),
+    oldestExecutionUnknownAgeSec: z.number().nullable().optional(),
+    executionUnknownSampleLimit: z.number().optional(),
+    executionUnknownLowerBound: z.boolean().optional(),
+    sentCleanup: z.number().optional(),
+    completedPendingCleanup: z.number().optional(),
+  }).optional(),
   lastDispatchAt: z.number().nullable(),
   lastDispatchStatus: z.string().nullable(),
   ...SafetyAlertFieldsNullableSchemaShape,

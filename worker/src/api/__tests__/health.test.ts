@@ -95,6 +95,39 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 }
 
 describe("handleHealth", () => {
+  const telegramCapacityRow = {
+    total: 3,
+    expired: 0,
+    due: 2,
+    deferred: 1,
+    near_ttl: 0,
+    oldest_pending_created_at: null,
+    oldest_due_created_at: null,
+    pending_sending: 0,
+    pending_execution_unknown: 0,
+    sent_cleanup: 0,
+    oldest_pending_execution_unknown_at: null,
+    fresh_sending: 0,
+    fresh_execution_unknown: 0,
+    oldest_fresh_execution_unknown_at: null,
+    fresh_uncertain_sample_count: 0,
+  };
+  const telegramDeliveryBacklog = {
+    claimable: 2,
+    due: 2,
+    deferred: 1,
+    expired: 0,
+    nearTtl: 0,
+    sending: 0,
+    executionUnknown: 0,
+    pendingExecutionUnknown: 0,
+    freshExecutionUnknown: 0,
+    oldestExecutionUnknownAgeSec: null,
+    executionUnknownSampleLimit: 5_001,
+    executionUnknownLowerBound: false,
+    sentCleanup: 0,
+    completedPendingCleanup: 0,
+  };
   it("returns 200 with health status", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -421,7 +454,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -461,6 +494,8 @@ describe("handleHealth", () => {
     expect(body.telegramSummary).toEqual({
       totalChats: 42,
       pendingDeliveries: 3,
+      pendingDeliveryLifecycleStatus: "available",
+      pendingDeliveryBacklog: telegramDeliveryBacklog,
       lastDispatchAt: now - 120,
       lastDispatchStatus: "ok",
       safetyAlertSourceState: "ok",
@@ -484,7 +519,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -513,6 +548,8 @@ describe("handleHealth", () => {
     expect(body.telegramSummary).toEqual({
       totalChats: 42,
       pendingDeliveries: 3,
+      pendingDeliveryLifecycleStatus: "available",
+      pendingDeliveryBacklog: telegramDeliveryBacklog,
       lastDispatchAt: now - 120,
       lastDispatchStatus: "ok",
       safetyAlertSourceState: null,
@@ -527,6 +564,41 @@ describe("handleHealth", () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
+  it("reports unknown lifecycle capacity without manufacturing an empty queue", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+      { match: "telegram_pending_alerts", rows: [], throwError: new Error("capacity unavailable") },
+      {
+        match: "dispatch-telegram-alerts",
+        rows: [],
+        first: { started_at: now - 120, status: "ok", metadata: null },
+      },
+    ]);
+
+    const response = await handleHealth(db);
+    const body = (await response.json()) as {
+      status: string;
+      warnings: string[];
+      telegramSummary: {
+        pendingDeliveries: number | null;
+        pendingDeliveryLifecycleStatus: string;
+        pendingDeliveryBacklog?: unknown;
+      };
+    };
+
+    expect(body.status).not.toBe("healthy");
+    expect(body.warnings).toContain("telegram-delivery-lifecycle:unknown");
+    expect(body.telegramSummary.pendingDeliveries).toBeNull();
+    expect(body.telegramSummary.pendingDeliveryLifecycleStatus).toBe("unknown");
+    expect(body.telegramSummary.pendingDeliveryBacklog).toBeUndefined();
+  });
+
   it("adds a warning when safety alerts are suppressed", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -536,7 +608,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
