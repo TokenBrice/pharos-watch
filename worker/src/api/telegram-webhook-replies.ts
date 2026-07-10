@@ -56,9 +56,8 @@ export async function sendAuditedTelegramReply(
       logTelegramEvent({
         level: "warn",
         message: "reply send failed",
-        chatId,
         action: actionDetail,
-        errorClass,
+        errorClass: result.errorClass ?? "unknown",
         statusCode: result.statusCode,
       });
       if (result.errorClass === "rate_limit" || !result.retryable) break;

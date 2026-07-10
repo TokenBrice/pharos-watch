@@ -1,7 +1,6 @@
 import { recordTelegramAlertTargetStatuses } from "../telegram-alert-target-status";
 import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
-import { toErrorMessage } from "../../lib/error-utils";
 import {
   deadLetterTerminalPendingRows,
   deletePendingAlertsByIds,
@@ -10,8 +9,6 @@ import {
 import type { DeadLetterPendingRow } from "./types";
 
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
-type ExpiredPendingReasonClass = "explicit-ttl" | "default-ttl" | "corrupt-expiry";
-type PriorFailureReasonClass = "none" | "terminal" | "retryable" | "unknown";
 type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
 type PendingAlertFilterClause = {
   whereSql: "chat_id = ?" | "created_at < ?";
@@ -23,14 +20,6 @@ export interface DisabledChatPendingCleanupResult {
   failed: boolean;
 }
 
-const TERMINAL_PENDING_ERROR_CLASSES = new Set(["blocked", "bad_request", "auth_error"]);
-const RETRYABLE_PENDING_ERROR_CLASSES = new Set([
-  "rate_limit",
-  "server_error",
-  "timeout",
-  "network",
-  "unknown",
-]);
 const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
   "id",
   "chat_id",
@@ -59,46 +48,23 @@ function normalizeFiniteNumber(value: unknown): number | null {
   return parsed != null && Number.isFinite(parsed) ? parsed : null;
 }
 
-function classifyExpiredPendingRow(row: ExpiredPendingRow, nowSec: number): ExpiredPendingReasonClass {
-  const expiresAt = normalizeFiniteNumber(row.expires_at);
-  if (expiresAt != null && expiresAt <= nowSec) return "explicit-ttl";
-  const createdAt = normalizeFiniteNumber(row.created_at);
-  if (createdAt != null && createdAt + PENDING_TTL_SEC <= nowSec) return "default-ttl";
-  return "corrupt-expiry";
-}
-
-function classifyPriorFailure(row: ExpiredPendingRow): PriorFailureReasonClass {
-  const errorClass = row.last_error_class?.trim();
-  if (!errorClass) return "none";
-  if (TERMINAL_PENDING_ERROR_CLASSES.has(errorClass)) return "terminal";
-  if (RETRYABLE_PENDING_ERROR_CLASSES.has(errorClass)) return "retryable";
-  return "unknown";
-}
-
 function logExpiredPendingCleanupRows(rows: readonly ExpiredPendingRow[], nowSec: number): void {
-  for (const row of rows) {
+  const oldestCreatedAt = rows.reduce<number | null>((oldest, row) => {
     const createdAt = normalizeFiniteNumber(row.created_at);
-    const expiresAt = normalizeFiniteNumber(row.expires_at);
-    logTelegramEvent({
-      level: "info",
-      message: "expired pending Telegram alert cleaned up",
-      action: "cleanup-expired-pending-alert",
-      module: "telegram-pending-cleanup",
-      chatId: row.chat_id,
-      pendingId: row.id,
-      reason: "ttl_expired",
-      reasonClass: classifyExpiredPendingRow(row, nowSec),
-      priorFailureReasonClass: classifyPriorFailure(row),
-      lastErrorClass: row.last_error_class ?? null,
-      sourceType: row.source_type ?? "legacy",
-      alertType: row.alert_type ?? null,
-      priority: row.priority ?? null,
-      attempts: row.attempts ?? 0,
-      ageSec: createdAt != null ? Math.max(0, nowSec - createdAt) : null,
-      expiresAt,
-      dedupeKeyPresent: Boolean(row.dedupe_key),
-    });
-  }
+    if (createdAt == null) return oldest;
+    return oldest == null ? createdAt : Math.min(oldest, createdAt);
+  }, null);
+  logTelegramEvent({
+    level: "info",
+    message: "expired pending Telegram alerts cleaned up",
+    action: "cleanup-expired-pending-alert",
+    module: "telegram-pending-cleanup",
+    reason: "ttl_expired",
+    rowCount: rows.length,
+    affectedChatCount: new Set(rows.map((row) => row.chat_id)).size,
+    dedupeKeyCount: rows.filter((row) => row.dedupe_key).length,
+    ageSec: oldestCreatedAt == null ? null : Math.max(0, nowSec - oldestCreatedAt),
+  });
 }
 
 function logExpiredPendingDeadLetterBypass(rows: readonly ExpiredPendingRow[]): void {
@@ -228,8 +194,7 @@ export async function clearPendingAlertsForDisabledChat(
   } catch (error) {
     logTelegramEvent({
       level: "warn",
-      message: `Failed to clear pending alerts for disabled chat: ${toErrorMessage(error)}`,
-      chatId,
+      message: "Failed to clear pending alerts for disabled chat",
       action: "clear-disabled-chat-pending",
       module: "telegram-pending-cleanup",
       reason: "blocked_disabled",

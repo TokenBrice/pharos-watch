@@ -1,6 +1,5 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { batchExecute, buildInClause, executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
-import { toErrorMessage } from "../lib/error-utils";
 import { sha256Hex } from "../lib/hash";
 import {
   listTelegramPresets,
@@ -378,12 +377,9 @@ async function resolveMemberships(
       message: "dynamic preset source page query failed",
       action: "preset-query",
       module: "telegram-alert-source-events",
-      sourceEventId: source.sourceEventId,
-      pageKey: page.page_key,
       alertType: page.alert_type,
       failureKind: "query-failed",
       requestedStablecoinCount: idsForType(source.events, page.alert_type).length,
-      err: toErrorMessage(error),
     });
     return "query-failed";
   }
@@ -414,12 +410,9 @@ async function resolveMemberships(
       message: "dynamic preset source page resolution failed",
       action: "preset-resolution",
       module: "telegram-alert-source-events",
-      sourceEventId: source.sourceEventId,
-      pageKey: page.page_key,
       alertType: page.alert_type,
       failureKind: "resolution-failed",
       reason: resolved.reason,
-      presetIds,
       presetCount: presetIds.length,
       subscriberRowCount: 1,
       requestedStablecoinCount: idsForType(source.events, page.alert_type).length,
@@ -473,10 +466,7 @@ async function resolveMemberships(
       message: "failed to persist normalized preset memberships",
       action: "preset-resolution-persist",
       module: "telegram-alert-source-events",
-      sourceEventId: source.sourceEventId,
-      pageKey: page.page_key,
       alertType: page.alert_type,
-      err: toErrorMessage(error),
     });
     return "query-failed";
   }
@@ -556,10 +546,7 @@ async function resolveFollowerPage(
       message: "dynamic preset follower page query failed",
       action: "preset-query",
       module: "telegram-alert-source-events",
-      sourceEventId: source.sourceEventId,
-      pageKey: page.page_key,
       alertType: page.alert_type,
-      err: toErrorMessage(error),
     });
     return "query-failed";
   }
@@ -635,10 +622,7 @@ async function resolveFollowerPage(
       message: "failed to persist normalized preset follower page",
       action: "preset-page-persist",
       module: "telegram-alert-source-events",
-      sourceEventId: source.sourceEventId,
-      pageKey: page.page_key,
       alertType: page.alert_type,
-      err: toErrorMessage(error),
     });
     return "query-failed";
   }

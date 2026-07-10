@@ -14,7 +14,6 @@ import {
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
-  hashDedupePart,
   clearPendingAlertsForDisabledChat,
   flushChatSuccessResets,
   handleBlockedChat,
@@ -533,7 +532,7 @@ export async function deliverFreshAlerts(
             const targetKey = buildDedupeKey(item);
             const jobId = freshTargetJobIds.get(targetKey);
             if (!jobId) {
-              throw new Error(`Telegram fresh target has no durable manifest identity (${hashDedupePart(targetKey)})`);
+              throw new Error("Telegram fresh target has no durable manifest identity");
             }
             return { jobId, targetKey };
           });
@@ -570,7 +569,7 @@ export async function deliverFreshAlerts(
             const targetKey = buildDedupeKey(entry.item);
             const claim = freshTargetClaimsByKey.get(targetKey);
             if (!claim) {
-              throw new Error(`Telegram fresh target send has no confirmed owner (${hashDedupePart(targetKey)})`);
+              throw new Error("Telegram fresh target send has no confirmed owner");
             }
             if (result.ok) {
               outcomes.push({ ...claim, status: "sent", at: completedAt });
@@ -689,8 +688,7 @@ export async function deliverFreshAlerts(
         message: "Telegram fresh alert outcome is execution-unknown",
         action: "fresh-target-execution-unknown",
         module: "dispatch-telegram-routing",
-        errorClass: result.errorClass,
-        targetRef: hashDedupePart(buildDedupeKey(sendPlan)),
+        errorClass: result.errorClass ?? "unknown",
       });
     } else if (result.retryable) {
       deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });

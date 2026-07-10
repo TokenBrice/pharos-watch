@@ -101,7 +101,6 @@ export async function handleMyChatMember(
     logTelegramEvent({
       level: "info",
       message: `telegram ${isChannelChatType(chatType) ? "channel" : "group"} removed bot; subscriber state cleared`,
-      chatId: chatIdStr,
       action: isChannelChatType(chatType) ? "channel-removal" : "group-removal",
     });
     return;

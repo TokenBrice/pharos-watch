@@ -2,7 +2,6 @@ import { batchExecute, buildInClause, chunkArray } from "../lib/db";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { toErrorMessage } from "../lib/error-utils";
 
 export interface TelegramAlertTargetStatusUpdate {
   targetKey: string;
@@ -43,10 +42,9 @@ export async function recordTelegramAlertTargetStatuses(
         );
     }));
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
-      message: `Failed to update Telegram alert job targets: ${message}`,
+      message: "Failed to update Telegram alert job targets",
       action: "update-alert-job-targets",
       module: "telegram-alert-target-status",
       updateCount: updates.length,

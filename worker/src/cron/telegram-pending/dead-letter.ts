@@ -2,7 +2,6 @@ import { batchExecute, buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT }
 import { TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import type { DeadLetterPendingRow, PendingDeadLetterReason } from "./types";
-import { toErrorMessage } from "../../lib/error-utils";
 
 export const PENDING_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
 
@@ -65,10 +64,9 @@ export async function deadLetterTerminalPendingRows(
     await insertPendingDeadLetters(db, rows, nowSec, reason);
     return true;
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
-      message: `Failed to dead-letter terminal pending alerts: ${message}`,
+      message: "Failed to dead-letter terminal pending alerts",
       action: "dead-letter-terminal-pending",
       module: "telegram-pending-dead-letter",
       reason,

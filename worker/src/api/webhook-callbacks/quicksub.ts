@@ -13,7 +13,6 @@ import {
   requireAdminForMutatingCallback,
   type CallbackHandler,
 } from "./_shared";
-import { toErrorMessage } from "../../lib/error-utils";
 
 export const handleQuickSubCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
   const { arg, parts } = parsed;
@@ -54,10 +53,7 @@ export const handleQuickSubCallback: CallbackHandler = async ({ db, botToken, cb
   } catch (err) {
     logTelegramEvent({
       message: "quicksub write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
       action: "quicksub",
-      err: toErrorMessage(err),
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save subscription. Please try again.",

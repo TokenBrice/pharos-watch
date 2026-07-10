@@ -146,6 +146,16 @@ export default function PrivacyPage() {
             low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
             aggregate rows contain no chat ID.
           </p>
+          <p>
+            The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and
+            incident response. Telegram-specific custom log records are limited to operation names, bounded counts,
+            status codes, retry timing, and fixed error categories. They exclude chat and user IDs, update and callback
+            identifiers, message or callback content, URLs, bot tokens, and Mini App{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code>. Cloudflare processes these records in
+            the Pharos Cloudflare account, where access follows the account&apos;s permissions. This repository does not
+            configure a separate Logpush archive or a Telegram-log retention duration. Per-chat incident investigation
+            uses the private operator diagnostics backed by D1 instead of general logs.
+          </p>
         </section>
 
         <section className="space-y-2">

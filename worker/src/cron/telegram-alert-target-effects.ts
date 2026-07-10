@@ -2,7 +2,6 @@ import { executeAtomicBatch } from "../lib/db";
 import { D1_BATCH_SIZE } from "../lib/constants";
 import type { BatchMessage } from "../lib/telegram";
 import { buildPendingAlertEnqueueStatement } from "./telegram-pending/enqueue";
-import { hashDedupePart } from "./telegram-pending/dedupe";
 import type { PendingEnqueueOptions } from "./telegram-pending/types";
 
 export const TELEGRAM_FRESH_TARGET_CLAIM_TTL_SEC = 120;
@@ -50,10 +49,6 @@ interface TelegramFreshTargetEffectRow {
 
 function identityKey(identity: TelegramFreshTargetIdentity): string {
   return `${identity.jobId}\0${identity.targetKey}`;
-}
-
-function identityLabel(identity: TelegramFreshTargetIdentity): string {
-  return `${identity.jobId}/${hashDedupePart(identity.targetKey)}`;
 }
 
 function uniqueIdentities(
@@ -156,7 +151,7 @@ export async function claimFreshTelegramAlertTargets(
   for (const identity of unique) {
     const row = rows.get(identityKey(identity));
     if (!row) {
-      throw new Error(`Telegram fresh target manifest row is missing (${identityLabel(identity)})`);
+      throw new Error("Telegram fresh target manifest row is missing");
     }
     if (row.effect_state === "claimed" && row.effect_owner === owner) {
       claims.set(identity.targetKey, {
@@ -176,9 +171,9 @@ export async function claimFreshTelegramAlertTargets(
       continue;
     }
     if (row.effect_state === "claimed") {
-      throw new Error(`Telegram fresh target has an active owner (${identityLabel(identity)})`);
+      throw new Error("Telegram fresh target has an active owner");
     }
-    throw new Error(`Telegram fresh target claim was not confirmed (${identityLabel(identity)})`);
+    throw new Error("Telegram fresh target claim was not confirmed");
   }
 
   return { claims, skippedTargetKeys };

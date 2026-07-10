@@ -4,7 +4,6 @@ import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-c
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportDigestProgress } from "./digest/progress";
-import { toErrorMessage } from "../lib/error-utils";
 
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -125,7 +124,6 @@ async function writePresetFailureCount(db: D1Database, value: number): Promise<v
       message: "failed to persist preset failure count",
       action: "write-preset-failure-count",
       module: "dispatch-telegram-alerts",
-      err: toErrorMessage(err),
     });
   }
 }

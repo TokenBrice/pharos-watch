@@ -1,4 +1,3 @@
-import { toErrorMessage } from "../../lib/error-utils";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_TTL_SEC,
@@ -115,10 +114,9 @@ export async function readPendingCapacitySnapshot(
       dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
     };
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
-      message: `Failed to read pending capacity snapshot: ${message}`,
+      message: "Failed to read pending capacity snapshot",
       action: "read-pending-capacity",
       module: "telegram-pending-capacity",
     });

@@ -174,7 +174,7 @@ export async function markTelegramProcessedUpdateEffectStarted(
     .bind(input.nowSec, input.updateId, input.claimOwner, input.claimGeneration)
     .run();
   if (d1ChangeCount(result) !== 1) {
-    throw new Error(`Telegram update ${input.updateId} lost its effect-start claim`);
+    throw new Error("Telegram update lost its effect-start claim");
   }
 }
 
@@ -209,7 +209,7 @@ export async function markTelegramProcessedUpdateProcessed(
     )
     .run();
   if (d1ChangeCount(result) !== 1) {
-    throw new Error(`Telegram update ${input.updateId} terminal marker lost ownership`);
+    throw new Error("Telegram update terminal marker lost ownership");
   }
 }
 

@@ -9,7 +9,6 @@ import {
 } from "../lib/telegram-presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PresetSubscriberLoadResult } from "./dispatch-telegram-alerts-fanout";
-import { toErrorMessage } from "../lib/error-utils";
 
 const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
@@ -310,7 +309,6 @@ export async function loadPresetSubscriberRowsBatch(
       failureKind: "query-failed",
       alertType: type,
       requestedStablecoinCount: stablecoinIds.length,
-      err: toErrorMessage(err),
     });
     return { kind: "query-failed", error: err };
   }
@@ -326,7 +324,6 @@ export async function loadPresetSubscriberRowsBatch(
       failureKind: "resolution-failed",
       alertType: type,
       reason: resolved.reason,
-      presetIds: allPresetIds,
       presetCount: allPresetIds.length,
       subscriberRowCount: 1,
       requestedStablecoinCount: stablecoinIds.length,
@@ -390,7 +387,6 @@ export async function loadPresetSubscriberRowsBatch(
       failureKind: "query-failed",
       alertType: type,
       requestedStablecoinCount: stablecoinIds.length,
-      err: toErrorMessage(err),
     });
     return { kind: "query-failed", error: err };
   }

@@ -1,4 +1,3 @@
-import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Shared context, types, and helpers used by every callback handler in
  * `webhook-callbacks/`. Mirrors `webhook-commands/context.ts` plus the
@@ -184,10 +183,7 @@ export async function runCallbackMutation<TValid>(params: {
   } catch (err) {
     logTelegramEvent({
       message: params.logMessage,
-      chatId: params.chatId,
-      userId: params.cb.from?.id ?? null,
       action: params.logAction,
-      err: toErrorMessage(err),
     });
     await recordTelegramUsageEvent(params.db, {
       eventType: params.eventType,

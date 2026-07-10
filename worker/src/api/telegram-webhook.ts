@@ -36,7 +36,7 @@ import {
   type TelegramChatCommandFloodResult,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import {
@@ -50,7 +50,6 @@ import {
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { toErrorMessage } from "../lib/error-utils";
 import {
   CHAT_COMMAND_FLOOD_LIMIT,
   CHAT_COMMAND_FLOOD_WINDOW_SEC,
@@ -86,12 +85,12 @@ const GROUP_ADMIN_GATED_COMMANDS = new Set([
 // compare against the lowercased canonical handle.
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
 
-function logWarn(message: string, fields: Record<string, unknown>, err: unknown): void {
+function logWarn(message: string, action: string, err: unknown): void {
   logTelegramEvent({
     level: "warn",
     message,
-    ...fields,
-    err: toErrorMessage(err),
+    action,
+    errorClass: classifyTelegramLogError(err),
   });
 }
 
@@ -161,7 +160,6 @@ export const handleTelegramWebhook = withErrorHandler(
             level: "warn",
             message: "duplicate update still in flight",
             action: "processed-update-dedupe",
-            updateId: claimedUpdateId,
             retryAfterSec: claim.retryAfterSec ?? null,
           });
           return new Response("retry", {
@@ -176,13 +174,12 @@ export const handleTelegramWebhook = withErrorHandler(
             level: "warn",
             message: "duplicate update suppressed after effect execution started",
             action: "processed-update-effect-unknown",
-            updateId: claimedUpdateId,
           });
         }
         return ok();
       }
       if (!claim.claimOwner || claim.claimGeneration == null) {
-        throw new Error(`Telegram update ${claimedUpdateId} claim token is missing`);
+        throw new Error("Telegram update claim token is missing");
       }
       processedUpdateClaim = {
         owner: claim.claimOwner,
@@ -284,18 +281,12 @@ export const handleTelegramWebhook = withErrorHandler(
               text: "Action failed. Try again.",
             });
           } catch (ackErr) {
-            logWarn("callback_query failure ack failed", {
-              chatId: update.callback_query.message?.chat?.id ?? null,
-              userId: update.callback_query.from?.id ?? null,
-              action: "callback_query",
-            }, ackErr);
+            logWarn("callback_query failure ack failed", "callback_query", ackErr);
           }
           logTelegramEvent({
             message: "callback_query failed",
-            chatId: update.callback_query.message?.chat?.id ?? null,
-            userId: update.callback_query.from?.id ?? null,
             action: "callback_query",
-            err: toErrorMessage(err),
+            errorClass: classifyTelegramLogError(err),
           });
           callbackErrorClass = "callback_query";
         }
@@ -309,10 +300,8 @@ export const handleTelegramWebhook = withErrorHandler(
         } catch (err) {
           logTelegramEvent({
             message: "my_chat_member failed",
-            chatId: update.my_chat_member.chat?.id ?? null,
-            userId: update.my_chat_member.from?.id ?? null,
             action: "my_chat_member",
-            err: toErrorMessage(err),
+            errorClass: classifyTelegramLogError(err),
           });
           myChatMemberErrorClass = "my_chat_member";
         }
@@ -327,17 +316,13 @@ export const handleTelegramWebhook = withErrorHandler(
           logTelegramEvent({
             level: "info",
             message: "telegram chat id migrated",
-            chatId: migration.newChatId,
-            oldChatId: migration.oldChatId,
             action: "chat-migration",
           });
         } catch (err) {
           logTelegramEvent({
             message: "telegram chat migration failed",
-            chatId: migration.newChatId,
-            oldChatId: migration.oldChatId,
             action: "chat-migration",
-            err: toErrorMessage(err),
+            errorClass: classifyTelegramLogError(err),
           });
           migrationErrorClass = "chat-migration";
         }
@@ -475,10 +460,8 @@ async function handleTelegramMessageUpdate(args: {
     }
     logTelegramEvent({
       message: "command handler failed",
-      chatId,
-      userId: actorUserId,
       action: "command-dispatch",
-      err: toErrorMessage(err),
+      errorClass: classifyTelegramLogError(err),
     });
     await reply("Something went wrong, please try again.");
     return finishOk("command-dispatch");
@@ -695,12 +678,7 @@ async function enforceIngressFlood(
     } catch (err) {
       // Availability-first by design: a D1 failure disables only this advisory
       // ingress guard for the current update, not the bot action itself.
-      logWarn("chat command flood check failed", {
-        chatId: input.chatId,
-        userId: input.actorUserId,
-        action: "command-flood",
-        command: input.actionDetail,
-      }, err);
+      logWarn("chat command flood check failed", "command-flood", err);
     }
   }
 
@@ -710,12 +688,7 @@ async function enforceIngressFlood(
     try {
       await input.reply(input.noticeMessage);
     } catch (err) {
-      logWarn("chat command flood notice reply failed", {
-        chatId: input.chatId,
-        userId: input.actorUserId,
-        action: "command-flood",
-        command: input.actionDetail,
-      }, err);
+      logWarn("chat command flood notice reply failed", "command-flood", err);
     }
   }
 
@@ -727,12 +700,7 @@ async function enforceIngressFlood(
       failureClass: blocked.scope === "actor" ? "actor-flood" : "chat-flood",
     });
   } catch (err) {
-    logWarn("chat command flood usage record failed", {
-      chatId: input.chatId,
-      userId: input.actorUserId,
-      action: "command-flood",
-      command: input.actionDetail,
-    }, err);
+    logWarn("chat command flood usage record failed", "command-flood", err);
   }
 
   return false;
@@ -753,11 +721,7 @@ async function releaseCommandCooldownBestEffort(
       commandKey: input.commandKey,
     });
   } catch (err) {
-    logWarn("command cooldown release failed", {
-      chatId: input.chatId,
-      action: input.action,
-      command: input.command,
-    }, err);
+    logWarn("command cooldown release failed", input.action, err);
   }
 }
 
@@ -784,11 +748,7 @@ async function enforceCommandCooldown(
       cooldownSec,
     });
   } catch (err) {
-    logWarn("command cooldown check failed", {
-      chatId,
-      action: "command-cooldown",
-      command,
-    }, err);
+    logWarn("command cooldown check failed", "command-cooldown", err);
     await reply("Command traffic is busy. Please try again shortly.");
     return { allowed: false, commandKey, outcome: "failure", failureClass: "cooldown-store-error" };
   }
@@ -895,12 +855,7 @@ async function maybeGateNonAdminGroupActor(
       cooldownSec: GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC,
     });
   } catch (err) {
-    logWarn("group admin diagnostic cooldown check failed", {
-      chatId,
-      userId: actorUserId,
-      action: "group-admin-diagnostics",
-      command,
-    }, err);
+    logWarn("group admin diagnostic cooldown check failed", "group-admin-diagnostics", err);
     await reply("Group permission checks are busy. Please try again shortly.");
     return false;
   }

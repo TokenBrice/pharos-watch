@@ -6,7 +6,6 @@ import {
   prepareMultiRowInsertStatements,
 } from "../lib/db";
 import { D1_BATCH_SIZE } from "../lib/constants";
-import { toErrorMessage } from "../lib/error-utils";
 import {
   TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
@@ -38,7 +37,7 @@ export function buildFreshTargetJobIdMap(
     for (const targetKey of manifest.targetKeys) {
       const existing = jobIdByTargetKey.get(targetKey);
       if (existing && existing !== manifest.jobId) {
-        throw new Error(`Telegram fresh target belongs to multiple jobs (${hashDedupePart(targetKey)})`);
+        throw new Error("Telegram fresh target belongs to multiple jobs");
       }
       jobIdByTargetKey.set(targetKey, manifest.jobId);
     }
@@ -186,10 +185,9 @@ export async function persistTelegramAlertJobManifests(
 
       manifests.push({ jobId, alertType, targetCount, targetKeys });
     } catch (error) {
-      const message = toErrorMessage(error);
       logTelegramEvent({
         level: "warn",
-        message: `Failed to persist Telegram alert job manifest: ${message}`,
+        message: "Failed to persist Telegram alert job manifest",
         action: "persist-alert-job-manifest",
         module: "telegram-alert-jobs",
       });
@@ -268,10 +266,9 @@ export async function finalizeTelegramAlertJobManifests(
         );
     }));
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
       level: "warn",
-      message: `Failed to finalize Telegram alert job manifests: ${message}`,
+      message: "Failed to finalize Telegram alert job manifests",
       action: "finalize-alert-job-manifest",
       module: "telegram-alert-jobs",
     });

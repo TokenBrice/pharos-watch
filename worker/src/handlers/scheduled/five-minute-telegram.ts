@@ -1,4 +1,4 @@
-import { toErrorMessage } from "../../lib/error-utils";
+import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial:
@@ -13,7 +13,6 @@ import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-a
 import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
-import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { dispatchPendingAlertBrokerDeliveries } from "../../lib/alert-broker";
 import {
@@ -66,12 +65,12 @@ async function runAlertBrokerDeliveryDrain(runtime: ScheduledRuntimeContext): Pr
       producer: getRuntimeProducerIdentity(runtime, ALERT_BROKER_DELIVERY_DRAIN_SURFACE),
     });
   } catch (err) {
-    const error = toErrorMessage(err);
+    const error = classifyTelegramLogError(err);
     logTelegramEvent({
       message: "durable alert broker delivery drain failed",
       action: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
       module: "five-minute-telegram",
-      err: error,
+      errorClass: error,
     });
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
@@ -85,16 +84,12 @@ async function runAlertBrokerDeliveryDrain(runtime: ScheduledRuntimeContext): Pr
   }
 }
 
-function logReconciliationSuccess(
-  action: string,
-  details: Record<string, unknown> = {},
-): void {
+function logReconciliationSuccess(action: string): void {
   logTelegramEvent({
     level: "info",
     message: "Telegram reconciliation succeeded",
     action,
     module: "five-minute-telegram",
-    ...details,
   });
 }
 
@@ -110,12 +105,11 @@ interface TelegramReconciliationTelemetry {
 async function runTelegramReconciliation<T extends { attempted: boolean }>(
   action: string,
   fn: () => Promise<T>,
-  onSuccessDetails?: (result: T) => Record<string, unknown>,
 ): Promise<TelegramReconciliationTelemetry> {
   try {
     const result = await fn();
     if (result.attempted) {
-      logReconciliationSuccess(action, onSuccessDetails ? onSuccessDetails(result) : undefined);
+      logReconciliationSuccess(action);
     }
     const resultRecord = result as T & { skipped?: boolean; reason?: string };
     return {
@@ -127,12 +121,12 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
       error: null,
     };
   } catch (err) {
-    const error = toErrorMessage(err);
+    const error = classifyTelegramLogError(err);
     logTelegramEvent({
       message: "registration reconciliation failed",
       action,
       module: "five-minute-telegram",
-      err: error,
+      errorClass: error,
     });
     return {
       action,
@@ -265,25 +259,19 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
           signal,
         }),
       ),
-      await runTelegramReconciliation(
-        "reconcile-menu",
-        () =>
-          reconcileTelegramMenuButton(runtime.db, {
-            botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-            signal,
-          }),
-        (menuResult) => ({ miniAppUrl: menuResult.miniAppUrl }),
+      await runTelegramReconciliation("reconcile-menu", () =>
+        reconcileTelegramMenuButton(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          signal,
+        }),
       ),
-      await runTelegramReconciliation(
-        "reconcile-webhook",
-        () =>
-          reconcileTelegramWebhookRegistration(runtime.db, {
-            botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-            webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-            selfUrl: runtime.env.SELF_URL,
-            signal,
-          }),
-        (result) => ({ expectedUrl: result.expectedUrl }),
+      await runTelegramReconciliation("reconcile-webhook", () =>
+        reconcileTelegramWebhookRegistration(runtime.db, {
+          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+          selfUrl: runtime.env.SELF_URL,
+          signal,
+        }),
       ),
     ],
   );

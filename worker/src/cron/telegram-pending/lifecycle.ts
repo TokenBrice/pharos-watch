@@ -1,6 +1,5 @@
 import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
-import { toErrorMessage } from "../../lib/error-utils";
 import { buildInClause, chunkArray } from "../../lib/db";
 
 /**
@@ -45,10 +44,8 @@ export async function registerSubscriberBlockAndShouldDisable(
       .run();
     return nextCount >= 2;
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
-      message: `Failed to register block strike: ${message}`,
-      chatId,
+      message: "Failed to register block strike",
       action: "register-block-strike",
       module: "telegram-pending-lifecycle",
     });
@@ -100,10 +97,8 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       .bind(chatId)
       .run();
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
-      message: `Failed to reset block count: ${message}`,
-      chatId,
+      message: "Failed to reset block count",
       action: "reset-block-count",
       module: "telegram-pending-lifecycle",
     });
@@ -130,9 +125,8 @@ export async function flushChatSuccessResets(
         .bind(...inClause.binds)
         .run();
     } catch (error) {
-      const message = toErrorMessage(error);
       logTelegramEvent({
-        message: `Failed to batch reset block counts: ${message}`,
+        message: "Failed to batch reset block counts",
         action: "reset-block-count-batch",
         module: "telegram-pending-lifecycle",
         affectedChats: chunk.length,
@@ -178,10 +172,8 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
     ]);
     return true;
   } catch (error) {
-    const message = toErrorMessage(error);
     logTelegramEvent({
-      message: `Failed to disable blocked subscriber: ${message}`,
-      chatId,
+      message: "Failed to disable blocked subscriber",
       action: "disable-blocked-subscriber",
       module: "telegram-pending-lifecycle",
     });

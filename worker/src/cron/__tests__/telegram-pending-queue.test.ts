@@ -2668,29 +2668,19 @@ describe("cleanupExpiredPendingAlerts", () => {
     const logs = parseLogRecords(infoSpy).filter((record) =>
       record.action === "cleanup-expired-pending-alert"
     );
-    expect(logs).toHaveLength(2);
+    expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
       scope: "telegram",
       level: "info",
       module: "telegram-pending-cleanup",
-      chatId: "default-ttl-chat",
-      pendingId: 10,
       reason: "ttl_expired",
-      reasonClass: "default-ttl",
-      priorFailureReasonClass: "none",
-      dedupeKeyPresent: true,
+      rowCount: 2,
+      affectedChatCount: 2,
+      dedupeKeyCount: 2,
+      ageSec: PENDING_TTL_SEC + 5,
     });
-    expect(logs[1]).toMatchObject({
-      chatId: "explicit-ttl-chat",
-      pendingId: 11,
-      reasonClass: "explicit-ttl",
-      priorFailureReasonClass: "terminal",
-      lastErrorClass: "bad_request",
-      sourceType: "risk_alert",
-      alertType: "launch",
-      attempts: 2,
-      expiresAt: nowSec - 1,
-    });
+    expect(JSON.stringify(logs)).not.toContain("default-ttl-chat");
+    expect(JSON.stringify(logs)).not.toContain("explicit-ttl-chat");
   });
 
   it("dead-letters expired rows without bumping the subscriber block-strike counter", async () => {

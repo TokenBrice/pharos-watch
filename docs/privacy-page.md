@@ -29,7 +29,7 @@ The page renders through `FeaturePageShell` with:
 - `path = "/privacy/"`
 - `variant = "longform"`
 - `containerClassName = "max-w-2xl"`
-- lead copy: `Last updated: June 2026`
+- lead copy: `Last updated: July 2026`
 
 ---
 
@@ -47,9 +47,10 @@ The current policy copy covers:
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state and no Telegram activity for 180 days are automatically purged on a weekly cleanup
 9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
 10. the Mini App privacy boundary: `initData` is never persisted; the embedded route loads no GA4 and reports no Web Vitals; after signed auth, first-party low-cardinality adoption, outcome, and error counters contain no chat ID
-11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
-12. homepage saved shortcuts store only a browser-local ordered list of route hrefs in `pharos-shortcuts`
-13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
+11. Telegram custom Worker logs use a closed low-cardinality schema with no chat/user/update/callback identifiers, message content, URLs, tokens, or `initData`; Cloudflare processes the sampled records under account permissions, while authenticated D1 diagnostics retain per-chat incident correlation
+12. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
+13. homepage saved shortcuts store only a browser-local ordered list of route hrefs in `pharos-shortcuts`
+14. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 
@@ -95,6 +96,12 @@ Telegram also uses the shared D1 `cache` table for short-lived chat-scoped bot s
 ### Mini App `initData`
 
 The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist it — neither the raw `initData` nor its hash is written to the `cache` table or any other store. Mutation requests are bounded by a short freshness window plus a per-user mutation cooldown rather than a one-shot replay claim: Telegram exposes a single `initData` value per launch, so reusing it across several edits inside the window is expected. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session reads accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`).
+
+### Telegram Worker logs
+
+`worker/src/lib/telegram-log.ts` is a privacy boundary, not an open metadata bag. Its compile-time type and independent runtime allowlist admit only operation/module labels, bounded counts, booleans, status codes, retry timing, and fixed error categories. Raw chat/user/update/callback/pending/source-event identifiers, callback or message content, arrays/objects, URLs, arbitrary errors, bot tokens, webhook secrets, and Mini App `initData` are not emitted. Allowed strings are bounded and defensively scrub numeric Telegram IDs, UUIDs, opaque hashes/tokens, secret assignments, and URLs.
+
+The checked-in Worker config enables Cloudflare Workers Logs and invocation logs with `head_sampling_rate = 0.1`. Cloudflare writes sampled records to the Pharos Cloudflare account and exposes them through its account tooling; access therefore follows Cloudflare account permissions. This repository configures neither a separate Workers Logpush archive nor a Telegram-specific/provider log-retention duration, so the policy does not promise one. Operators correlate a specific chat through the Access-authenticated admin diagnostics and retained D1 target/delivery rows, never through a raw or pseudonymous general-log identifier.
 
 ### Telemetry Contract
 
