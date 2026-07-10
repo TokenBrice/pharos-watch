@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.31`
+- **Current methodology version:** `v8.32`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.32 adds opportunity-level risk for external opportunities. Rows whose yield type is `lending-opportunity`, `fixed-yield`, or `structured-tranche` publish a source-keyed `sourceRisk.opportunityRisk` contract (`shared/lib/yield-opportunity-risk.ts`): the underlying stablecoin's Safety Score is one input, and reviewed venue risk (shared 2.0 blue-chip threshold, 5 safety points per weighted point above it), market size, observed utilization, and access/withdrawal constraints adjust it into an opportunity safety score published with `safetyProvenance: opportunity-safety`. Missing critical market evidence — unreviewed venue, unknown market size, or unknown market status for non-Royco structured tranches — produces `pysNullReason: opportunity-evidence-missing` with an NR qualification instead of a neutral exact score. Royco Dawn tranches keep their bespoke market-health model and publish the same contract. Underlying Report Card scores, PYS formula weights, and source-risk calibration are unchanged.
 
 Yield v8.31 separates calculation mechanics from evidence quality. Rankings now publish `calculationMode`, `evidenceClass`, `evidenceCompleteness`, and `scoreQualification`; rate-derived products are modeled proxies and cannot outrank fresh direct evidence merely because the proxy math is deterministic. Missing or stale critical freshness, benchmark, or safety evidence produces NR with a null PYS, while modeled/fallback evidence is estimated and noncritical gaps are partial. New history points also persist the exact versioned PYS inputs used at publication and the history API labels them `exact`; older points remain available as `legacy-partial`. Formula weights, benchmark rates, source-risk calibration, and Report Card scores are unchanged.
 

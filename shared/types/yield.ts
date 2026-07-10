@@ -43,6 +43,7 @@ export const YIELD_PYS_NULL_REASONS = [
   "source-freshness-unknown",
   "benchmark-stale",
   "safety-unrated",
+  "opportunity-evidence-missing",
 ] as const;
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
@@ -155,6 +156,22 @@ export const YieldDependencyConcentrationSchema = z.object({
   reviewedAt: z.string(),
 });
 
+export const YIELD_OPPORTUNITY_CLASS_VALUES = ["lending", "fixed-yield", "structured-tranche"] as const;
+export type YieldOpportunityClass = (typeof YIELD_OPPORTUNITY_CLASS_VALUES)[number];
+
+export const YIELD_OPPORTUNITY_CRITICAL_EVIDENCE_VALUES = ["venue-review", "market-size", "market-status"] as const;
+export type YieldOpportunityCriticalEvidence = (typeof YIELD_OPPORTUNITY_CRITICAL_EVIDENCE_VALUES)[number];
+
+export const YieldOpportunityRiskSchema = z.object({
+  opportunityClass: z.enum(YIELD_OPPORTUNITY_CLASS_VALUES),
+  underlyingSafetyScore: z.number().min(0).max(100),
+  opportunitySafetyScore: z.number().min(0).max(100).nullable(),
+  opportunitySafetyPenalty: z.number().min(0).max(100).nullable(),
+  venueReviewed: z.boolean(),
+  missingCriticalEvidence: z.array(z.enum(YIELD_OPPORTUNITY_CRITICAL_EVIDENCE_VALUES)),
+});
+export type YieldOpportunityRisk = z.infer<typeof YieldOpportunityRiskSchema>;
+
 export const YieldSourceRiskSchema = z.object({
   sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
@@ -190,6 +207,7 @@ export const YieldSourceRiskSchema = z.object({
   kycRequired: z.boolean().nullable().optional(),
   accessRestricted: z.boolean().nullable().optional(),
   investabilityFlags: z.array(z.string()).optional(),
+  opportunityRisk: YieldOpportunityRiskSchema.nullable().optional(),
 });
 const YieldSourceRiskFieldSchemas = YieldSourceRiskSchema.shape;
 type YieldSourceRiskField = keyof typeof YieldSourceRiskFieldSchemas;

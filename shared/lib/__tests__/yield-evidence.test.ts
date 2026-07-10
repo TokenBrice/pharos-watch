@@ -42,7 +42,15 @@ describe("assessYieldEvidence", () => {
     { sourceFreshness: "unknown" as const },
     { sourceFreshness: "stale" as const },
     { benchmarkFreshness: "stale" as const },
-  ])("does not rate missing critical evidence: $safetyObserved$sourceFreshness$benchmarkFreshness", (gap) => {
+    { opportunityEvidenceComplete: false },
+  ])("does not rate missing critical evidence: $safetyObserved$sourceFreshness$benchmarkFreshness$opportunityEvidenceComplete", (gap) => {
     expect(assessYieldEvidence(completeEvidence(gap)).scoreQualification).toBe("NR");
+  });
+
+  it("keeps complete opportunity evidence rated without changing completeness", () => {
+    expect(assessYieldEvidence(completeEvidence({ opportunityEvidenceComplete: true }))).toEqual({
+      evidenceCompleteness: 1,
+      scoreQualification: "rated",
+    });
   });
 });

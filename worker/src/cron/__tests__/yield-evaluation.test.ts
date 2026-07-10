@@ -951,3 +951,166 @@ describe("evaluateYieldSources", () => {
     expect(source?.benchmarkSelectionMode).toBe("manual-override");
   });
 });
+
+describe("opportunity-level risk (yield v8.32)", () => {
+  it("scores a reviewed blue-chip lending opportunity at the underlying safety", () => {
+    const startSec = 1776729600;
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:aave",
+          project: "aave-v3",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+      sourceHistory: new Map([
+        [buildHistoryKey("coin-a", "defillama:coin-a:aave"), historyRows("defillama:coin-a:aave", 9, startSec)],
+      ]),
+    })).evaluatedSources;
+
+    // The fixture coin resolves a fallback-USD benchmark, so qualification is
+    // estimated rather than rated; the opportunity contract itself is complete.
+    expect(source).toMatchObject({
+      safetyScore: 80,
+      safetyProvenance: "opportunity-safety",
+      scoreQualification: "estimated",
+      pysNullReason: null,
+    });
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.sourceRisk?.opportunityRisk).toEqual({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 80,
+      opportunitySafetyScore: 80,
+      opportunitySafetyPenalty: 0,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
+  });
+
+  it("deducts opportunity safety for a reviewed higher-risk venue without touching the underlying input", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:clearpool",
+          project: "clearpool",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.safetyProvenance).toBe("opportunity-safety");
+    expect(source?.safetyScore).toBeLessThan(80);
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 80,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
+    expect(source?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBe(source?.safetyScore);
+  });
+
+  it("withholds the exact PYS when an external opportunity's venue is unreviewed", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:obscure",
+          project: "obscure-unreviewed-venue",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source).toMatchObject({
+      safetyScore: 80,
+      safetyProvenance: "cached-publish",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "opportunity-evidence-missing",
+    });
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunitySafetyScore: null,
+      venueReviewed: false,
+      missingCriticalEvidence: ["venue-review"],
+    });
+  });
+
+  it("treats unknown market size as missing critical evidence", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:aave",
+          project: "aave-v3",
+          yieldType: "lending-opportunity",
+          sourceTvlUsd: null,
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "opportunity-evidence-missing",
+      scoreQualification: "NR",
+    });
+    expect(source?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["market-size"]);
+  });
+
+  it("leaves holder yield untouched by opportunity evidence requirements", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:holder",
+          project: "obscure-unreviewed-venue",
+          yieldType: "lending-vault",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.safetyProvenance).toBe("cached-publish");
+    expect(source?.sourceRisk?.opportunityRisk).toBeUndefined();
+  });
+
+  it("publishes the opportunity contract for Royco Dawn tranches from the bespoke tranche model", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "royco-dawn:ethereum:0xmarket:junior",
+          dataSource: "protocol-api",
+          yieldType: "structured-tranche",
+          sourceRisk: {
+            trancheSide: "junior",
+            venueProtocol: "royco-dawn",
+            venueRiskTier: "medium",
+            marketStatus: "normal",
+            marketTvlUsd: 2_000_000,
+          },
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.safetyProvenance).toBe("opportunity-safety");
+    expect(source?.safetyScore).toBeLessThan(80);
+    expect(source?.sourceRisk?.trancheSafetyScore).toBe(source?.safetyScore);
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "structured-tranche",
+      underlyingSafetyScore: 80,
+      opportunitySafetyScore: source?.safetyScore,
+      opportunitySafetyPenalty: source?.sourceRisk?.trancheSafetyPenalty,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
+  });
+});

@@ -1,13 +1,19 @@
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import { assessYieldOpportunityRisk, deriveYieldOpportunityClass } from "@shared/lib/yield-opportunity-risk";
 import {
   computePysComponents,
   computePysRewardShare,
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import type { YieldSafetyProvenance, YieldSafetyReason, YieldSourceInputMeta } from "@shared/types/yield";
+import type {
+  YieldOpportunityRisk,
+  YieldSafetyProvenance,
+  YieldSafetyReason,
+  YieldSourceInputMeta,
+} from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
@@ -362,17 +368,57 @@ function evaluateYieldSourceGroup(
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
       (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
+    const safetyEvidenceObserved = !usedDefaultSafety && underlyingSafetyGrade !== "NR";
+    // Opportunity-level risk for external opportunities (yield v8.32): the
+    // underlying stablecoin's report card is one component, not the score.
+    // Royco Dawn tranches keep their bespoke market-health model and publish
+    // the same contract; missing critical market evidence produces NR below.
+    const opportunityClass = deriveYieldOpportunityClass(yieldType);
+    let opportunityRisk: YieldOpportunityRisk | null = null;
+    if (opportunityClass != null) {
+      if (safetyProvenance === "opportunity-safety") {
+        opportunityRisk = {
+          opportunityClass,
+          underlyingSafetyScore,
+          opportunitySafetyScore: safetyScore,
+          opportunitySafetyPenalty: sourceRisk?.trancheSafetyPenalty ?? null,
+          venueReviewed: resolvedVenueRiskTier !== "unknown",
+          missingCriticalEvidence: [],
+        };
+      } else {
+        opportunityRisk = assessYieldOpportunityRisk({
+          opportunityClass,
+          underlyingSafetyScore,
+          venueRiskWeighted: resolvedVenueRiskWeighted,
+          sourceTvlUsd: y.sourceTvlUsd,
+          sourceRisk,
+        });
+        if (safetyEvidenceObserved && opportunityRisk.opportunitySafetyScore != null) {
+          safetyScore = opportunityRisk.opportunitySafetyScore;
+          safetyGrade = scoreToGrade(safetyScore);
+          safetyProvenance = "opportunity-safety";
+        }
+      }
+      sourceRisk = {
+        ...(sourceRisk ?? {}),
+        opportunityRisk,
+        underlyingSafetyScore: sourceRisk?.underlyingSafetyScore ?? underlyingSafetyScore,
+      };
+    }
+    const opportunityEvidenceComplete =
+      opportunityRisk == null || opportunityRisk.missingCriticalEvidence.length === 0;
     const calculationMode = resolveCalculationMode(y);
     const evidenceClass = resolveEvidenceClass(y);
     const evidenceAssessment = assessYieldEvidence({
       evidenceClass,
-      safetyObserved: !usedDefaultSafety && underlyingSafetyGrade !== "NR",
+      safetyObserved: safetyEvidenceObserved,
       sourceFreshness,
       benchmarkFreshness,
       hasSourceDepth: sourceDepthRatio != null,
       hasVenueRisk: resolvedVenueRiskTier !== "unknown",
       hasHistory: !historySelection.usedLegacyHistory && historyRowsForStats.length > 0,
       hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
+      opportunityEvidenceComplete,
     });
     const { evidenceCompleteness, scoreQualification } = evidenceAssessment;
     const scoreQualified = scoreQualification !== "NR";
@@ -416,6 +462,10 @@ function evaluateYieldSourceGroup(
         ? "source-freshness-unknown" as const
       : benchmarkFreshness === "stale"
         ? "benchmark-stale" as const
+        : !safetyEvidenceObserved
+          ? "safety-unrated" as const
+          : !opportunityEvidenceComplete
+            ? "opportunity-evidence-missing" as const
         : !scoreQualified
           ? "safety-unrated" as const
         : null;

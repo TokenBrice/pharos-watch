@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.32",
+    title: "Opportunity-Level Risk for External Opportunities",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "External yield opportunities (lending markets, fixed-yield products, structured tranches) are scored at the market level through a source-keyed OpportunityRisk contract. The underlying stablecoin's Safety Score becomes one input rather than the opportunity's score, and missing critical market evidence produces NR instead of a neutral exact score. Report Card scores, PYS formula weights, and source-risk calibration are unchanged.",
+    impact: [
+      "Every external opportunity row publishes `sourceRisk.opportunityRisk` with its opportunity class, the underlying Safety Score used as input, the derived opportunity safety score and penalty, venue review status, and any missing critical evidence",
+      "External opportunities with a reviewed venue and observable market size score safety at the opportunity level: reviewed venue risk above the blue-chip threshold, thin market size, observed high utilization, KYC/access restrictions, and withdrawal constraints deduct safety points from the underlying input",
+      "Missing critical market evidence (unreviewed venue, unknown market size, or unknown market status for structured tranches) withholds the exact PYS with pysNullReason opportunity-evidence-missing and an NR score qualification instead of inheriting the underlying stablecoin's safety with a neutral penalty",
+      "Royco Dawn tranches keep their bespoke market-health safety model and now publish the same OpportunityRisk contract for uniform completeness auditing",
+      "Blue-chip venues at or below the existing 2.0 weighted venue-risk threshold deduct no venue points, so well-reviewed Aave, Compound, Morpho, Yearn, and Pendle markets are unaffected by the venue component",
+      "The underlying stablecoin's own Report Card score and grade are never modified; holder yield on the coin itself is scored exactly as before",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.31",
     title: "Evidence Qualification and Reproducible History",
     date: "2026-07-10",

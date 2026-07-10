@@ -3,6 +3,8 @@ import type {
   YieldDecisionReasonCode,
   YieldDecisionRejectionReasonCode,
   YieldEvidenceClass,
+  YieldOpportunityClass,
+  YieldOpportunityCriticalEvidence,
   YieldPysNullReason,
   YieldRankChangeAttribution,
   YieldScoreQualification,
@@ -18,6 +20,7 @@ export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "source-freshness-unknown": "Source observation time unavailable",
   "benchmark-stale": "Benchmark stale",
   "safety-unrated": "Safety evidence not rated",
+  "opportunity-evidence-missing": "Opportunity risk evidence missing",
 };
 
 export const YIELD_CALCULATION_MODE_LABELS: Record<YieldCalculationMode, string> = {
@@ -47,6 +50,18 @@ export const YIELD_SCORE_QUALIFICATION_LABELS: Record<YieldScoreQualification, s
 export function formatEvidenceCompleteness(value: number): string {
   return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}% evidence`;
 }
+
+export const YIELD_OPPORTUNITY_CLASS_LABELS: Record<YieldOpportunityClass, string> = {
+  lending: "Lending market",
+  "fixed-yield": "Fixed yield",
+  "structured-tranche": "Structured tranche",
+};
+
+export const YIELD_OPPORTUNITY_EVIDENCE_LABELS: Record<YieldOpportunityCriticalEvidence, string> = {
+  "venue-review": "venue review",
+  "market-size": "market size",
+  "market-status": "market status",
+};
 
 export function formatSignedPysDelta(delta: number): string {
   if (!Number.isFinite(delta)) return "";

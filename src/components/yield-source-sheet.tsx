@@ -27,6 +27,8 @@ import {
   formatEvidenceCompleteness,
   YIELD_CALCULATION_MODE_LABELS,
   YIELD_EVIDENCE_CLASS_LABELS,
+  YIELD_OPPORTUNITY_CLASS_LABELS,
+  YIELD_OPPORTUNITY_EVIDENCE_LABELS,
   YIELD_SCORE_QUALIFICATION_LABELS,
 } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -71,6 +73,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
   const evidenceClass = ranking.provenance?.evidenceClass ?? null;
   const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
   const scoreQualification = ranking.provenance?.scoreQualification ?? null;
+  const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
   const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
@@ -182,6 +185,16 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
                   </span>
                 ) : null}
               </div>
+            ) : null}
+            {opportunityRisk ? (
+              <p
+                className="mt-1.5 text-[10px] text-muted-foreground"
+                title="External opportunities are scored at the market level; the underlying stablecoin's report card is one input, not the score"
+              >
+                {opportunityRisk.opportunitySafetyScore != null
+                  ? `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — safety ${opportunityRisk.opportunitySafetyScore} after a ${opportunityRisk.opportunitySafetyPenalty ?? 0}-point market adjustment to the underlying's ${opportunityRisk.underlyingSafetyScore}`
+                  : `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — not rated: missing ${opportunityRisk.missingCriticalEvidence.map((code) => YIELD_OPPORTUNITY_EVIDENCE_LABELS[code]).join(", ")}`}
+              </p>
             ) : null}
             <YieldDecisionLedgerCard ledger={ranking.decisionLedger} variant="inline" className="mt-2" />
             <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">

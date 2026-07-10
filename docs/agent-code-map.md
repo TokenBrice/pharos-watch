@@ -304,7 +304,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
-- ... 406 more files omitted; use `rg --files src/components` for the full list.
+- ... 407 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -393,7 +393,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
-- ... 277 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 278 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -635,7 +635,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
 - `worker/src/cron/dex-discovery/crawl-coingecko-tickers.ts` - CoinGeckoTickersStageDependencies, crawlCoinGeckoTickersStage
-- ... 380 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 382 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

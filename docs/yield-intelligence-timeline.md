@@ -1,10 +1,21 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.31`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.32`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.32 - Opportunity-Level Risk for External Opportunities (July 11, 2026)
+
+- Publishes a source-keyed `sourceRisk.opportunityRisk` contract on every external opportunity row: opportunity class, underlying Safety Score input, derived opportunity safety score and penalty, venue review status, and missing critical evidence
+- Scores lending, fixed-yield, and structured opportunities at the market level; reviewed venue risk above the 2.0 blue-chip threshold, thin market size, observed high utilization, KYC/access restrictions, and withdrawal constraints deduct safety points from the underlying input
+- Withholds exact PYS with `pysNullReason: opportunity-evidence-missing` and NR qualification when the venue is unreviewed, market size is unknown, or a non-Royco structured tranche lacks market status
+- Keeps the bespoke Royco Dawn tranche market-health model and publishes the same contract for uniform completeness auditing
+- Never modifies the underlying stablecoin's Report Card score or grade; holder yield on the coin itself scores exactly as before
+- Leaves PYS formula weights, benchmark rates, and source-risk calibration unchanged
+
+---
 
 ## v8.31 - Evidence Qualification and Reproducible History (July 10, 2026)
 
