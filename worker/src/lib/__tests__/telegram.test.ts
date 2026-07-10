@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
+const { answerCallbackQuery, buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
 
 const digestCreds = {
   botToken: "bot-token",
@@ -215,6 +215,50 @@ describe("sendToChat", () => {
       errorClass: "timeout",
       retryAfterSec: null,
     });
+  });
+});
+
+describe("answerCallbackQuery", () => {
+  it.each([
+    [400, "bad_request"],
+    [401, "auth_error"],
+    [403, "auth_error"],
+    [429, "rate_limit"],
+    [503, "server_error"],
+  ] as const)("classifies a non-OK %i response as %s without logging identifiers", async (status, errorClass) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = new Response("sensitive Telegram response body", { status });
+    fetchSpy.mockResolvedValueOnce(response);
+
+    await answerCallbackQuery("callback-secret-id", "bot-secret-token");
+
+    expect(response.bodyUsed).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const record = JSON.parse(String(warn.mock.calls[0]?.[0])) as Record<string, unknown>;
+    expect(record).toMatchObject({
+      scope: "telegram",
+      level: "warn",
+      action: "answer-callback-query",
+      statusCode: status,
+      errorClass,
+    });
+    const serialized = JSON.stringify(record);
+    expect(serialized).not.toContain("callback-secret-id");
+    expect(serialized).not.toContain("bot-secret-token");
+    expect(serialized).not.toContain("sensitive Telegram response body");
+    expect(record).not.toHaveProperty("chatId");
+    expect(record).not.toHaveProperty("userId");
+    warn.mockRestore();
+  });
+
+  it("does not emit failure telemetry for a successful acknowledgement", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await answerCallbackQuery("callback-id", "bot-token");
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

@@ -124,9 +124,8 @@ describe("handleTelegramWebhook", () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:123"],
-        rows: [{ key: "telegram:command-flood:123", value: "20", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        rows: [{ value: "21" }],
       },
     ]);
 
@@ -153,9 +152,8 @@ describe("handleTelegramWebhook", () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:123"],
-        rows: [{ key: "telegram:command-flood:123", value: "25", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        rows: [{ value: "26" }],
       },
     ]);
 
@@ -171,14 +169,14 @@ describe("handleTelegramWebhook", () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:-123:actor:222"],
-        rows: [],
+        match: "RETURNING value",
+        matchBinds: ["telegram:command-flood:-123:actor:222", 1_700_000_000, 1_699_999_940, 1_699_999_940],
+        rows: [{ value: "1" }],
       },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:-123"],
-        rows: [{ key: "telegram:command-flood:-123", value: "20", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        matchBinds: ["telegram:command-flood:-123", 1_700_000_000, 1_699_999_940, 1_699_999_940],
+        rows: [{ value: "1" }],
       },
     ]);
 
@@ -205,9 +203,8 @@ describe("handleTelegramWebhook", () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:-123:actor:222"],
-        rows: [{ key: "telegram:command-flood:-123:actor:222", value: "20", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        rows: [{ value: "21" }],
       },
     ]);
 
@@ -232,8 +229,7 @@ describe("handleTelegramWebhook", () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:123"],
+        match: "RETURNING value",
         rows: [],
         throwError: new Error("d1 flood boom"),
       },

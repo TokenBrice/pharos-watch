@@ -937,9 +937,8 @@ describe("handleTelegramWebhook", () => {
         },
       },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:-123:actor:222"],
-        rows: [{ key: "telegram:command-flood:-123:actor:222", value: "20", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        rows: [{ value: "21" }],
       },
     ]);
 

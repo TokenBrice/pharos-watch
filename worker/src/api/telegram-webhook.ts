@@ -693,6 +693,8 @@ async function enforceIngressFlood(
         break;
       }
     } catch (err) {
+      // Availability-first by design: a D1 failure disables only this advisory
+      // ingress guard for the current update, not the bot action itself.
       logWarn("chat command flood check failed", {
         chatId: input.chatId,
         userId: input.actorUserId,

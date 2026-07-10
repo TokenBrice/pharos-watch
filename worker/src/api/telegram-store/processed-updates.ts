@@ -365,10 +365,24 @@ export interface TelegramChatCommandFloodResult {
   firstExceeded: boolean;
 }
 
+/** @internal Exported so the SQLite contention regression executes the production statement. */
+export const TELEGRAM_CHAT_FLOOD_UPSERT_SQL = `INSERT INTO cache (key, value, updated_at)
+ VALUES (?, '1', ?)
+ ON CONFLICT(key) DO UPDATE SET
+   value = CASE
+     WHEN cache.updated_at <= ? THEN '1'
+     ELSE CAST(COALESCE(CAST(cache.value AS INTEGER), 0) + 1 AS TEXT)
+   END,
+   updated_at = CASE
+     WHEN cache.updated_at <= ? THEN excluded.updated_at
+     ELSE cache.updated_at
+   END
+ RETURNING value`;
+
 /**
  * Generous per-chat fixed-window command counter covering every command,
- * including light ones with no per-command cooldown. Concurrent webhook
- * deliveries may lose an increment; the cap is advisory, not a quota.
+ * including light ones with no per-command cooldown. The conditional upsert
+ * increments or rotates the window atomically under concurrent webhooks.
  */
 export async function recordTelegramChatCommandFlood(
   db: D1Database,
@@ -380,22 +394,14 @@ export async function recordTelegramChatCommandFlood(
   },
 ): Promise<TelegramChatCommandFloodResult> {
   const key = `telegram:command-flood:${input.chatId}`;
+  const rotateBeforeOrAt = input.nowSec - input.windowSec;
   const row = await db
-    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-    .bind(key)
-    .first<{ value: string; updated_at: number }>();
-  const windowStartedAt = Number(row?.updated_at);
-  const inWindow = Number.isFinite(windowStartedAt) && input.nowSec - windowStartedAt < input.windowSec;
-  const count = inWindow ? (Number.parseInt(row?.value ?? "0", 10) || 0) + 1 : 1;
-  await db
-    .prepare(
-      `INSERT INTO cache (key, value, updated_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET
-         value = excluded.value,
-         updated_at = excluded.updated_at`,
-    )
-    .bind(key, String(count), inWindow ? windowStartedAt : input.nowSec)
-    .run();
+    .prepare(TELEGRAM_CHAT_FLOOD_UPSERT_SQL)
+    .bind(key, input.nowSec, rotateBeforeOrAt, rotateBeforeOrAt)
+    .first<{ value: string }>();
+  const count = Number.parseInt(row?.value ?? "", 10);
+  if (!Number.isFinite(count) || count < 1) {
+    throw new Error("Telegram chat flood counter upsert returned no valid count");
+  }
   return { allowed: count <= input.limit, firstExceeded: count === input.limit + 1 };
 }

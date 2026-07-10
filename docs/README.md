@@ -230,6 +230,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [digest-pipeline.md](./digest-pipeline.md) - digest generation, storage, distribution, and SSG pipeline
 - [feedback-pipeline.md](./feedback-pipeline.md) - feedback widget, POST contract, rate limiting, and GitHub routing
 - [telegram-alerts.md](./telegram-alerts.md) - PharosWatchBot page route, Telegram webhook commands, subscription tables, and alert dispatch rules
+- [runbooks/telegram-webhook-ingress.md](./runbooks/telegram-webhook-ingress.md) - Telegram ingress flood control and callback acknowledgement diagnostics
 - [telegram-architecture.md](./telegram-architecture.md) - PharosWatchBot worker seams, ownership, and freeze-window rules
 - [telegram-mini-app.md](./telegram-mini-app.md) - Telegram Mini App surface: launch entrypoints, payload registry, auth model, seam rules, debugging workflow
 - [shadow-stablecoins.md](./shadow-stablecoins.md) - PSI-only shadow asset boundary and UI exclusion rules

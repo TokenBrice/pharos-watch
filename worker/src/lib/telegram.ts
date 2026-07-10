@@ -1,4 +1,5 @@
 import { drainResponseBody } from "./response-body";
+import { logTelegramEvent } from "./telegram-log";
 import {
   TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
   TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC,
@@ -292,6 +293,14 @@ function buildCaughtFailure(error: unknown): SendToChatResult {
     delivery: "retryable_failure",
     retryAfterSec: null,
   };
+}
+
+function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
+  if (statusCode === 429) return "rate_limit";
+  if (statusCode >= 500) return "server_error";
+  if (statusCode === 401 || statusCode === 403) return "auth_error";
+  if (statusCode === 400 || statusCode === 404 || statusCode === 413) return "bad_request";
+  return "unknown";
 }
 
 /** Send an HTML message to a specific Telegram chat. */
@@ -700,4 +709,13 @@ export async function answerCallbackQuery(
     },
   );
   await drainResponseBody(res);
+  if (!res.ok) {
+    logTelegramEvent({
+      level: "warn",
+      message: "callback acknowledgement rejected",
+      action: "answer-callback-query",
+      statusCode: res.status,
+      errorClass: classifyCallbackAcknowledgementFailure(res.status),
+    });
+  }
 }
