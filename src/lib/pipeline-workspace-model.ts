@@ -6,7 +6,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import type { DataQuality, StatusHealthValue, StatusResponse, StatusSectionKey } from "@shared/types";
 
-export const PIPELINE_MODE_QUERY_PARAM = "view";
+const PIPELINE_MODE_QUERY_PARAM = "view";
 
 export const PIPELINE_MODES = [
   { id: "quality", label: "Quality" },

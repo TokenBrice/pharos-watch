@@ -6,7 +6,6 @@
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { answerCallbackQuery } from "../../lib/telegram";
 import {
   recordTelegramUsageEvent,
   type TelegramUsageEventType,
@@ -212,7 +211,7 @@ export async function runCallbackMutation<TValid>(params: {
       // Production webhook dispatch always supplies the prepared atomic marker.
       else await params.markMutationApplied();
     }
-  } catch (err) {
+  } catch {
     logTelegramEvent({
       message: params.logMessage,
       action: params.logAction,

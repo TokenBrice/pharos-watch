@@ -11,6 +11,7 @@ export function createLatestSchemaSqlite(): { sqlite: DatabaseSync; db: D1Databa
     .filter((name) => /^\d+.*\.sql$/.test(name))
     .sort();
   for (const migration of migrations) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixtures only.
     sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, migration), "utf8"));
   }
   return { sqlite, db: createSqliteD1(sqlite) };

@@ -1,20 +1,16 @@
 export const TELEGRAM_ADOPTION_CTA_ENDPOINT = "/pharoswatchbot-adoption";
-export const TELEGRAM_ADOPTION_TOKEN_VERSION = "pw1";
 export const TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD = 5;
 
-export const TELEGRAM_ADOPTION_CAMPAIGNS = ["landing", "organic"] as const;
-export type TelegramAdoptionCampaign = (typeof TELEGRAM_ADOPTION_CAMPAIGNS)[number];
+export type TelegramAdoptionCampaign = "landing" | "organic";
 
-export const TELEGRAM_ADOPTION_PLACEMENTS = [
-  "hero",
-  "setup",
-  "miniapp_setup",
-  "miniapp_home",
-  "miniapp_watchlist",
-  "menu",
-  "unknown",
-] as const;
-export type TelegramAdoptionPlacement = (typeof TELEGRAM_ADOPTION_PLACEMENTS)[number];
+export type TelegramAdoptionPlacement =
+  | "hero"
+  | "setup"
+  | "miniapp_setup"
+  | "miniapp_home"
+  | "miniapp_watchlist"
+  | "menu"
+  | "unknown";
 
 export const TELEGRAM_ADOPTION_CTA_PLACEMENTS = [
   "hero",

@@ -10,7 +10,7 @@ import type {
 } from "@shared/types";
 import { normalizeStatusIssues, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
 
-export const RELIABILITY_MODE_QUERY_PARAM = "view";
+const RELIABILITY_MODE_QUERY_PARAM = "view";
 
 export const RELIABILITY_MODES = [
   { id: "impact", label: "Impact" },
@@ -331,7 +331,7 @@ export function buildReliabilityModeUrl(
   return `${location.pathname}${query ? `?${query}` : ""}${location.hash}`;
 }
 
-export function collectReliabilityEvidenceGaps(input: ReliabilityWorkspaceInput): ReliabilityEvidenceGap[] {
+function collectReliabilityEvidenceGaps(input: ReliabilityWorkspaceInput): ReliabilityEvidenceGap[] {
   const gaps = new Map<string, ReliabilityEvidenceGap>();
   const add = (gap: ReliabilityEvidenceGap) => {
     if (!gaps.has(gap.rawCode)) gaps.set(gap.rawCode, gap);

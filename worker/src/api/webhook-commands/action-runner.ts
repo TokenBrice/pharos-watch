@@ -146,7 +146,7 @@ export function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[
   );
 }
 
-export async function resolvePresetCoins(
+async function resolvePresetCoins(
   db: D1Database,
   presetIds: readonly TelegramPresetId[],
 ): Promise<ResolvedCoin[] | null> {

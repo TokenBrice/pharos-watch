@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 function migrationSql(name: string): string {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
   return readFileSync(resolve(process.cwd(), "worker", "migrations", name), "utf8");
 }
 

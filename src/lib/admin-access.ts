@@ -116,16 +116,3 @@ export async function adminMutation<T = unknown>(
 
   return mutationResult;
 }
-
-export async function postAdminJson<T>(
-  path: string,
-  body?: unknown,
-  options?: Omit<AdminMutationOptions, "method" | "body">,
-): Promise<T> {
-  const result = await adminMutation<T>(path, {
-    ...options,
-    method: "POST",
-    body,
-  });
-  return result.data;
-}

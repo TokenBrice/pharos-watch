@@ -21,7 +21,7 @@ import {
 } from "./telegram-alert-target-plans";
 
 export const LEGACY_OVERFLOW_MAX_BYTES = 1_048_576;
-export const LEGACY_OVERFLOW_IMPORT_PAGE_SIZE = 90;
+const LEGACY_OVERFLOW_IMPORT_PAGE_SIZE = 90;
 
 export interface TelegramLegacyOverflowImportStatus {
   state: "absent" | "importing" | "imported" | "corrupt" | "oversized" | "degraded";
@@ -58,7 +58,7 @@ function mapStatus(row: LegacyOverflowStateRow): TelegramLegacyOverflowImportSta
   };
 }
 
-export async function loadTelegramLegacyOverflowImportStatus(
+async function loadTelegramLegacyOverflowImportStatus(
   db: D1Database,
 ): Promise<TelegramLegacyOverflowImportStatus | null> {
   const row = await db

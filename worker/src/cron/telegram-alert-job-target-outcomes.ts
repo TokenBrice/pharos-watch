@@ -1,15 +1,11 @@
-import { batchExecute, buildInClause, chunkArray } from "../lib/db";
-
-export const TELEGRAM_TARGET_FINAL_DELIVERY_STATES = [
-  "accepted",
-  "failed",
-  "cancelled",
-  "expired",
-  "execution_unknown",
-] as const;
+import { batchExecute } from "../lib/db";
 
 export type TelegramTargetFinalDeliveryState =
-  (typeof TELEGRAM_TARGET_FINAL_DELIVERY_STATES)[number];
+  | "accepted"
+  | "failed"
+  | "cancelled"
+  | "expired"
+  | "execution_unknown";
 
 export type TelegramTargetCounterBucket =
   | "planned"
@@ -64,21 +60,6 @@ interface TargetCounterInput {
   effectState?: string | null;
   cancelledAt?: number | null;
   finalDeliveryState?: string | null;
-}
-
-export interface TelegramAlertJobDeliverySummary {
-  jobId: string;
-  sourceEventId: string;
-  alertType: string;
-  status: string;
-  targetCount: number;
-  plannedCount: number;
-  acceptedCount: number;
-  enqueuedCount: number;
-  failedCount: number;
-  cancelledCount: number;
-  expiredCount: number;
-  executionUnknownCount: number;
 }
 
 export function classifyTelegramTargetCounterBucket(
@@ -376,68 +357,4 @@ export async function reconcileTelegramAlertJobCounters(
       )
       .bind(jobId, nowSec, nowSec, jobId);
   }));
-}
-
-export async function loadTelegramAlertJobDeliverySummaries(
-  db: D1Database,
-  options: { sourceEventId?: string; jobIds?: readonly string[] } = {},
-): Promise<TelegramAlertJobDeliverySummary[]> {
-  const jobIds = [...new Set(options.jobIds ?? [])];
-  if (!options.sourceEventId && jobIds.length === 0) return [];
-  const summaries: TelegramAlertJobDeliverySummary[] = [];
-  const chunks = jobIds.length > 0 ? chunkArray(jobIds) : [[]];
-  for (const jobIdChunk of chunks) {
-    const conditions: string[] = [];
-    const binds: unknown[] = [];
-    if (options.sourceEventId) {
-      conditions.push("source_event_id = ?");
-      binds.push(options.sourceEventId);
-    }
-    if (jobIdChunk.length > 0) {
-      const inClause = buildInClause(jobIdChunk);
-      conditions.push(`job_id IN (${inClause.sql})`);
-      binds.push(...inClause.binds);
-    }
-    const rows = await db
-      .prepare(
-        `SELECT job_id, source_event_id, alert_type, status, target_count,
-                planned_count, accepted_count, enqueued_count, failed_count,
-                cancelled_count, expired_count, execution_unknown_count
-           FROM telegram_alert_jobs
-          WHERE ${conditions.join(" AND ")}
-          ORDER BY created_at, job_id`,
-      )
-      .bind(...binds)
-      .all<{
-        job_id: string;
-        source_event_id: string;
-        alert_type: string;
-        status: string;
-        target_count: number;
-        planned_count: number;
-        accepted_count: number;
-        enqueued_count: number;
-        failed_count: number;
-        cancelled_count: number;
-        expired_count: number;
-        execution_unknown_count: number;
-      }>();
-    for (const row of rows.results ?? []) {
-      summaries.push({
-        jobId: row.job_id,
-        sourceEventId: row.source_event_id,
-        alertType: row.alert_type,
-        status: row.status,
-        targetCount: Number(row.target_count),
-        plannedCount: Number(row.planned_count),
-        acceptedCount: Number(row.accepted_count),
-        enqueuedCount: Number(row.enqueued_count),
-        failedCount: Number(row.failed_count),
-        cancelledCount: Number(row.cancelled_count),
-        expiredCount: Number(row.expired_count),
-        executionUnknownCount: Number(row.execution_unknown_count),
-      });
-    }
-  }
-  return summaries;
 }

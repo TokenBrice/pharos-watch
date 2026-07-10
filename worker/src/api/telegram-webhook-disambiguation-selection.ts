@@ -57,7 +57,7 @@ function normalizedTicker(value: string): string {
   return ticker;
 }
 
-export function normalizePendingDisambiguationSelection(
+function normalizePendingDisambiguationSelection(
   pending: SelectablePendingAction,
   selectedIndices: readonly number[],
 ): NormalizedPendingSelection {
@@ -194,30 +194,6 @@ export function parseStoredCommandSelectionIntent(
       remainingTickers: [],
       clearPending: payload.clearPending,
     };
-  }
-  return null;
-}
-
-export function parseNormalizedPendingSelection(value: unknown): NormalizedPendingSelection | null {
-  if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
-  const input = value as Partial<NormalizedPendingSelection>;
-  if (
-    !Array.isArray(input.initialCoinIds)
-    || !input.initialCoinIds.every((id) => typeof id === "string" && TRACKED_META_BY_ID.has(id))
-    || !Array.isArray(input.remainingTickers)
-    || !input.remainingTickers.every((ticker) => typeof ticker === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(ticker))
-    || typeof input.clearPending !== "boolean"
-  ) {
-    return null;
-  }
-  if (input.actionType === "subscribe" && Array.isArray(input.alertTypes) && Array.isArray(input.presetIds)) {
-    return input as NormalizedPendingSelection;
-  }
-  if (input.actionType === "unsubscribe" && Array.isArray(input.presetIds)) {
-    return input as NormalizedPendingSelection;
-  }
-  if (input.actionType === "set" && typeof input.command === "object" && input.command != null) {
-    return input as NormalizedPendingSelection;
   }
   return null;
 }

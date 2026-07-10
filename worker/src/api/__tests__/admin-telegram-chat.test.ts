@@ -4,6 +4,16 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 
 const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
+interface AdminTelegramChatBody {
+  contractVersion: number;
+  subscriber: unknown;
+  subscriptions: unknown[];
+  pendingAlerts: { lifecycle: unknown };
+  deadLetters: { count: number; recent: unknown[] };
+  deliveryDiagnostics: { recent_failure_class: string | null };
+  targetHistory: unknown[];
+}
+
 function latestDb() {
   const fixture = createLatestSchemaSqlite();
   openSqlite.push(fixture.sqlite);
@@ -93,7 +103,7 @@ describe("handleAdminTelegramChat v2", () => {
 
     const response = await handleAdminTelegramChat(db, "12345", true, request());
     expect(response.status).toBe(200);
-    const body = await response.json() as any;
+    const body = await response.json() as AdminTelegramChatBody;
     expect(body.contractVersion).toBe(2);
     expect(body.subscriber).toMatchObject({
       usernamePresent: true,
@@ -142,7 +152,7 @@ describe("handleAdminTelegramChat v2", () => {
     }
     const response = await handleAdminTelegramChat(db, "999", true, request("999"));
     expect(response.status).toBe(200);
-    const body = await response.json() as any;
+    const body = await response.json() as AdminTelegramChatBody;
     expect(body.contractVersion).toBe(2);
     expect(body.subscriber).toBeNull();
     expect(body.deadLetters.count).toBe(25);

@@ -9,8 +9,8 @@ export type TelegramDeliveryMode = (typeof TELEGRAM_DELIVERY_MODES)[number];
 export type TelegramTransportCircuitState = "closed" | "open" | "half_open";
 
 const FAILURE_WINDOW_SEC = 60;
-export const TELEGRAM_TRANSPORT_OBSERVATION_RETENTION_SEC = 5 * 60;
-export const TELEGRAM_TRANSPORT_DISTINCT_CHAT_THRESHOLD = 3;
+const TELEGRAM_TRANSPORT_OBSERVATION_RETENTION_SEC = 5 * 60;
+const TELEGRAM_TRANSPORT_DISTINCT_CHAT_THRESHOLD = 3;
 const DEFAULT_OUTAGE_BACKOFF_SEC = 60;
 const AUTH_OUTAGE_BACKOFF_SEC = 15 * 60;
 const PROBE_LEASE_SEC = 30;

@@ -33,11 +33,11 @@ export function isTelegramMiniAppErrorCode(value: unknown): value is TelegramMin
   return typeof value === "string" && MINI_APP_ERROR_CODE_SET.has(value);
 }
 
-export const TelegramAlertTypeSchema = z.enum(["dews", "depeg", "safety", "launch", "reserve"]);
-export const TelegramDewsBandSchema = z.enum(["ALERT", "WARNING", "DANGER"]);
-export const TelegramDepegStepBpsSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]);
-export const TelegramSafetyModeSchema = z.enum(["all", "downgrade-only", "upgrade-only"]);
-export const TelegramPresetIdSchema = z.enum(TELEGRAM_PRESET_IDS);
+const TelegramAlertTypeSchema = z.enum(["dews", "depeg", "safety", "launch", "reserve"]);
+const TelegramDewsBandSchema = z.enum(["ALERT", "WARNING", "DANGER"]);
+const TelegramDepegStepBpsSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]);
+const TelegramSafetyModeSchema = z.enum(["all", "downgrade-only", "upgrade-only"]);
+const TelegramPresetIdSchema = z.enum(TELEGRAM_PRESET_IDS);
 
 const NullableDepegStepSchema = TelegramDepegStepBpsSchema.nullable();
 const AlertTypesSchema = z

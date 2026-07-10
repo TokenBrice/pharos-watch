@@ -13,7 +13,6 @@ import {
   prepareUpsertSubscriberRow,
   preparePreferenceGenerationBump,
   unixNow,
-  upsertSubscriberRow,
   type UpsertSubscriberInput,
 } from "./subscribers";
 import {

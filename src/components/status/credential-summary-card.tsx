@@ -21,7 +21,7 @@ export interface CredentialSummaryItem {
   emphasisClassName?: string;
 }
 
-export function countRecentAuditAnomalies(entries: readonly ApiKeyAuditEntry[], nowSeconds: number): number {
+function countRecentAuditAnomalies(entries: readonly ApiKeyAuditEntry[], nowSeconds: number): number {
   return entries.filter(
     (entry) => AUDIT_ANOMALY_ACTIONS.has(entry.action) && entry.createdAt >= nowSeconds - AUDIT_ANOMALY_WINDOW_SEC,
   ).length;

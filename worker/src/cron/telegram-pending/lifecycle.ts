@@ -43,7 +43,7 @@ export async function registerSubscriberBlockAndShouldDisable(
       .bind(nextCount, nextFirstAt, chatId)
       .run();
     return nextCount >= 2;
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       message: "Failed to register block strike",
       action: "register-block-strike",
@@ -96,7 +96,7 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       )
       .bind(chatId)
       .run();
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       message: "Failed to reset block count",
       action: "reset-block-count",
@@ -124,7 +124,7 @@ export async function flushChatSuccessResets(
         )
         .bind(...inClause.binds)
         .run();
-    } catch (error) {
+    } catch {
       logTelegramEvent({
         message: "Failed to batch reset block counts",
         action: "reset-block-count-batch",
@@ -172,7 +172,7 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
         .bind(chatId),
     ]);
     return true;
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       message: "Failed to disable blocked subscriber",
       action: "disable-blocked-subscriber",

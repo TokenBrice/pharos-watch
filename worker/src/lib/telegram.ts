@@ -1,6 +1,5 @@
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { logTelegramEvent } from "./telegram-log";
-import type { PendingAlertScopeItem } from "./telegram-pending-provenance";
 import {
   classifyTelegramCaughtFailure,
   classifyTelegramResponseFailure,
@@ -10,6 +9,11 @@ import {
 export interface TelegramCreds {
   botToken: string;
   chatId: string;
+}
+
+interface PendingAlertScopeItem {
+  stablecoinId: string;
+  family: import("@shared/types/status").TelegramAlertType;
 }
 
 /** Telegram Bot API inline keyboard button shape. */

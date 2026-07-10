@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { StatusPageAction, StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
-export const AdminActionAuditEntrySchema = z.object({
+const AdminActionAuditEntrySchema = z.object({
   id: z.number().int(),
   at: z.number(),
   actor: z.string(),

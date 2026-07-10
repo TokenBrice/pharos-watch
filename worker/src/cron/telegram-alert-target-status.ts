@@ -47,7 +47,7 @@ export async function recordTelegramAlertTargetStatuses(
           update.targetKey,
         );
     }));
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to update Telegram alert job targets",
@@ -79,7 +79,7 @@ export async function recordTelegramAlertTargetCancellations(
         )
         .bind(cancellation.at, cancellation.at, cancellation.reason, cancellation.targetKey),
     ));
-  } catch (error) {
+  } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to cancel Telegram alert job targets",

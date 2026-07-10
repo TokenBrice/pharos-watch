@@ -121,7 +121,3 @@ export const TELEGRAM_PRESET_DEFINITIONS: readonly TelegramPresetDefinition[] = 
 export const TELEGRAM_PRESET_LABEL_BY_ID: ReadonlyMap<TelegramPresetId, string> = new Map(
   TELEGRAM_PRESET_DEFINITIONS.map((definition) => [definition.id, definition.label] as const),
 );
-
-export function listTelegramPresetDefinitions(): readonly TelegramPresetDefinition[] {
-  return TELEGRAM_PRESET_DEFINITIONS;
-}

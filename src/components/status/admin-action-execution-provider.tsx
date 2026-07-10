@@ -51,7 +51,7 @@ function createDefaultIdempotencyKey(): string {
   return `admin-action:${Date.now()}:${fallbackId}`;
 }
 
-export function getAdminActionExecutionKey(actionPath: string, scopeKey: string): string {
+function getAdminActionExecutionKey(actionPath: string, scopeKey: string): string {
   return `${actionPath}\u0000${scopeKey}`;
 }
 
@@ -374,16 +374,6 @@ function useAdminActionExecutionContext(): AdminActionExecutionContextValue {
     throw new Error("Admin action controls must be rendered inside AdminActionExecutionProvider");
   }
   return context;
-}
-
-export function useAdminActionExecution(actionPath: string, scopeKey: string) {
-  const context = useAdminActionExecutionContext();
-  return {
-    execution: context.current[getAdminActionExecutionKey(actionPath, scopeKey)],
-    execute: context.execute,
-    retry: context.retry,
-    startNew: context.startNew,
-  };
 }
 
 export function useAdminActionExecutions(): readonly AdminActionExecution[] {

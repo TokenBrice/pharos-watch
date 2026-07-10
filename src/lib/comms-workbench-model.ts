@@ -10,12 +10,12 @@ import {
   readMetadataString,
 } from "@shared/lib/status-metadata";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
-import {
-  TELEGRAM_ALERT_TYPES,
-  type CronRunStatus,
-  type CronStatus,
-  type StatusResponse,
-  type TelegramAlertType,
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
+import type {
+  CronRunStatus,
+  CronStatus,
+  StatusResponse,
+  TelegramAlertType,
 } from "@shared/types";
 
 export type CommsDeliveryHealth = "healthy" | "degraded" | "failed" | "unknown";

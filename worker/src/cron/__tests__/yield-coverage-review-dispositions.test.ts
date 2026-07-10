@@ -18,6 +18,7 @@ function createDispositionDb(): { sqlite: DatabaseSync; db: D1Database } {
   const migrationsDir = process.cwd().endsWith("/worker")
     ? resolve(process.cwd(), "migrations")
     : resolve(process.cwd(), "worker", "migrations");
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
   sqlite.exec(readFileSync(resolve(migrationsDir, "0193_yield_coverage_review_dispositions.sql"), "utf8"));
   openDatabases.push(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };

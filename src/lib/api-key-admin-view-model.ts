@@ -86,18 +86,10 @@ export interface ApiKeyInventoryView extends ApiKeyInventoryPage {
 const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE);
 const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
 
-export const API_KEY_INVENTORY_MIN_PAGE_SIZE = 1;
+const API_KEY_INVENTORY_MIN_PAGE_SIZE = 1;
 export const API_KEY_INVENTORY_DEFAULT_PAGE_SIZE = 25;
 export const API_KEY_INVENTORY_MAX_PAGE_SIZE = 100;
-export const DEFAULT_API_KEY_INVENTORY_STATUS_FILTER: ApiKeyInventoryStatusFilter = "attention";
-
-export const API_KEY_INVENTORY_STATUS_PRIORITY: readonly ApiKeyInventoryStatus[] = [
-  "expired",
-  "expiring-soon",
-  "inactive",
-  "non-expiring",
-  "active",
-];
+const DEFAULT_API_KEY_INVENTORY_STATUS_FILTER: ApiKeyInventoryStatusFilter = "attention";
 
 const API_KEY_INVENTORY_STATUS_RANK: Record<ApiKeyInventoryStatus, number> = {
   expired: 0,
@@ -196,7 +188,7 @@ export function getApiKeyInventoryStatus(key: ApiKeySummary, nowSeconds: number)
   return "active";
 }
 
-export function isApiKeyInAttentionQueue(key: ApiKeySummary, nowSeconds: number): boolean {
+function isApiKeyInAttentionQueue(key: ApiKeySummary, nowSeconds: number): boolean {
   return getApiKeyInventoryStatus(key, nowSeconds) !== "active";
 }
 
@@ -502,11 +494,4 @@ export function buildUpdateApiKeyPayload(draft: EditableKeyState): Record<string
     rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
     expiresAt,
   };
-}
-
-export function requirePlaintextToken<T extends { token?: unknown }>(response: T, action: "created" | "rotated"): string {
-  if (typeof response.token === "string" && response.token.trim().length > 0) {
-    return response.token;
-  }
-  throw new Error(`The key was ${action}, but the plaintext token was not returned. Rotate the key before using it.`);
 }

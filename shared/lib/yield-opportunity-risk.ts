@@ -30,7 +30,7 @@ import { PYS_VENUE_PENALTY_THRESHOLD } from "./yield-scoring";
  * are a no-op on the PYS venue curve are also a no-op here; calibrated to the
  * Royco tranche venue penalties (medium ≈ 5, high ≈ 10-15 safety points).
  */
-export const OPPORTUNITY_VENUE_SAFETY_SLOPE = 5;
+const OPPORTUNITY_VENUE_SAFETY_SLOPE = 5;
 
 const OPPORTUNITY_CLASS_BY_YIELD_TYPE: Partial<Record<YieldType, YieldOpportunityClass>> = {
   "lending-opportunity": "lending",

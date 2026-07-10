@@ -10,6 +10,21 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 
 const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
+interface AdminTelegramResendBody {
+  mode: string;
+  dryRun: boolean;
+  enqueued: number;
+  historicalOutcome: unknown;
+  payload: { messageLength: number };
+}
+
+interface PendingReplayRow {
+  message_html: string;
+  source_type: string;
+  markup_policy_json: string;
+  dedupe_key: string;
+}
+
 function latestDb() {
   const fixture = createLatestSchemaSqlite();
   openSqlite.push(fixture.sqlite);
@@ -131,7 +146,7 @@ describe("handleAdminTelegramResend exact replay", () => {
       trustedAdmin: true,
     });
     expect(response.status).toBe(200);
-    const body = await response.json() as any;
+    const body = await response.json() as AdminTelegramResendBody;
     expect(body).toMatchObject({
       mode: "exact_historical_outbox_replay",
       dryRun: true,
@@ -161,7 +176,7 @@ describe("handleAdminTelegramResend exact replay", () => {
     const replay = sqlite.prepare(
       `SELECT message_html, source_type, markup_policy_json, dedupe_key
          FROM telegram_pending_alerts`,
-    ).get() as any;
+    ).get() as unknown as PendingReplayRow;
     expect(replay).toMatchObject({
       message_html: seeded.messageHtml,
       source_type: "admin_replay",

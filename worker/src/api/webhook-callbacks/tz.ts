@@ -57,7 +57,7 @@ export const handleTimezoneCallback: CallbackHandler = async ({
       actionDetail: "quick_pick",
       outcome: "set",
     });
-  } catch (err) {
+  } catch {
     logTelegramEvent({
       message: "timezone write failed",
       action: "tz",

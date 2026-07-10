@@ -77,7 +77,7 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
 }
 
-export function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertType[] {
+function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertType[] {
   const types: TelegramAlertType[] = [];
   if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0)
     types.push("depeg");
