@@ -118,6 +118,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0172     | `0172_worker_effect_fencing.sql`                         | Add Worker effect fencing, retry-safe cron telemetry, and public blacklist pagination indexes                                                       |
 | 0173     | `0173_scheduled_recovery_checkpoints.sql`                | Add generation-fenced scheduled-job checkpoints for replay-safe platform-abandonment recovery                                                       |
 | 0174     | `0174_blacklist_sync_fairness.sql`                       | Add typed dual-written blacklist cursors, generation-fenced attempt state, fair-scheduling timestamps, and safe-head observations                   |
+| 0175     | `0175_durable_alert_broker.sql`                          | Add durable alert condition episodes, transition delivery claims, retries, recoveries, and explicit enforcement modes                               |
+| 0176     | `0176_scheduler_execution_history.sql`                   | Add path/version-attributed producer invocation and productivity histories, publication attribution, hardening modes, and detail-cache generations  |
+| 0177     | `0177_pricing_provider_and_dex_coverage_state.sql`       | Add provider availability/fairness state, resumable DEX pagination cursors, and exact deployment coverage outcomes                                  |
 
 ## Retired Individual Migrations
 
@@ -174,6 +177,9 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0172_worker_effect_fencing.sql`: roll back runtime fencing by restoring the prior Worker version. Keep the additive columns/indexes; uncertain admin/Telegram effects require operator reconciliation before manual retry.
 - `0173_scheduled_recovery_checkpoints.sql`: roll back reserve recovery by restoring the prior Worker version and removing the isolated recovery trigger. Keep the additive checkpoint table/indexes for forensic inspection; do not delete ready or recovering rows during rollback.
 - `0174_blacklist_sync_fairness.sql`: roll back the fair scheduler by restoring the prior Worker version. The new Worker dual-writes `last_block`, so the legacy reader remains compatible; keep the additive cursor and attempt columns for later re-enablement and forensic inspection.
+- `0175_durable_alert_broker.sql`: roll back broker enforcement with `ALERT_BROKER_MODE=off` or by restoring the prior Worker version. Keep incident and delivery rows for forensic inspection and retry reconciliation; no existing alert table is altered.
+- `0176_scheduler_execution_history.sql`: roll back producer-history writers and readers by restoring the prior Worker version. Keep additive attribution columns, histories, heads, and generation rows for forensic inspection; legacy cron and publication readers remain compatible.
+- `0177_pricing_provider_and_dex_coverage_state.sql`: roll back provider suppression and DEX coverage writers by restoring the prior Worker version. Keep the additive state and outcome tables for later re-enablement and forensic inspection.
 
 ## Rollback Procedure
 
