@@ -131,6 +131,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0185     | `0185_telegram_source_event_resolution.sql`               | Add immutable Telegram source events, cursorable normalized preset-resolution pages, target-item lineage, and atomic baseline advancement             |
 | 0186     | `0186_admin_action_audit_intent_keys.sql`                  | Add nullable intent identities and a partial unique index for exactly-once catalog action audit rows                                                   |
 | 0187     | `0187_telegram_pending_preference_revalidation.sql`         | Add Telegram chat preference generations, exact pending-risk provenance, cancellation audit fields, and dead-letter lineage                           |
+| 0188     | `0188_telegram_webhook_operation_intents.sql`               | Add versioned Telegram webhook operation intents, atomic mutation markers, and explicit outbound effect lifecycle metadata                            |
+| 0189     | `0189_telegram_pending_lifecycle_safety.sql`                  | Add owner/generation-fenced pending effects, explicit execution-unknown reconciliation, and idempotent dead-letter identities                          |
+| 0190     | `0190_telegram_authoritative_target_plans.sql`                | Add cursorable Telegram target planning, sendable target payloads, exact job counters, and explicit legacy-overflow import state                      |
 
 ## Retired Individual Migrations
 
@@ -200,6 +203,9 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0185_telegram_source_event_resolution.sql`: roll back resumable Telegram source planning by restoring the prior Worker version. Keep source/page/lineage rows for the 90-day audit window; unresolved or expired rows remain forensic evidence and require no destructive rollback.
 - `0186_admin_action_audit_intent_keys.sql`: roll back canonical catalog auditing by restoring the prior Worker version. Keep the nullable intent column and unique index; older Workers ignore both and existing handler-owned audit rows remain compatible.
 - `0187_telegram_pending_preference_revalidation.sql`: roll back pending preference revalidation by restoring the prior Worker version. Keep additive generation, provenance, and cancellation audit columns; older Workers ignore them and legacy pending rows remain deliverable under the prior policy.
+- `0188_telegram_webhook_operation_intents.sql`: roll back webhook intent fencing by restoring the prior Worker version. Keep additive intent/effect columns and the mutation ledger for forensic inspection; updates in `started` or `execution_unknown` require operator reconciliation and must not be replayed automatically.
+- `0189_telegram_pending_lifecycle_safety.sql`: roll back pending lifecycle fencing by restoring the prior Worker version. Keep additive effect-owner/generation and dead-letter identity columns; `sending` and `execution_unknown` rows require operator reconciliation before manual removal or resend.
+- `0190_telegram_authoritative_target_plans.sql`: roll back row-authoritative target planning by restoring the prior Worker version. Keep additive plan, payload, counter, and legacy-import audit rows; do not delete a reconciled plan or target ledger during rollback.
 
 ## Rollback Procedure
 
