@@ -1,6 +1,7 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { EndpointProbeResult } from "@shared/types";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { LazyDetails } from "@/components/status/lazy-details";
 import { ReliabilityCopyDiagnostics } from "@/components/status/reliability-copy-diagnostics";
 import { StatusPill } from "@/components/status/severity-pill";
 import type { ReliabilityEndpointModel } from "@/lib/reliability-workspace-model";
@@ -164,10 +165,13 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
       )}
 
       {model.healthyProbes.length > 0 ? (
-        <details>
-          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-muted-foreground">
-            {model.healthyProbes.length} healthy endpoint{model.healthyProbes.length === 1 ? "" : "s"}
-          </summary>
+        <LazyDetails
+          summary={
+            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-muted-foreground">
+              {model.healthyProbes.length} healthy endpoint{model.healthyProbes.length === 1 ? "" : "s"}
+            </summary>
+          }
+        >
           <TableFrame
             tableId="reliability-endpoints-healthy"
             chrome="content"
@@ -178,7 +182,7 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
             {probeHeader}
             <ProbeRows probes={model.healthyProbes} />
           </TableFrame>
-        </details>
+        </LazyDetails>
       ) : null}
     </div>
   );

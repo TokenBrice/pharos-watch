@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CircuitRecord } from "@shared/types";
 import { CircuitBreakerTable } from "../circuit-breaker-table";
@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("CircuitBreakerTable", () => {
-  it("keeps tripped breakers visible and nests healthy breakers in a shared table", () => {
+  it("keeps tripped breakers visible and nests healthy breakers in a shared table", async () => {
     const circuits: Record<string, CircuitRecord> = {
       "dex-liquidity": {
         state: "open",
@@ -36,7 +36,10 @@ describe("CircuitBreakerTable", () => {
     expect(within(trippedTable).getByText("dex-liquidity")).toBeTruthy();
     expect(screen.getByText("1 healthy breaker")).toBeTruthy();
 
-    const healthyTable = screen.getByTestId("circuit-breakers-healthy-table");
+    // Collapsed healthy detail is not mounted until the operator opens it.
+    expect(screen.queryByTestId("circuit-breakers-healthy-table")).toBeNull();
+    fireEvent.click(screen.getByText("1 healthy breaker"));
+    const healthyTable = await screen.findByTestId("circuit-breakers-healthy-table");
     expect(healthyTable.getAttribute("data-table-id")).toBe("circuit-breakers-healthy");
     expect(within(healthyTable).getByRole("table", { name: /healthy circuit breakers/i })).toBeTruthy();
     expect(within(healthyTable).getByRole("columnheader", { name: "Name" })).toBeTruthy();

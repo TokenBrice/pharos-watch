@@ -315,7 +315,7 @@ describe("CronsSection", () => {
     expect(screen.getByText("Queued / claimed / started")).toBeTruthy();
   });
 
-  it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", () => {
+  it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", async () => {
     const data = makeData({
       budgetOnlySurfaces: [makeBudgetSurface()],
       summary: {
@@ -332,7 +332,10 @@ describe("CronsSection", () => {
     expect(screen.getByText("Telegram registration reconciliation")).toBeTruthy();
     expect(screen.getByText("Fresh telemetry")).toBeTruthy();
     expect(screen.getAllByText("Completed with warnings").length).toBeGreaterThan(0);
-    expect(screen.getByText("43m 2s")).toBeTruthy();
+    // Deep surface evidence stays unmounted until the row disclosure opens.
+    expect(screen.queryByText("43m 2s")).toBeNull();
+    fireEvent.click(screen.getByText("Telegram registration reconciliation"));
+    expect(await screen.findByText("43m 2s")).toBeTruthy();
     expect(screen.getByText("4 / 3")).toBeTruthy();
     expect(screen.getByText("1 max")).toBeTruthy();
     expect(screen.getByText("five-minute-telegram-chain")).toBeTruthy();

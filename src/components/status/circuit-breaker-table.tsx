@@ -2,6 +2,7 @@ import type { CircuitRecord } from "@shared/types";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { formatTimestampSeconds } from "@/lib/status-dashboard-model";
+import { LazyDetails } from "./lazy-details";
 import { PublicSignalCard } from "./public-signal-card";
 
 interface CircuitBreakerTableProps {
@@ -90,10 +91,14 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
           </TableFrame>
         )}
         {healthy.length > 0 && (
-          <details className={tripped.length > 0 ? "mt-4" : undefined}>
-            <summary className="cursor-pointer text-sm text-muted-foreground">
-              {healthy.length} healthy breaker{healthy.length !== 1 ? "s" : ""}
-            </summary>
+          <LazyDetails
+            className={tripped.length > 0 ? "mt-4" : undefined}
+            summary={
+              <summary className="cursor-pointer text-sm text-muted-foreground">
+                {healthy.length} healthy breaker{healthy.length !== 1 ? "s" : ""}
+              </summary>
+            }
+          >
             <TableFrame
               tableId="circuit-breakers-healthy"
               testId="circuit-breakers-healthy-table"
@@ -105,7 +110,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
               {tableHead}
               <TableBody>{healthy.map(renderRow)}</TableBody>
             </TableFrame>
-          </details>
+          </LazyDetails>
         )}
       </div>
     </PublicSignalCard>

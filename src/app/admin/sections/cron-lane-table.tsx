@@ -8,6 +8,7 @@ import type { BudgetOnlySurfaceStatus, CronRun, CronStaleArtifact } from "@share
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
+import { LazyDetails } from "@/components/status/lazy-details";
 import { formatInterval } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
@@ -714,28 +715,32 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
   const surface = row.surface;
   const checkedAge = surface.ageSeconds == null ? "Unknown" : `${formatElapsedSeconds(surface.ageSeconds)} ago`;
   return (
-    <details className="group min-w-0 border-t border-border/55 py-3 first:border-t-0">
-      <summary className="flex min-w-0 cursor-pointer list-none flex-wrap items-start justify-between gap-3 marker:hidden">
-        <span className="min-w-0">
-          <span className="block break-words text-sm font-medium text-foreground">{row.label}</span>
-          <span className="mt-1 block break-all font-mono text-[11px] text-muted-foreground">{row.job}</span>
-        </span>
-        <span className="flex flex-wrap items-center justify-end gap-2">
-          <Badge
-            className={cn(
-              "text-[11px]",
-              surface.telemetryStatus === "fresh"
-                ? "bg-green-500/15 text-green-800 dark:text-green-300"
-                : surface.telemetryStatus === "stale"
-                  ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
-                  : "bg-red-500/15 text-red-800 dark:text-red-300",
-            )}
-          >
-            {row.telemetryLabel} telemetry
-          </Badge>
-          <Badge className={`text-[11px] ${getCronStatusColor(surface.outcome)}`}>{row.outcomeLabel}</Badge>
-        </span>
-      </summary>
+    <LazyDetails
+      className="group min-w-0 border-t border-border/55 py-3 first:border-t-0"
+      summary={
+        <summary className="flex min-w-0 cursor-pointer list-none flex-wrap items-start justify-between gap-3 marker:hidden">
+          <span className="min-w-0">
+            <span className="block break-words text-sm font-medium text-foreground">{row.label}</span>
+            <span className="mt-1 block break-all font-mono text-[11px] text-muted-foreground">{row.job}</span>
+          </span>
+          <span className="flex flex-wrap items-center justify-end gap-2">
+            <Badge
+              className={cn(
+                "text-[11px]",
+                surface.telemetryStatus === "fresh"
+                  ? "bg-green-500/15 text-green-800 dark:text-green-300"
+                  : surface.telemetryStatus === "stale"
+                    ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                    : "bg-red-500/15 text-red-800 dark:text-red-300",
+              )}
+            >
+              {row.telemetryLabel} telemetry
+            </Badge>
+            <Badge className={`text-[11px] ${getCronStatusColor(surface.outcome)}`}>{row.outcomeLabel}</Badge>
+          </span>
+        </summary>
+      }
+    >
       <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-4">
         <div className="min-w-0 col-span-2 sm:col-span-4">
           <dt className="text-muted-foreground">Raw telemetry / outcome</dt>
@@ -787,7 +792,7 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
           </pre>
         </details>
       ) : null}
-    </details>
+    </LazyDetails>
   );
 }
 

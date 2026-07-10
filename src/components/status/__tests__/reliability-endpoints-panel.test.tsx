@@ -64,6 +64,12 @@ describe("ReliabilityEndpointsPanel", () => {
     const healthyDetails = screen.getByText("1 healthy endpoint").closest("details");
     expect(healthyDetails?.hasAttribute("open")).toBe(false);
     expect(screen.getByText("1 healthy endpoint").className).toContain("min-h-11");
+    // Closed healthy detail keeps its table subtree unmounted until opened.
+    expect(screen.queryByRole("table", { name: "Healthy endpoint probes" })).toBeNull();
+    fireEvent.click(screen.getByText("1 healthy endpoint"));
+    expect(await screen.findByRole("table", { name: "Healthy endpoint probes" })).toBeTruthy();
+    fireEvent.click(screen.getByText("1 healthy endpoint"));
+    await waitFor(() => expect(screen.queryByRole("table", { name: "Healthy endpoint probes" })).toBeNull());
 
     const copy = screen.getByRole("button", { name: "Copy secret-free reliability diagnostics" });
     expect(copy.className).toContain("min-h-11");

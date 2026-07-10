@@ -3,6 +3,7 @@ import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { LazyDetails } from "./lazy-details";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 
@@ -194,22 +195,26 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
             </TableFrame>
           )}
           {ok.length > 0 && (
-            <details className={unhealthy.length > 0 ? "mt-4" : undefined}>
-              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
-                {ok.length} healthy cache{ok.length !== 1 ? "s" : ""}
-              </summary>
+            <LazyDetails
+              className={unhealthy.length > 0 ? "mt-4" : undefined}
+              summary={
+                <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm text-muted-foreground">
+                  {ok.length} healthy cache{ok.length !== 1 ? "s" : ""}
+                </summary>
+              }
+            >
               <TableFrame
                 tableId="cache-freshness-healthy"
                 testId="cache-freshness-healthy-table"
                 chrome="content"
                 density="compact"
                 className="mt-2"
-              tableProps={{ "aria-label": "Healthy cache freshness" }}
-            >
+                tableProps={{ "aria-label": "Healthy cache freshness" }}
+              >
                 {tableHead}
                 <TableBody>{ok.map(renderRow)}</TableBody>
               </TableFrame>
-            </details>
+            </LazyDetails>
           )}
         </div>
       </div>
