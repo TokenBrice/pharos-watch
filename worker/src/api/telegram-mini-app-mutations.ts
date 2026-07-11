@@ -89,6 +89,8 @@ const PORTABLE_PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 
 type PortableDirectAlertType = (typeof PORTABLE_DIRECT_ALERT_TYPES)[number];
 type PortablePresetAlertType = (typeof PORTABLE_PRESET_ALERT_TYPES)[number];
+type BulkUndoOperation = Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "undo-bulk-watchlist" }>;
+type BulkUndoRow = BulkUndoOperation["restoreDirectRows"][number];
 
 interface PortablePreview {
   directAdds: string[];
@@ -298,17 +300,24 @@ function bulkPreviewFingerprint(
   });
 }
 
-function bulkStateFingerprint(
+function bulkUndoFingerprint(
   expectedPreferenceGeneration: number,
   direct: readonly WatchlistTokenDirectState[],
+  restoreRows: readonly BulkUndoRow[],
+  removeStablecoinIds: readonly string[],
 ): string {
   return previewFingerprint({
     expectedPreferenceGeneration,
     direct: direct.map(packWatchlistDirectState).sort(),
+    restore: restoreRows.map((row) => ({
+      direct: packWatchlistDirectState(fromBulkDirectRow(row)),
+      snoozeUntilTs: row.snoozeUntilTs ?? null,
+    })).sort((left, right) => left.direct.localeCompare(right.direct)),
+    removeStablecoinIds: [...removeStablecoinIds].sort(),
   });
 }
 
-function fromBulkDirectRow(row: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "undo-bulk-watchlist" }> ["restoreDirectRows"][number]): WatchlistTokenDirectState {
+function fromBulkDirectRow(row: BulkUndoRow): WatchlistTokenDirectState {
   return {
     ...row,
     alertFreeze: row.alertFreeze ?? false,
@@ -575,6 +584,11 @@ export async function executeTelegramMiniAppBulkWatchlistPreview(
   ];
   const removedSnoozes = await directSnoozesById(db, chatId, removes);
   const inheritedSources = await sourceImpactAfter(db, chatId, [...adds, ...removes]);
+  const restoreDirectRows: BulkUndoRow[] = removes.map((stablecoinId) => ({
+    ...directById.get(stablecoinId)!,
+    snoozeUntilTs: removedSnoozes.get(stablecoinId) ?? null,
+  }));
+  const removeStablecoinIds = adds;
   return {
     contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
     catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -599,12 +613,14 @@ export async function executeTelegramMiniAppBulkWatchlistPreview(
       ],
       undo: {
         expectedPreferenceGeneration: expectedPreferenceGeneration + 1,
-        expectedFingerprint: bulkStateFingerprint(expectedPreferenceGeneration + 1, desiredDirect),
-        restoreDirectRows: removes.map((stablecoinId) => ({
-          ...directById.get(stablecoinId)!,
-          snoozeUntilTs: removedSnoozes.get(stablecoinId) ?? null,
-        })),
-        removeStablecoinIds: adds,
+        expectedFingerprint: bulkUndoFingerprint(
+          expectedPreferenceGeneration + 1,
+          desiredDirect,
+          restoreDirectRows,
+          removeStablecoinIds,
+        ),
+        restoreDirectRows,
+        removeStablecoinIds,
       },
     },
   };
@@ -654,7 +670,12 @@ async function undoBulkWatchlist(
   const expectedPreferenceGeneration = current.preferenceGeneration ?? 0;
   if (
     operation.expectedPreferenceGeneration !== expectedPreferenceGeneration
-    || operation.expectedFingerprint !== bulkStateFingerprint(expectedPreferenceGeneration, current.state.direct)
+    || operation.expectedFingerprint !== bulkUndoFingerprint(
+      expectedPreferenceGeneration,
+      current.state.direct,
+      operation.restoreDirectRows,
+      operation.removeStablecoinIds,
+    )
   ) {
     throw new TelegramMiniAppMutationError("stale-bulk-preview", 409);
   }
