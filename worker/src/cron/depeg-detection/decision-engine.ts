@@ -44,6 +44,12 @@ import type {
   DexPoolChallenger,
   PendingDepegCommandPayload,
 } from "./types";
+import {
+  applyNativeQuoteVeto,
+  recoveryPriceForEvent,
+  resolveDirectRecovery,
+  resolvePeakUpdateCommand,
+} from "./native-quote-policy";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -82,12 +88,6 @@ interface DecisionContext {
 const DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.75;
 const DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.5;
 const DEPEG_TIERED_CONFIRMATION_SEVERITY_MULTIPLIER = 2;
-
-function isNativePegEvent(event: DepegRow): boolean {
-  return event.source === "live" &&
-    event.peg_reference === 1 &&
-    normalizePegType(event.peg_type) !== "peggedUSD";
-}
 
 type DecisionContextDerivation =
   | { kind: "skip"; decision: DepegAssetDecision }
@@ -463,67 +463,6 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   };
 }
 
-function buildNativeSuppressionWarning(ctx: DecisionContext): DepegDiagnostic {
-  return withDiagnostic(
-    "warn",
-    `[depeg] Suppressed live depeg mutation for ${ctx.asset.symbol}: ` +
-    `primary=${ctx.bps}bps but direct ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`,
-  );
-}
-
-function applyNativeQuoteVeto(
-  ctx: DecisionContext,
-  existing: DepegRow | undefined,
-): DepegAssetDecision | null {
-  const nativeSupportsPrimaryDirection =
-    ctx.nativeSignal != null &&
-    signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
-    signalsShareDirection(ctx.nativeSignal, ctx.direction);
-  const nativeShowsRecovery = ctx.nativeSignal != null && ctx.nativeSignal.absBps < ctx.threshold;
-  const nativeSupportsExistingDirection =
-    existing != null &&
-    ctx.nativeSignal != null &&
-    signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
-    signalsShareDirection(ctx.nativeSignal, existing.direction as DepegDirection);
-
-  if (ctx.absBps >= ctx.threshold && ctx.nativeSignal != null && !nativeSupportsPrimaryDirection) {
-    const decision = emptyDecision(ctx.trackedCoinId);
-    if (nativeShowsRecovery) {
-      if (existing) {
-        const nativeEvent = isNativePegEvent(existing);
-        decision.commands.push({
-          type: "close-event",
-          id: existing.id,
-          endedAt: ctx.now,
-          recoveryPrice: nativeEvent ? ctx.nativePegPrice : null,
-          closeReason: "recovered-native",
-        });
-      }
-      decision.diagnostics.push(buildNativeSuppressionWarning(ctx));
-      return decision;
-    }
-
-    if (existing && nativeSupportsExistingDirection) {
-      decision.seenEventIds.push(existing.id);
-    }
-    decision.diagnostics.push(buildNativeSuppressionWarning(ctx));
-    return decision;
-  }
-
-  if (ctx.absBps < ctx.threshold && existing && nativeSupportsExistingDirection) {
-    const decision = emptyDecision(ctx.trackedCoinId);
-    decision.seenEventIds.push(existing.id);
-    decision.diagnostics.push(withDiagnostic(
-      "warn",
-      `[depeg] Kept ${ctx.asset.symbol} open despite primary recovery: ` +
-      `primary=${ctx.bps}bps but direct ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`,
-    ));
-    return decision;
-  }
-
-  return null;
-}
-
 /**
  * Allows fresh direct native-fiat quotes to initiate supported non-USD live
  * depeg state when the USD-vs-reference primary path is still inside threshold.
@@ -607,7 +546,6 @@ function decideExistingEvent(
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
-  const nativeEvent = isNativePegEvent(existing);
 
   // Direction change: retire the live row only on authoritative contradiction
   // or corroborated same-direction DEX support for the replacement move.
@@ -617,7 +555,7 @@ function decideExistingEvent(
         type: "close-event",
         id: existing.id,
         endedAt: now,
-        recoveryPrice: nativeEvent ? null : price,
+        recoveryPrice: recoveryPriceForEvent(existing, price),
         closeReason: "superseded-direction",
       });
       if (requiresConfirmation) {
@@ -641,21 +579,17 @@ function decideExistingEvent(
 
   // Same direction - event stays open.
   seenEventIds.push(existing.id);
-  const peakSignal = nativeEvent ? ctx.nativeSignal : { bps, absBps, direction };
-  const peakPrice = nativeEvent ? ctx.nativePegPrice : price;
-  const canUpdatePeak = nativeEvent
-    ? peakSignal != null && peakSignal.direction === existing.direction && peakPrice != null
-    : primaryTrust === "authoritative" ||
-      dexSupportsDirection ||
-      (primaryTrust === "confirm_required" && dexSupportsSecondaryBarDirection);
-  if (canUpdatePeak && peakSignal && peakSignal.absBps > Math.abs(existing.peak_deviation_bps)) {
-    commands.push({
-      type: "update-peak",
-      id: existing.id,
-      peakDeviationBps: peakSignal.bps,
-      peakPrice,
-    });
-  }
+  const peakUpdate = resolvePeakUpdateCommand({
+    existing,
+    nativeSignal: ctx.nativeSignal,
+    nativePegPrice: ctx.nativePegPrice,
+    primarySignal: { bps, absBps, direction },
+    primaryPrice: price,
+    primaryTrust,
+    dexSupportsDirection,
+    dexSupportsSecondaryBarDirection,
+  });
+  if (peakUpdate) commands.push(peakUpdate);
 
   // Keep the event open when the current primary sample still shows a same-direction depeg.
   // Aggregate DEX disagreement can still suppress brand-new events and confirm recoveries,
@@ -760,38 +694,31 @@ function decideRecovery(
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
-  const nativeEvent = isNativePegEvent(existing);
+  const directRecovery = resolveDirectRecovery({
+    existing,
+    nativeSignal: ctx.nativeSignal,
+    nativePegPrice: ctx.nativePegPrice,
+    primaryPrice: price,
+    threshold,
+    primarySupportsRecovery,
+    primaryRecoveryContradicted:
+      (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) || poolRecoveryVeto,
+  });
 
-  if (nativeEvent && ctx.nativeSignal != null && ctx.nativeSignal.absBps < threshold) {
-    commands.push({
-      type: "close-event",
-      id: existing.id,
-      endedAt: now,
-      recoveryPrice: ctx.nativePegPrice,
-      closeReason: "recovered-native",
-    });
-    return { seenEventIds, commands, diagnostics };
-  }
-
-  if (
-    primarySupportsRecovery &&
-    !(isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) &&
-    !poolRecoveryVeto
-  ) {
+  if (directRecovery) {
     // Price recovered - close the event.
     commands.push({
       type: "close-event",
       id: existing.id,
       endedAt: now,
-      recoveryPrice: nativeEvent ? null : price,
-      closeReason: "recovered-primary",
+      ...directRecovery,
     });
   } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
     commands.push({
       type: "close-event",
       id: existing.id,
       endedAt: now,
-      recoveryPrice: nativeEvent ? null : dexRow.dex_price_usd,
+      recoveryPrice: recoveryPriceForEvent(existing, dexRow.dex_price_usd),
       closeReason: "recovered-dex",
     });
   } else {
