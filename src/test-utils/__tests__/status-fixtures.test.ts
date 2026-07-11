@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StatusResponseSchema } from "@shared/types/status";
+import { StatusResponseSchema, TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildActionReadinessChecks } from "@/lib/status/admin-ops-insights";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
@@ -144,7 +144,7 @@ describe("status review fixtures", () => {
 
     expect(data.telegramBot?.lifecycleSnapshot?.snapshotAt).toBeLessThan(data.timestamp - 10_000_000);
     expect(data.telegramBot?.retryErrorClassCounts).toHaveProperty("gateway_timeout_after_fixture_retry_budget");
-    expect(Object.keys(perAlertType ?? {})).toEqual(["dews", "depeg", "safety", "launch", "reserve"]);
+    expect(Object.keys(perAlertType ?? {})).toEqual([...TELEGRAM_ALERT_TYPES]);
     expect(dispatch?.durationMs).toBe(98_765);
   });
 });

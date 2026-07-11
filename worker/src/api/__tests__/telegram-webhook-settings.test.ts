@@ -229,9 +229,9 @@ describe("handleSettingsCallback — chat-level", () => {
         /global_alert_dews\s*=\s*excluded\.global_alert_dews/.test(h.sql),
     );
     expect(upsert).toBeDefined();
-    // Binds for INSERT OR CONFLICT in upsertSubscriberRow: chatId, username, per-coin flags,
-    // then global flags. global_alert_dews must be 1 (toggled from 0).
-    expect(upsert!.binds[7]).toBe(1);
+    // Binds are chatId, username, six per-coin flags, then six global flags.
+    // global_alert_dews must be 1 (toggled from 0).
+    expect(upsert!.binds[8]).toBe(1);
     expect(editCalls().length).toBe(1);
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("dews");
@@ -265,11 +265,11 @@ describe("handleSettingsCallback — chat-level", () => {
         /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql),
     );
     expect(upsert).toBeDefined();
-    // bind positions: chat_id, username, 5 per-coin flags, 5 global flags,
-    //                 quiet_enabled(12), quiet_start(13), quiet_end(14)
-    expect(upsert!.binds[12]).toBe(1);
-    expect(upsert!.binds[13]).toBe(22);
-    expect(upsert!.binds[14]).toBe(7);
+    // bind positions: chat_id, username, six per-coin flags, six global flags,
+    //                 quiet_enabled(14), quiet_start(15), quiet_end(16)
+    expect(upsert!.binds[14]).toBe(1);
+    expect(upsert!.binds[15]).toBe(22);
+    expect(upsert!.binds[16]).toBe(7);
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("enabled");
   });
@@ -297,7 +297,7 @@ describe("handleSettingsCallback — chat-level", () => {
 
     const upsert = db.getHistory().find((h) => /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql));
     expect(upsert).toBeDefined();
-    expect(upsert!.binds[10]).toBe(0);
+    expect(upsert!.binds[12]).toBe(0);
   });
 
   it("settings:sc clears the snooze timestamp", async () => {

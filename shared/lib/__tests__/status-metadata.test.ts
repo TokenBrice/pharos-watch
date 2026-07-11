@@ -5,6 +5,7 @@ import {
   readMetadataNumber,
   readMetadataRecord,
 } from "../status-metadata";
+import { TELEGRAM_ALERT_TYPES } from "../../types/status";
 
 describe("status-metadata", () => {
   it("coerces generic metadata primitives defensively", () => {
@@ -126,12 +127,14 @@ describe("status-metadata", () => {
       },
     });
 
+    expect(Object.keys(metadata?.perAlertType ?? {})).toEqual([...TELEGRAM_ALERT_TYPES]);
     expect(metadata?.perAlertType).toEqual({
       dews: { sent: 3, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
       depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
       safety: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
       launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
       reserve: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
+      freeze: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
     });
   });
 

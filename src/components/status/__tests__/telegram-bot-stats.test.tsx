@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { CronStatus, StatusResponse } from "@shared/types";
+import { TELEGRAM_ALERT_TYPES, type CronStatus, type StatusResponse } from "@shared/types";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { TelegramBotStats } from "../telegram-bot-stats";
 
@@ -236,13 +236,13 @@ describe("TelegramBotStats", () => {
     const mobile = screen.getByTestId("telegram-delivery-mobile");
     const desktop = screen.getByTestId("telegram-delivery-desktop");
     expect(mobile.className).toContain("sm:hidden");
-    expect(mobile.querySelectorAll("dl")).toHaveLength(5);
-    expect(within(mobile).getAllByText("First send latency")).toHaveLength(5);
+    expect(mobile.querySelectorAll("dl")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
+    expect(within(mobile).getAllByText("First send latency")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
     expect(within(mobile).getAllByText("Unknown").length).toBeGreaterThan(0);
     expect(desktop.className).toContain("overflow-x-auto");
     expect(desktop.className).toContain("sm:block");
     expect(desktop.querySelector("table")?.className).toContain("table-fixed");
-    expect(desktop.querySelectorAll("tbody tr")).toHaveLength(5);
+    expect(desktop.querySelectorAll("tbody tr")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
     expect(within(desktop).getByText("Alert type")).toBeTruthy();
     expect(within(desktop).getByText("First latency")).toBeTruthy();
   });
