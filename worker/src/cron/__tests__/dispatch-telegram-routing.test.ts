@@ -272,6 +272,18 @@ describe("dispatch telegram routing helpers", () => {
     expect(selected.overflow.map((entry) => entry.chatId)).toEqual(["older-dews"]);
   });
 
+  it("counts freeze alerts in the cheap pre-format chunk estimate", () => {
+    const freezeAlerts = Array.from({ length: 17 }, (_, index) => ({
+      stablecoinId: `freeze-${index}`,
+      symbol: `F${index}`,
+    })) as NonNullable<ConsolidatedAlerts["freeze"]>;
+    const planned = planSubscriberQueue(
+      new Map([["freeze", alertsEntry({ alerts: emptyAlerts({ freeze: freezeAlerts }) })]]),
+    );
+
+    expect(planned).toMatchObject([{ alertType: "freeze", alertTypes: ["freeze"], estimatedChunks: 2 }]);
+  });
+
   it("expands chunks with private-chat Mini App markup and skips blocked chats", () => {
     const privateChat = routedAlert("123", ["first", "second"]);
     const groupChat = routedAlert("-100123", ["group"]);
@@ -356,5 +368,19 @@ describe("collapseBurstChats (C128)", () => {
     const out = collapseBurstChats(map, {}, 1000);
     expect(out.collapsedChats).toBe(0);
     expect(map.get("100")?.alerts.burst).toBeUndefined();
+  });
+
+  it("includes freeze-only alerts in burst collapse identity and attribution", () => {
+    const freezeAlerts = ["frozen-a", "frozen-b"].map((stablecoinId) => ({ stablecoinId })) as NonNullable<ConsolidatedAlerts["freeze"]>;
+    const map = new Map([["100", entry(emptyAlerts({ freeze: freezeAlerts }), 2)]]);
+
+    const out = collapseBurstChats(map, {}, 1000, 2, 1800);
+
+    expect(map.get("100")?.alerts.burst).toMatchObject({
+      coinCount: 2,
+      dominantFamily: "freeze",
+      stablecoinIds: ["frozen-a", "frozen-b"],
+    });
+    expect(out.markers["100"]?.coinIds).toEqual(["frozen-a", "frozen-b"]);
   });
 });

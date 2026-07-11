@@ -3036,6 +3036,45 @@ describe("enqueuePendingAlerts", () => {
     sqlite.close();
   });
 
+  it("rejects a recap that lacks immutable delivery provenance", async () => {
+    const db = mockD1([]);
+
+    await expect(enqueuePendingAlerts(db, [{
+      chatId: "invalid-recap",
+      html: "<b>Watchbot recap</b>",
+      disableNotification: false,
+      sourceEventId: "recap:invalid-recap:2026-07-11:v1",
+    }], 10_000, { sourceType: "personalized_recap" })).rejects.toThrow("incomplete provenance");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("persists replay markup while using the admin delivery policy by default", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const markup = { inline_keyboard: [[{ text: "Open", callback_data: "admin:open" }]] };
+
+    await enqueuePendingAlerts(db, [{
+      chatId: "admin-replay",
+      html: "<b>Replay</b>",
+      disableNotification: false,
+      replyMarkup: markup,
+    }], 10_000, { sourceType: "admin_replay" });
+
+    expect(sqlite.prepare(
+      `SELECT source_type, priority, expires_at, source_event_id, alert_scope_json,
+              preference_generation, markup_policy_json
+         FROM telegram_pending_alerts`,
+    ).get()).toEqual({
+      source_type: "admin_replay",
+      priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
+      expires_at: 10_000 + 45 * 60,
+      source_event_id: null,
+      alert_scope_json: null,
+      preference_generation: null,
+      markup_policy_json: serializePendingMarkupPolicy({ replyMarkup: markup }),
+    });
+    sqlite.close();
+  });
+
   it("inserts messages into the pending table", async () => {
     const db = mockD1([
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },

@@ -114,11 +114,10 @@ function insertDirect(options: {
   );
 }
 
-function insertPreset(): void {
+function insertPreset(presetId = "usd-top10"): void {
   sqlite.prepare(
-    `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews)
-     VALUES (?, 'usd-top10', 1)`,
-  ).run(CHAT_ID);
+    "INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews) VALUES (?, ?, 1)",
+  ).run(CHAT_ID, presetId);
 }
 
 function pendingRow(options: {
@@ -341,6 +340,44 @@ describe("pending Telegram preference revalidation", () => {
     await expect(evaluate(recapRow())).resolves.toMatchObject({ kind: "cancel", reason: "recap_paused" });
   });
 
+  it("defers a recap during a timed snooze until the subscriber becomes eligible", async () => {
+    insertSubscriber({ generation: 1, chatSnoozeUntil: NOW + 300 });
+    insertRecapTarget();
+
+    await expect(evaluate(recapRow())).resolves.toMatchObject({
+      kind: "defer",
+      reason: "recap_snoozed",
+      notBeforeAt: NOW + 300,
+    });
+  });
+
+  it("cancels a recap when the preference has been disabled", async () => {
+    insertSubscriber({ generation: 1 });
+    insertRecapTarget(1, 0);
+
+    await expect(evaluate(recapRow())).resolves.toMatchObject({ kind: "cancel", reason: "recap_disabled" });
+  });
+
+  it("cancels a recap whose durable preference or target has been removed", async () => {
+    insertSubscriber({ generation: 1 });
+
+    await expect(evaluate(recapRow())).resolves.toMatchObject({
+      kind: "cancel",
+      reason: "recap_preference_missing",
+    });
+  });
+
+  it("defers recap rows with invalid immutable provenance", async () => {
+    const row = recapRow();
+    row.markup_policy_json = null;
+
+    await expect(evaluate(row)).resolves.toMatchObject({
+      kind: "defer",
+      reason: "recap_markup_policy_missing",
+      notBeforeAt: NOW + 15 * 60,
+    });
+  });
+
   it("cancels a recap when its target generation no longer matches the subscriber", async () => {
     insertSubscriber({ generation: 2 });
     insertRecapTarget(1);
@@ -348,5 +385,28 @@ describe("pending Telegram preference revalidation", () => {
       kind: "cancel",
       reason: "recap_generation_changed",
     });
+  });
+
+  it("cancels a preset route after the preset no longer contains its coin", async () => {
+    insertSubscriber({ generation: 2 });
+    insertPreset("mcap-ge-1b");
+    const [outcome] = await revalidatePendingAlertPreferences(db, [pendingRow()], NOW, {
+      getStablecoinsCacheResult: async () => ({
+        kind: "ok",
+        updatedAt: NOW,
+        payload: {
+          peggedAssets: [{
+            id: "tether",
+            symbol: "USDT",
+            name: "Tether",
+            pegType: "peggedUSD",
+            price: 1,
+            circulating: { peggedUSD: 100_000_000_000 },
+          }],
+        },
+      }) as StablecoinsCacheLoadResult,
+    });
+
+    expect(outcome).toMatchObject({ kind: "cancel", reason: "scope_disabled" });
   });
 });
