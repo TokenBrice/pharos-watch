@@ -55,6 +55,16 @@ export interface TelegramWebhookEffectLifecycle {
   lowerBound: boolean;
 }
 
+export interface TelegramPersonalizedRecapTelemetry {
+  enabledPrivateChats: number;
+  due: number;
+  queued: number;
+  executionUnknown: number;
+  oldestDueAgeSec: number | null;
+  oldestQueuedAgeSec: number | null;
+  oldestExecutionUnknownAgeSec: number | null;
+}
+
 export type TelegramDeliverySliEvidenceQuality = "complete" | "partial" | "empty";
 export type TelegramDeliverySliEvidenceFreshness = "fresh" | "stale" | "empty";
 
@@ -200,6 +210,7 @@ export interface TelegramBotStats {
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
   webhookEffectUnknown?: number;
   webhookEffectLifecycle?: TelegramWebhookEffectLifecycle;
+  personalizedRecap?: TelegramPersonalizedRecapTelemetry;
   deliverySli: TelegramDeliverySliStatus;
   presetQueryFailures?: number;
   /**

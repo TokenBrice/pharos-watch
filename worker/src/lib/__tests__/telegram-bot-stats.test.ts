@@ -113,6 +113,15 @@ describe("mapTelegramBotStats", () => {
         { error_class: "rate_limit", pending_count: "4" },
         { error_class: "server_error", pending_count: "2" },
       ],
+      recapTelemetry: {
+        enabled_private_chats: "14",
+        due_count: "3",
+        queued_count: "5",
+        execution_unknown_count: "1",
+        oldest_due_at: "1710000040",
+        oldest_queued_at: "1710000020",
+        oldest_execution_unknown_at: "1710000010",
+      },
       topStablecoins: [
         {
           stablecoin_id: "usdc-circle",
@@ -247,6 +256,15 @@ describe("mapTelegramBotStats", () => {
         oldestAmbiguousAgeSec: 90,
         sampleLimit: 5001,
         lowerBound: false,
+      },
+      personalizedRecap: {
+        enabledPrivateChats: 14,
+        due: 3,
+        queued: 5,
+        executionUnknown: 1,
+        oldestDueAgeSec: 60,
+        oldestQueuedAgeSec: 80,
+        oldestExecutionUnknownAgeSec: 90,
       },
       deliverySli: unavailableDeliverySli(),
     });
