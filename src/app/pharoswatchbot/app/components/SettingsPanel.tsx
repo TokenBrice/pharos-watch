@@ -200,7 +200,7 @@ function DailyRecapSection({ state, canMutate, isMutating, pendingOperation, onM
             <h2 id="daily-recap-heading" className="text-sm font-semibold text-foreground">Daily recap</h2>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Sent only when watched assets materially changed.
+            Sent only when watched assets materially changed. Immediate alert toggles are separate.
           </p>
         </div>
         <button

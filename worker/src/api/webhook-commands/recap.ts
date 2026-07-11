@@ -49,7 +49,7 @@ function formatRecapStatus(input: {
     `Last local date: ${input.lastLocalDate ?? "Not delivered yet"}`,
     `Last outcome: ${input.lastOutcome ?? "Not recorded yet"}`,
     "",
-    "Sent only when watched assets materially changed.",
+    "Sent only when watched assets materially changed. Immediate alert toggles are separate.",
   ].join("\n");
 }
 
