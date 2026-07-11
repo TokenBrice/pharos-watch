@@ -200,7 +200,7 @@ export interface YieldHealthSummary {
     headlineGaps: YieldCoverageAuditQueueItem[];
     recommendationCandidates: YieldCoverageAuditQueueItem[];
     allowedActions: YieldCoverageAuditQueueAction[];
-    queuePersistence: "deferred";
+    queuePersistence: "deferred" | "durable";
   };
   sourceRiskCoverage: YieldSourceRiskCoverageSummary;
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessSummary;
