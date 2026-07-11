@@ -635,7 +635,7 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain(
       "npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live",
     );
-    expect(consolidatedPagesReleaseJob).toContain("for attempt in 1 2 3");
+    expect(consolidatedPagesReleaseJob).toContain("for attempt in 1 2 3 4 5");
     expect(consolidatedPagesReleaseJob).toContain("waiting for Pages asset propagation");
     expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
