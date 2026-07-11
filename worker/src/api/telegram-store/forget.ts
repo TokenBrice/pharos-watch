@@ -1,6 +1,6 @@
 import { executeAtomicBatch } from "../../lib/db";
-import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
+import { pruneOverflowPlanBacklogForChat } from "../../lib/telegram-overflow-plan-cache";
 import { unixNow } from "./subscribers";
 import {
   appendTelegramOperationStatements,

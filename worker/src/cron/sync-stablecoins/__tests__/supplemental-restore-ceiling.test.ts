@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import {
   mergeSupplementalLastKnownGood,
+  replaceZeroSupplyPrimaryAssets,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "../shared";
 
@@ -81,5 +82,49 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.restoredCount).toBe(1);
     expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets[0]).toMatchObject({ supplyRestored: true });
+  });
+});
+
+describe("replaceZeroSupplyPrimaryAssets", () => {
+  it("prefers positive supplemental coverage over a zero primary duplicate", () => {
+    const primary = asset({
+      id: "eurq-quantoz",
+      symbol: "EURQ",
+      circulating: { peggedEUR: 0 },
+      supplySource: "defillama",
+    });
+    const supplemental = asset({
+      id: "eurq-quantoz",
+      symbol: "EURQ",
+      circulating: { peggedEUR: 5_200_000 },
+      supplySource: "coingecko-fallback",
+    });
+
+    const result = replaceZeroSupplyPrimaryAssets([primary], [supplemental]);
+
+    expect(result.replacedIds).toEqual(["eurq-quantoz"]);
+    expect(result.assets[0]).toBe(supplemental);
+  });
+
+  it("does not replace positive primary supply or substitute zero supplemental supply", () => {
+    const positivePrimary = asset({
+      id: "eurq-quantoz",
+      symbol: "EURQ",
+      circulating: { peggedEUR: 5_000_000 },
+    });
+    const zeroPrimary = asset({
+      id: "gramg-token-teknoloji",
+      symbol: "GRAMG",
+      circulating: { peggedGOLD: 0 },
+    });
+    const supplements = [
+      asset({ id: "eurq-quantoz", symbol: "EURQ", circulating: { peggedEUR: 5_200_000 } }),
+      asset({ id: "gramg-token-teknoloji", symbol: "GRAMG", circulating: { peggedGOLD: 0 } }),
+    ];
+
+    const result = replaceZeroSupplyPrimaryAssets([positivePrimary, zeroPrimary], supplements);
+
+    expect(result.replacedIds).toEqual([]);
+    expect(result.assets).toEqual([positivePrimary, zeroPrimary]);
   });
 });

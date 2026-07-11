@@ -49,7 +49,7 @@ async function insertPendingDeadLetters(
            delivery_completed_at, delivery_claim_expires_at
          )
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(dead_letter_key) DO UPDATE SET
+         ON CONFLICT(dead_letter_key) WHERE dead_letter_key IS NOT NULL DO UPDATE SET
            dead_letter_key = excluded.dead_letter_key
          WHERE telegram_alert_dead_letters.pending_id IS excluded.pending_id
            AND telegram_alert_dead_letters.chat_id IS excluded.chat_id
