@@ -1,4 +1,5 @@
 import type { TelegramLoadCheckReport } from "../ci/check-telegram-load";
+import { TELEGRAM_LOAD_GUARD_ASSUMPTIONS } from "../../shared/lib/telegram-delivery-policy";
 
 function formatDuration(seconds: number): string {
   if (seconds === 0) return "same run";
@@ -46,6 +47,19 @@ export function printTelegramLoadReport(report: TelegramLoadCheckReport): void {
     const slo = result.sloStatus.toUpperCase();
     console.log(
       `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, planning ${formatDuration(result.planningDelaySeconds)}, unavailable ${formatDuration(result.outageUnavailableSeconds)}, post-recovery ${formatDuration(result.postRecoveryDrainSeconds)}, TTL margin ${(result.ttlMarginFraction * 100).toFixed(1)}%, CPU ~${result.estimatedCpuMs.toLocaleString()}ms, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
+    );
+  }
+
+  console.log("");
+  console.log("Personalized recap estimates:");
+  for (const result of report.recapScenarios) {
+    const mode = result.exploratory
+      ? "ADVISORY"
+      : result.targetRecipients === TELEGRAM_LOAD_GUARD_ASSUMPTIONS.requiredTarget
+        ? "ENFORCED"
+        : "CALIBRATION";
+    console.log(
+      `- ${result.targetRecipients.toLocaleString()} / ${result.scenarioLabel}: ${result.pendingEnqueued.toLocaleString()} queued, ${result.plannerRuns} planner runs, ${result.pendingDrainRuns} drain runs, completion ${formatDuration(result.estimatedCompletionSeconds)}, TTL margin ${(result.ttlMarginFraction * 100).toFixed(1)}%, planner CPU ~${result.peakPlannerCpuMs.toLocaleString()}ms, dispatch CPU ~${result.peakDispatchCpuMs.toLocaleString()}ms, aiCalls=${result.aiCalls}, externalPlanningFetches=${result.externalPlanningFetches} [${mode}]`,
     );
   }
 

@@ -35,9 +35,14 @@ import {
   type SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
 import { parseTelegramLoadTargets, printTelegramLoadReport } from "../lib/telegram-load-report";
+import {
+  simulateTelegramRecapLoadScenarios,
+  type TelegramRecapLoadScenarioResult,
+} from "../lib/telegram-recap-load-scenarios";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export { buildSyntheticTelegramFixture, simulateLoadScenarios, summarizeFixture } from "../lib/telegram-load-scenarios";
+export { simulateTelegramRecapLoadScenarios } from "../lib/telegram-recap-load-scenarios";
 export type {
   LoadScenarioResult,
   SyntheticFixtureSummary,
@@ -76,7 +81,7 @@ export interface StatusPathBudget {
 
 export interface QueryPlanCheckDefinition {
   id: string;
-  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle";
+  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle" | "recap-planner";
   sql: string;
   binds: Array<string | number | null>;
   requiredDetails?: string[];
@@ -134,6 +139,7 @@ export interface TelegramLoadCheckReport {
   };
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
+  recapScenarios: TelegramRecapLoadScenarioResult[];
   queryPlans: QueryPlanCheckResult[];
   statusPathBudgets: StatusPathBudgetResult[];
 }
@@ -156,6 +162,20 @@ export function findTtlMarginBreaches(report: TelegramLoadCheckReport): LoadScen
       scenario.targetActiveWatchers === REQUIRED_TARGET &&
       !scenario.exploratory &&
       scenario.ttlMarginFraction < report.assumptions.minimumTtlMarginFraction,
+  );
+}
+
+export function findRecapLoadBreaches(report: TelegramLoadCheckReport): TelegramRecapLoadScenarioResult[] {
+  return report.recapScenarios.filter((scenario) =>
+    scenario.targetRecipients === REQUIRED_TARGET
+    && (
+      scenario.ttlMarginFraction < report.assumptions.minimumTtlMarginFraction
+      || scenario.peakPlannerCpuMs > report.assumptions.cpuBudgetCeilingMs
+      || scenario.peakDispatchCpuMs > report.assumptions.cpuBudgetCeilingMs
+      || !scenario.priorityPreserved
+      || scenario.aiCalls !== 0
+      || scenario.externalPlanningFetches !== 0
+    ),
   );
 }
 function runExplainQueryPlan(db: DatabaseSync, check: QueryPlanCheckDefinition): QueryPlanCheckResult {
@@ -356,6 +376,33 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         GROUP BY chat_id`,
       binds: [1_799_996_400, 1_800_000_000],
       requiredDetails: ["idx_telegram_pending_alerts_chat_id"],
+    },
+    {
+      id: "recap-due-preferences",
+      category: "recap-planner",
+      sql: `SELECT p.chat_id, p.delivery_hour_local, p.next_due_at, s.preference_generation
+        FROM telegram_recap_preferences p
+        JOIN telegram_subscribers s ON s.chat_id = p.chat_id
+       WHERE p.enabled = 1 AND p.chat_kind = 'private'
+         AND p.next_due_at IS NOT NULL AND p.next_due_at <= ?
+       ORDER BY p.next_due_at ASC, p.chat_id ASC
+       LIMIT ?`,
+      binds: [1_800_000_000, 90],
+      requiredDetails: ["idx_telegram_recap_preferences_due", "sqlite_autoindex_telegram_subscribers_1"],
+      note: "Mirrors the bounded due-page read used by the personalized recap planner.",
+    },
+    {
+      id: "recap-tape-window",
+      category: "recap-planner",
+      sql: `SELECT id, event_id, type, severity, ts, coin_id, chain, payload_json
+        FROM tape_events
+       WHERE ts > ? AND ts <= ?
+         AND type IN (?, ?, ?, ?, ?, ?)
+       ORDER BY ts ASC, id ASC
+       LIMIT ?`,
+      binds: [1_799_870_400_000, 1_800_000_000_000, "depeg.opened", "dews.escalated", "score.downgraded", "freeze.blocked", "mint_burn.large_mint", "yield.warning_emitted", 501],
+      requiredDetails: ["idx_tape_type_ts"],
+      note: "Reviews the Tape type/time index and cap-plus-one bounded scan used by recap planning.",
     },
     {
       id: "pulse-aggregate",
@@ -622,6 +669,12 @@ export function buildTelegramLoadCheckReport(
   const targets = options.targets ?? WATCHER_TARGETS;
   const fixtures = targets.map((target) => buildSyntheticTelegramFixture(target));
   const scenarios = fixtures.flatMap((fixture) => simulateLoadScenarios(fixture));
+  const recapScenarios = fixtures.flatMap((fixture) => {
+    const riskBurst = simulateLoadScenarios(fixture).find((scenario) => scenario.scenarioId === "market-wide-burst");
+    return simulateTelegramRecapLoadScenarios(fixture.activeWatchers, {
+      riskBurstChunks: riskBurst?.messageChunks ?? fixture.activeWatchers,
+    });
+  });
   const requiredPlanningScenarios = scenarios.filter((scenario) => scenario.targetActiveWatchers === REQUIRED_TARGET);
   const worstCasePlanningDelaySeconds = Math.max(
     0,
@@ -654,6 +707,7 @@ export function buildTelegramLoadCheckReport(
     },
     fixtureSummaries: fixtures.map(summarizeFixture),
     scenarios,
+    recapScenarios,
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
     statusPathBudgets: options.skipQueryPlans ? [] : runStatusPathBudgetChecks(options.migrationsDir),
   };
@@ -693,6 +747,7 @@ function main(): void {
   // of the per-invocation cap. Always enforced (not gated on --enforce-target-slo).
   const cpuBudgetBreaches = findCpuBudgetBreaches(report);
   const ttlMarginBreaches = enforceTargetSlo ? findTtlMarginBreaches(report) : [];
+  const recapLoadBreaches = enforceTargetSlo ? findRecapLoadBreaches(report) : [];
 
   if (
     failedPlans.length > 0 ||
@@ -700,7 +755,8 @@ function main(): void {
     normalTargetSloFailures.length > 0 ||
     spikeTargetSloBreaches.length > 0 ||
     cpuBudgetBreaches.length > 0 ||
-    ttlMarginBreaches.length > 0
+    ttlMarginBreaches.length > 0 ||
+    recapLoadBreaches.length > 0
   ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
@@ -733,6 +789,13 @@ function main(): void {
       console.error(
         `\n${ttlMarginBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) missed the ${(MINIMUM_TTL_MARGIN_FRACTION * 100).toFixed(0)}% TTL margin: ${ttlMarginBreaches
           .map((scenario) => `${scenario.scenarioId} ${(scenario.ttlMarginFraction * 100).toFixed(1)}%`)
+          .join(", ")}.`,
+      );
+    }
+    if (recapLoadBreaches.length > 0) {
+      console.error(
+        `\n${recapLoadBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-recipient recap scenario(s) failed the TTL, CPU, priority, or zero-call boundary: ${recapLoadBreaches
+          .map((scenario) => scenario.scenarioId)
           .join(", ")}.`,
       );
     }

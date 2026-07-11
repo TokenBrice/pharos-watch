@@ -7,9 +7,11 @@ import {
   evaluateQueryPlan,
   evaluateStatusPathBudget,
   findCpuBudgetBreaches,
+  findRecapLoadBreaches,
   findTtlMarginBreaches,
   runStatusPathBudgetChecks,
   simulateLoadScenarios,
+  simulateTelegramRecapLoadScenarios,
   STATUS_PATH_MAX_DURATION_MS,
   summarizeFixture,
   type QueryPlanCheckDefinition,
@@ -155,6 +157,37 @@ describe("Telegram load simulation", () => {
     };
     expect(findCpuBudgetBreaches(exploratoryOver)).toEqual([]);
   });
+
+  it("enforces all seven personalized recap capacity and zero-call scenarios", () => {
+    const scenarios = simulateTelegramRecapLoadScenarios(5_000, { riskBurstChunks: 8_000 });
+
+    expect(scenarios.map((scenario) => scenario.scenarioId)).toEqual([
+      "recap-all-due",
+      "recap-plus-risk-burst",
+      "recap-plus-429-storm",
+      "recap-preset-heavy",
+      "recap-global-scope",
+      "recap-no-change",
+      "recap-stale-tape",
+    ]);
+    expect(scenarios.every((scenario) => scenario.ttlMarginFraction >= 0.2)).toBe(true);
+    expect(scenarios.every((scenario) => scenario.priorityPreserved)).toBe(true);
+    expect(scenarios.every((scenario) => scenario.aiCalls === 0)).toBe(true);
+    expect(scenarios.every((scenario) => scenario.externalPlanningFetches === 0)).toBe(true);
+    expect(scenarios.find((scenario) => scenario.scenarioId === "recap-no-change"))
+      .toMatchObject({ pendingEnqueued: 0, scheduleAdvancements: 5_000 });
+    expect(scenarios.find((scenario) => scenario.scenarioId === "recap-stale-tape"))
+      .toMatchObject({ pendingEnqueued: 0, scheduleAdvancements: 0 });
+  });
+
+  it("emits enforced 5000 and advisory 10000 personalized recap reports", () => {
+    const report = buildTelegramLoadCheckReport({ targets: [5_000, 10_000], skipQueryPlans: true });
+
+    expect(report.recapScenarios).toHaveLength(14);
+    expect(report.recapScenarios.filter((scenario) => scenario.targetRecipients === 5_000 && !scenario.exploratory)).toHaveLength(7);
+    expect(report.recapScenarios.filter((scenario) => scenario.targetRecipients === 10_000 && scenario.exploratory)).toHaveLength(7);
+    expect(findRecapLoadBreaches(report)).toEqual([]);
+  });
 });
 
 describe("Telegram query-plan evaluation", () => {
@@ -173,6 +206,14 @@ describe("Telegram query-plan evaluation", () => {
 
     expect(pendingDrainIds).toContain("pending-claim-ready");
     expect(pendingDrainIds).not.toContain("pending-drain-ready");
+  });
+
+  it("reviews bounded due-recipient and Tape-window recap query plans", () => {
+    const recapChecks = buildQueryPlanChecks()
+      .filter((check) => check.category === "recap-planner")
+      .map((check) => check.id);
+
+    expect(recapChecks).toEqual(["recap-due-preferences", "recap-tape-window"]);
   });
 
   it("passes when required index details are present", () => {
