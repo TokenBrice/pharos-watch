@@ -256,6 +256,39 @@ describe("forgetSubscriber", () => {
     expect(remaining).toEqual([{ target_key: "420:v3:0:ghi" }]);
   });
 
+  it("removes recap preferences, targets, and pending payloads on forget", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const chatId = "recap-forget";
+    const now = 1_700_000_000;
+    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES (?, ?, ?)")
+      .run(chatId, now, now);
+    sqlite.prepare(`
+      INSERT INTO telegram_recap_preferences
+        (chat_id, enabled, delivery_hour_local, next_due_at, created_at, updated_at)
+      VALUES (?, 1, 9, ?, ?, ?)
+    `).run(chatId, now + 3600, now, now);
+    sqlite.prepare(`
+      INSERT INTO telegram_recap_targets
+        (recap_key, chat_id, local_date, window_start_at, window_end_at,
+         preference_generation, watchlist_fingerprint, status, created_at, updated_at)
+      VALUES (?, ?, '2026-07-11', ?, ?, 0, 'fingerprint', 'queued', ?, ?)
+    `).run(`recap:${chatId}:2026-07-11:v1`, chatId, now - 3600, now, now, now);
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_alerts
+        (chat_id, message_html, created_at, updated_at, dedupe_key, source_type, source_event_id)
+      VALUES (?, 'recap', ?, ?, ?, 'personalized_recap', ?)
+    `).run(chatId, now, now, `recap:${chatId}:2026-07-11:v1`, `recap:${chatId}:2026-07-11:v1`);
+
+    await forgetSubscriber(db, chatId);
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 0 });
+  });
+
   it("deletes exact and actor-scoped command-flood keys", async () => {
     const chatId = "42";
     const db = mockD1();
@@ -517,6 +550,22 @@ describe("migrateTelegramChatId", () => {
       ) VALUES (?, ?, ?, ?, ?)
     `).run(oldChatId, "expired", 100, 200, "ttl_expired");
     sqlite.prepare(`
+      INSERT INTO telegram_recap_preferences
+        (chat_id, enabled, delivery_hour_local, next_due_at, created_at, updated_at)
+      VALUES (?, 1, 9, 500, 100, 100)
+    `).run(oldChatId);
+    sqlite.prepare(`
+      INSERT INTO telegram_recap_targets
+        (recap_key, chat_id, local_date, window_start_at, window_end_at,
+         preference_generation, watchlist_fingerprint, status, created_at, updated_at)
+      VALUES (?, ?, '2026-07-11', 100, 200, 0, 'fingerprint', 'queued', 100, 100)
+    `).run(`recap:${oldChatId}:2026-07-11:v1`, oldChatId);
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_alerts
+        (chat_id, message_html, created_at, updated_at, dedupe_key, source_type, source_event_id)
+      VALUES (?, 'recap', 100, 100, ?, 'personalized_recap', ?)
+    `).run(oldChatId, `${oldChatId}:recap`, `recap:${oldChatId}:2026-07-11:v1`);
+    sqlite.prepare(`
       INSERT INTO telegram_processed_updates (update_id, received_at, chat_id)
       VALUES (?, ?, ?)
     `).run(700, 100, oldChatId);
@@ -673,6 +722,10 @@ describe("migrateTelegramChatId", () => {
       pending_dedupe_key: `${newChatId}:unique`,
     });
     expect(sqlite.prepare("SELECT chat_id FROM telegram_alert_dead_letters").get()).toEqual({ chat_id: newChatId });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_preferences").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE source_type = 'personalized_recap'").get())
+      .toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT chat_id FROM telegram_processed_updates").get()).toEqual({ chat_id: newChatId });
     expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(`telegram:group-welcome:${newChatId}`))
       .toEqual({ value: "legacy welcome", updated_at: 200 });

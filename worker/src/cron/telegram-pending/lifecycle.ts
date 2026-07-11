@@ -137,6 +137,7 @@ export async function flushChatSuccessResets(
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
   try {
+    const nowSec = Math.floor(Date.now() / 1000);
     await executeAtomicBatch(db, [
       db
         .prepare(
@@ -173,6 +174,29 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
       db
         .prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id=?")
         .bind(chatId),
+      // A blocked private chat must not retain a recap schedule or allow a
+      // planned/queued recap target to be delivered after the block cascade.
+      // Pending recap rows are dead-lettered and removed by
+      // clearPendingAlertsForDisabledChat immediately after this transaction.
+      db
+        .prepare(
+          `UPDATE telegram_recap_preferences
+              SET enabled = 0,
+                  next_due_at = NULL,
+                  updated_at = ?
+            WHERE chat_id = ?`,
+        )
+        .bind(nowSec, chatId),
+      db
+        .prepare(
+          `UPDATE telegram_recap_targets
+              SET status = 'cancelled',
+                  terminal_reason = 'blocked_disabled',
+                  completed_at = COALESCE(completed_at, ?),
+                  updated_at = ?
+            WHERE chat_id = ? AND status IN ('planned', 'queued')`,
+        )
+        .bind(nowSec, nowSec, chatId),
     ]);
     return true;
   } catch {

@@ -470,7 +470,7 @@ export async function pruneTelegramRecapTargets(
     DELETE FROM telegram_recap_targets
      WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
             AND updated_at < ?)
-        OR (status IN ('execution_unknown', 'failed_permanent') AND updated_at < ?)
+        OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
   `).bind(aggregateCutoff, terminalCutoff).run();
   return { deletedTargets: Number(result.meta?.changes ?? 0) };
 }

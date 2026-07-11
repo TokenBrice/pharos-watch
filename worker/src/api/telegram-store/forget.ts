@@ -67,6 +67,8 @@ export async function forgetSubscriber(
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_recap_targets WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_recap_preferences WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(chatId),
     db.prepare(
@@ -590,6 +592,13 @@ export async function migrateTelegramChatId(
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    // Recaps are private-chat-only. Never carry recap preferences, targets,
+    // pending payloads, or dead-letter audit rows across a group migration.
+    db.prepare(
+      "DELETE FROM telegram_pending_alerts WHERE chat_id IN (?, ?) AND source_type = 'personalized_recap'",
+    ).bind(oldChatId, newChatId),
+    db.prepare("DELETE FROM telegram_recap_targets WHERE chat_id IN (?, ?)").bind(oldChatId, newChatId),
+    db.prepare("DELETE FROM telegram_recap_preferences WHERE chat_id IN (?, ?)").bind(oldChatId, newChatId),
     db.prepare("UPDATE OR IGNORE telegram_freeze_alert_targets SET chat_id = ? WHERE chat_id = ?")
       .bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_freeze_alert_targets WHERE chat_id = ?").bind(oldChatId),
@@ -616,6 +625,9 @@ export async function migrateTelegramChatId(
     db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(oldChatId),
     ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare(
+      "DELETE FROM telegram_alert_dead_letters WHERE chat_id IN (?, ?) AND source_type = 'personalized_recap'",
+    ).bind(oldChatId, newChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(oldChatId),

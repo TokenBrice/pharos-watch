@@ -215,6 +215,7 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       chat_id TEXT PRIMARY KEY,
       chat_kind TEXT NOT NULL DEFAULT 'private',
       enabled INTEGER NOT NULL DEFAULT 0,
+      next_due_at INTEGER,
       last_window_end_at INTEGER,
       last_delivered_local_date TEXT,
       updated_at INTEGER
@@ -464,6 +465,15 @@ describe("disableBlockedSubscriber", () => {
     const presetDelete = history.find((e) => e.sql.includes("DELETE FROM telegram_preset_subscriptions"));
     expect(presetDelete).toBeDefined();
     expect(presetDelete!.binds).toEqual(["blocked-chat"]);
+
+    const recapPreferenceUpdate = history.find((e) => e.sql.includes("UPDATE telegram_recap_preferences"));
+    expect(recapPreferenceUpdate).toBeDefined();
+    expect(recapPreferenceUpdate!.sql).toContain("enabled = 0");
+    expect(recapPreferenceUpdate!.sql).toContain("next_due_at = NULL");
+    const recapTargetUpdate = history.find((e) => e.sql.includes("UPDATE telegram_recap_targets"));
+    expect(recapTargetUpdate).toBeDefined();
+    expect(recapTargetUpdate!.sql).toContain("status = 'cancelled'");
+    expect(recapTargetUpdate!.sql).toContain("blocked_disabled");
   });
 
   it("returns false and logs on D1 error", async () => {

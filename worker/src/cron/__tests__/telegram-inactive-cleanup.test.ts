@@ -26,6 +26,10 @@ interface ChildRow {
   chat_id: string;
 }
 
+interface RecapPreferenceRow extends ChildRow {
+  enabled: number;
+}
+
 const ONE_DAY_SEC = 86_400;
 const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
 const RUN_INTERVAL_SEC = 7 * ONE_DAY_SEC;
@@ -37,6 +41,7 @@ interface StubState {
   presets: ChildRow[];
   pendingAlerts: ChildRow[];
   pendingDisambig: ChildRow[];
+  recapPreferences: RecapPreferenceRow[];
   diagnostics: ChildRow[];
   cache: Map<string, { value: string; updated_at: number }>;
 }
@@ -121,8 +126,9 @@ function createStubDb(state: StubState): D1Database {
           const hasChild = (chatId: string) =>
             state.subscriptions.some((r) => r.chat_id === chatId)
             || state.presets.some((r) => r.chat_id === chatId)
-            || state.pendingAlerts.some((r) => r.chat_id === chatId)
-            || state.pendingDisambig.some((r) => r.chat_id === chatId);
+          || state.pendingAlerts.some((r) => r.chat_id === chatId)
+            || state.pendingDisambig.some((r) => r.chat_id === chatId)
+            || state.recapPreferences.some((r) => r.chat_id === chatId && r.enabled === 1);
           const hasGlobalAlert = (sub: SubscriberRow) =>
             sub.global_alert_dews === 1
             || sub.global_alert_depeg === 1
@@ -164,6 +170,7 @@ function makeState(): StubState {
     presets: [],
     pendingAlerts: [],
     pendingDisambig: [],
+    recapPreferences: [],
     diagnostics: [],
     cache: new Map(),
   };
@@ -329,12 +336,14 @@ describe("runTelegramInactiveCleanup", () => {
       { chat_id: "has-preset", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
       { chat_id: "has-pending-alert", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
       { chat_id: "has-pending-disambig", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
+      { chat_id: "has-recap", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
       { chat_id: "eligible", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
     );
     state.subscriptions.push({ chat_id: "has-sub" });
     state.presets.push({ chat_id: "has-preset" });
     state.pendingAlerts.push({ chat_id: "has-pending-alert" });
     state.pendingDisambig.push({ chat_id: "has-pending-disambig" });
+    state.recapPreferences.push({ chat_id: "has-recap", enabled: 1 });
     const db = createStubDb(state);
 
     const result = await runTelegramInactiveCleanup(db);
@@ -345,6 +354,7 @@ describe("runTelegramInactiveCleanup", () => {
       "has-pending-alert",
       "has-pending-disambig",
       "has-preset",
+      "has-recap",
       "has-sub",
     ]);
   });

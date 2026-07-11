@@ -9,6 +9,7 @@ import {
   type TelegramProcessedUpdateBacklog,
 } from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
+import { pruneTelegramRecapTargets } from "./telegram-recap-store";
 import {
   TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
   TELEGRAM_ADOPTION_SESSION_TTL_SEC,
@@ -151,6 +152,9 @@ export async function runTelegramRetentionCleanup(
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec, signal);
+  throwIfAborted(signal);
+
+  const recapTargets = await pruneTelegramRecapTargets(db, nowSec);
   throwIfAborted(signal);
 
   const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal, options);
@@ -360,6 +364,7 @@ export async function runTelegramRetentionCleanup(
 
   const totalPruned =
     processedUpdates.pruned +
+    recapTargets.deletedTargets +
     deadLetters.pruned +
     jobTargetItems.pruned +
     jobTargets.pruned +
@@ -391,6 +396,7 @@ export async function runTelegramRetentionCleanup(
     itemCount: totalPruned,
     metadata: {
       processedUpdatesPruned: processedUpdates.pruned,
+      recapTargetsPruned: recapTargets.deletedTargets,
       deadLettersPruned: deadLetters.pruned,
       jobTargetItemsPruned: jobTargetItems.pruned,
       jobTargetsPruned: jobTargets.pruned,
@@ -433,6 +439,7 @@ export async function runTelegramRetentionCleanup(
       },
       cappedAtLimit: {
         processedUpdates: processedUpdates.cappedAtLimit,
+        recapTargets: false,
         deadLetters: deadLetters.cappedAtLimit,
         jobTargetItems: jobTargetItems.cappedAtLimit,
         jobTargets: jobTargets.cappedAtLimit,
@@ -461,6 +468,7 @@ export async function runTelegramRetentionCleanup(
       },
       retentionDays: {
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
+        recapTargetsTerminal: 90,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,

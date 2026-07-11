@@ -83,6 +83,14 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
               FROM telegram_pending_disambiguation pd
              WHERE pd.chat_id = s.chat_id
           )
+          -- An enabled personalized recap is durable user intent even when
+          -- the subscriber has not interacted with the bot recently.
+          AND NOT EXISTS (
+            SELECT 1
+              FROM telegram_recap_preferences rp
+             WHERE rp.chat_id = s.chat_id
+               AND rp.enabled = 1
+          )
           AND s.global_alert_dews = 0
           AND s.global_alert_depeg = 0
           AND s.global_alert_safety = 0
