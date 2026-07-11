@@ -269,6 +269,7 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_usage_daily` — privacy-preserving aggregates (Action handlers + Dispatch)
   - `telegram_adoption_daily` / `telegram_adoption_retention_daily` — identifier-free funnel and retention aggregates
   - `telegram_adoption_ingress_quota` — identifier-free global CTA-ingress ceiling
+  - `telegram_adoption_client_quota` — dedicated-pepper HMAC-IP CTA-ingress ceiling
   - `telegram_watcher_lifecycle_daily` — daily lifecycle snapshots
   - `telegram_chat_delivery_diagnostics` — per-chat diagnostics (Outbound + Dispatch)
 - KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:reserve-snapshot` (producer-written versioned reserve source envelope), `alert:reserve-dispatched-snapshot` (dispatch baseline), `alert:safety-source-cache`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, the 30-minute consumed-on-first-mutation `telegram:adoption-mini-app-session:<chat_id>` key, legacy `telegram:re-engagement-warned:<chat_id>` markers awaiting retention cleanup, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.

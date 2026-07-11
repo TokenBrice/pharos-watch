@@ -133,6 +133,7 @@ The Telegram subscriber, disambiguation, and delivery-queue tables are part of `
 | `telegram_adoption_daily` | Low-cardinality first-party funnel aggregates; never stores a chat/user ID | allowlisted campaign, placement, stage, feature, mutation-latency bucket, outcome, count and aggregate timestamps |
 | `telegram_adoption_retention_daily` | Aggregate D7/D30 first-follow cohorts by surviving active-follow feature | cohort/measurement day, 7/30-day window, `any`/`direct`/`preset`/`global`, durable cohort/retained counts, quality |
 | `telegram_adoption_ingress_quota` | Identifier-free global minute ceiling for the public CTA counter | minute bucket, admitted request count, update time; two-day operational retention |
+| `telegram_adoption_client_quota` | Per-client minute ceiling for the public CTA counter | minute bucket, dedicated-pepper HMAC-IP key, admitted request count, update time; two-day operational retention |
 | `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for stable public pulse history | `day`, `snapshot_at`, `active_watchers`, `new_watchers`, `churned_watchers`, `reactivated_watchers`, `explicit_coin_follows`, `preset_implied_coin_follows`, `active_preset_followers`, alert-type opt-ins, quiet-hours and pending-delivery counts |
 | `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | `chat_id`, `last_successful_delivery_at`, `last_successful_reply_at`, `last_delivery_attempt_at`, `recent_failure_class`, `updated_at` |
 
