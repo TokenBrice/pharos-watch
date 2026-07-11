@@ -8,15 +8,23 @@ import { z } from "zod";
 
 const MAX_BODY_BYTES = 512;
 const GLOBAL_REQUESTS_PER_MINUTE = 3_000;
-const TelegramAdoptionClickSchema = z.object({
-  campaign: z.literal("landing"),
-  placement: z.enum(TELEGRAM_ADOPTION_CTA_PLACEMENTS),
-}).strict();
+const CLIENT_REQUESTS_PER_MINUTE = 10;
+const IP_HASH_BYTES = 16;
+const ENCODER = new TextEncoder();
+let cachedIpHashSecret: string | null = null;
+let cachedIpHashKey: Promise<CryptoKey> | null = null;
+const TelegramAdoptionClickSchema = z
+  .object({
+    campaign: z.literal("landing"),
+    placement: z.enum(TELEGRAM_ADOPTION_CTA_PLACEMENTS),
+  })
+  .strict();
 
 interface TelegramAdoptionPagesEnv {
   DB?: D1Database;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
+  TELEGRAM_ADOPTION_IP_HASH_SECRET?: string;
 }
 
 interface TelegramAdoptionPagesContext {
@@ -69,6 +77,47 @@ async function readBoundedJson(request: Request): Promise<unknown | null> {
   }
 }
 
+function getIpHashKey(secret: string): Promise<CryptoKey> {
+  if (cachedIpHashSecret !== secret || cachedIpHashKey === null) {
+    cachedIpHashSecret = secret;
+    cachedIpHashKey = crypto.subtle.importKey("raw", ENCODER.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+      "sign",
+    ]);
+  }
+  return cachedIpHashKey;
+}
+
+async function hashClientIp(ip: string, secret: string): Promise<string> {
+  const digest = await crypto.subtle.sign("HMAC", await getIpHashKey(secret), ENCODER.encode(ip));
+  return Array.from(new Uint8Array(digest).slice(0, IP_HASH_BYTES), (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
+
+async function getClientIpHash(request: Request, env: TelegramAdoptionPagesEnv): Promise<string | null> {
+  const ip = request.headers.get("CF-Connecting-IP");
+  const secret = env.TELEGRAM_ADOPTION_IP_HASH_SECRET?.trim();
+  if (!ip || !secret) return null;
+  return hashClientIp(ip, secret);
+}
+
+async function admitClientMinute(db: D1Database, ipHash: string, nowSec: number): Promise<boolean> {
+  const bucketStart = nowSec - (nowSec % 60);
+  const row = await db
+    .prepare(
+      `INSERT INTO telegram_adoption_client_quota (bucket_start, ip_hash, request_count, updated_at)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(bucket_start, ip_hash) DO UPDATE SET
+         request_count = telegram_adoption_client_quota.request_count + 1,
+         updated_at = excluded.updated_at
+       WHERE telegram_adoption_client_quota.request_count < ?
+       RETURNING request_count`,
+    )
+    .bind(bucketStart, ipHash, nowSec, CLIENT_REQUESTS_PER_MINUTE)
+    .first<{ request_count: number }>();
+  return row != null;
+}
+
 async function admitGlobalMinute(db: D1Database, nowSec: number): Promise<boolean> {
   const bucketStart = nowSec - (nowSec % 60);
   const row = await db
@@ -95,21 +144,27 @@ export const onRequest = async ({ request, env }: TelegramAdoptionPagesContext):
   const parsed = TelegramAdoptionClickSchema.safeParse(await readBoundedJson(request));
   if (!parsed.success) return response(400);
 
+  const ipHash = await getClientIpHash(request, env);
+  if (!ipHash) return response(503);
+
   const nowSec = Math.floor(Date.now() / 1_000);
+  if (!(await admitClientMinute(env.DB, ipHash, nowSec))) {
+    return response(429, null, { "Retry-After": "60" });
+  }
+
   if (!(await admitGlobalMinute(env.DB, nowSec))) {
     return response(429, null, { "Retry-After": "60" });
   }
 
   const day = new Date(nowSec * 1_000).toISOString().slice(0, 10);
-  await env.DB
-    .prepare(
-      `INSERT INTO telegram_adoption_daily (
+  await env.DB.prepare(
+    `INSERT INTO telegram_adoption_daily (
          day, campaign, placement, stage, feature, latency_bucket, outcome,
          count, first_seen_at, last_seen_at
        ) VALUES (?, ?, ?, 'cta_click', '', '', 'success', 1, ?, ?)
        ON CONFLICT(day, campaign, placement, stage, feature, latency_bucket, outcome)
        DO UPDATE SET count = telegram_adoption_daily.count + 1, last_seen_at = excluded.last_seen_at`,
-    )
+  )
     .bind(day, parsed.data.campaign, parsed.data.placement, nowSec, nowSec)
     .run();
 

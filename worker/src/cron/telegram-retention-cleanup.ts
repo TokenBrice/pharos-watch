@@ -60,10 +60,7 @@ async function pruneTelegramProcessedUpdatesCapped(
       break;
     }
 
-    const limit = Math.min(
-      TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
-      TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT - pruned,
-    );
+    const limit = Math.min(TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT, TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT - pruned);
     const batchPruned = await pruneTelegramProcessedUpdates(db, { nowSec, limit, signal });
     batches += 1;
     pruned += batchPruned;
@@ -143,12 +140,7 @@ export function pruneTelegramMiniAppMutationBurstCache(
   cutoff: number,
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  return deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:mini-app-mutation-burst:",
-    cutoff,
-    signal,
-  );
+  return deleteCachePrefixOlderThanCapped(db, "telegram:mini-app-mutation-burst:", cutoff, signal);
 }
 
 export async function runTelegramRetentionCleanup(
@@ -273,6 +265,14 @@ export async function runTelegramRetentionCleanup(
   );
   throwIfAborted(signal);
 
+  const adoptionClientQuota = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_adoption_client_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_client_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
+    nowSec - 2 * DAY_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
   const diagnostics = await deleteOlderThanCapped(
     db,
     "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
@@ -358,6 +358,7 @@ export async function runTelegramRetentionCleanup(
     adoptionDaily.pruned +
     adoptionRetention.pruned +
     adoptionIngressQuota.pruned +
+    adoptionClientQuota.pruned +
     diagnostics.pruned +
     commandCooldownCache.pruned +
     miniAppMutationBurstCache.pruned +
@@ -386,6 +387,7 @@ export async function runTelegramRetentionCleanup(
       adoptionDailyPruned: adoptionDaily.pruned,
       adoptionRetentionPruned: adoptionRetention.pruned,
       adoptionIngressQuotaPruned: adoptionIngressQuota.pruned,
+      adoptionClientQuotaPruned: adoptionClientQuota.pruned,
       diagnosticsPruned: diagnostics.pruned,
       commandCooldownCachePruned: commandCooldownCache.pruned,
       miniAppMutationBurstCachePruned: miniAppMutationBurstCache.pruned,
@@ -425,6 +427,7 @@ export async function runTelegramRetentionCleanup(
         adoptionDaily: adoptionDaily.cappedAtLimit,
         adoptionRetention: adoptionRetention.cappedAtLimit,
         adoptionIngressQuota: adoptionIngressQuota.cappedAtLimit,
+        adoptionClientQuota: adoptionClientQuota.cappedAtLimit,
         diagnostics: diagnostics.cappedAtLimit,
         commandCooldownCache: commandCooldownCache.cappedAtLimit,
         miniAppMutationBurstCache: miniAppMutationBurstCache.cappedAtLimit,

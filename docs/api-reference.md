@@ -3730,7 +3730,7 @@ New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 
 
 Same-origin Pages Function used by allowlisted `/pharoswatchbot/` CTA links. It accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
 
-The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no IP address, IP hash, User-Agent, referrer, cookie, request ID, chat ID, or user ID. An identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
+The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no raw IP address, User-Agent, referrer, cookie, request ID, chat ID, or user ID. A dedicated-pepper HMAC of `CF-Connecting-IP` is used only in the minute-quota table, where a per-client quota admits at most 10 requests per minute before the identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
 
 ### `POST /selector-snapshot`
 

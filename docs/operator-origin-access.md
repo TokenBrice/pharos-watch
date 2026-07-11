@@ -78,6 +78,7 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `SITE_ORIGIN` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
+| `TELEGRAM_ADOPTION_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
