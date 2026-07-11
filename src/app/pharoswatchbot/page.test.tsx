@@ -84,6 +84,10 @@ vi.mock("./telegram-pulse-strip", () => ({
   TelegramPulseStrip: () => <div>pulse strip</div>,
 }));
 
+vi.mock("./telegram-hero-metric", () => ({
+  TelegramHeroMetric: () => <p>hero metric</p>,
+}));
+
 afterEach(() => {
   cleanup();
 });
@@ -158,7 +162,11 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByRole("heading", { name: "PharosWatchBot" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Stablecoin alerts, before you have to check." })).toBeTruthy();
-    expect(container.querySelector('img[src="/featured/telegram-mini-app/home.png"]')).toBeTruthy();
+    // The hero is benefits-led: the mini-app screenshot lives only in the carousel (mocked here).
+    expect(container.querySelector('img[src="/featured/telegram-mini-app/home.png"]')).toBeNull();
+    for (const family of TELEGRAM_ALERT_FAMILIES) {
+      expect(screen.getAllByText(family.label).length).toBeGreaterThan(0);
+    }
     expect(screen.getByText("Command Reference")).toBeTruthy();
     const commandDetails = screen.getByText("Command Reference").closest("details") as HTMLDetailsElement;
     expect(commandDetails.open).toBe(false);
@@ -185,7 +193,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Bot sync")).toBeTruthy();
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
-    expect(screen.getByText("Reserve Drift")).toBeTruthy();
+    expect(screen.getAllByText("Reserve Drift").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/all six families/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/export").length).toBeGreaterThan(0);

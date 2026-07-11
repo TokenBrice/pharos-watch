@@ -11,6 +11,19 @@ import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-sample
 export const TELEGRAM_PAGE_DESCRIPTION =
   `PharosWatchBot sends stablecoin Telegram alerts for ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`;
 
+/**
+ * One-line utility blurb per alert family for the hero signal board. Keyed by
+ * `TelegramAlertType` so adding or renaming a family forces a hero line too.
+ */
+export const TELEGRAM_HERO_FAMILY_BLURBS: Record<TelegramAlertType, string> = {
+  dews: "Crossing into a worse early-warning band",
+  depeg: "Triggered, worsening, and resolved at your bps step",
+  safety: "Grade moves with the score driver named",
+  launch: "Tracked pre-launch stablecoins going live",
+  reserve: "Backing-mix drift on live-tracked reserves",
+  freeze: "Opt-in, from the verified on-chain tape",
+};
+
 export const TELEGRAM_ACTIONS = [
   {
     key: "bot",

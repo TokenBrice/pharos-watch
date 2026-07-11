@@ -16,6 +16,7 @@ import {
   TELEGRAM_DISPATCH_INTERVAL_SEC,
 } from "@shared/lib/telegram-delivery-policy";
 import "./telegram-carousel.css";
+import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
 import {
   MINI_APP_FEATURES,
   MINI_APP_SCREENSHOTS,
@@ -26,11 +27,13 @@ import {
   TELEGRAM_COMMAND_GROUPS,
   TELEGRAM_COMMAND_REFERENCE_TIPS,
   TELEGRAM_FAQ,
+  TELEGRAM_HERO_FAMILY_BLURBS,
   TELEGRAM_PAGE_DESCRIPTION,
   TELEGRAM_PARAM_LEGEND,
 } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
+import { TelegramHeroMetric } from "./telegram-hero-metric";
 import { TelegramPulseBoard } from "./telegram-pulse-strip";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
@@ -509,55 +512,63 @@ export default function PharosWatchBotPage() {
       containerClassName="mx-auto max-w-6xl"
     >
       <div className="space-y-6 sm:space-y-14">
-        <section
-          id="bot"
-          className="pharoswatchbot-hero relative isolate -mx-4 h-[330px] scroll-mt-24 overflow-hidden text-white sm:mx-0 sm:h-[400px] lg:h-[460px]"
-          aria-labelledby="telegram-hero-title"
-        >
-          <div className="pharoswatchbot-hero-media absolute inset-y-0 right-0" aria-hidden="true">
-            <Image
-              src="/featured/telegram-mini-app/home.png"
-              alt=""
-              fill
-              priority
-              sizes="(min-width: 1024px) 620px, (min-width: 640px) 58vw, 100vw"
-              className="pharoswatchbot-hero-image"
-            />
-          </div>
-          <div className="pharoswatchbot-hero-scrim absolute inset-0" aria-hidden="true" />
-          <div className="relative flex h-full max-w-3xl flex-col justify-end px-5 py-6 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
-            <p className="text-xs font-semibold text-white/80">
-              Free Telegram alerts for {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins
-            </p>
-            <h2
-              id="telegram-hero-title"
-              className="mt-2.5 max-w-xl text-balance font-display text-3xl font-extrabold leading-[1.05] tracking-normal text-white sm:mt-3 sm:text-5xl lg:text-[3.5rem]"
-            >
-              Stablecoin alerts, before you have to check.
-            </h2>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:mt-4 sm:text-base">
-              Depeg events, DEWS early warnings, safety-grade changes, launches, reserve drift, and issuer freeze events, sent to your
-              Telegram chat. Start with one preset; tune later.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">
-              <TelegramAdoptionLink
-                href={SETUP_DEEP_LINK}
-                placement="hero"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharoswatchbot-hero-primary pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors sm:px-6"
+        <section id="bot" className="scroll-mt-24" aria-labelledby="telegram-hero-title">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.66fr)] lg:items-start lg:gap-12">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">
+                Free Telegram alerts for {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins
+              </p>
+              <h2
+                id="telegram-hero-title"
+                className="mt-3 max-w-xl text-balance font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl"
               >
-                <Bot className="h-4 w-4" aria-hidden="true" />
-                Open Bot
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              </TelegramAdoptionLink>
-              <Link
-                href="#alerts"
-                className="pharoswatchbot-hero-secondary pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors sm:px-6"
-              >
-                See alert examples
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+                Stablecoin alerts, before you have to check.
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Six alert families, from depeg events to issuer freezes, sent to your Telegram chat. Start with one
+                preset; tune later.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                <Button asChild className="gap-2">
+                  <TelegramAdoptionLink
+                    href={SETUP_DEEP_LINK}
+                    placement="hero"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Bot className="h-4 w-4" aria-hidden="true" />
+                    Open Bot
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </TelegramAdoptionLink>
+                </Button>
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href="#alerts">
+                    See alert examples
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+            <div aria-label="The six alert families">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pb-2.5">
+                <p className="pharos-kicker !tracking-normal">Six alert families</p>
+                <TelegramHeroMetric />
+              </div>
+              <ul>
+                {TELEGRAM_ALERT_FAMILIES.map((family) => (
+                  <li key={family.key} className="border-t border-border/55 py-2.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">{family.label}</p>
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-muted-foreground">
+                        {family.key}
+                      </code>
+                    </div>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {TELEGRAM_HERO_FAMILY_BLURBS[family.key]}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
