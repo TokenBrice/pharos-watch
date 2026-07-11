@@ -70,17 +70,25 @@ AFTER INSERT ON telegram_alert_dead_letters
 WHEN NEW.dead_letter_key IS NULL
 BEGIN
   UPDATE telegram_alert_dead_letters
-     SET dead_letter_key = CASE
-       WHEN NEW.pending_id IS NULL THEN 'legacy:' || NEW.id
-       WHEN NOT EXISTS (
-         SELECT 1
-           FROM telegram_alert_dead_letters existing
-          WHERE existing.id <> NEW.id
-            AND existing.dead_letter_key = 'pending:' || NEW.pending_id || ':delivery:0'
-       ) THEN 'pending:' || NEW.pending_id || ':delivery:0'
-       ELSE 'legacy-duplicate:' || NEW.id
-     END
-   WHERE id = NEW.id;
+     SET dead_letter_key = 'legacy:' || NEW.id
+   WHERE id = NEW.id
+     AND NEW.pending_id IS NULL;
+
+  UPDATE telegram_alert_dead_letters
+     SET dead_letter_key = 'pending:' || NEW.pending_id || ':delivery:0'
+   WHERE id = NEW.id
+     AND NEW.pending_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+         FROM telegram_alert_dead_letters existing
+        WHERE existing.id <> NEW.id
+          AND existing.dead_letter_key = 'pending:' || NEW.pending_id || ':delivery:0'
+     );
+
+  UPDATE telegram_alert_dead_letters
+     SET dead_letter_key = 'legacy-duplicate:' || NEW.id
+   WHERE id = NEW.id
+     AND dead_letter_key IS NULL;
 END;
 
 CREATE INDEX IF NOT EXISTS idx_tpa_delivery_reconcile

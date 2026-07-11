@@ -40,16 +40,17 @@ CREATE TABLE IF NOT EXISTS telegram_webhook_operation_mutations (
 
 CREATE TRIGGER IF NOT EXISTS trg_telegram_webhook_operation_mutation_guard
 BEFORE INSERT ON telegram_webhook_operation_mutations
+WHEN NOT EXISTS (
+  SELECT 1
+    FROM telegram_processed_updates
+   WHERE update_id = NEW.update_id
+     AND status = 'processing'
+     AND effect_state = 'planned'
+     AND intent_mutates = 1
+     AND claim_generation = NEW.claim_generation
+)
 BEGIN
-  SELECT CASE WHEN NOT EXISTS (
-    SELECT 1
-      FROM telegram_processed_updates
-     WHERE update_id = NEW.update_id
-       AND status = 'processing'
-       AND effect_state = 'planned'
-       AND intent_mutates = 1
-       AND claim_generation = NEW.claim_generation
-  ) THEN RAISE(ABORT, 'invalid telegram webhook mutation claim') END;
+  SELECT RAISE(ABORT, 'invalid telegram webhook mutation claim');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_telegram_webhook_operation_mutation_applied
