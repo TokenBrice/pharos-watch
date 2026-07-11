@@ -404,7 +404,7 @@ describe("pending Telegram preference revalidation", () => {
             circulating: { peggedUSD: 100_000_000_000 },
           }],
         },
-      }) as StablecoinsCacheLoadResult,
+      }) as unknown as StablecoinsCacheLoadResult,
     });
 
     expect(outcome).toMatchObject({ kind: "cancel", reason: "scope_disabled" });
