@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 71 contract configurations on 9 chains (35 tracked symbols; deferred coverage is reported from the runtime coverage manifest and is currently 10 known configs). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 70 contract configurations on 9 chains (34 tracked symbols; deferred coverage is reported from the runtime coverage manifest and is currently 10 known configs). Runs every 6 hours, incrementally scanning from the last processed block or timestamp cursor.
 
 ## Methodology Versioning
 
@@ -17,9 +17,9 @@ The tracker now has two distinct amount layers:
 - the `/freezewatch` status charts now support on-page drilldown into the matching stablecoin subset for each blacklistability bucket
 - the `/freezewatch` summary cards now include an unfreezable market-share stat: blacklist-status `No` market cap divided by total tracked stablecoin market cap
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, FIDD.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, XUSD, XAUm, JPYC, FRXUSD, FIDD.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, FIDD via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
+**API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, U, USDTB, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP, EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUM, JPYC, FRXUSD, FIDD via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`). The enum retains archived AEUR for historical filtering even though its live scan is retired.
 
 Every stablecoin ID wired into `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes` in shared metadata/report-card status. `worker/src/lib/__tests__/blacklist-contracts.test.ts` guards this so direct tracker coverage does not show as only upstream-inherited exposure on `/freezewatch`.
 

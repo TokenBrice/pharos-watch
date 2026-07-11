@@ -20,7 +20,7 @@ Pharos is research infrastructure, not financial advice. Data can be delayed, in
 ## What Pharos Tracks
 
 - **Peg health:** 15-minute peg monitoring, Peg Score, depeg detection, direction tracking, and historical depeg timelines.
-- **Issuer controls:** FreezeWatch provides on-chain tracking of 35 stablecoins, covering freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
+- **Issuer controls:** FreezeWatch provides on-chain tracking of 34 stablecoins, covering freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
 - **Liquidity quality:** DEX Liquidity Score combines pool TVL, volume, durability, pool quality, and pair diversity.
 - **DEX price corroboration:** Curve, Uniswap V3, Aerodrome, Velodrome, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener inputs help suppress false depeg alerts.
 - **Market structure:** USD, non-USD fiat, commodity, and CPI-linked stablecoin cohorts with chain and peg distribution views.
