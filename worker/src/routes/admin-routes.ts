@@ -21,7 +21,7 @@ import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
 import { handleAlertBrokerCanary } from "../api/admin-alert-broker-canary";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { handleArmReserveRecoveryFaultInjection } from "../api/admin-reserve-recovery-fault-injection";
-import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
+import { makeAdminRoute, makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
 import { defineStaticRoute, type StaticRouteDefinition, type StaticRouteHandler } from "./shared";
 import type { EndpointKey } from "@shared/lib/api-endpoints";
 
@@ -84,8 +84,12 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("reset-cron-lease", handleResetCronLease),
   defineStaticRoute("reset-circuit-breaker", handleResetCircuitBreaker),
   defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
-  defineStaticRoute("reserve-recovery-fault-injection", ({ db, request, trustedAdmin, workerVersion }) =>
-    handleArmReserveRecoveryFaultInjection(db, request, trustedAdmin, workerVersion)),
+  defineStaticRoute(
+    "reserve-recovery-fault-injection",
+    makeAdminRoute("reserve-recovery-fault-injection", ({ db, request, trustedAdmin, workerVersion }) =>
+      handleArmReserveRecoveryFaultInjection(db, request, trustedAdmin, workerVersion),
+    ),
+  ),
   defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),
   defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
   defineConditionalIdempotentAdminRoute(
