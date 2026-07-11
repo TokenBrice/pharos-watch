@@ -1,5 +1,6 @@
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 // Shared version/helpers also consumed by homepage-bootstrap-runtime.ts; this
 // module adds the Zod-validating layer (ApiMetaSchema, descriptor.schema).
 import {
@@ -34,29 +35,23 @@ const homepageBootstrapCodec = makeBootstrapCodec<HomepageBootstrapQueryId, ApiM
     const meta = ApiMetaSchema.safeParse(raw);
     return meta.success ? meta.data : undefined;
   },
-  validateData(id, data) {
-    const descriptor = HOMEPAGE_BOOTSTRAP_DESCRIPTORS.find((entry) => entry.id === id)?.descriptor;
-    const parsed = descriptor?.schema?.safeParse(data);
-    if (parsed && !parsed.success) {
-      return null;
-    }
-    return { data: parsed ? parsed.data : data };
-  },
 });
 
 export function normalizeHomepageBootstrapPayload(raw: unknown): HomepageBootstrapPayload | null {
   return homepageBootstrapCodec.normalizePayload(raw);
 }
 
-export function validateHomepageBootstrapPayloadData(payload: HomepageBootstrapPayload): string[] {
-  const errors: string[] = [];
-  for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
+export async function validateHomepageBootstrapPayloadData(
+  payload: HomepageBootstrapPayload,
+): Promise<string[]> {
+  const results = await Promise.all(HOMEPAGE_BOOTSTRAP_DESCRIPTORS.map(async ({ id, descriptor }) => {
     const query = payload.queries[id];
-    if (!query || !descriptor.schema) continue;
-    const parsed = descriptor.schema.safeParse(query.data);
-    if (!parsed.success) {
-      errors.push(`${id}: ${parsed.error.issues.map((issue) => issue.message).join(", ")}`);
-    }
-  }
-  return errors;
+    const schema = await resolveSchemaLike(descriptor.schema as SchemaLikeSource<unknown> | undefined);
+    if (!query || !schema) return null;
+    const parsed = schema.safeParse(query.data);
+    return parsed.success
+      ? null
+      : `${id}: ${parsed.error.issues.map((issue) => issue.message).join(", ")}`;
+  }));
+  return results.filter((error): error is string => error !== null);
 }

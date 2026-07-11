@@ -1,6 +1,7 @@
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
 import { isFiniteNumber, isRecord } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
+import { normalizeSelectorInput, normalizeSelectorSnapshot } from "./snapshot-normalize";
 import { sha256Hex } from "../sha256";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
@@ -15,11 +16,13 @@ import {
   LOWEST_SUB_DIMENSION_KEYS,
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   SELECTOR_PROFILES,
+  SELECTOR_SNAPSHOT_VERIFICATION_KIND,
   TRADING_VENUE_VALUES,
   TREASURY_VENUE_VALUES,
   WEIGHT_KEYS,
   WHY_KEYS,
   YIELD_VENUE_VALUES,
+  type SelectorInput,
   type SelectorOutput,
 } from "./types";
 
@@ -83,6 +86,10 @@ export type SelectorSnapshotValidationResult =
   | { ok: true; snapshot: SelectorOutput }
   | { ok: false; error: SelectorSnapshotValidationError };
 
+export type SelectorSnapshotInputValidationResult =
+  | { ok: true; input: SelectorInput }
+  | { ok: false; error: SelectorSnapshotValidationError };
+
 export function isSelectorSnapshotSid(value: string): boolean {
   return SELECTOR_SNAPSHOT_SID_PATTERN.test(value);
 }
@@ -109,19 +116,19 @@ export function stripDebugFromSelectorSnapshot(value: Record<string, unknown>): 
   return snapshot;
 }
 
-/**
- * Snapshot POST is unauthenticated beyond the same-origin browser gate. Keep
- * deterministic numeric/key fields, but drop prose that the UI can derive from
- * canonical selector keys during replay.
- */
-function stripUntrustedSelectorSnapshotProse(value: SelectorOutput): SelectorOutput {
-  return {
-    ...value,
-    recommended: value.recommended.map(({ whyText: _whyText, watchText: _watchText, ...rec }) => rec),
-    lowerRanked: value.lowerRanked.map(
-      ({ verdictText: _verdictText, teachingText: _teachingText, ...entry }) => entry,
-    ),
-  } as SelectorOutput;
+export function validateSelectorSnapshotInput(value: unknown): SelectorSnapshotInputValidationResult {
+  if (!isSelectorSnapshotStructurallySafe(value)) {
+    return { ok: false, error: "unsafe" };
+  }
+  if (!isRecord(value)) {
+    return { ok: false, error: "shape" };
+  }
+  const candidate = isRecord(value.input) ? value.input : value;
+  const profile = candidate.profile;
+  if (typeof profile !== "string" || !SELECTOR_PROFILE_SET.has(profile) || !isSelectorInputShape(candidate, profile)) {
+    return { ok: false, error: "shape" };
+  }
+  return { ok: true, input: normalizeSelectorInput(candidate as unknown as SelectorInput) };
 }
 
 export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
@@ -135,7 +142,75 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
   if (!isSelectorOutputShape(snapshot)) {
     return { ok: false, error: "shape" };
   }
-  return { ok: true, snapshot: stripUntrustedSelectorSnapshotProse(snapshot) };
+  const normalized = normalizeSelectorSnapshot(snapshot);
+  return normalized
+    ? { ok: true, snapshot: normalized }
+    : { ok: false, error: "shape" };
+}
+
+function attachVerifiedSnapshotBinding(snapshot: SelectorOutput): SelectorOutput {
+  return {
+    ...snapshot,
+    provenance: "pharos-verified",
+    snapshotSchemaVersion: 3,
+    verification: {
+      kind: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+      datasetHash: snapshot.datasetHash,
+      engineVersion: snapshot.engineVersion,
+    },
+  };
+}
+
+export function createVerifiedSelectorSnapshot(output: SelectorOutput): SelectorOutput {
+  const validation = validateSelectorSnapshot(output);
+  if (!validation.ok) {
+    throw new Error("Server-recomputed selector output failed snapshot validation");
+  }
+  return attachVerifiedSnapshotBinding(validation.snapshot);
+}
+
+export function validateVerifiedSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
+  if (!isSelectorSnapshotStructurallySafe(value) || !isRecord(value) || "debug" in value) {
+    return { ok: false, error: "unsafe" };
+  }
+  if (!isSelectorOutputShape(value) || !isRecord(value.verification)) {
+    return { ok: false, error: "shape" };
+  }
+  if (
+    value.provenance !== "pharos-verified"
+    || value.snapshotSchemaVersion !== 3
+    || value.verification.kind !== SELECTOR_SNAPSHOT_VERIFICATION_KIND
+    || value.verification.datasetHash !== value.datasetHash
+    || value.verification.engineVersion !== value.engineVersion
+  ) {
+    return { ok: false, error: "shape" };
+  }
+
+  const normalized = normalizeSelectorSnapshot(value);
+  if (!normalized) return { ok: false, error: "shape" };
+  const verified = attachVerifiedSnapshotBinding(normalized);
+  return canonicalizeForSid(value) === canonicalizeForSid(verified)
+    ? { ok: true, snapshot: verified }
+    : { ok: false, error: "shape" };
+}
+
+/**
+ * Validates a snapshot returned by the trusted Pages Function boundary.
+ * Verified-looking payloads must satisfy the exact verified contract; they
+ * are never silently downgraded to the legacy client-unverified projection.
+ */
+export function validateSelectorSnapshotResponse(value: unknown): SelectorSnapshotValidationResult {
+  if (
+    isRecord(value)
+    && (
+      value.provenance === "pharos-verified"
+      || value.snapshotSchemaVersion === 3
+      || value.verification !== undefined
+    )
+  ) {
+    return validateVerifiedSelectorSnapshot(value);
+  }
+  return validateSelectorSnapshot(value);
 }
 
 export function computeSelectorSnapshotSid(snapshot: unknown): string {
@@ -143,7 +218,7 @@ export function computeSelectorSnapshotSid(snapshot: unknown): string {
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+  return typeof value === "string" && value.trim().length > 0 && value.length <= 256;
 }
 
 function isNumberInRange(value: unknown, min: number, max: number): value is number {
@@ -159,11 +234,14 @@ function isNonNegativeNumber(value: unknown): value is number {
 }
 
 function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
+  return Array.isArray(value)
+    && value.length <= 64
+    && value.every((item) => typeof item === "string" && item.length <= 128);
 }
 
 function isKnownStringArray(value: unknown, allowed: ReadonlySet<string>): value is string[] {
   return Array.isArray(value)
+    && value.length <= allowed.size
     && value.every((item) => typeof item === "string" && allowed.has(item));
 }
 
@@ -250,6 +328,7 @@ function isCoverageWarningsShape(value: unknown): boolean {
   return (
     isNonNegativeInteger(value.skippedForCoverageCount)
     && Array.isArray(value.skippedForCoverage)
+    && value.skippedForCoverage.length <= 410
     && value.skippedForCoverage.every(isSkippedCoinShape)
     && typeof value.sparse === "boolean"
     && typeof value.uneven === "boolean"
@@ -285,7 +364,9 @@ function isChainHintsShape(value: unknown): boolean {
   if (!isRecord(value)) return false;
   return (
     isStringArray(value.topByLiquidity)
+    && value.topByLiquidity.length <= 3
     && isStringArray(value.topByYield)
+    && value.topByYield.length <= 1
     && (value.primary === null || typeof value.primary === "string")
   );
 }
@@ -345,8 +426,10 @@ function isRecommendationShape(value: unknown, outputProfile: string): boolean {
     && isNumberInRange(value.score, 0, 100)
     && isNumberInRange(value.confidence, 0, 100)
     && Array.isArray(value.components)
+    && value.components.length <= 16
     && value.components.every(isComponentShape)
     && isKnownStringArray(value.whyKeys, WHY_KEY_SET)
+    && value.whyKeys.length <= 4
     && isOptionalConfidenceReasons(value.confidenceReasons)
     && isLowestSubDimensionShape(value.lowestSubDimension)
     && isChainHintsShape(value.chainHints)
@@ -382,10 +465,7 @@ function isLowerRankedShape(value: unknown): boolean {
 
 function isMethodologyVersionsShape(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  return (
-    REQUIRED_METHODOLOGY_KEYS.every((key) => isNonEmptyString(value[key]))
-    && Object.values(value).every(isNonEmptyString)
-  );
+  return REQUIRED_METHODOLOGY_KEYS.every((key) => isNonEmptyString(value[key]));
 }
 
 function isExclusionSummaryItemShape(value: unknown): boolean {
@@ -449,7 +529,10 @@ function isSelectorOutputShape(value: unknown): value is SelectorOutput {
     && typeof candidate.usedRelaxedFallback === "boolean"
     && isKnownStringArray(candidate.relaxedReasons, EXCLUSION_REASON_SET)
     && isRequiredArrayOf(candidate.exclusionSummary, isExclusionSummaryItemShape)
+    && (candidate.exclusionSummary as unknown[]).length <= 410
     && isRequiredArrayOf(candidate.closestSurvivors, isClosestSurvivorShape)
+    && (candidate.closestSurvivors as unknown[]).length <= 3
     && isRequiredArrayOf(candidate.relaxableConstraints, isRelaxableConstraintShape)
+    && (candidate.relaxableConstraints as unknown[]).length <= 3
   );
 }

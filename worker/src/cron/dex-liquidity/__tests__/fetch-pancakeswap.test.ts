@@ -6,9 +6,14 @@ vi.mock("../../../lib/fetch-retry", () => ({
 }));
 
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
-import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
+import { buildPancakePageSkips, fetchPancakeSwapPools } from "../fetch-pancakeswap";
 
 describe("fetchPancakeSwapPools", () => {
+  it("refreshes the head and rotates a persisted bounded tail", () => {
+    expect(buildPancakePageSkips(null)).toEqual([0, 250, 500]);
+    expect(buildPancakePageSkips("1250")).toEqual([0, 1250, 1500]);
+  });
+
   function response(body: unknown): Response {
     return new Response(JSON.stringify(body), { status: 200 });
   }
@@ -162,9 +167,41 @@ describe("fetchPancakeSwapPools", () => {
 
     const result = await fetchPancakeSwapPools("graph-key");
 
-    expect(result.ok).toBe(false);
+    // The BSC source failed, while the remaining chain heads completed as valid-empty.
+    expect(result.ok).toBe(true);
     expect(result.degraded).toBe(true);
     expect(result.errors[0]).toContain("invalid-json");
     expect(result.errors[0]).toContain("GET,HEAD");
+  });
+
+  it("degrades successful chain reads when their cursors are not durable", async () => {
+    vi.mocked(fetchTextWithRetry).mockImplementation(async () =>
+      textResult(response({ data: { pools: [] } })));
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => null),
+          run: vi.fn(async () => {
+            throw new Error("pagination state write failed");
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await fetchPancakeSwapPools("graph-key", undefined, db);
+
+    expect(result).toMatchObject({ ok: true, degraded: true });
+    expect(result.pagination?.cursorPersistence).toEqual({
+      attempts: 3,
+      written: 0,
+      failures: [
+        { sourceKey: "pancakeswap-v3:bsc", errorClass: "write-failed" },
+        { sourceKey: "pancakeswap-v3:ethereum", errorClass: "write-failed" },
+        { sourceKey: "pancakeswap-v3:base", errorClass: "write-failed" },
+      ],
+    });
+    expect(result.warnings).toContain(
+      "bsc: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
+    );
   });
 });

@@ -3,11 +3,24 @@ import type { D1Database, D1PreparedStatement, KVNamespace, KVNamespaceGetOption
 import {
   SELECTOR_SNAPSHOT_TTL_SECONDS,
   SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
+  computeSelectorSnapshotSid,
+  createVerifiedSelectorSnapshot,
+  validateSelectorSnapshot,
 } from "../../shared/lib/selector/snapshot";
+import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "../../shared/lib/selector/types";
 import {
   buildSelectorSnapshotOutput,
   buildSnapshotRecommendation,
 } from "../../shared/lib/selector/__tests__/snapshot-fixture";
+
+const { recomputeVerifiedSelectorSnapshotMock } = vi.hoisted(() => ({
+  recomputeVerifiedSelectorSnapshotMock: vi.fn(),
+}));
+
+vi.mock("../lib/selector-canonical-snapshot", () => ({
+  recomputeVerifiedSelectorSnapshot: recomputeVerifiedSelectorSnapshotMock,
+}));
+
 import { onRequest } from "../selector-snapshot/[[path]].ts";
 
 interface RecordedPutCall {
@@ -58,8 +71,12 @@ function makeKV(): TestKVNamespace {
     list: (async () => ({ keys: [], list_complete: true, cacheStatus: null })) as KVNamespace["list"],
     __getStore: () => store,
     __getPutCalls: () => putCalls,
-    __setReadHandler: (handler) => { readHandler = handler; },
-    __setWriteHandler: (handler) => { writeHandler = handler; },
+    __setReadHandler: (handler) => {
+      readHandler = handler;
+    },
+    __setWriteHandler: (handler) => {
+      writeHandler = handler;
+    },
   };
 
   return ns as TestKVNamespace;
@@ -67,7 +84,9 @@ function makeKV(): TestKVNamespace {
 
 interface TestD1Database extends D1Database {
   __getQuotaRows(): Map<string, number>;
-  __setRunHandler(handler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null): void;
+  __setRunHandler(
+    handler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null,
+  ): void;
 }
 
 function makeD1(): TestD1Database {
@@ -96,7 +115,9 @@ function makeD1(): TestD1Database {
       return statement as D1PreparedStatement;
     }) as D1Database["prepare"],
     __getQuotaRows: () => quotaRows,
-    __setRunHandler: (handler) => { runHandler = handler; },
+    __setRunHandler: (handler) => {
+      runHandler = handler;
+    },
   };
 
   return db as TestD1Database;
@@ -107,11 +128,15 @@ interface MakeEnvOverrides {
   DB?: D1Database | undefined;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
+  SITE_API_ORIGIN?: string;
+  SITE_API_SHARED_SECRET?: string;
+  SELECTOR_SNAPSHOT_IP_HASH_SECRET?: string | undefined;
 }
 
 function makeEnv(overrides: MakeEnvOverrides = {}) {
   const kvProvided = Object.prototype.hasOwnProperty.call(overrides, "SELECTOR_SNAPSHOTS");
   const dbProvided = Object.prototype.hasOwnProperty.call(overrides, "DB");
+  const pepperProvided = Object.prototype.hasOwnProperty.call(overrides, "SELECTOR_SNAPSHOT_IP_HASH_SECRET");
   const kv = kvProvided ? overrides.SELECTOR_SNAPSHOTS : makeKV();
   const db = dbProvided ? overrides.DB : makeD1();
   return {
@@ -119,6 +144,11 @@ function makeEnv(overrides: MakeEnvOverrides = {}) {
     DB: db,
     SITE_ORIGIN: overrides.SITE_ORIGIN ?? "https://pharos.watch",
     OPS_UI_ORIGIN: overrides.OPS_UI_ORIGIN ?? "https://ops.pharos.watch",
+    SITE_API_ORIGIN: overrides.SITE_API_ORIGIN ?? "https://site-api.pharos.watch",
+    SITE_API_SHARED_SECRET: overrides.SITE_API_SHARED_SECRET ?? "site-api-test-secret",
+    SELECTOR_SNAPSHOT_IP_HASH_SECRET: pepperProvided
+      ? overrides.SELECTOR_SNAPSHOT_IP_HASH_SECRET
+      : "selector-snapshot-test-pepper-32-bytes",
   };
 }
 
@@ -135,9 +165,17 @@ function postRequest(body: unknown, headers: HeadersInit = POST_HEADERS): Reques
   });
 }
 
+function buildVerifiedSnapshot(overrides: Record<string, unknown> = {}) {
+  const validation = validateSelectorSnapshot(buildSelectorSnapshotOutput(overrides));
+  if (!validation.ok) throw new Error(`Invalid verified snapshot fixture: ${validation.error}`);
+  return createVerifiedSelectorSnapshot(validation.snapshot);
+}
+
 describe("selector-snapshot Pages Function", () => {
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
+    recomputeVerifiedSelectorSnapshotMock.mockReset();
+    recomputeVerifiedSelectorSnapshotMock.mockResolvedValue(buildVerifiedSnapshot());
   });
 
   afterEach(() => {
@@ -206,7 +244,7 @@ describe("selector-snapshot Pages Function", () => {
   });
 
   describe("POST storage", () => {
-    it("stores the payload and returns a 32-hex sid", async () => {
+    it("stores a server-recomputed verified payload and returns its binding", async () => {
       const env = makeEnv();
       const response = await onRequest({
         request: postRequest(buildSelectorSnapshotOutput()),
@@ -215,10 +253,91 @@ describe("selector-snapshot Pages Function", () => {
       });
       expect(response.status).toBe(200);
       expect(response.headers.get("Cache-Control")).toBe("no-store");
-      const body = (await response.json()) as { sid: string };
+      const body = (await response.json()) as { sid: string; ev: string };
       expect(body.sid).toMatch(/^[0-9a-f]{32}$/);
+      expect(body.ev).toBe(SELECTOR_SNAPSHOT_VERIFICATION_KIND);
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       expect(kv.__getStore().has(`s:${body.sid}`)).toBe(true);
+      const stored = JSON.parse(kv.__getStore().get(`s:${body.sid}`) ?? "{}") as Record<string, unknown>;
+      expect(stored).toMatchObject({
+        provenance: "pharos-verified",
+        snapshotSchemaVersion: 3,
+        verification: {
+          kind: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+          datasetHash: stored.datasetHash,
+          engineVersion: stored.engineVersion,
+        },
+      });
+      expect(kv.__getPutCalls()[0]?.options?.metadata).toEqual({
+        trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+      });
+    });
+
+    it("accepts an input-only request and ignores caller-authored output fields", async () => {
+      const env = makeEnv();
+      const canonical = buildVerifiedSnapshot();
+      recomputeVerifiedSelectorSnapshotMock.mockResolvedValueOnce(canonical);
+      const forged = buildSelectorSnapshotOutput({
+        datasetHash: "f".repeat(64),
+        recommended: [buildSnapshotRecommendation({ score: 100, name: "Official Pharos winner" })],
+        provenance: "pharos-verified",
+        snapshotSchemaVersion: 3,
+        verification: {
+          kind: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+          datasetHash: "f".repeat(64),
+          engineVersion: buildSelectorSnapshotOutput().engineVersion,
+        },
+      });
+
+      const forgedResponse = await onRequest({ request: postRequest(forged), env, params: {} });
+      const inputOnlyResponse = await onRequest({ request: postRequest({ input: forged.input }), env, params: {} });
+      const forgedBody = (await forgedResponse.json()) as { sid: string };
+      const inputOnlyBody = (await inputOnlyResponse.json()) as { sid: string };
+
+      expect(forgedResponse.status).toBe(200);
+      expect(inputOnlyResponse.status).toBe(200);
+      expect(forgedBody.sid).toBe(inputOnlyBody.sid);
+      expect(recomputeVerifiedSelectorSnapshotMock).toHaveBeenCalledWith(
+        canonical.input,
+        expect.any(Request),
+        expect.any(Object),
+      );
+      const stored = JSON.parse(
+        (env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getStore().get(`s:${forgedBody.sid}`) ?? "{}",
+      ) as typeof canonical;
+      expect(stored.datasetHash).toBe(canonical.datasetHash);
+      expect(stored.recommended[0]?.score).toBe(canonical.recommended[0]?.score);
+      expect(stored.recommended[0]?.name).toBe(canonical.recommended[0]?.name);
+      expect(stored.verification).toEqual(canonical.verification);
+    });
+
+    it("does not deduplicate against an untrusted value at the verified sid", async () => {
+      const env = makeEnv();
+      const canonical = buildVerifiedSnapshot();
+      const sid = computeSelectorSnapshotSid(canonical);
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      await kv.put(
+        `s:${sid}`,
+        JSON.stringify({
+          ...canonical,
+          provenance: "client-unverified",
+          snapshotSchemaVersion: 2,
+          verification: undefined,
+        }),
+      );
+
+      const response = await onRequest({
+        request: postRequest({ input: canonical.input }),
+        env,
+        params: {},
+      });
+
+      expect(response.status).toBe(200);
+      expect(kv.__getPutCalls()).toHaveLength(2);
+      expect(kv.__getPutCalls()[1]?.options?.metadata).toEqual({
+        trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+      });
+      expect(JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}")).toEqual(canonical);
     });
 
     it("strips debug before storing snapshots", async () => {
@@ -364,6 +483,44 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(413);
     });
 
+    it("cancels a chunked request body as soon as it crosses the byte cap", async () => {
+      const cancel = vi.fn();
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(101 * 1024));
+        },
+        cancel,
+      });
+      const request = new Request("https://pharos.watch/selector-snapshot", {
+        method: "POST",
+        body,
+        headers: POST_HEADERS,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+
+      const response = await onRequest({ request, env: makeEnv(), params: {} });
+
+      expect(response.status).toBe(413);
+      expect(cancel).toHaveBeenCalled();
+    });
+
+    it("enforces the streaming cap when Content-Length falsely claims a small body", async () => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(101 * 1024));
+        },
+      });
+      const request = new Request("https://pharos.watch/selector-snapshot", {
+        method: "POST",
+        body,
+        headers: { ...POST_HEADERS, "Content-Length": "1" },
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+
+      const response = await onRequest({ request, env: makeEnv(), params: {} });
+      expect(response.status).toBe(413);
+    });
+
     it("returns 413 when a multibyte body exceeds the byte cap", async () => {
       const response = await onRequest({
         request: postRequest({
@@ -383,6 +540,16 @@ describe("selector-snapshot Pages Function", () => {
         params: {},
       });
       expect(response.status).toBe(500);
+    });
+
+    it("fails closed when the dedicated IP HMAC pepper is missing", async () => {
+      const response = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput()),
+        env: makeEnv({ SELECTOR_SNAPSHOT_IP_HASH_SECRET: "" }),
+        params: {},
+      });
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({ error: "Snapshot write limiter is not configured" });
     });
 
     it("returns 503 when the D1 quota binding is missing for identified clients", async () => {
@@ -411,6 +578,20 @@ describe("selector-snapshot Pages Function", () => {
         params: {},
       });
       expect(response.status).toBe(503);
+    });
+
+    it("returns 503 instead of storing caller output when canonical recomputation fails", async () => {
+      recomputeVerifiedSelectorSnapshotMock.mockRejectedValueOnce(new Error("canonical source unavailable"));
+      const env = makeEnv();
+      const response = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput({ datasetHash: "f".repeat(64) })),
+        env,
+        params: {},
+      });
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ error: "Canonical selector data temporarily unavailable" });
+      expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getStore().size).toBe(0);
     });
 
     it("returns 503 when the KV write fails", async () => {
@@ -465,24 +646,19 @@ describe("selector-snapshot Pages Function", () => {
       expect(body.timestamp).toBe(1715000000);
       expect(body.universe).toEqual({ active: 392, surviving: 12 });
       expect(body.lowConfidence).toBe(false);
+      expect(body.provenance).toBe("pharos-verified");
+      expect(body.snapshotSchemaVersion).toBe(3);
     });
 
     it("strips debug from a legacy stored value before replay", async () => {
       const env = makeEnv();
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
-      const { sid } = (await post.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      kv.__getStore().set(
-        `s:${sid}`,
-        JSON.stringify({
-          ...buildSelectorSnapshotOutput(),
-          debug: { allSurvivors: [buildSnapshotRecommendation()] },
-        }),
-      );
+      const legacy = {
+        ...buildSelectorSnapshotOutput(),
+        debug: { allSurvivors: [buildSnapshotRecommendation()] },
+      };
+      const sid = computeSelectorSnapshotSid(legacy);
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(legacy));
 
       const get = await onRequest({
         request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
@@ -514,12 +690,7 @@ describe("selector-snapshot Pages Function", () => {
           },
         ],
       });
-      const post = await onRequest({
-        request: postRequest(legacyShape),
-        env,
-        params: {},
-      });
-      const { sid } = (await post.json()) as { sid: string };
+      const sid = computeSelectorSnapshotSid(legacyShape);
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       kv.__getStore().set(`s:${sid}`, JSON.stringify(legacyShape));
 
@@ -538,6 +709,56 @@ describe("selector-snapshot Pages Function", () => {
       expect(recommended[0]?.watchText).toBeUndefined();
       expect(lowerRanked[0]?.verdictText).toBeUndefined();
       expect(lowerRanked[0]?.teachingText).toBeUndefined();
+    });
+
+    it("replays a recognized legacy sid with explicit unverified provenance", async () => {
+      const env = makeEnv();
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const output = buildSelectorSnapshotOutput({
+        engineVersion: "selector-v1.9",
+        methodologyVersions: {
+          ...(buildSelectorSnapshotOutput().methodologyVersions as Record<string, unknown>),
+          exclusionFilters: "selector-v1.9",
+        },
+      });
+      const sid = computeSelectorSnapshotSid(output);
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(output));
+
+      const get = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+
+      expect(get.status).toBe(200);
+      const body = (await get.json()) as Record<string, unknown>;
+      expect(body.provenance).toBe("client-unverified");
+      expect(body.snapshotSchemaVersion).toBe(2);
+      expect(kv.__getPutCalls().at(-1)?.options?.metadata).toEqual({ extended: true, legacySid: sid });
+    });
+
+    it("downgrades a forged verified payload when KV metadata does not attest it", async () => {
+      const env = makeEnv();
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const forged = buildVerifiedSnapshot();
+      const sid = computeSelectorSnapshotSid(forged);
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(forged));
+
+      const response = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        provenance: "client-unverified",
+        snapshotSchemaVersion: 2,
+      });
     });
   });
 
@@ -569,7 +790,10 @@ describe("selector-snapshot Pages Function", () => {
       expect(kv.__getPutCalls()).toHaveLength(2);
       expect(kv.__getPutCalls()[1]).toMatchObject({
         key: `s:${sid}`,
-        options: { expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS, metadata: { extended: true } },
+        options: {
+          expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
+          metadata: { extended: true, trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND },
+        },
       });
 
       const getTwice = await onRequest({
@@ -581,6 +805,31 @@ describe("selector-snapshot Pages Function", () => {
       });
       expect(getTwice.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
+    });
+
+    it("returns 503 instead of claiming success when the retention extension fails", async () => {
+      const env = makeEnv();
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const post = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput()),
+        env,
+        params: {},
+      });
+      const { sid } = (await post.json()) as { sid: string };
+      kv.__setWriteHandler(() => {
+        throw new Error("extension unavailable");
+      });
+
+      const get = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+
+      expect(get.status).toBe(503);
+      await expect(get.json()).resolves.toEqual({ error: "Snapshot retention could not be extended" });
     });
   });
 
@@ -635,7 +884,7 @@ describe("selector-snapshot Pages Function", () => {
     for (let i = 0; i < 100; i++) {
       vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 0, i + 1, 0)));
       const response = await onRequest({
-        request: postRequest({ ...output, datasetHash: `quota-${i}` }, headers),
+        request: postRequest({ ...output, datasetHash: i.toString(16).padStart(64, "0") }, headers),
         env,
         params: {},
       });
@@ -644,13 +893,37 @@ describe("selector-snapshot Pages Function", () => {
 
     vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 1, 50, 0)));
     const throttled = await onRequest({
-      request: postRequest({ ...output, datasetHash: "quota-over" }, headers),
+      request: postRequest({ ...output, datasetHash: "f".repeat(64) }, headers),
       env,
       params: {},
     });
     expect(throttled.status).toBe(429);
     expect(throttled.headers.get("Retry-After")).toBe("86400");
-    expect([...((env.DB as TestD1Database).__getQuotaRows()).values()]).toEqual([100]);
+    expect([...(env.DB as TestD1Database).__getQuotaRows().values()]).toEqual([100]);
+  });
+
+  it("stores only a peppered HMAC-derived IP quota key", async () => {
+    const db = makeD1();
+    const env = makeEnv({ DB: db, SELECTOR_SNAPSHOT_IP_HASH_SECRET: "pepper-one-which-is-long-enough-for-tests" });
+    const ip = "203.0.113.201";
+    const response = await onRequest({
+      request: postRequest(buildSelectorSnapshotOutput(), {
+        ...POST_HEADERS,
+        "CF-Connecting-IP": ip,
+      }),
+      env,
+      params: {},
+    });
+    expect(response.status).toBe(200);
+
+    const [storedKey] = [...db.__getQuotaRows().keys()];
+    const unsalted = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip));
+    const unsaltedPrefix = Array.from(new Uint8Array(unsalted).slice(0, 16), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    expect(storedKey).not.toContain(ip);
+    expect(storedKey).not.toContain(unsaltedPrefix);
+    expect(storedKey).toMatch(/^\d{4}-\d{2}-\d{2}:[0-9a-f]{32}$/);
   });
 
   describe("GET failure modes", () => {
@@ -712,7 +985,32 @@ describe("selector-snapshot Pages Function", () => {
       });
       const { sid } = (await post.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      kv.__getStore().set(`s:${sid}`, JSON.stringify(buildSelectorSnapshotOutput({ datasetHash: "different-hash" })));
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })));
+
+      const response = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
+      });
+      expect(response.status).toBe(502);
+    });
+
+    it("returns 502 when a KV-attested verified score is tampered", async () => {
+      const env = makeEnv();
+      const post = await onRequest({
+        request: postRequest(buildSelectorSnapshotOutput()),
+        env,
+        params: {},
+      });
+      const { sid } = (await post.json()) as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const stored = JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}") as {
+        recommended: Array<{ score: number }>;
+      };
+      stored.recommended[0]!.score = 100;
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(stored));
 
       const response = await onRequest({
         request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {

@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
+import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-light";
 import { useStabilityIndexLight } from "../use-stability-index-light";
 
 type CapturedQueryOptions = {
@@ -47,7 +47,7 @@ describe("useStabilityIndexLight", () => {
   });
 
   it("uses the registered stability index key and meta-compatible cached value", async () => {
-    const descriptor = FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex;
+    const descriptor = STABILITY_INDEX_QUERY_DESCRIPTOR;
     const cachedValue = {
       data: { current: null, history: [] },
       meta: { ageSeconds: 0, status: "fresh", updatedAt: 1 },

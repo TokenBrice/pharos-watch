@@ -72,6 +72,7 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
     signal?: AbortSignal;
   }) => Promise<boolean>;
   fetchPools: (tokenAddress: string, sourceChain: string, signal?: AbortSignal) => Promise<TRawPool[]>;
+  onRequestResult?: (token: CrawlToken, status: "success" | "failure") => void;
   parsePool: (rawPool: TRawPool) => ParsedPool | null;
   buildNewPool: (args: BuildNewPoolArgs<TRawPool>) => TNewPool;
 };
@@ -134,6 +135,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
 
     try {
       const pools = await config.fetchPools(token.address, token.sourceChain, config.signal);
+      config.onRequestResult?.(token, "success");
       for (const rawPool of pools) {
         let parsed: ParsedPool | null = null;
         try {
@@ -209,6 +211,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
       }
     } catch (err) {
       if (config.signal?.aborted) throw err;
+      config.onRequestResult?.(token, "failure");
       console.warn(`[dex-liquidity] ${config.sourceLabel} pool crawl error for ${token.ourChain}:${token.address}:`, err);
     }
   }

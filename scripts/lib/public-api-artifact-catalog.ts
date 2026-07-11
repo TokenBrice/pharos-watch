@@ -707,8 +707,17 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
     tags: ["Yield"],
     responseSchema: "YieldRankingsResponse",
+    parameters: [
+      {
+        name: "projection",
+        in: "query",
+        schema: { type: "string", enum: ["summary"] },
+        description: "Returns the compact Yield workbench contract while preserving the detailed response as the default.",
+      },
+    ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
+      query: { projection: "" },
     },
   },
   {

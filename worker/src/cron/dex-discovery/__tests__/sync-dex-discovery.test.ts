@@ -32,7 +32,13 @@ vi.mock("../crawl-sources", () => ({
       { poolId: "base:0xpool2" },
     ],
     unresolvedChains: [],
+    deploymentOutcomes: [],
   })),
+}));
+
+vi.mock("../deployment-outcomes", () => ({
+  buildStaticInaccessibleDeploymentOutcomes: vi.fn(() => []),
+  upsertDexDeploymentOutcomes: vi.fn(async (_db: D1Database, rows: unknown[]) => rows.length),
 }));
 
 vi.mock("../persistence", () => ({
@@ -116,6 +122,7 @@ describe("syncDexDiscovery", () => {
         makeStagedPool("base:0xpool2"),
       ],
       unresolvedChains: [],
+      deploymentOutcomes: [],
     });
   });
 
@@ -156,6 +163,7 @@ describe("syncDexDiscovery", () => {
       return {
         pools: [makeStagedPool("ethereum:0xpool1")],
         unresolvedChains: [],
+        deploymentOutcomes: [],
       };
     });
 

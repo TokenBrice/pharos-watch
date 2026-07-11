@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearAllTrackingTimers, trackSearch } from "@/lib/analytics";
+import { clearAllTrackingTimers, trackEvent, trackSearch } from "@/lib/analytics";
 
 describe("trackSearch debounce + clearAllTrackingTimers", () => {
   let gtag: ReturnType<typeof vi.fn>;
@@ -7,7 +7,10 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     gtag = vi.fn();
-    (globalThis as { window?: { gtag?: typeof gtag } }).window = { gtag };
+    (globalThis as { window?: unknown }).window = {
+      gtag,
+      location: { pathname: "/" },
+    };
   });
 
   afterEach(() => {
@@ -32,6 +35,15 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
     // user navigates away mid-debounce
     clearAllTrackingTimers();
     vi.advanceTimersByTime(1000);
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
+  it("suppresses custom events in the embedded Telegram Mini App", () => {
+    (globalThis as { window: { location: { pathname: string } } }).window.location.pathname =
+      "/pharoswatchbot/app/";
+
+    trackEvent("panel_toggled", { panel: "watchlist", action: "open" });
+
     expect(gtag).not.toHaveBeenCalled();
   });
 });

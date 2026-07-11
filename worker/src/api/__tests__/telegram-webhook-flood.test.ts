@@ -41,9 +41,8 @@ describe("telegram webhook per-chat flood cap", () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["telegram:command-flood:123"],
-        rows: [{ key: "telegram:command-flood:123", value: "20", updated_at: 1_699_999_990 }],
+        match: "RETURNING value",
+        rows: [{ value: "21" }],
       },
     ]);
 

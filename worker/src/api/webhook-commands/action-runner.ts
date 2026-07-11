@@ -5,6 +5,7 @@
  */
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { recordTelegramFirstFollow } from "../../lib/telegram-adoption-analytics";
 import {
   type ResolvedCoin,
   type TickerResolutionScope,
@@ -18,20 +19,19 @@ import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registr
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
+  buildPresetUnavailableMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
 } from "../telegram-webhook-messages";
 import { runCoinResolutionFlow, type CoinResolutionCompletion } from "../telegram-webhook-resolution";
 import {
   applySettingToSubscriptions,
-  clearPendingDisambiguation,
+  applySubscribeIntent,
+  applyUnsubscribeIntent,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
+  persistPendingDisambiguation,
   persistPendingConfirmBulk,
-  removePresetSubscriptions,
-  removeSubscriptions,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
 } from "../telegram-webhook-store";
 import {
   type ConfirmBulkPayload,
@@ -45,12 +45,47 @@ import {
   BULK_CONFIRM_COIN_THRESHOLD,
   BULK_CONFIRM_PREVIEW_LIMIT,
 } from "../../lib/telegram-constants";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
+import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 
 export interface TelegramActionContext {
   db: D1Database;
   chatId: string;
   username: string | null;
   initiatorUserId: string | null;
+  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+  prepareMutationAppliedStatement?: () => D1PreparedStatement;
+  prepareMutationOperationStatements?: () => D1PreparedStatement[];
+  preparePendingMutationAppliedStatement?: (input: {
+    chatId: string;
+    actionType: string;
+    actionPayload: string;
+    expiresAt: number;
+  }) => D1PreparedStatement;
+  confirmAtomicMutationApplied?: () => void;
+  markMutationApplied?: () => Promise<void>;
+  storedIntent?: TelegramWebhookOperationIntent | null;
+  wasMutationApplied?: boolean;
+  operationNowSec?: number;
+}
+
+async function prepareActionMutation(
+  context: TelegramActionContext,
+  kind: string,
+  payload: Record<string, unknown>,
+): Promise<{ operationStatements?: D1PreparedStatement[] }> {
+  await context.planIntent?.(createTelegramWebhookIntent(kind, payload, "required"));
+  return context.prepareMutationOperationStatements
+    ? { operationStatements: context.prepareMutationOperationStatements() }
+    : context.prepareMutationAppliedStatement
+      ? { operationStatements: [context.prepareMutationAppliedStatement()] }
+    : {};
+}
+
+function confirmActionMutation(context: TelegramActionContext, options: { operationStatements?: D1PreparedStatement[] }): void {
+  if (options.operationStatements) context.confirmAtomicMutationApplied?.();
 }
 
 export type ActionPayloadMap = {
@@ -111,7 +146,7 @@ export function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[
   );
 }
 
-export async function resolvePresetCoins(
+async function resolvePresetCoins(
   db: D1Database,
   presetIds: readonly TelegramPresetId[],
 ): Promise<ResolvedCoin[] | null> {
@@ -131,7 +166,11 @@ type CompletionHandlerMap = {
     context: TelegramActionContext,
     coins: ResolvedCoin[],
     payload: ActionPayloadMap[K],
-    options: { clearPending: boolean },
+    options: {
+      clearPending: boolean;
+      presetCoins: ResolvedCoin[];
+      presetResolutionAvailable: boolean;
+    },
   ) => Promise<string>;
 };
 
@@ -139,21 +178,34 @@ const completionHandlers: CompletionHandlerMap = {
   subscribe: async (context, coins, payload, options) => {
     const alertTypes = new Set(payload.alertTypes);
     const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    await upsertSubscriberAndSubscriptions(
-      context.db,
-      context.chatId,
-      context.username,
-      alertTypes,
-      coins.map((coin) => coin.id),
-      {
+    const operation = await prepareActionMutation(context, "command:subscribe", {
+      coinIds: coins.map((coin) => coin.id),
+      presetIds,
+      alertTypes: [...alertTypes].sort(),
+      depegWorseningBpsStep: payload.depegWorseningBpsStep ?? null,
+      clearPending: options.clearPending,
+    });
+    if (!context.wasMutationApplied) {
+      await applySubscribeIntent(context.db, {
+        chatId: context.chatId,
+        username: context.username,
+        alertTypes,
+        directStablecoinIds: coins.map((coin) => coin.id),
+        presetIds,
         clearPending: options.clearPending,
         depegWorseningBpsStep: payload.depegWorseningBpsStep,
-      },
-    );
-    if (presetIds.length > 0) {
-      await upsertPresetSubscriptions(context.db, context.chatId, presetIds, alertTypes, {
-        depegWorseningBpsStep: payload.depegWorseningBpsStep,
+        ...operation,
       });
+      confirmActionMutation(context, operation);
+    }
+    await recordTelegramFirstFollow(context.db, {
+      campaign: "organic",
+      placement: "unknown",
+      chatId: context.chatId,
+      feature: presetIds.length > 0 ? "preset" : "direct",
+      nowSec: context.operationNowSec ?? Math.floor(Date.now() / 1_000),
+    });
+    if (presetIds.length > 0) {
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_follow",
         actionDetail: "preset",
@@ -174,22 +226,29 @@ const completionHandlers: CompletionHandlerMap = {
       return buildPresetSubscriptionSummaryMessage(subscriptions, {
         presetIds,
         presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: options.presetCoins.length,
       });
     }
     return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
   },
   unsubscribe: async (context, coins, payload, options) => {
     const presetIds = dedupePresetIds(payload.presetIds ?? []);
-    if (options.clearPending) {
-      await clearPendingDisambiguation(context.db, context.chatId);
+    const operation = await prepareActionMutation(context, "command:unsubscribe", {
+      coinIds: coins.map((coin) => coin.id),
+      presetIds,
+      clearPending: options.clearPending,
+    });
+    if (!context.wasMutationApplied) {
+      await applyUnsubscribeIntent(context.db, {
+        chatId: context.chatId,
+        directStablecoinIds: coins.map((coin) => coin.id),
+        presetIds,
+        clearPending: options.clearPending,
+        ...operation,
+      });
+      confirmActionMutation(context, operation);
     }
-    await removeSubscriptions(
-      context.db,
-      context.chatId,
-      coins.map((coin) => coin.id),
-    );
     if (presetIds.length > 0) {
-      await removePresetSubscriptions(context.db, context.chatId, presetIds);
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_unfollow",
         actionDetail: "preset",
@@ -205,15 +264,29 @@ const completionHandlers: CompletionHandlerMap = {
       return buildPresetUnsubscribeSummaryMessage(coins, {
         presetIds,
         presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: options.presetResolutionAvailable ? options.presetCoins.length : null,
       });
     }
     return buildUnsubscribeSuccessMessage(coins);
   },
   set: async (context, coins, payload, options) => {
-    if (options.clearPending) {
-      await clearPendingDisambiguation(context.db, context.chatId);
+    const { ticker: _ticker, ...normalizedSetting } = payload;
+    const operation = await prepareActionMutation(context, "command:set", {
+      coinIds: coins.map((coin) => coin.id),
+      setting: normalizedSetting,
+      clearPending: options.clearPending,
+    });
+    if (!context.wasMutationApplied) {
+      await applySettingToSubscriptions(
+        context.db,
+        context.chatId,
+        context.username,
+        coins,
+        payload,
+        { ...operation, clearPending: options.clearPending },
+      );
+      confirmActionMutation(context, operation);
     }
-    await applySettingToSubscriptions(context.db, context.chatId, context.username, coins, payload);
     const subscriptions = await loadSubscriptionsByIds(
       context.db,
       context.chatId,
@@ -267,14 +340,12 @@ async function persistAndPromptBulkConfirm(
   context: TelegramActionContext,
   botToken: string,
   gate: BulkGate,
-  coins: ResolvedCoin[],
+  directCoins: ResolvedCoin[],
+  previewCoins: ResolvedCoin[],
   clearPending: boolean,
 ): Promise<CoinResolutionCompletion> {
-  if (clearPending) {
-    await clearPendingDisambiguation(context.db, context.chatId);
-  }
-  const coinIds = coins.map((coin) => coin.id);
-  const symbols = coins.map((coin) => coin.symbol);
+  const coinIds = directCoins.map((coin) => coin.id);
+  const symbols = previewCoins.map((coin) => coin.symbol);
   const payload: ConfirmBulkPayload =
     gate.kind === "subscribe"
       ? {
@@ -291,21 +362,45 @@ async function persistAndPromptBulkConfirm(
           coinIds,
           unsubscribeAll: false,
         };
-  const persisted = await persistPendingConfirmBulk(context.db, {
-    chatId: context.chatId,
+  const storedExpiresAt = Number(context.storedIntent?.payload.expiresAt);
+  const expiresAt = Number.isFinite(storedExpiresAt)
+    ? storedExpiresAt
+    : (context.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
+  await context.planIntent?.(createTelegramWebhookIntent(`command:${gate.kind}`, {
+    stage: "bulk-confirm-prompt",
     payload,
-    initiatorUserId: context.initiatorUserId,
-  });
+    expiresAt,
+    clearPending,
+  }, "required"));
+  const actionPayload = JSON.stringify(payload);
+  const operationStatements = context.preparePendingMutationAppliedStatement
+    ? [context.preparePendingMutationAppliedStatement({
+        chatId: context.chatId,
+        actionType: "confirm-bulk",
+        actionPayload,
+        expiresAt,
+      })]
+    : undefined;
+  const persisted = context.wasMutationApplied
+    ? true
+    : await persistPendingConfirmBulk(context.db, {
+        chatId: context.chatId,
+        payload,
+        initiatorUserId: context.initiatorUserId,
+        expiresAt,
+        operationStatements,
+      });
   if (!persisted) {
-    await sendAuditedTelegramReply(context.db, context.chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken);
-    return { kind: "gated" };
+    throw new Error(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
   }
+  if (!context.wasMutationApplied && operationStatements) context.confirmAtomicMutationApplied?.();
+  await context.beforeIrreversibleEffect?.("command-reply");
   await sendAuditedTelegramReply(
     context.db,
     context.chatId,
     buildBulkConfirmMessage(
       gate.kind,
-      coinIds.length,
+      previewCoins.length,
       gate.kind === "subscribe" ? gate.alertTypes : [],
       symbols,
     ),
@@ -324,6 +419,7 @@ export function makeActionRunner(
   runnerOptions: ActionRunnerOptions = {},
 ): BoundActionRunner {
   const reply = async (message: string, options?: { replyMarkup?: unknown }) => {
+    await context.beforeIrreversibleEffect?.("command-reply");
     await sendAuditedTelegramReply(
       context.db,
       context.chatId,
@@ -344,8 +440,52 @@ export function makeActionRunner(
       alertTypes,
       clearPendingOnTerminal,
       resolutionScope,
+      persistAmbiguous: async (resolution) => {
+        const storedExpiresAt = Number(context.storedIntent?.payload.expiresAt);
+        const expiresAt = Number.isFinite(storedExpiresAt)
+          ? storedExpiresAt
+          : (context.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
+        const normalizedPayload = {
+          stage: "disambiguation-prompt",
+          actionType,
+          actionPayload,
+          resolvedCoinIds: resolution.coins.map((coin) => coin.id),
+          ambiguousTicker: resolution.ticker,
+          candidateIds: resolution.candidates.map((coin) => coin.id),
+          remainingTickers: resolution.remainingTickers,
+          expiresAt,
+          clearPending: Boolean(clearPendingOnTerminal),
+        };
+        await context.planIntent?.(createTelegramWebhookIntent(`command:${actionType}`, normalizedPayload, "required"));
+        const serializedActionPayload = JSON.stringify(actionPayload);
+        const operationStatements = context.preparePendingMutationAppliedStatement
+          ? [context.preparePendingMutationAppliedStatement({
+              chatId: context.chatId,
+              actionType,
+              actionPayload: serializedActionPayload,
+              expiresAt,
+            })]
+          : undefined;
+        if (context.wasMutationApplied) return true;
+        const persisted = await persistPendingDisambiguation(context.db, {
+          chatId: context.chatId,
+          actionType,
+          actionPayload,
+          alertTypes,
+          resolvedCoins: resolution.coins,
+          ambiguousTicker: resolution.ticker,
+          candidates: resolution.candidates,
+          remainingTickers: resolution.remainingTickers,
+          initiatorUserId: context.initiatorUserId,
+          expiresAt,
+          operationStatements,
+        });
+        if (persisted && operationStatements) context.confirmAtomicMutationApplied?.();
+        return persisted;
+      },
       reply,
       replyWithMarkup: async (message, options) => {
+        await context.beforeIrreversibleEffect?.("command-reply");
         await sendAuditedTelegramReply(
           context.db,
           context.chatId,
@@ -355,10 +495,38 @@ export function makeActionRunner(
         );
       },
       onComplete: async (coins, resolutionOptions) => {
-        if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
+        const presetIds = actionType === "set"
+          ? []
+          : dedupePresetIds(
+              (actionPayload as SubscribeActionPayload | UnsubscribeActionPayload).presetIds ?? [],
+            );
+        const resolvedPresetCoins = await resolvePresetCoins(context.db, presetIds);
+        if (resolvedPresetCoins == null && actionType !== "unsubscribe") {
+          await recordTelegramUsageEvent(context.db, {
+            eventType: actionType === "unsubscribe" ? "unsubscribe" : "subscribe",
+            actionDetail: "preset",
+            outcome: "failure",
+            failureClass: "preset_unavailable",
+          });
+          return { kind: "message", text: buildPresetUnavailableMessage() };
         }
-        const text = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
+        const presetCoins = resolvedPresetCoins ?? [];
+        const previewCoins = dedupeCoins([...coins, ...presetCoins]);
+        if (gate && shouldGateBulk(previewCoins.length) && (gate.kind === actionType)) {
+          return persistAndPromptBulkConfirm(
+            context,
+            botToken,
+            gate,
+            coins,
+            previewCoins,
+            resolutionOptions.clearPending,
+          );
+        }
+        const text = await completionHandlers[actionType](context, coins, actionPayload, {
+          ...resolutionOptions,
+          presetCoins,
+          presetResolutionAvailable: resolvedPresetCoins != null,
+        });
         const replyMarkup = runnerOptions.replyMarkupForCompletion?.({
           actionType,
           coins,

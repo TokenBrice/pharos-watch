@@ -55,6 +55,7 @@ import {
   type ProtocolPriceOverride,
 } from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -456,6 +457,7 @@ export async function runDepegPipeline(
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult,
   abortStagePrefix: string,
   logContext: string,
+  binanceSession?: BinanceFetchSession,
 ): Promise<DepegPipelineResult | CronResult> {
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
@@ -475,7 +477,14 @@ export async function runDepegPipeline(
   try {
     const confirmAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-confirmation`);
     if (confirmAbort) return confirmAbort;
-    const confirmation = await confirmPendingDepegs(db, assets, fxFallbackRates, signal, coingeckoApiKey);
+    const confirmation = await confirmPendingDepegs(
+      db,
+      assets,
+      fxFallbackRates,
+      signal,
+      coingeckoApiKey,
+      binanceSession,
+    );
     if (confirmation?.providerDiagnostics?.length) {
       providerDiagnostics.push(...confirmation.providerDiagnostics);
     }

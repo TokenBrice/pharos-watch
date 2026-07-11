@@ -1,5 +1,5 @@
 import { answerCallbackQuery } from "../../lib/telegram";
-import { handleSettingsCallback } from "../telegram-webhook-settings";
+import { handleSettingsCallback, type SettingsWebhookEffect } from "../telegram-webhook-settings";
 import {
   requireAdminForMutatingCallback,
   type CallbackHandler,
@@ -20,7 +20,13 @@ export async function handleSettingsInlineCallback(
   cb: TelegramCallbackQuery,
   chatId: string,
   parsed: ParsedCallbackData,
+  effect: SettingsWebhookEffect = { beforeIrreversibleEffect: async () => undefined },
 ): Promise<void> {
+  const { beforeIrreversibleEffect } = effect;
+  const answer = async (text: string): Promise<void> => {
+    await beforeIrreversibleEffect("callback-ack");
+    await answerCallbackQuery(cb.id, botToken, { text });
+  };
   const { arg: subAction = "", parts } = parsed;
   const subArg = parts.slice(2).join(":");
   // `settings:c` uses colon delimiters; registry tests pin stablecoin ids to
@@ -31,7 +37,7 @@ export async function handleSettingsInlineCallback(
     (subAction === "sc" && parts.length === 2) ||
     (subAction === "c" && parts.length === 5);
   if (!validSettingsCallback) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await answer("Action not recognized.");
     return;
   }
   const mutatingSettingsCallback =
@@ -41,11 +47,11 @@ export async function handleSettingsInlineCallback(
     subAction === "c";
   if (
     mutatingSettingsCallback &&
-    !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
+    !(await requireAdminForMutatingCallback(db, botToken, cb, chatId, undefined, beforeIrreversibleEffect))
   ) {
     return;
   }
-  await handleSettingsCallback(db, botToken, cb, subAction, subArg);
+  await handleSettingsCallback(db, botToken, cb, subAction, subArg, effect);
 }
 
 // The `settings` action runs through `handleSettingsInlineCallback` *before*

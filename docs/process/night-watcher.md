@@ -35,7 +35,7 @@ Extend into a second cycle if:
 
 Mandatory coverage:
 
-- Account for all 19 cron trigger slots.
+- Account for all 20 cron trigger slots, including the isolated five-minute reserve-recovery lane.
 - Account for every `CRON_JOB_DEFINITIONS` job.
 - Account for every `CRON_CONNECTION_BUDGET_ENTRIES` surface, including budget-only surfaces exposed under `/api/status.budgetOnlySurfaces` rather than standalone cron rows:
   - `telegram-registration-reconciliation`
@@ -48,7 +48,7 @@ Watch protocol:
 - Capture baseline, boundary, and final snapshots from `/api/health`, admin `/api/status`, and admin `/api/status-history`.
 - Sample at least every 15 minutes, plus shortly after expected slot boundaries.
 - Inspect D1 telemetry where available: `cron_runs`, `cron_slot_executions`, `cron_run_progress`, `cron_leases`, status/probe history.
-- Prefer `npm run ops:night-watch-worker -- --cycles 1 --include-status --include-status-history --include-d1` for the standard collector/report pass. It writes `agents/night-watch-report.md` and `agents/night-watch-evidence.json`, loads the canonical cron registries, calls the lower-level watcher for bounded D1 snapshots, and marks admin/D1/tail access gaps explicitly.
+- Prefer `npm run ops:night-watch-worker -- --cycles 1 --include-status --include-status-history --include-d1` for the standard collector/report pass. It writes the report, final evidence JSON, and an atomic redacted JSONL checkpoint under `agents/`; a restarted collector resumes matching-window samples by default. The checked-in registry fixture makes slot, shared-path, and budget-only inventory changes explicit, while due-in-window accounting prevents old latest rows from being treated as observed.
 - Use `npm run ops:night-watch-worker:two-cycle` for the recurring hardening/post-incident variant. It runs the same collector with `--cycles 2 --include-status --include-status-history --include-d1`.
 - Use `node scripts/maintenance/watch-worker-cron.mjs --include-status --include-status-history` for narrow follow-up reads or incident spot checks. Use `--include-full-metadata` only for targeted follow-up reads, and pass Cloudflare Access service-token headers via `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` when the admin probes are behind Access.
 - Inspect Worker logs / Cloudflare observability where available.

@@ -10,7 +10,7 @@ Current repo-side state:
 
 - the Worker is attached to `api.pharos.watch`, `site-api.pharos.watch`, and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
-- `/admin/` only serves the live operator panel on `ops.pharos.watch`; `/admin-api/` only serves private API management there. The public host is blocked by Pages host-gate functions and returns non-indexed `404` responses.
+- `/admin/`, `/admin/pipeline/`, `/admin/reliability/`, `/admin/crons/`, `/admin/actions/`, `/admin/comms/`, and `/admin/history/` serve route-based operator workspaces on `ops.pharos.watch`; `/admin-api/` serves private API management there. Public hosts are blocked by Pages host-gate functions and return non-indexed `404` responses.
 - `/admin/*` and `/admin-api/*` static fallback headers are `no-store`; the host-gate functions also nonce-authorize inline scripts and return `no-store` HTML so stale pre-hydration operator shells cannot persist in shared caches.
 - `/status/` is public and read-only on both the public and ops hosts
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
@@ -18,7 +18,9 @@ Current repo-side state:
 Still true:
 
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
+- the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
+- the reserve-recovery fault injector is the sole preview-host admin exception: a `workers.dev` request must carry a valid `Cf-Access-Jwt-Assertion` for `CF_ACCESS_OPS_API_AUD`, and the handler still refuses every production hostname
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---
@@ -75,11 +77,12 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 | `OPS_API_SERVICE_TOKEN_SECRET` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 <!-- ENV-CONTRACT:OPERATOR-ORIGIN-ACCESS:END -->
 
 Use the derived runtime exports in `worker/src/lib/env.ts`, `functions/lib/ops-env.ts`, and `functions/lib/site-api-env.ts` when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` and `CF_ACCESS_OPS_UI_AUD` are worker-reserved but Pages-active.
 
-For `/_site-data/*`, configure `SITE_API_SHARED_SECRET`; production Pages hosts also require `SITE_API_ORIGIN=https://site-api.pharos.watch`. Bind `DB` to the shared D1 database for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.
+For `/_site-data/*` and server-recomputed selector snapshots, configure `SITE_API_SHARED_SECRET`; every Pages host requires the exact HTTPS `SITE_API_ORIGIN=https://site-api.pharos.watch`. Arbitrary, non-HTTPS, credentialed, port-bearing, and path-bearing origins fail closed before secrets are attached. Bind `DB` for attribution and selector quota writes, and configure the dedicated `SELECTOR_SNAPSHOT_IP_HASH_SECRET` HMAC pepper.
 
 ---
 
@@ -103,8 +106,8 @@ The current proxy now fails closed on its own trust boundary:
 - HTTP method rules are enforced through the shared endpoint validators (`validateRouteMatchMethod()` in the Worker router, backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
-- The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
-- The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`, plus `Retry-After` when present so upstream backoff semantics survive the proxy layer.
+- The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
+- The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
@@ -127,6 +130,7 @@ For the site-data proxy:
 
 - `SITE_API_SHARED_SECRET`
 - `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
+- `SELECTOR_SNAPSHOT_IP_HASH_SECRET`
 - `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
 
 Optional active overrides (the proxy has production defaults for these already):

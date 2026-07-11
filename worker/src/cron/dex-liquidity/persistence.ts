@@ -2,7 +2,7 @@ import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablec
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { batchExecute } from "../../lib/db";
+import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -12,6 +12,9 @@ import { toErrorMessage } from "../../lib/error-utils";
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * DAY_SECONDS;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
+const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
+  (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
+   coverage_class, coverage_confidence, source_mix_json, methodology_version)`;
 
 const DEX_LIQUIDITY_ROW_COLUMNS = [
   "stablecoin_id",
@@ -116,6 +119,43 @@ interface CandidateGenerationCoverage {
   rowCount: number;
   activeAssetRows: number;
   globalRows: number;
+}
+
+interface HistoricalSnapshotRow {
+  id: number;
+  stablecoin_id: string;
+  total_tvl_usd: number;
+  total_volume_24h_usd: number;
+  liquidity_score: number | null;
+  snapshot_date: number;
+  coverage_class: string;
+  coverage_confidence: number;
+  source_mix_json: string | null;
+  methodology_version: string;
+}
+
+function setsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  if (left.size !== right.size) return false;
+  for (const value of left) {
+    if (!right.has(value)) return false;
+  }
+  return true;
+}
+
+function canReuseHistoricalSnapshot(
+  rows: readonly HistoricalSnapshotRow[],
+  expectedActiveIds: ReadonlySet<string>,
+  expectedScoredIds: ReadonlySet<string>,
+): boolean {
+  const activeIds = new Set(rows.map((row) => row.stablecoin_id));
+  if (activeIds.size !== rows.length || !setsEqual(activeIds, expectedActiveIds)) return false;
+
+  const scoredIds = new Set(
+    rows
+      .filter((row) => row.liquidity_score != null)
+      .map((row) => row.stablecoin_id),
+  );
+  return setsEqual(scoredIds, expectedScoredIds);
 }
 
 async function stageDexLiquidityPublicationGeneration(
@@ -654,7 +694,9 @@ export async function writeHistoricalSnapshots(
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<HistoricalSnapshotWriteResult> {
   const todayMidnight = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS; // epoch seconds at UTC midnight
-  const expectedRowCount = ACTIVE_STABLECOINS.length;
+  const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
+  const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
+  const incomingScoredIds = new Set(activeScoreMap.keys());
   let historyRowsPruned = 0;
   let retentionPruneFailed = false;
   const pruneHistory = async (): Promise<void> => {
@@ -679,22 +721,30 @@ export async function writeHistoricalSnapshots(
     throwIfAborted(signal);
     const existing = await db
       .prepare(
-        `SELECT
-           COUNT(*) as cnt,
-           SUM(CASE WHEN liquidity_score IS NOT NULL THEN 1 ELSE 0 END) as scored
+        `SELECT id, stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score,
+                snapshot_date, coverage_class, coverage_confidence, source_mix_json,
+                methodology_version
          FROM dex_liquidity_history
-         WHERE snapshot_date = ?`
+         WHERE snapshot_date = ?
+         ORDER BY stablecoin_id, id`
       )
       .bind(todayMidnight)
-      .first<{ cnt: number; scored: number | null }>();
-    const existingCount = existing?.cnt ?? 0;
-    const existingScored = existing?.scored ?? 0;
-    const incomingScored = scoreMap.size;
+      .all<HistoricalSnapshotRow>();
+    const existingRows = existing.results ?? [];
+    const existingCount = existingRows.length;
+    const existingScored = existingRows.filter((row) => row.liquidity_score != null).length;
+    const incomingScored = activeScoreMap.size;
     throwIfAborted(signal);
 
-    // Keep repairing today's snapshot until coverage and scored-coin count are at least
-    // as good as the current run (avoids locking in a degraded first post-midnight run).
-    if (existingCount >= expectedRowCount && existingScored >= incomingScored) {
+    const existingScoredRows = new Map<string, HistoricalSnapshotRow>();
+    for (const row of existingRows) {
+      if (expectedActiveIds.has(row.stablecoin_id) && row.liquidity_score != null) {
+        existingScoredRows.set(row.stablecoin_id, row);
+      }
+    }
+    const targetScoredIds = new Set([...existingScoredRows.keys(), ...incomingScoredIds]);
+
+    if (canReuseHistoricalSnapshot(existingRows, expectedActiveIds, targetScoredIds)) {
       await pruneHistory();
       return {
         snapshotRowsWritten: 0,
@@ -705,18 +755,13 @@ export async function writeHistoricalSnapshots(
       };
     }
 
-    const snapStmts: D1PreparedStatement[] = [];
-    for (const [id, data] of scoreMap) {
-      snapStmts.push(
-        db
-          .prepare(
-            `INSERT OR REPLACE INTO dex_liquidity_history
-              (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
-               coverage_class, coverage_confidence, source_mix_json, methodology_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .bind(
-            id,
+    const snapshotRows: unknown[][] = [];
+    for (const meta of ACTIVE_STABLECOINS) {
+      const data = activeScoreMap.get(meta.id);
+      const existingData = existingScoredRows.get(meta.id);
+      snapshotRows.push(data
+        ? [
+            meta.id,
             data.tvl,
             data.vol24h,
             data.score,
@@ -725,31 +770,49 @@ export async function writeHistoricalSnapshots(
             data.coverageConfidence,
             JSON.stringify(data.sourceMix),
             LIQUIDITY_METHODOLOGY_VERSION,
-          )
-      );
+          ]
+        : existingData
+          ? [
+              meta.id,
+              existingData.total_tvl_usd,
+              existingData.total_volume_24h_usd,
+              existingData.liquidity_score,
+              todayMidnight,
+              existingData.coverage_class,
+              existingData.coverage_confidence,
+              existingData.source_mix_json,
+              existingData.methodology_version,
+            ]
+        : [
+            meta.id,
+            0,
+            0,
+            null,
+            todayMidnight,
+            "unobserved",
+            0,
+            null,
+            LIQUIDITY_METHODOLOGY_VERSION,
+          ]);
     }
-    // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
-    for (const meta of ACTIVE_STABLECOINS) {
-      if (!scoreMap.has(meta.id)) {
-        snapStmts.push(
-          db
-            .prepare(
-              `INSERT OR REPLACE INTO dex_liquidity_history
-                (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
-                 coverage_class, coverage_confidence, source_mix_json, methodology_version)
-              VALUES (?, 0, 0, NULL, ?, 'unobserved', 0, NULL, ?)`
-            )
-            .bind(meta.id, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
-        );
-      }
-    }
-    await batchExecute(db, snapStmts, { signal });
+
+    const replacementStatements = [
+      db
+        .prepare(
+          `/* pharos:dex-liquidity:history-date-replace */
+           DELETE FROM dex_liquidity_history
+           WHERE snapshot_date = ?`,
+        )
+        .bind(todayMidnight),
+      ...prepareMultiRowInsertStatements(db, DEX_LIQUIDITY_HISTORY_INSERT_SQL, snapshotRows),
+    ];
+    await executeAtomicBatch(db, replacementStatements, { signal });
     await pruneHistory();
     console.log(
-      `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapStmts.length}/${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+      `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapshotRows.length}/${targetScoredIds.size}, incoming=${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
     return {
-      snapshotRowsWritten: snapStmts.length,
+      snapshotRowsWritten: snapshotRows.length,
       skipped: false,
       writeFailed: false,
       historyRowsPruned,

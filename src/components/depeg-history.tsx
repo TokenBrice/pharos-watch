@@ -78,6 +78,7 @@ export function DepegHistory({
 }) {
   const { data, isLoading, error, refetch, isFetchingNextPage, loadedCount, isFullyLoaded } = useInfiniteDepegEvents({
     stablecoinId,
+    autoLoadAll: true,
   });
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";

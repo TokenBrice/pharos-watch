@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("loadStatusForCoin", () => {
   it("returns DEWS + safety + depeg=stable when no active event", async () => {
@@ -16,6 +21,48 @@ describe("loadStatusForCoin", () => {
     expect(status.safety?.grade).toBe("B+");
     expect(status.depeg.status).toBe("stable");
     expect(status.priceUsd).toBeCloseTo(0.9997);
+  });
+
+  it("uses an exact published DEWS row instead of an older latest-table row", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const publishedAt = nowSec - 60;
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: publishedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: 2,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
+      }),
+      updated_at: publishedAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-one",
+        matchBinds: ["usdc-circle", publishedAt],
+        rows: [{ band: "CALM", score: 5, signals_json: "{}", computed_at: publishedAt - 60 }],
+      },
+      {
+        match: "pharos:stress-signals:published-exact-one",
+        matchBinds: ["usdc-circle", publishedAt],
+        rows: [{ band: "WARNING", score: 72, signals_json: "{}", computed_at: publishedAt }],
+      },
+    ]);
+
+    const status = await loadStatusForCoin(db, "usdc-circle");
+
+    expect(status.dews).toEqual({ band: "WARNING", score: 72, computedAt: publishedAt });
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
   });
 
   it("surfaces an active depeg event with direction and deviation", async () => {

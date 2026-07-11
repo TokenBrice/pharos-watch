@@ -17,6 +17,7 @@ import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 
 export interface MainPublicationInput {
   assets: PeggedAsset[];
@@ -26,6 +27,7 @@ export interface MainPublicationInput {
   syncStartSec: number;
   signal?: AbortSignal;
   alertWebhookUrl?: string | null;
+  alertBrokerMode?: string;
   coingeckoApiKey?: string | null;
   rawAssetCount: number;
   droppedMalformedAssets: number;
@@ -33,6 +35,7 @@ export interface MainPublicationInput {
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
   reportProgress?: CronProgressReporter;
+  binanceSession?: BinanceFetchSession;
 }
 
 export interface MainPublicationResult {
@@ -58,6 +61,7 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     syncStartSec: input.syncStartSec,
     signal: input.signal,
     alertWebhookUrl: input.alertWebhookUrl,
+    alertBrokerMode: input.alertBrokerMode,
     validationContext: "main",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
@@ -72,7 +76,13 @@ export async function publishMainStablecoinsAndRunFollowThrough(
   }));
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {
-    await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
+    await recordOutcome(
+      input.db,
+      CIRCUIT_SOURCE.DL_STABLECOINS,
+      true,
+      input.alertWebhookUrl,
+      input.alertBrokerMode,
+    );
     return buildStablecoinsUnwrittenCacheResult({
       cacheResult,
       rawAssetCount: input.rawAssetCount,
@@ -90,7 +100,13 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     returnIfAborted: input.returnIfAborted,
   });
   if (priceCacheCommit) return priceCacheCommit;
-  await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
+  await recordOutcome(
+    input.db,
+    CIRCUIT_SOURCE.DL_STABLECOINS,
+    true,
+    input.alertWebhookUrl,
+    input.alertBrokerMode,
+  );
   await queueTrackedAdditionsNotice(input.db, input.previousAssetsById.keys(), input.assets);
   await reportStablecoinsStage(input.reportProgress, "depeg-pipeline", "Running depeg pipeline", {
     itemsTotal: input.assets.length,
@@ -105,6 +121,7 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     input.abortResult,
     "",
     "",
+    input.binanceSession,
   );
   if (isAbortResult(depegResult)) return depegResult;
   return {

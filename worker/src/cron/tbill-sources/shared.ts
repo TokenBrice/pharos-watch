@@ -4,7 +4,28 @@ import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 
-export type BenchmarkFetchResult = { rate: number; recordDate: string; source?: string };
+export interface BenchmarkResponseDiagnostic {
+  status: number | null;
+  contentType: string | null;
+  bodyBytes: number;
+  parsed: boolean;
+  recordDate: string | null;
+  failure: "transport-failed" | "http-status" | "empty-body" | "parse-failed" | null;
+}
+export interface BenchmarkProviderAttemptDiagnostic extends BenchmarkResponseDiagnostic {
+  provider: string;
+}
+export type BenchmarkFetchResult = {
+  rate: number;
+  recordDate: string;
+  source?: string;
+  responseDiagnostics?: BenchmarkProviderAttemptDiagnostic[];
+};
+export interface BenchmarkFetchFailure {
+  result: null;
+  responseDiagnostics: BenchmarkProviderAttemptDiagnostic[];
+}
+export type BenchmarkProviderFetchOutcome = BenchmarkFetchResult | BenchmarkFetchFailure;
 export type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
 export type StandardBenchmarkProviderKey = Exclude<BenchmarkProviderKey, "MXN">;
 
@@ -12,7 +33,7 @@ export interface BenchmarkProvider {
   key: StandardBenchmarkProviderKey;
   fetch: (params: {
     signal?: AbortSignal;
-  }) => Promise<BenchmarkFetchResult | null>;
+  }) => Promise<BenchmarkProviderFetchOutcome | null>;
   source: string;
   fallbackMode: string;
 }
@@ -93,6 +114,7 @@ export async function fetchAndParseBenchmark<T>({
   parse,
   warnLabel,
   signal,
+  onDiagnostic,
 }: {
   url: string;
   headers: Record<string, string>;
@@ -102,6 +124,7 @@ export async function fetchAndParseBenchmark<T>({
   parse: (body: string) => T | null;
   warnLabel: string;
   signal?: AbortSignal;
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void;
 }): Promise<T | null> {
   try {
     const result = await fetchTextWithRetry(url, {
@@ -109,11 +132,83 @@ export async function fetchAndParseBenchmark<T>({
       headers,
       body: body ?? undefined,
       signal,
-    }, retries, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+    }, retries, {
+      timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
+      returnFinalResponse: onDiagnostic != null,
+    });
 
-    if (!result?.response.ok) return null;
+    if (!result) {
+      onDiagnostic?.({
+        status: null,
+        contentType: null,
+        bodyBytes: 0,
+        parsed: false,
+        recordDate: null,
+        failure: "transport-failed",
+      });
+      return null;
+    }
 
-    return parse(result.body);
+    const bodyBytes = new TextEncoder().encode(result.body).length;
+    const contentType = result.response.headers.get("Content-Type");
+    if (!result.response.ok) {
+      onDiagnostic?.({
+        status: result.response.status,
+        contentType,
+        bodyBytes,
+        parsed: false,
+        recordDate: null,
+        failure: "http-status",
+      });
+      return null;
+    }
+
+    if (bodyBytes === 0) {
+      onDiagnostic?.({
+        status: result.response.status,
+        contentType,
+        bodyBytes,
+        parsed: false,
+        recordDate: null,
+        failure: "empty-body",
+      });
+      return null;
+    }
+
+    let parsed: T | null;
+    try {
+      parsed = parse(result.body);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "benchmark_parse_failed",
+        message: `${warnLabel} parse failed`,
+        error,
+      });
+      onDiagnostic?.({
+        status: result.response.status,
+        contentType,
+        bodyBytes,
+        parsed: false,
+        recordDate: null,
+        failure: "parse-failed",
+      });
+      return null;
+    }
+    const recordDate = parsed != null && typeof parsed === "object" && "recordDate" in parsed
+      && typeof parsed.recordDate === "string"
+      ? parsed.recordDate
+      : null;
+    onDiagnostic?.({
+      status: result.response.status,
+      contentType,
+      bodyBytes,
+      parsed: parsed != null,
+      recordDate,
+      failure: parsed == null ? "parse-failed" : null,
+    });
+    return parsed;
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEvent({
@@ -123,6 +218,14 @@ export async function fetchAndParseBenchmark<T>({
       event: "benchmark_fetch_failed",
       message: `${warnLabel} failed`,
       error: err,
+    });
+    onDiagnostic?.({
+      status: null,
+      contentType: null,
+      bodyBytes: 0,
+      parsed: false,
+      recordDate: null,
+      failure: "transport-failed",
     });
     return null;
   }

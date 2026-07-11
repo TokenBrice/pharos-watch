@@ -26,7 +26,14 @@ const cronMocks = vi.hoisted(() => ({
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramDegradationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   cleanExpiredDisambiguations: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  publishTelegramPulseSnapshot: vi.fn(async () => undefined),
+  publishTelegramPulseSnapshotWithOutcome: vi.fn(async () => ({
+    pulse: { quality: { status: "complete", unavailableFields: [] } },
+    status: "ok",
+    snapshotPublished: true,
+    heavySectionsRecomputed: false,
+    heavyMarkerAdvanced: true,
+    error: null,
+  })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -129,6 +136,15 @@ const cronMocks = vi.hoisted(() => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
   sendAlert: vi.fn(async () => true),
+  reportAlertCondition: vi.fn(async () => ({
+    mode: "shadow",
+    conditionKey: "test",
+    fingerprint: "test",
+    state: "recovered",
+    streak: 0,
+    transition: null,
+    deliveryState: null,
+  })),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -153,7 +169,79 @@ vi.mock("../cron/telegram-degradation-watchdog", () => ({
 vi.mock("../api/telegram-store/disambiguation", () => ({
   cleanExpiredDisambiguations: cronMocks.cleanExpiredDisambiguations,
 }));
-vi.mock("../api/telegram-pulse", () => ({ publishTelegramPulseSnapshot: cronMocks.publishTelegramPulseSnapshot }));
+vi.mock("../api/telegram-pulse", () => ({
+  publishTelegramPulseSnapshotWithOutcome: cronMocks.publishTelegramPulseSnapshotWithOutcome,
+}));
+vi.mock("../handlers/scheduled/preflight-skip", () => ({
+  logSkippedCronRun: vi.fn(async () => undefined),
+}));
+vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/budget-surface-telemetry")>();
+  return { ...actual, recordBudgetSurfaceTelemetry: vi.fn(async () => undefined) };
+});
+vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
+  let latestCheckpoint: Record<string, unknown> | null = null;
+  return {
+    ...actual,
+    beginScheduledCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
+      latestCheckpoint = {
+        scheduleKey: input.scheduleKey,
+        slotStartedAt: input.slotStartedAt,
+        job: input.job,
+        attemptNo: 1,
+        executionGeneration: 1,
+        invocationId: input.invocationId,
+        workerVersion: input.workerVersion ?? null,
+        queueHash: input.queueHash,
+        state: "running",
+        nextItemKey: input.nextItemKey ?? null,
+        currentItemKey: null,
+        currentDomainAttemptId: null,
+        itemsDone: 0,
+        itemsTotal: input.itemsTotal ?? 0,
+        childDispositions: {},
+        recoveryOwner: null,
+        recoveryLeaseUntil: null,
+        sourceAttemptNo: null,
+        error: null,
+        createdAt: 0,
+        updatedAt: 0,
+        completedAt: null,
+      };
+      return latestCheckpoint;
+    }),
+    loadScheduledCheckpoint: vi.fn(async () => latestCheckpoint == null ? null : {
+      ...latestCheckpoint,
+      nextItemKey: null,
+      itemsDone: latestCheckpoint.itemsTotal,
+    }),
+    setScheduledCheckpointChildDisposition: vi.fn(async (
+      _db: D1Database,
+      _identity: Record<string, unknown>,
+      job: string,
+      disposition: string,
+    ) => {
+      if (!latestCheckpoint) return;
+      latestCheckpoint = {
+        ...latestCheckpoint,
+        childDispositions: {
+          ...(latestCheckpoint.childDispositions as Record<string, unknown>),
+          [job]: disposition,
+        },
+      };
+    }),
+    finishScheduledCheckpoint: vi.fn(async () => undefined),
+    claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
+  };
+});
+vi.mock("../lib/reserve-recovery-fault-injection", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/reserve-recovery-fault-injection")>();
+  return {
+    ...actual,
+    loadReserveRecoveryFaultInjectionController: vi.fn(async () => null),
+  };
+});
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
@@ -231,6 +319,17 @@ vi.mock("../lib/alerts", async (importOriginal) => {
     sendAlert: cronMocks.sendAlert,
   };
 });
+
+vi.mock("../lib/alert-broker", () => ({
+  normalizeAlertBrokerMode: () => "shadow",
+  reportAlertCondition: cronMocks.reportAlertCondition,
+  dispatchPendingAlertBrokerDeliveries: vi.fn(async () => ({
+    due: 0,
+    delivered: 0,
+    failed: 0,
+    missingTarget: 0,
+  })),
+}));
 
 vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/circuit-breaker")>();
@@ -473,7 +572,7 @@ describe("worker.scheduled", () => {
     const leaseUpdate = db.getHistory().find((entry) => entry.sql.includes("lease_until = ?"));
     expect(leaseUpdate?.binds[1]).toBe(1_777_777_900);
     expect(leaseUpdate?.binds[6]).toBe(
-      "attempt|scheduled-slot|quarterHourly|1775002500|sync-fx-rates|1",
+      "attempt|scheduled-job|quarterHourly|quarterHourly|1775002500|sync-fx-rates|1",
     );
   });
 
@@ -819,7 +918,7 @@ describe("worker.scheduled", () => {
       accessToken: "tw-token",
       accessTokenSecret: "tw-token-secret",
     });
-    expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateWeeklyRecap).not.toHaveBeenCalled();
     expect(cronMocks.runDiscoveryScan).not.toHaveBeenCalled();
   });
 
@@ -839,6 +938,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncBluechip).not.toHaveBeenCalled();
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
   });

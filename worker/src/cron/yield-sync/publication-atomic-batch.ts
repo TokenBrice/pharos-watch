@@ -17,7 +17,7 @@ export async function publishYieldRowsAtomically(
 ): Promise<CacheWriteResult> {
   const cacheValue = JSON.stringify(input.rankingsPayload);
   const cacheFreshGuard = "(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?";
-  const buildStatements = (legacySchema: boolean): D1PreparedStatement[] => [
+  const buildStatements = (legacySchema: boolean, reproducibleHistory: boolean): D1PreparedStatement[] => [
     db
       .prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
@@ -96,7 +96,7 @@ export async function publishYieldRowsAtomically(
           : `INSERT OR IGNORE INTO yield_history (
               stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state,
-              pys_at_publish, safety_at_publish, variance_at_publish
+              pys_at_publish, safety_at_publish, variance_at_publish${reproducibleHistory ? ", pys_inputs_at_publish" : ""}
             )
             SELECT
               json_extract(value, '$.stablecoin_id'),
@@ -116,7 +116,7 @@ export async function publishYieldRowsAtomically(
               json_extract(value, '$.publication_state'),
               json_extract(value, '$.pys_at_publish'),
               json_extract(value, '$.safety_at_publish'),
-              json_extract(value, '$.variance_at_publish')
+              json_extract(value, '$.variance_at_publish')${reproducibleHistory ? ",\n              json_extract(value, '$.pys_inputs_at_publish')" : ""}
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )
@@ -204,10 +204,15 @@ export async function publishYieldRowsAtomically(
 
   let results: D1Result<unknown>[];
   try {
-    results = await runWithOverloadRetry(() => db.batch(buildStatements(false)), 3, input.signal);
+    results = await runWithOverloadRetry(() => db.batch(buildStatements(false, true)), 3, input.signal);
   } catch (error) {
     if (!isMissingColumnError(error) && !isMissingTableError(error)) throw error;
-    results = await runWithOverloadRetry(() => db.batch(buildStatements(true)), 3, input.signal);
+    try {
+      results = await runWithOverloadRetry(() => db.batch(buildStatements(false, false)), 3, input.signal);
+    } catch (fallbackError) {
+      if (!isMissingColumnError(fallbackError) && !isMissingTableError(fallbackError)) throw fallbackError;
+      results = await runWithOverloadRetry(() => db.batch(buildStatements(true, false)), 3, input.signal);
+    }
   }
 
   return Number(results[0]?.meta?.changes ?? 0) > 0

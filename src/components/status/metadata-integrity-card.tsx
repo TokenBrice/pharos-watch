@@ -26,7 +26,7 @@ export function MetadataIntegrityCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Metadata Integrity Watchlist</CardTitle>
+        <CardTitle as="h3" className="text-base">Metadata Integrity Watchlist</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-3">
@@ -57,7 +57,9 @@ export function MetadataIntegrityCard({
             <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
               {reserveDriftError
                 ? `Reserve drift loader failed: ${reserveDriftError.message}`
-                : `No reserve-score drift above the ${STATUS_RESERVE_DRIFT_THRESHOLD_POINTS}-point watch threshold.`}
+                : reserveDrift
+                  ? `No reserve-score drift above the ${STATUS_RESERVE_DRIFT_THRESHOLD_POINTS}-point watch threshold.`
+                  : "Reserve drift payload is unavailable; no zero count is inferred."}
             </div>
           )}
         </div>
@@ -89,7 +91,9 @@ export function MetadataIntegrityCard({
             <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
               {classificationWarningsError
                 ? `Classification warning loader failed: ${classificationWarningsError.message}`
-                : "No governance classification warnings are active."}
+                : classificationWarnings
+                  ? "No governance classification warnings are active."
+                  : "Classification warnings payload is unavailable; no zero count is inferred."}
             </div>
           )}
         </div>

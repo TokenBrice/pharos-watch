@@ -13,6 +13,15 @@ import { logCronEvent } from "../lib/cron-logger";
 
 export type LiveReserveCursorTailState = "recording" | "incomplete" | "complete";
 
+export interface LiveReserveGlobalCursorOwner {
+  scheduleKey: string;
+  slotStartedAt: number;
+  attemptNo: number;
+  executionGeneration: number;
+  invocationId: string;
+  queueHash: string;
+}
+
 interface LiveReserveCursorState {
   nextStablecoinId: string | null;
   deferredCount: number;
@@ -24,6 +33,7 @@ interface LiveReserveCursorState {
   tailFailedAt?: number;
   tailError?: string;
   runBudgetTruncationCount?: number;
+  cursorOwner?: LiveReserveGlobalCursorOwner;
 }
 
 export interface LoadedLiveReserveCursorState {
@@ -36,6 +46,8 @@ export interface LoadedLiveReserveCursorState {
   tailFailedAt: number | null;
   tailError: string | null;
   runBudgetTruncationCount: number;
+  cursorOwner?: LiveReserveGlobalCursorOwner;
+  rawValue?: string;
 }
 
 export interface RecordDeferredTailResult {
@@ -63,6 +75,19 @@ export function selectConfiguredCoinRunQueue(
   return configuredCoins.slice(cursorIndex);
 }
 
+function parseCursorOwner(value: unknown): LiveReserveGlobalCursorOwner | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const owner = value as Partial<LiveReserveGlobalCursorOwner>;
+  return typeof owner.scheduleKey === "string"
+    && typeof owner.slotStartedAt === "number"
+    && typeof owner.attemptNo === "number"
+    && typeof owner.executionGeneration === "number"
+    && typeof owner.invocationId === "string"
+    && typeof owner.queueHash === "string"
+    ? owner as LiveReserveGlobalCursorOwner
+    : null;
+}
+
 export async function loadLiveReserveCursorState(db: D1Database): Promise<LoadedLiveReserveCursorState | null> {
   const cached = await getCache(db, LIVE_RESERVE_RUN_CURSOR_CACHE_KEY);
   if (!cached) return null;
@@ -72,6 +97,7 @@ export async function loadLiveReserveCursorState(db: D1Database): Promise<Loaded
       parsed.tailState === "recording" || parsed.tailState === "incomplete" || parsed.tailState === "complete"
         ? parsed.tailState
         : null;
+    const cursorOwner = parseCursorOwner(parsed.cursorOwner);
     return parsed.reason === "run-budget-exhausted" && typeof parsed.deferredAt === "number"
       ? {
           nextStablecoinId: typeof parsed.nextStablecoinId === "string" ? parsed.nextStablecoinId : null,
@@ -86,6 +112,7 @@ export async function loadLiveReserveCursorState(db: D1Database): Promise<Loaded
             typeof parsed.runBudgetTruncationCount === "number" && parsed.runBudgetTruncationCount > 0
               ? parsed.runBudgetTruncationCount
               : 1,
+          ...(cursorOwner ? { cursorOwner, rawValue: cached.value } : {}),
         }
       : null;
   } catch {
@@ -132,34 +159,43 @@ export async function recordDeferredTail(
   remainingCoins: readonly ConfiguredCoin[],
   attemptedAt: number,
   signal?: AbortSignal,
+  options: {
+    manageGlobalCursor?: boolean;
+    globalCursorOwner?: LiveReserveGlobalCursorOwner | null;
+  } = {},
 ): Promise<RecordDeferredTailResult> {
   throwIfAborted(signal);
+  const manageGlobalCursor = options.manageGlobalCursor ?? true;
   const deferredCoins = remainingCoins.length;
   const nextCursorStablecoinId = remainingCoins[0]?.id ?? null;
   const additionalBreakerKeys = new Set<string>();
   let previousCursorState: LoadedLiveReserveCursorState | null = null;
-  try {
-    previousCursorState = await loadLiveReserveCursorState(db);
-  } catch (error) {
-    await logCronEvent(db, {
-      job: "sync-live-reserves",
-      eventType: "live-reserve-cursor-read-failed",
-      severity: "warning",
-      message: "Failed to read previous deferred reserve cursor state; truncation count will restart from one.",
-      metadata: {
-        error: toErrorMessage(error),
-      },
-    });
+  if (manageGlobalCursor) {
+    try {
+      previousCursorState = await loadLiveReserveCursorState(db);
+    } catch (error) {
+      await logCronEvent(db, {
+        job: "sync-live-reserves",
+        eventType: "live-reserve-cursor-read-failed",
+        severity: "warning",
+        message: "Failed to read previous deferred reserve cursor state; truncation count will restart from one.",
+        metadata: {
+          error: toErrorMessage(error),
+        },
+      });
+    }
   }
-  const runBudgetTruncationCount = previousCursorState
-    ? previousCursorState.runBudgetTruncationCount + 1
-    : 1;
+  const runBudgetTruncationCount = manageGlobalCursor
+    ? previousCursorState
+      ? previousCursorState.runBudgetTruncationCount + 1
+      : 1
+    : 0;
   const statements: D1PreparedStatement[] = [];
   const metadata = {
     failureCategory: "run-budget-exhausted",
     deferredTail: true,
   };
-  const cursorBaseState = nextCursorStablecoinId
+  const cursorBaseState = manageGlobalCursor && nextCursorStablecoinId
     ? {
         nextStablecoinId: nextCursorStablecoinId,
         deferredCount: deferredCoins,
@@ -167,6 +203,7 @@ export async function recordDeferredTail(
         reason: "run-budget-exhausted" as const,
         cursorRecordedAt: attemptedAt,
         runBudgetTruncationCount,
+        ...(options.globalCursorOwner ? { cursorOwner: options.globalCursorOwner } : {}),
       }
     : null;
 
@@ -286,4 +323,32 @@ export async function clearCursorStateIfComplete(
   }
 
   await deleteLiveReserveCursorState(db, signal);
+}
+
+export async function retireRecoveryOwnedGlobalCursor(
+  db: D1Database,
+  recoveryOwner: Pick<LiveReserveGlobalCursorOwner, "scheduleKey" | "slotStartedAt" | "queueHash">,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  throwIfAborted(signal);
+  const cursor = await loadLiveReserveCursorState(db);
+  if (
+    !cursor?.cursorOwner
+    || !cursor.rawValue
+    || cursor.cursorOwner.scheduleKey !== recoveryOwner.scheduleKey
+    || cursor.cursorOwner.slotStartedAt !== recoveryOwner.slotStartedAt
+    || cursor.cursorOwner.queueHash !== recoveryOwner.queueHash
+  ) {
+    return false;
+  }
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM cache WHERE key = ? AND value = ?")
+      .bind(LIVE_RESERVE_RUN_CURSOR_CACHE_KEY, cursor.rawValue)
+      .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return (result.meta.changes ?? 0) === 1;
 }

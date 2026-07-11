@@ -29,9 +29,32 @@ const NATIVE_PLACEHOLDER_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 export function makeDexApiFetchResult(
   pools: DexApiPool[],
-  meta: { ok: boolean; degraded: boolean; errors: string[]; warnings?: string[] },
+  meta: {
+    ok: boolean;
+    degraded: boolean;
+    errors: string[];
+    warnings?: string[];
+    pagination?: DexApiFetchResult["pagination"];
+  },
 ): DexApiFetchResult {
-  return { pools, ...meta, warnings: meta.warnings ?? [] };
+  return {
+    pools,
+    ...meta,
+    errors: boundDexDiagnostics(meta.errors),
+    warnings: boundDexDiagnostics(meta.warnings ?? []),
+  };
+}
+
+const DEX_DIAGNOSTIC_SAMPLE_LIMIT = 12;
+const DEX_DIAGNOSTIC_MAX_CHARS = 240;
+
+function boundDexDiagnostics(values: readonly string[]): string[] {
+  const bounded = values.slice(0, DEX_DIAGNOSTIC_SAMPLE_LIMIT).map((value) =>
+    value.replace(/\s+/g, " ").trim().slice(0, DEX_DIAGNOSTIC_MAX_CHARS)
+  );
+  const omitted = values.length - bounded.length;
+  if (omitted > 0) bounded.push(`${omitted} additional diagnostic(s) omitted`);
+  return bounded;
 }
 
 export function isEligibleDirectApiPool(

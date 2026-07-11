@@ -1,7 +1,7 @@
 import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import {
   buildPriceMapByDate,
@@ -32,15 +32,17 @@ export async function fetchCommodityTokens(
 ): Promise<Record<string, unknown>[]> {
   const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * DAY_SECONDS;
 
-  const [priceRes, protocolRes] = await Promise.all([
-    fetchWithRetry(
+  const [priceResult, protocolResult] = await Promise.all([
+    fetchJsonWithRetry(
       `${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${twoYearsAgo}&span=730`,
       undefined,
       DETAIL_UPSTREAM_MAX_RETRIES,
       { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
     ),
     config.protocolSlug
-      ? fetchWithRetry(
+      ? fetchJsonWithRetry<{
+          tvl?: { date: number; totalLiquidityUSD: number }[];
+        }>(
           `${DEFILLAMA_API}/protocol/${config.protocolSlug}`,
           undefined,
           DETAIL_UPSTREAM_MAX_RETRIES,
@@ -50,20 +52,26 @@ export async function fetchCommodityTokens(
   ]);
 
   let prices: { timestamp: number; price: number }[] = [];
-  if (priceRes?.ok) {
-    prices = extractDefiLlamaCoinChartPrices(await priceRes.json(), config.geckoId);
+  if (priceResult?.response.ok) {
+    prices = extractDefiLlamaCoinChartPrices(priceResult.body, config.geckoId);
   } else {
-    logUpstreamFailure("defillama-coins-chart", config.stablecoinId, priceRes?.status ?? "no-response");
+    logUpstreamFailure(
+      "defillama-coins-chart",
+      config.stablecoinId,
+      priceResult?.response.status ?? "no-response",
+    );
   }
 
   let tvlHistory: { date: number; totalLiquidityUSD: number }[] = [];
-  if (protocolRes?.ok) {
-    const protocolData = (await protocolRes.json()) as {
-      tvl?: { date: number; totalLiquidityUSD: number }[];
-    };
+  if (protocolResult?.response.ok) {
+    const protocolData = protocolResult.body;
     tvlHistory = protocolData.tvl ?? [];
   } else if (config.protocolSlug) {
-    logUpstreamFailure("defillama-protocol-detail", config.stablecoinId, protocolRes?.status ?? "no-response");
+    logUpstreamFailure(
+      "defillama-protocol-detail",
+      config.stablecoinId,
+      protocolResult?.response.status ?? "no-response",
+    );
   }
 
   // Merge TVL history with price data to produce chart-compatible tokens array.

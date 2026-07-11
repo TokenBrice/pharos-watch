@@ -22,6 +22,7 @@ import {
   findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
+import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mjs";
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
@@ -304,6 +305,27 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/depeg-resolver-incident-store.ts",
       "worker/src/lib/depeg-resolver-publication-store.ts",
       "worker/src/lib/publication-contract.ts",
+      "worker/src/cron/dispatch-telegram-alerts.ts",
+      "worker/src/cron/dispatch-telegram-authoritative-path.ts",
+      "worker/src/cron/telegram-alert-source-events.ts",
+      "worker/src/cron/telegram-alert-target-plans/coordinator.ts",
+      "worker/src/cron/telegram-alert-target-plans/materialization.ts",
+      "worker/src/cron/telegram-legacy-overflow-import.ts",
+      "worker/src/cron/dispatch-telegram-routing.ts",
+      "worker/src/cron/dispatch-telegram-delivery.ts",
+      "worker/src/cron/telegram-pending/lifecycle.ts",
+      "worker/src/cron/telegram-pending/preference-revalidation.ts",
+      "worker/src/cron/telegram-pending/drain.ts",
+      "worker/src/cron/telegram-pending/dedupe.ts",
+      "worker/src/api/telegram-webhook-effect-fence.ts",
+      "worker/src/api/telegram-store/watchlist-import.ts",
+      "worker/src/lib/telegram-transport-control.ts",
+      "worker/src/lib/telegram-watchlist-token.ts",
+      "src/app/pharoswatchbot/app/client.tsx",
+      "shared/lib/telegram-adoption-analytics.ts",
+      "worker/src/lib/telegram-adoption-analytics.ts",
+      "functions/pharoswatchbot-adoption.ts",
+      "worker/src/lib/telegram.ts",
       "functions/lib/upstream-proxy.ts",
       "shared/lib/peg-score.ts",
     ]));
@@ -312,6 +334,29 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/psi-recompute.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
       "shared/lib/redemption-backstop-scoring.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
     }));
+    expect(CRITICAL_TEST_FILES).toEqual(expect.arrayContaining([
+      "worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
+      "worker/src/cron/__tests__/dispatch-telegram-routing.test.ts",
+      "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
+      "worker/src/cron/__tests__/telegram-alert-target-effects.test.ts",
+      "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
+      "worker/src/cron/__tests__/telegram-legacy-overflow-import.test.ts",
+      "worker/src/cron/__tests__/telegram-fresh-delivery-fence.test.ts",
+      "worker/src/cron/__tests__/telegram-pending-lifecycle-migration.test.ts",
+      "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",
+      "worker/src/cron/__tests__/telegram-transport-outage-integration.test.ts",
+      "worker/src/lib/__tests__/telegram-transport-control.test.ts",
+      "worker/src/lib/__tests__/telegram.test.ts",
+      "worker/src/api/__tests__/telegram-webhook-effect-fence.test.ts",
+      "worker/src/api/telegram-store/__tests__/preset-intents.test.ts",
+      "worker/src/api/telegram-store/__tests__/forget.test.ts",
+      "worker/src/api/telegram-store/__tests__/watchlist-import.test.ts",
+      "src/app/pharoswatchbot/app/page.test.tsx",
+      "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
+      "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
+      "worker/src/lib/__tests__/telegram-adoption-analytics.test.ts",
+      "functions/__tests__/pharoswatchbot-adoption.test.ts",
+    ]));
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {

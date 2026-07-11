@@ -11,7 +11,13 @@ import {
   normalizeDexApiPoolsForMerge,
 } from "./dex-api-pool-shaping";
 
-export type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
+export type {
+  DexApiFetchResult,
+  DexApiPool,
+  DexApiPoolToken,
+  DexPaginationPersistenceErrorClass,
+  DexPaginationPersistenceSummary,
+} from "./dex-api-types";
 export {
   DIRECT_API_MAX_POOL_TVL_USD,
   DIRECT_API_POOL_MIN_TVL_USD,

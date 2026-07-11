@@ -1,7 +1,13 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { batchExecute } from "../lib/db";
+import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
+import { executeAtomicBatch } from "../lib/db";
+import { isSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
-import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
+import {
+  TELEGRAM_PRESET_LABEL_BY_ID,
+  resolveTelegramPresetTargets,
+  type TelegramPresetId,
+} from "../lib/telegram-presets";
 import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../lib/telegram-constants";
 import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
@@ -9,10 +15,10 @@ import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutati
 import {
   clearAlertSnooze,
   forgetSubscriber,
-  prepareRemovePresetSubscriptionStatements,
   prepareRemoveSubscriptionStatements,
   prepareSubscriberAndPresetStatements,
   prepareSubscriberAndSubscriptionStatements,
+  removePresetSubscriptions,
   setGlobalDepegWorseningStep,
   setSubscriberSnooze,
   setSubscriberTimezone,
@@ -22,7 +28,6 @@ import {
   unixNow,
   type UpsertSubscriberInput,
 } from "./telegram-webhook-store";
-import type { TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"
@@ -57,6 +62,16 @@ function assertCoin(stablecoinId: string): void {
   if (!TRACKED_META_BY_ID.has(stablecoinId)) throw new TelegramMiniAppMutationError("unknown-coin");
 }
 
+function assertCoinCanSubscribe(stablecoinId: string): void {
+  if (!isSubscribableCoin(stablecoinId)) throw new TelegramMiniAppMutationError("unknown-coin");
+}
+
+function assertPreset(presetId: string): asserts presetId is TelegramPresetId {
+  if (!TELEGRAM_PRESET_LABEL_BY_ID.has(presetId as TelegramPresetId)) {
+    throw new TelegramMiniAppMutationError("unknown-preset");
+  }
+}
+
 function alertTypeSet(values: readonly string[]): Set<string> {
   return new Set(values);
 }
@@ -75,6 +90,9 @@ async function presetCoins(db: D1Database, presetId: TelegramPresetId): Promise<
   if (resolved.kind !== "ok") throw new TelegramMiniAppMutationError("preset-unavailable", 503);
   const preset = resolved.presets.find((entry) => entry.definition.id === presetId);
   if (!preset) throw new TelegramMiniAppMutationError("unknown-preset");
+  for (const stablecoinId of preset.stablecoinIds) {
+    assertCoinCanSubscribe(stablecoinId);
+  }
   return preset.stablecoinIds;
 }
 
@@ -103,7 +121,7 @@ async function setQuietHours(db: D1Database, chatId: string, username: string | 
 }
 
 async function setCoin(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>): Promise<void> {
-  assertCoin(operation.stablecoinId);
+  assertCoinCanSubscribe(operation.stablecoinId);
   const patch = operation.patch;
   let appliedCount = 0;
   const statements: D1PreparedStatement[] = [];
@@ -157,7 +175,7 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
     apply("rs", patch.reserve ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
-  await batchExecute(db, statements);
+  await executeAtomicBatch(db, statements);
 }
 
 export async function applyTelegramMiniAppMutation(db: D1Database, auth: TelegramMiniAppAuthContext, operation: TelegramMiniAppOperation): Promise<void> {
@@ -165,11 +183,11 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
   const username = auth.username;
   switch (operation.kind) {
     case "recommended-setup": {
-      const coins = await presetCoins(db, operation.presetId);
+      await presetCoins(db, operation.presetId);
       const alertTypes = alertTypeSet(operation.alertTypes);
-      await batchExecute(
+      await executeAtomicBatch(
         db,
-        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], coins, alertTypes),
+        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes),
       );
       return;
     }
@@ -192,7 +210,11 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
       return;
     case "set-coin-snooze":
-      assertCoin(operation.stablecoinId);
+      if (operation.durationToken === "clear") {
+        assertCoin(operation.stablecoinId);
+      } else {
+        assertCoinCanSubscribe(operation.stablecoinId);
+      }
       await setSubscriptionSnooze(
         db,
         chatId,
@@ -217,24 +239,22 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       return;
     case "remove-coin":
       assertCoin(operation.stablecoinId);
-      await batchExecute(db, prepareRemoveSubscriptionStatements(db, chatId, [operation.stablecoinId]));
+      await executeAtomicBatch(db, prepareRemoveSubscriptionStatements(db, chatId, [operation.stablecoinId]));
       return;
     case "follow-preset": {
-      const coins = await presetCoins(db, operation.presetId);
+      assertPreset(operation.presetId);
+      await presetCoins(db, operation.presetId);
       const alertTypes = alertTypesFromPatch(operation.alertTypes);
       const options = operation.alertTypes.depeg && "depegStepBps" in operation ? { depegWorseningBpsStep: operation.depegStepBps ?? null } : undefined;
-      await batchExecute(
+      await executeAtomicBatch(
         db,
-        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], coins, alertTypes, options),
+        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes, options),
       );
       return;
     }
     case "unfollow-preset": {
-      const coins = await presetCoins(db, operation.presetId);
-      await batchExecute(db, [
-        ...prepareRemoveSubscriptionStatements(db, chatId, coins),
-        ...prepareRemovePresetSubscriptionStatements(db, chatId, [operation.presetId]),
-      ]);
+      assertPreset(operation.presetId);
+      await removePresetSubscriptions(db, chatId, [operation.presetId]);
       return;
     }
   }

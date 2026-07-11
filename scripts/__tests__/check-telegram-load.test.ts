@@ -5,8 +5,12 @@ import {
   buildSyntheticTelegramFixture,
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
+  evaluateStatusPathBudget,
   findCpuBudgetBreaches,
+  findTtlMarginBreaches,
+  runStatusPathBudgetChecks,
   simulateLoadScenarios,
+  STATUS_PATH_MAX_DURATION_MS,
   summarizeFixture,
   type QueryPlanCheckDefinition,
   type TelegramLoadCheckReport,
@@ -67,9 +71,14 @@ describe("Telegram load simulation", () => {
     );
 
     expect(report.assumptions.freshAttemptsPerRun).toBe(3_600);
-    expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(900);
+    expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(1_800);
     expect(report.assumptions.sendLoopSoftDeadlineSeconds).toBe(4 * 60);
     expect(requiredScenarios.every((scenario) => scenario.sloStatus !== "breach")).toBe(true);
+    expect(requiredScenarios.every((scenario) => scenario.initialFreshAttempts === 0)).toBe(true);
+    expect(requiredScenarios.every((scenario) => scenario.ttlMarginFraction >= 0.2)).toBe(true);
+    expect(findTtlMarginBreaches(report)).toEqual([]);
+    expect(requiredScenarios.find((scenario) => scenario.scenarioId === "telegram-429-storm"))
+      .toMatchObject({ sloStatus: "outage-unavailable", outageUnavailableSeconds: 15 * 60 });
   });
 
   it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {
@@ -191,5 +200,87 @@ describe("Telegram query-plan evaluation", () => {
 
     expect(result.status).toBe("review");
     expect(result.unexpectedFullScanTables).toEqual([]);
+  });
+});
+
+describe("Telegram status-path budgets", () => {
+  const budgetedCheck: QueryPlanCheckDefinition = {
+    id: "example-status-path",
+    category: "pulse-status",
+    sql: "SELECT 1",
+    binds: [],
+    budget: {
+      rowsReadTables: ["telegram_subscriptions"],
+      maxRowsRead: 30_000,
+      maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+    },
+  };
+
+  it("defines a reviewed budget for every status read path", () => {
+    const statusPathChecks = buildQueryPlanChecks().filter(
+      (check) => check.category === "pulse-status" || check.category === "lifecycle",
+    );
+
+    expect(statusPathChecks.map((check) => check.id)).toEqual([
+      "pulse-aggregate",
+      "status-top-stablecoins",
+      "lifecycle-current-active-history",
+    ]);
+    for (const check of statusPathChecks) {
+      expect(check.budget?.rowsReadTables.length).toBeGreaterThan(0);
+      expect(check.budget?.maxRowsRead).toBeGreaterThan(0);
+      expect(check.budget?.maxDurationMs).toBeGreaterThan(0);
+    }
+  });
+
+  it("passes a measurement within the reviewed maxima", () => {
+    const result = evaluateStatusPathBudget(budgetedCheck, budgetedCheck.budget!, {
+      rowsRead: 28_334,
+      durationMs: 5,
+      seededRowCounts: { telegram_subscriptions: 28_334 },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.rowsRead).toBe(28_334);
+    expect(result.maxRowsRead).toBe(30_000);
+  });
+
+  it("fails a measurement that exceeds the reviewed rows-read maximum", () => {
+    const result = evaluateStatusPathBudget(budgetedCheck, budgetedCheck.budget!, {
+      rowsRead: 30_001,
+      durationMs: 5,
+      seededRowCounts: { telegram_subscriptions: 30_001 },
+    });
+
+    expect(result.status).toBe("fail");
+  });
+
+  it("fails a measurement that exceeds the reviewed duration maximum", () => {
+    const result = evaluateStatusPathBudget(budgetedCheck, budgetedCheck.budget!, {
+      rowsRead: 28_334,
+      durationMs: STATUS_PATH_MAX_DURATION_MS + 1,
+      seededRowCounts: { telegram_subscriptions: 28_334 },
+    });
+
+    expect(result.status).toBe("fail");
+  });
+
+  it("measures each status path against the seeded planning-target fixture", () => {
+    const results = runStatusPathBudgetChecks();
+
+    expect(results.map((result) => result.id)).toEqual([
+      "pulse-aggregate",
+      "status-top-stablecoins",
+      "lifecycle-current-active-history",
+    ]);
+    for (const result of results) {
+      expect(result.status).toBe("ok");
+      expect(result.targetActiveWatchers).toBe(5_000);
+      expect(result.rowsRead).toBe(
+        Object.values(result.seededRowCounts).reduce((sum, count) => sum + count, 0),
+      );
+      expect(result.rowsRead).toBeGreaterThan(5_000);
+      expect(result.durationMs).toBeLessThanOrEqual(result.maxDurationMs);
+    }
   });
 });

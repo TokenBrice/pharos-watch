@@ -37,6 +37,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { safeJsonParse } from "../lib/api-cache-read";
+import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -296,33 +297,16 @@ export async function snapshotPublicDataset(
     };
   }
 
-  // --- 4. DEWS stress signals (latest per coin) ---
+  // --- 4. DEWS stress signals (one completed publication generation) ---
   const sectionReadFailures: SnapshotSectionReadFailure[] = [];
   let stressRows: StressSignalRow[] = [];
-  try {
-    // Per-coin dedup: take the latest row only. The bare ORDER BY
-    // computed_at DESC would emit every historical signal row and the
-    // snapshot blob would grow linearly with retention window.
-    const result = await db
-      .prepare(
-        `SELECT s.stablecoin_id, s.computed_at, s.score, s.band, s.signals_json
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) AS latest_computed_at
-           FROM stress_signals
-           GROUP BY stablecoin_id
-         ) latest
-           ON latest.stablecoin_id = s.stablecoin_id
-          AND latest.latest_computed_at = s.computed_at
-         ORDER BY s.stablecoin_id ASC`,
-      )
-      .all<StressSignalRow>();
-    throwIfAborted(signal);
-    stressRows = result.results ?? [];
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "read-dews" } });
-    sectionReadFailures.push({ section: "dews", error: toErrorMessage(err).slice(0, 200) });
+  const publishedDews = await loadPublishedStressSignalGeneration(db, nowSec);
+  throwIfAborted(signal);
+  if (publishedDews.status === "ok") {
+    stressRows = publishedDews.rows;
+  } else {
+    recordCronFailure("snapshot-public-dataset", publishedDews.reason, { metadata: { stage: "read-dews" } });
+    sectionReadFailures.push({ section: "dews", error: publishedDews.reason.slice(0, 200) });
   }
 
   // --- 5. DEX liquidity (latest per coin) ---

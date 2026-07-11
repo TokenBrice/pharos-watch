@@ -5,6 +5,11 @@ import {
   loadDewsRows,
   type DispatchSourceData,
 } from "../dispatch-telegram-state";
+import {
+  ALERT_RESERVE_SOURCE_GENERATION,
+  buildAlertReserveSourceEnvelope,
+} from "../../lib/alert-reserve-source-cache";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
@@ -15,6 +20,23 @@ const signalsJson = JSON.stringify({
 
 function cache(value: unknown, updatedAt = nowSec - 60) {
   return { value: JSON.stringify(value), updatedAt };
+}
+
+function reserveSource(
+  driftIds: string[],
+  overrides: Partial<{
+    generation: string;
+    publishedAt: number;
+    continuous: boolean;
+  }> = {},
+) {
+  return cache({
+    generation: ALERT_RESERVE_SOURCE_GENERATION,
+    publishedAt: nowSec - 60,
+    continuous: true,
+    driftIds,
+    ...overrides,
+  });
 }
 
 function sourceData(overrides: Partial<DispatchSourceData> = {}): DispatchSourceData {
@@ -29,7 +51,7 @@ function sourceData(overrides: Partial<DispatchSourceData> = {}): DispatchSource
     safetyCache: null,
     safetySourceCache: null,
     launchCache: cache([]),
-    reserveCache: cache([]),
+    reserveCache: reserveSource([]),
     reserveDispatchedCache: cache([]),
     ...overrides,
   };
@@ -157,7 +179,7 @@ describe("buildDispatchSnapshotState reserve baseline handling", () => {
 
     const nextGoodRun = buildDispatchSnapshotState(
       sourceData({
-        reserveCache: cache(["usdc-circle"]),
+        reserveCache: reserveSource(["usdc-circle"]),
         reserveDispatchedCache: cache(invalidRun.currentSnapshots.reserveDispatched),
       }),
       nowSec,
@@ -182,7 +204,7 @@ describe("buildDispatchSnapshotState reserve baseline handling", () => {
 
     const nextGoodRun = buildDispatchSnapshotState(
       sourceData({
-        reserveCache: cache(["usdc-circle"]),
+        reserveCache: reserveSource(["usdc-circle"]),
         reserveDispatchedCache: cache(invalidFirstRun.currentSnapshots.reserveDispatched),
       }),
       nowSec,
@@ -190,5 +212,84 @@ describe("buildDispatchSnapshotState reserve baseline handling", () => {
 
     expect(nextGoodRun.previousReserveDriftIds).toEqual(["usdc-circle"]);
     expect(nextGoodRun.currentReserveDriftIds).toEqual(["usdc-circle"]);
+  });
+
+  it("suppresses a stale source without advancing the prior reserve baseline", () => {
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        reserveCache: reserveSource(["usdc-circle"], {
+          publishedAt: nowSec - CRON_INTERVALS["sync-live-reserves"] * 2 - 1,
+        }),
+        reserveDispatchedCache: cache([]),
+      }),
+      nowSec,
+    );
+
+    expect(state.reserveSourceAssessment).toMatchObject({
+      state: "stale",
+      generation: ALERT_RESERVE_SOURCE_GENERATION,
+    });
+    expect(state.previousReserveDriftIds).toEqual([]);
+    expect(state.currentReserveDriftIds).toEqual([]);
+    expect(state.currentSnapshots.reserveDispatched).toEqual([]);
+  });
+
+  it("suppresses a wrong-generation source without advancing the prior reserve baseline", () => {
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        reserveCache: reserveSource(["usdc-circle"], { generation: "reserve-alert-source-v0" }),
+        reserveDispatchedCache: cache([]),
+      }),
+      nowSec,
+    );
+
+    expect(state.reserveSourceAssessment.state).toBe("wrong-generation");
+    expect(state.previousReserveDriftIds).toEqual([]);
+    expect(state.currentReserveDriftIds).toEqual([]);
+    expect(state.currentSnapshots.reserveDispatched).toEqual([]);
+  });
+
+  it("cold-seeds the first fresh generation after a gap and does not replay the gap", () => {
+    const firstFreshEnvelope = buildAlertReserveSourceEnvelope(
+      ["usdc-circle"],
+      null,
+      {
+        nowSec,
+        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+      },
+    );
+    const recoveryRun = buildDispatchSnapshotState(
+      sourceData({
+        reserveCache: cache(firstFreshEnvelope, nowSec),
+        reserveDispatchedCache: cache([]),
+      }),
+      nowSec,
+    );
+
+    expect(recoveryRun.reserveSourceAssessment.state).toBe("recovering");
+    expect(recoveryRun.previousReserveDriftIds).toEqual(["usdc-circle"]);
+    expect(recoveryRun.currentReserveDriftIds).toEqual(["usdc-circle"]);
+    expect(recoveryRun.currentSnapshots.reserveDispatched).toEqual(["usdc-circle"]);
+
+    const nextPublishedAt = nowSec + CRON_INTERVALS["sync-live-reserves"];
+    const continuousEnvelope = buildAlertReserveSourceEnvelope(
+      ["usdc-circle"],
+      cache(firstFreshEnvelope, nowSec),
+      {
+        nowSec: nextPublishedAt,
+        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+      },
+    );
+    const healthyRun = buildDispatchSnapshotState(
+      sourceData({
+        reserveCache: cache(continuousEnvelope, nextPublishedAt),
+        reserveDispatchedCache: cache(recoveryRun.currentSnapshots.reserveDispatched, nextPublishedAt),
+      }),
+      nextPublishedAt,
+    );
+
+    expect(healthyRun.reserveSourceAssessment.state).toBe("ok");
+    expect(healthyRun.previousReserveDriftIds).toEqual(["usdc-circle"]);
+    expect(healthyRun.currentReserveDriftIds).toEqual(["usdc-circle"]);
   });
 });

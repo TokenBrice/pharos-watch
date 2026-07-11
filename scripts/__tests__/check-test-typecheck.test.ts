@@ -13,6 +13,13 @@ function makeWorkdir() {
   return cwd;
 }
 
+function writeBaseline(cwd: string, diagnostics: Record<string, unknown>[]) {
+  writeFileSync(
+    join(cwd, "scripts/lib/test-typecheck-baseline.json"),
+    `${JSON.stringify({ diagnostics })}\n`,
+  );
+}
+
 function makeFakeNpx(cwd: string, body: string) {
   const binDir = join(cwd, "bin");
   mkdirSync(binDir, { recursive: true });
@@ -69,5 +76,80 @@ describe("check-test-typecheck", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("new scripts/__tests__/sample.test.ts");
     expect(result.stderr).toContain("TS9999");
+  });
+
+  it("rejects a replacement diagnostic with the same file and TypeScript code", () => {
+    const cwd = makeWorkdir();
+    writeBaseline(cwd, [{
+      file: "scripts/__tests__/sample.test.ts",
+      code: "TS2322",
+      message: "Type 'string' is not assignable to type 'number'.",
+      count: 1,
+      examples: ["1:1"],
+    }]);
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo "scripts/__tests__/sample.test.ts(1,1): error TS2322: Type 'boolean' is not assignable to type 'number'." >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Type 'boolean' is not assignable");
+  });
+
+  it("normalizes diagnostic whitespace before comparing message identity", () => {
+    const cwd = makeWorkdir();
+    writeBaseline(cwd, [{
+      file: "scripts/__tests__/sample.test.ts",
+      code: "TS2322",
+      message: "Type 'string'   is not assignable to type 'number'.",
+      count: 1,
+      examples: ["1:1"],
+    }]);
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo "scripts/__tests__/sample.test.ts(1,1): error TS2322: Type 'string' is not assignable to type 'number'." >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("No new test type diagnostics");
+  });
+
+  it("normalizes repository paths before comparing message identity", () => {
+    const cwd = makeWorkdir();
+    writeBaseline(cwd, [{
+      file: "scripts/__tests__/sample.test.ts",
+      code: "TS2719",
+      message: "Module at <repo>/shared/types/core is not assignable.",
+      count: 1,
+      examples: ["1:1"],
+    }]);
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo "scripts/__tests__/sample.test.ts(1,1): error TS2719: Module at ${cwd}/shared/types/core is not assignable." >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("No new test type diagnostics");
+  });
+
+  it("writes portable repository paths when updating the baseline", () => {
+    const cwd = makeWorkdir();
+    const binDir = makeFakeNpx(
+      cwd,
+      `echo 'scripts/__tests__/sample.test.ts(1,1): error TS7016: Missing ${cwd}/node_modules/example/index.js.' >&2\nexit 1`,
+    );
+
+    const result = runCheck(cwd, binDir, ["--update-baseline"]);
+    const baseline = readFileSync(join(cwd, "scripts/lib/test-typecheck-baseline.json"), "utf8");
+
+    expect(result.status).toBe(0);
+    expect(baseline).toContain("<repo>/node_modules/example/index.js");
+    expect(baseline).not.toContain(cwd);
   });
 });

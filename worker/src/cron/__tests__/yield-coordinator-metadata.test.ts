@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
-import { buildComparisonAnchorFreshnessMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator-metadata";
+import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
+import {
+  buildComparisonAnchorFreshnessMeta,
+  buildYieldDegradationReasons,
+  buildYieldSyncMetadata,
+} from "../yield-sync/coordinator-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 
@@ -61,13 +66,36 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
 
     expect(meta).toMatchObject({
       anchoredRowCount: 3,
-      staleAnchorCount: 2,
+      staleAnchorCount: 1,
       oldestAnchorAgeSeconds: STALE_THRESHOLD_SEC + 100,
       oldestAnchorStablecoinId: "oldest",
       oldestAnchorSourceKey: "price-derived",
       staleAnchorExamplesTruncated: false,
     });
-    expect(meta.staleAnchorExamples.map((row) => row.stablecoinId)).toEqual(["oldest", "stale"]);
+    expect(meta.staleAnchorExamples.map((row) => row.stablecoinId)).toEqual(["stale"]);
+  });
+});
+
+describe("buildYieldDegradationReasons", () => {
+  it("retains default benchmark fallback health when no source row is selected", () => {
+    expect(buildYieldDegradationReasons({
+      safetySnapshotDegraded: false,
+      safetySnapshotReason: null,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("fred-api-error-retained"),
+      selectedSources: [],
+      dlPoolsMeta: {
+        mode: "dex-cache",
+        updatedAt: START_SEC,
+        ageSeconds: 0,
+        poolCount: 0,
+        fallbackMode: null,
+      },
+      allDeterministicFailed: false,
+      maskedAllDeterministicFailure: false,
+      onChainSkippedDueToCooldown: false,
+      onChainAlternativeCoverageMissingIds: [],
+      previousTvlRowsTruncated: false,
+    })).toContain("risk-free-rate:fred-api-error-retained");
   });
 });
 
@@ -100,6 +128,10 @@ describe("buildYieldSyncMetadata", () => {
           coveredCount: 1,
           trackedCount: 1,
           reason: null,
+          source: "report-card-cache",
+          publicationGenerationId: "report-cards:v8.299:1800000000",
+          methodologyVersion: "v8.299",
+          publishedAt: START_SEC,
         },
         resolvedYieldBearingCount: 1,
         expectedYieldBearingCount: 1,
@@ -157,6 +189,12 @@ describe("buildYieldSyncMetadata", () => {
         onChainEnvelopeRejectionsTruncated: boolean;
         comparisonAnchorFreshness: typeof comparisonAnchorFreshness;
         previousTvlRowsTruncated: boolean;
+        safetySnapshot: {
+          source: string;
+          publicationGenerationId: string;
+          methodologyVersion: string;
+          publishedAt: number;
+        };
       };
     };
 
@@ -167,5 +205,11 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionsTruncated).toBe(true);
     expect(metadata.sourceCoverage.comparisonAnchorFreshness).toEqual(comparisonAnchorFreshness);
     expect(metadata.sourceCoverage.previousTvlRowsTruncated).toBe(true);
+    expect(metadata.sourceCoverage.safetySnapshot).toMatchObject({
+      source: "report-card-cache",
+      publicationGenerationId: "report-cards:v8.299:1800000000",
+      methodologyVersion: "v8.299",
+      publishedAt: START_SEC,
+    });
   });
 });

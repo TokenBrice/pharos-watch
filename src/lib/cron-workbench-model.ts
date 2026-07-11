@@ -1,0 +1,456 @@
+import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact } from "@shared/lib/cron-jobs";
+import type {
+  BudgetOnlySurfaceStatus,
+  CronRunStatus,
+  CronStatus,
+  StatusResponse,
+  WorkerJobAttemptState,
+  WorkerJobAttemptStatusClass,
+} from "@shared/types";
+import { getStatusCronDisplay } from "@/lib/status/cron-config";
+
+export type CronWorkbenchState = "unhealthy" | "degraded" | "unknown" | "running" | "healthy";
+export type CronWorkbenchStateFilter = "all" | "attention" | CronWorkbenchState;
+export type CronImpactClass = "public-critical" | "admin-watch";
+export type CronImpactFilter = "all" | CronImpactClass;
+export type CronRunningFilter = "all" | "running" | "stale" | "idle";
+
+export interface CronWorkbenchFilters {
+  search: string;
+  state: CronWorkbenchStateFilter;
+  impact: CronImpactFilter;
+  triggerGroup: string;
+  running: CronRunningFilter;
+}
+
+export const DEFAULT_CRON_WORKBENCH_FILTERS: Readonly<CronWorkbenchFilters> = Object.freeze({
+  search: "",
+  state: "attention",
+  impact: "all",
+  triggerGroup: "all",
+  running: "all",
+});
+
+export interface CronWorkbenchGroupInput {
+  key: string;
+  title: string;
+  badge: string;
+  description: string;
+  entries: ReadonlyArray<readonly [string, CronStatus]>;
+}
+
+export interface CronWorkbenchRow {
+  key: string;
+  job: string;
+  cron: CronStatus;
+  display: ReturnType<typeof getStatusCronDisplay>;
+  group: Omit<CronWorkbenchGroupInput, "entries">;
+  state: CronWorkbenchState;
+  severity: number;
+  impactClass: CronImpactClass;
+  impactLabel: "Public critical" | "Admin watch";
+  runningState: Exclude<CronRunningFilter, "all">;
+  rawStatus: CronRunStatus | null;
+  statusLabel: string;
+  registryIndex: number;
+  sourceIndex: number;
+}
+
+export interface CronWorkbenchGroupSummary {
+  total: number;
+  visible: number;
+  unhealthy: number;
+  degraded: number;
+  unknown: number;
+  running: number;
+  healthy: number;
+  publicCritical: number;
+  adminWatch: number;
+  staleRunning: number;
+}
+
+export interface CronWorkbenchGroup {
+  key: string;
+  title: string;
+  badge: string;
+  description: string;
+  rows: CronWorkbenchRow[];
+  summary: CronWorkbenchGroupSummary;
+}
+
+export interface CronWorkbenchTriggerGroupOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface CronWorkbenchModel {
+  groups: CronWorkbenchGroup[];
+  allRows: CronWorkbenchRow[];
+  rows: CronWorkbenchRow[];
+  totalCount: number;
+  filteredCount: number;
+  triggerGroups: CronWorkbenchTriggerGroupOption[];
+  hasActiveFilters: boolean;
+}
+
+export interface FormattedCronDuration {
+  label: string;
+  exactLabel: string;
+}
+
+export interface BudgetOnlySurfaceRow {
+  surface: BudgetOnlySurfaceStatus;
+  job: string;
+  label: string;
+  scheduleKey: string;
+  schedule: string;
+  telemetryLabel: string;
+  outcomeLabel: string;
+  duration: FormattedCronDuration | null;
+  severity: number;
+  registryIndex: number;
+  sourceIndex: number;
+}
+
+export interface BudgetOnlySurfaceGroup {
+  scheduleKey: string;
+  schedule: string;
+  rows: BudgetOnlySurfaceRow[];
+  summary: {
+    total: number;
+    fresh: number;
+    stale: number;
+    missing: number;
+    unreadable: number;
+    errors: number;
+  };
+}
+
+const CRON_REGISTRY_INDEX = new Map(CRON_JOB_DEFINITIONS.map((definition, index) => [definition.job, index]));
+const BUDGET_SURFACE_REGISTRY_INDEX = new Map(
+  CRON_CONNECTION_BUDGET_ENTRIES.filter((entry) => !entry.statusTracked).map((entry, index) => [entry.job, index]),
+);
+
+const CRON_STATE_SEVERITY: Readonly<Record<CronWorkbenchState, number>> = {
+  unhealthy: 4,
+  degraded: 3,
+  unknown: 2,
+  running: 1,
+  healthy: 0,
+};
+
+const RUN_STATUS_LABELS: Readonly<Record<CronRunStatus, string>> = {
+  ok: "Succeeded",
+  degraded: "Completed with warnings",
+  error: "Failed",
+  skipped_locked: "Skipped: lease held",
+  skipped_neutral: "Skipped: no work required",
+  skipped_duplicate: "Skipped: duplicate slot",
+  skipped_running: "Skipped: already running",
+};
+
+const ATTEMPT_STATE_LABELS: Readonly<Record<WorkerJobAttemptState, string>> = {
+  queued: "Queued",
+  claimed: "Claimed",
+  running: "Running",
+  completed: "Completed",
+  deferred: "Deferred",
+  abandoned: "Abandoned",
+  failed: "Failed",
+  skipped_locked: "Skipped: lease held",
+  cancelled: "Cancelled",
+};
+
+const ATTEMPT_STATUS_CLASS_LABELS: Readonly<Record<WorkerJobAttemptStatusClass, string>> = {
+  ok: "Succeeded",
+  degraded: "Completed with warnings",
+  controlled_error: "Controlled error",
+  thrown_error: "Unhandled error",
+  abandoned: "Abandoned",
+  deferred: "Deferred",
+  skipped_duplicate: "Skipped: duplicate slot",
+  skipped_running: "Skipped: already running",
+  skipped_locked: "Skipped: lease held",
+};
+
+const BUDGET_TELEMETRY_LABELS: Readonly<Record<BudgetOnlySurfaceStatus["telemetryStatus"], string>> = {
+  fresh: "Fresh",
+  stale: "Stale",
+  missing: "Missing",
+  unreadable: "Unreadable",
+};
+
+const BUDGET_OUTCOME_LABELS: Readonly<Record<BudgetOnlySurfaceStatus["outcome"], string>> = {
+  ok: "Succeeded",
+  degraded: "Completed with warnings",
+  error: "Failed",
+  skipped: "Skipped",
+  unknown: "Unknown",
+};
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function getRegistryIndex(job: string): number {
+  return CRON_REGISTRY_INDEX.get(job) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function getBudgetSurfaceRegistryIndex(job: string): number {
+  return BUDGET_SURFACE_REGISTRY_INDEX.get(job) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function compareStableRegistryOrder(
+  a: Pick<CronWorkbenchRow, "registryIndex" | "sourceIndex">,
+  b: Pick<CronWorkbenchRow, "registryIndex" | "sourceIndex">,
+): number {
+  const registryDelta = a.registryIndex - b.registryIndex;
+  return registryDelta || a.sourceIndex - b.sourceIndex;
+}
+
+function isAttentionState(state: CronWorkbenchState): boolean {
+  return state === "unhealthy" || state === "degraded" || state === "unknown";
+}
+
+function getRunningState(cron: CronStatus): Exclude<CronRunningFilter, "all"> {
+  if (!cron.inFlight) return "idle";
+  return cron.inFlight.stale ? "stale" : "running";
+}
+
+function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {
+  if (!normalizedSearch) return true;
+  const attempt = row.cron.latestAttempt;
+  const artifactText = (row.cron.staleArtifacts ?? [])
+    .map((artifact) => `${artifact.kind} ${artifact.leaseOwner ?? ""} ${artifact.progressStage ?? ""}`)
+    .join(" ");
+  const searchable = [
+    row.job,
+    row.display.label,
+    row.display.schedule,
+    row.display.triggerMode,
+    row.group.key,
+    row.group.title,
+    row.group.badge,
+    row.state,
+    row.rawStatus,
+    row.statusLabel,
+    row.impactClass,
+    attempt?.attemptId,
+    attempt?.state,
+    attempt?.statusClass,
+    artifactText,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLocaleLowerCase();
+  return searchable.includes(normalizedSearch);
+}
+
+function matchesFilters(row: CronWorkbenchRow, filters: CronWorkbenchFilters): boolean {
+  if (!matchesSearch(row, normalizeSearch(filters.search))) return false;
+  if (filters.state === "attention") {
+    if (!isAttentionState(row.state)) return false;
+  } else if (filters.state !== "all" && row.state !== filters.state) {
+    return false;
+  }
+  if (filters.impact !== "all" && row.impactClass !== filters.impact) return false;
+  if (filters.triggerGroup !== "all" && row.group.key !== filters.triggerGroup) return false;
+  if (filters.running !== "all" && row.runningState !== filters.running) return false;
+  return true;
+}
+
+function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchRow[]): CronWorkbenchGroupSummary {
+  return {
+    total: allRows.length,
+    visible: visibleRows.length,
+    unhealthy: allRows.filter((row) => row.state === "unhealthy").length,
+    degraded: allRows.filter((row) => row.state === "degraded").length,
+    unknown: allRows.filter((row) => row.state === "unknown").length,
+    running: allRows.filter((row) => row.runningState === "running").length,
+    healthy: allRows.filter((row) => row.state === "healthy").length,
+    publicCritical: allRows.filter((row) => row.impactClass === "public-critical").length,
+    adminWatch: allRows.filter((row) => row.impactClass === "admin-watch").length,
+    staleRunning: allRows.filter((row) => row.runningState === "stale").length,
+  };
+}
+
+export function classifyCronWorkbenchState(cron: CronStatus): CronWorkbenchState {
+  if (cron.telemetryUnknown) return "unknown";
+  if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return "unhealthy";
+  if (cron.lastRun?.status === "degraded") return "degraded";
+  if (cron.inFlight && !cron.inFlight.stale) return "running";
+  return "healthy";
+}
+
+export function formatCronRunStatus(status: CronRunStatus | null | undefined): string {
+  return status ? RUN_STATUS_LABELS[status] : "No runs";
+}
+
+export function formatCronAttemptState(state: WorkerJobAttemptState): string {
+  return ATTEMPT_STATE_LABELS[state];
+}
+
+export function formatCronAttemptStatusClass(statusClass: WorkerJobAttemptStatusClass | null): string {
+  return statusClass ? ATTEMPT_STATUS_CLASS_LABELS[statusClass] : "Pending outcome";
+}
+
+function formatExactSeconds(durationMs: number): string {
+  const seconds = durationMs / 1000;
+  const value = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  return `${value}s (${durationMs}ms)`;
+}
+
+export function formatCronDuration(durationMs: number): FormattedCronDuration {
+  const safeDurationMs = Math.max(0, Math.round(durationMs));
+  if (safeDurationMs < 1000) {
+    return { label: `${safeDurationMs}ms`, exactLabel: formatExactSeconds(safeDurationMs) };
+  }
+
+  if (safeDurationMs < 60_000) {
+    const seconds = safeDurationMs / 1000;
+    const label = Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`;
+    return { label, exactLabel: formatExactSeconds(safeDurationMs) };
+  }
+
+  const totalSeconds = Math.floor(safeDurationMs / 1000);
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [
+    days > 0 ? `${days}d` : null,
+    hours > 0 ? `${hours}h` : null,
+    minutes > 0 ? `${minutes}m` : null,
+    seconds > 0 || (days === 0 && hours === 0 && minutes === 0) ? `${seconds}s` : null,
+  ].filter((part): part is string => part != null);
+
+  return { label: parts.join(" "), exactLabel: formatExactSeconds(safeDurationMs) };
+}
+
+export function buildCronWorkbenchModel(
+  groups: readonly CronWorkbenchGroupInput[],
+  filters: CronWorkbenchFilters = DEFAULT_CRON_WORKBENCH_FILTERS,
+): CronWorkbenchModel {
+  let sourceIndex = 0;
+  const rowsByGroup = groups.map((group) => {
+    const groupMeta = {
+      key: group.key,
+      title: group.title,
+      badge: group.badge,
+      description: group.description,
+    };
+    const rows = group.entries.map(([job, cron]) => {
+      const state = classifyCronWorkbenchState(cron);
+      const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
+      const rawStatus = cron.lastRun?.status ?? null;
+      const row: CronWorkbenchRow = {
+        key: `${group.key}:${job}`,
+        job,
+        cron,
+        display: getStatusCronDisplay(job),
+        group: groupMeta,
+        state,
+        severity: CRON_STATE_SEVERITY[state],
+        impactClass,
+        impactLabel: impactClass === "public-critical" ? "Public critical" : "Admin watch",
+        runningState: getRunningState(cron),
+        rawStatus,
+        statusLabel: cron.telemetryUnknown ? "Telemetry unknown" : formatCronRunStatus(rawStatus),
+        registryIndex: getRegistryIndex(job),
+        sourceIndex,
+      };
+      sourceIndex += 1;
+      return row;
+    });
+    return { group, rows };
+  });
+
+  const allRows = rowsByGroup.flatMap(({ rows }) => rows);
+  const visibleRowKeys = new Set(allRows.filter((row) => matchesFilters(row, filters)).map((row) => row.key));
+  const visibleGroups = rowsByGroup.flatMap(({ group, rows }) => {
+    const visibleRows = rows
+      .filter((row) => visibleRowKeys.has(row.key))
+      .sort((a, b) => b.severity - a.severity || compareStableRegistryOrder(a, b));
+    if (visibleRows.length === 0) return [];
+    return [
+      {
+        key: group.key,
+        title: group.title,
+        badge: group.badge,
+        description: group.description,
+        rows: visibleRows,
+        summary: summarizeGroup(rows, visibleRows),
+      },
+    ];
+  });
+  const rows = visibleGroups.flatMap((group) => group.rows);
+
+  return {
+    groups: visibleGroups,
+    allRows,
+    rows,
+    totalCount: allRows.length,
+    filteredCount: rows.length,
+    triggerGroups: groups.map((group) => ({
+      value: group.key,
+      label: group.title,
+      count: group.entries.length,
+    })),
+    hasActiveFilters:
+      filters.search.trim().length > 0 ||
+      filters.state !== DEFAULT_CRON_WORKBENCH_FILTERS.state ||
+      filters.impact !== DEFAULT_CRON_WORKBENCH_FILTERS.impact ||
+      filters.triggerGroup !== DEFAULT_CRON_WORKBENCH_FILTERS.triggerGroup ||
+      filters.running !== DEFAULT_CRON_WORKBENCH_FILTERS.running,
+  };
+}
+
+function getBudgetSurfaceSeverity(surface: BudgetOnlySurfaceStatus): number {
+  if (surface.outcome === "error") return 4;
+  if (surface.telemetryStatus === "missing" || surface.telemetryStatus === "unreadable") return 3;
+  if (surface.telemetryStatus === "stale" || surface.outcome === "degraded") return 2;
+  if (surface.outcome === "unknown") return 1;
+  return 0;
+}
+
+export function buildBudgetOnlySurfaceGroups(
+  surfaces: readonly StatusResponse["budgetOnlySurfaces"][number][],
+): BudgetOnlySurfaceGroup[] {
+  const rows = surfaces.map((surface, sourceIndex): BudgetOnlySurfaceRow => ({
+    surface,
+    job: surface.job,
+    label: surface.label,
+    scheduleKey: surface.scheduleKey,
+    schedule: surface.schedule,
+    telemetryLabel: BUDGET_TELEMETRY_LABELS[surface.telemetryStatus],
+    outcomeLabel: BUDGET_OUTCOME_LABELS[surface.outcome],
+    duration: surface.durationMs == null ? null : formatCronDuration(surface.durationMs),
+    severity: getBudgetSurfaceSeverity(surface),
+    registryIndex: getBudgetSurfaceRegistryIndex(surface.job),
+    sourceIndex,
+  }));
+  const grouped = new Map<string, BudgetOnlySurfaceRow[]>();
+  for (const row of rows) {
+    const groupRows = grouped.get(row.scheduleKey) ?? [];
+    groupRows.push(row);
+    grouped.set(row.scheduleKey, groupRows);
+  }
+
+  return Array.from(grouped.entries()).map(([scheduleKey, groupRows]) => {
+    const sortedRows = [...groupRows].sort((a, b) => b.severity - a.severity || compareStableRegistryOrder(a, b));
+    return {
+      scheduleKey,
+      schedule: sortedRows[0]?.schedule ?? "—",
+      rows: sortedRows,
+      summary: {
+        total: groupRows.length,
+        fresh: groupRows.filter((row) => row.surface.telemetryStatus === "fresh").length,
+        stale: groupRows.filter((row) => row.surface.telemetryStatus === "stale").length,
+        missing: groupRows.filter((row) => row.surface.telemetryStatus === "missing").length,
+        unreadable: groupRows.filter((row) => row.surface.telemetryStatus === "unreadable").length,
+        errors: groupRows.filter((row) => row.surface.outcome === "error").length,
+      },
+    };
+  });
+}

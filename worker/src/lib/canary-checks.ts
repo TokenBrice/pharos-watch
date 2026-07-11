@@ -1,12 +1,16 @@
-import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { REPORT_CARD_CACHE_GENERATION, REPORT_CARD_CACHE_MAX_AGE_MS, loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
+import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingColumnError, isMissingTableError } from "./db";
 import { toErrorMessage } from "./error-utils";
 import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
+import { getCache } from "./db-cache";
+import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
+import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 
 export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
 
@@ -73,13 +77,6 @@ interface PsiLatestRow {
   methodology_version: string;
 }
 
-interface DewsLatestSummaryRow {
-  source_table: string;
-  row_count: number | null;
-  latest_computed_at: number | null;
-  out_of_range_scores: number | null;
-}
-
 interface WorkerCanaryRunRow {
   check_id: string;
   status: CanaryRunStatus;
@@ -117,7 +114,9 @@ const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 90 * 24 * 3600;
 const PSI_MAX_AGE_SEC = 4 * 3600;
 const DEWS_MAX_AGE_SEC = 4 * 3600;
-const STABLECOINS_ACTIVE_MIN_RATIO = 0.95;
+const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
+const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
+const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
 export function normalizeWorkerCanaryMode(value: string | undefined): WorkerCanaryMode {
   const normalized = value?.trim().toLowerCase();
@@ -174,7 +173,6 @@ function worstSeverity(results: readonly Pick<CanaryCheckResult, "severity">[]):
 async function checkStablecoinsCacheActiveCount(db: D1Database) {
   const cache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   const expectedActiveCount = ACTIVE_IDS.size;
-  const minimumActiveCount = Math.floor(expectedActiveCount * STABLECOINS_ACTIVE_MIN_RATIO);
   if (!hasUsableStablecoinsPayload(cache)) {
     return {
       status: "error" as const,
@@ -182,7 +180,6 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
       error: `stablecoins cache ${cache.reason}`,
       metadata: {
         expectedActiveCount,
-        minimumActiveCount,
         updatedAt: cache.updatedAt,
         reason: cache.reason,
       },
@@ -190,25 +187,25 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
   }
 
   const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => asset.id));
-  const activeCount = [...ACTIVE_IDS].filter((id) => cachedIds.has(id)).length;
-  const missingExamples = ACTIVE_STABLECOINS
-    .filter((coin) => !cachedIds.has(coin.id))
-    .slice(0, 12)
-    .map((coin) => coin.id);
+  const coverage = evaluateStablecoinPublicationCoverage(cachedIds);
+  const activeCount = coverage.presentActiveCount;
   const metadata = {
     activeCount,
     expectedActiveCount,
-    minimumActiveCount,
     cachedAssetCount: cache.payload.peggedAssets.length,
     updatedAt: cache.updatedAt,
-    missingExamples,
+    missingActiveIds: coverage.missingActiveIds,
+    waivedActiveIds: coverage.waivedActiveIds,
+    expiredWaiverIds: coverage.expiredWaiverIds,
     cacheKind: cache.kind,
   };
-  if (activeCount < minimumActiveCount) {
+  if (!coverage.complete) {
     return {
       status: "degraded" as const,
       severity: "warning" as const,
-      error: `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}`,
+      error:
+        `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}; ` +
+        `missing=${coverage.missingActiveIds.join(",")}`,
       metadata,
     };
   }
@@ -405,57 +402,40 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
   }
 }
 
-async function loadDewsLatestSummary(db: D1Database): Promise<DewsLatestSummaryRow> {
-  try {
-    return (await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT
-             'stress_signals_latest' AS source_table,
-             COUNT(*) AS row_count,
-             MAX(computed_at) AS latest_computed_at,
-             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
-           FROM stress_signals_latest`,
-        )
-        .first<DewsLatestSummaryRow>(),
-    )) ?? { source_table: "stress_signals_latest", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
-  } catch (error) {
-    if (!isMissingTableError(error)) throw error;
-    return (await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT
-             'stress_signals' AS source_table,
-             COUNT(*) AS row_count,
-             MAX(computed_at) AS latest_computed_at,
-             SUM(CASE WHEN score < 0 OR score > 100 THEN 1 ELSE 0 END) AS out_of_range_scores
-           FROM stress_signals`,
-        )
-        .first<DewsLatestSummaryRow>(),
-    )) ?? { source_table: "stress_signals", row_count: 0, latest_computed_at: null, out_of_range_scores: 0 };
-  }
-}
-
 async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   try {
-    const summary = await loadDewsLatestSummary(db);
-    const rowCount = Number(summary.row_count ?? 0);
-    const outOfRangeScores = Number(summary.out_of_range_scores ?? 0);
-    const latestComputedAt = summary.latest_computed_at;
-    const ageSec = latestComputedAt == null ? null : Math.max(0, observedAt - latestComputedAt);
+    const published = await loadPublishedStressSignalGeneration(db, observedAt);
+    if (published.status !== "ok") {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: `DEWS published generation unavailable: ${published.reason}`,
+        metadata: {
+          sourceTable: "stress_signals",
+          publicationStatus: "unavailable",
+          publicationReason: published.reason,
+          maxAgeSec: DEWS_MAX_AGE_SEC,
+        },
+      };
+    }
+    const rowCount = published.rows.length;
+    const outOfRangeScores = published.rows.filter((row) => !isScoreInRange(row.score)).length;
+    const latestComputedAt = published.computedAt;
+    const ageSec = Math.max(0, observedAt - latestComputedAt);
     const metadata = {
-      sourceTable: summary.source_table,
+      sourceTable: "stress_signals",
       rowCount,
       latestComputedAt,
       ageSec,
       maxAgeSec: DEWS_MAX_AGE_SEC,
       outOfRangeScores,
+      exactCoverageVerified: published.exactCoverageVerified,
     };
-    if (rowCount === 0 || latestComputedAt == null) {
+    if (!published.exactCoverageVerified) {
       return {
         status: "degraded" as const,
         severity: "warning" as const,
-        error: "no DEWS stress signal rows found",
+        error: "DEWS published generation uses legacy coverage evidence",
         metadata,
       };
     }
@@ -482,9 +462,14 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
 }
 
 async function checkReportCardCacheMethodology(db: D1Database) {
-  const cache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  const cache = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
   if (cache.kind === "error") {
-    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch" || cache.reason === "methodology-mismatch"
+    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch"
+      || cache.reason === "methodology-mismatch"
+      || cache.reason === "completeness-mismatch"
       ? "error"
       : "warning";
     return {
@@ -519,6 +504,69 @@ async function checkReportCardCacheMethodology(db: D1Database) {
   return { status: "ok" as const, severity: "info" as const, metadata };
 }
 
+async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
+  try {
+    const ratesCache = await getCache(db, "risk_free_rates");
+    if (!ratesCache) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "risk-free benchmark registry cache is missing",
+        metadata: { requiredFreshPublications: 2 },
+      };
+    }
+    const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
+    const gbp = registry?.GBP ?? null;
+    const streakCache = await getCache(db, GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY);
+    const streak = parseObjectMetadata(streakCache?.value ?? null);
+    const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
+      && Number.isFinite(streak.consecutiveFreshRuns)
+      ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
+      : 0;
+    const fetchedAgeSec = gbp?.fetchedAt != null ? Math.max(0, observedAt - gbp.fetchedAt) : null;
+    const recordDateMs = gbp?.recordDate ? Date.parse(`${gbp.recordDate}T00:00:00Z`) : Number.NaN;
+    const recordAgeSec = Number.isFinite(recordDateMs)
+      ? Math.max(0, observedAt - Math.floor(recordDateMs / 1000))
+      : null;
+    const metadata = {
+      source: gbp?.source ?? null,
+      recordDate: gbp?.recordDate ?? null,
+      fetchedAt: gbp?.fetchedAt ?? null,
+      fetchedAgeSec,
+      recordAgeSec,
+      maxFetchAgeSec: GBP_BENCHMARK_MAX_FETCH_AGE_SEC,
+      maxRecordAgeSec: GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
+      isFallback: gbp?.isFallback ?? null,
+      fallbackMode: gbp?.fallbackMode ?? null,
+      consecutiveFreshRuns,
+      requiredFreshPublications: 2,
+    };
+    const problems: string[] = [];
+    if (!gbp) problems.push("GBP benchmark is missing");
+    if (gbp?.isFallback) problems.push(`GBP benchmark is fallback (${gbp.fallbackMode ?? "unknown"})`);
+    if (fetchedAgeSec == null || fetchedAgeSec > GBP_BENCHMARK_MAX_FETCH_AGE_SEC) {
+      problems.push("GBP benchmark fetch is stale");
+    }
+    if (recordAgeSec == null || recordAgeSec > GBP_BENCHMARK_MAX_RECORD_AGE_SEC) {
+      problems.push("GBP benchmark observation is stale");
+    }
+    if (consecutiveFreshRuns < 2) {
+      problems.push(`GBP benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
+    }
+    if (problems.length > 0) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: problems.join("; "),
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
 const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "dex-liquidity-current-publication",
@@ -535,7 +583,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "stablecoins-cache-active-count",
     label: "Stablecoins cache active count",
-    description: "The stablecoins cache contains nearly all active registry assets.",
+    description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
     run: checkStablecoinsCacheActiveCount,
   },
   {
@@ -555,6 +603,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Report-card cache methodology",
     description: "The report-card score cache is fresh and matches the expected generation/methodology contract.",
     run: checkReportCardCacheMethodology,
+  },
+  {
+    checkId: "yield-gbp-benchmark-current",
+    label: "Yield GBP benchmark current",
+    description: "GBP SONIA is direct, current, and has published successfully in two consecutive daily generations.",
+    run: checkGbpBenchmarkCurrent,
   },
 ] as const;
 
@@ -652,14 +706,15 @@ async function persistCanaryRun(
     db
       .prepare(
         `INSERT INTO worker_canary_runs (
-           id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(idempotency_key) DO UPDATE SET
            status = excluded.status,
            severity = excluded.severity,
            duration_ms = excluded.duration_ms,
            metadata_json = excluded.metadata_json,
-           error = excluded.error`,
+           error = excluded.error,
+           mode = excluded.mode`,
       )
       .bind(
         canaryRunId(result),
@@ -671,6 +726,7 @@ async function persistCanaryRun(
         result.durationMs,
         metadataJson,
         result.error ?? null,
+        options.mode ?? "shadow",
       )
       .run(),
   );
@@ -736,10 +792,12 @@ export async function loadCanaryStatus(db: D1Database, now = nowSec()): Promise<
            INNER JOIN (
              SELECT check_id, MAX(observed_at) AS observed_at
                FROM worker_canary_runs
+              WHERE mode IN ('status', 'alert')
               GROUP BY check_id
            ) latest
              ON latest.check_id = r.check_id
             AND latest.observed_at = r.observed_at
+          WHERE r.mode IN ('status', 'alert')
           ORDER BY r.check_id ASC`,
       )
       .all<WorkerCanaryRunRow>(),

@@ -13,6 +13,56 @@ import {
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
+import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
+
+const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;
+const MAX_DIAGNOSTIC_OBJECT_KEYS = 40;
+const MAX_DIAGNOSTIC_STRING_CHARS = 500;
+const MAX_DIAGNOSTIC_DEPTH = 4;
+const MAX_STABLECOINS_CRON_METADATA_BYTES = 64 * 1024;
+
+function compactDiagnosticValue(value: unknown, depth = 0): unknown {
+  if (value == null || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return value.length <= MAX_DIAGNOSTIC_STRING_CHARS
+      ? value
+      : `${value.slice(0, MAX_DIAGNOSTIC_STRING_CHARS)}...`;
+  }
+  if (depth >= MAX_DIAGNOSTIC_DEPTH) return "[truncated-depth]";
+  if (Array.isArray(value)) {
+    const compacted = value
+      .slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS)
+      .map((entry) => compactDiagnosticValue(entry, depth + 1));
+    if (value.length > MAX_DIAGNOSTIC_ARRAY_ITEMS) {
+      compacted.push(`[${value.length - MAX_DIAGNOSTIC_ARRAY_ITEMS} more]`);
+    }
+    return compacted;
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    const compacted: Record<string, unknown> = {};
+    for (const [key, entry] of entries.slice(0, MAX_DIAGNOSTIC_OBJECT_KEYS)) {
+      compacted[key] = compactDiagnosticValue(entry, depth + 1);
+    }
+    if (entries.length > MAX_DIAGNOSTIC_OBJECT_KEYS) {
+      compacted.truncatedKeys = entries.length - MAX_DIAGNOSTIC_OBJECT_KEYS;
+    }
+    return compacted;
+  }
+  return String(value).slice(0, MAX_DIAGNOSTIC_STRING_CHARS);
+}
+
+function boundedIds(ids: readonly string[]): { ids: string[]; total: number; truncated: number } {
+  return {
+    ids: ids.slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS),
+    total: ids.length,
+    truncated: Math.max(0, ids.length - MAX_DIAGNOSTIC_ARRAY_ITEMS),
+  };
+}
+
+function serializedByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
 
 function mapSourceToBucket(source: string) {
   return isPriceSourceHealthBucketKey(source) ? source : null;
@@ -172,7 +222,14 @@ export function buildStablecoinsSyncResult(input: {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
   const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);
-  const status: CronResult["status"] = input.depegErrorCount > 0 || input.stalenessCheckFailed ? "degraded" : "ok";
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    input.assets.map((asset) => String(asset.id)),
+    input.syncStartSec,
+  );
+  const status: CronResult["status"] =
+    input.depegErrorCount > 0 || input.stalenessCheckFailed || !publicationCoverage.complete
+      ? "degraded"
+      : "ok";
 
   const metadata: Record<string, unknown> = {
     rowsRead: input.rawAssetCount,
@@ -181,23 +238,36 @@ export function buildStablecoinsSyncResult(input: {
     sourceCoverage: { defillama: true },
     fallbackMode: null,
     validationFailures: 0,
-    canonicalDeduplication: input.canonicalDeduplication,
+    canonicalDeduplication: {
+      duplicateRows: input.canonicalDeduplication.duplicateRows,
+      affectedIds: input.canonicalDeduplication.affectedIds.slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS),
+      affectedIdsTruncated: Math.max(
+        0,
+        input.canonicalDeduplication.affectedIds.length - MAX_DIAGNOSTIC_ARRAY_ITEMS,
+      ),
+    },
     assetCount: input.assets.length,
-    enrichment: input.enrichStats,
+    enrichment: compactDiagnosticValue(input.enrichStats),
     authoritativeOverrides: input.authoritativeOverrideCount ?? 0,
-    authoritativeOverrideStats: input.authoritativeOverrideStats,
+    authoritativeOverrideStats: compactDiagnosticValue(input.authoritativeOverrideStats),
     gtProbe: {
       updatedCount: input.gtProbe.updatedCount,
-      ...input.gtProbe.stats,
+      ...compactDiagnosticValue(input.gtProbe.stats) as Record<string, unknown>,
     },
-    priceValidation: input.priceValidationStats,
-    providerDiagnostics: input.providerDiagnostics ?? [],
+    priceValidation: compactDiagnosticValue(input.priceValidationStats),
+    providerDiagnostics: compactDiagnosticValue(input.providerDiagnostics ?? []),
     rejectedPrices: input.rejectedCount,
     nativePegCorrections: input.nativePegCorrectionCount ?? 0,
     nativePegFills: input.nativePegFillCount ?? 0,
     missingPrices: finalMissing,
     priceSourceHealth,
-    pricingSourceAuditReport,
+    pricingSourceAuditReport: {
+      ...pricingSourceAuditReport,
+      assetsWithoutIndependentHardSource: boundedIds(
+        pricingSourceAuditReport.assetsWithoutIndependentHardSource,
+      ),
+    },
+    activePublicationCoverage: publicationCoverage,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
@@ -218,30 +288,55 @@ export function buildStablecoinsSyncResult(input: {
     metadata.supplyGapReconciliation = {
       totalReconciled: input.supplyGapReconciliation.totalReconciled,
       byReason: input.supplyGapReconciliation.byReason,
-      assets: input.supplyGapReconciliation.assets,
+      assets: compactDiagnosticValue(input.supplyGapReconciliation.assets),
     };
   }
   if (input.trackedCoverage && (input.trackedCoverage.restoredIds.length > 0 || input.trackedCoverage.droppedIds.length > 0)) {
     metadata.trackedCoverage = {
-      restoredIds: input.trackedCoverage.restoredIds,
-      droppedIds: input.trackedCoverage.droppedIds,
+      restoredIds: boundedIds(input.trackedCoverage.restoredIds),
+      droppedIds: boundedIds(input.trackedCoverage.droppedIds),
     };
   }
   if (input.depegErrorCount > 0) {
     metadata.depegErrorCount = input.depegErrorCount;
-    metadata.depegErrors = input.depegErrors;
+    metadata.depegErrors = compactDiagnosticValue(input.depegErrors);
+  }
+
+  const capabilities = {
+    stablecoinsCache: publicationCoverage.complete,
+    depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
+  };
+  let serializedMetadata = buildSyncMetadata(metadata, {
+    cacheWriteMode: "published",
+    capabilities,
+  });
+  if (serializedByteLength(serializedMetadata) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
+    const compactedMetadata = {
+      rowsRead: input.rawAssetCount,
+      rowsWritten: input.assets.length,
+      rowsDropped: input.droppedMalformedAssets,
+      assetCount: input.assets.length,
+      missingPrices: finalMissing,
+      activePublicationCoverage: publicationCoverage,
+      canonicalDeduplication: metadata.canonicalDeduplication,
+      rejectedPrices: input.rejectedCount,
+      nativePegCorrections: input.nativePegCorrectionCount ?? 0,
+      nativePegFills: input.nativePegFillCount ?? 0,
+      depegErrorCount: input.depegErrorCount,
+      stalenessCheckFailed: input.stalenessCheckFailed,
+      metadataCompactedBySizeGuard: true,
+      originalMetadataBytes: serializedByteLength(serializedMetadata),
+    };
+    serializedMetadata = buildSyncMetadata(compactedMetadata, {
+      cacheWriteMode: "published",
+      capabilities,
+    });
   }
 
   return {
     itemCount: input.assets.length,
     status,
-    metadata: buildSyncMetadata(metadata, {
-      cacheWriteMode: "published",
-      capabilities: {
-        stablecoinsCache: true,
-        depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
-      },
-    }),
+    metadata: serializedMetadata,
   };
 }
 

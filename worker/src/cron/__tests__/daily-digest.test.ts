@@ -137,12 +137,13 @@ vi.mock("../../lib/twitter", () => ({
   postDigestTweet: vi.fn(),
 }));
 
-vi.mock("../../lib/telegram", () => ({
-  postDigestToTelegram: vi.fn(),
-}));
-
 vi.mock("../../lib/telegram-digest-appendices", () => ({
   prepareTelegramDigestAppendices: vi.fn(),
+}));
+
+vi.mock("../../lib/telegram-digest-outbox", () => ({
+  enqueueTelegramDigestEdition: vi.fn(),
+  deliverTelegramDigestEdition: vi.fn(),
 }));
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
@@ -170,9 +171,13 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
-import { postDigestToTelegram } from "../../lib/telegram";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
+import {
+  deliverTelegramDigestEdition,
+  enqueueTelegramDigestEdition,
+} from "../../lib/telegram-digest-outbox";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
@@ -274,12 +279,64 @@ function mockAnthropicStreamResponse(text: string): Response {
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
 
-function makeBaseTables(): MockTableConfig[] {
+interface TestDewsRow {
+  stablecoin_id: string;
+  score: number;
+  band: string;
+  signals_json: string;
+  computed_at: number;
+}
+
+function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
+  const computedAt = dewsRows[0]!.computed_at;
+  return [
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["dews:published-generation"],
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          updatedAt: computedAt,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: dewsRows.length,
+          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
+        }),
+        updated_at: computedAt,
+      },
+    },
+    {
+      match: "pharos:stress-signals:published-exact",
+      rows: dewsRows.map((row) => ({ ...row })),
+    },
+  ];
+}
+
+function makeBaseTables(options: {
+  dewsRows?: TestDewsRow[];
+} = {}): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
   const weekAgoTs = todayTs - 7 * 86_400;
-
+  const dewsRows = options.dewsRows ?? [
+    {
+      stablecoin_id: "usdt-tether",
+      score: 8,
+      band: "CALM",
+      signals_json: '{"supply":{"value":5,"available":true}}',
+      computed_at: nowSec - 600,
+    },
+    {
+      stablecoin_id: "usdc-circle",
+      score: 12,
+      band: "CALM",
+      signals_json: '{"pool":{"value":10,"available":true}}',
+      computed_at: nowSec - 600,
+    },
+  ];
   return [
+    ...makePublishedDewsTables(dewsRows),
     {
       match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
       rows: [],
@@ -419,7 +476,23 @@ describe("generateDailyDigest", () => {
       .mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
-    vi.mocked(postDigestToTelegram).mockReset().mockResolvedValue(undefined);
+    vi.mocked(enqueueTelegramDigestEdition).mockReset().mockResolvedValue({
+      created: true,
+      payloadMatched: true,
+      editionKey: "daily:2026-03-06",
+      state: "pending",
+      chunks: ["stored daily payload"],
+    });
+    vi.mocked(deliverTelegramDigestEdition).mockReset().mockResolvedValue({
+      editionKey: "daily:2026-03-06",
+      state: "sent",
+      outcome: "sent",
+      chunksSent: 1,
+      nextChunkIndex: 1,
+      chunkCount: 1,
+      errorClass: null,
+      retryAfterSec: null,
+    });
     commitTelegramAppendices.mockReset().mockResolvedValue(undefined);
     vi.mocked(prepareTelegramDigestAppendices)
       .mockReset()
@@ -496,7 +569,8 @@ describe("generateDailyDigest", () => {
     expect(storedInput.editorialAudit?.usedCandidateIds).toEqual(["depeg:usdt-tether:active"]);
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
@@ -572,7 +646,7 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("quality: title-word-count:soft");
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
   it("reports digest preflight and skipped progress when Anthropic is not configured", async () => {
@@ -700,7 +774,7 @@ describe("generateDailyDigest", () => {
 
     expect(result).toEqual({ status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" });
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
   });
 
@@ -814,30 +888,25 @@ describe("generateDailyDigest", () => {
 
   it("includes DEWS stress data with band changes in stored input", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-
-    const baseTables = makeBaseTables();
+    const dewsRows = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 8,
+        band: "CALM",
+        signals_json: '{"supply":{"value":5,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 62,
+        band: "ALERT",
+        signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+    ];
+    const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
       ...baseTables,
-      // Latest DEWS per coin
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 8,
-            band: "CALM",
-            signals_json: '{"supply":{"value":5,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            score: 62,
-            band: "ALERT",
-            signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-        ],
-      },
       // Yesterday's snapshot
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
@@ -866,28 +935,25 @@ describe("generateDailyDigest", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const baseTables = makeBaseTables();
+    const dewsRows = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 8,
+        band: "CALM",
+        signals_json: '{"supply":{"value":5,"available":true}}',
+        computed_at: nowSec - 600,
+      },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 62,
+        band: "ALERT",
+        signals_json: '{"pool":',
+        computed_at: nowSec - 600,
+      },
+    ];
+    const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
       ...baseTables,
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 8,
-            band: "CALM",
-            signals_json: '{"supply":{"value":5,"available":true}}',
-            computed_at: nowSec - 600,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            score: 62,
-            band: "ALERT",
-            signals_json: '{"pool":',
-            computed_at: nowSec - 600,
-          },
-        ],
-      },
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [
@@ -1069,7 +1135,7 @@ describe("generateDailyDigest", () => {
 
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
-    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+    vi.mocked(deliverTelegramDigestEdition).mockRejectedValueOnce(new Error("telegram down"));
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(
@@ -1173,7 +1239,6 @@ describe("generateDailyDigest", () => {
   it("still attempts Telegram before failing hard when the Twitter marker write fails", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const twitterMarkerKey = "daily-digest:twitter-sent:2026-03-06";
-    const telegramMarkerKey = "daily-digest:telegram-sent:2026-03-06";
     const db = mockD1([
       {
         match: "INSERT OR IGNORE INTO cache",
@@ -1207,7 +1272,8 @@ describe("generateDailyDigest", () => {
     ).rejects.toThrow("Twitter daily digest marker write failed");
 
     expect(postDigestTweet).not.toHaveBeenCalled();
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
     const history = (db as MockD1Database).getHistory();
     expect(history).toContainEqual(
       expect.objectContaining({
@@ -1215,35 +1281,43 @@ describe("generateDailyDigest", () => {
         binds: expect.arrayContaining([twitterMarkerKey]),
       }),
     );
-    expect(history).toContainEqual(
-      expect.objectContaining({
-        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
-        binds: expect.arrayContaining([telegramMarkerKey]),
-      }),
-    );
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
-  it("persists the Telegram sent marker before sending on the happy path", async () => {
+  it("persists the exact Telegram edition before crossing the send boundary", async () => {
     const db = mockD1(makeBaseTables());
     await generateDailyDigest(db, "anthropic-key", null, false, { botToken: "tg-token", chatId: "tg-chat" });
 
-    const markerKey = "daily-digest:telegram-sent:2026-03-06";
-    const history = (db as MockD1Database).getHistory();
-    const markerWrites = history.filter(
-      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        editionKey: "daily:2026-03-06",
+        digestKind: "daily",
+        digestGeneratedAt: Math.floor(Date.now() / 1000),
+        targetChatId: "tg-chat",
+        title: "Calm Drift",
+        extended: VALID_DAILY_EXTENDED,
+        date: "2026-03-06",
+        editionNumber: 1,
+      }),
+      undefined,
     );
-    const markerDeletes = history.filter(
-      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
+    expect(vi.mocked(enqueueTelegramDigestEdition).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(deliverTelegramDigestEdition).mock.invocationCallOrder[0]!,
     );
-    expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
-    expect(markerWrites).toHaveLength(1);
-    // A successful send leaves the marker in place (no rollback).
-    expect(markerDeletes).toHaveLength(0);
   });
 
-  it("rolls back the Telegram sent marker when delivery fails so the next run can resend", async () => {
-    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+  it("keeps a retryable Telegram failure in the durable outbox", async () => {
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
+      editionKey: "daily:2026-03-06",
+      state: "pending",
+      outcome: "pending",
+      chunksSent: 0,
+      nextChunkIndex: 0,
+      chunkCount: 1,
+      errorClass: "rate_limit",
+      retryAfterSec: 45,
+    });
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key", null, false, {
@@ -1252,36 +1326,46 @@ describe("generateDailyDigest", () => {
     });
 
     expect(result.metadata).toContain("telegram: failed:");
-
-    const markerKey = "daily-digest:telegram-sent:2026-03-06";
-    const history = (db as MockD1Database).getHistory();
-    const markerWrites = history.filter(
-      (entry) => entry.sql.includes("INSERT OR IGNORE INTO cache") && entry.binds[0] === markerKey,
-    );
-    const markerDeletes = history.filter(
-      (entry) => entry.sql.includes("DELETE FROM cache") && entry.binds[0] === markerKey,
-    );
-    // Marker written pre-send, then rolled back when the send threw — leaving
-    // no marker so a subsequent cron run within the same day retries delivery.
-    expect(markerWrites).toHaveLength(1);
-    expect(markerDeletes).toHaveLength(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
-  it("fails hard and skips Telegram delivery when the sent marker write fails", async () => {
-    const db = mockD1([
-      { match: "INSERT OR IGNORE INTO cache", rows: [], throwError: new Error("cache write down") },
-      ...makeBaseTables(),
-    ]);
+  it("fails hard without sending when the Telegram outbox write fails", async () => {
+    vi.mocked(enqueueTelegramDigestEdition).mockRejectedValueOnce(new Error("outbox down"));
+    const db = mockD1(makeBaseTables());
 
     await expect(
       generateDailyDigest(db, "anthropic-key", null, false, { botToken: "tg-token", chatId: "tg-chat" }),
-    ).rejects.toThrow("Telegram daily digest marker write failed");
+    ).rejects.toThrow("Telegram daily digest outbox write failed");
 
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
-  it("passes digest appendices to Telegram and commits appendix state after a successful send", async () => {
+  it("surfaces an immutable same-edition payload mismatch as degraded", async () => {
+    vi.mocked(enqueueTelegramDigestEdition).mockResolvedValueOnce({
+      created: false,
+      payloadMatched: false,
+      editionKey: "daily:2026-03-06",
+      state: "pending",
+      chunks: ["previous exact edition"],
+    });
+    const failureSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const db = mockD1(makeBaseTables());
+
+    const result = await generateDailyDigest(db, "anthropic-key", null, false, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("telegram-outbox-payload-mismatch");
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    failureSpy.mockRestore();
+  });
+
+  it("stores appendix copy and success actions in the immutable Telegram edition", async () => {
+    const successActions = [{ key: "telegram:tracked-stablecoins-snapshot", value: "[\"example\"]" }];
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
       metadata: {
@@ -1296,6 +1380,7 @@ describe("generateDailyDigest", () => {
         frozenSymbols: [],
         seededSnapshots: [],
       },
+      successActions,
       commitSuccess: commitTelegramAppendices,
     });
 
@@ -1306,18 +1391,18 @@ describe("generateDailyDigest", () => {
     });
 
     expect(result.metadata).toContain("telegram: ok+appendix(");
-    expect(postDigestToTelegram).toHaveBeenCalledWith(
-      "Calm Drift",
-      VALID_DAILY_EXTENDED,
-      "2026-03-06",
-      { botToken: "tg-token", chatId: "tg-chat" },
-      1,
-      "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
+        successActions,
+      }),
+      undefined,
     );
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).not.toHaveBeenCalled();
   });
 
-  it("does not commit appendix state when the same-day Telegram marker claim is already taken", async () => {
+  it("preserves an already-sent immutable edition without crossing the send boundary", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
       metadata: {
@@ -1335,15 +1420,17 @@ describe("generateDailyDigest", () => {
       commitSuccess: commitTelegramAppendices,
     });
 
-    const markerKey = "daily-digest:telegram-sent:2026-03-06";
-    const db = mockD1([
-      {
-        match: "INSERT OR IGNORE INTO cache",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      ...makeBaseTables(),
-    ]);
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
+      editionKey: "daily:2026-03-06",
+      state: "sent",
+      outcome: "skipped",
+      chunksSent: 0,
+      nextChunkIndex: 1,
+      chunkCount: 1,
+      errorClass: null,
+      retryAfterSec: null,
+    });
+    const db = mockD1(makeBaseTables());
 
     const result = await generateDailyDigest(db, "anthropic-key", null, false, {
       botToken: "tg-token",
@@ -1351,18 +1438,12 @@ describe("generateDailyDigest", () => {
     });
 
     expect(result.metadata).toContain("telegram: skipped: already-sent");
-    expect(postDigestToTelegram).not.toHaveBeenCalled();
-    expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
-    expect((db as MockD1Database).getHistory()).toContainEqual(
-      expect.objectContaining({
-        sql: expect.stringContaining("INSERT OR IGNORE INTO cache"),
-        binds: expect.arrayContaining([markerKey]),
-      }),
-    );
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).not.toHaveBeenCalled();
   });
 
-  it("does not commit appendix state when Telegram delivery fails", async () => {
+  it("leaves appendix success actions uncommitted when Telegram delivery remains pending", async () => {
+    const successActions = [{ key: "telegram:cemetery-snapshot", value: "[\"terrausd\"]" }];
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>New Cemetery Entries</b>\n\n<code>UST</code> TerraUSD",
       metadata: {
@@ -1377,9 +1458,19 @@ describe("generateDailyDigest", () => {
         frozenSymbols: [],
         seededSnapshots: [],
       },
+      successActions,
       commitSuccess: commitTelegramAppendices,
     });
-    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
+      editionKey: "daily:2026-03-06",
+      state: "pending",
+      outcome: "pending",
+      chunksSent: 0,
+      nextChunkIndex: 0,
+      chunkCount: 1,
+      errorClass: "server_error",
+      retryAfterSec: null,
+    });
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key", null, false, {
@@ -1388,7 +1479,12 @@ describe("generateDailyDigest", () => {
     });
 
     expect(result.metadata).toContain("telegram: failed:");
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ successActions }),
+      undefined,
+    );
+    expect(commitTelegramAppendices).not.toHaveBeenCalled();
   });
 });
 
@@ -2671,24 +2767,62 @@ describe("collectDewsStress — topSignals enrichment", () => {
     vi.useRealTimers();
   });
 
-  it("returns topSignals on elevated coins when signals_json is provided", async () => {
+  it("marks the collector degraded instead of using a partial staged generation", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
     const db = mockD1([
       {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify({
-              supply: { value: 30, available: true },
-              pool: { value: 80, available: true },
-              liq: { value: 45, available: true },
-              price: { value: 10, available: true },
-            }),
-          },
-        ],
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            updatedAt: computedAt,
+            source: "compute-dews",
+            publishStatus: "published",
+            coverageVersion: 2,
+            expectedRowCount: 2,
+            stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
+          }),
+          updated_at: computedAt,
+        },
       },
+      {
+        match: "pharos:stress-signals:published-exact",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          score: 65,
+          band: "ALERT",
+          signals_json: "{}",
+          computed_at: computedAt,
+        }],
+      },
+    ]);
+    const degradedReasons: string[] = [];
+
+    const result = await collectDewsStress(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("dews-published-generation");
+  });
+
+  it("returns topSignals on elevated coins when signals_json is provided", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
+    const dewsRows: TestDewsRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify({
+          supply: { value: 30, available: true },
+          pool: { value: 80, available: true },
+          liq: { value: 45, available: true },
+          price: { value: 10, available: true },
+        }),
+        computed_at: computedAt,
+      },
+    ];
+    const db = mockD1([
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
@@ -2712,18 +2846,16 @@ describe("collectDewsStress — topSignals enrichment", () => {
   });
 
   it("returns empty topSignals when signals_json is missing", async () => {
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
+    const dewsRows: TestDewsRow[] = [{
+      stablecoin_id: "usdt-tether",
+      score: 65,
+      band: "ALERT",
+      signals_json: "{}",
+      computed_at: computedAt,
+    }];
     const db = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: "{}",
-          },
-        ],
-      },
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [],
@@ -2747,18 +2879,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
       },
       amplifiers: { psi: 1.08, contagion: 1.15 },
     });
+    const dewsRows: TestDewsRow[] = [{
+      stablecoin_id: "usdt-tether",
+      score: 65,
+      band: "ALERT",
+      signals_json: wrappedJson,
+      computed_at: Math.floor(Date.now() / 1000) - 600,
+    }];
     const db = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: wrappedJson,
-          },
-        ],
-      },
+      ...makePublishedDewsTables(dewsRows),
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [{ stablecoin_id: "usdt-tether", score: 25, band: "WATCH" }],
@@ -2785,35 +2914,28 @@ describe("collectDewsStress — topSignals enrichment", () => {
       pool: { value: 80, available: true },
       liq: { value: 45, available: true },
     };
+    const computedAt = Math.floor(Date.now() / 1000) - 600;
     const flatDb = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify(signalsPayload),
-          },
-        ],
-      },
+      ...makePublishedDewsTables([{
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify(signalsPayload),
+        computed_at: computedAt,
+      }]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
     const wrappedDb = mockD1([
-      {
-        match: "FROM stress_signals",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            score: 65,
-            band: "ALERT",
-            signals_json: JSON.stringify({
-              signals: signalsPayload,
-              amplifiers: { psi: 1, contagion: 1 },
-            }),
-          },
-        ],
-      },
+      ...makePublishedDewsTables([{
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: JSON.stringify({
+          signals: signalsPayload,
+          amplifiers: { psi: 1, contagion: 1 },
+        }),
+        computed_at: computedAt,
+      }]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
 

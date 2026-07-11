@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
+import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+
+// Retention prose derives from the shared delivery policy so the public
+// inventory cannot drift from production TTL constants (TGB-028).
+const RISK_ALERT_TTL_HOURS = PENDING_TTL_SEC / 3600;
+const LAUNCH_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.launch / 60;
+const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 
 export const metadata: Metadata = {
   title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
@@ -29,7 +36,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: June 2026"]}
+      leadParagraphs={["Last updated: July 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -45,11 +52,13 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">What We Collect</h2>
           <p>
-            When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, Pharos collects
-            anonymized usage analytics such as page views, session duration, approximate geographic region, device or
-            browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
-            in the feedback form, that handle is included in the GitHub issue created for the submission. Telegram alert
-            subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state,
+            When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, public Pharos
+            website routes collect anonymized usage analytics such as page views, session duration, approximate
+            geographic region, device or browser type, and a small set of product-interaction events. The embedded
+            PharosWatchBot Mini App is excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
+            or X handle in the feedback form, that handle is included in the GitHub issue created for the submission.
+            Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours,
+            snooze state,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
             access, Pharos stores the email address you verify plus any name, organization, project URL, use-case,
@@ -93,22 +102,31 @@ export default function PrivacyPage() {
               last-active timestamp): auto-purged after 180 days of inactivity once no follows or pending state remain.
             </li>
             <li>
-              <strong>Per-coin and preset subscriptions</strong>: kept while the subscriber exists, cleared by{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or the inactivity prune.
+              <strong>Per-coin and preset subscriptions</strong>: live settings are retained until{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>. Inactivity cleanup removes only
+              inert per-coin rows after 180 days; preset follows and meaningful per-coin settings do not expire for
+              inactivity.
             </li>
             <li>
               <strong>Pending disambiguation</strong> (ambiguous ticker prompts, setup wizard state, bulk-action
               confirmations): 5-minute TTL.
             </li>
             <li>
-              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 1-hour TTL for depeg, DEWS, and
-              safety; 30-minute TTL for launch and admin broadcasts.
+              <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
+              for depeg, DEWS, safety, reserve, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
+              alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.
             </li>
             <li>
-              <strong>Alert job manifests and per-target audit</strong>: 90-day retention.
+              <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
+              rows and per-target item lineage, planning snapshots, rendered target plans, and transport-failure
+              observations; aggregate job manifests remain until their normal prune.
             </li>
             <li>
-              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention.
+              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,
+              or immediate removal for that chat through{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>.
             </li>
             <li>
               <strong>Processed-update idempotency claims</strong>: 7-day prune.
@@ -118,7 +136,8 @@ export default function PrivacyPage() {
               retention.
             </li>
             <li>
-              <strong>Daily watcher lifecycle snapshots</strong>: aggregate-only public pulse history.
+              <strong>Daily watcher lifecycle snapshots</strong>: aggregate-only public pulse history with 400-day
+              retention.
             </li>
             <li>
               <strong>Per-chat delivery diagnostics</strong> used by{" "}
@@ -130,8 +149,21 @@ export default function PrivacyPage() {
             For the PharosWatchBot Mini App, the signed Telegram{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. It is
             validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
-            5-minute auth window plus a per-user cooldown, while read-only session launches accept a Telegram-signed
-            launch up to 24 hours old so an open panel stays usable across the day.
+            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session launches accept a
+            Telegram-signed launch up to 24 hours old so an open panel stays usable across the day. The embedded route does not load
+            Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
+            low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
+            aggregate rows contain no chat ID.
+          </p>
+          <p>
+            The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and
+            incident response. Telegram-specific custom log records are limited to operation names, bounded counts,
+            status codes, retry timing, and fixed error categories. They exclude chat and user IDs, update and callback
+            identifiers, message or callback content, URLs, bot tokens, and Mini App{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code>. Cloudflare processes these records in
+            the Pharos Cloudflare account, where access follows the account&apos;s permissions. This repository does not
+            configure a separate Logpush archive or a Telegram-log retention duration. Per-chat incident investigation
+            uses the private operator diagnostics backed by D1 instead of general logs.
           </p>
         </section>
 
@@ -146,10 +178,12 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Cookies</h2>
           <p>
-            When analytics is enabled, the only cookies set by Pharos are those required by Google Analytics 4 (e.g.,{" "}
+            On GA4-enabled public website routes, the only cookies set by Pharos are those required by Google Analytics
+            4 (e.g.,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga</code>,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga_*</code>) for distinguishing unique visitors. No
-            advertising or tracking cookies are used.
+            advertising or tracking cookies are used. The embedded PharosWatchBot Mini App does not load GA4 or set
+            GA4 cookies.
           </p>
         </section>
 
@@ -173,7 +207,8 @@ export default function PrivacyPage() {
           <h2 className="pharos-section-title">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
-            processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
+            processed by Google (GA4) only when analytics is enabled for the current deployment and never from the
+            embedded PharosWatchBot Mini App route. Feedback submissions
             are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are echoed publicly in
             those GitHub issues. API request verification emails are sent through Resend. API key issuance records stay
             in private operator storage and structured Worker logs; requester details and key material are not published

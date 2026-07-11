@@ -27,5 +27,19 @@ function makeSqliteStatement(
 export function createSqliteD1(sqlite: import("node:sqlite").DatabaseSync): D1Database {
   return {
     prepare: (sql: string) => makeSqliteStatement(sqlite, sql),
+    batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
+      sqlite.exec("BEGIN IMMEDIATE");
+      try {
+        const results: D1Result<T>[] = [];
+        for (const statement of statements) {
+          results.push(await statement.run<T>());
+        }
+        sqlite.exec("COMMIT");
+        return results;
+      } catch (error) {
+        sqlite.exec("ROLLBACK");
+        throw error;
+      }
+    },
   } as unknown as D1Database;
 }

@@ -3,26 +3,17 @@ import { CRON_INTERVALS } from "./cron-jobs";
 import type { DependencyCriticality } from "../types/status";
 
 export type DataSurfaceDescriptorKey =
-  | "stablecoins"
-  | "dexLiquidity"
-  | "yieldRankings"
-  | "yieldHistory"
-  | "stressSignals"
-  | "reportCards"
-  | "publicHealth";
+  "stablecoins" | "dexLiquidity" | "yieldRankings" | "yieldHistory" | "stressSignals" | "reportCards" | "publicHealth";
 
 export type YieldHistoryMode = "best" | "source";
 
 export interface DataSurfaceDescriptor {
   key: DataSurfaceDescriptorKey;
   apiPath?: string;
-  buildApiPath?: (
-    stablecoinId: string,
-    days?: number,
-    mode?: YieldHistoryMode,
-    sourceKey?: string | null,
-  ) => string;
+  summaryApiPath?: string;
+  buildApiPath?: (stablecoinId: string, days?: number, mode?: YieldHistoryMode, sourceKey?: string | null) => string;
   queryKey?: readonly unknown[];
+  summaryQueryKey?: readonly unknown[];
   buildQueryKey?: (
     stablecoinId: string,
     days: number,
@@ -86,6 +77,8 @@ export const DATA_SURFACE_DESCRIPTORS = {
     key: "yieldRankings",
     apiPath: API_PATHS.yieldRankings(),
     queryKey: ["yield-rankings"],
+    summaryApiPath: API_PATHS.yieldRankingsSummary(),
+    summaryQueryKey: ["yield-rankings", "summary"],
     cacheKey: "yield-data",
     producerJob: "sync-yield-data",
     producerIntervalSec: CRON_INTERVALS["sync-yield-data"],

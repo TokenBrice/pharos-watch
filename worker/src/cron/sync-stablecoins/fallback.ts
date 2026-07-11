@@ -18,6 +18,7 @@ import {
   runFallbackDepegFollowThrough,
 } from "./fallback-publish";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -33,6 +34,7 @@ export async function syncViaCoingeckoFallback(
   coingeckoApiKey?: string | null,
   reportProgress?: CronProgressReporter,
   jupiterApiKey?: string | null,
+  alertBrokerMode?: string,
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
@@ -120,6 +122,7 @@ export async function syncViaCoingeckoFallback(
     priceCacheEntries,
     fxFallbackRates,
     alertWebhookUrl,
+    alertBrokerMode,
     returnIfAborted,
     abortResult,
   });
@@ -139,9 +142,13 @@ export async function syncViaCoingeckoFallback(
   });
   if (isFallbackCronResult(depegResult)) return depegResult;
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    assets.map((asset) => String(asset.id)),
+    syncStartSec,
+  );
 
   const result: CronResult = {
-    status: depegErrorCount > 0 || stalenessCheckFailed ? "degraded" : "ok",
+    status: depegErrorCount > 0 || stalenessCheckFailed || !publicationCoverage.complete ? "degraded" : "ok",
     itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: assets.length,
@@ -168,10 +175,11 @@ export async function syncViaCoingeckoFallback(
       cacheKey: cacheResult.cacheKey,
       syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
+      activePublicationCoverage: publicationCoverage,
     }, {
       cacheWriteMode: "published",
       capabilities: {
-        stablecoinsCache: true,
+        stablecoinsCache: publicationCoverage.complete,
         depegPipeline: depegErrorCount === 0,
       },
     }),
@@ -184,5 +192,21 @@ export async function syncViaCoingeckoFallback(
       status: result.status ?? "ok",
     },
   });
-  return result;
+  return {
+    ...result,
+    productivity: {
+      productive: true,
+      reason: "stablecoins-fallback-cache-published",
+      publications: [{
+        surface: "stablecoins",
+        generationId: `stablecoins:${cacheResult.syncStartSec}`,
+        publishedAt: cacheResult.syncStartSec,
+        candidateRows: assets.length,
+        publishedRows: assets.length,
+        expectedRows: assets.length,
+        artifactCacheKey: cacheResult.cacheKey,
+        validationSummary: { publicationPath: "coingecko-fallback" },
+      }],
+    },
+  };
 }

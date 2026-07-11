@@ -25,7 +25,7 @@ export async function runDataInvariantCanary(
   const mode = resolveDataInvariantCanaryMode(options.mode);
   if (mode === "off") {
     return {
-      status: "ok",
+      status: "skipped_neutral",
       itemCount: 0,
       metadata: JSON.stringify({
         mode,
@@ -50,7 +50,7 @@ export async function runDataInvariantCanary(
 
   if (!summary) {
     return {
-      status: "degraded",
+      status: mode === "shadow" ? "ok" : mode === "alert" ? "error" : "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
         mode,
@@ -61,11 +61,19 @@ export async function runDataInvariantCanary(
     };
   }
 
+  const observedStatus = summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok";
+  const operationalStatus = mode === "shadow"
+    ? "ok"
+    : mode === "alert" && (summary.errorCount > 0 || summary.worstSeverity === "critical")
+      ? "error"
+      : observedStatus;
+
   return {
-    status: summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok",
+    status: operationalStatus,
     itemCount: summary.totalChecks,
     metadata: JSON.stringify({
       mode,
+      observedStatus,
       observedAt: summary.observedAt,
       totalChecks: summary.totalChecks,
       okCount: summary.okCount,

@@ -36,6 +36,11 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
+import {
+  readProviderTargetCursor,
+  rotateTargets,
+  writeProviderTargetCursor,
+} from "../pricing-provider-runtime-state";
 
 export type {
   AddressPriceAssetLike,
@@ -297,12 +302,16 @@ async function runAddressProvider(params: {
   signal?: AbortSignal;
   nowSec: number;
   deadlineMs: number;
+  db?: D1Database;
 }): Promise<AddressPriceProviderRunResult> {
   switch (params.provider) {
     case "dexscreener-address":
       return runDexScreenerAddressProvider(params.targets, params.signal, params.nowSec, params.deadlineMs);
     case "dexpaprika-address":
-      return runDexPaprikaAddressProvider(params.targets, params.signal, params.deadlineMs);
+      return runDexPaprikaAddressProvider(params.targets, params.signal, params.deadlineMs, {
+        db: params.db,
+        nowSec: params.nowSec,
+      });
     case "coingecko-onchain-address":
       return runCoingeckoOnchainAddressProvider(params.targets, params.config.cgApiKey ?? null, params.signal, params.nowSec, params.deadlineMs);
     case "alchemy-address":
@@ -321,15 +330,29 @@ export async function collectAddressPriceProviderQuotes(params: {
   config: AddressPriceProviderRuntimeConfig;
   signal?: AbortSignal;
   nowSec: number;
+  db?: D1Database;
 }): Promise<AddressPriceProviderCollectionResult> {
   const quotesByStablecoinId = new Map<string, AddressPriceQuote[]>();
   const diagnostics: AddressPriceProviderCollectionResult["diagnostics"] = [];
   const providerOutcomes: AddressPriceProviderCollectionResult["providerOutcomes"] = new Map();
   const deadlineMs = Date.now() + ADDRESS_PROVIDER_RUN_BUDGET_MS;
 
-  for (const provider of params.providers) {
+  const providerOrderCursor = await readProviderTargetCursor(
+    params.db,
+    "address-provider-order",
+    Math.floor(params.nowSec / 900),
+  );
+  const providers = rotateTargets(params.providers, providerOrderCursor);
+
+  for (const provider of providers) {
     throwIfAborted(params.signal);
-    const targets = params.targetsByProvider.get(provider) ?? [];
+    const unrotatedTargets = params.targetsByProvider.get(provider) ?? [];
+    const targetCursor = await readProviderTargetCursor(
+      params.db,
+      `address-targets:${provider}`,
+      Math.floor(params.nowSec / 900),
+    );
+    const targets = rotateTargets(unrotatedTargets, targetCursor);
     if (targets.length === 0) {
       providerOutcomes.set(provider, "success");
       diagnostics.push(buildNoCandidatesDiagnostic({
@@ -373,6 +396,7 @@ export async function collectAddressPriceProviderQuotes(params: {
       signal: params.signal,
       nowSec: params.nowSec,
       deadlineMs,
+      db: params.db,
     });
     diagnostics.push(...result.diagnostics);
     providerOutcomes.set(
@@ -388,6 +412,27 @@ export async function collectAddressPriceProviderQuotes(params: {
       list.push(quote);
       quotesByStablecoinId.set(quote.stablecoinId, list);
     }
+    if (unrotatedTargets.length > 0) {
+      const capSkipped = result.diagnostics
+        .filter((diagnostic) => diagnostic.errorClass === "cap")
+        .reduce((sum, diagnostic) => sum + (diagnostic.candidateCount ?? 0), 0);
+      const consideredTargets = Math.max(1, targets.length - capSkipped);
+      await writeProviderTargetCursor(
+        params.db,
+        `address-targets:${provider}`,
+        (targetCursor + consideredTargets) % unrotatedTargets.length,
+        params.nowSec,
+      );
+    }
+  }
+
+  if (params.providers.length > 0) {
+    await writeProviderTargetCursor(
+      params.db,
+      "address-provider-order",
+      (providerOrderCursor + 1) % params.providers.length,
+      params.nowSec,
+    );
   }
 
   return { quotesByStablecoinId, diagnostics, providerOutcomes };

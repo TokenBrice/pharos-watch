@@ -7,6 +7,9 @@ import {
   type TelegramWatcherHistoryPoint,
 } from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
+import { throwIfAborted } from "../lib/abort";
+import { toErrorMessage } from "../lib/error-utils";
+import { logWorkerEvent } from "../lib/structured-log";
 import {
   coerceCount,
   computeTelegramCurrentLifecycleSnapshot,
@@ -18,6 +21,10 @@ import {
   loadTelegramMiniAppDailyAggregate,
   utcDayFromUnixSeconds,
 } from "../lib/status/telegram-bot-stats";
+import {
+  loadTelegramFirstMutationP50,
+  refreshTelegramAdoptionRetention,
+} from "../lib/telegram-adoption-analytics";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
@@ -28,6 +35,21 @@ const PUBLIC_LOW_CARDINALITY_THRESHOLD = 5;
 
 interface TelegramPulseSnapshotOptions {
   pendingCapacitySnapshot?: { active: number } | null;
+  signal?: AbortSignal;
+}
+
+interface BuiltTelegramPulseSnapshot {
+  pulse: TelegramPulse;
+  heavySectionsRecomputed: boolean;
+}
+
+export interface TelegramPulsePublicationOutcome {
+  pulse: TelegramPulse;
+  status: "ok" | "degraded" | "error";
+  snapshotPublished: boolean;
+  heavySectionsRecomputed: boolean;
+  heavyMarkerAdvanced: boolean;
+  error: string | null;
 }
 
 interface CachedTelegramPulse {
@@ -258,12 +280,12 @@ async function loadPulseHeavySectionsUpdatedAt(
   return cachedPulse?.updatedAt ?? null;
 }
 
-async function recordPulseHeavySectionsUpdatedAt(db: D1Database, nowSec: number): Promise<void> {
-  try {
-    await setCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY, String(nowSec));
-  } catch {
-    // Heavy-section freshness is an optimization marker, not a response dependency.
-  }
+async function recordPulseHeavySectionsUpdatedAt(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  await setCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY, String(nowSec), signal);
 }
 
 async function loadFreshTelegramPulseSnapshot(
@@ -279,7 +301,8 @@ async function buildTelegramPulseSnapshot(
   db: D1Database,
   nowSec: number,
   options: TelegramPulseSnapshotOptions = {},
-): Promise<TelegramPulse> {
+): Promise<BuiltTelegramPulseSnapshot> {
+  throwIfAborted(options.signal);
   const cachedPulse = await loadCachedTelegramPulseSnapshot(db);
   const heavySectionsUpdatedAt = await loadPulseHeavySectionsUpdatedAt(db, cachedPulse);
   const reusablePulse =
@@ -308,27 +331,36 @@ async function buildTelegramPulseSnapshot(
         miniAppMutationsToday: reusablePulse.miniAppMutationsToday,
         miniAppDeniedToday: reusablePulse.miniAppDeniedToday,
         miniAppReplayClaimsToday: reusablePulse.miniAppReplayClaimsToday,
+        miniAppOpenToFirstMutationP50Sec: reusablePulse.miniAppOpenToFirstMutationP50Sec,
       }
     : await (async () => {
-        const [topRows, snapshotHistory, miniAppDailyAggregate, fallbackHistory] = await Promise.all([
+        const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation, fallbackHistory] = await Promise.all([
           loadTelegramTopFollowedCoins(db, 5).catch((error) => {
-            console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse top followed coin telemetry unavailable", error });
             unavailableFields.add("topCoins");
             return [];
           }),
           loadTelegramLifecycleHistory(db),
           loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-            console.warn("[telegram-pulse] mini-app daily aggregate unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app daily aggregate unavailable", error });
             unavailableFields.add("miniAppDailyAggregate");
             return null;
           }),
+          loadTelegramFirstMutationP50(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app first-mutation latency unavailable", error });
+            unavailableFields.add("miniAppOpenToFirstMutationP50Sec");
+            return null;
+          }),
           loadFallbackWatcherHistory(db).catch((error) => {
-            console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse fallback watcher history unavailable", error });
             unavailableFields.add("watcherHistory");
             return [];
           }),
         ]);
         const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
+        if (miniAppFirstMutation && shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)) {
+          suppressedFields.add("miniAppOpenToFirstMutationP50Sec");
+        }
         return {
           topCoins: topRows.map(
             (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
@@ -349,11 +381,12 @@ async function buildTelegramPulseSnapshot(
           miniAppReplayClaimsToday: miniAppDailyAggregate
             ? miniAppDailyAggregate.replayClaimed
             : null,
+          miniAppOpenToFirstMutationP50Sec: miniAppFirstMutation == null
+            || shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)
+            ? null
+            : miniAppFirstMutation.p50Sec,
         };
       })();
-  if (!reusablePulse) {
-    await recordPulseHeavySectionsUpdatedAt(db, nowSec);
-  }
   if (reusablePulse) {
     for (const field of reusablePulse.quality.unavailableFields) {
       if (field !== "pendingDeliveries") unavailableFields.add(field);
@@ -361,7 +394,7 @@ async function buildTelegramPulseSnapshot(
   }
   const qualityUnavailableFields = [...unavailableFields].sort();
 
-  return {
+  const pulse: TelegramPulse = {
     activeWatchers: currentSnapshot.activeWatchers,
     coinSubscriptions: currentSnapshot.explicitCoinFollows + currentSnapshot.presetImpliedCoinFollows,
     explicitCoinSubscriptions: currentSnapshot.explicitCoinFollows,
@@ -384,9 +417,7 @@ async function buildTelegramPulseSnapshot(
     miniAppMutationsToday: heavySections.miniAppMutationsToday,
     miniAppDeniedToday: heavySections.miniAppDeniedToday,
     miniAppReplayClaimsToday: heavySections.miniAppReplayClaimsToday,
-    // P50 stays null until Wave 6 (T-64) wires bucketed session→first-mutation
-    // latency through `telegram_usage_daily.latency_bucket`.
-    miniAppOpenToFirstMutationP50Sec: null,
+    miniAppOpenToFirstMutationP50Sec: heavySections.miniAppOpenToFirstMutationP50Sec,
     currentSnapshotAt: currentSnapshot.snapshotAt,
     lifecycleHistoryUpdatedAt: heavySections.lifecycleHistoryUpdatedAt,
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,
@@ -402,6 +433,62 @@ async function buildTelegramPulseSnapshot(
     updatedAt: nowSec,
     updatedEverySeconds: TELEGRAM_PULSE_CACHE_SECONDS,
   };
+  return { pulse, heavySectionsRecomputed: !reusablePulse };
+}
+
+export async function publishTelegramPulseSnapshotWithOutcome(
+  db: D1Database,
+  nowSec = Math.floor(Date.now() / 1000),
+  options: TelegramPulseSnapshotOptions = {},
+): Promise<TelegramPulsePublicationOutcome> {
+  const built = await buildTelegramPulseSnapshot(db, nowSec, options);
+  throwIfAborted(options.signal);
+  try {
+    await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(built.pulse), options.signal);
+  } catch (error) {
+    throwIfAborted(options.signal);
+    return {
+      pulse: built.pulse,
+      status: "error",
+      snapshotPublished: false,
+      heavySectionsRecomputed: built.heavySectionsRecomputed,
+      heavyMarkerAdvanced: false,
+      error: toErrorMessage(error),
+    };
+  }
+
+  let heavyMarkerAdvanced = !built.heavySectionsRecomputed;
+  let markerError: string | null = null;
+  if (built.heavySectionsRecomputed) {
+    try {
+      await recordPulseHeavySectionsUpdatedAt(db, nowSec, options.signal);
+      heavyMarkerAdvanced = true;
+    } catch (error) {
+      throwIfAborted(options.signal);
+      markerError = toErrorMessage(error);
+    }
+    try {
+      throwIfAborted(options.signal);
+      await refreshTelegramAdoptionRetention(db, nowSec);
+    } catch (error) {
+      throwIfAborted(options.signal);
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        message: "Telegram adoption retention refresh failed",
+        error,
+      });
+    }
+  }
+
+  return {
+    pulse: built.pulse,
+    status: markerError || built.pulse.quality.status !== "complete" ? "degraded" : "ok",
+    snapshotPublished: true,
+    heavySectionsRecomputed: built.heavySectionsRecomputed,
+    heavyMarkerAdvanced,
+    error: markerError,
+  };
 }
 
 export async function publishTelegramPulseSnapshot(
@@ -409,13 +496,7 @@ export async function publishTelegramPulseSnapshot(
   nowSec = Math.floor(Date.now() / 1000),
   options: TelegramPulseSnapshotOptions = {},
 ): Promise<TelegramPulse> {
-  const pulse = await buildTelegramPulseSnapshot(db, nowSec, options);
-  try {
-    await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(pulse));
-  } catch {
-    // Snapshot cache writes must not block status/pulse responses or cron sidecars.
-  }
-  return pulse;
+  return (await publishTelegramPulseSnapshotWithOutcome(db, nowSec, options)).pulse;
 }
 
 /**

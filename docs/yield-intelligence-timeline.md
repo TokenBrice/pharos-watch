@@ -1,10 +1,64 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.298`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.33`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.33 - Distinct-Day History Maturity (July 11, 2026)
+
+- Defines `sourceRisk.observationCount30d` as distinct UTC observation days from source-specific history plus the current publication day
+- Keeps the limited-history penalty active until seven distinct days exist; repeated hourly samples within one day no longer manufacture maturity
+- Leaves APY7d/APY30d/variance calculations, source ownership, PYS weights, and the penalty magnitude unchanged
+
+---
+
+## v8.32 - Opportunity-Level Risk for External Opportunities (July 11, 2026)
+
+- Publishes a source-keyed `sourceRisk.opportunityRisk` contract on every external opportunity row: opportunity class, underlying Safety Score input, derived opportunity safety score and penalty, venue review status, and missing critical evidence
+- Scores lending, fixed-yield, and structured opportunities at the market level; reviewed venue risk above the 2.0 blue-chip threshold, thin market size, observed high utilization, KYC/access restrictions, and withdrawal constraints deduct safety points from the underlying input
+- Withholds exact PYS with `pysNullReason: opportunity-evidence-missing` and NR qualification when the venue is unreviewed, market size is unknown, or a non-Royco structured tranche lacks market status
+- Keeps the bespoke Royco Dawn tranche market-health model and publishes the same contract for uniform completeness auditing
+- Never modifies the underlying stablecoin's Report Card score or grade; holder yield on the coin itself scores exactly as before
+- Recomputes generic opportunity safety during API live-safety hydration and preserves NR when critical venue or market evidence is missing; pre-v8.32 cached rows remain compatible
+- Leaves PYS formula weights, benchmark rates, and source-risk calibration unchanged
+
+---
+
+## v8.31 - Evidence Qualification and Reproducible History (July 10, 2026)
+
+- Separates deterministic calculation mechanics from evidence quality through typed calculation mode, evidence class, completeness, and score qualification fields
+- Reclassifies rate-derived products as modeled proxies, below fresh direct first-party, on-chain, and curated observations in arbitration
+- Withholds exact PYS for missing or stale critical source, benchmark, or safety evidence; modeled/fallback rows are estimated and noncritical gaps are partial
+- Persists the exact versioned APY30d, safety, variance, benchmark, source-risk, scaling, qualification, benchmark-key, evidence-class, and methodology inputs used by every new PYS history point
+- Marks post-migration history as exactly reproducible and legacy points as partial rather than manufacturing unavailable inputs
+- Leaves PYS formula weights, benchmark rates, source-risk calibration, and Report Card scores unchanged
+
+---
+
+## v8.3 - Registry-Wide Freshness Eligibility (July 10, 2026)
+
+- Applies source-family and benchmark TTLs before confidence arbitration, so fresh curated observations outrank expired deterministic or rate-derived candidates
+- Retains expired candidates as auditable alternatives; a stale-only winner remains visible as last-known context with `pharosYieldScore: null`
+- Publishes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified` provenance plus `source-stale` / `benchmark-stale` PYS null reasons
+- Uses a 48-hour hard benchmark scoring TTL; fallback or retained benchmarks degrade health, while expired benchmarks cannot support an exact PYS
+- Rolls Yield Health up across every benchmark used by published rows, so fresh USD plus stale GBP reports aggregate degraded with GBP identified
+- Leaves PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation unchanged
+
+---
+
+## v8.299 - Source Identity and Freshness Correctness (July 10, 2026)
+
+- Preserves linked-variant, protocol-specific, and other modern on-chain source keys; only null/`legacy-best` history and the explicit LUSD `bprotocol-lqty-only` legacy identity normalize to the deterministic parent key
+- Reclassifies the historical linked-variant false-switch pattern only after two consecutive clean published generations, then lets the normal 30-day audit retention remove corrected noise
+- Gives rate-derived observations a 48-hour freshness window, price-derived observations 36 hours, price-derived plus Midas/Ondo NAV anchors 45 days, and ordinary exchange-rate anchors 14 days
+- Publishes explicit `safetyReason` values for missing report-card scores, explicit `NR` grades, and Royco rows whose underlying report-card score is missing
+- Marks vaults.fyi operation as `disabled`, `probe-only`, or `rankable`, so an enabled empty allowlist is visibly non-consumable
+- Records bounded FRED/ALFRED/BoE GBP response diagnostics and adds a canary requiring two consecutive direct, current GBP SONIA publications
+- PYS formula, venue/source-risk calibration, benchmark derivation and provider order, and confidence-weighted source arbitration are unchanged
+
+---
 
 ## v8.298 - Yearn-Report Venue-Risk Recalibration (July 1, 2026)
 

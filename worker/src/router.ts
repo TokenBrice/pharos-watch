@@ -5,13 +5,14 @@ import {
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
 
-import { errorResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-utils";
+import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-utils";
 import {
   getRouteMatch,
   ROUTER_STATIC_PATHS,
   getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
 import { logWorkerEvent } from "./lib/structured-log";
+import { auditCatalogActionResponseSafely } from "./lib/catalog-action-audit";
 import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
 
 export interface ResolvedRoute {
@@ -36,6 +37,24 @@ function stripHeadBody(request: Request | undefined, response: Response): Respon
     statusText: response.statusText,
     headers: response.headers,
   });
+}
+
+function auditPersistenceFailureResponse(response: Response): Response {
+  const headers: Record<string, string> = {
+    "X-Execution-Certainty": "audit-incomplete",
+    Warning: '199 pharos "Admin action audit persistence failed"',
+  };
+  for (const name of ["Idempotency-Key", "X-Idempotent-Replay"]) {
+    const value = response.headers.get(name);
+    if (value) headers[name] = value;
+  }
+  return jsonResponse(
+    {
+      error: "audit_persistence_failed",
+      message: "The action result could not be durably audited. Retry with the same idempotency key.",
+    },
+    { status: 503, noStore: true, headers },
+  );
 }
 
 export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
@@ -86,7 +105,14 @@ async function handleRouteWithErrorBoundary(
   }
 
   const responseWithHeaders = addAdminGetNoStoreHeader(routeMatch.endpoint, routeCtx.request, response);
-  return stripHeadBody(routeCtx.request, responseWithHeaders);
+  const audited = await auditCatalogActionResponseSafely({
+    db: routeCtx.db,
+    endpoint: routeMatch.endpoint,
+    request: routeCtx.request,
+    response: responseWithHeaders,
+  });
+  const finalResponse = audited ? responseWithHeaders : auditPersistenceFailureResponse(responseWithHeaders);
+  return stripHeadBody(routeCtx.request, finalResponse);
 }
 
 export function route(routeCtx: FullRouteContext, resolvedRoute: ResolvedRoute): Promise<Response>;

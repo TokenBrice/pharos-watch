@@ -26,6 +26,8 @@ import {
 } from "./helpers";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { requireJsonInput } from "./input-guards";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { throwIfAborted } from "../../lib/abort";
 
 type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm" | "XOFm";
 
@@ -544,6 +546,7 @@ const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
 // PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
 const POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
 const MENTO_BROKER_POOL_MAX_EXCHANGE_IDS = 64;
+const MENTO_REDEMPTION_TIMEOUT_MS = 8_000;
 
 // mento-protocol/bold (GBPm) is a Liquity v2 fork sharing the ActivePool debt
 // and redemption-rate selectors already verified in liquity-v2-branches.ts.
@@ -595,6 +598,62 @@ interface MentoPoolExchange {
   };
 }
 
+function mentoPoolEnumerationCacheKey(params: MentoBrokerPoolParams): string {
+  return [
+    "mento-bipool-enumeration:v1",
+    params.rpcUrl ?? "",
+    params.fallbackRpcUrl ?? "",
+  ].join(":");
+}
+
+function loadMentoPoolExchanges(
+  params: MentoBrokerPoolParams,
+  callOptions: {
+    signal: AbortSignal;
+    ctx: AdapterContext | undefined;
+    rpcUrl: string | undefined;
+    fallbackRpcUrl: string | undefined;
+    rpcMode: EvmOnchainInput["rpcMode"];
+    chain: string;
+  },
+): Promise<MentoPoolExchange[]> {
+  const cacheKey = mentoPoolEnumerationCacheKey(params);
+  const cached = callOptions.ctx?.requestCache?.get(cacheKey) as Promise<MentoPoolExchange[]> | undefined;
+  if (cached) return cached;
+
+  const request = (async () => {
+    const exchangeIdsRaw = await fetchOnchainRawCall({
+      ...callOptions,
+      contract: MENTO_BIPOOL_MANAGER_ADDRESS,
+      data: GET_EXCHANGE_IDS_SELECTOR,
+    });
+    const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, {
+      maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS,
+    });
+    if (!exchangeIds || exchangeIds.length === 0) {
+      throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
+    }
+
+    const poolExchanges: MentoPoolExchange[] = [];
+    for (const exchangeId of exchangeIds) {
+      throwIfAborted(callOptions.signal);
+      const poolExchange = decodePoolExchange(await fetchOnchainRawCall({
+        ...callOptions,
+        contract: MENTO_BIPOOL_MANAGER_ADDRESS,
+        data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
+      }));
+      if (poolExchange) poolExchanges.push(poolExchange);
+    }
+    return poolExchanges;
+  })();
+
+  // Keep rejected enumeration promises for this run. Repeating the same 17 RPC
+  // reads for every Mento coin cannot turn a run-scoped provider failure into a
+  // success, and it was the largest avoidable reserve-slot cost during Night Watch.
+  callOptions.ctx?.requestCache?.set(cacheKey, request);
+  return request;
+}
+
 function decodePoolExchange(raw: string | null): MentoPoolExchange | null {
   if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
   try {
@@ -628,48 +687,21 @@ async function fetchMentoBrokerPoolRedemption(
     chain: CELO_ONCHAIN_INPUT.chain,
   };
 
-  const exchangeIdsRaw = await fetchOnchainRawCall({
-    ...callOptions,
-    contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-    data: GET_EXCHANGE_IDS_SELECTOR,
-  });
-  const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, { maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS });
-  if (!exchangeIds || exchangeIds.length === 0) {
-    throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
-  }
-
-  const matchedPoolExchanges: Array<MentoPoolExchange | null> = Array.from({ length: params.pools.length }, () => null);
-  for (const exchangeId of exchangeIds) {
-    const poolExchange = decodePoolExchange(await fetchOnchainRawCall({
-      ...callOptions,
-      contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-      data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
-    }));
-    if (!poolExchange) continue;
-
-    for (let index = 0; index < params.pools.length; index += 1) {
-      if (matchedPoolExchanges[index]) continue;
-      const poolConfig = params.pools[index];
-      const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
-      const counterAddress = poolConfig.counterAsset.address.toLowerCase();
-      const asset0 = poolExchange.asset0.toLowerCase();
-      const asset1 = poolExchange.asset1.toLowerCase();
-      if (
-        (asset0 === selfAddress && asset1 === counterAddress) ||
-        (asset0 === counterAddress && asset1 === selfAddress)
-      ) {
-        matchedPoolExchanges[index] = poolExchange;
-      }
-    }
-
-    if (matchedPoolExchanges.every((pool) => pool != null)) break;
-  }
+  const poolExchanges = await loadMentoPoolExchanges(params, callOptions);
 
   let capacityUsd = 0;
   let maxFeeBps: number | null = null;
-  for (const [index, poolConfig] of params.pools.entries()) {
+  for (const poolConfig of params.pools) {
+    const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
     const counterAddress = poolConfig.counterAsset.address.toLowerCase();
-    const match = matchedPoolExchanges[index];
+    const match = poolExchanges.find((pool) => {
+      const asset0 = pool.asset0.toLowerCase();
+      const asset1 = pool.asset1.toLowerCase();
+      return (
+        (asset0 === selfAddress && asset1 === counterAddress) ||
+        (asset0 === counterAddress && asset1 === selfAddress)
+      );
+    });
     if (!match) {
       throw new Error(
         `mento broker-pool: no matching BiPoolManager exchange for ${poolConfig.selfTokenAddress}/${poolConfig.counterAsset.address}`,
@@ -833,7 +865,17 @@ export async function fetchMentoReserves(
   }
 
   try {
-    const redemptionMetadata = await fetchMentoRedemptionMetadata(params.redemption, signal, ctx);
+    const redemptionTimeout = createTimeoutSignal({
+      timeoutMs: MENTO_REDEMPTION_TIMEOUT_MS,
+      timeoutReason: new Error("mento-redemption-timeout"),
+      parentSignal: signal,
+    });
+    let redemptionMetadata: NonNullable<AdapterResult["metadata"]>;
+    try {
+      redemptionMetadata = await fetchMentoRedemptionMetadata(params.redemption, redemptionTimeout.signal, ctx);
+    } finally {
+      redemptionTimeout.dispose();
+    }
     return {
       ...result,
       ...(warnings.length > 0 ? { warnings } : {}),

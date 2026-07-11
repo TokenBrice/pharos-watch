@@ -5,22 +5,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YieldClient } from "./client";
 import { makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
-import type { YieldRankingsResponse } from "@shared/types";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
+import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
 const {
   useYieldAdapterManifestMock,
-  useYieldRankingsMock,
+  useYieldRankingsSummaryMock,
   searchParamsMock,
   replaceParamsMock,
   setParamMock,
   pushMock,
+  leaderboardPropsMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
-  useYieldRankingsMock: vi.fn(),
+  useYieldRankingsSummaryMock: vi.fn(),
   searchParamsMock: new URLSearchParams(),
   replaceParamsMock: vi.fn(),
   setParamMock: vi.fn(),
   pushMock: vi.fn(),
+  leaderboardPropsMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -29,7 +32,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldAdapterManifest: useYieldAdapterManifestMock,
-  useYieldRankings: useYieldRankingsMock,
+  useYieldRankingsSummary: useYieldRankingsSummaryMock,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -53,7 +56,10 @@ vi.mock("@/components/yield-scatter-plot", () => ({
 }));
 
 vi.mock("@/components/yield-leaderboard", () => ({
-  YieldLeaderboard: () => <div data-testid="yield-leaderboard" />,
+  YieldLeaderboard: (props: unknown) => {
+    leaderboardPropsMock(props);
+    return <div data-testid="yield-leaderboard" />;
+  },
 }));
 
 vi.mock("@/app/yield/source-board", () => ({
@@ -87,21 +93,21 @@ const rows = [
   }),
 ];
 
-function makeResponse(): YieldRankingsResponse {
-  return {
+function makeResponse(): YieldRankingsSummaryResponse {
+  return projectYieldRankingsSummary({
     rankings: rows,
     riskFreeRate: 4.25,
     scalingFactor: 1,
     medianApy: 5,
     updatedAt: 1_776_000_000,
     warnings: [],
-  };
+  });
 }
 
 describe("YieldClient", () => {
   beforeEach(() => {
     searchParamsMock.forEach((_, key) => searchParamsMock.delete(key));
-    useYieldRankingsMock.mockReturnValue({
+    useYieldRankingsSummaryMock.mockReturnValue({
       data: makeResponse(),
       meta: null,
       isLoading: false,
@@ -131,9 +137,23 @@ describe("YieldClient", () => {
     expect(screen.queryByTestId("yield-scatter-plot")).toBeNull();
   });
 
+  it("resolves comparison rows independently of the current filters", () => {
+    searchParamsMock.set("q", "zzzz-no-match");
+
+    render(<YieldClient />);
+
+    const props = leaderboardPropsMock.mock.calls.at(-1)?.[0] as {
+      rows: unknown[];
+      comparisonRows: Array<{ id: string }>;
+    };
+    expect(props.rows).toHaveLength(0);
+    expect(props.comparisonRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
   it("renders both the risk budget slider and scatter plot when yield rows are visible", () => {
     render(<YieldClient />);
 
+    expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
   });
@@ -147,6 +167,26 @@ describe("YieldClient", () => {
     expect(screen.getByRole("link", { name: "Adjust picker answers" }).getAttribute("href")).toBe(
       "/screener/picker?p=yield",
     );
+  });
+
+  it("explains when an omitted per-coin workbench falls back to the leaderboard", () => {
+    searchParamsMock.set("workbenchFallback", "usdc-circle");
+
+    render(<YieldClient />);
+
+    expect(screen.getByRole("region", { name: "Yield workbench fallback" })).toBeTruthy();
+    expect(screen.getByText(/dedicated Yield workbench for/i).textContent).toContain("USDC");
+    expect(screen.getByRole("link", { name: "View USDC dossier" }).getAttribute("href")).toBe(
+      "/stablecoin/usdc-circle",
+    );
+  });
+
+  it("does not render fallback metadata for an invalid or untracked id", () => {
+    searchParamsMock.set("workbenchFallback", "not-a-tracked-stablecoin");
+
+    render(<YieldClient />);
+
+    expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
   });
 
   it("risk budget changes preserve non-risk research filters", () => {

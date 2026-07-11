@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { isOpsPath } from "@/lib/admin-workspaces";
 import { isChromelessPath } from "@/lib/chromeless-routes";
 
 function isDigestPath(pathname: string | null): boolean {
@@ -10,13 +11,13 @@ function isDigestPath(pathname: string | null): boolean {
 
 export function RouteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname)) return null;
+  if (isChromelessPath(pathname) || isOpsPath(pathname)) return null;
   return children;
 }
 
 export function RegimeBarChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname) || pathname === "/") return null;
+  if (isChromelessPath(pathname) || isOpsPath(pathname) || pathname === "/") return null;
   return children;
 }
 
@@ -27,7 +28,7 @@ export function RegimeBarChrome({ children }: { children: ReactNode }) {
  */
 export function GlobalFooterChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname) || isDigestPath(pathname)) return null;
+  if (isChromelessPath(pathname) || isOpsPath(pathname) || isDigestPath(pathname)) return null;
   if (pathname === "/") {
     return <div className="pharos-home-footer">{children}</div>;
   }
@@ -36,6 +37,8 @@ export function GlobalFooterChrome({ children }: { children: ReactNode }) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  if (isOpsPath(pathname)) return children;
+
   const chromeless = isChromelessPath(pathname);
   const className = chromeless
     ? "flex-1 min-w-0"

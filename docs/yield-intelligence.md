@@ -8,11 +8,21 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.298`
+- **Current methodology version:** `v8.33`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.33 makes history maturity cadence-aware at the day boundary: `sourceRisk.observationCount30d` counts distinct UTC observation days, including the current publication day, rather than raw hourly samples. The existing limited-history penalty remains active until seven distinct days are represented, so a few hours of dense observations cannot appear mature. APY windows, PYS weights, and the penalty magnitude are unchanged.
+
+Yield v8.32 adds opportunity-level risk for external opportunities. Rows whose yield type is `lending-opportunity`, `fixed-yield`, or `structured-tranche` publish a source-keyed `sourceRisk.opportunityRisk` contract (`shared/lib/yield-opportunity-risk.ts`): the underlying stablecoin's Safety Score is one input, and reviewed venue risk (shared 2.0 blue-chip threshold, 5 safety points per weighted point above it), market size, observed utilization, and access/withdrawal constraints adjust it into an opportunity safety score published with `safetyProvenance: opportunity-safety`. Missing critical market evidence — unreviewed venue, unknown market size, or unknown market status for non-Royco structured tranches — produces `pysNullReason: opportunity-evidence-missing` with an NR qualification instead of a neutral exact score. Royco Dawn tranches keep their bespoke market-health model and publish the same contract. Underlying Report Card scores, PYS formula weights, and source-risk calibration are unchanged.
+
+Yield v8.31 separates calculation mechanics from evidence quality. Rankings now publish `calculationMode`, `evidenceClass`, `evidenceCompleteness`, and `scoreQualification`; rate-derived products are modeled proxies and cannot outrank fresh direct evidence merely because the proxy math is deterministic. Missing or stale critical freshness, benchmark, or safety evidence produces NR with a null PYS, while modeled/fallback evidence is estimated and noncritical gaps are partial. New history points also persist the exact versioned PYS inputs used at publication and the history API labels them `exact`; older points remain available as `legacy-partial`. Formula weights, benchmark rates, source-risk calibration, and Report Card scores are unchanged.
+
+Yield v8.3 makes freshness an eligibility rule rather than a display-only warning. Source-family and benchmark TTLs are applied before confidence arbitration, so a fresh curated observation beats an expired deterministic or rate-derived candidate. Expired candidates remain auditable as retained alternatives; if no fresh alternative exists, the last-known row remains visible with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`. Ranking provenance now publishes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. Yield Health evaluates every benchmark key used by published rows, preventing a fresh USD benchmark from masking stale GBP or other local-currency evidence. The hard benchmark scoring TTL is 48 hours. PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged.
+
+Yield v8.299 corrects source-identity and freshness semantics exposed by the July Night Watch. Source-aware history now aliases only null/`legacy-best` rows and the explicit LUSD `bprotocol-lqty-only` legacy key; linked-variant, protocol-specific, and other modern on-chain keys remain distinct. The historical linked-variant false-switch pattern is reclassified only after two consecutive clean published generations. Rate-derived observations now receive a 48-hour freshness window, price-derived observations remain at 36 hours, price-derived and Midas/Ondo NAV anchors remain valid through their configured 45-day lookup window, and ordinary exchange-rate anchors retain the 14-day limit. Rankings now publish explicit default/NR safety reasons, vaults.fyi reports disabled/probe-only/rankable consumption, and GBP SONIA attempts expose bounded response diagnostics plus a canary requiring two consecutive direct current publications. PYS math, source-risk and venue-risk calibration, benchmark derivation/provider order, and confidence-weighted arbitration are unchanged.
 
 Yield v8.298 recalibrates reviewed venue sub-scores against Yearn's newly-published per-protocol risk reports (documentation cross-check, not a runtime feed). Five direct-match RWA/credit venues that scored harsher than Yearn are lowered — `3jane-lending` (also upgraded partial→verified), `cap`, `maple`, `centrifuge`, and `fluid-lending` — so their continuous venue penalties fall and `fluid-lending`'s derived tier moves medium→low (leaving the DEWS medium-venue branch; DEWS thresholds unchanged). The shared Sky/Spark legs `sparklend` and `spark-savings` move funds management 1→2 for the shared MCD_VAT backing, and `yearn`/`yearn-finance` operational moves 2→1; all three stay below the 2.0 penalty knee so the blue-chip no-op is preserved. Two proxy-only reports (`aave-v3` vs sGHO, `morpho` vs a Gauntlet Aera vault) are held unchanged. It also adds two low-severity (zero-penalty) dependency-concentration entries `syrupusdc-maple` and `syrupusdt-maple` = Maple (Pool Delegate), surfacing the single off-chain Pool-Delegate EOA without double-counting the `maple` venue tier. The PYS formula, tier thresholds, and penalty curve are unchanged.
 
@@ -328,7 +338,7 @@ vaults.fyi is an optional supplemental source family for coverage review and sel
 - With no `VAULTS_FYI_RANKABLE_VAULTS`, the adapter runs a bounded detailed-vault inventory probe, records provider telemetry, and publishes no rankable candidates. Inventory volume is reported separately from supplemental candidate counts.
 - `VAULTS_FYI_RANKABLE_VAULTS` is a CSV of `network:vaultId` or `network/vaultId` entries. Only matching rows can become supplemental candidates.
 - Candidate rows must match a tracked stablecoin by canonical chain and token contract address. Symbol-only matches are rejected.
-- The adapter applies TVL, APY, active/corruption/warning, vault-score, and local credit-budget gates before writing cache candidates.
+- The adapter applies TVL, APY, active/corruption/warning, vault-score, and local credit-budget gates before writing cache candidates. Its monthly ledger reserves the full run allowance before provider calls; if that reservation expires before finalization, the full reserved amount is conservatively charged to month-to-date estimated usage before a successor can claim credits, preventing a crashed run from silently undercounting quota consumption.
 - Source keys are stable as `protocol-api:vaults-fyi:<chain>:<vault>`. The row `project` and `sourceRisk.venueProtocol` use the underlying protocol slug from vaults.fyi when available.
 - Provider telemetry exposes `pageCapReached` and `creditCapReached` so expected bounded probes are distinguishable from provider errors.
 - Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the hourly publisher require vaults.fyi. Disabled-family telemetry distinguishes `disabled` (flag off/unset), `no-key` (enabled without runtime secret), and `invalid-config` (malformed enable flag) so operators can tell configuration states apart.
@@ -596,13 +606,13 @@ https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2
 | `reward-heavy`     | `apyReward / apy > 0.8`                                                                                                                                                                                                                                                                                            | 80%+ from incentives, not base yield                                                |
 | `tvl-outflow`      | TVL dropped > 20% from prev week                                                                                                                                                                                                                                                                                   | Capital leaving the protocol                                                        |
 | `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                                                                                                                                                                                                                                                                               | Yield dropped to zero but had recent activity                                       |
-| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours; `price-derived` rows are older than 36 hours from their latest `supply_history` snapshot; derived-source comparison anchors are older than 14 days | Yield data or its APY comparison anchor is older than the expected freshness window |
+| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours; `price-derived` rows are older than 36 hours; `rate-derived` rows are older than 48 hours; ordinary comparison anchors are older than 14 days; price-derived and Midas/Ondo NAV anchors are older than 45 days | Yield data or its APY comparison anchor is older than the source's expected cadence/window |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
-At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation exceeds its freshness window or a derived-source comparison anchor is older than 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`). Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use a 6 hour threshold (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`) so the hourly publisher does not flag them stale during a normal 4 hour supplemental cycle, and `price-derived` rows use a 36 hour threshold because their source observations come from daily `supply_history` snapshots (`PRICE_DERIVED_STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
+At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation or its comparison anchor exceeds the source-aware window. Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use 6 hours (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`), price-derived source observations use 36 hours (`PRICE_DERIVED_STALE_THRESHOLD_MS`), and rate-derived rows use 48 hours (`RATE_DERIVED_STALE_THRESHOLD_MS`) because the benchmark producer is daily. Ordinary exchange-rate comparison anchors use 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`); price-derived plus the Midas mMEV and Ondo USDY NAV-oracle rows use 45 days (`LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS`) because those adapters deliberately choose anchors from a 7-45 day window. The signal is included in cached rankings responses but is not written back to `yield_data`.
 
-The sync also records comparison-anchor freshness under `sourceCoverage.comparisonAnchorFreshness`. The summary includes the anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples, and a truncation flag. Publication metadata additionally records `sourceCoverage.previousPublishedRankingCount` and `sourceCoverage.publishedRankingCountDelta`; severe coverage-regression guards emit the same ranking-count fields at top level before normal source coverage is assembled. `/api/status` exposes both shapes as `yieldHealth.previousRankingCount` and `yieldHealth.rankingCountDelta` so operators can see coverage growth or shrinkage without manually comparing payloads. These summaries are observability-only: stale-anchor warnings still follow the read-time `data-stale` rules above, and the freshness/ranking-delta metadata does not change source arbitration or scoring.
+The sync also records comparison-anchor freshness under `sourceCoverage.comparisonAnchorFreshness`. The summary includes the anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples with each source's `maxAgeSeconds`, and a truncation flag. Publication metadata additionally records `sourceCoverage.previousPublishedRankingCount` and `sourceCoverage.publishedRankingCountDelta`; severe coverage-regression guards emit the same ranking-count fields at top level before normal source coverage is assembled. `/api/status` exposes both shapes as `yieldHealth.previousRankingCount` and `yieldHealth.rankingCountDelta` so operators can see coverage growth or shrinkage without manually comparing payloads. These summaries are observability-only: stale-anchor warnings still follow the read-time `data-stale` rules above, and the freshness/ranking-delta metadata does not change source arbitration or scoring.
 
 The sync also performs a confidence-aware cross-source arbitration pass before `is_best` is chosen:
 
@@ -658,7 +668,7 @@ CREATE TABLE yield_data (
 
 **Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
 
-**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Eligible tracked wrapper variants also project linked native/wrapper sources to the active parent with `linked-variant:<variantId>:<sourceKey>` source keys, while third-party lending opportunities stay attached only to the asset that owns the lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately, sorted by the same worker candidate ordering used for arbitration, and attached as `altSources[]` in the cached API response with `sourceRole`, `confidenceTier`, `selectionRank`, and `rejectionReasonCode` metadata. Ranking rows with retained alternates also include `alternateSummary` for the best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus the selected row. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Eligible tracked wrapper variants also project linked native/wrapper sources to the active parent with `linked-variant:<variantId>:<sourceKey>` source keys, while third-party lending opportunities stay attached only to the asset that owns the lending row. These modern linked and protocol-specific keys remain distinct during history normalization; only null/`legacy-best` rows and the explicit LUSD `bprotocol-lqty-only` legacy alias normalize to a deterministic parent identity. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately, sorted by the same worker candidate ordering used for arbitration, and attached as `altSources[]` in the cached API response with `sourceRole`, `confidenceTier`, `selectionRank`, and `rejectionReasonCode` metadata. Ranking rows with retained alternates also include `alternateSummary` for the best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus the selected row. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
 
 Generation-aware publisher fields added by migration `0125_yield_publication_generations.sql` are nullable so old rows and rollback payloads remain readable:
 
@@ -691,6 +701,7 @@ CREATE TABLE yield_history (
   pys_at_publish    REAL,             -- PYS at publish time (v8.14, migration 0132)
   safety_at_publish REAL,             -- safety score at publish time (v8.14, migration 0132)
   variance_at_publish REAL,           -- APY30d variance at publish time (v8.14, migration 0132)
+  pys_inputs_at_publish TEXT,         -- versioned exact PYS input snapshot JSON (v8.31, migration 0194)
   PRIMARY KEY (stablecoin_id, source_key, recorded_at)
 );
 ```
@@ -710,7 +721,7 @@ Migration `0125_yield_publication_generations.sql` adds a compact generation led
 - `yield_publication_generations` records `generation_id`, `started_at`, publication `state`, ranking/source row counts, `published_at` or `failed_at`, and failure/debug metadata.
 - `yield_source_decisions` records the selected source per stablecoin for a generation, selected confidence/data-source details, selected 30d APY and score, previous best source, source-changed flag, rejected-candidate count, and a bounded alternatives JSON payload.
 
-The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema.
+The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema. The v8.299 cleanup recognizes the exact historical false-switch pattern where a selected `linked-variant:*` key was compared with `onchain:<stablecoinId>`. It reclassifies those old rows as audit evidence only after the same stablecoin publishes the linked identity with `source_switch = 0` in two consecutive published generations; the normal 30-day audit retention can then remove them.
 
 ---
 
@@ -719,7 +730,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 ### `sync-yield-data`
 
 **Schedule:** `20 * * * *` (every hour on a dedicated post-DEX trigger)
-**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + helper modules under `worker/src/cron/yield-sync/`
+**Files:** `worker/src/cron/sync-yield-data.ts` thin stage sequencer; `worker/src/cron/yield-sync/coordinator-{fetch,normalize,health-telemetry,persist}-stage.ts` orchestration stages; domain helpers under `worker/src/cron/yield-sync/`
 
 **Execution flow:**
 
@@ -728,7 +739,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 3. Load the latest cached supplemental-source snapshot from `sync-yield-supplemental`; stale or missing supplemental cache is treated as optional loss, not a publisher hard-stop
 4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs; protocol-specific hourly on-chain readers such as scrvUSD's current-rate source run during per-coin resolution and fall back to curated rows if unavailable
 5. Read the cached benchmark registry from D1, with USD as the default benchmark and EUR / CHF available when fetched successfully
-6. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
+6. Load Safety Scores through `computeSafetyScoresSnapshot(db, { outputMode: "map", sourceMode: "published-cache" })`. This mode consumes the compact `report_card_cache` projection from `publish-report-card-cache` instead of recomputing report cards independently. The loader requires a fresh methodology-pinned manifest whose scored IDs plus explicit NR IDs equal the exact active registry set; a missing, stale, legacy, or identity-mismatched projection returns an empty degraded snapshot rather than mixing generations. The accepted source, `publicationGenerationId`, `methodologyVersion`, and `publishedAt` are carried into rankings provenance
 7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins and linked parent rows for eligible tracked yield variants
 8. Preload source-aware `yield_history` datasets: previous-best rows use indexed per-coin point reads, previous-TVL rows use indexed point reads for the source keys resolved in the current run, 30d APY history remains chunked by stablecoin IDs, and legacy best-history fallbacks stay available for evaluation
 9. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
@@ -738,9 +749,9 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 13. Publish the `yield-rankings` cache payload with `publication.status = "published"` plus row-level `publishedRank`, upsert `yield_data` (all sources), insert `yield_history` points, insert selected-source decision evidence, and mark the generation `published` in one guarded D1 batch; if cache publication fails or CAS skips because a newer cache exists, mark only the generation `failed` and leave the previous published D1 rows in place
 14. Purge stale rows for refreshed coins only on non-degraded successful publication so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
 15. Prune `yield_history` older than 365 days
-16. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration using source-cadence freshness windows (three hourly publish cycles for hourly families; 6 hours for supplemental protocol-API and optional Aave/Compound rows; 36 hours for `price-derived` rows; 14 days for derived-source comparison anchors), record bounded source-coverage metadata for deterministic-envelope rejections, comparison-anchor freshness, and previous-vs-current published ranking counts, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
+16. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration using source-cadence freshness windows (three hourly publish cycles for hourly families; 6 hours for supplemental protocol-API and optional Aave/Compound rows; 36 hours for `price-derived` rows; 14 days for derived-source comparison anchors), record bounded source-coverage metadata for deterministic-envelope rejections, comparison-anchor freshness, previous-vs-current published ranking counts, and the exact report-card publication consumed for PYS, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid; `sync-yield-data` never writes `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the default USD benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention), the retained last-known-good USD benchmark is older than 72 hours (3 days), DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, rankings publication fails schema/severe-shrink guards, or the candidate publication severely regresses yield-bearing, lending-opportunity, or total ranking count versus the previous public cache, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage unless the published-coverage guard would overwrite a materially fuller prior public snapshot. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite so the previous public ranking remains in place. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
+**Degraded semantics:** If the exact published report-card projection is missing, stale, legacy, methodology-mismatched, or active-ID-incomplete; Safety Score coverage is below the minimum ratio (0.75); the default USD benchmark is on a true fallback path (`isFallback === true`); the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention); the retained last-known-good USD benchmark is older than 72 hours (3 days); DeFiLlama pool inputs are unavailable; the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools; all configured deterministic on-chain sources fail in the same cycle without full alternative coverage; a deterministic cooldown suppresses on-chain reads but coverage gaps reappear; rankings publication fails schema/severe-shrink guards; or the candidate publication severely regresses yield-bearing, lending-opportunity, or total ranking count versus the previous public cache, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage unless the published-coverage guard would overwrite a materially fuller prior public snapshot. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite so the previous public ranking remains in place. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid; the report-card publisher remains the sole owner of `report_card_cache`.
 
 Implementation stages:
 
@@ -749,7 +760,11 @@ Implementation stages:
 - `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-change tracking
 - `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes
 - `yield-sync/history.ts`: batched history preloads plus stale/orphan cleanup
-- `sync-yield-data.ts`: safety snapshot handling, orchestration glue, and degraded-mode policy
+- `yield-sync/coordinator-fetch-stage.ts`: preflight, writer-pause enforcement, published-generation repair, source-state loading, and safety-input progress
+- `yield-sync/coordinator-normalize-stage.ts`: source resolution, history loading/normalization, and cooperative evaluation progress
+- `yield-sync/coordinator-health-telemetry-stage.ts`: deterministic-source health, coverage guards, preview artifacts, degradation policy, and publication-readiness telemetry
+- `yield-sync/coordinator-persist-stage.ts`: generation publication, completion telemetry, and final cron metadata
+- `sync-yield-data.ts`: public cron entrypoint that sequences the four stages and preserves early degraded returns
 
 ### `sync-yield-supplemental`
 
@@ -769,9 +784,9 @@ This best-effort cron owns the heavier optional families that used to run inline
 
 It fetches those families, serializes the resolved candidate set into a cache snapshot, and lets the hourly publisher consume that snapshot. Empty snapshots are treated as degraded and do not overwrite the previous cache.
 
-vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. `sourceFamilyCounts.vaultsFyi` tracks emitted candidates, while `sourceFamilyInventoryCounts.vaultsFyi` and the vaults.fyi provider telemetry track audit inventory volume. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
+vaults.fyi participates as a supplemental-family cache row only when explicitly enabled. Without `VAULTS_FYI_RANKABLE_VAULTS`, its output remains audit-only telemetry and contributes no supplemental candidates. Provider telemetry makes this consumability explicit through `consumptionMode` (`disabled`, `probe-only`, or `rankable`) and `consumptionReason`; enabled plus an empty allowlist is always `probe-only` / `rankable-allowlist-empty`. `sourceFamilyCounts.vaultsFyi` tracks emitted candidates, while `sourceFamilyInventoryCounts.vaultsFyi` and the vaults.fyi provider telemetry track audit inventory volume. With allowlisted vaults, emitted rows use the same cached supplemental-source path as the other optional families and remain subject to the hourly publisher's existing freshness, dedupe, source-risk, and publication-collapse guards.
 
-**Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
+**Shared safety scores:** The shared helper has explicit computed and published-cache modes. Computed consumers use the same report-card pipeline and two-phase dependency ordering (independent first, then CeFi-dependent). Hourly yield publication uses only `sourceMode: "published-cache"`, so PYS inputs are the exact compact projection already sealed with the full report-card and Telegram projections. Rankings provenance records `source: "report-card-cache"`, the report-card `publicationGenerationId`, Safety Score `methodologyVersion`, and source `publishedAt`; rejected cache evidence leaves those fields nullable and the safety snapshot degraded.
 
 **History query policy:** Previous-best reads select the latest published row through indexed per-coin point queries. Previous-TVL reads select the latest published row through indexed per-coin/source point queries scoped to source keys resolved in the current run, with a legacy null-source fallback only for single-source coins. The 30d APY history read remains chunked by stablecoin IDs and indexed by stablecoin ID in memory. Cleanup deletes also chunk ID lists to stay under D1's 100-bound-parameter cap.
 
@@ -799,13 +814,19 @@ Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate n
 
 When a fetch fails but a prior benchmark exists, the cache preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded or proxy default.
 
+GBP attempts additionally write bounded cron metadata for every FRED, ALFRED, and BoE response attempted: provider, HTTP status, content type, body byte count, parse success, parsed record date, and a stable failure class. Response bodies and URLs are never included. The `yield-gbp-benchmark-current` Worker canary remains degraded until GBP is non-fallback, fetched within 48 hours, has a record date within 7 days, and has completed two consecutive fresh daily publications.
+
 ---
 
 ## API Endpoints
 
 ### `GET /api/yield-rankings`
 
-Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from current report-card data at API read time. The API first uses the exact published `report-cards:snapshot` and computes a report-card fallback when that snapshot is unavailable. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report card, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
+
+For v8.32 external opportunities, read-time hydration recomputes the opportunity-level safety contract from the live underlying Report Card plus the published venue and market evidence. It preserves `opportunity-evidence-missing` and an NR qualification when critical market evidence is absent; hydration cannot replace market-level safety with the underlying stablecoin score or requalify an NR opportunity. Pre-v8.32 cached rows without an `opportunityRisk` contract retain their legacy compatibility behavior.
+
+The two top-level safety provenance fields have different clocks. `provenance.safetySnapshot` is immutable publish-time evidence: it names the exact compact report-card generation used by the hourly cron to compute the cached rankings. Read-time hydration never overwrites it. Optional `provenance.liveSafetyHydration` instead reports the current hydration `kind`, row coverage counts/ratio, reason, source (`report-cards:snapshot` or `computed-report-cards`), publication generation, methodology, and publish time. Hydration is marked degraded when DEX-liquidity/redemption inputs are stale, the full report-card snapshot is over age, or live row coverage is below 0.75; the API appends the `yield-safety-hydration-degraded` body warning and emits HTTP `Warning: 199`. A hydration exception returns the cached published safety fields with the same warning code/header.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
 
@@ -831,6 +852,7 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       "pharosYieldScore": 28,
       "safetyScore": 65,
       "safetyGrade": "B",
+      "safetyReason": null,
       "yieldToRisk": 0.33,
       "excessYield": 5.95,
       "benchmarkKey": "USD",
@@ -868,7 +890,11 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       "provenance": {
         "confidenceTier": "curated",
         "selectionReason": "curated canonical source selected by confidence-weighted arbitration",
-        "sourceSwitch": false
+        "sourceSwitch": false,
+        "safetyReason": null,
+        "sourceFreshness": "fresh",
+        "benchmarkFreshness": "healthy",
+        "scoreQualified": true
       },
       "publicationGenerationId": "yield-1772000000",
       "publishedRank": 3,
@@ -951,15 +977,15 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.298",
-    "currentVersion": "8.298",
+    "version": "8.299",
+    "currentVersion": "8.299",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
 }
 ```
 
-Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics. Generation-aware payloads include top-level `publication` and optional row-level `publicationGenerationId`; legacy rows remain valid when those fields are omitted. Rankings payloads may also include the standard Yield Intelligence `methodology` envelope.
+Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics. Generation-aware payloads include top-level `publication` and optional row-level `publicationGenerationId`; legacy rows remain valid when those fields are omitted. Rankings payloads may also include the standard Yield Intelligence `methodology` envelope. `provenance.safetySnapshot` remains the hourly publisher's immutable generation evidence, while optional `provenance.liveSafetyHydration` describes the separate report-card source used for API-time row hydration.
 
 Each best-source row and alt-source row can also include `yieldSourceUrl`. The worker resolves this from the curated yield-source link registry (`worker/src/lib/yield-source-links.ts`) and falls back to coin metadata links when no source-specific override exists.
 
@@ -1005,6 +1031,9 @@ Each `history` row includes:
 - `dataSource`
 - `isBest`
 - `sourceSwitch`
+- `pysAtPublish`, `safetyAtPublish`, and `varianceAtPublish`
+- `pysInputsAtPublish`: versioned exact formula/evidence inputs on v8.31+ rows, otherwise `null`
+- `pysReproducibility`: `exact` for complete post-migration snapshots or `legacy-partial` for older rows
 
 `warningSignals` type: `string[]`.
 
@@ -1014,16 +1043,16 @@ Each `history` row includes:
 
 ### Page: `/yield`
 
-**Files:** `src/app/yield/page.tsx` (SSG wrapper), `src/app/yield/client.tsx` (interactive)
+**Files:** `src/app/yield/page.tsx` (SSG wrapper), `src/app/yield/client.tsx` (interactive), and the filter, facet, and presentation modules listed in the file index behind the `src/lib/yield-view-model.ts` facade
 
 **Layout (top to bottom):**
 
 1. `QueryErrorNotice` when the rankings query fails
 2. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
 3. Optional selector handoff strip when opened from the Stablecoin Picker
-4. Hero scatter card with the summary metrics integrated into the card header
-5. Risk-budget slider and filter controls
-6. Yield leaderboard table
+4. Risk-budget controls and active policy
+5. Hero decision panel with risk-qualified highlights and a capped scatter mini-map
+6. Filter controls and the yield leaderboard table
 7. Reference rates strip, Yield Sources board for the active filtered ranking scope, and coin index
 8. Disclaimer / FAQ
 
@@ -1031,7 +1060,7 @@ Each `history` row includes:
 
 **Files:** `src/app/stablecoin/[id]/yield/page.tsx` (SSG wrapper), `src/app/stablecoin/[id]/yield/client.tsx` (interactive)
 
-Generated for every non-pre-launch tracked coin (lending-opportunity rows can appear for any tracked stablecoin, so the deep link must be reachable beyond `flags.yieldBearing`). The route renders the peer rail, per-source APY history, warning-signal timeline, and source-switch history for the selected coin; coins with no live yield row render an empty-state card, and only IDs absent from the tracked registry return `notFound()`. All known-coin pages carry noindex (`robots: { index: false, follow: true }`) metadata.
+Statically generated only for non-pre-launch yield-bearing coins and the curated auto-lending allowlist shared with the Worker. The route renders the peer rail, per-source APY history, warning-signal timeline, and source-switch history for the selected coin; allowlisted coins with no live row render an empty-state card. Requests for a known tracked coin without a materialized workbench are redirected by the Pages stablecoin shim to `/yield/?compare=<id>&from=detail-fallback`, while unknown IDs remain 404s. Materialized workbenches carry noindex (`robots: { index: false, follow: true }`) metadata.
 
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 
@@ -1070,7 +1099,7 @@ The section returns `null` once rankings have loaded and the coin is neither `yi
 
 ### `YieldScatterPlot` (`src/components/yield-scatter-plot.tsx`)
 
-Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-source point per stablecoin, auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
+Recharts scatter chart. X = safety score, Y = APY (%). The default workbench mini-map caps the set at 48 top-ranked and APY-outlier rows; the complete accessible result set remains in the leaderboard. The chart auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's compact WebP logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
 
 **Quadrants** (divided at safety = 60 and APY = the visible benchmark frame rate):
 
@@ -1081,7 +1110,7 @@ Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-
 | Play It Safe | High safety, below benchmark | Blue (5% opacity)  |
 | Why Bother?  | Low safety, below benchmark  | Gray (5% opacity)  |
 
-Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Scatter tooltips show each row's own benchmark label/rate and 30d excess-yield value. Click a dot to navigate to that coin's detail page.
+Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Scatter tooltips show each row's own benchmark label/rate and 30d excess-yield value. Points are intentionally noninteractive; row actions, keyboard navigation, and detail links live in the leaderboard.
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
@@ -1102,6 +1131,8 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 **Source-risk visibility:** Desktop and mobile rows show a labeled compact summary such as `Source risk 42/100 | 1.32x` when the nested source-risk penalty is material. Stablecoin detail yield surfaces render a permanent `YieldSourceRiskCard`; the embedded detail section uses the compact variant, while `/stablecoin/<id>/yield/` keeps the full card and `VenueRiskBreakdown` when `sourceRisk.venueRiskScores` exists. These use the published `sourceRisk.sourceRiskScore` and `sourceRisk.sourceRiskPenalty` fields and are visibility changes only; neutral or missing evidence stays visually quiet.
 
 **Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, shows the decision-ledger card when present, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
+
+**Compare and export:** Comparison renders stacked summaries on narrow screens and a metric table on wider screens. It includes PYS qualification and evidence completeness alongside safety, source posture, venue risk, depth, stability, warnings, and benchmark context. Remove/share controls keep a 44px target, and an additional mobile content spacer prevents the fixed compare tray from covering the final leaderboard actions. Ranking and comparison CSV exports include score qualification and null reason; the ranking export also includes evidence completeness.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
@@ -1158,6 +1189,16 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 ---
 
+## Outcome Validation
+
+`npm run calibrate:yield-outcomes -- --input <dataset.json>` runs the offline, deterministic PYS outcome validator. The input is a strict privacy-safe dataset keyed by publication generation, stablecoin id, and source key. Ranking anchors carry the exact score inputs used at publication; future history observations provide the APY/PYS outcomes matched at configurable 7d/30d/90d horizons.
+
+The report records the normalized dataset SHA-256 digest, methodology versions, observation coverage, exact published-score recomputation, forward APY/PYS retention, rank correlation, top-quartile lift, and cohort cuts for canonical holders, direct evidence, external opportunities, and modeled proxies. One-component ablations neutralize benchmark, stablecoin safety, sustainability, or source risk through the checked-in `computePYS` implementation. Formula weights are not configurable and the report explicitly records `formulaWeightsModified: false`; this tool measures the current formula and does not change it.
+
+Use `--out <path>` to write deterministic JSON, `--horizons 7,30,90` to select forward windows, and `--max-gap-hours` to bound observation matching. Unsafe identifiers, duplicate generation/source rows, dangling generation references, unknown fields, and weight-control arguments are rejected.
+
+---
+
 ## Testing
 
 **Pure function tests:** `worker/src/cron/__tests__/yield-helpers.test.ts`
@@ -1172,7 +1213,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 - `findBestLendingPool` — allowlist filtering, symbol match, address fallback, quality gates
 - `computeTvlWeightedMedianApy` — empty input, null/zero TVL, single row, TVL-weighted vs simple median, zero APY filtering
 
-**Integration tests:** `worker/src/cron/__tests__/sync-yield-data.test.ts`
+**Integration tests:** `worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts`, `worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts`, `worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts`, and `worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts`
 
 - Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage, and mixed benchmark publication
 - Deterministic/native coexistence: verifies on-chain rows can coexist with curated native rows without source-key collision
@@ -1209,7 +1250,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 - **First sync (no history):** `apy7d` and `apy30d` equal `currentApy`. PYS still computed.
 - **On-chain rate bootstrapping:** When a Tier 1 vault has no previous exchange rate in history (first 7 days after config is added), the sync emits a seed row with `currentApy: 0` and the current `exchangeRate`. This persists the rate in `yield_history` so future cycles can compute APY once a 7-day-old reference point exists.
 - **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Most NAV tokens hit this path since the report card framework doesn't grade them yet.
-- **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped.
+- **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped. The API preserves the hourly `safetySnapshot`, reports the read-time state under `liveSafetyHydration`, and emits body warning `yield-safety-hydration-degraded` plus HTTP `Warning: 199` for stale inputs/snapshot age, low coverage, or a hydration failure.
 - **All tiers fail:** Coin is recorded with `yield: null` and skipped in the write phase. No PYS computed. Logged as warning.
 - **Negative APY:** Stored and displayed. PYS returns 0 for `apy30d <= 0`.
 - **DL Yields circuit-broken:** Tier 2 skipped entirely. Coins with Tier 1 or Tier 3 coverage still get APY. Others get `yield: null`.
@@ -1240,12 +1281,18 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/lib/yield-constants.ts`                                          | Warning-signal labels, `formatYieldWarningSignal`, `getPysColor`, `computePysBreakdown` — shared frontend yield utilities                                                                                                     |
 | `src/lib/yield-decision-ledger.ts`                                    | Frontend display helper for source-selection decision-ledger reason/rejection labels                                                                                                                                          |
 | `src/lib/yield-peers.ts`                                              | Pure peer-rail cohort selection for `/stablecoin/<id>/yield/`                                                                                                                                                                 |
+| `src/lib/yield-view-model.ts`                                         | Public yield workbench view-model facade                                                                                                                                                                                       |
+| `src/lib/yield-view-model-types.ts`                                   | Shared workbench view-model contracts                                                                                                                                                                                          |
+| `src/lib/yield-view-model-helpers.ts`                                 | Shared row/filter derivation helpers                                                                                                                                                                                            |
+| `src/lib/yield-view-model-filter-axes.ts`                             | Filter-axis registry and risk-budget ownership                                                                                                                                                                                  |
+| `src/lib/yield-view-model-facets.ts`                                  | Facet counts and filter option derivation                                                                                                                                                                                        |
+| `src/lib/yield-view-model-presentation.ts`                            | Active-filter summaries and presentation projection                                                                                                                                                                             |
 | `src/lib/__tests__/yield-constants.test.ts`                           | Unit tests for shared frontend yield utilities                                                                                                                                                                                |
 | `src/app/yield/page.tsx`                                              | SSG page wrapper with metadata                                                                                                                                                                                                |
 | `src/app/yield/client.tsx`                                            | Interactive page: hero scatter, risk budget, filters, leaderboard, selector handoff strip, source board, and reference-rate surfaces                                                                                          |
 | `src/app/yield/source-board-model.ts`                                 | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks                                                 |
 | `src/app/yield/source-board.tsx`                                      | Compact `/yield` source-provenance board with clickable posture/confidence/depth segments                                                                                                                                     |
-| `src/app/stablecoin/[id]/yield/page.tsx`                              | SSG per-coin yield-analysis wrapper for every non-pre-launch tracked stablecoin; the client renders an empty state when no live yield row exists                                                                              |
+| `src/app/stablecoin/[id]/yield/page.tsx`                              | SSG per-coin yield-analysis wrapper for intrinsic yield coins and curated auto-lending overrides; other known coins fall back to filtered `/yield/` through the Pages stablecoin function                                    |
 | `src/app/stablecoin/[id]/yield/client.tsx`                            | Interactive per-coin yield-analysis surface with peer rail, APY history, warning timeline, and source-switch history                                                                                                          |
 | `src/components/yield-decision-ledger-card.tsx`                       | Shared compact "Why this source won" card for expanded rows, sheets, and detail yield sections                                                                                                                                |
 | `src/components/yield-detail-section.tsx`                             | Stablecoin detail-page yield section with warnings, decision-ledger card, source metadata, metric cards, and shared history chart                                                                                             |
@@ -1253,7 +1300,10 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/components/yield-history-chart.tsx`                              | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                                                                                                    |
 | `src/components/yield-scatter-plot.tsx`                               | Risk-adjusted scatter visualization                                                                                                                                                                                           |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`                     | Unit tests for all pure yield functions                                                                                                                                                                                       |
-| `worker/src/cron/__tests__/sync-yield-data.test.ts`                   | Integration tests for sync-yield-data orchestration (on-chain, rate-derived, DL, supplemental-cache, cooldown, auto-discovery)                                                                                                |
+| `worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts` | Integration tests for yield discovery, tracked coverage guards, and source-envelope behavior                                                                                                                                |
+| `worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts` | Integration tests for lending opportunities, safety degradation, and deterministic-source cooldown behavior                                                                                                                 |
+| `worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts` | Integration tests for publication generations, cache guards, provenance, and writer-pause behavior                                                                                                                           |
+| `worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts`     | Integration tests for rate-derived sources, benchmarks, source-aware history, and cleanup behavior                                                                                                                           |
 | `worker/src/cron/__tests__/pool-filter.test.ts`                       | Tests wrapper-preserving pre-filter behavior for cached/direct DeFiLlama pool ingestion                                                                                                                                       |
 | `worker/src/cron/__tests__/yield-resolve.test.ts`                     | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                                                                                                      |
 | `worker/src/cron/__tests__/yield-cache.test.ts`                       | Cache parsing tests for DL pools and benchmark caches                                                                                                                                                                         |
@@ -1295,6 +1345,10 @@ deep-link reveals. Both surfaces must avoid duplicating panels.
 Deep-link yield pages are `noindex` and omitted from `sitemap.xml`; the indexable
 SEO surface remains `/yield/` plus each stablecoin detail page because the
 deep-link pages are runtime-data workbenches rather than static crawl targets.
+The static export materializes workbenches only for intrinsic yield coins and
+curated deterministic auto-lending overrides. A missing workbench for any other
+known coin redirects to the comparison-filtered `/yield/` surface, so dynamic
+lending discovery remains reachable without reserving ten export files per coin.
 
 ### Cross-surface handoffs
 

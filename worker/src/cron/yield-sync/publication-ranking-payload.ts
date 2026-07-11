@@ -16,7 +16,7 @@ import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
 } from "../../lib/yield-history-ownership-handoffs";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS, getRankingStaleThresholdMs } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import {
@@ -26,6 +26,7 @@ import {
 } from "./decision-public";
 import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
+import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 
 function evaluatedSourceToRanking(
   source: EvaluatedYieldSource,
@@ -57,6 +58,7 @@ function evaluatedSourceToRanking(
     pysNullReason: source.pysNullReason,
     safetyScore: source.safetyScore,
     safetyGrade: source.safetyGrade,
+    safetyReason: source.safetyReason,
     yieldToRisk: source.yieldToRisk,
     excessYield: source.excessYield,
     benchmarkKey: source.benchmarkKey,
@@ -84,6 +86,14 @@ function evaluatedSourceToRanking(
       ? {
           ...provenance,
           safetyProvenance: source.safetyProvenance,
+          safetyReason: source.safetyReason,
+          sourceFreshness: source.sourceFreshness,
+          benchmarkFreshness: source.benchmarkFreshness,
+          calculationMode: source.calculationMode,
+          evidenceClass: source.evidenceClass,
+          evidenceCompleteness: source.evidenceCompleteness,
+          scoreQualification: source.scoreQualification,
+          scoreQualified: source.scoreQualified,
         }
       : null,
   };
@@ -125,6 +135,10 @@ function buildAltYieldSource(params: {
     }),
     sourceRole: deriveYieldSourceRole(params.candidate, { isSelected: false }),
     confidenceTier: params.candidate.confidenceTier,
+    calculationMode: params.candidate.calculationMode,
+    evidenceClass: params.candidate.evidenceClass,
+    evidenceCompleteness: params.candidate.evidenceCompleteness,
+    scoreQualification: params.candidate.scoreQualification,
     selectionRank: params.selectionRank,
     rejectionReasonCode: deriveRejectionReasonCode(params.selected, params.candidate),
   };
@@ -256,7 +270,10 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
 ) {
   const bestRows = input.evaluatedSources
     .filter((source) => input.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
-    .sort((a, b) => b.pharosYieldScore - a.pharosYieldScore);
+    .sort((a, b) =>
+      (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) -
+      (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
+    );
 
   const publicationGenerationId = input.publication?.generationId ?? null;
   const rankings = bestRows.map((source, index) => {
@@ -315,11 +332,50 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         : null;
     const staleComparisonAnchor =
       comparisonAnchorAgeSeconds != null &&
-      comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
-    if ((updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) || staleComparisonAnchor) {
+      comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey);
+    const staleSource =
+      (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
+      staleComparisonAnchor;
+    const benchmarkFreshness = source.benchmarkFreshness ?? classifyYieldBenchmarkFreshness(
+      source.benchmarkMeta,
+      { selectionMode: source.benchmarkSelectionMode },
+    );
+    if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
       }
+      ranking.pharosYieldScore = null;
+      ranking.pysNullReason = "source-stale";
+    }
+    if (benchmarkFreshness === "degraded" && !ranking.warningSignals.includes("benchmark-degraded")) {
+      ranking.warningSignals = [...ranking.warningSignals, "benchmark-degraded"];
+    }
+    if (benchmarkFreshness === "stale") {
+      if (!ranking.warningSignals.includes("benchmark-stale")) {
+        ranking.warningSignals = [...ranking.warningSignals, "benchmark-stale"];
+      }
+      ranking.pharosYieldScore = null;
+      ranking.pysNullReason = ranking.pysNullReason === "source-stale"
+        ? ranking.pysNullReason
+        : "benchmark-stale";
+    }
+    if (ranking.provenance) {
+      const effectiveSourceFreshness = staleSource ? "stale" : (source.sourceFreshness ?? "unknown");
+      const qualificationInvalidated = staleSource || benchmarkFreshness === "stale";
+      const newlyMissingEvidenceFields =
+        (staleSource && source.sourceFreshness === "fresh" ? 1 : 0) +
+        (benchmarkFreshness === "stale" && source.benchmarkFreshness !== "stale" ? 1 : 0);
+      ranking.provenance = {
+        ...ranking.provenance,
+        sourceFreshness: effectiveSourceFreshness,
+        benchmarkFreshness,
+        evidenceCompleteness: Math.max(
+          0,
+          Number((source.evidenceCompleteness - newlyMissingEvidenceFields / 7).toFixed(4)),
+        ),
+        scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,
+        scoreQualified: ranking.pharosYieldScore != null,
+      };
     }
     ranking.sourceRole = deriveYieldSourceRole(
       { ...source, warnings: ranking.warningSignals },

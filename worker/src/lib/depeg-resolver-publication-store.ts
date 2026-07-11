@@ -823,6 +823,7 @@ export async function writePublicationManifest(
                     SELECT 1
                     FROM depeg_resolver_publication_snapshot_rows existing
                     WHERE existing.public_prediction_id = p.id
+                      AND existing.first_published = 1
                   )
                   THEN 0
                   ELSE 1

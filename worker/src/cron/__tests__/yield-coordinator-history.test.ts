@@ -75,6 +75,41 @@ describe("yield coordinator history", () => {
     expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(2);
   });
 
+  it("preserves linked on-chain identities across consecutive generations", () => {
+    const linkedSourceKey = "linked-variant:child-coin:onchain:child-coin";
+    const result = buildYieldHistoryEvaluationInputs({
+      historyRows: [
+        row({
+          stablecoin_id: "parent-coin",
+          source_key: linkedSourceKey,
+          data_source: "onchain",
+          exchange_rate: 1.01,
+          is_best: 1,
+          recorded_at: 100,
+        }),
+        row({
+          stablecoin_id: "parent-coin",
+          source_key: linkedSourceKey,
+          data_source: "onchain",
+          exchange_rate: 1.02,
+          is_best: 1,
+          recorded_at: 200,
+        }),
+      ],
+      prevTvlRows: [],
+      prevBestRows: [row({
+        stablecoin_id: "parent-coin",
+        source_key: linkedSourceKey,
+        data_source: "onchain",
+        exchange_rate: 1.02,
+        is_best: 1,
+      })],
+    });
+
+    expect(result.prevBestSourceKeyByCoin.get("parent-coin")).toBe(linkedSourceKey);
+    expect(result.sourceSwitchCount30dByCoin.get("parent-coin")).toBe(0);
+  });
+
   it("cooperative input construction matches the synchronous builder", async () => {
     const input = {
       historyRows: [

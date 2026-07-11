@@ -1,9 +1,10 @@
 "use client";
 
-import { Camera, RefreshCw } from "lucide-react";
+import { Camera, RefreshCw, ShieldCheck } from "lucide-react";
 
 interface SelectorSnapshotBannerProps {
   mode: "frozen" | "fallback";
+  trust?: "verified" | "unverified";
   capturedAt?: number;
   onCompareToToday?: () => void;
   comparison?: {
@@ -33,11 +34,14 @@ function formatDate(ts: number): string {
 
 export function SelectorSnapshotBanner({
   mode,
+  trust = "unverified",
   capturedAt,
   onCompareToToday,
   comparison,
 }: SelectorSnapshotBannerProps) {
   if (mode === "frozen") {
+    const verified = trust === "verified";
+    const SnapshotIcon = verified ? ShieldCheck : Camera;
     return (
       <div
         role="status"
@@ -46,10 +50,17 @@ export function SelectorSnapshotBanner({
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
-            <Camera className="mt-0.5 h-4 w-4 shrink-0 text-frost-blue" aria-hidden="true" />
-            <p className="text-foreground">
-              Showing snapshot {capturedAt ? `from ${formatDate(capturedAt)}` : "from earlier"}.
-            </p>
+            <SnapshotIcon className="mt-0.5 h-4 w-4 shrink-0 text-frost-blue" aria-hidden="true" />
+            <div className="min-w-0 text-foreground">
+              <p className="font-semibold">{verified ? "Pharos-verified snapshot" : "Unverified client snapshot"}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {verified
+                  ? `Pharos recomputed this snapshot from canonical source data when the link was created${
+                      capturedAt ? ` on ${formatDate(capturedAt)}` : ""
+                    }.`
+                  : `Showing snapshot ${capturedAt ? `from ${formatDate(capturedAt)}` : "from earlier"}. Pharos checked its format and tracked identities, but did not reproduce its scores from canonical source data.`}
+              </p>
+            </div>
           </div>
           {onCompareToToday ? (
             <button
@@ -71,7 +82,7 @@ export function SelectorSnapshotBanner({
                   ? "No shortlist changes against today's data."
                   : comparison.status === "error"
                     ? "Comparison could not be loaded."
-                    : comparison.summary ?? "Snapshot differs from today's data."}
+                    : (comparison.summary ?? "Snapshot differs from today's data.")}
             </p>
             {comparison.deltas && comparison.deltas.length > 0 ? (
               <dl className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -99,9 +110,7 @@ export function SelectorSnapshotBanner({
       className="flex items-start gap-2 rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm"
     >
       <Camera className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <p className="text-foreground">
-        Original snapshot no longer cached; showing current output for the same inputs.
-      </p>
+      <p className="text-foreground">Original snapshot no longer cached; showing current output for the same inputs.</p>
     </div>
   );
 }

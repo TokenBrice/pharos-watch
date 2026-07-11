@@ -2,9 +2,9 @@ import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yie
 import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
   computeSafetyScoresSnapshot,
+  type PublishedSafetyScoresResultMap,
   type SafetyScoresResultMap,
 } from "../../lib/safety-scores";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronStageContext } from "../shared/stage-contracts";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -59,7 +59,7 @@ export interface YieldSyncLoadedState {
   riskFreeRates: Awaited<ReturnType<typeof loadRiskFreeRateRegistry>>;
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
-  safetySnapshot: SafetyScoresResultMap;
+  safetySnapshot: PublishedSafetyScoresResultMap;
   safetyScores: SafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
   safetySnapshotDegraded: boolean;
@@ -294,12 +294,6 @@ export async function loadYieldSyncState(params: {
   ]);
   const { pools: dlPools, meta: dlPoolsMeta } = dlPoolsResult;
   const { candidates: supplementalCandidates, meta: supplementalMeta } = supplementalResult;
-  const stablecoinsCache = await loadStablecoinsCache(params.db, {
-    mode: "strict",
-    contract: "published",
-    allowLegacyArray: false,
-    preloadedCache: stablecoinsCacheRow,
-  });
   const onChainHealthState = onChainHealthCache
     ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
     : getDefaultDeterministicOnChainHealthState();
@@ -323,9 +317,8 @@ export async function loadYieldSyncState(params: {
       }
     : fetchOnChainRates(params.signal, params.chainRpcs, params.etherscanApiKey);
   const safetySnapshotPromise = computeSafetyScoresSnapshot(params.db, {
-    includeNavTokens: true,
     outputMode: "map",
-    preloadedStablecoinsCache: stablecoinsCache,
+    sourceMode: "published-cache",
   });
   const [onChainFetchResult, safetySnapshot] = await Promise.all([
     onChainFetchResultPromise,

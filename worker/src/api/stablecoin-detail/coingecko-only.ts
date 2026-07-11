@@ -2,7 +2,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
   buildPriceMapByDate,
   buildTokenRowsFromMarketCaps,
@@ -21,22 +21,26 @@ async function fetchCoinGeckoOnlyTokens(config: {
   coingeckoApiKey?: string | null;
 }): Promise<{ tokens: Record<string, unknown>[]; upstreamOk: boolean }> {
   const apiKey = config.coingeckoApiKey ?? null;
-  const cgRes = await fetchWithRetry(
+  const cgResult = await fetchJsonWithRetry<{
+    market_caps: [number, number][];
+    prices?: [number, number][];
+  }>(
     cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
     { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
     DETAIL_UPSTREAM_MAX_RETRIES,
     { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
   );
 
-  if (!cgRes?.ok) {
-    logUpstreamFailure("coingecko-market-chart", config.stablecoinId, cgRes?.status ?? "no-response");
+  if (!cgResult?.response.ok) {
+    logUpstreamFailure(
+      "coingecko-market-chart",
+      config.stablecoinId,
+      cgResult?.response.status ?? "no-response",
+    );
     return { tokens: [], upstreamOk: false };
   }
 
-  const cgData = (await cgRes.json()) as {
-    market_caps: [number, number][];
-    prices?: [number, number][];
-  };
+  const cgData = cgResult.body;
 
   const priceMap = buildPriceMapByDate(cgData.prices);
   return {

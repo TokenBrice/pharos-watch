@@ -163,6 +163,25 @@ describe("provider-execution", () => {
     );
   });
 
+  it("records sub-second duration from the monotonic clock", async () => {
+    const nowSpy = vi.spyOn(performance, "now")
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(137.5);
+    const context = createProviderExecutionContext({
+      laneId: "duration-lane",
+      laneMaxConcurrent: 1,
+    });
+
+    const result = await withProviderExecution(
+      context,
+      makePolicy(),
+      async () => "ok",
+    );
+
+    expect(result.attempt.durationMs).toBe(37.5);
+    nowSpy.mockRestore();
+  });
+
   it("records timed-out degraded results as provider failures", async () => {
     vi.useFakeTimers();
     try {

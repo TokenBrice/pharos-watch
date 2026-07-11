@@ -9,9 +9,17 @@ import {
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
+import {
+  describeDexPaginationWriteFailure,
+  isDegradingDexPaginationWriteFailure,
+  readDexSourcePaginationState,
+  summarizeDexSourcePaginationWrites,
+  writeDexSourcePaginationState,
+  type DexSourcePaginationWriteAttempt,
+} from "./source-pagination-state";
 
 const PAGE_SIZE = 250;
-const MAX_PAGES = 8;
+const TAIL_PAGES_PER_RUN = 2;
 // `poolHourDatas(first: 1000)` can safely cover 40 pools over 24 hourly buckets (40 * 24 = 960 rows max).
 const HOUR_DATA_BATCH_SIZE = 40;
 const SUBGRAPH_TIMEOUT_MS = DIRECT_API_REQUEST_TIMEOUT_MS;
@@ -22,6 +30,15 @@ const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: stri
   ethereum: { chain: "ethereum", subgraphId: "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS" },
   base: { chain: "base", subgraphId: "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3" },
 };
+
+export function buildPancakePageSkips(cursor: string | null): number[] {
+  const storedSkip = Number.parseInt(cursor ?? "", 10);
+  const tailStartSkip = Number.isFinite(storedSkip) && storedSkip >= PAGE_SIZE ? storedSkip : PAGE_SIZE;
+  return [
+    0,
+    ...Array.from({ length: TAIL_PAGES_PER_RUN }, (_, index) => tailStartSkip + index * PAGE_SIZE),
+  ];
+}
 
 type V3Pool = {
   id: string;
@@ -129,6 +146,7 @@ async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?:
 export async function fetchPancakeSwapPools(
   graphApiKey: string | null,
   signal?: AbortSignal,
+  db?: D1Database,
 ): Promise<DexApiFetchResult> {
   if (!graphApiKey) {
     return makeDexApiFetchResult([], {
@@ -140,20 +158,40 @@ export async function fetchPancakeSwapPools(
 
   const pools: DexApiPool[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   let successfulChains = 0;
+  let pagesFetched = 0;
+  let partialChains = 0;
+  let cursorPersistenceDegraded = false;
+  const paginationWriteAttempts: DexSourcePaginationWriteAttempt[] = [];
   const currentHourStart = Math.floor(Date.now() / 1000 / 3600) * 3600;
   const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
 
   for (const { chain, subgraphId } of Object.values(PANCAKESWAP_V3_SUBGRAPHS)) {
     throwIfAborted(signal);
     const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
+    const sourceKey = `pancakeswap-v3:${chain}`;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const paginationState = await readDexSourcePaginationState(db, sourceKey);
+    const pageSkips = buildPancakePageSkips(paginationState.cursor);
+    const tailStartSkip = pageSkips[1] ?? PAGE_SIZE;
+    let nextCursor: number | null = tailStartSkip;
+    let cycleCompleted = false;
+    let chainPagesFetched = 0;
     try {
-      let chainPoolCount = 0;
-      for (let page = 0; page < MAX_PAGES; page++) {
+      for (let pageIndex = 0; pageIndex < pageSkips.length; pageIndex++) {
+        const skip = pageSkips[pageIndex]!;
+        const displayPage = skip / PAGE_SIZE + 1;
         throwIfAborted(signal);
-        const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(page * PAGE_SIZE), signal);
+        const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(skip), signal);
+        chainPagesFetched++;
+        pagesFetched++;
         const pagePools = data.pools ?? [];
-        if (pagePools.length === 0) break;
+        if (pagePools.length === 0) {
+          cycleCompleted = true;
+          nextCursor = PAGE_SIZE;
+          break;
+        }
 
         const volume24hByPool = new Map<string, number>();
         const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
@@ -182,7 +220,7 @@ export async function fetchPancakeSwapPools(
               "[fetch-pancakeswap]",
               chain,
               "poolHourDatas",
-              `page ${page + 1} batch ${batchIndex + 1}/${hourDataPoolIdBatches.length}`,
+              `page ${displayPage} batch ${batchIndex + 1}/${hourDataPoolIdBatches.length}`,
               message,
             );
           }
@@ -191,7 +229,10 @@ export async function fetchPancakeSwapPools(
           console.warn(
             "[fetch-pancakeswap]",
             chain,
-            `page ${page + 1} completed with ${failedHourDataBatches}/${hourDataPoolIdBatches.length} hourData batch failures`,
+            `page ${displayPage} completed with ${failedHourDataBatches}/${hourDataPoolIdBatches.length} hourData batch failures`,
+          );
+          warnings.push(
+            `${chain} page ${displayPage} had ${failedHourDataBatches}/${hourDataPoolIdBatches.length} volume batch failures`,
           );
         }
 
@@ -228,17 +269,35 @@ export async function fetchPancakeSwapPools(
             feeRate: Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 1_000_000 : null,
             balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
           });
-          chainPoolCount++;
         }
 
-        if (pagePools.length < PAGE_SIZE) break;
-        if (page === MAX_PAGES - 1) {
-          errors.push(`${chain}: pagination cap reached at page ${page + 1}; resumeFromSkip=${MAX_PAGES * PAGE_SIZE}`);
+        if (pagePools.length < PAGE_SIZE) {
+          cycleCompleted = true;
+          nextCursor = PAGE_SIZE;
           break;
         }
+        if (skip > 0) nextCursor = skip + PAGE_SIZE;
       }
-      if (chainPoolCount > 0) {
+      if (chainPagesFetched > 0) {
         successfulChains++;
+        if (!cycleCompleted) {
+          partialChains++;
+          warnings.push(`${chain}: pagination partial; resumeFromSkip=${nextCursor}`);
+        }
+        const outcome = await writeDexSourcePaginationState({
+          db,
+          sourceKey,
+          cursor: String(nextCursor ?? PAGE_SIZE),
+          cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
+          nowSec,
+          completed: cycleCompleted,
+          pagesFetched: chainPagesFetched,
+          diagnostics: warnings.filter((warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`)),
+        });
+        paginationWriteAttempts.push({ sourceKey, outcome });
+        const persistenceWarning = describeDexPaginationWriteFailure(chain, outcome);
+        if (persistenceWarning) warnings.push(persistenceWarning);
+        if (isDegradingDexPaginationWriteFailure(outcome)) cursorPersistenceDegraded = true;
       }
     } catch (error) {
       rethrowIfAborted(error, signal);
@@ -253,7 +312,16 @@ export async function fetchPancakeSwapPools(
 
   return makeDexApiFetchResult(pools, {
     ok: successfulChains > 0,
-    degraded: errors.length > 0,
+    degraded: errors.length > 0 || cursorPersistenceDegraded,
     errors,
+    warnings,
+    pagination: {
+      state: partialChains > 0 ? "partial" : "complete",
+      headRefreshed: successfulChains === Object.keys(PANCAKESWAP_V3_SUBGRAPHS).length,
+      pagesFetched,
+      cursor: partialChains > 0 ? `${partialChains}-chain-tail(s)` : null,
+      cycleCompleted: partialChains === 0,
+      cursorPersistence: summarizeDexSourcePaginationWrites(paginationWriteAttempts),
+    },
   });
 }

@@ -4,7 +4,7 @@ import { mapWithConcurrency } from "../../lib/concurrency";
 import { DEPEG_SECONDARY_THRESHOLD_RATIO, getDepegThresholdBps, USER_AGENT } from "../../lib/constants";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
   buildPriceValidationContext,
   loadPriceValidationReferences,
@@ -134,9 +134,13 @@ async function auditSingleEventWithCoinGecko(
       `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
     );
     const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
-    const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
+    const cgResult = await fetchJsonWithRetry<{ prices?: [number, number][] }>(
+      cgEndpoint,
+      { headers: cgFetchHeaders },
+      1,
+    );
 
-    if (!cgRes?.ok) {
+    if (!cgResult?.response.ok) {
       logWorkerEvent({
         scope: "admin",
         level: "warn",
@@ -144,7 +148,7 @@ async function auditSingleEventWithCoinGecko(
         event: "audit-depeg-history-cg-fetch-failed",
         route: "audit-depeg-history",
         provider: "coingecko",
-        status: cgRes?.status ?? "no-response",
+        status: cgResult?.response.status ?? "no-response",
         metadata: { stablecoinId: event.stablecoin_id, symbol: event.symbol, geckoId },
       });
       return {
@@ -159,7 +163,7 @@ async function auditSingleEventWithCoinGecko(
       };
     }
 
-    const cgData = (await cgRes.json()) as { prices?: [number, number][] };
+    const cgData = cgResult.body;
     const rawPrices = cgData.prices ?? [];
     const validatedPrices = rawPrices.filter(([, cgPrice]) => {
       if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {

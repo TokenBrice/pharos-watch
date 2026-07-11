@@ -6,9 +6,6 @@
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
  */
-import { getCache } from "../../lib/db-cache";
-import { sendAlert } from "../../lib/alerts";
-
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
@@ -22,6 +19,7 @@ import {
   summarizeSkippedScheduledJob,
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
+import { logSkippedCronRun } from "./preflight-skip";
 
 export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   const outcomes: ScheduledSlotJobSummary[] = [];
@@ -33,6 +31,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       runtime.chainRpcs,
       runtime.env.DRPC_API_KEY ?? null,
       runtime.env.ETHERSCAN_API_KEY ?? null,
+      { scheduledAtSec: runtime.slotStartedAt },
     ),
   )).summary);
 
@@ -46,6 +45,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       {
         cmcApiKey: runtime.env.CMC_API_KEY,
         alertWebhookUrl: runtime.alertWebhookUrl,
+        alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
         coingeckoApiKey: runtime.coingeckoApiKey,
         chainRpcs: runtime.chainRpcs,
         reportProgress,
@@ -75,6 +75,11 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     if (stablecoinsCacheSafe) {
       outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn)).summary);
     } else {
+      await logSkippedCronRun(runtime, {
+        job,
+        reason: "stablecoins-cache-unsafe",
+        message: `${job} did not start because the stablecoins cache capability was unavailable`,
+      });
       outcomes.push(summarizeSkippedScheduledJob(job, "stablecoins-cache-unsafe"));
     }
   };
@@ -93,18 +98,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       syncCapabilities: stablecoinsCapabilities,
     }),
   )).summary);
-
-  try {
-    const cached = await getCache(runtime.db, "stablecoins");
-    if (cached) {
-      const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
-      if (age > 1800) {
-        await sendAlert(runtime.alertWebhookUrl, "Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <20min)`);
-      }
-    }
-  } catch {
-    // Non-blocking.
-  }
 
   return buildScheduledSlotSummary(outcomes);
 }

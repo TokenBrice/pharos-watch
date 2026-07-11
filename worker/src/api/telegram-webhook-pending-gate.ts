@@ -16,15 +16,112 @@ import {
   loadPendingDisambiguation,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
 } from "./telegram-webhook-store";
-import { executePendingDisambiguationSelection } from "./telegram-webhook-disambiguation-selection";
+import {
+  executePendingDisambiguationSelection,
+  type PendingSelectionOperationContext,
+} from "./telegram-webhook-disambiguation-selection";
 import { isGroupChatType } from "./telegram-webhook-auth";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
+import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 
 export type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
 export type ReplyFn = (message: string) => Promise<void>;
 
 type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguation>>;
-type PendingFlowResult = "continue" | "finished";
+type PendingFlowResult = "continue" | "continue-clear-pending" | "finished";
+
+const MUTATING_PENDING_REPLACEMENT_COMMANDS = new Set([
+  "/forget",
+  "/mute",
+  "/set",
+  "/subscribe",
+  "/unmutehours",
+  "/unsnooze",
+  "/unsubscribe",
+]);
+
+function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
+  return MUTATING_PENDING_REPLACEMENT_COMMANDS.has(command.command)
+    || (command.command === "/timezone" && command.args.trim().length > 0);
+}
+
+function normalizedPendingActionType(value: string | null | undefined): string {
+  return value && /^[a-z0-9][a-z0-9-]{0,63}$/.test(value) ? value : "unknown";
+}
+
+async function clearPendingWithIntent(
+  db: D1Database,
+  chatId: string,
+  pendingRow: NonNullable<PendingDisambiguationRow>,
+  reason: "cancel" | "invalid" | "expired" | "setup-cancel" | "clear-and-run",
+  operation?: PendingSelectionOperationContext,
+): Promise<void> {
+  if (!operation?.planIntent) {
+    // Compatibility for direct/unit invocations without a claimed update.
+    // Authenticated Telegram updates always supply the atomic fence callbacks.
+    await clearPendingDisambiguation(db, chatId);
+    return;
+  }
+  const actionType = normalizedPendingActionType(pendingRow.action_type);
+  await operation.planIntent(createTelegramWebhookIntent(`pending:${reason}`, {
+    actionType,
+    expiresAt: pendingRow.expires_at,
+    reason,
+  }, "required"));
+  if (operation.wasMutationApplied) return;
+  const operationStatements = operation.prepareMutationAppliedStatement
+    ? [operation.prepareMutationAppliedStatement()]
+    : undefined;
+  await clearPendingDisambiguation(db, chatId, {
+    expected: { actionType: pendingRow.action_type ?? "", expiresAt: pendingRow.expires_at },
+    operationStatements,
+  });
+  if (operationStatements) operation.confirmAtomicMutationApplied?.();
+  else await operation.markMutationApplied?.();
+}
+
+export async function resumeStoredPendingClearIntent(args: {
+  db: D1Database;
+  chatId: string;
+  intent: TelegramWebhookOperationIntent | null | undefined;
+  operation?: PendingSelectionOperationContext;
+}): Promise<{ handled: boolean; reply: string | null; continueCommand: boolean }> {
+  const { intent, operation } = args;
+  const reason = intent?.payload.reason;
+  if (
+    !intent
+    || intent.mutation !== "required"
+    || !intent.kind.startsWith("pending:")
+    || (reason !== "cancel" && reason !== "setup-cancel" && reason !== "invalid" && reason !== "expired" && reason !== "clear-and-run")
+    || typeof intent.payload.actionType !== "string"
+    || typeof intent.payload.expiresAt !== "number"
+  ) {
+    return { handled: false, reply: null, continueCommand: false };
+  }
+  if (!operation?.wasMutationApplied) {
+    const operationStatements = operation?.prepareMutationAppliedStatement
+      ? [operation.prepareMutationAppliedStatement()]
+      : undefined;
+    await clearPendingDisambiguation(args.db, args.chatId, {
+      expected: {
+        actionType: intent.payload.actionType,
+        expiresAt: intent.payload.expiresAt,
+      },
+      operationStatements,
+    });
+    if (operationStatements) operation?.confirmAtomicMutationApplied?.();
+    else await operation?.markMutationApplied?.();
+  }
+  const reply = reason === "cancel"
+    ? "Pending selection cancelled."
+    : reason === "setup-cancel"
+      ? "Setup cancelled. Send /start to begin again or /list to view subscriptions."
+      : reason === "invalid"
+        ? "That pending selection could not be restored. Please rerun the command, or use /help for examples."
+        : null;
+  return { handled: true, reply, continueCommand: reason === "clear-and-run" };
+}
 
 /**
  * Commands that, when issued while a pending disambiguation is active, clear
@@ -76,15 +173,28 @@ export async function handleSetupPendingBeforeDispatch(args: {
   pendingRow: NonNullable<PendingDisambiguationRow>;
   parsedCommand: ParsedTelegramCommand | null;
   reply: ReplyFn;
+  operation?: PendingSelectionOperationContext;
 }): Promise<PendingFlowResult> {
-  const { db, botToken, chatId, actorUserId, username, text, pendingRow, parsedCommand, reply } = args;
+  const { db, botToken, chatId, actorUserId, username, text, pendingRow, parsedCommand, reply, operation } = args;
   const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
   const setupTickerInput = setupState?.step === "awaiting-ticker"
     ? normalizeSetupTickerInput(text, parsedCommand)
     : null;
   if (setupState && setupState.step === "awaiting-ticker" && setupTickerInput != null) {
     await handleSetupTickerInput(
-      { db, botToken, chatId, actorUserId, username },
+      {
+        db,
+        botToken,
+        chatId,
+        actorUserId,
+        username,
+        beforeIrreversibleEffect: operation?.beforeIrreversibleEffect,
+        planIntent: operation?.planIntent,
+        prepareMutationAppliedStatement: operation?.prepareMutationAppliedStatement,
+        confirmAtomicMutationApplied: operation?.confirmAtomicMutationApplied,
+        storedIntent: operation?.storedIntent,
+        wasMutationApplied: operation?.wasMutationApplied,
+      },
       setupTickerInput,
       setupState,
     );
@@ -97,11 +207,13 @@ export async function handleSetupPendingBeforeDispatch(args: {
   if (parsedCommand) {
     if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
       if (parsedCommand.command === "/cancel") {
-        await clearPendingDisambiguation(db, chatId);
+        await clearPendingWithIntent(db, chatId, pendingRow, "setup-cancel", operation);
         await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
         return "finished";
       }
-      await clearPendingDisambiguation(db, chatId);
+      if (mutatesAfterPendingClear(parsedCommand)) return "continue-clear-pending";
+      await clearPendingWithIntent(db, chatId, pendingRow, "clear-and-run", operation);
+      return "continue";
     } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return "finished";
@@ -133,6 +245,7 @@ export async function handlePendingActionBeforeDispatch(args: {
   pendingNotExpired: boolean;
   parsedCommand: ParsedTelegramCommand | null;
   reply: ReplyFn;
+  operation?: PendingSelectionOperationContext;
 }): Promise<PendingFlowResult> {
   const {
     db,
@@ -146,6 +259,7 @@ export async function handlePendingActionBeforeDispatch(args: {
     pendingNotExpired,
     parsedCommand,
     reply,
+    operation,
   } = args;
   const parsedPending = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
   // This path only runs when the row is not a setup step (see isSetupPending in
@@ -156,15 +270,18 @@ export async function handlePendingActionBeforeDispatch(args: {
   const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
 
   if (pendingRow && !pendingAction && pendingNotExpired) {
-    await clearPendingDisambiguation(db, chatId);
     if (!parsedCommand) {
+      await clearPendingWithIntent(db, chatId, pendingRow, "invalid", operation);
       await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
       return "finished";
     }
   }
 
   if (pendingRow && !pendingActive) {
-    await clearPendingDisambiguation(db, chatId);
+    if (!parsedCommand) {
+      await clearPendingWithIntent(db, chatId, pendingRow, "expired", operation);
+      return "finished";
+    }
   }
 
   if (!pendingActive || !pendingAction) {
@@ -184,7 +301,7 @@ export async function handlePendingActionBeforeDispatch(args: {
       await reply("Only the user who started this pending selection can complete it.");
       return "finished";
     }
-    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
+    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username, operation);
     return "finished";
   }
 
@@ -194,7 +311,7 @@ export async function handlePendingActionBeforeDispatch(args: {
       await reply("Only the user who started this pending selection can cancel it.");
       return "finished";
     }
-    await clearPendingDisambiguation(db, chatId);
+    await clearPendingWithIntent(db, chatId, pendingRow!, "cancel", operation);
     await reply("Pending selection cancelled.");
     return "finished";
   }
@@ -207,7 +324,8 @@ export async function handlePendingActionBeforeDispatch(args: {
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return "finished";
     }
-    await clearPendingDisambiguation(db, chatId);
+    if (mutatesAfterPendingClear(parsedCommand)) return "continue-clear-pending";
+    await clearPendingWithIntent(db, chatId, pendingRow!, "clear-and-run", operation);
     return "continue";
   }
   if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
@@ -256,6 +374,7 @@ async function handleDisambiguationReply(
   pending: PendingAction,
   botToken: string,
   username: string | null,
+  operation?: PendingSelectionOperationContext,
 ): Promise<void> {
   if (pending.actionType === "confirm-bulk" || pending.actionType === "forget-confirm") {
     // Bulk-confirm and forget-confirm use inline buttons; plain text replies are handled upstream.
@@ -274,5 +393,13 @@ async function handleDisambiguationReply(
     await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
     return;
   }
-  await executePendingDisambiguationSelection(db, botToken, chatId, username, pending, selectedIndices);
+  await executePendingDisambiguationSelection(
+    db,
+    botToken,
+    chatId,
+    username,
+    pending,
+    selectedIndices,
+    operation,
+  );
 }

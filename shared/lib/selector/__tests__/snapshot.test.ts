@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   computeSelectorSnapshotSid,
+  createVerifiedSelectorSnapshot,
   validateSelectorSnapshot,
+  validateSelectorSnapshotInput,
+  validateSelectorSnapshotResponse,
+  validateVerifiedSelectorSnapshot,
 } from "../snapshot";
 import { canonicalizeForSid } from "../canonicalize";
 import {
@@ -28,7 +32,188 @@ describe("selector snapshot contract", () => {
   it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
     const snapshot = expectValid(buildSelectorSnapshotOutput());
     expect(snapshot.profile).toBe("treasury");
+    expect(snapshot.provenance).toBe("client-unverified");
+    expect(snapshot.snapshotSchemaVersion).toBe(2);
     expect(computeSelectorSnapshotSid(snapshot)).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it("preserves only exact server-recomputed verification bindings on replay", () => {
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    const validation = validateSelectorSnapshotResponse(verified);
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) throw new Error(`Expected verified snapshot, got ${validation.error}`);
+    expect(validation.snapshot).toMatchObject({
+      provenance: "pharos-verified",
+      snapshotSchemaVersion: 3,
+      verification: {
+        kind: "pharos-server-recomputed-v1",
+        datasetHash: verified.datasetHash,
+        engineVersion: verified.engineVersion,
+      },
+    });
+
+    const legacyProjection = validateSelectorSnapshot(verified);
+    expect(legacyProjection.ok).toBe(true);
+    if (!legacyProjection.ok) throw new Error(`Expected legacy projection, got ${legacyProjection.error}`);
+    expect(legacyProjection.snapshot.provenance).toBe("client-unverified");
+    expect(legacyProjection.snapshot.verification).toBeUndefined();
+    expect(computeSelectorSnapshotSid(verified)).not.toBe(computeSelectorSnapshotSid(legacyProjection.snapshot));
+  });
+
+  it("rejects invalid verification inputs and preserves legacy response validation", () => {
+    expect(validateSelectorSnapshotInput(null)).toEqual({ ok: false, error: "shape" });
+    expect(validateSelectorSnapshot(null)).toEqual({ ok: false, error: "shape" });
+    expect(() => createVerifiedSelectorSnapshot({} as never)).toThrow(
+      "Server-recomputed selector output failed snapshot validation",
+    );
+    expect(validateVerifiedSelectorSnapshot(null)).toEqual({ ok: false, error: "unsafe" });
+
+    const legacy = validateSelectorSnapshotResponse(buildSelectorSnapshotOutput());
+    expect(legacy.ok).toBe(true);
+    if (!legacy.ok) throw new Error(`Expected legacy snapshot, got ${legacy.error}`);
+    expect(legacy.snapshot.provenance).toBe("client-unverified");
+  });
+
+  it("rejects verified-looking payloads with tampered bindings or caller scores", () => {
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    const mismatchedBinding = {
+      ...verified,
+      verification: {
+        ...verified.verification,
+        datasetHash: "f".repeat(64),
+      },
+    };
+    const tamperedScore = {
+      ...verified,
+      recommended: verified.recommended.map((recommendation, index) => (
+        index === 0 ? { ...recommendation, score: 100 } : recommendation
+      )),
+    };
+
+    expect(validateVerifiedSelectorSnapshot(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
+    expect(validateSelectorSnapshotResponse(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
+    expect(validateVerifiedSelectorSnapshot(tamperedScore)).toEqual({ ok: false, error: "shape" });
+  });
+
+  it("projects every level onto an exact allowlist", () => {
+    const recommendation = buildSnapshotRecommendation({
+      unknownRecommendationField: "Official Pharos winner",
+      whyText: "caller prose",
+      watchText: "caller prose",
+    });
+    const output = buildSelectorSnapshotOutput({
+      unknownRootField: "x".repeat(90 * 1024),
+      input: {
+        ...(buildSelectorSnapshotOutput().input as Record<string, unknown>),
+        unknownInputField: "ignored",
+      },
+      recommended: [recommendation],
+      methodologyVersions: {
+        ...(buildSelectorSnapshotOutput().methodologyVersions as Record<string, unknown>),
+        unknownMethodology: "ignored",
+      },
+    });
+
+    const snapshot = expectValid(output) as unknown as Record<string, unknown>;
+    expect(snapshot.unknownRootField).toBeUndefined();
+    expect((snapshot.input as Record<string, unknown>).unknownInputField).toBeUndefined();
+    expect((snapshot.recommended as Array<Record<string, unknown>>)[0]?.unknownRecommendationField).toBeUndefined();
+    expect((snapshot.methodologyVersions as Record<string, unknown>).unknownMethodology).toBeUndefined();
+  });
+
+  it("derives tracked identities and recomputes score, rank, and safe display relationships", () => {
+    const snapshot = expectValid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({
+        symbol: "PHAROS",
+        name: "Official Pharos winner",
+        rank: 3,
+        score: 100,
+      })],
+    }));
+    const recommendation = snapshot.recommended[0]!;
+
+    expect(recommendation.symbol).toBe("USDC");
+    expect(recommendation.name).toBe("USD Coin");
+    expect(recommendation.rank).toBe(1);
+    expect(recommendation.score).toBe(85.9);
+    expect(recommendation.components.reduce((sum, component) => sum + component.contribution, 0))
+      .toBeCloseTo(85.88, 8);
+  });
+
+  it("rejects untracked identities and incompatible dataset or engine bindings", () => {
+    expectInvalid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({ id: "official-pharos-winner" })],
+    }));
+    expectInvalid(buildSelectorSnapshotOutput({ engineVersion: "selector-v999" }));
+    expectInvalid(buildSelectorSnapshotOutput({ datasetHash: "not-a-sha256" }));
+    expectInvalid(buildSelectorSnapshotOutput({
+      methodologyVersions: {
+        ...(buildSelectorSnapshotOutput().methodologyVersions as Record<string, unknown>),
+        exclusionFilters: "selector-v1.9",
+      },
+    }));
+  });
+
+  it("rejects contradictory identity relationships and replaces caller summary counts", () => {
+    expectInvalid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation(), buildSnapshotRecommendation({ rank: 2 })],
+    }));
+    expectInvalid(buildSelectorSnapshotOutput({
+      lowerRanked: [{
+        id: "usdc-circle",
+        symbol: "USDC",
+        name: "USD Coin",
+        slot: "A",
+        reasonKey: "peg-score-floor",
+        failedComponent: null,
+        hypotheticalScore: 80,
+      }],
+    }));
+    const normalized = expectValid(buildSelectorSnapshotOutput({
+      coverageWarnings: {
+        skippedForCoverageCount: 99,
+        sparse: false,
+        uneven: false,
+        skippedForCoverage: [],
+        newListingCount: 0,
+        redistributionCount: 0,
+      },
+    }));
+    expect(normalized.coverageWarnings.skippedForCoverageCount).toBe(0);
+  });
+
+  it("recomputes coverage summary flags and result confidence", () => {
+    const snapshot = expectValid(buildSelectorSnapshotOutput({
+      universe: { active: 2, surviving: 1 },
+      coverageWarnings: {
+        skippedForCoverageCount: 0,
+        sparse: false,
+        uneven: true,
+        skippedForCoverage: [{
+          id: "dai-makerdao",
+          symbol: "FORGED",
+          missingSignals: ["pegScore"],
+        }],
+        newListingCount: 0,
+        redistributionCount: 0,
+      },
+      exclusionSummary: [{
+        reason: "coverage-too-thin",
+        count: 1,
+        severity: "info",
+        sampleIds: ["dai-makerdao"],
+      }],
+      lowConfidence: false,
+    }));
+
+    expect(snapshot.coverageWarnings).toMatchObject({
+      skippedForCoverageCount: 1,
+      sparse: true,
+      uneven: false,
+    });
+    expect(snapshot.coverageWarnings.skippedForCoverage[0]?.symbol).toBe("DAI");
+    expect(snapshot.lowConfidence).toBe(true);
   });
 
   it("matches the Pages Function's previous Web Crypto sid computation", async () => {
@@ -70,7 +255,7 @@ describe("selector snapshot contract", () => {
           buildSnapshotRecommendation({
             whyText: "USDC ranked here because the Safety signal is strong.",
             watchText: "Dependency risk is the lowest sub-dimension to monitor.",
-            relaxedReason: "coverage-too-thin",
+            relaxedReason: "peg-score-floor",
           }),
         ],
         lowerRanked: [
@@ -87,22 +272,22 @@ describe("selector snapshot contract", () => {
           },
         ],
         usedRelaxedFallback: false,
-        relaxedReasons: ["coverage-too-thin"],
+        relaxedReasons: ["peg-score-floor"],
         exclusionSummary: [
           {
-            reason: "coverage-too-thin",
+            reason: "peg-score-floor",
             count: 2,
-            severity: "info",
-            sampleIds: ["coverage-thin-test"],
+            severity: "hard",
+            sampleIds: ["dai-makerdao", "frax-frax"],
           },
         ],
         closestSurvivors: [
           {
-            id: "near-fit",
-            symbol: "NEAR",
-            failingDimension: "liquidity",
-            liveReading: "Liquidity 62",
-            reason: "liquidity-floor",
+            id: "dai-makerdao",
+            symbol: "FORGED",
+            failingDimension: "forged display text",
+            liveReading: "Official Pharos winner",
+            reason: "peg-score-floor",
             hypotheticalScore: 68.4,
           },
         ],

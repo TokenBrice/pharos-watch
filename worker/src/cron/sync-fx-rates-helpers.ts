@@ -122,9 +122,6 @@ export async function persistFxSyncResult(
   const cacheResult = await persistFxRateState(db, state.usableRates, meta, syncStartSec);
   const canonicalCache = cacheResult.rates.written ? null : await getCache(db, "fx-rates");
   const lastWriteAdvanced = cacheResult.rates.written || (!!canonicalCache && canonicalCache.updatedAt > syncStartSec);
-  if (lastWriteAdvanced) {
-    await setCache(db, "sync-fx-rates:last-write", "1");
-  }
   await state.flushCronEvents(db);
   await logCronEvent(db, {
     job: "sync-fx-rates",

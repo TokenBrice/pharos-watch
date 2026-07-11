@@ -1,0 +1,218 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+
+export type RequestFailureKind = "http" | "network" | "timeout" | "aborted" | "superseded" | "parse" | "schema";
+
+export class RequestFailure extends Error {
+  readonly kind: RequestFailureKind;
+  readonly url: string;
+  readonly status: number | null;
+  readonly bodyText: string | null;
+
+  constructor(
+    kind: RequestFailureKind,
+    url: string,
+    message: string,
+    options: { status?: number | null; bodyText?: string | null; cause?: unknown } = {},
+  ) {
+    super(message, options.cause === undefined ? undefined : { cause: options.cause });
+    this.name = "RequestFailure";
+    this.kind = kind;
+    this.url = url;
+    this.status = options.status ?? null;
+    this.bodyText = options.bodyText ?? null;
+  }
+}
+
+export interface RequestLifecycleOptions {
+  init?: RequestInit;
+  signal?: AbortSignal;
+  timeoutMs?: number | null;
+  allowHttpError?: boolean;
+}
+
+export interface RequestJsonOptions<T> extends RequestLifecycleOptions {
+  schema?: SchemaLikeSource<T>;
+}
+
+export interface RequestResult<T> {
+  data: T;
+  response: Response;
+}
+
+function inputLabel(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+function mergeSignals(signals: readonly AbortSignal[]): AbortSignal | undefined {
+  const active = signals.filter(Boolean);
+  if (active.length === 0) return undefined;
+  if (active.length === 1) return active[0];
+  if (typeof AbortSignal.any === "function") return AbortSignal.any([...active]);
+
+  const controller = new AbortController();
+  const abort = (source: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(source.reason);
+  };
+  for (const source of active) {
+    if (source.aborted) {
+      abort(source);
+      break;
+    }
+    source.addEventListener("abort", () => abort(source), { once: true });
+  }
+  return controller.signal;
+}
+
+function normalizedTimeoutMs(timeoutMs: number | null | undefined): number | null {
+  if (timeoutMs === null) return null;
+  if (timeoutMs === undefined || !Number.isFinite(timeoutMs)) return DEFAULT_REQUEST_TIMEOUT_MS;
+  return Math.max(1, Math.ceil(timeoutMs));
+}
+
+async function resolveSchema<T>(schema: SchemaLikeSource<T>): Promise<SchemaLike<T>> {
+  return typeof schema === "function" ? schema() : schema;
+}
+
+function formatSchemaIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
+  return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
+}
+
+async function executeRequest<T>(
+  input: RequestInfo | URL,
+  options: RequestLifecycleOptions,
+  readSuccessBody: (response: Response) => Promise<T>,
+): Promise<RequestResult<T>> {
+  const url = inputLabel(input);
+  const parentSignal = mergeSignals(
+    [options.init?.signal, options.signal].filter((signal): signal is AbortSignal => signal !== undefined),
+  );
+  const timeoutMs = normalizedTimeoutMs(options.timeoutMs);
+  const timeout =
+    timeoutMs == null
+      ? null
+      : createTimeoutSignal({
+          timeoutMs,
+          timeoutReason: new DOMException(`Request timed out after ${timeoutMs}ms`, "TimeoutError"),
+          parentSignal,
+        });
+  const signal = timeout?.signal ?? parentSignal;
+
+  try {
+    const response = await fetch(input, { ...options.init, signal });
+    if (!response.ok && !options.allowHttpError) {
+      let bodyText: string | null = null;
+      try {
+        bodyText = await response.text();
+      } catch (error) {
+        if (timeout?.isTimedOut()) {
+          throw new RequestFailure("timeout", url, `Request timed out after ${timeoutMs}ms`, { cause: error });
+        }
+      }
+      throw new RequestFailure("http", url, `Request failed with status ${response.status}`, {
+        status: response.status,
+        bodyText,
+      });
+    }
+
+    return { data: await readSuccessBody(response), response };
+  } catch (error) {
+    if (error instanceof RequestFailure) throw error;
+    if (timeout?.isTimedOut()) {
+      throw new RequestFailure("timeout", url, `Request timed out after ${timeoutMs}ms`, { cause: error });
+    }
+    if (signal?.aborted) {
+      throw new RequestFailure("aborted", url, "Request was aborted", { cause: error });
+    }
+    throw new RequestFailure("network", url, "Network request failed", { cause: error });
+  } finally {
+    timeout?.dispose();
+  }
+}
+
+export async function requestResponse<T>(
+  input: RequestInfo | URL,
+  options: RequestLifecycleOptions,
+  handleResponse: (response: Response) => Promise<T>,
+): Promise<RequestResult<T>> {
+  return executeRequest(input, options, handleResponse);
+}
+
+export async function requestJsonWithResponse<T>(
+  input: RequestInfo | URL,
+  options: RequestJsonOptions<T> = {},
+): Promise<RequestResult<T>> {
+  const url = inputLabel(input);
+  const result = await executeRequest<unknown>(input, options, async (response) => {
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as unknown;
+    } catch (error) {
+      throw new RequestFailure("parse", url, "Response was not valid JSON", { bodyText: text, cause: error });
+    }
+  });
+
+  if (!options.schema) return result as RequestResult<T>;
+  const schema = await resolveSchema(options.schema);
+  const parsed = schema.safeParse(result.data);
+  if (!parsed.success) {
+    throw new RequestFailure(
+      "schema",
+      url,
+      `Response schema validation failed: ${formatSchemaIssues(parsed.error.issues)}`,
+    );
+  }
+  return { data: parsed.data, response: result.response };
+}
+
+export async function requestJson<T>(input: RequestInfo | URL, options: RequestJsonOptions<T> = {}): Promise<T> {
+  return (await requestJsonWithResponse(input, options)).data;
+}
+
+export async function requestTextWithResponse(
+  input: RequestInfo | URL,
+  options: RequestLifecycleOptions = {},
+): Promise<RequestResult<string>> {
+  return executeRequest(input, options, (response) => response.text());
+}
+
+export async function requestBlob(input: RequestInfo | URL, options: RequestLifecycleOptions = {}): Promise<Blob> {
+  return (await executeRequest(input, options, (response) => response.blob())).data;
+}
+
+export function isRequestCancellation(error: unknown): boolean {
+  return error instanceof RequestFailure && (error.kind === "aborted" || error.kind === "superseded");
+}
+
+/** Serializes one UI action lane and rejects results from superseded requests. */
+export class RequestSequence {
+  private controller: AbortController | null = null;
+  private version = 0;
+
+  async run<T>(operation: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    this.controller?.abort(new DOMException("Request superseded", "AbortError"));
+    const controller = new AbortController();
+    const version = ++this.version;
+    this.controller = controller;
+
+    try {
+      const result = await operation(controller.signal);
+      if (version !== this.version) {
+        throw new RequestFailure("superseded", "request-sequence", "Request result was superseded");
+      }
+      return result;
+    } finally {
+      if (version === this.version) this.controller = null;
+    }
+  }
+
+  cancel(): void {
+    this.version += 1;
+    this.controller?.abort(new DOMException("Request cancelled", "AbortError"));
+    this.controller = null;
+  }
+}

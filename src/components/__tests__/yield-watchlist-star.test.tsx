@@ -1,17 +1,21 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 
 const STORAGE_KEY = "pharos-watchlist-v1";
+const gtag = vi.fn();
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.gtag = gtag;
 });
 
 afterEach(() => {
   cleanup();
+  gtag.mockReset();
+  delete window.gtag;
 });
 
 describe("YieldWatchlistStar", () => {
@@ -35,6 +39,10 @@ describe("YieldWatchlistStar", () => {
     await waitFor(() => {
       const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null");
       expect(stored).toEqual(["usdc-circle"]);
+    });
+    expect(gtag).toHaveBeenCalledWith("event", "yield_watchlist_changed", {
+      action: "added",
+      coin_id: "usdc-circle",
     });
   });
 

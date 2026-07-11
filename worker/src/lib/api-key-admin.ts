@@ -27,11 +27,34 @@ import {
 } from "./api-key-core";
 import { errorResponse } from "./api-utils";
 
+function apiKeyPostWriteReadbackFailure(action: "create" | "activate" | "update" | "deactivate" | "rotate"): Response {
+  const recovery =
+    action === "rotate"
+      ? "Inspect the key prefix in inventory. If it changed, the prior token is revoked and the replacement token is unavailable; start a new rotation intent to issue another token."
+      : "Inspect API-key inventory before starting a new intent; the requested write may already have completed.";
+  return new Response(
+    JSON.stringify({
+      error: "api_key_post_write_readback_failed",
+      message: `API key ${action} may have completed, but the authoritative readback failed.`,
+      recovery,
+    }),
+    {
+      status: 503,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Execution-Certainty": "unknown",
+      },
+    },
+  );
+}
+
 export async function listApiKeys(db: ApiKeyDb, nowSec = getNowSec()): Promise<ApiKeyListResponse> {
-  const rows = await db.prepare(
-    `${buildPublicApiKeySelectQuery()}
+  const rows = await db
+    .prepare(
+      `${buildPublicApiKeySelectQuery()}
      ORDER BY created_at DESC, id DESC`,
-  ).all<ApiKeyPublicRow>();
+    )
+    .all<ApiKeyPublicRow>();
 
   return {
     generatedAt: nowSec,
@@ -55,21 +78,25 @@ export async function createApiKey(
     return parsed;
   }
 
-  const expiresAt = parsed.expiresAt === undefined
-    ? nowSec + API_KEY_DEFAULT_EXPIRY_SEC
-    : parsed.expiresAt;
-  const created = await createTrustedApiKey(db, effectivePepper, {
-    name: parsed.name,
-    ownerEmail: parsed.ownerEmail ?? null,
-    tier: parsed.tier ?? "standard",
-    trafficClass: parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
-    rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
-    expiresAt: expiresAt ?? null,
-  }, nowSec, {
-    actor: "admin",
-    action: "created",
-    detail: { name: parsed.name, tier: parsed.tier ?? "standard" },
-  });
+  const expiresAt = parsed.expiresAt === undefined ? nowSec + API_KEY_DEFAULT_EXPIRY_SEC : parsed.expiresAt;
+  const created = await createTrustedApiKey(
+    db,
+    effectivePepper,
+    {
+      name: parsed.name,
+      ownerEmail: parsed.ownerEmail ?? null,
+      tier: parsed.tier ?? "standard",
+      trafficClass: parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
+      rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+      expiresAt: expiresAt ?? null,
+    },
+    nowSec,
+    {
+      actor: "admin",
+      action: "created",
+      detail: { name: parsed.name, tier: parsed.tier ?? "standard" },
+    },
+  );
   return created;
 }
 
@@ -97,8 +124,9 @@ export async function createTrustedApiKey(
   audit: TrustedApiKeyAuditInput | null = null,
 ): Promise<ApiKeyCreateResponse | Response> {
   const material = await buildApiKeyMaterial(pepper);
-  const createdRow = await db.prepare(
-    `INSERT INTO api_keys (
+  const createdRow = await db
+    .prepare(
+      `INSERT INTO api_keys (
        key_prefix,
        secret_hash,
        name,
@@ -113,7 +141,7 @@ export async function createTrustedApiKey(
      )
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ${buildPublicApiKeyReturningClause()}`,
-  )
+    )
     .bind(
       material.keyPrefix,
       material.secretHash,
@@ -130,7 +158,7 @@ export async function createTrustedApiKey(
     .first<ApiKeyPublicRow>();
 
   if (!createdRow) {
-    return errorResponse(500, "Failed to create API key");
+    return apiKeyPostWriteReadbackFailure("create");
   }
 
   clearApiKeyCache(material.keyPrefix);
@@ -149,9 +177,8 @@ export async function activateTrustedApiKey(
   keyPrefix: string,
   nowSec = getNowSec(),
 ): Promise<ApiKeyMutationResponse | Response> {
-  const result = await db.prepare(
-    "UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0",
-  )
+  const result = await db
+    .prepare("UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0")
     .bind(nowSec, id)
     .run();
   if ((result.meta?.changes ?? 0) === 0) {
@@ -162,7 +189,7 @@ export async function activateTrustedApiKey(
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
-    return errorResponse(500, "Failed to activate API key");
+    return apiKeyPostWriteReadbackFailure("activate");
   }
   return { key: mapRowToSummary(updated) };
 }
@@ -183,8 +210,9 @@ export async function updateApiKey(
     return parsed;
   }
 
-  await db.prepare(
-    `UPDATE api_keys
+  await db
+    .prepare(
+      `UPDATE api_keys
      SET
       name = ?,
       owner_email = ?,
@@ -195,15 +223,15 @@ export async function updateApiKey(
       expires_at = ?,
       updated_at = ?
      WHERE id = ?`,
-  )
+    )
     .bind(
       parsed.name ?? existing.name,
-      Object.prototype.hasOwnProperty.call(parsed, "ownerEmail") ? parsed.ownerEmail ?? null : existing.owner_email,
+      Object.prototype.hasOwnProperty.call(parsed, "ownerEmail") ? (parsed.ownerEmail ?? null) : existing.owner_email,
       parsed.tier ?? existing.tier,
       parsed.trafficClass ?? existing.traffic_class,
       parsed.rateLimitPerMinute ?? existing.rate_limit_per_minute,
       parsed.isActive == null ? existing.is_active : parsed.isActive ? 1 : 0,
-      Object.prototype.hasOwnProperty.call(parsed, "expiresAt") ? parsed.expiresAt ?? null : existing.expires_at,
+      Object.prototype.hasOwnProperty.call(parsed, "expiresAt") ? (parsed.expiresAt ?? null) : existing.expires_at,
       nowSec,
       id,
     )
@@ -214,7 +242,7 @@ export async function updateApiKey(
   await recordApiKeyAudit(db, id, "updated", parsed as Record<string, unknown>, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
-    return errorResponse(500, "Failed to update API key");
+    return apiKeyPostWriteReadbackFailure("update");
   }
 
   return { key: mapRowToSummary(updated) };
@@ -230,18 +258,14 @@ export async function deactivateApiKey(
     return errorResponse(404, "API key not found");
   }
 
-  await db.prepare(
-    "UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?",
-  )
-    .bind(nowSec, id)
-    .run();
+  await db.prepare("UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?").bind(nowSec, id).run();
 
   clearApiKeyCache(existing.key_prefix);
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
   await recordApiKeyAudit(db, id, "deactivated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
-    return errorResponse(500, "Failed to deactivate API key");
+    return apiKeyPostWriteReadbackFailure("deactivate");
   }
 
   return { key: mapRowToSummary(updated) };
@@ -264,8 +288,9 @@ export async function rotateApiKey(
   }
 
   const material = await buildApiKeyMaterial(effectivePepper);
-  await db.prepare(
-    `UPDATE api_keys
+  await db
+    .prepare(
+      `UPDATE api_keys
      SET
        key_prefix = ?,
        secret_hash = ?,
@@ -273,7 +298,7 @@ export async function rotateApiKey(
        last_used_route = NULL,
        updated_at = ?
      WHERE id = ?`,
-  )
+    )
     .bind(material.keyPrefix, material.secretHash, nowSec, id)
     .run();
 
@@ -283,7 +308,7 @@ export async function rotateApiKey(
   await recordApiKeyAudit(db, id, "rotated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
-    return errorResponse(500, "Failed to rotate API key");
+    return apiKeyPostWriteReadbackFailure("rotate");
   }
 
   return {

@@ -7,6 +7,10 @@ const DAY_SECONDS = 86_400;
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
+  fetchJsonWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args) as Response | null;
+    return response ? { response, body: await response.json() } : null;
+  },
 }));
 
 import { auditEvents, handleAuditDepegHistory } from "../audit-depeg-history";

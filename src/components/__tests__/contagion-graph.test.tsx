@@ -99,6 +99,14 @@ afterEach(() => {
 });
 
 describe("ContagionGraph", () => {
+  function getTraceCoinPicker(): HTMLSelectElement {
+    const picker = screen.getByLabelText("Trace coin");
+    if (!(picker instanceof HTMLSelectElement)) {
+      throw new TypeError("Expected the trace coin control to be a select element");
+    }
+    return picker;
+  }
+
   it("renders no graph for an empty dataset", () => {
     const { container } = render(<ContagionGraph cards={[]} mcapMap={new Map()} />);
 
@@ -130,7 +138,7 @@ describe("ContagionGraph", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
-    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    const nodePicker = getTraceCoinPicker();
     const usdcNode = screen.getByRole("button", { name: /USDC/i });
     usdcNode.focus();
 
@@ -146,7 +154,7 @@ describe("ContagionGraph", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
-    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    const nodePicker = getTraceCoinPicker();
     fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
 
     expect(nodePicker.value).toBe("usde-ethena");
@@ -159,7 +167,7 @@ describe("ContagionGraph", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Selected neighborhood" }));
 
-    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    const nodePicker = getTraceCoinPicker();
     const initialValue = nodePicker.value;
     const dragTarget = screen
       .getAllByRole("button", { name: /market cap/i })
@@ -194,7 +202,7 @@ describe("ContagionGraph", () => {
   it("uses the trace picker to open a selected neighborhood", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    const nodePicker = getTraceCoinPicker();
     fireEvent.change(nodePicker, { target: { value: "usdc-circle" } });
 
     expect(nodePicker.value).toBe("usdc-circle");

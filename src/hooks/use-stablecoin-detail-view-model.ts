@@ -56,6 +56,7 @@ export function useStablecoinDetailViewModel({
     data: supplyData,
     isLoading: supplyLoading,
     error: supplyError,
+    dataUpdatedAt: supplyUpdatedAt,
     refetch: refetchSupply,
   } = useSupplyHistory(id);
   const {
@@ -76,6 +77,7 @@ export function useStablecoinDetailViewModel({
   } = usePegSummary();
   const {
     data: liquidityMap,
+    isLoading: liquidityLoading,
     dataUpdatedAt: liqUpdatedAt,
     error: liquidityError,
     refetch: refetchLiquidity,
@@ -95,8 +97,22 @@ export function useStablecoinDetailViewModel({
     refetch: refetchRedemptionBackstops,
     meta: redemptionBackstopsMeta,
   } = useRedemptionBackstops();
-  const { data: yieldRankingsData } = useYieldRankings();
-  const { data: stressSignalsData } = useStressSignals();
+  const {
+    data: yieldRankingsData,
+    isLoading: yieldRankingsLoading,
+    error: yieldRankingsError,
+    dataUpdatedAt: yieldRankingsUpdatedAt,
+    refetch: refetchYieldRankings,
+    meta: yieldRankingsMeta,
+  } = useYieldRankings();
+  const {
+    data: stressSignalsData,
+    isLoading: stressSignalsLoading,
+    error: stressSignalsError,
+    dataUpdatedAt: stressSignalsUpdatedAt,
+    refetch: refetchStressSignals,
+    meta: stressSignalsMeta,
+  } = useStressSignals();
   const flowsEnabled = supplementalQueryControls?.flows ?? true;
   const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
   const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
@@ -104,11 +120,17 @@ export function useStablecoinDetailViewModel({
   const {
     data: flowsData,
     isLoading: isFlowsLoading,
+    error: flowsError,
+    dataUpdatedAt: flowsUpdatedAt,
+    meta: flowsMeta,
     refetch: refetchFlows,
   } = useMintBurnFlows(24, { enabled: flowsEnabled });
   const {
     data: blacklistSummary,
     isLoading: isBlacklistLoading,
+    error: blacklistError,
+    dataUpdatedAt: blacklistUpdatedAt,
+    meta: blacklistMeta,
     refetch: refetchBlacklist,
   } = useBlacklistSummary({ enabled: blacklistEnabled });
   const liveReserves = useStablecoinReserves(id, reservesEnabled);
@@ -122,6 +144,8 @@ export function useStablecoinDetailViewModel({
         refetchLiquidity,
         refetchReportCards,
         refetchRedemptionBackstops,
+        refetchYieldRankings,
+        refetchStressSignals,
         ...(flowsEnabled ? [refetchFlows] : []),
         ...(blacklistEnabled ? [refetchBlacklist] : []),
         ...(reservesEnabled ? [liveReserves.refetch] : []),
@@ -141,7 +165,9 @@ export function useStablecoinDetailViewModel({
     refetchPeg,
     refetchRedemptionBackstops,
     refetchReportCards,
+    refetchStressSignals,
     refetchSupply,
+    refetchYieldRankings,
     reservesEnabled,
   ]);
 
@@ -160,6 +186,7 @@ export function useStablecoinDetailViewModel({
             data: supplyData,
             isLoading: supplyLoading,
             error: supplyError,
+            dataUpdatedAt: supplyUpdatedAt,
           },
           stablecoinList: {
             data: listData,
@@ -177,6 +204,7 @@ export function useStablecoinDetailViewModel({
           },
           dexLiquidity: {
             data: liquidityMap,
+            isLoading: liquidityLoading,
             dataUpdatedAt: liqUpdatedAt,
             error: liquidityError,
             meta: liquidityMeta,
@@ -195,19 +223,42 @@ export function useStablecoinDetailViewModel({
           },
         },
         supplemental: {
-          yieldRankingsData,
-          stressSignalsData,
+          yieldRankings: {
+            data: yieldRankingsData,
+            isLoading: yieldRankingsLoading,
+            error: yieldRankingsError,
+            dataUpdatedAt: yieldRankingsUpdatedAt,
+            meta: yieldRankingsMeta,
+          },
+          stressSignals: {
+            data: stressSignalsData,
+            isLoading: stressSignalsLoading,
+            error: stressSignalsError,
+            dataUpdatedAt: stressSignalsUpdatedAt,
+            meta: stressSignalsMeta,
+          },
           flows: {
             data: flowsEnabled ? flowsData : undefined,
             isLoading: flowsEnabled && isFlowsLoading,
+            error: flowsEnabled ? flowsError : null,
+            dataUpdatedAt: flowsEnabled ? flowsUpdatedAt : 0,
+            meta: flowsEnabled ? flowsMeta : null,
+            enabled: flowsEnabled,
           },
           blacklist: {
             summary: blacklistEnabled ? blacklistSummary : undefined,
             isLoading: blacklistEnabled && isBlacklistLoading,
+            error: blacklistEnabled ? blacklistError : null,
+            dataUpdatedAt: blacklistEnabled ? blacklistUpdatedAt : 0,
+            meta: blacklistEnabled ? blacklistMeta : null,
+            enabled: blacklistEnabled,
           },
           reserves: {
             live: reservesEnabled ? liveReserves.reserveResult : null,
             error: reservesEnabled ? liveReserves.error : null,
+            dataUpdatedAt: reservesEnabled ? liveReserves.dataUpdatedAt : 0,
+            isLoading: reservesEnabled && liveReserves.isLoading,
+            enabled: reservesEnabled,
           },
         },
       }),
@@ -220,6 +271,7 @@ export function useStablecoinDetailViewModel({
       supplyData,
       supplyLoading,
       supplyError,
+      supplyUpdatedAt,
       listData,
       listLoading,
       isListError,
@@ -231,6 +283,7 @@ export function useStablecoinDetailViewModel({
       pegError,
       pegMeta,
       liquidityMap,
+      liquidityLoading,
       liqUpdatedAt,
       liquidityError,
       liquidityMeta,
@@ -243,16 +296,32 @@ export function useStablecoinDetailViewModel({
       redemptionBackstopsError,
       redemptionBackstopsMeta,
       yieldRankingsData,
+      yieldRankingsLoading,
+      yieldRankingsError,
+      yieldRankingsUpdatedAt,
+      yieldRankingsMeta,
       stressSignalsData,
+      stressSignalsLoading,
+      stressSignalsError,
+      stressSignalsUpdatedAt,
+      stressSignalsMeta,
       flowsEnabled,
       flowsData,
       isFlowsLoading,
+      flowsError,
+      flowsUpdatedAt,
+      flowsMeta,
       blacklistEnabled,
       blacklistSummary,
       isBlacklistLoading,
+      blacklistError,
+      blacklistUpdatedAt,
+      blacklistMeta,
       reservesEnabled,
       liveReserves.reserveResult,
       liveReserves.error,
+      liveReserves.dataUpdatedAt,
+      liveReserves.isLoading,
     ],
   );
 

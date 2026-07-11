@@ -4,12 +4,16 @@ import type { FollowedPreset, SubscribedCoin, TelegramMiniAppState } from "./typ
 
 type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
 
-function makeCoin(alertTypes: Partial<SubscribedCoin["alertTypes"]>): SubscribedCoin {
+function makeCoin(
+  alertTypes: Partial<SubscribedCoin["alertTypes"]>,
+  alertOverrides: Partial<NonNullable<SubscribedCoin["alertOverrides"]>> = {},
+): SubscribedCoin {
   return {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     name: "USD Coin",
     alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertTypes },
+    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertOverrides },
     dewsMinBand: null,
     depegStepBps: null,
     safetyMode: null,
@@ -43,13 +47,19 @@ describe("computeEffectiveSource", () => {
 
   it("treats an all-off row as an off-override when a global default would otherwise cover it", () => {
     const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
-    const result = computeEffectiveSource(makeCoin({}), global, []);
+    const result = computeEffectiveSource(makeCoin({}, { dews: true }), global, []);
     expect(result.dews).toBe("off-override");
   });
 
   it("treats an off type as an off-override when a followed preset would otherwise cover it", () => {
-    const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ depeg: true })]);
+    const result = computeEffectiveSource(makeCoin({}, { depeg: true }), NO_GLOBAL, [makePreset({ depeg: true })]);
     expect(result.depeg).toBe("off-override");
+  });
+
+  it("does not treat an unmarked legacy/default zero as a local opt-out", () => {
+    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+    const result = computeEffectiveSource(makeCoin({}), global, []);
+    expect(result.dews).toBe("global");
   });
 
   it("lets per-coin win over a preset/global that also covers the type", () => {

@@ -1,5 +1,6 @@
 import { OPS_UI_HOSTNAME } from "@shared/lib/runtime-origins";
 import { buildRequestUrl } from "@/lib/api";
+import { requestTextWithResponse } from "@/lib/request";
 
 export function isOpsUiHost(
   hostname: string | null = typeof window !== "undefined" ? window.location.hostname : null,
@@ -19,6 +20,8 @@ export interface AdminMutationOptions {
   body?: unknown;
   idempotencyKey?: string;
   headers?: HeadersInit;
+  signal?: AbortSignal;
+  timeoutMs?: number | null;
 }
 
 export interface AdminMutationResult<T> {
@@ -26,6 +29,20 @@ export interface AdminMutationResult<T> {
   text: string;
   formattedBody: string;
   status: number;
+  idempotencyKey: string | null;
+  idempotentReplay: boolean | null;
+  executionCertainty: string | null;
+  warning: string | null;
+}
+
+export class AdminMutationError<T = unknown> extends Error {
+  readonly result: AdminMutationResult<T>;
+
+  constructor(message: string, result: AdminMutationResult<T>) {
+    super(message);
+    this.name = "AdminMutationError";
+    this.result = result;
+  }
 }
 
 function parseResponseText(text: string): unknown {
@@ -44,11 +61,17 @@ function formatResponseBody(parsed: unknown, text: string): string {
   return text;
 }
 
-function getErrorMessage(response: Response, parsed: unknown, text: string): string {
+function getErrorMessage(status: number, parsed: unknown, text: string): string {
   if (parsed && typeof parsed === "object" && "error" in parsed && typeof parsed.error === "string") {
     return parsed.error;
   }
-  return `${response.status}: ${text}`;
+  return `${status}: ${text}`;
+}
+
+function parseBooleanHeader(value: string | null): boolean | null {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return null;
 }
 
 export async function adminMutation<T = unknown>(
@@ -64,35 +87,32 @@ export async function adminMutation<T = unknown>(
     headers.set("Idempotency-Key", options.idempotencyKey);
   }
 
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
-    method: options.method ?? "POST",
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  const result = await requestTextWithResponse(buildRequestUrl(buildAdminApiPath(path)), {
+    signal: options.signal,
+    timeoutMs: options.timeoutMs,
+    allowHttpError: true,
+    init: {
+      method: options.method ?? "POST",
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    },
   });
-  const text = await response.text();
+  const { response, data: text } = result;
   const parsed = parseResponseText(text);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(response, parsed, text));
-  }
-
-  return {
+  const mutationResult: AdminMutationResult<T> = {
     data: parsed as T,
     text,
     formattedBody: formatResponseBody(parsed, text),
     status: response.status,
+    idempotencyKey: response.headers.get("Idempotency-Key"),
+    idempotentReplay: parseBooleanHeader(response.headers.get("X-Idempotent-Replay")),
+    executionCertainty: response.headers.get("X-Execution-Certainty"),
+    warning: response.headers.get("Warning"),
   };
-}
 
-export async function postAdminJson<T>(
-  path: string,
-  body?: unknown,
-  options?: Omit<AdminMutationOptions, "method" | "body">,
-): Promise<T> {
-  const result = await adminMutation<T>(path, {
-    ...options,
-    method: "POST",
-    body,
-  });
-  return result.data;
+  if (!response.ok) {
+    throw new AdminMutationError(getErrorMessage(response.status, parsed, text), mutationResult);
+  }
+
+  return mutationResult;
 }

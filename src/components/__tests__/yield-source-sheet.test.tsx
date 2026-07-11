@@ -211,6 +211,47 @@ describe("YieldSourceSheet", () => {
     expect(pill.className).toContain("bg-sky-500/10");
   });
 
+  it("shows modeled evidence qualification without presenting it as a direct observation", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          provenance: {
+            sourceKey: "rate-derived:usdc",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 60,
+            confidenceTier: "deterministic",
+            calculationMode: "benchmark-model",
+            evidenceClass: "modeled-proxy",
+            evidenceCompleteness: 0.7143,
+            scoreQualification: "estimated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "Modeled proxy retained as context.",
+            sourceSwitch: false,
+            previousBestSourceKey: null,
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByText("Estimated")).toBeTruthy();
+    expect(screen.getByText("Modeled proxy")).toBeTruthy();
+    expect(screen.getByText("Benchmark model")).toBeTruthy();
+    expect(screen.getByText("71% evidence")).toBeTruthy();
+  });
+
   it("renders the source-risk sparkbar under the APY with the provided score", () => {
     const onOpenChange = vi.fn();
     render(

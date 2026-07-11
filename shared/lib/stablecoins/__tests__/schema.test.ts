@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseStablecoinMetaAssets } from "../schema";
+import {
+  parseStablecoinMetaAssets,
+  StablecoinComplianceSidecarSchema,
+  StablecoinMintAuthoritySidecarSchema,
+  StablecoinRiskReviewSidecarSchema,
+} from "../schema";
 
 const baseFlags = {
   pegCurrency: "USD",
@@ -252,6 +257,24 @@ describe("StablecoinMeta schema — blacklistability review", () => {
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
+
+  it.each(["2026-99-99", "2026-02-30", "2025-00-12"])(
+    "rejects impossible review date %s",
+    (reviewedAt) => {
+      expect(() => parseStablecoinMetaAssets([
+        makeCoin({
+          id: "fixture-blacklist-invalid-date",
+          blacklistabilityReview: {
+            reviewedStatus: "inherited",
+            sourceFreeRationale: "Resolved from Pharos stablecoin metadata.",
+            evidence: "Fixture evidence for inferred upstream exposure.",
+            reviewer: "Fixture",
+            reviewedAt,
+          },
+        }),
+      ], "fixture")).toThrow(/Expected YYYY-MM-DD/);
+    },
+  );
 
   it("requires review status to match the override and include a source or rationale", () => {
     const base = {
@@ -915,6 +938,99 @@ describe("StablecoinMeta schema — error formatting", () => {
       message = err instanceof Error ? err.message : String(err);
     }
     expect(message).not.toMatch(/more\)/);
+  });
+});
+
+describe("Stablecoin research sidecar schemas", () => {
+  const mintAuthority = {
+    mintPath: "unknown",
+    authorityPosture: "unknown",
+    confidence: "unknown",
+    summary: "The fixture mint authority remains unresolved.",
+    review: {
+      sourceFreeRationale: "Schema fixture without external research.",
+      evidence: "The fixture records enough evidence text for strict schema validation.",
+      reviewer: "test",
+      reviewedAt: "2026-07-09",
+    },
+  };
+
+  const blacklistabilityReview = {
+    reviewedStatus: true,
+    sourceFreeRationale: "Schema fixture without external research.",
+    evidence: "The fixture models a direct blacklistability control surface.",
+    reviewer: "test",
+    reviewedAt: "2026-07-09",
+  };
+
+  it("accepts each supported research-domain shape", () => {
+    expect(StablecoinMintAuthoritySidecarSchema.safeParse({
+      id: "fixture-usd",
+      mintAuthority,
+    }).success).toBe(true);
+    expect(StablecoinComplianceSidecarSchema.safeParse({
+      id: "fixture-usd",
+      mica: { status: "out-of-scope" },
+      genius: {
+        applicability: "unclear",
+        authorizationStatus: "unknown",
+        issuerPathway: "unknown",
+        reviewer: "test",
+        reviewedAt: "2026-07-09",
+      },
+    }).success).toBe(true);
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      canBeBlacklisted: true,
+      blacklistabilityReview,
+      oracleRisk: {
+        tier: "opaque-or-unknown",
+        summary: "The fixture oracle design remains unknown.",
+      },
+      bridgeRouteRisk: {
+        tier: "opaque-or-unknown",
+        summary: "The fixture bridge route remains unknown.",
+        reviewedAt: "2026-07-09",
+        reviewer: "test",
+        confidence: "unknown",
+        sourceFreeRationale: "Schema fixture without external research.",
+      },
+    }).success).toBe(true);
+  });
+
+  it("requires at least one owned field in optional multi-field domains", () => {
+    expect(StablecoinComplianceSidecarSchema.safeParse({ id: "fixture-usd" }).success).toBe(false);
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({ id: "fixture-usd" }).success).toBe(false);
+  });
+
+  it("keeps explicit blacklistability overrides coupled to their review", () => {
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      canBeBlacklisted: true,
+    }).success).toBe(false);
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      canBeBlacklisted: false,
+      blacklistabilityReview,
+    }).success).toBe(false);
+  });
+
+  it("rejects unknown keys in every research sidecar", () => {
+    expect(StablecoinMintAuthoritySidecarSchema.safeParse({
+      id: "fixture-usd",
+      mintAuthority,
+      notes: "not owned here",
+    }).success).toBe(false);
+    expect(StablecoinComplianceSidecarSchema.safeParse({
+      id: "fixture-usd",
+      mica: { status: "out-of-scope" },
+      jurisdiction: { country: "US" },
+    }).success).toBe(false);
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      blacklistabilityReview,
+      governanceQuality: "single-entity",
+    }).success).toBe(false);
   });
 });
 

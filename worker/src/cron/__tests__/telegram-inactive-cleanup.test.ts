@@ -1,39 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// Mock sendToChat so the warning sub-pass never makes a real HTTP call. The
-// test file owns the queue of responses; each `sendToChat` invocation pops the
-// next entry. Tests can assert call args and call counts.
-type SendResult = Awaited<ReturnType<typeof import("../../lib/telegram").sendToChat>>;
-const sendToChatQueue: SendResult[] = [];
-const sendToChatCalls: Array<{ chatId: string; text: string; botToken: string; opts: unknown }> = [];
-
-vi.mock("../../lib/telegram", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/telegram")>();
-  return {
-    ...actual,
-    sendToChat: vi.fn(async (chatId: string, text: string, botToken: string, opts: unknown) => {
-      sendToChatCalls.push({ chatId, text, botToken, opts });
-      const next = sendToChatQueue.shift();
-      if (next) return next;
-      return {
-        ok: true,
-        blocked: false,
-        retryable: false,
-        permanentFailure: false,
-        statusCode: 200,
-        errorClass: null,
-        delivery: "sent",
-        retryAfterSec: null,
-      } satisfies SendResult;
-    }),
-  };
-});
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");
 
-beforeEach(() => {
-  sendToChatQueue.length = 0;
-  sendToChatCalls.length = 0;
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 interface SubscriberRow {
@@ -50,23 +25,10 @@ interface ChildRow {
   chat_id: string;
 }
 
-interface UsageEventRow {
-  day: string;
-  event_type: string;
-  source_category: string;
-  action_detail: string;
-  outcome: string;
-  latency_bucket: string;
-  failure_class: string;
-  count: number;
-}
-
 const ONE_DAY_SEC = 86_400;
 const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
-const WARN_WINDOW_START_SEC = 170 * ONE_DAY_SEC;
 const RUN_INTERVAL_SEC = 7 * ONE_DAY_SEC;
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
-const WARN_CACHE_KEY_PREFIX = "telegram:re-engagement-warned:";
 
 interface StubState {
   subscribers: SubscriberRow[];
@@ -76,7 +38,6 @@ interface StubState {
   pendingDisambig: ChildRow[];
   diagnostics: ChildRow[];
   cache: Map<string, { value: string; updated_at: number }>;
-  usageEvents: UsageEventRow[];
 }
 
 function deleteFromChild(rows: ChildRow[], chatId: string): number {
@@ -105,42 +66,6 @@ function createStubDb(state: StubState): D1Database {
         ) {
           const [key, value, updatedAt] = bound as [string, string, number];
           state.cache.set(key, { value, updated_at: updatedAt });
-          return { success: true, meta: { changes: 1 } };
-        }
-        if (sql.startsWith("INSERT INTO telegram_usage_daily")) {
-          const [
-            day,
-            eventType,
-            sourceCategory,
-            actionDetail,
-            outcome,
-            latencyBucket,
-            failureClass,
-          ] = bound as [string, string, string, string, string, string, string];
-          const existing = state.usageEvents.find(
-            (row) =>
-              row.day === day
-              && row.event_type === eventType
-              && row.source_category === sourceCategory
-              && row.action_detail === actionDetail
-              && row.outcome === outcome
-              && row.latency_bucket === latencyBucket
-              && row.failure_class === failureClass,
-          );
-          if (existing) {
-            existing.count += 1;
-          } else {
-            state.usageEvents.push({
-              day,
-              event_type: eventType,
-              source_category: sourceCategory,
-              action_detail: actionDetail,
-              outcome,
-              latency_bucket: latencyBucket,
-              failure_class: failureClass,
-              count: 1,
-            });
-          }
           return { success: true, meta: { changes: 1 } };
         }
         if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id")) {
@@ -190,28 +115,6 @@ function createStubDb(state: StubState): D1Database {
         return null;
       },
       all: async () => {
-        // Warning-candidate query: 170-179 day idle subscribers still tied to
-        // active subscriptions or preset rows.
-        if (
-          sql.includes("SELECT DISTINCT s.chat_id")
-          && sql.includes("FROM telegram_subscribers s")
-        ) {
-          const [warnWindowOlderBound, warnWindowNewerBound, limit] = bound as [number, number, number];
-          const hasActive = (chatId: string) =>
-            state.subscriptions.some((r) => r.chat_id === chatId)
-            || state.presets.some((r) => r.chat_id === chatId);
-          const eligible = state.subscribers
-            .filter(
-              (sub) =>
-                sub.last_active_at >= warnWindowOlderBound
-                && sub.last_active_at < warnWindowNewerBound
-                && hasActive(sub.chat_id),
-            )
-            .sort((a, b) => a.last_active_at - b.last_active_at)
-            .slice(0, limit)
-            .map((row) => ({ chat_id: row.chat_id, last_active_at: row.last_active_at }));
-          return { results: eligible, success: true, meta: {} };
-        }
         if (sql.includes("FROM telegram_subscribers s")) {
           const [cutoffSec, limit] = bound as [number, number];
           const hasChild = (chatId: string) =>
@@ -261,8 +164,115 @@ function makeState(): StubState {
     pendingDisambig: [],
     diagnostics: [],
     cache: new Map(),
-    usageEvents: [],
   };
+}
+
+function setupLatestSchemaSqlite(): { sqlite: DatabaseSync; db: D1Database } {
+  const sqlite = new DatabaseSync(":memory:");
+  const migrationDir = join(process.cwd(), "worker/migrations");
+  const migrationFiles = readdirSync(migrationDir)
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
+  for (const file of migrationFiles) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test replays checked-in migrations only.
+    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
+  }
+  return { sqlite, db: createSqliteD1(sqlite) };
+}
+
+function insertSubscriber(sqlite: DatabaseSync, chatId: string, lastActiveAt: number): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
+       VALUES (?, ?, ?)`,
+    )
+    .run(chatId, lastActiveAt, lastActiveAt);
+}
+
+interface SubscriptionState {
+  alertDews: number;
+  alertDepeg: number;
+  alertSafety: number;
+  alertLaunch: number;
+  alertReserve: number;
+  alertDewsOverride: number;
+  alertDepegOverride: number;
+  alertSafetyOverride: number;
+  alertLaunchOverride: number;
+  alertReserveOverride: number;
+  dewsMinBand: string | null;
+  safetyMode: string | null;
+  depegWorseningBpsStep: number | null;
+  alertSnoozeUntilTs: number | null;
+}
+
+const EMPTY_SUBSCRIPTION_STATE: SubscriptionState = {
+  alertDews: 0,
+  alertDepeg: 0,
+  alertSafety: 0,
+  alertLaunch: 0,
+  alertReserve: 0,
+  alertDewsOverride: 0,
+  alertDepegOverride: 0,
+  alertSafetyOverride: 0,
+  alertLaunchOverride: 0,
+  alertReserveOverride: 0,
+  dewsMinBand: null,
+  safetyMode: null,
+  depegWorseningBpsStep: null,
+  alertSnoozeUntilTs: null,
+};
+
+function insertSubscription(
+  sqlite: DatabaseSync,
+  chatId: string,
+  overrides: Partial<SubscriptionState> = {},
+): void {
+  const state = { ...EMPTY_SUBSCRIPTION_STATE, ...overrides };
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_subscriptions (
+         chat_id,
+         stablecoin_id,
+         alert_dews,
+         alert_depeg,
+         alert_safety,
+         alert_launch,
+         alert_reserve,
+         alert_dews_override,
+         alert_depeg_override,
+         alert_safety_override,
+         alert_launch_override,
+         alert_reserve_override,
+         dews_min_band,
+         safety_mode,
+         depeg_worsening_bps_step,
+         alert_snooze_until_ts
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      chatId,
+      `coin-${chatId}`,
+      state.alertDews,
+      state.alertDepeg,
+      state.alertSafety,
+      state.alertLaunch,
+      state.alertReserve,
+      state.alertDewsOverride,
+      state.alertDepegOverride,
+      state.alertSafetyOverride,
+      state.alertLaunchOverride,
+      state.alertReserveOverride,
+      state.dewsMinBand,
+      state.safetyMode,
+      state.depegWorseningBpsStep,
+      state.alertSnoozeUntilTs,
+    );
+}
+
+function listSubscriberIds(sqlite: DatabaseSync): string[] {
+  return (sqlite.prepare("SELECT chat_id FROM telegram_subscribers ORDER BY chat_id").all() as Array<{ chat_id: string }>)
+    .map((row) => row.chat_id);
 }
 
 describe("runTelegramInactiveCleanup", () => {
@@ -300,7 +310,7 @@ describe("runTelegramInactiveCleanup", () => {
     expect(metadata.cappedAtLimit).toBe(false);
   });
 
-  it("preserves recently-active subscribers and chats with any child rows", async () => {
+  it("preserves recently-active subscribers and chats with meaningful child state", async () => {
     const state = makeState();
     const now = Math.floor(Date.now() / 1000);
     state.subscribers.push(
@@ -451,89 +461,91 @@ describe("runTelegramInactiveCleanup", () => {
     expect(state.diagnostics.map((row) => row.chat_id)).toEqual(["active"]);
   });
 
-  it("dispatches a warn-pass nudge and emits a re_engagement_warning event", async () => {
-    const state = makeState();
+  it("does not warn or expire live follows across the inactivity boundary", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-10T12:00:00.000Z"));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected Bot API call"));
+    const { sqlite, db } = setupLatestSchemaSqlite();
     const now = Math.floor(Date.now() / 1000);
-    // Subscriber sits inside the 170-179 day warn window AND still has an
-    // active subscription so it is eligible for the nudge but not yet for
-    // deletion.
-    state.subscribers.push({
-      chat_id: "warn-1",
-      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
-    });
-    state.subscriptions.push({ chat_id: "warn-1" });
-    const db = createStubDb(state);
 
-    const result = await runTelegramInactiveCleanup(db, undefined, "bot-token-123");
-
-    expect(result.status).toBe("ok");
-    // The subscriber row must NOT be deleted in this run: it is in the warn
-    // window, not past the 180-day inactivity cutoff.
-    expect(state.subscribers).toHaveLength(1);
-    expect(state.subscribers[0]?.chat_id).toBe("warn-1");
-
-    // A nudge was dispatched to the eligible chat.
-    expect(sendToChatCalls).toHaveLength(1);
-    expect(sendToChatCalls[0]?.chatId).toBe("warn-1");
-    expect(sendToChatCalls[0]?.botToken).toBe("bot-token-123");
-
-    // The 30-day warn marker was persisted for this chat.
-    const warnMarker = state.cache.get(`${WARN_CACHE_KEY_PREFIX}warn-1`);
-    expect(warnMarker).toBeTruthy();
-
-    // A re_engagement_warning usage event was recorded with outcome=sent.
-    const warningEvents = state.usageEvents.filter(
-      (row) => row.event_type === "re_engagement_warning",
-    );
-    expect(warningEvents).toHaveLength(1);
-    expect(warningEvents[0]?.outcome).toBe("sent");
-
-    // Metadata exposes the warning-pass summary, including the cap flag.
-    const metadata = JSON.parse(result.metadata!) as {
-      warningPass?: { attempted: number; warned: number; cappedAtLimit: boolean };
-    };
-    expect(metadata.warningPass?.attempted).toBe(1);
-    expect(metadata.warningPass?.warned).toBe(1);
-    expect(metadata.warningPass?.cappedAtLimit).toBe(false);
-  });
-
-  it("omits Mini App reply markup for group re-engagement warnings", async () => {
-    const state = makeState();
-    const now = Math.floor(Date.now() / 1000);
-    state.subscribers.push({
-      chat_id: "-100123",
-      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
-    });
-    state.subscriptions.push({ chat_id: "-100123" });
-    const db = createStubDb(state);
-
-    const result = await runTelegramInactiveCleanup(db, undefined, "bot-token-123");
-
-    expect(result.status).toBe("ok");
-    expect(sendToChatCalls).toHaveLength(1);
-    expect(sendToChatCalls[0]?.chatId).toBe("-100123");
-    expect(sendToChatCalls[0]?.opts).not.toMatchObject({
-      replyMarkup: expect.anything(),
-    });
-  });
-
-  it("skips the warning pass entirely when botToken is not provided", async () => {
-    const state = makeState();
-    const now = Math.floor(Date.now() / 1000);
-    state.subscribers.push({
-      chat_id: "warn-1",
-      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
-    });
-    state.subscriptions.push({ chat_id: "warn-1" });
-    const db = createStubDb(state);
+    insertSubscriber(sqlite, "empty-179d", now - 179 * ONE_DAY_SEC);
+    insertSubscriber(sqlite, "empty-181d", now - 181 * ONE_DAY_SEC);
+    insertSubscriber(sqlite, "live-175d", now - 175 * ONE_DAY_SEC);
+    insertSubscription(sqlite, "live-175d", { alertDepeg: 1 });
+    insertSubscriber(sqlite, "live-365d", now - 365 * ONE_DAY_SEC);
+    insertSubscription(sqlite, "live-365d", { alertReserve: 1 });
 
     const result = await runTelegramInactiveCleanup(db);
 
-    expect(sendToChatCalls).toHaveLength(0);
-    expect(state.usageEvents).toHaveLength(0);
-    const metadata = JSON.parse(result.metadata!) as {
-      warningPass?: unknown;
-    };
-    expect(metadata.warningPass).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+    expect(listSubscriberIds(sqlite)).toEqual(["empty-179d", "live-175d", "live-365d"]);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).not.toHaveProperty("warningPass");
+    sqlite.close();
+  });
+
+  it("prunes zero-effect rows but preserves every current form of subscription intent", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-10T12:00:00.000Z"));
+    const { sqlite, db } = setupLatestSchemaSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    const staleAt = now - INACTIVE_RETENTION_SEC - ONE_DAY_SEC;
+
+    const meaningfulRows: Array<[string, Partial<SubscriptionState>]> = [
+      ["alert-dews", { alertDews: 1 }],
+      ["alert-depeg", { alertDepeg: 1 }],
+      ["alert-safety", { alertSafety: 1 }],
+      ["alert-launch", { alertLaunch: 1 }],
+      ["alert-reserve", { alertReserve: 1 }],
+      ["override-dews", { alertDewsOverride: 1 }],
+      ["override-depeg", { alertDepegOverride: 1 }],
+      ["override-safety", { alertSafetyOverride: 1 }],
+      ["override-launch", { alertLaunchOverride: 1 }],
+      ["override-reserve", { alertReserveOverride: 1 }],
+      ["tuning-dews", { dewsMinBand: "AMBER" }],
+      ["tuning-safety", { safetyMode: "critical" }],
+      ["tuning-depeg", { depegWorseningBpsStep: 25 }],
+      ["coin-snooze", { alertSnoozeUntilTs: now + ONE_DAY_SEC }],
+    ];
+    for (const [chatId, state] of meaningfulRows) {
+      insertSubscriber(sqlite, chatId, staleAt);
+      insertSubscription(sqlite, chatId, state);
+    }
+
+    insertSubscriber(sqlite, "zero-effect", staleAt);
+    insertSubscription(sqlite, "zero-effect");
+
+    insertSubscriber(sqlite, "preset-follow", staleAt);
+    sqlite.prepare(
+      `INSERT INTO telegram_preset_subscriptions
+         (chat_id, preset_id, alert_dews, created_at, updated_at)
+       VALUES (?, ?, 1, ?, ?)`,
+    ).run("preset-follow", "usd-top25", staleAt, staleAt);
+
+    insertSubscriber(sqlite, "pending-alert", staleAt);
+    sqlite.prepare(
+      `INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at)
+       VALUES (?, ?, ?)`,
+    ).run("pending-alert", "pending", staleAt);
+
+    insertSubscriber(sqlite, "pending-interaction", staleAt);
+    sqlite.prepare(
+      `INSERT INTO telegram_pending_disambiguation (
+         chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
+         remaining_tickers, expires_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run("pending-interaction", "[]", "[]", "USD", "[]", "[]", now + ONE_DAY_SEC);
+
+    const result = await runTelegramInactiveCleanup(db);
+
+    expect(result.itemCount).toBe(1);
+    expect(listSubscriberIds(sqlite)).toEqual(
+      [...meaningfulRows.map(([chatId]) => chatId), "pending-alert", "pending-interaction", "preset-follow"].sort(),
+    );
+    expect(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = ?")
+        .get("zero-effect"),
+    ).toEqual({ count: 0 });
+    sqlite.close();
   });
 });

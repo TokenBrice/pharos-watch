@@ -6,15 +6,21 @@ import { buildStatusDiscoveryKeyboard } from "../telegram-webhook-messages";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { runReadOnlyCoinCallback, type CallbackHandler } from "./_shared";
 
-export const handleCoverageCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
+export const handleCoverageCallback: CallbackHandler = async ({
+  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect, planIntent,
+}) => {
   await runReadOnlyCoinCallback({
     botToken,
     cb,
     parsed,
     ackText: "Coverage sent.",
+    answerCallback,
+    planIntent,
+    intentKind: "callback:coverage",
     send: async (id, isPrivateChat) => {
       const status = await loadStatusForCoin(db, id);
       const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
+      await beforeIrreversibleEffect("callback-coverage-reply");
       await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(symbol, status), botToken, {
         replyMarkup: buildStatusDiscoveryKeyboard(id, {
           includeMiniAppButton: isPrivateChat,

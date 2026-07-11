@@ -53,14 +53,14 @@ describe("telegram-constants", () => {
   });
 
   it("declares pending-queue tuning values", () => {
-    expect(PENDING_TTL_SEC).toBe(3600);
+    expect(PENDING_TTL_SEC).toBe(2 * 60 * 60);
     expect(TELEGRAM_ALERT_TTL_SEC.depeg).toBe(PENDING_TTL_SEC);
     expect(TELEGRAM_ALERT_TTL_SEC.dews).toBe(PENDING_TTL_SEC);
     expect(TELEGRAM_ALERT_TTL_SEC.safety).toBe(PENDING_TTL_SEC);
-    expect(TELEGRAM_ALERT_TTL_SEC.launch).toBe(30 * 60);
-    expect(TELEGRAM_ALERT_TTL_SEC.adminBroadcast).toBe(30 * 60);
+    expect(TELEGRAM_ALERT_TTL_SEC.launch).toBe(90 * 60);
+    expect(TELEGRAM_ALERT_TTL_SEC.adminBroadcast).toBe(45 * 60);
     expect(TELEGRAM_MAX_MESSAGES_PER_RUN).toBe(3600);
-    expect(TELEGRAM_PENDING_DRAIN_BUDGET).toBe(900);
+    expect(TELEGRAM_PENDING_DRAIN_BUDGET).toBe(1800);
     expect(SEND_BATCH_SIZE).toBe(4);
     expect(PENDING_MAX_ATTEMPTS).toBe(20);
     expect(PENDING_BACKOFF_SCHEDULE_SEC).toEqual([60, 120, 240, 480, 600]);

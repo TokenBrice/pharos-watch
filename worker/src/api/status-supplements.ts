@@ -463,7 +463,7 @@ export async function loadStatusSupplements(
       ? resolveCloudflareD1StatusConfig(cloudflareD1StatusBindings)
       : null;
     if (d1StatusConfig) {
-      d1Usage = await getD1UsageSummary(d1StatusConfig, now);
+      d1Usage = await getD1UsageSummary(d1StatusConfig, now, db);
     } else if (cloudflareD1StatusBindings && hasAnyCloudflareD1StatusBinding(cloudflareD1StatusBindings)) {
       sectionErrors.d1Usage = sectionError(
         "cloudflare_d1_status_config_incomplete",

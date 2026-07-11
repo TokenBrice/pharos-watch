@@ -10,7 +10,7 @@ import type {
 import { MiniButton } from "./MiniButton";
 
 export interface StatusPanelProps {
-  /** Composite optimistic state; reading `subscriber`, `viewer`, `health`. */
+  /** Last server-confirmed state; reading `subscriber`, `viewer`, `health`. */
   state: TelegramMiniAppState;
   /** Whether the user has write access AND `initData` is present. */
   canMutate: boolean;
@@ -18,10 +18,10 @@ export interface StatusPanelProps {
   isMutating: boolean;
   /** Mutation currently in flight, used for scoped control feedback. */
   pendingOperation: TelegramMiniAppOperation | null;
-  /** Mutation dispatcher (optimistic). */
+  /** Server-confirmed mutation dispatcher. */
   onMutate: (operation: TelegramMiniAppOperation) => void;
   /** Pre-computed headline summary (active globals, coin count, preset count). */
-  optimisticHomeHeadline: string;
+  homeHeadline: string;
   /** "missed" → show CTA; "added" / null → hide. Plumbed from `useMiniAppMutations`. */
   homeScreenStatus: string | null;
   /** `webApp.addToHomeScreen` + haptic + checkHomeScreenStatus refresh. */
@@ -55,7 +55,7 @@ function failureCopy(failureClass: string | null): { title: string; body: string
   };
 }
 
-export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
+export function StatusPanel({ state, canMutate, isMutating, pendingOperation, onMutate, homeHeadline, homeScreenStatus, onAddToHomeScreen, onSendSample }: StatusPanelProps) {
   const snoozeUntil = state.subscriber.snoozeUntilTs;
   const snoozeActive = snoozeUntil != null;
   const paused = isPausedSentinel(snoozeUntil);
@@ -99,7 +99,7 @@ export function StatusPanel({ state, canMutate, isMutating, pendingOperation, on
         <p className="pharos-kicker">Watcher state</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">{state.subscriber.exists ? "Alerts are active" : "No active watcher yet"}</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {state.subscriber.exists ? optimisticHomeHeadline : "Start with the recommended setup for DEWS and depeg alerts on the top USD stablecoins."}
+          {state.subscriber.exists ? homeHeadline : "Start with the recommended setup for DEWS and depeg alerts on the top USD stablecoins."}
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <MiniButton

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { runTelegramRetentionCleanup } from "../telegram-retention-cleanup";
+import {
+  TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
+  runTelegramRetentionCleanup,
+} from "../telegram-retention-cleanup";
 
 interface UsageDailyRow {
   day: string;
@@ -63,7 +66,10 @@ function makeState(): StubState {
  * `reconcileExpiredTelegramAlertJobTargets`). Mirrors the pattern in
  * prune-cron-history.test.ts and telegram-inactive-cleanup.test.ts.
  */
-function createStubDb(state: StubState): D1Database {
+function createStubDb(
+  state: StubState,
+  options: { afterProcessedUpdateDelete?: () => void } = {},
+): D1Database {
   function boundDeleteLimit(bound: unknown[]): number {
     const limit = Number(bound[2]);
     return Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY;
@@ -96,8 +102,9 @@ function createStubDb(state: StubState): D1Database {
           return { success: true, meta: { changes: 0 } };
         }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
-          const [cutoff] = bound as [number];
-          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff, 5_000);
+          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
+          const removed = deleteMatching(state.processedUpdates, (row) => row.received_at < cutoff, limit);
+          options.afterProcessedUpdateDelete?.();
           return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_alert_dead_letters")) {
@@ -152,7 +159,17 @@ function createStubDb(state: StubState): D1Database {
         }
         return { success: true, meta: { changes: 0 } };
       },
-      first: async () => null,
+      first: async () => {
+        if (sql.includes("SELECT COUNT(*) AS count") && sql.includes("FROM telegram_processed_updates")) {
+          const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
+          const count = Math.min(
+            state.processedUpdates.filter((row) => row.received_at < cutoff).length,
+            limit,
+          );
+          return { count };
+        }
+        return null;
+      },
       all: async () => ({ results: [], success: true, meta: {} }),
     };
     return stmt as unknown as D1PreparedStatement;
@@ -275,7 +292,7 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.cappedAtLimit.jobs).toBe(false);
   });
 
-  it("drains processed-update retention across multiple capped batches", async () => {
+  it("caps processed-update retention to one bounded run and reports a lower-bound backlog", async () => {
     const state = makeState();
     const now = Math.floor(Date.now() / 1000);
     const staleReceivedAt = now - 8 * 24 * 60 * 60;
@@ -286,13 +303,77 @@ describe("runTelegramRetentionCleanup", () => {
 
     const result = await runTelegramRetentionCleanup(db);
 
-    expect(state.processedUpdates).toHaveLength(0);
+    expect(state.processedUpdates).toHaveLength(7_001);
     const metadata = JSON.parse(result.metadata!) as {
       processedUpdatesPruned: number;
+      processedUpdatesRemainingBacklog: { count: number; exact: boolean; probeLimit: number };
+      processedUpdatePruneBudget: { batches: number; batchLimit: number; timeBudgetExhausted: boolean };
+      runBudgetTruncated: boolean;
       cappedAtLimit: { processedUpdates: boolean };
     };
-    expect(metadata.processedUpdatesPruned).toBe(12_001);
+    expect(metadata.processedUpdatesPruned).toBe(5_000);
+    expect(metadata.cappedAtLimit.processedUpdates).toBe(true);
+    expect(metadata.processedUpdatePruneBudget).toMatchObject({
+      batches: 5,
+      batchLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
+      timeBudgetExhausted: false,
+    });
+    expect(metadata.processedUpdatesRemainingBacklog).toEqual({
+      count: 5_001,
+      exact: false,
+      probeLimit: 5_001,
+    });
+    expect(metadata.runBudgetTruncated).toBe(true);
+  });
+
+  it("stops processed-update batches at the time budget and reports the exact remaining backlog", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    const staleReceivedAt = now - 8 * 24 * 60 * 60;
+    for (let i = 0; i < 3_000; i += 1) {
+      state.processedUpdates.push({ received_at: staleReceivedAt });
+    }
+
+    let monotonicMs = 0;
+    const db = createStubDb(state, {
+      afterProcessedUpdateDelete: () => {
+        monotonicMs = 10;
+      },
+    });
+    const result = await runTelegramRetentionCleanup(db, undefined, {
+      monotonicNow: () => monotonicMs,
+      processedUpdateTimeBudgetMs: 10,
+    });
+
+    expect(state.processedUpdates).toHaveLength(2_000);
+    const metadata = JSON.parse(result.metadata!) as {
+      processedUpdatesPruned: number;
+      processedUpdatesRemainingBacklog: { count: number; exact: boolean; probeLimit: number };
+      processedUpdatePruneBudget: {
+        rowLimit: number;
+        batchLimit: number;
+        timeBudgetMs: number;
+        batches: number;
+        timeBudgetExhausted: boolean;
+      };
+      runBudgetTruncated: boolean;
+      cappedAtLimit: { processedUpdates: boolean };
+    };
+    expect(metadata.processedUpdatesPruned).toBe(1_000);
     expect(metadata.cappedAtLimit.processedUpdates).toBe(false);
+    expect(metadata.processedUpdatePruneBudget).toEqual({
+      rowLimit: 5_000,
+      batchLimit: 1_000,
+      timeBudgetMs: 10,
+      batches: 1,
+      timeBudgetExhausted: true,
+    });
+    expect(metadata.processedUpdatesRemainingBacklog).toEqual({
+      count: 2_000,
+      exact: true,
+      probeLimit: 5_001,
+    });
+    expect(metadata.runBudgetTruncated).toBe(true);
   });
 
   it("prunes stale Telegram chat cache residue by prefix", async () => {
@@ -304,12 +385,14 @@ describe("runTelegramRetentionCleanup", () => {
     const freshWarning = now - 20 * 24 * 60 * 60;
     state.cache.push(
       { key: "telegram:command-cooldown:42:/status", value: "1", updated_at: staleShortLived },
+      { key: "telegram:mini-app-mutation-burst:42", value: "12", updated_at: staleShortLived },
       { key: "telegram:command-flood:42", value: "1", updated_at: staleShortLived },
       { key: "telegram:chat-member:42:99", value: "1", updated_at: staleShortLived },
       { key: "telegram:chat-admins:-42", value: "1", updated_at: staleShortLived },
       { key: "telegram:group-welcome:-42", value: "1", updated_at: staleShortLived },
       { key: "telegram:re-engagement-warned:42", value: "1", updated_at: staleWarning },
       { key: "telegram:command-cooldown:43:/status", value: "1", updated_at: freshShortLived },
+      { key: "telegram:mini-app-mutation-burst:43", value: "6", updated_at: freshShortLived },
       { key: "telegram:command-flood:43", value: "1", updated_at: freshShortLived },
       { key: "telegram:chat-member:43:99", value: "1", updated_at: freshShortLived },
       { key: "telegram:chat-admins:-43", value: "1", updated_at: freshShortLived },
@@ -323,6 +406,7 @@ describe("runTelegramRetentionCleanup", () => {
     expect(state.cache.map((row) => row.key).sort()).toEqual(
       [
         "telegram:command-cooldown:43:/status",
+        "telegram:mini-app-mutation-burst:43",
         "telegram:command-flood:43",
         "telegram:chat-admins:-43",
         "telegram:chat-member:43:99",
@@ -332,6 +416,7 @@ describe("runTelegramRetentionCleanup", () => {
     );
     const metadata = JSON.parse(result.metadata!) as {
       commandCooldownCachePruned: number;
+      miniAppMutationBurstCachePruned: number;
       commandFloodCachePruned: number;
       chatMemberCachePruned: number;
       chatAdminsCachePruned: number;
@@ -343,6 +428,7 @@ describe("runTelegramRetentionCleanup", () => {
       };
     };
     expect(metadata.commandCooldownCachePruned).toBe(1);
+    expect(metadata.miniAppMutationBurstCachePruned).toBe(1);
     expect(metadata.commandFloodCachePruned).toBe(1);
     expect(metadata.chatMemberCachePruned).toBe(1);
     expect(metadata.chatAdminsCachePruned).toBe(1);

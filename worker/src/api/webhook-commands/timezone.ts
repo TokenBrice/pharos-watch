@@ -7,7 +7,12 @@ import {
 } from "../telegram-webhook-store";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { isGroupChatType } from "../telegram-webhook-auth";
-import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
+import {
+  confirmCommandMutation,
+  prepareCommandMutation,
+  replyWithOptionalMiniApp,
+  type WebhookCommandHandler,
+} from "./context";
 
 /**
  * Subset of IANA zones surfaced as a fallback inline keyboard when `/timezone`
@@ -101,7 +106,11 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
     return;
   }
 
-  await setSubscriberTimezone(db, chatId, username, trimmed);
+  const operation = await prepareCommandMutation(ctx, "timezone", { timezone: trimmed });
+  if (!ctx.wasMutationApplied) {
+    await setSubscriberTimezone(db, chatId, username, trimmed, operation);
+    confirmCommandMutation(ctx, operation);
+  }
   await recordTelegramUsageEvent(db, {
     eventType: "timezone_change",
     actionDetail: "iana",

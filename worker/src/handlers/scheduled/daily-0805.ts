@@ -1,15 +1,14 @@
 /**
  * Daily 08:05 UTC trigger (5 8 * * *):
  *   sync-bluechip (3)          ← parallel chain
- *   daily-digest (1) → weekly-digest (1)  ← chained to share connection pool
+ *   daily-digest (1)           ← independent parallel chain
  *
- * Digests are chained; bluechip runs as an independent parallel chain.
- * Worst case peak is bluechip batch (3) + digest chain (1).
+ * Weekly recap runs in the separate 08:10 UTC slot so both LLM jobs receive
+ * their full scheduled-event runtime budget on Mondays.
  * Connection budget: 4/6 peak.
  */
 import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
-import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slot-groups";
@@ -32,7 +31,7 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
           ],
         },
         {
-          label: "digest-chain",
+          label: "daily-digest",
           tasks: [
             {
               job: "daily-digest",
@@ -42,17 +41,6 @@ function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
                   runtime.env.ANTHROPIC_API_KEY ?? null,
                   buildTwitterCreds(runtime.env),
                   false,
-                  buildTelegramCreds(runtime.env),
-                  signal,
-                  reportProgress,
-                ),
-            },
-            {
-              job: "weekly-recap",
-              run: (signal, reportProgress) =>
-                generateWeeklyRecap(
-                  runtime.db,
-                  runtime.env.ANTHROPIC_API_KEY ?? null,
                   buildTelegramCreds(runtime.env),
                   signal,
                   reportProgress,

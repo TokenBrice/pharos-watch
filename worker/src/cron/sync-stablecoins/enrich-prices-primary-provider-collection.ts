@@ -12,10 +12,11 @@ import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
-  fetchBinancePricesDetailed,
+  fetchBinancePricesForRun,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
+  type BinanceFetchSession,
 } from "../../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -452,11 +453,12 @@ export async function collectPrimaryProviderQuotes(params: {
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   references?: PriceValidationReferences;
+  binanceSession?: BinanceFetchSession;
 }): Promise<{
   quoteMaps: PrimaryConsensusQuoteMaps;
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }> {
-  const { plan, db, signal, coingeckoApiKey, chainRpcs, references } = params;
+  const { plan, db, signal, coingeckoApiKey, chainRpcs, references, binanceSession } = params;
   const {
     coinbaseSymbols,
     geckoIds,
@@ -573,7 +575,7 @@ export async function collectPrimaryProviderQuotes(params: {
     fetches.push(async () => {
       if (sourceAllowed.binance) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
-          const outcome = await fetchBinancePricesDetailed(signal);
+          const outcome = await fetchBinancePricesForRun(db, binanceSession ?? {}, signal, nowSec);
           const { prices, diagnostics } = outcome.value;
           providerDiagnostics.push(...diagnostics);
           for (const [symbol, price] of prices) {
@@ -710,6 +712,7 @@ export async function collectPrimaryProviderQuotes(params: {
       config: plan.addressProviderConfig,
       signal,
       nowSec,
+      db,
     });
     for (const [coinId, quotes] of addressProviderResult.quotesByStablecoinId) {
       addressProviderQuotes.set(coinId, quotes);

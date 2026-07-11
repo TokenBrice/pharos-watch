@@ -22,6 +22,10 @@ export type PagesProxyFetchErrorKind = "timeout" | "fetch-error";
 
 export interface PagesProxyHarness<Env, Params> {
   logPrefix: string;
+  finalizeResponse?: (
+    context: PagesProxyContext<Env, Params>,
+    response: Response,
+  ) => Response;
   rejectRequest?: (context: PagesProxyContext<Env, Params>) => Response | null;
   validateEnv?: (context: PagesProxyContext<Env, Params>) => Response | null;
   resolveUpstreamPath: (context: PagesProxyContext<Env, Params>) => string | null;
@@ -58,39 +62,42 @@ export async function runPagesProxy<Env, Params>(
   context: PagesProxyContext<Env, Params>,
   harness: PagesProxyHarness<Env, Params>,
 ): Promise<Response> {
+  const finalize = (response: Response): Response =>
+    harness.finalizeResponse?.(context, response) ?? response;
+
   const requestError = harness.rejectRequest?.(context);
   if (requestError) {
-    return requestError;
+    return finalize(requestError);
   }
 
   const envError = harness.validateEnv?.(context);
   if (envError) {
-    return envError;
+    return finalize(envError);
   }
 
   const upstreamPath = harness.resolveUpstreamPath(context);
   if (!upstreamPath) {
-    return harness.rejectUpstreamPath?.(context, "") ?? new Response(null, { status: 404 });
+    return finalize(harness.rejectUpstreamPath?.(context, "") ?? new Response(null, { status: 404 }));
   }
 
   const pathError = harness.rejectUpstreamPath?.(context, upstreamPath);
   if (pathError) {
-    return pathError;
+    return finalize(pathError);
   }
 
   const methodError = harness.rejectMethod?.(context, upstreamPath);
   if (methodError) {
-    return methodError;
+    return finalize(methodError);
   }
 
   const earlyResponse = await harness.beforeFetch?.(context, upstreamPath);
   if (earlyResponse) {
-    return earlyResponse;
+    return finalize(earlyResponse);
   }
 
   const upstreamRequest = harness.buildUpstreamRequest(context, upstreamPath);
   if (upstreamRequest instanceof Response) {
-    return upstreamRequest;
+    return finalize(upstreamRequest);
   }
 
   const upstreamResult = await fetchUpstreamProxy(context.request, {
@@ -105,10 +112,11 @@ export async function runPagesProxy<Env, Params>(
     fetchFailedMessage: upstreamRequest.fetchFailedMessage,
   });
   if (!upstreamResult.ok) {
-    return harness.onFetchError
-      ? harness.onFetchError(context, upstreamPath, upstreamResult.errorKind, upstreamResult.response)
+    const response = harness.onFetchError
+      ? await harness.onFetchError(context, upstreamPath, upstreamResult.errorKind, upstreamResult.response)
       : upstreamResult.response;
+    return finalize(response);
   }
 
-  return harness.buildResponse(context, upstreamPath, upstreamResult.response);
+  return finalize(await harness.buildResponse(context, upstreamPath, upstreamResult.response));
 }

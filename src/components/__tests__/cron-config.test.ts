@@ -80,7 +80,7 @@ describe("status cron config", () => {
       group: "daily",
       label: "Coverage discovery",
       schedule: "10 8 * * *",
-      triggerMode: "isolated",
+      triggerMode: "shared",
     });
   });
 

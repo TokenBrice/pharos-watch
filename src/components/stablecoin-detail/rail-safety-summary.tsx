@@ -38,11 +38,11 @@ export function RailSafetySummary({ items }: { items: HeroSignalRailItem[] }) {
         href={hero.href}
         className="pharos-focus-ring mt-2.5 inline-flex items-baseline gap-2 rounded-md"
       >
-        <span className={cn("pharos-numeric text-3xl font-extrabold leading-none", gradeClass)}>
+        <span className={cn("pharos-numeric text-5xl font-extrabold leading-none tracking-tight", gradeClass)}>
           {hero.primary}
         </span>
         {hero.secondary ? (
-          <span className="font-mono text-sm text-muted-foreground">· {hero.secondary}</span>
+          <span className="font-mono text-base text-muted-foreground">· {hero.secondary}</span>
         ) : null}
       </Link>
       <div className="mt-3 divide-y divide-border/40 border-t border-border/40">

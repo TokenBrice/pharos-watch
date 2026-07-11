@@ -474,8 +474,8 @@ describe("reconcileTelegramMenuButton", () => {
     const result = await reconcileTelegramMenuButton(db, { botToken: "bot-token" });
 
     expect(result).toEqual({
-      attempted: false,
-      skipped: true,
+      attempted: true,
+      skipped: false,
       reason: "already-current",
       miniAppUrl: TELEGRAM_MINI_APP_URL,
     });

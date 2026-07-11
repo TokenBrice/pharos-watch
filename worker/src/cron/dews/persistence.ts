@@ -1,7 +1,12 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { batchExecute, buildInClause } from "../../lib/db";
+import {
+  batchExecute,
+  buildInClause,
+  executeAtomicBatch,
+  prepareMultiRowInsertStatements,
+} from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
@@ -159,6 +164,107 @@ function buildStressSignalsEnvelope(result: DewsComputedRow): string {
   });
 }
 
+function hasExactStablecoinIds(actual: ReadonlySet<string>, expected: ReadonlySet<string>): boolean {
+  if (actual.size !== expected.size) return false;
+  for (const stablecoinId of expected) {
+    if (!actual.has(stablecoinId)) return false;
+  }
+  return true;
+}
+
+async function readDailyStressHistoryIds(
+  db: D1Database,
+  snapshotDate: number,
+  signal?: AbortSignal,
+): Promise<Set<string>> {
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT /* pharos:dews:stress-history-daily-ids */ stablecoin_id
+           FROM stress_signal_history
+          WHERE snapshot_date = ?`,
+      )
+      .bind(snapshotDate)
+      .all<{ stablecoin_id: string }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return new Set((rows.results ?? []).map((row) => row.stablecoin_id));
+}
+
+/**
+ * Seal the producer-owned portion of one daily snapshot to the exact computed
+ * identity set. Frozen rows are retained as historical evidence outside the
+ * active producer's ownership boundary.
+ */
+export async function reconcileDailyDewsHistorySnapshot(
+  db: D1Database,
+  results: DewsComputedRow[],
+  snapshotDate: number,
+  signal?: AbortSignal,
+): Promise<{ rewritten: boolean; previousOwnedRowCount: number; sealedRowCount: number }> {
+  if (results.length === 0) {
+    return { rewritten: false, previousOwnedRowCount: 0, sealedRowCount: 0 };
+  }
+
+  const expectedIds = new Set(results.map((result) => result.stablecoinId));
+  if (expectedIds.size !== results.length) {
+    throw new Error("DEWS daily snapshot contains duplicate stablecoin identities");
+  }
+
+  const existingIds = await readDailyStressHistoryIds(db, snapshotDate, signal);
+  const existingOwnedIds = new Set([...existingIds].filter((stablecoinId) => !FROZEN_IDS.has(stablecoinId)));
+  if (hasExactStablecoinIds(existingOwnedIds, expectedIds)) {
+    return {
+      rewritten: false,
+      previousOwnedRowCount: existingOwnedIds.size,
+      sealedRowCount: expectedIds.size,
+    };
+  }
+
+  const frozenIds = [...FROZEN_IDS];
+  const frozenClause = frozenIds.length > 0
+    ? `AND stablecoin_id NOT IN (${buildInClause(frozenIds).sql})`
+    : "";
+  const deleteOwnedRows = db
+    .prepare(
+      `/* pharos:dews:stress-history-daily-replace */
+       DELETE FROM stress_signal_history
+        WHERE snapshot_date = ? ${frozenClause}`,
+    )
+    .bind(snapshotDate, ...frozenIds);
+  const insertRows = results.map((result) => [
+    result.stablecoinId,
+    snapshotDate,
+    result.score,
+    result.band,
+    buildStressSignalsEnvelope(result),
+  ]);
+  const insertStatements = prepareMultiRowInsertStatements(
+    db,
+    `/* pharos:dews:stress-history-daily-seal */
+     INSERT OR REPLACE INTO stress_signal_history
+       (stablecoin_id, snapshot_date, score, band, signals_json)`,
+    insertRows,
+  );
+  await executeAtomicBatch(db, [deleteOwnedRows, ...insertStatements], { signal });
+
+  const sealedIds = await readDailyStressHistoryIds(db, snapshotDate, signal);
+  const sealedOwnedIds = new Set([...sealedIds].filter((stablecoinId) => !FROZEN_IDS.has(stablecoinId)));
+  if (!hasExactStablecoinIds(sealedOwnedIds, expectedIds)) {
+    throw new Error(
+      `DEWS daily snapshot identity mismatch: sealed ${sealedOwnedIds.size}/${expectedIds.size} rows for ${snapshotDate}`,
+    );
+  }
+
+  return {
+    rewritten: true,
+    previousOwnedRowCount: existingOwnedIds.size,
+    sealedRowCount: sealedOwnedIds.size,
+  };
+}
+
 async function upsertLatestStressSignalRows(
   db: D1Database,
   results: DewsComputedRow[],
@@ -265,34 +371,18 @@ export async function persistDewsResults(params: {
   await deleteLatestStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
 
   const todayMidnight = startOfUtcDaySec();
-  const existing = await runWithOverloadRetry(() =>
-    params.db
-      .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")
-      .bind(todayMidnight)
-      .first<{ cnt: number }>(),
-    3,
-    params.signal,
-  );
-  const existingCount = existing?.cnt ?? 0;
-
-  if (params.results.length > 0 && existingCount < params.results.length) {
-    const histStmts = params.results.map((result) =>
-      params.db
-        .prepare(
-          "INSERT OR REPLACE INTO stress_signal_history (stablecoin_id, snapshot_date, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
-        )
-        .bind(
-          result.stablecoinId,
-          todayMidnight,
-          result.score,
-          result.band,
-          buildStressSignalsEnvelope(result),
-        ),
+  if (params.results.length > 0) {
+    const dailySnapshot = await reconcileDailyDewsHistorySnapshot(
+      params.db,
+      params.results,
+      todayMidnight,
+      params.signal,
     );
-    await batchExecute(params.db, histStmts, { signal: params.signal });
-    console.log(
-      `[dews] Reconciled daily snapshot (${existingCount} -> ${histStmts.length}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
-    );
+    if (dailySnapshot.rewritten) {
+      console.log(
+        `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+      );
+    }
   }
 
   let rowsDropped = rowsRetiredCurrent;
@@ -361,7 +451,12 @@ export async function persistDewsResults(params: {
         `DEWS publication incomplete: stress_signals_latest has ${latestGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
       );
     }
-    const pointerWrite = await writeDewsPublishedGeneration(params.db, params.nowSec, params.signal);
+    const pointerWrite = await writeDewsPublishedGeneration(
+      params.db,
+      params.nowSec,
+      params.results.map((result) => result.stablecoinId),
+      params.signal,
+    );
     publicationPointerWritten = pointerWrite.written;
     publishedGeneration = pointerWrite.written ? params.nowSec : null;
   }

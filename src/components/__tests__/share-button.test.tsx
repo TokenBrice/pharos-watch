@@ -9,13 +9,9 @@ import { ShareButton } from "@/components/share-button";
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({
-    children,
-    onSelect,
-  }: {
-    children: ReactNode;
-    onSelect?: () => void;
-  }) => <button onClick={onSelect}>{children}</button>,
+  DropdownMenuItem: ({ children, onSelect }: { children: ReactNode; onSelect?: () => void }) => (
+    <button onClick={onSelect}>{children}</button>
+  ),
   DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -65,7 +61,10 @@ describe("ShareButton", () => {
       await Promise.resolve();
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/api/og/stablecoin/usdc");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/og/stablecoin/usdc",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(createObjectURL).toHaveBeenCalledWith(blob);
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).not.toHaveBeenCalled();

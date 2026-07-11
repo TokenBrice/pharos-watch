@@ -1,8 +1,8 @@
 /**
  * Factory for stubbing `@shared/lib/stablecoins/registry` in cron tests.
  *
- * Captures the common shape used inline by `sync-yield-data.test.ts`,
- * `sync-stablecoins.test.ts`, and `enrich-prices.test.ts`: derive `*_IDS` and
+ * Captures the common shape used by `sync-yield-data-*.test.ts`,
+ * `sync-stablecoins.test.ts`, and `enrich-prices-*.test.ts`: derive `*_IDS` and
  * `*_META_BY_ID` from a supplied stablecoin list, with empty FROZEN defaults.
  *
  * Callers pass a minimal stablecoin array; the factory returns the full

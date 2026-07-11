@@ -26,7 +26,7 @@ Production Pages does not proxy public self-serve `/api/*` POST requests. The pu
 
 Self-serve API-key request honeypot submissions are intentionally no-op accepted: `POST /api/api-key-requests` returns `200 { "ok": true }` when the optional `website` field is non-empty, without creating an API-key request or sending email. Normal non-honeypot submissions return `202 Accepted` with `pending_verification`.
 
-The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`, without `Cache-Control: no-store`, and without freshness `Warning: 110`; it does not cache no-store admin and control routes.
+The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. Pages `/_site-data/*` forwards the upstream cache policy, `Age`, and `Date` without adding a second Cache API lifetime, so it cannot make a nearly expired Worker response fresh again.
 
 ## Public API Auth
 
@@ -50,7 +50,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` are also externally reachable but not anonymous. They require Telegram Mini App `initData` signed for `@PharosWatchBot`; the worker validates the HMAC, `auth_date`, and user payload before any D1-backed state write. These endpoints are denied on the website-internal site-data lane and are intended only for the Mini App at `https://pharos.watch/pharoswatchbot/app/`.
 
-Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*`, `/api/api-key-requests-admin*`, and `/api/discovery-candidates*` on `api.pharos.watch`.
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The one exception is the reserve-recovery fault injector: it accepts a cryptographically verified Access assertion only on a `workers.dev` preview host and rejects production hosts. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*`, `/api/api-key-requests-admin*`, and `/api/discovery-candidates*` on `api.pharos.watch`.
 
 The public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
 
@@ -144,7 +144,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime           | `public, s-maxage=60, max-age=10`                              | health, events                                                                                                                                                                                                                                                                                                                                                                                      |
 | producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains (cron-published payloads with 15-30 min producers)                                                                                                                                                                                                                               |
-| standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, yield-adapter-manifest, mint-burn-flows, stress-signals                                                                                                                                                                    |
+| standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, yield-adapter-manifest, mint-burn-flows, stress-signals                                                                                                                                                                   |
 | custom             | `public, s-maxage=300, max-age=300`                            | dex-liquidity (browser-side max-age extended to match CDN TTL); telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                                                                                                                                                                                                 |
 | per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                                                          |
 | slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                                                                                         |
@@ -155,7 +155,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`                           | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                                                                       |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
-| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `admin-telegram-chat/:chatId`, `status-probe-history`) |
+| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
@@ -229,7 +229,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                                                                                                     |
 | 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1`                                                                                                                                                             |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                                                                                                                                                      |
-| 413    | Payload Too Large     | Public JSON `POST` body exceeds that endpoint's defensive byte cap before parsing or side effects                                                                                                                                                                                                                                               |
+| 413    | Payload Too Large     | Public JSON `POST` body exceeds that endpoint's defensive byte cap before parsing or side effects                                                                                                                                                                                                                                              |
 | 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                                                                                                                                                                                              |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                                                                                                                                                             |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
@@ -284,14 +284,20 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/kill-cron-in-flight`
 - `POST /api/bulk-dismiss-discovery-candidates`
 - `POST /api/telegram-pending`
+- `POST /api/alert-broker-canary` for live execution (`execute=true`); dry-run previews bypass idempotency
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
+- `POST /api/admin-telegram-delivery-control` (GET inspection bypasses idempotency)
 - `POST /api/api-key-requests-admin/:requestId/reject`
 - `POST /api/api-key-requests-admin/:requestId/release-claim`
 
-When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
+When an `Idempotency-Key` is supplied on one of those routes, the worker fingerprints the request and reserves the key with owner/generation fencing before execution. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`; a stored terminal response is replayed without rerunning the action, while reuse with a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
+
+Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 `POST /api/telegram-pending` is conditional: mutating clears use idempotency, but dry-run previews (`dry_run`, `dryRun`, or `dry-run`) bypass idempotency bookkeeping and return the current match count directly.
+
+`POST /api/alert-broker-canary` is also conditional: the default dry-run bypasses idempotency bookkeeping. Live execution requires `?execute=true`, the documented confirmation value, and an `Idempotency-Key`; the key is also used to derive a fixed synthetic condition identity.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -352,7 +358,7 @@ Total documented public operations: **38**.
 | GET | `/api/usds-status` | USDS freeze status | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-adapter-manifest` | Yield adapter manifest | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-history` | Yield history | Yield, History | X-API-Key | `stablecoin`, `days?`, `mode?`, `sourceKey?` | 200, 400, 401, 429, 503 |
-| GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | `projection?` | 200, 400, 401, 429, 503 |
 
 <!-- GENERATED-END: public-endpoints-quick-reference -->
 
@@ -733,7 +739,7 @@ When present, `provenance` has:
 
 ### `GET /api/stablecoin-charts`
 
-Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
+Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes; scheduled deliveries share an hourly generation-fenced cadence bucket, and a failed first delivery remains retryable at the second delivery. `/api/health` treats the cache as healthy for up to 1 hour.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. This array response gets freshness headers only; it does not receive a response-body `_meta` envelope.
 
@@ -778,8 +784,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `sortBy`        | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`                                                                                                                             |
 | `sortDirection` | `string`  | `desc`  | Sort direction: `asc`, `desc`                                                                                                                                                  |
 | `limit`         | `integer` | `1000`  | Max results (0–1000; `0` maps to default `1000`)                                                                                                                               |
-| `offset`        | `integer` | `0`     | Pagination offset                                                                                                                                                              |
-| `includeTotal`  | `boolean` | `true`  | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false`                                                                       |
+| `offset`        | `integer` | `0`     | Legacy pagination offset (0–25,000); cannot be combined with `cursor`                                                                                                          |
+| `cursor`        | `string`  | —       | Opaque keyset cursor from `nextCursor`; preferred for deep pagination and valid for every supported sort order                                                                 |
+| `includeTotal`  | `boolean` | `false` | When `true`, runs an exact `COUNT(*)`; otherwise `total` is a page lower bound and `totalExact` is `false`                                                                     |
 
 **Response**
 
@@ -787,6 +794,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 {
   "events": [BlacklistEvent, ...],
   "total": 13422,
+  "totalExact": true,
+  "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLCJldmVudC1pZCJdfQ",
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
@@ -798,6 +807,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   }
 }
 ```
+
+Prefer `cursor`/`nextCursor` for sequential or deep traversal. Numbered FreezeWatch pages opt into exact totals and retain bounded offset pagination for direct page navigation.
 
 **`BlacklistEvent`**
 
@@ -846,6 +857,8 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
 `stats.destroyedTotal` remains an event-history total. `stats.activeAddressCount`, `stats.activeFrozenTotal`, and `stats.activeAmountGapCount` are legacy wire-compatible fields for Pharos' local net-active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. New consumers should prefer `trackedAddressCount`, `trackedFrozenTotal`, and `trackedAmountGapCount` for public freeze-ledger exposure, and use the active fields only when they specifically need the current local net-frozen state. These current-balance totals are last-known successful snapshots, not a live guarantee; provider refresh failures preserve the last successful amount and should be interpreted through freshness, status, and provenance metadata when present. New snapshot rows are contract/config-scoped; older rows can still fall back to the legacy symbol/chain/address identity until remediated. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
 The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stablecoin detail pages. `perCoinFrozenAddressCount` counts addresses whose latest event is `blacklist` (net-frozen). `perCoinFrozenTotal` sums last-known successful `blacklist_current_balances.balance_usd` snapshots per coin. `perCoinDestroyedTotal` sums `amount_usd_at_event` over `destroy` events per coin. `perCoinQuarterlyEventTypes` contains each coin's quarterly breakdown of event-type counts, zero-filled between the coin's first and last event quarters so bars render contiguously. All per-coin aggregations exclude rows where `suppression_reason` is set (e.g. EURC mirror zero-balance entries).
+
+`reconciliation` exposes the latest durable guarded-recovery result. It is hydrated onto older producer snapshots after a recovery run, so exact manifest/gap evidence does not wait for the next six-hour publication. The same object is available to operators in `GET /api/status` at `dataQuality.blacklistReconciliation`.
 
 **Cache:** producer-backed
 
@@ -956,6 +969,26 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
     },
     "coverage": { "supportedConfigs": 71, "unsupportedDeferredConfigs": 10 }
   },
+  "reconciliation": {
+    "status": "verified",
+    "runId": "night-watch-usdt-tron-2026-07-09:<bookmark>",
+    "manifestId": "night-watch-usdt-tron-2026-07-09",
+    "manifestSha256": "bc46bbce09a1c7e926499c07e6f968a914ae9df58c8acec552b7ebff1425f917",
+    "bookmarkRecorded": true,
+    "expectedEventCount": 86,
+    "presentEventCount": 86,
+    "missingEventCount": 0,
+    "duplicateIdentityCount": 0,
+    "destroyedAmountExpectedRaw": "8874287612325",
+    "destroyedAmountActualRaw": "8874287612325",
+    "balanceReplayExpectedCount": 70,
+    "balanceReplayMatchingCount": 70,
+    "unresolvedManifestGapCount": 0,
+    "tronAtSafeHead": true,
+    "arbitrumAtSafeHead": true,
+    "startedAt": 1783660000,
+    "completedAt": 1783660100
+  },
   "totalEvents": 13422,
   "methodology": {
     "version": "3.9972",
@@ -1027,10 +1060,10 @@ When the Depeg Duration Resolver has linked multiple raw event rows into one act
 | `direction`           | `"above" \| "below"`   | Whether the price was above or below the peg                                                                                                                                                                                                                                                                                                                                   |
 | `peakDeviationBps`    | `number`               | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg)                                                                                                                                                                                                                                                                                  |
 | `startedAt`           | `number`               | Unix seconds when depeg was first detected                                                                                                                                                                                                                                                                                                                                     |
-| `endedAt`             | `number \| null`       | Unix seconds when the event row closed; `null` if still active                                                                                                                                                                                                                                                                                                                |
+| `endedAt`             | `number \| null`       | Unix seconds when the event row closed; `null` if still active                                                                                                                                                                                                                                                                                                                 |
 | `startPrice`          | `number`               | Price at event start (USD)                                                                                                                                                                                                                                                                                                                                                     |
 | `peakPrice`           | `number \| null`       | Price at worst deviation                                                                                                                                                                                                                                                                                                                                                       |
-| `recoveryPrice`       | `number \| null`       | Price at recovery when the close reason is a market recovery. `null` for open rows, legacy rows without terminal evidence, and non-price recovery evidence such as native-peg quote closes.                                                                                                                                                                                     |
+| `recoveryPrice`       | `number \| null`       | Price at recovery when the close reason is a market recovery. `null` for open rows, legacy rows without terminal evidence, and non-price recovery evidence such as native-peg quote closes.                                                                                                                                                                                    |
 | `pegReference`        | `number`               | Reference peg value used (USD)                                                                                                                                                                                                                                                                                                                                                 |
 | `source`              | `"live" \| "backfill"` | Detection method                                                                                                                                                                                                                                                                                                                                                               |
 | `confirmationSources` | `string \| null`       | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (`CoinGecko`, `DefiLlama`, or `NativePeg(<currency>)`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"CoinGecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
@@ -1369,44 +1402,45 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 **`DexLiquidityData`**
 
-| Field                          | Type                                                                        | Description                                                                                                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `totalTvlUsd`                  | `number`                                                                    | Total DEX TVL (USD)                                                                                                                                                     |
-| `totalVolume24hUsd`            | `number`                                                                    | 24 h trading volume (USD)                                                                                                                                               |
-| `totalVolume7dUsd`             | `number`                                                                    | 7-day trading volume (USD)                                                                                                                                              |
-| `poolCount`                    | `number`                                                                    | Number of liquidity pools                                                                                                                                               |
-| `pairCount`                    | `number`                                                                    | Number of unique trading pairs                                                                                                                                          |
-| `chainCount`                   | `number`                                                                    | Number of chains with active pools                                                                                                                                      |
-| `protocolTvl`                  | `Record<string, number>`                                                    | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`)                                                                                                                  |
-| `chainTvl`                     | `Record<string, number>`                                                    | TVL per chain (e.g. `{ "Ethereum": 500000 }`)                                                                                                                           |
-| `topPools`                     | `DexLiquidityPool[]`                                                        | Top 10 retained pools sorted by 24h volume, then TVL                                                                                                                    |
-| `liquidityScore`               | `number \| null`                                                            | Composite liquidity score 0–100                                                                                                                                         |
-| `concentrationHhi`             | `number \| null`                                                            | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation                    |
-| `depthStability`               | `number \| null`                                                            | Pool depth stability metric                                                                                                                                             |
-| `tvlChange24h`                 | `number \| null`                                                            | % TVL change vs. 24 h ago                                                                                                                                               |
-| `tvlChange7d`                  | `number \| null`                                                            | % TVL change vs. 7 days ago                                                                                                                                             |
-| `updatedAt`                    | `number`                                                                    | Unix seconds of last cron update                                                                                                                                        |
-| `dexPriceUsd`                  | `number \| null`                                                            | DEX-derived price (USD)                                                                                                                                                 |
-| `dexDeviationBps`              | `number \| null`                                                            | DEX price deviation from peg (basis points, signed)                                                                                                                     |
-| `priceSourceCount`             | `number \| null`                                                            | Number of pools used for DEX price (all must meet the shared $50K observation floor)                                                                                    |
-| `priceSourceTvl`               | `number \| null`                                                            | Combined TVL of price-source pools (USD)                                                                                                                                |
-| `priceSources`                 | `DexPriceSource[] \| null`                                                  | Aggregated price sources by protocol (for example one `balancer` or `raydium` entry per asset)                                                                          |
-| `effectiveTvlUsd`              | `number`                                                                    | TVL after applying quality multipliers                                                                                                                                  |
-| `avgPoolStress`                | `number \| null`                                                            | Average pool stress index on a 0–100 scale (0 = balanced, 100 = maximally stressed / imbalanced)                                                                        |
-| `weightedBalanceRatio`         | `number \| null`                                                            | TVL-weighted balance ratio across pools                                                                                                                                 |
-| `organicFraction`              | `number \| null`                                                            | Fraction of TVL from organic (non-incentivized) pools                                                                                                                   |
-| `durabilityScore`              | `number \| null`                                                            | Score for pool maturity and reliability                                                                                                                                 |
-| `coverageClass`                | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved" \| null`    | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows. The `__global__` aggregate sentinel uses `null`. |
-| `coverageConfidence`           | `number`                                                                    | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                                           |
-| `liquidityEvidenceClass`       | `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Coverage-confidence evidence class: `measured` for high-confidence primary coverage, `partial_measured` for high-confidence mixed coverage, informational otherwise       |
-| `hasMeasuredLiquidityEvidence` | `boolean`                                                                   | Whether the row's coverage-confidence evidence qualifies as measured or partially measured                                                                               |
-| `trendworthy`                  | `boolean`                                                                   | Whether this row is suitable for trend baselines (`coverageConfidence >= 0.75`, positive TVL, and `primary`/`mixed` coverage)                                           |
-| `sourceMix`                    | `Record<string, { poolCount: number; tvlUsd: number }>`                     | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                                             |
-| `balanceMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `weightedBalanceRatio`                                                                                                                |
-| `organicMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `organicFraction`                                                                                                                     |
-| `scoreComponents`              | `ScoreComponents \| null`                                                   | Breakdown of the composite liquidity score                                                                                                                              |
-| `lockedLiquidityPct`           | `number \| null`                                                            | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                                   |
-| `methodologyVersion`           | `string`                                                                    | Methodology version attributed to this row                                                                                                                              |
+| Field                          | Type                                                                        | Description                                                                                                                                                                                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `totalTvlUsd`                  | `number`                                                                    | Total DEX TVL (USD)                                                                                                                                                                                                                                                       |
+| `totalVolume24hUsd`            | `number`                                                                    | 24 h trading volume (USD)                                                                                                                                                                                                                                                 |
+| `totalVolume7dUsd`             | `number`                                                                    | 7-day trading volume (USD)                                                                                                                                                                                                                                                |
+| `poolCount`                    | `number`                                                                    | Number of liquidity pools                                                                                                                                                                                                                                                 |
+| `pairCount`                    | `number`                                                                    | Number of unique trading pairs                                                                                                                                                                                                                                            |
+| `chainCount`                   | `number`                                                                    | Number of chains with active pools                                                                                                                                                                                                                                        |
+| `protocolTvl`                  | `Record<string, number>`                                                    | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`)                                                                                                                                                                                                                    |
+| `chainTvl`                     | `Record<string, number>`                                                    | TVL per chain (e.g. `{ "Ethereum": 500000 }`)                                                                                                                                                                                                                             |
+| `topPools`                     | `DexLiquidityPool[]`                                                        | Top 10 retained pools sorted by 24h volume, then TVL                                                                                                                                                                                                                      |
+| `liquidityScore`               | `number \| null`                                                            | Composite liquidity score 0–100                                                                                                                                                                                                                                           |
+| `concentrationHhi`             | `number \| null`                                                            | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation                                                                                                                      |
+| `depthStability`               | `number \| null`                                                            | Pool depth stability metric                                                                                                                                                                                                                                               |
+| `tvlChange24h`                 | `number \| null`                                                            | % TVL change vs. 24 h ago                                                                                                                                                                                                                                                 |
+| `tvlChange7d`                  | `number \| null`                                                            | % TVL change vs. 7 days ago                                                                                                                                                                                                                                               |
+| `updatedAt`                    | `number`                                                                    | Unix seconds of last cron update                                                                                                                                                                                                                                          |
+| `dexPriceUsd`                  | `number \| null`                                                            | DEX-derived price (USD)                                                                                                                                                                                                                                                   |
+| `dexDeviationBps`              | `number \| null`                                                            | DEX price deviation from peg (basis points, signed)                                                                                                                                                                                                                       |
+| `priceSourceCount`             | `number \| null`                                                            | Number of pools used for DEX price (all must meet the shared $50K observation floor)                                                                                                                                                                                      |
+| `priceSourceTvl`               | `number \| null`                                                            | Combined TVL of price-source pools (USD)                                                                                                                                                                                                                                  |
+| `priceSources`                 | `DexPriceSource[] \| null`                                                  | Aggregated price sources by protocol (for example one `balancer` or `raydium` entry per asset)                                                                                                                                                                            |
+| `effectiveTvlUsd`              | `number`                                                                    | TVL after applying quality multipliers                                                                                                                                                                                                                                    |
+| `avgPoolStress`                | `number \| null`                                                            | Average pool stress index on a 0–100 scale (0 = balanced, 100 = maximally stressed / imbalanced)                                                                                                                                                                          |
+| `weightedBalanceRatio`         | `number \| null`                                                            | TVL-weighted balance ratio across pools                                                                                                                                                                                                                                   |
+| `organicFraction`              | `number \| null`                                                            | Fraction of TVL from organic (non-incentivized) pools                                                                                                                                                                                                                     |
+| `durabilityScore`              | `number \| null`                                                            | Score for pool maturity and reliability                                                                                                                                                                                                                                   |
+| `coverageClass`                | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved" \| null`    | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows. The `__global__` aggregate sentinel uses `null`.                                                                                                   |
+| `coverageConfidence`           | `number`                                                                    | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                                                                                                                                             |
+| `liquidityEvidenceClass`       | `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Coverage-confidence evidence class: `measured` for high-confidence primary coverage, `partial_measured` for high-confidence mixed coverage, informational otherwise                                                                                                       |
+| `hasMeasuredLiquidityEvidence` | `boolean`                                                                   | Whether the row's coverage-confidence evidence qualifies as measured or partially measured                                                                                                                                                                                |
+| `trendworthy`                  | `boolean`                                                                   | Whether this row is suitable for trend baselines (`coverageConfidence >= 0.75`, positive TVL, and `primary`/`mixed` coverage)                                                                                                                                             |
+| `sourceMix`                    | `Record<string, { poolCount: number; tvlUsd: number }>`                     | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                                                                                                                                               |
+| `balanceMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `weightedBalanceRatio`                                                                                                                                                                                                                  |
+| `organicMeasuredTvlUsd`        | `number`                                                                    | TVL denominator actually used for `organicFraction`                                                                                                                                                                                                                       |
+| `scoreComponents`              | `ScoreComponents \| null`                                                   | Breakdown of the composite liquidity score                                                                                                                                                                                                                                |
+| `lockedLiquidityPct`           | `number \| null`                                                            | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                                                                                                                                     |
+| `methodologyVersion`           | `string`                                                                    | Methodology version attributed to this row                                                                                                                                                                                                                                |
+| `deploymentCoverage`           | `object \| null`                                                            | Exact deployment outcome summary and rows. Each contract is `observed_pools`, `verified_no_pools`, or `provider_inaccessible`; active owned waivers include owner, reason, and expiry. `null` means the additive outcome ledger has not published a row for the coin yet. |
 
 **`ScoreComponents`**
 
@@ -1489,18 +1523,18 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 ]
 ```
 
-| Field                          | Type             | Description                                                                                   |
-| ------------------------------ | ---------------- | --------------------------------------------------------------------------------------------- |
-| `tvl`                          | `number`         | Total DEX TVL snapshot (USD)                                                                  |
-| `volume24h`                    | `number`         | 24 h volume at time of snapshot (USD)                                                         |
-| `score`                        | `number \| null` | Liquidity score at time of snapshot                                                           |
-| `date`                         | `number`         | Unix seconds                                                                                  |
-| `coverageClass`                | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`)            |
-| `coverageConfidence`           | `number`         | Snapshot confidence score                                                                     |
+| Field                          | Type             | Description                                                                                                                                                    |
+| ------------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tvl`                          | `number`         | Total DEX TVL snapshot (USD)                                                                                                                                   |
+| `volume24h`                    | `number`         | 24 h volume at time of snapshot (USD)                                                                                                                          |
+| `score`                        | `number \| null` | Liquidity score at time of snapshot                                                                                                                            |
+| `date`                         | `number`         | Unix seconds                                                                                                                                                   |
+| `coverageClass`                | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`)                                                                             |
+| `coverageConfidence`           | `number`         | Snapshot confidence score                                                                                                                                      |
 | `liquidityEvidenceClass`       | `string`         | Snapshot evidence class (`measured`, `partial_measured`, `observed_unmeasured`, `unobserved`) using the same coverage-confidence rules as `/api/dex-liquidity` |
-| `hasMeasuredLiquidityEvidence` | `boolean`        | Whether the snapshot's coverage-confidence evidence qualifies as measured or partially measured                         |
-| `trendworthy`                  | `boolean`        | Whether the snapshot is suitable for trend baselines rather than informational use            |
-| `methodologyVersion`           | `string`         | Methodology version attributed to this snapshot                                               |
+| `hasMeasuredLiquidityEvidence` | `boolean`        | Whether the snapshot's coverage-confidence evidence qualifies as measured or partially measured                                                                |
+| `trendworthy`                  | `boolean`        | Whether the snapshot is suitable for trend baselines rather than informational use                                                                             |
+| `methodologyVersion`           | `string`         | Methodology version attributed to this snapshot                                                                                                                |
 
 ---
 
@@ -1584,18 +1618,18 @@ Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude A
 
 If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 
-| Field                 | Type                                 | Description                                                                               |
-| --------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `digest`              | `string \| null`                     | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet.       |
-| `digestTitle`         | `string \| null`                     | Short headline for the digest                                                             |
-| `digestExtended`      | `string \| null`                     | Extended commentary for the website view                                                  |
-| `generatedAt`         | `number`                             | Unix seconds when this digest was generated (present only when `digest` is non-null)      |
-| `editionNumber`       | `number \| null`                     | Sequential daily digest number (present only when `digest` is non-null)                   |
+| Field                 | Type                                 | Description                                                                                                                                     |
+| --------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `digest`              | `string \| null`                     | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet.                                                             |
+| `digestTitle`         | `string \| null`                     | Short headline for the digest                                                                                                                   |
+| `digestExtended`      | `string \| null`                     | Extended commentary for the website view                                                                                                        |
+| `generatedAt`         | `number`                             | Unix seconds when this digest was generated (present only when `digest` is non-null)                                                            |
+| `editionNumber`       | `number \| null`                     | Sequential daily digest number (present only when `digest` is non-null)                                                                         |
 | `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from stored digest input data; critical depegs are prioritized before market impact and deviation size |
-| `changeSummary`       | `DigestChangeSummary \| null`        | Deterministic "what changed since yesterday" summary parsed from stored digest input data |
-| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks for tomorrow's digest                         |
-| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input                |
-| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact reader-facing risk state chips parsed from stored digest input data               |
+| `changeSummary`       | `DigestChangeSummary \| null`        | Deterministic "what changed since yesterday" summary parsed from stored digest input data                                                       |
+| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks for tomorrow's digest                                                                               |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers against the latest input                                                                      |
+| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact reader-facing risk state chips parsed from stored digest input data                                                                     |
 
 ---
 
@@ -1650,21 +1684,21 @@ Newest-first archive of up to 365 daily and weekly digests.
 
 Each element uses `digestText` (note: differs from the singular `/api/daily-digest` which uses `digest`).
 
-| Field                 | Type                                 | Description                                                                              |
-| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `digestText`          | `string`                             | Tweet-ready summary                                                                      |
-| `digestTitle`         | `string \| null`                     | Short headline                                                                           |
-| `digestExtended`      | `string \| null`                     | Extended commentary                                                                      |
-| `generatedAt`         | `number`                             | Unix seconds of generation time                                                          |
-| `psiScore`            | `number \| null`                     | PSI score parsed from archived digest input data                                         |
-| `psiBand`             | `string \| null`                     | PSI condition band parsed from archived digest input data                                |
-| `totalMcapUsd`        | `number \| null`                     | Ecosystem market cap parsed from archived digest input data                              |
+| Field                 | Type                                 | Description                                                                                                                                       |
+| --------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `digestText`          | `string`                             | Tweet-ready summary                                                                                                                               |
+| `digestTitle`         | `string \| null`                     | Short headline                                                                                                                                    |
+| `digestExtended`      | `string \| null`                     | Extended commentary                                                                                                                               |
+| `generatedAt`         | `number`                             | Unix seconds of generation time                                                                                                                   |
+| `psiScore`            | `number \| null`                     | PSI score parsed from archived digest input data                                                                                                  |
+| `psiBand`             | `string \| null`                     | PSI condition band parsed from archived digest input data                                                                                         |
+| `totalMcapUsd`        | `number \| null`                     | Ecosystem market cap parsed from archived digest input data                                                                                       |
 | `riskSignal`          | `DigestRiskSignal \| null`           | Compact active-depeg risk summary parsed from archived digest input data; critical depegs are prioritized before market impact and deviation size |
-| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks parsed from archived digest input data       |
-| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data |
-| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact risk-state chips parsed from archived digest input data                          |
-| `digestType`          | `"daily" \| "weekly"`                | Digest cadence for this archived entry                                                   |
-| `editionNumber`       | `number`                             | Sequential edition number within that digest cadence                                     |
+| `nextTriggers`        | `DigestNextTrigger[] \| null`        | Structured forward-looking threshold checks parsed from archived digest input data                                                                |
+| `forwardLookOutcomes` | `DigestForwardLookOutcome[] \| null` | Evaluation of the previous digest's next triggers parsed from archived digest input data                                                          |
+| `riskTape`            | `DigestRiskTapeItem[] \| null`       | Compact risk-state chips parsed from archived digest input data                                                                                   |
+| `digestType`          | `"daily" \| "weekly"`                | Digest cadence for this archived entry                                                                                                            |
+| `editionNumber`       | `number`                             | Sequential edition number within that digest cadence                                                                                              |
 
 **`DigestRiskSignal`**
 
@@ -1768,7 +1802,7 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
 
-The writer fails closed for required cache/table reads and now also marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. Successful empty DEWS/DEX reads still publish empty `dewsRows` / `liquidityRows`; failed reads are not silently omitted from an `ok` snapshot.
+The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidityRows` section, while failed reads are never silently omitted from an `ok` snapshot.
 
 **Cache:** immutable-snapshot
 
@@ -1969,9 +2003,36 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
     "coingecko-prices": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190030 }
   },
+  "d1Capacity": {
+    "observedAt": 1771856400,
+    "databaseSizeBytes": 4079546368,
+    "maximumSizeBytes": 10000000000,
+    "utilizationRatio": 0.407955,
+    "utilizationPercent": 40.8,
+    "thresholdState": "normal",
+    "crossedThresholdPercent": null,
+    "nextThresholdPercent": 60,
+    "sampleCount": 72,
+    "forecastBasis": "linear-30d",
+    "forecastSpanHours": 71,
+    "growthBytesPerDay": 12000000,
+    "nextThresholdAt": 1787860189,
+    "exhaustionAt": 1814488989,
+    "daysUntilExhaustion": 493.4
+  },
   "telegramSummary": {
     "totalChats": 142,
     "pendingDeliveries": 0,
+    "pendingDeliveryLifecycleStatus": "available",
+    "pendingDeliveryBacklog": {
+      "claimable": 0,
+      "due": 0,
+      "deferred": 0,
+      "sending": 0,
+      "executionUnknown": 0,
+      "sentCleanup": 0,
+      "expired": 0
+    },
     "lastDispatchAt": 1771856400,
     "lastDispatchStatus": "ok",
     "safetyAlertSourceState": "ok",
@@ -1996,14 +2057,16 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `blacklist.missingRatio`                      | `number`                                                                  | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `telegramSummary`                             | `TelegramHealthSummary \| null`                                           | Lightweight Telegram delivery health summary. `null` when the Telegram tables are unavailable or not yet migrated                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `telegramSummary.totalChats`                  | `number`                                                                  | Total subscribed Telegram chats currently stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `telegramSummary.pendingDeliveries`           | `number`                                                                  | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `telegramSummary.pendingDeliveries`           | `number \| null`                                                          | Active claimable plus deferred Telegram deliveries. `null` when lifecycle capacity is unavailable; it never reports a fabricated zero on query failure.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `telegramSummary.pendingDeliveryLifecycleStatus` | `"available" \| "unknown"`                                           | Whether the lifecycle counts are authoritative for this response. An `unknown` result also adds `telegram-delivery-lifecycle:unknown` to `warnings`.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `telegramSummary.pendingDeliveryBacklog`      | `TelegramPendingDeliveryBacklog`                                          | Present when lifecycle data is available. Separates claimable/due, deferred, recent sending, execution-unknown, sent-cleanup, expired, and near-TTL work, with source splits and bounded-sample saturation metadata for execution-unknown rows.                                                                                                                                                                                                                                                                                                                           |
 | `telegramSummary.lastDispatchAt`              | `number \| null`                                                          | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `telegramSummary.lastDispatchStatus`          | `string \| null`                                                          | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `telegramSummary.safetyAlertSourceState`      | `"ok" \| "missing" \| "corrupt" \| "stale" \| "wrong-generation" \| null` | Live safety-alert source-cache state from the most recent Telegram dispatch run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `telegramSummary.safetyAlertSourceAgeSeconds` | `number \| null`                                                          | Age of the current live safety-alert source snapshot when available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `telegramSummary.safetyAlertsSuppressed`      | `boolean`                                                                 | `true` when safety alerts are paused because the live source snapshot is missing, corrupt, stale, or from the wrong generation                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `telegramSummary.safetyAlertSourceGeneration` | `string \| null`                                                          | Generation marker of the current live safety-alert source snapshot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `mintBurn.totalEvents`                        | `number \| null`                                                          | Legacy advisory total sourced from the latest `mint-burn-growth-watchdog` `cron_runs` row. `null` until that daily watchdog has published a count. The budget-capped health path does not scan `mint_burn_events` or `mint_burn_hourly`; use `/api/mint-burn-flows` or `/api/mint-burn-events` for live mint/burn data views.                                                                                                                                                                                                                                          |
+| `mintBurn.totalEvents`                        | `number \| null`                                                          | Legacy advisory total sourced from the latest `mint-burn-growth-watchdog` `cron_runs` row. `null` until that daily watchdog has published a count. The budget-capped health path does not scan `mint_burn_events` or `mint_burn_hourly`; use `/api/mint-burn-flows` or `/api/mint-burn-events` for live mint/burn data views.                                                                                                                                                                                                                                       |
 | `mintBurn.latestEventTs`                      | `number \| null`                                                          | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_events`; freshness is represented by `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                                                                      |
 | `mintBurn.latestHourlyTs`                     | `number \| null`                                                          | Legacy advisory timestamp. `null` on the budget-capped health path because `/api/health` no longer scans `mint_burn_hourly`.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `mintBurn.freshnessAgeSec`                    | `number \| null`                                                          | Legacy advisory age. `null` on the budget-capped health path; derive critical-lane age from `mintBurn.sync.lastSuccessfulSyncAt`.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -2015,6 +2078,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `mintBurn.sync.warning`                       | `string \| null`                                                          | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `mintBurn.sync.criticalLaneHealthy`           | `boolean`                                                                 | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-liquidity`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
+| `d1Capacity`                                  | `D1CapacityAssessment \| null`                                            | Latest hourly D1 file-size assessment. `watch` starts at 60%, `warning` at 75%, and `critical` at 90% of the 10 GB ceiling. Forecast fields remain null until enough growing history exists. Optional for old-Worker compatibility.                                                                                                                                                                                                                                                                                                                                 |
 
 **`CacheStatus`**
 
@@ -2179,7 +2243,7 @@ Direct `https://api.pharos.watch/api/telegram-pulse` access is protected and req
 | `miniAppMutationsToday`            | `number \| null`                | Successful Mini App mutations today; `null` when unavailable or suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                             |
 | `miniAppDeniedToday`               | `number \| null`                | Mini App denial count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                                           |
 | `miniAppReplayClaimsToday`         | `number \| null`                | Mini App replay-protection claim count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                          |
-| `miniAppOpenToFirstMutationP50Sec` | `number \| null`                | Reserved Mini App session-to-first-mutation latency metric; currently `null` until bucketed latency is wired through `telegram_usage_daily`                                                                                                                                                                                                                                 |
+| `miniAppOpenToFirstMutationP50Sec` | `number \| null`                | Approximate P50 selected from first-party open-to-first-mutation bucket midpoints; `null` when unavailable, no known correlations exist, or the daily sample is privacy-suppressed below five                                                                                                                                                                                   |
 | `currentSnapshotAt`                | `number`                        | Unix seconds when the current aggregate pulse snapshot was measured                                                                                                                                                                                                                                                                                                         |
 | `lifecycleHistoryUpdatedAt`        | `number \| null`                | Unix seconds of the latest daily lifecycle snapshot when any snapshot row exists; can be non-null while `historySource="live-fallback"` when subscriber-created-at aggregation yields older chart points; `null` when no snapshot history exists                                                                                                                            |
 | `lifecycleHistoryEverySeconds`     | `number`                        | Expected lifecycle-history snapshot cadence, currently 900 seconds                                                                                                                                                                                                                                                                                                          |
@@ -2316,6 +2380,14 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
   },
   "collateralDriftCoins": [{ "id": "jupusd-jupiter", "liveScore": 80, "curatedScore": 65, "delta": 15 }],
   "liveToFallbackCoins": ["usdaf-asymmetry"],
+  "publication": {
+    "generationId": "report-cards:8.11:1771977600",
+    "methodologyVersion": "8.11",
+    "expectedCount": 364,
+    "scoredCount": 308,
+    "notRatedCount": 56,
+    "notRatedIds": ["example-not-rated-id"]
+  },
   "updatedAt": 1771977600
 }
 ```
@@ -2330,7 +2402,7 @@ For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskSco
 
 For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore` are populated only when a coin has a reviewed `bridgeRouteRisk` profile. Missing route reviews return `null` and stay neutral. Since Safety Score v8.12, cards can also carry an optional display-only `bridgeRouteRisk` object with the reviewed summary, source links, protocol evidence, review provenance, and confidence. L2BEAT Interop is used only as static review evidence and candidate-queue material; the report-card API does not fetch L2BEAT live.
 
-`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. The published envelope is also the preferred Safety Score source for yield hydration, while the smaller `report_card_cache` score map remains available for lightweight Chain Health/OG consumers and is rejected when its compact `methodologyVersion` does not match the current Safety Score methodology.
+`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. Published payloads also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot used for yield hydration, the smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and the Telegram safety source all carry the same publication generation and methodology and are committed in one D1 batch.
 
 Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
@@ -2642,7 +2714,9 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral for holder-yield rows; since v8.32, external opportunity rows publish `sourceRisk.opportunityRisk` and withhold the exact PYS (`pysNullReason: "opportunity-evidence-missing"`) when critical market evidence is missing. Source-family and benchmark freshness are eligibility rules applied before arbitration. Expired rows remain available as last-known context or retained alternatives, but publish `pharosYieldScore: null` with `pysNullReason: "source-stale"` or `"benchmark-stale"`; provenance exposes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. Row-level and provenance `safetyReason` fields make default/NR inputs explicit.
+
+Set `projection=summary` for the compact workbench contract. It preserves leaderboard, filter, scatter, comparison, benchmark, warning, publication, and evidence-qualification fields while omitting retained alternatives and deep decision/source-risk evidence. The detailed response remains the default. Repeated or unknown `projection` values return a non-cacheable `400`.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2671,7 +2745,28 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
       "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
     },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
-    "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
+    "safetySnapshot": {
+      "kind": "ok",
+      "coverageRatio": 0.8462,
+      "coveredCount": 308,
+      "trackedCount": 364,
+      "reason": null,
+      "source": "report-card-cache",
+      "publicationGenerationId": "report-cards:8.13:1771999800",
+      "methodologyVersion": "8.13",
+      "publishedAt": 1771999800
+    },
+    "liveSafetyHydration": {
+      "kind": "ok",
+      "coverageRatio": 0.9846,
+      "coveredCount": 64,
+      "trackedCount": 65,
+      "reason": null,
+      "source": "report-cards:snapshot",
+      "publicationGenerationId": "report-cards:8.13:1772000700",
+      "methodologyVersion": "8.13",
+      "publishedAt": 1772000700
+    }
   },
   "warnings": [],
   "publication": {
@@ -2682,8 +2777,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.298",
-    "currentVersion": "8.298",
+    "version": "8.31",
+    "currentVersion": "8.31",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2698,119 +2793,140 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `scalingFactor` | `number`                 | Scaling factor applied in yield score computation                                                                                                                                                               |
 | `medianApy`     | `number`                 | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                                                                                                           |
 | `updatedAt`     | `number`                 | Unix seconds when the rankings were last computed                                                                                                                                                               |
-| `provenance`    | `object \| null`         | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method                                                       |
+| `provenance`    | `object \| null`         | Snapshot-level provenance for benchmark and pool freshness, immutable hourly Safety Score evidence, optional live read-time hydration health, and selection method                                               |
 | `warnings`      | `YieldResponseWarning[]` | Optional body-level warnings for degraded but still served payloads, such as live safety hydration gaps. Clients should surface these separately from row-level `warningSignals`                                |
 | `publication`   | `object \| null`         | Optional publication metadata for generation-aware payloads; omitted on legacy payloads                                                                                                                         |
 | `methodology`   | `object \| undefined`    | Optional Yield Intelligence methodology envelope for rankings payloads when emitted by the publisher                                                                                                            |
 
 Optional v8 fields are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Public source-risk values are nested under the `sourceRisk` object; flattened top-level fields such as `sourceRiskPenalty` or `rewardShare` are not part of the public API contract.
 
-| Field                                    | Surface                     | Type                                                                                                                                                                                                              | Population status                                                                                                                                       |
-| ---------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `publication.generationId`               | rankings/history root       | `string \| null \| undefined`                                                                                                                                                                                     | Publisher generation identifier, e.g. `yield-1774526400`; omitted on legacy payloads                                                                    |
-| `publication.updatedAt`                  | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Unix seconds when the generation was computed                                                                                                           |
-| `publication.cutoffAt`                   | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Latest history timestamp approved for public reads                                                                                                      |
-| `publication.schemaVersion`              | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Payload-generation schema version                                                                                                                       |
-| `publication.status`                     | rankings/history root       | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                                                                                                        | Public cache payloads should expose `published`; failed or CAS-skipped generations do not replace current `yield_data` rows                             |
-| `warnings[]`                             | rankings root               | `YieldResponseWarning[] \| undefined`                                                                                                                                                                             | Body-level degraded-response advisories; row source warnings remain in `warningSignals`                                                                 |
-| `publicationGenerationId`                | ranking/history rows        | `string \| null \| undefined`                                                                                                                                                                                     | Row-to-generation join identifier; `null` on legacy rows                                                                                                |
-| `publishedRank`                          | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Stable rank from the published cache order before live Safety Score hydration                                                                           |
-| `liveRank`                               | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Post-hydration rank assigned after live Safety Score recomputation                                                                                      |
-| `sourceRole`                             | ranking/source rows         | `"canonical-holder" \| "external-opportunity" \| "fallback-proxy" \| "audit-alternate" \| "degraded-canonical" \| undefined`                                                                                    | Worker-derived source role explaining whether the row is the selected holder source, external opportunity, fallback proxy, retained audit alternate, or degraded canonical source |
-| `altSources[].confidenceTier`            | ranking rows                | `"deterministic" \| "curated" \| "discovered" \| "fallback" \| undefined`                                                                                                                                        | Source-candidate confidence tier from the worker arbitration pass                                                                                       |
-| `altSources[].selectionRank`             | ranking rows                | `integer >= 1 \| undefined`                                                                                                                                                                                       | Rank inside the worker's source-candidate ordering for that stablecoin                                                                                  |
-| `altSources[].rejectionReasonCode`       | ranking rows                | `"thinner" \| "stale" \| "lower-confidence" \| "rewards-only" \| "smaller" \| "unspecified" \| undefined`                                                                                                      | Stable reason code for why the retained alternate did not become the selected source                                                                    |
-| `alternateSummary`                       | ranking rows                | `object \| null \| undefined`                                                                                                                                                                                     | Optional deterministic summary of retained alternates: count, best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus selected |
-| `sourceRisk.sourceRiskScore`             | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Optional source-risk score when populated by the source-risk worker                                                                                     |
-| `sourceRisk.sourceRiskPenalty`           | ranking/history/source rows | `number >= 1 \| null \| undefined`                                                                                                                                                                                | Active PYS v8 source-risk multiplier derived from reliable source evidence. Missing/invalid values are neutral (`1`); runtime clamps values to `1..2.5` |
-| `sourceRisk.sourceDepthRatio`            | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Optional venue-depth ratio                                                                                                                              |
-| `sourceRisk.rewardShare`                 | ranking/history/source rows | `0..1 number \| null \| undefined`                                                                                                                                                                                | Optional reward APY share                                                                                                                               |
-| `sourceRisk.sourceAgeSeconds`            | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                                                                                                       | Optional source-observation age                                                                                                                         |
-| `sourceRisk.observationCount30d`         | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Optional 30-day observation count for the source                                                                                                        |
-| `sourceRisk.sourceSwitchCount30d`        | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Optional 30-day selected-source switch count                                                                                                            |
-| `sourceRisk.deploymentPlace`             | ranking/history/source rows | `"native-wrapper" \| "issuer-savings" \| "lending-market" \| "strategy-vault" \| "structured-tranche" \| "lp-or-dex" \| "rwa-fund" \| "reward-program" \| "rate-derived" \| "price-derived" \| null \| undefined` | Optional sourced deployment-place label                                                                                                                 |
-| `sourceRisk.venueProtocol`               | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Optional venue protocol label                                                                                                                           |
-| `sourceRisk.venueChain`                  | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Optional venue chain label                                                                                                                              |
-| `sourceRisk.venueRiskTier`               | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                                                                                                   | Optional sourced venue tier; unknown remains neutral                                                                                                    |
-| `sourceRisk.venueRiskScores`             | ranking/history/source rows | `object \| null \| undefined`                                                                                                                                                                                     | Optional Yearn-style venue sub-scores (`audits`, `centralization`, `fundsManagement`, `liquidity`, `operational`), each `1..5`                          |
-| `sourceRisk.venueRiskWeighted`           | ranking/history/source rows | `1..5 number \| null \| undefined`                                                                                                                                                                                | Optional weighted venue-risk score derived from the venue sub-scores                                                                                    |
-| `sourceRisk.venueRiskConfidence`         | ranking/history/source rows | `"verified" \| "partial" \| "low" \| null \| undefined`                                                                                                                                                           | Optional evidence-confidence label for the reviewed venue-risk inputs                                                                                   |
-| `sourceRisk.dependencyConcentration`     | ranking/history/source rows | `object \| null \| undefined`                                                                                                                                                                                     | Optional reviewed cross-venue concentration signal with `ecosystem`, `severity`, `note`, and `reviewedAt`                                               |
-| `sourceRisk.investabilityFlags`          | ranking/history/source rows | `string[] \| undefined`                                                                                                                                                                                           | Optional investability caveats                                                                                                                          |
-| `sourceRisk.trancheSide`                 | ranking/history/source rows | `"senior" \| "junior" \| null \| undefined`                                                                                                                                                                       | Royco Dawn tranche side for structured-tranche rows                                                                                                     |
-| `sourceRisk.trancheSafetyScore`          | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Opportunity-level Safety Score used by Royco Dawn tranche rows after underlying-score and tranche-risk adjustments                                      |
-| `sourceRisk.trancheSafetyPenalty`        | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Difference between the underlying report-card Safety Score and the final tranche Safety Score                                                           |
-| `sourceRisk.underlyingSafetyScore`       | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Current underlying report-card Safety Score input used for opportunity-level tranche scoring                                                            |
-| `sourceRisk.marketCoverageRatio`         | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market coverage ratio                                                                                                                     |
-| `sourceRisk.marketMinCoverageRatio`      | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market minimum required coverage ratio                                                                                                            |
-| `sourceRisk.marketUtilizationRatio`      | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market utilization ratio                                                                                                                  |
-| `sourceRisk.marketUtilizationLimitRatio` | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market utilization target or limit ratio when supplied                                                                                            |
-| `sourceRisk.marketDrawdownRatio`         | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market drawdown ratio                                                                                                                     |
-| `sourceRisk.marketTotalDrawdowns`        | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Royco market drawdown count when supplied                                                                                                               |
-| `sourceRisk.marketStatus`                | ranking/history/source rows | `"normal" \| "protected" \| "unhealthy" \| "critical" \| null \| undefined`                                                                                                                                       | Normalized Royco market status used by tranche scoring                                                                                                  |
-| `sourceRisk.marketTvlUsd`                | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market-level TVL in USD                                                                                                                           |
-| `sourceRisk.trancheTvlUsd`               | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco vault/tranche TVL in USD                                                                                                                          |
-| `sourceRisk.trancheShareTokenAddress`    | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Share-token address for the Royco tranche vault                                                                                                         |
-| `sourceRisk.trancheDepositTokenAddress`  | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Deposit-token address used to attach the tranche row to a tracked underlying stablecoin                                                                 |
-| `sourceRisk.withdrawalDelaySeconds`      | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                                                                                                       | Withdrawal/redemption delay for the tranche when supplied                                                                                               |
-| `sourceRisk.kycRequired`                 | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                                                    | Whether the source marks KYC as required                                                                                                                |
-| `sourceRisk.accessRestricted`            | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                                                    | Whether the source marks jurisdictional or other access restrictions                                                                                    |
-| `rankChangeAttribution`                  | ranking rows                | `object \| null \| undefined`                                                                                                                                                                                     | Optional previous-rank/PYS delta attribution with primary driver and contribution hints                                                                 |
+| Field                                    | Surface                     | Type                                                                                                                                                                                                              | Population status                                                                                                                                                                 |
+| ---------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `publication.generationId`               | rankings/history root       | `string \| null \| undefined`                                                                                                                                                                                     | Publisher generation identifier, e.g. `yield-1774526400`; omitted on legacy payloads                                                                                              |
+| `publication.updatedAt`                  | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Unix seconds when the generation was computed                                                                                                                                     |
+| `publication.cutoffAt`                   | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Latest history timestamp approved for public reads                                                                                                                                |
+| `publication.schemaVersion`              | rankings/history root       | `number \| null \| undefined`                                                                                                                                                                                     | Payload-generation schema version                                                                                                                                                 |
+| `publication.status`                     | rankings/history root       | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                                                                                                        | Public cache payloads should expose `published`; failed or CAS-skipped generations do not replace current `yield_data` rows                                                       |
+| `warnings[]`                             | rankings root               | `YieldResponseWarning[] \| undefined`                                                                                                                                                                             | Body-level degraded-response advisories; row source warnings remain in `warningSignals`                                                                                           |
+| `pysNullReason`                          | ranking rows                | `"apy-non-positive" \| "effective-yield-non-positive" \| "scaling-invalid" \| "missing-inputs" \| "source-stale" \| "source-freshness-unknown" \| "benchmark-stale" \| "safety-unrated" \| "opportunity-evidence-missing" \| null \| undefined` | Machine-readable reason an exact current PYS is unavailable; stale rows remain visible as NR context                                                                              |
+| `provenance.sourceFreshness`             | ranking rows                | `"fresh" \| "stale" \| "unknown" \| undefined`                                                                                                                                                              | Source-family eligibility state used before confidence arbitration                                                                                                                |
+| `provenance.benchmarkFreshness`          | ranking rows                | `"healthy" \| "degraded" \| "stale" \| undefined`                                                                                                                                                            | Row benchmark state; fallback within TTL is degraded, while stale cannot support exact PYS                                                                                        |
+| `provenance.scoreQualified`              | ranking rows                | `boolean \| undefined`                                                                                                                                                                                            | Whether current source and benchmark freshness permit an exact PYS                                                                                                                |
+| `provenance.safetySnapshot.source`       | rankings root               | `"report-card-cache" \| undefined`                                                                                                                                                                               | Safety input source used by the hourly publisher; current generation-aware payloads use the exact compact report-card projection                                                  |
+| `provenance.safetySnapshot.publicationGenerationId` | rankings root      | `string \| null \| undefined`                                                                                                                                                                                     | Report-card publication generation consumed for PYS; `null` when no exact projection was accepted                                                                                 |
+| `provenance.safetySnapshot.methodologyVersion` | rankings root           | `string \| null \| undefined`                                                                                                                                                                                     | Safety Score methodology pinned by the consumed report-card projection                                                                                                            |
+| `provenance.safetySnapshot.publishedAt`  | rankings root               | `number \| null \| undefined`                                                                                                                                                                                     | Unix seconds for the compact report-card projection consumed by the hourly publisher                                                                                              |
+| `provenance.liveSafetyHydration`         | rankings root               | `object \| undefined`                                                                                                                                                                                             | Optional read-time evidence for the report-card data used to hydrate public safety fields and recompute PYS; it does not replace `safetySnapshot`                                  |
+| `provenance.liveSafetyHydration.kind`    | rankings root               | `"ok" \| "degraded"`                                                                                                                                                                                           | Read-time hydration health after source freshness/input checks and row coverage evaluation                                                                                         |
+| `provenance.liveSafetyHydration.coverageRatio` | rankings root         | `number`                                                                                                                                                                                                          | `coveredCount / trackedCount` for hydrated ranking rows, rounded to four decimals                                                                                                  |
+| `provenance.liveSafetyHydration.coveredCount` | rankings root          | `number`                                                                                                                                                                                                          | Ranking rows hydrated from a report card or explicit opportunity safety rather than the default safety fallback                                                                    |
+| `provenance.liveSafetyHydration.trackedCount` | rankings root          | `number`                                                                                                                                                                                                          | Total ranking rows evaluated during read-time hydration                                                                                                                            |
+| `provenance.liveSafetyHydration.reason`  | rankings root               | `string \| null`                                                                                                                                                                                                  | Comma-separated degradation reasons, including stale report-card inputs/snapshot age or low row coverage                                                                           |
+| `provenance.liveSafetyHydration.source`  | rankings root               | `"report-cards:snapshot" \| "computed-report-cards"`                                                                                                                                                           | Full published report-card snapshot when valid, otherwise the on-read computed fallback                                                                                            |
+| `provenance.liveSafetyHydration.publicationGenerationId` | rankings root | `string \| null`                                                                                                                                                                                     | Full report-card publication generation used for hydration; `null` for computed fallback                                                                                           |
+| `provenance.liveSafetyHydration.methodologyVersion` | rankings root     | `string \| null`                                                                                                                                                                                                  | Full report-card publication methodology; `null` for computed fallback                                                                                                             |
+| `provenance.liveSafetyHydration.publishedAt` | rankings root           | `number \| null`                                                                                                                                                                                                  | Full report-card snapshot timestamp; `null` for computed fallback                                                                                                                  |
+| `publicationGenerationId`                | ranking/history rows        | `string \| null \| undefined`                                                                                                                                                                                     | Row-to-generation join identifier; `null` on legacy rows                                                                                                                          |
+| `publishedRank`                          | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Stable rank from the published cache order before live Safety Score hydration                                                                                                     |
+| `liveRank`                               | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Post-hydration rank assigned after live Safety Score recomputation                                                                                                                |
+| `sourceRole`                             | ranking/source rows         | `"canonical-holder" \| "external-opportunity" \| "fallback-proxy" \| "audit-alternate" \| "degraded-canonical" \| undefined`                                                                                      | Worker-derived source role explaining whether the row is the selected holder source, external opportunity, fallback proxy, retained audit alternate, or degraded canonical source |
+| `altSources[].confidenceTier`            | ranking rows                | `"deterministic" \| "curated" \| "discovered" \| "fallback" \| undefined`                                                                                                                                         | Source-candidate confidence tier from the worker arbitration pass                                                                                                                 |
+| `altSources[].selectionRank`             | ranking rows                | `integer >= 1 \| undefined`                                                                                                                                                                                       | Rank inside the worker's source-candidate ordering for that stablecoin                                                                                                            |
+| `altSources[].rejectionReasonCode`       | ranking rows                | `"thinner" \| "stale" \| "lower-confidence" \| "rewards-only" \| "smaller" \| "unspecified" \| undefined`                                                                                                         | Stable reason code for why the retained alternate did not become the selected source                                                                                              |
+| `alternateSummary`                       | ranking rows                | `object \| null \| undefined`                                                                                                                                                                                     | Optional deterministic summary of retained alternates: count, best 30d-APY alternate, best source-risk-adjusted alternate, and APY spread versus selected                         |
+| `sourceRisk.sourceRiskScore`             | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Optional source-risk score when populated by the source-risk worker                                                                                                               |
+| `sourceRisk.sourceRiskPenalty`           | ranking/history/source rows | `number >= 1 \| null \| undefined`                                                                                                                                                                                | Active PYS v8 source-risk multiplier derived from reliable source evidence. Missing/invalid values are neutral (`1`); runtime clamps values to `1..2.5`                           |
+| `sourceRisk.sourceDepthRatio`            | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Optional venue-depth ratio                                                                                                                                                        |
+| `sourceRisk.rewardShare`                 | ranking/history/source rows | `0..1 number \| null \| undefined`                                                                                                                                                                                | Optional reward APY share                                                                                                                                                         |
+| `sourceRisk.sourceAgeSeconds`            | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                                                                                                       | Optional source-observation age                                                                                                                                                   |
+| `sourceRisk.observationCount30d`         | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Optional 30-day observation count for the source                                                                                                                                  |
+| `sourceRisk.sourceSwitchCount30d`        | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Optional 30-day selected-source switch count                                                                                                                                      |
+| `sourceRisk.deploymentPlace`             | ranking/history/source rows | `"native-wrapper" \| "issuer-savings" \| "lending-market" \| "strategy-vault" \| "structured-tranche" \| "lp-or-dex" \| "rwa-fund" \| "reward-program" \| "rate-derived" \| "price-derived" \| null \| undefined` | Optional sourced deployment-place label                                                                                                                                           |
+| `sourceRisk.venueProtocol`               | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Optional venue protocol label                                                                                                                                                     |
+| `sourceRisk.venueChain`                  | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Optional venue chain label                                                                                                                                                        |
+| `sourceRisk.venueRiskTier`               | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                                                                                                   | Optional sourced venue tier; unknown remains neutral                                                                                                                              |
+| `sourceRisk.venueRiskScores`             | ranking/history/source rows | `object \| null \| undefined`                                                                                                                                                                                     | Optional Yearn-style venue sub-scores (`audits`, `centralization`, `fundsManagement`, `liquidity`, `operational`), each `1..5`                                                    |
+| `sourceRisk.venueRiskWeighted`           | ranking/history/source rows | `1..5 number \| null \| undefined`                                                                                                                                                                                | Optional weighted venue-risk score derived from the venue sub-scores                                                                                                              |
+| `sourceRisk.venueRiskConfidence`         | ranking/history/source rows | `"verified" \| "partial" \| "low" \| null \| undefined`                                                                                                                                                           | Optional evidence-confidence label for the reviewed venue-risk inputs                                                                                                             |
+| `sourceRisk.dependencyConcentration`     | ranking/history/source rows | `object \| null \| undefined`                                                                                                                                                                                     | Optional reviewed cross-venue concentration signal with `ecosystem`, `severity`, `note`, and `reviewedAt`                                                                         |
+| `sourceRisk.investabilityFlags`          | ranking/history/source rows | `string[] \| undefined`                                                                                                                                                                                           | Optional investability caveats                                                                                                                                                    |
+| `sourceRisk.trancheSide`                 | ranking/history/source rows | `"senior" \| "junior" \| null \| undefined`                                                                                                                                                                       | Royco Dawn tranche side for structured-tranche rows                                                                                                                               |
+| `sourceRisk.trancheSafetyScore`          | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Opportunity-level Safety Score used by Royco Dawn tranche rows after underlying-score and tranche-risk adjustments                                                                |
+| `sourceRisk.trancheSafetyPenalty`        | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Difference between the underlying report-card Safety Score and the final tranche Safety Score                                                                                     |
+| `sourceRisk.underlyingSafetyScore`       | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                                                                                              | Current underlying report-card Safety Score input used for opportunity-level tranche scoring                                                                                      |
+| `sourceRisk.marketCoverageRatio`         | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market coverage ratio                                                                                                                                               |
+| `sourceRisk.marketMinCoverageRatio`      | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market minimum required coverage ratio                                                                                                                                      |
+| `sourceRisk.marketUtilizationRatio`      | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market utilization ratio                                                                                                                                            |
+| `sourceRisk.marketUtilizationLimitRatio` | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market utilization target or limit ratio when supplied                                                                                                                      |
+| `sourceRisk.marketDrawdownRatio`         | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Current Royco market drawdown ratio                                                                                                                                               |
+| `sourceRisk.marketTotalDrawdowns`        | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                                                                                                               | Royco market drawdown count when supplied                                                                                                                                         |
+| `sourceRisk.marketStatus`                | ranking/history/source rows | `"normal" \| "protected" \| "unhealthy" \| "critical" \| null \| undefined`                                                                                                                                       | Normalized Royco market status used by tranche scoring                                                                                                                            |
+| `sourceRisk.marketTvlUsd`                | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco market-level TVL in USD                                                                                                                                                     |
+| `sourceRisk.trancheTvlUsd`               | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                                                                                                | Royco vault/tranche TVL in USD                                                                                                                                                    |
+| `sourceRisk.trancheShareTokenAddress`    | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Share-token address for the Royco tranche vault                                                                                                                                   |
+| `sourceRisk.trancheDepositTokenAddress`  | ranking/history/source rows | `string \| null \| undefined`                                                                                                                                                                                     | Deposit-token address used to attach the tranche row to a tracked underlying stablecoin                                                                                           |
+| `sourceRisk.withdrawalDelaySeconds`      | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                                                                                                       | Withdrawal/redemption delay for the tranche when supplied                                                                                                                         |
+| `sourceRisk.kycRequired`                 | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                                                    | Whether the source marks KYC as required                                                                                                                                          |
+| `sourceRisk.accessRestricted`            | ranking/history/source rows | `boolean \| null \| undefined`                                                                                                                                                                                    | Whether the source marks jurisdictional or other access restrictions                                                                                                              |
+| `sourceRisk.opportunityRisk`             | ranking/history/source rows | `object \| null \| undefined`                                                                                                                                                                                     | v8.32 opportunity-level risk contract for external opportunities: `opportunityClass` (`"lending" \| "fixed-yield" \| "structured-tranche"`), `underlyingSafetyScore`, nullable `opportunitySafetyScore` / `opportunitySafetyPenalty`, `venueReviewed`, and `missingCriticalEvidence` (`"venue-review" \| "market-size" \| "market-status"`) |
+| `rankChangeAttribution`                  | ranking rows                | `object \| null \| undefined`                                                                                                                                                                                     | Optional previous-rank/PYS delta attribution with primary driver and contribution hints                                                                                           |
 | `decisionLedger`                         | ranking rows                | `object \| null \| undefined`                                                                                                                                                                                     | Bounded selected-source decision evidence, including selected reason, source-switch metadata, rejected count, and up to two public alternatives with role/rank/rejection metadata |
 
-Current `v8.291` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. Generic on-chain exchange-rate and price-derived APY observations above the deterministic 300% sanity envelope are rejected before publication; protocol-specific adapters and benchmark rate-derived rows retain their family-specific rules. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Holder-yield rows still treat missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. Since `v8.32`, external opportunity rows (`lending-opportunity`, `fixed-yield`, `structured-tranche` yield types) are no longer neutral on missing market evidence: they publish `sourceRisk.opportunityRisk`, score safety at the opportunity level with `safetyProvenance: "opportunity-safety"` when critical evidence is complete, and otherwise withhold the exact PYS with `pysNullReason: "opportunity-evidence-missing"` and an `NR` score qualification. Royco Dawn structured-tranche rows additionally carry opportunity-level Safety Score evidence under `sourceRisk.tranche*`; this changes only the yield row's safety input and PYS, not the underlying stablecoin's report-card Safety Score. Generic on-chain exchange-rate and price-derived APY observations above the deterministic 300% sanity envelope are rejected before publication; protocol-specific adapters and benchmark rate-derived rows retain their family-specific rules. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
-| Field                     | Type                                                                                                  | Description                                                                                                                                                                                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                      | `string`                                                                                              | Pharos stablecoin ID                                                                                                                                                                                                  |
-| `symbol`                  | `string`                                                                                              | Token symbol                                                                                                                                                                                                          |
-| `name`                    | `string`                                                                                              | Full name                                                                                                                                                                                                             |
-| `currentApy`              | `number`                                                                                              | Current APY (%)                                                                                                                                                                                                       |
-| `apy7d`                   | `number`                                                                                              | 7-day average APY (%)                                                                                                                                                                                                 |
-| `apy30d`                  | `number`                                                                                              | 30-day average APY (%)                                                                                                                                                                                                |
-| `apyBase`                 | `number \| null`                                                                                      | Base APY component (%)                                                                                                                                                                                                |
-| `apyReward`               | `number \| null`                                                                                      | Reward APY component (%), `null` if none                                                                                                                                                                              |
-| `yieldSource`             | `string`                                                                                              | Human-readable yield source description                                                                                                                                                                               |
-| `yieldSourceUrl`          | `string \| null`                                                                                      | Official URL for the selected source when Pharos has a curated or metadata-derived link                                                                                                                               |
-| `yieldType`               | `string`                                                                                              | Yield type classification (e.g. `"lending-vault"`, `"staking"`)                                                                                                                                                       |
-| `dataSource`              | `string`                                                                                              | Data source identifier (e.g. `"defillama"`)                                                                                                                                                                           |
-| `sourceTvlUsd`            | `number \| null`                                                                                      | TVL of the yield source pool (USD)                                                                                                                                                                                    |
-| `pharosYieldScore`        | `number \| null`                                                                                      | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                                                                                        |
-| `safetyScore`             | `number \| null`                                                                                      | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; Royco structured-tranche rows expose the row-level tranche score; unrated coins use the default NR penalty input (`40`) |
-| `safetyGrade`             | `string \| null`                                                                                      | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`); Royco structured-tranche rows derive the grade from the opportunity-level tranche score                                                          |
-| `yieldToRisk`             | `number \| null`                                                                                      | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                                                                                      |
-| `excessYield`             | `number \| null`                                                                                      | 30-day average APY above the row benchmark (percentage points)                                                                                                                                                        |
-| `benchmarkKey`            | `"USD" \| "EUR" \| "CHF" \| "GBP" \| "JPY" \| "MXN" \| "BRL" \| "AUD" \| "CAD" \| "SGD" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic (v8.13 expanded the set; `SGD` is reserved without a fetcher and routes to USD fallback)                                               |
-| `benchmarkLabel`          | `string \| undefined`                                                                                 | Human-readable benchmark label for the row                                                                                                                                                                            |
-| `benchmarkCurrency`       | `string \| undefined`                                                                                 | Benchmark currency code used for the row                                                                                                                                                                              |
-| `benchmarkRate`           | `number \| undefined`                                                                                 | Benchmark rate (%) applied to this row                                                                                                                                                                                |
-| `benchmarkRecordDate`     | `string \| null \| undefined`                                                                         | Market or policy record date for the selected benchmark                                                                                                                                                               |
-| `benchmarkIsFallback`     | `boolean \| undefined`                                                                                | Whether the row benchmark is currently on a fallback path                                                                                                                                                             |
-| `benchmarkFallbackMode`   | `string \| null \| undefined`                                                                         | Fallback reason for the row benchmark when applicable                                                                                                                                                                 |
-| `benchmarkSelectionMode`  | `"native" \| "fallback-usd" \| "manual-override" \| undefined`                                        | How the row benchmark was selected                                                                                                                                                                                    |
-| `benchmarkIsProxy`        | `boolean \| undefined`                                                                                | True when the selected benchmark is an explicit proxy rather than the exact reference rate                                                                                                                            |
-| `yieldStability`          | `number \| null`                                                                                      | Yield stability metric (0–1; higher = more stable)                                                                                                                                                                    |
-| `apyVariance30d`          | `number \| null`                                                                                      | 30-day APY variance                                                                                                                                                                                                   |
-| `apyMin30d`               | `number \| null`                                                                                      | Minimum APY in last 30 days (%)                                                                                                                                                                                       |
-| `apyMax30d`               | `number \| null`                                                                                      | Maximum APY in last 30 days (%)                                                                                                                                                                                       |
-| `warningSignals`          | `string[]`                                                                                            | Active warning-signal flags for the selected best source                                                                                                                                                              |
-| `altSources`              | `AltYieldSource[]`                                                                                    | Additional non-selected source rows for the same coin                                                                                                                                                                 |
-| `alternateSummary`        | `object \| null \| undefined`                                                                         | Optional deterministic summary of retained alternates: count, best 30d-APY alternate, best source-risk-adjusted alternate, and spread versus selected                                                                 |
-| `provenance`              | `object \| null`                                                                                      | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing                                                                     |
-| `publicationGenerationId` | `string \| null \| undefined`                                                                         | Publication-generation identifier, or `null`/omitted for legacy rows                                                                                                                                                  |
-| `publishedRank`           | `number \| null \| undefined`                                                                         | Stable publication-order rank from the cached generation                                                                                                                                                              |
-| `liveRank`                | `number \| null \| undefined`                                                                         | Post-hydration rank from the response order after live Safety Score recomputation                                                                                                                                     |
-| `sourceRisk`              | `object \| null \| undefined`                                                                         | Optional nested source-risk payload. Runtime rows derive or resolve `sourceRisk.sourceRiskPenalty` before PYS v8 scoring; missing or unknown values remain neutral                                                    |
-| `sourceRole`              | `string \| undefined`                                                                                 | Worker-derived role (`canonical-holder`, `external-opportunity`, `fallback-proxy`, `audit-alternate`, or `degraded-canonical`) for selected and alternate source transparency                                          |
-| `rankChangeAttribution`   | `object \| null \| undefined`                                                                         | Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints                                                                                                         |
-| `decisionLedger`          | `object \| null \| undefined`                                                                         | Bounded selected-source decision evidence with stable reason/rejection codes and up to two public alternatives                                                                                                         |
+| Field                     | Type                                                                                                                          | Description                                                                                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                      | `string`                                                                                                                      | Pharos stablecoin ID                                                                                                                                                                                                  |
+| `symbol`                  | `string`                                                                                                                      | Token symbol                                                                                                                                                                                                          |
+| `name`                    | `string`                                                                                                                      | Full name                                                                                                                                                                                                             |
+| `currentApy`              | `number`                                                                                                                      | Current APY (%)                                                                                                                                                                                                       |
+| `apy7d`                   | `number`                                                                                                                      | 7-day average APY (%)                                                                                                                                                                                                 |
+| `apy30d`                  | `number`                                                                                                                      | 30-day average APY (%)                                                                                                                                                                                                |
+| `apyBase`                 | `number \| null`                                                                                                              | Base APY component (%)                                                                                                                                                                                                |
+| `apyReward`               | `number \| null`                                                                                                              | Reward APY component (%), `null` if none                                                                                                                                                                              |
+| `yieldSource`             | `string`                                                                                                                      | Human-readable yield source description                                                                                                                                                                               |
+| `yieldSourceUrl`          | `string \| null`                                                                                                              | Official URL for the selected source when Pharos has a curated or metadata-derived link                                                                                                                               |
+| `yieldType`               | `string`                                                                                                                      | Yield type classification (e.g. `"lending-vault"`, `"staking"`)                                                                                                                                                       |
+| `dataSource`              | `string`                                                                                                                      | Data source identifier (e.g. `"defillama"`)                                                                                                                                                                           |
+| `sourceTvlUsd`            | `number \| null`                                                                                                              | TVL of the yield source pool (USD)                                                                                                                                                                                    |
+| `pharosYieldScore`        | `number \| null`                                                                                                              | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                                                                                        |
+| `safetyScore`             | `number \| null`                                                                                                              | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; Royco structured-tranche rows expose the row-level tranche score; unrated coins use the default NR penalty input (`40`) |
+| `safetyGrade`             | `string \| null`                                                                                                              | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`); Royco structured-tranche rows derive the grade from the opportunity-level tranche score                                                          |
+| `safetyReason`            | `"report-card-score-missing" \| "report-card-grade-not-rated" \| "underlying-report-card-score-missing" \| null \| undefined` | Stable reason for a default or explicit-NR safety input; `null` for normally rated rows                                                                                                                               |
+| `yieldToRisk`             | `number \| null`                                                                                                              | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                                                                                      |
+| `excessYield`             | `number \| null`                                                                                                              | 30-day average APY above the row benchmark (percentage points)                                                                                                                                                        |
+| `benchmarkKey`            | `"USD" \| "EUR" \| "CHF" \| "GBP" \| "JPY" \| "MXN" \| "BRL" \| "AUD" \| "CAD" \| "SGD" \| undefined`                         | Benchmark selected for this row's `excessYield` and any rate-derived APY logic (v8.13 expanded the set; `SGD` is reserved without a fetcher and routes to USD fallback)                                               |
+| `benchmarkLabel`          | `string \| undefined`                                                                                                         | Human-readable benchmark label for the row                                                                                                                                                                            |
+| `benchmarkCurrency`       | `string \| undefined`                                                                                                         | Benchmark currency code used for the row                                                                                                                                                                              |
+| `benchmarkRate`           | `number \| undefined`                                                                                                         | Benchmark rate (%) applied to this row                                                                                                                                                                                |
+| `benchmarkRecordDate`     | `string \| null \| undefined`                                                                                                 | Market or policy record date for the selected benchmark                                                                                                                                                               |
+| `benchmarkIsFallback`     | `boolean \| undefined`                                                                                                        | Whether the row benchmark is currently on a fallback path                                                                                                                                                             |
+| `benchmarkFallbackMode`   | `string \| null \| undefined`                                                                                                 | Fallback reason for the row benchmark when applicable                                                                                                                                                                 |
+| `benchmarkSelectionMode`  | `"native" \| "fallback-usd" \| "manual-override" \| undefined`                                                                | How the row benchmark was selected                                                                                                                                                                                    |
+| `benchmarkIsProxy`        | `boolean \| undefined`                                                                                                        | True when the selected benchmark is an explicit proxy rather than the exact reference rate                                                                                                                            |
+| `yieldStability`          | `number \| null`                                                                                                              | Yield stability metric (0–1; higher = more stable)                                                                                                                                                                    |
+| `apyVariance30d`          | `number \| null`                                                                                                              | 30-day APY variance                                                                                                                                                                                                   |
+| `apyMin30d`               | `number \| null`                                                                                                              | Minimum APY in last 30 days (%)                                                                                                                                                                                       |
+| `apyMax30d`               | `number \| null`                                                                                                              | Maximum APY in last 30 days (%)                                                                                                                                                                                       |
+| `warningSignals`          | `string[]`                                                                                                                    | Active warning-signal flags for the selected best source                                                                                                                                                              |
+| `altSources`              | `AltYieldSource[]`                                                                                                            | Additional non-selected source rows for the same coin                                                                                                                                                                 |
+| `alternateSummary`        | `object \| null \| undefined`                                                                                                 | Optional deterministic summary of retained alternates: count, best 30d-APY alternate, best source-risk-adjusted alternate, and spread versus selected                                                                 |
+| `provenance`              | `object \| null`                                                                                                              | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing                                                                     |
+| `publicationGenerationId` | `string \| null \| undefined`                                                                                                 | Publication-generation identifier, or `null`/omitted for legacy rows                                                                                                                                                  |
+| `publishedRank`           | `number \| null \| undefined`                                                                                                 | Stable publication-order rank from the cached generation                                                                                                                                                              |
+| `liveRank`                | `number \| null \| undefined`                                                                                                 | Post-hydration rank from the response order after live Safety Score recomputation                                                                                                                                     |
+| `sourceRisk`              | `object \| null \| undefined`                                                                                                 | Optional nested source-risk payload. Runtime rows derive or resolve `sourceRisk.sourceRiskPenalty` before PYS v8 scoring; missing or unknown values remain neutral                                                    |
+| `sourceRole`              | `string \| undefined`                                                                                                         | Worker-derived role (`canonical-holder`, `external-opportunity`, `fallback-proxy`, `audit-alternate`, or `degraded-canonical`) for selected and alternate source transparency                                         |
+| `rankChangeAttribution`   | `object \| null \| undefined`                                                                                                 | Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints                                                                                                         |
+| `decisionLedger`          | `object \| null \| undefined`                                                                                                 | Bounded selected-source decision evidence with stable reason/rejection codes and up to two public alternatives                                                                                                        |
 
 When present, `YieldRanking.provenance` includes:
 
 - `sourceObservedAt` / `sourceAgeSeconds`: the timestamp and age of the latest observation actually backing the row
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds`: optional prior-anchor timing for APYs derived from two observations, such as price-derived and on-chain exchange-rate rows
+- `safetyReason`: the same stable missing/default/NR reason published on the ranking row, or `null` for a normally rated row
 - `benchmarkKey`, `benchmarkLabel`, `benchmarkRate`, `benchmarkIsFallback`, `benchmarkSelectionMode`, and related fields for the exact benchmark applied to that row
 
 ---
@@ -2825,7 +2941,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.298",
+  "methodologyVersion": "v8.299",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2839,7 +2955,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.298",
+      "methodologyVersion": "v8.299",
       "updatedAt": 1779210000
     }
   ]
@@ -2851,6 +2967,8 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 ### `GET /api/yield-history`
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Generation-aware rows are returned only after their publication generation is marked `published`; legacy rows remain readable through the existing cutoff fallback. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
+
+History written under methodology v8.31 or later includes the versioned PYS formula inputs captured at publication. `pysReproducibility: "exact"` means the point can be recomputed from `pysInputsAtPublish`; older rows are labeled `legacy-partial` and do not invent missing benchmark, source-risk, or scaling facts.
 
 For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context.
 
@@ -2889,8 +3007,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.13",
-    "currentVersion": "8.13",
+    "version": "8.31",
+    "currentVersion": "8.31",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2922,7 +3040,22 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "dataSource": "rate-derived",
   "isBest": true,
   "sourceSwitch": false,
-  "publicationGenerationId": "yield-1771500000"
+  "publicationGenerationId": "yield-1771500000",
+  "pysAtPublish": 42.7,
+  "pysInputsAtPublish": {
+    "schemaVersion": 1,
+    "methodologyVersion": "8.31",
+    "apy30d": 12.1,
+    "safetyScore": 81,
+    "varianceScore": 0.18,
+    "benchmarkRate": 4.25,
+    "sourceRiskPenalty": 1.15,
+    "scalingFactor": 16,
+    "scoreQualification": "rated",
+    "benchmarkKey": "USD",
+    "evidenceClass": "direct-onchain"
+  },
+  "pysReproducibility": "exact"
 }
 ```
 
@@ -2944,6 +3077,9 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `sourceSwitch`            | `boolean`                     | True when the historically selected best source changed at this row                                                                               |
 | `publicationGenerationId` | `string \| null \| undefined` | Published generation identifier for generation-aware rows; `null`/omitted on legacy rows                                                          |
 | `sourceRisk`              | `object \| null \| undefined` | Optional nested source-risk payload for historical rows; missing or unknown values are neutral                                                    |
+| `pysAtPublish`            | `number \| null \| undefined` | PYS stored at publication time                                                                                                                    |
+| `pysInputsAtPublish`      | `object \| null \| undefined` | Versioned formula and evidence inputs for exact post-v8.31 recomputation; `null` for legacy or malformed snapshots                                |
+| `pysReproducibility`      | `"exact" \| "legacy-partial"` | Whether the stored point has every input required for exact recomputation                                                                       |
 
 ---
 
@@ -3147,6 +3283,8 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
+Current responses are bounded by `cache["dews:published-generation"]`. Version 2 pointers bind the exact generation timestamp, row count, and stablecoin-ID digest; readers use `stress_signals_latest` only when it matches that proof and otherwise read exactly the canonical `stress_signals` rows at the published timestamp. Missing rows, same-count ID drift, and newer failed partial generations fail closed instead of being filled with older per-coin rows. Legacy or absent pointers retain the bounded compatibility path during rollout.
+
 Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, and `X-Data-Age` / `Warning` freshness headers use that aggregate generation timestamp. `oldestComputedAt` remains a body-only lag diagnostic for consumers that need per-coin retained-last-valid detection.
 
 **Response (all coins)**
@@ -3276,7 +3414,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 | `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"` | Yes      | Used for review context                                                                                                         |
 | `expectedVolume`    | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `acceptedTerms`     | `true`                                                              | Yes      | Fair-use acknowledgement                                                                                                        |
-| `website`           | `string`                                                            | No       | Honeypot field, max 300 chars; non-empty submissions are silently accepted without issuing work                                |
+| `website`           | `string`                                                            | No       | Honeypot field, max 300 chars; non-empty submissions are silently accepted without issuing work                                 |
 
 **Success response:** `202 Accepted`
 
@@ -3374,7 +3512,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 | `title`                                                       | `string`                                          | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction`                                                     |
 | `description`                                                 | `string`                                          | Yes         | 10–2000 chars                                                                                                                              |
 | `pageUrl`                                                     | `string`                                          | Yes         | Relative app path (must be a single-slash internal path such as `/stablecoin/usdc-circle/`; protocol-relative `//...` values are rejected) |
-| `website`                                                     | `string`                                          | No          | Honeypot field, max 300 chars; non-empty is silently accepted/dropped                                                                     |
+| `website`                                                     | `string`                                          | No          | Honeypot field, max 300 chars; non-empty is silently accepted/dropped                                                                      |
 | `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                                                                          |
 | `contactHandle`                                               | `string`                                          | No          | Optional Telegram/X handle that appears publicly on GitHub                                                                                 |
 
@@ -3414,9 +3552,9 @@ Returns the current private-chat Mini App control-panel state for a Telegram use
 }
 ```
 
-The request schema is strict. Launch context such as `start_param` must come from signed Telegram `initData`.
+The request schema is strict. Launch context such as `start_param` must come from signed Telegram `initData`. Current clients also advertise the shared contract and bundled-catalog versions through the non-identifying `mini_app_contract` and `mini_app_catalog` query parameters; older clients may omit both during the rolling-deploy compatibility window.
 
-**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 5-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
+**Response:** matching versioned clients receive `{ contractVersion, catalogVersion, stateRevision, state }`. `state` contains the mutable Mini App projection and excludes the immutable searchable catalog, which is bundled into the fingerprinted static client asset. A legacy request with neither version parameter receives the former full state plus `catalog`; a new client can also parse that full response from an older Worker. Private fresh sessions return `state.viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 5-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
 
 Key fields:
 
@@ -3424,20 +3562,20 @@ Key fields:
 - `subscriber` — global alert flags, quiet-hours settings, and chat-level snooze.
 - `subscriptions` — explicit per-coin follows with alert flags and per-coin thresholds.
 - `presets` — followed preset watchlists.
-- `catalog` — recommended presets and searchable tracked stablecoins for the UI.
+- bundled `catalog` — recommended presets and searchable tracked stablecoins; present in the static client (and temporary legacy responses), not routine versioned API responses.
 - `health` — last successful delivery/reply, recent failure class, and queued alert count.
 
-Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `413` request body above the 16 KiB Mini App cap, `429` cooldown, `500` uncaught handler failure wrapper, `503` missing bot-token configuration.
+Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `409` contract/catalog version mismatch, `413` request body above the 16 KiB Mini App cap, `429` cooldown, `500` uncaught handler failure wrapper, `503` missing bot-token configuration. A version mismatch is rejected before auth cooldown or analytics writes and carries the Worker's current versions.
 
 ### `POST /api/telegram-mini-app/mutate`
 
-Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
+Applies one private-chat Mini App setting mutation, then returns the refreshed mutable-state snapshot and opaque state revision. The immutable catalog is not repeated.
 
 **Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 5 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). The same fresh launch can perform multiple mutations inside that 5-minute window; stale auth returns `401`.
 
 **Site-data lane:** denied.
 
-**Rate limiting:** cache-backed cooldown per Telegram user across all mutation kinds (`mini-app:mutation:any`, 5 seconds).
+**Rate limiting:** an anchored per-user burst budget admits up to 12 signature-valid, schema-valid mutation attempts in 30 seconds. A denial returns the same integer delay in `Retry-After` and `retryAfterSec`; the client counts down without replaying the write.
 
 **Cache:** no-store.
 
@@ -3458,7 +3596,7 @@ Supported `operation.kind` values:
 
 - `recommended-setup` — canonical first-run setup only: `presetId="usd-top25"` and `alertTypes=["dews","depeg"]`.
 - `follow-preset` — follow any supported preset with selected alert types.
-- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`).
+- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`, `reserve`).
 - `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.
 - `clear-snooze` — clear chat-level snooze.
@@ -3471,7 +3609,7 @@ Supported `operation.kind` values:
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `413` request body above the 16 KiB Mini App cap; `429` cooldown; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration.
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `409` contract/catalog version mismatch; `413` request body above the 16 KiB Mini App cap; `429` burst budget; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration. A `409` occurs before burst admission, analytics, or mutation writes; the client refreshes its static bundle at most once and never replays the rejected mutation.
 
 ### `POST /api/telegram-webhook`
 
@@ -3522,17 +3660,17 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 
 These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
 
-Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are snapshot storage for the website UI, not a public integration API.
+Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are the website UI's server-recomputed snapshot surface, not a public integration API.
 
 Pages Function inventory:
 
-| Surface | Function | Contract |
-| --- | --- | --- |
-| `GET /_site-data/*` | `functions/_site-data/[[path]].ts` | Same-origin browser data proxy to the Worker site-data lane. |
-| `/api/admin/*` | `functions/api/admin/[[path]].ts` | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`. |
-| `GET /admin/*`, `GET /admin-api/*` | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces. |
-| `GET /stablecoin/:legacy-id` | `functions/stablecoin/[[path]].ts` | Redirect shim for legacy numeric stablecoin URLs. |
-| `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts` | Stablecoin Picker frozen snapshot read/write surface. |
+| Surface                                                  | Function                                                         | Contract                                                                           |
+| -------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /_site-data/*`                                      | `functions/_site-data/[[path]].ts`                               | Same-origin browser data proxy to the Worker site-data lane.                       |
+| `/api/admin/*`                                           | `functions/api/admin/[[path]].ts`                                | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`.      |
+| `GET /admin/*`, `GET /admin-api/*`                       | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces.                     |
+| `GET /stablecoin/:legacy-id`                             | `functions/stablecoin/[[path]].ts`                               | Redirect shim for legacy numeric stablecoin URLs.                                  |
+| `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts`                        | Stablecoin Picker frozen snapshot read and canonical server-recomputation surface. |
 
 ### `GET /selector-snapshot/:sid`
 
@@ -3540,16 +3678,23 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 
 **Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
 
-**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation. The server recomputes the identifier from the canonicalized selector output before storing or reading a snapshot.
+**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation. The server recomputes the identifier from the canonicalized selector output before storing or reading a snapshot. Schema-v3 verification fields contribute to the sid; verified artifacts therefore cannot collide with their legacy-unverified projection.
 
 **Response (200):**
 
 ```json
 {
   "profile": "treasury",
+  "provenance": "pharos-verified",
+  "snapshotSchemaVersion": 3,
   "engineVersion": "selector-v1.91",
-  "datasetHash": "<content hash>",
-  "timestamp": 1715000000,
+  "datasetHash": "<64-character canonical dataset hash>",
+  "verification": {
+    "kind": "pharos-server-recomputed-v1",
+    "datasetHash": "<same 64-character canonical dataset hash>",
+    "engineVersion": "selector-v1.91"
+  },
+  "timestamp": 1715000000000,
   "input": {
     "profile": "treasury",
     "pegCurrency": "EUR",
@@ -3564,12 +3709,8 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
     "custodyOk": "any"
   },
   "universe": { "active": 392, "surviving": 12 },
-  "recommended": [
-    /* ranked shortlist entries */
-  ],
-  "lowerRanked": [
-    /* lower-ranked entries */
-  ],
+  "recommended": [/* ranked shortlist entries */],
+  "lowerRanked": [/* lower-ranked entries */],
   "usedRelaxedFallback": false,
   "relaxedReasons": [],
   "coverageWarnings": {
@@ -3588,9 +3729,9 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, and coverage warning counts). Authored recommendation/lower-ranked prose fields are optional on input and are stripped before persistence/replay, so shared links derive visible copy from canonical keys instead of trusting caller-supplied free-form text. Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. For new writes, the Pages Function receives only allowlisted selector input, loads eight canonical sources through the authenticated site-data lane, validates every source with its shared response schema, builds the dataset with `shared/lib/selector/data-adapter.ts`, and runs the shared selector engine. Caller-authored scores, ranks, identities, prose, engine versions, and dataset hashes are not inputs to the persisted output. The eight requests run as two batches of four, and each bounded response body is fully consumed before the next batch starts.
 
-On GET, the Pages Function parses the stored payload, strips legacy debug/prose fields, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
+New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 3` in the body and `pharos-server-recomputed-v1` trust metadata in KV. GET trusts only the KV metadata, validates the exact body binding, recomputes the canonical sid, and returns `502` on mismatch or tampering. A body that merely self-claims verified provenance without trusted KV metadata is normalized to the historical `client-unverified` schema-v2 projection and must use the unverified UI banner. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
@@ -3601,42 +3742,50 @@ On GET, the Pages Function parses the stored payload, strips legacy debug/prose 
 | 404    | Origin disallowed, sid not 32 hex chars, or KV miss.                                     |
 | 500    | `SELECTOR_SNAPSHOTS` KV binding missing on the Pages project.                            |
 | 502    | Stored KV value is corrupt, fails semantic validation, or recomputes to a different sid. |
-| 503    | KV read throws transiently (Cloudflare KV outage).                                       |
+| 503    | KV read throws transiently, or the first-read retention extension cannot be confirmed.   |
+
+### `POST /pharoswatchbot-adoption`
+
+Same-origin Pages Function used by allowlisted `/pharoswatchbot/` CTA links. It accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
+
+The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no IP address, IP hash, User-Agent, referrer, cookie, request ID, chat ID, or user ID. An identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
 
 ### `POST /selector-snapshot`
 
-Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Picker wizard at `https://pharos.watch/screener/picker/`).
+Recomputes a Stablecoin Picker output from canonical source data and stores it under a server-computed `sid`. Idempotent while canonical content and methodology are unchanged: re-POSTing the same input against the same canonical dataset returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Picker wizard at `https://pharos.watch/screener/picker/`).
 
 **Authentication:** exempt — same-origin gated.
 
-**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces and caller-supplied selector prose (`whyText`, `watchText`, `verdictText`, `teachingText`) are stripped before canonical sid computation and storage.
+**Body:** `application/json`, `{ "input": <SelectorInput> }` (a bare `SelectorInput` is also accepted for compatibility). Max 100 KB defensive cap, enforced incrementally even when `Content-Length` is absent or false. Input is projected onto an exact allowlist. A legacy client may still send a complete `SelectorOutput`, but every field outside its nested `input` is ignored.
 
-**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+**Response (200):** `{ "sid": "<32 hex chars>", "ev": "pharos-server-recomputed-v1" }`. The sid is SHA-256 over canonicalized server output with debug/provenance/freshness-derived fields stripped (`timestamp`, `debug`, `provenance`, `snapshotSchemaVersion`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. The schema-v3 `verification` binding is retained, so it commits the sid to the canonical dataset hash and engine version. `coverageWarnings.newListingCount` is retained because the engine derives it from content-level recent-listing flags.
 
-Share-link privacy property: the stored payload contains the Picker answers and output rows with free-form selector prose removed, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact. Unread KV entries expire after 90 days; the first successful read extends the entry to the full 5-year retention TTL.
+Share-link privacy property: the KV payload contains Picker answers and server-recomputed output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. Rate limits use a separate D1 daily quota keyed by a dedicated-pepper HMAC of `CF-Connecting-IP`; raw and unsalted IP hashes are never stored. The website UI must disclose that anyone with the link can view the artifact. Unread KV entries expire after 90 days; the first read succeeds only when the full five-year extension is confirmed.
 
 **Validation matrix:**
 
-| Case                                                             | Status / client contract                                                                                  |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Invalid `sid` path syntax                                        | `404`; clients should surface invalid-link/not-found state without replaying unrelated live output.       |
-| Missing required replay fields                                   | `400` on POST, `502` on GET.                                                                              |
-| Unknown enum, reason key, source shape, or impossible score/rank | `400` on POST, `502` on GET.                                                                              |
-| Stored payload canonical sid differs from requested `sid`        | `502`.                                                                                                    |
-| Clipboard denied after a successful POST                         | Endpoint still returns `200`; UI shows a selectable URL fallback.                                         |
-| Trading profile has stale share-blocking inputs                  | UI should not POST until refreshed; endpoint remains shape-focused and does not recompute live staleness. |
+| Case                                                                   | Status / client contract                                                                            |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Invalid `sid` path syntax                                              | `404`; clients should surface invalid-link/not-found state without replaying unrelated live output. |
+| Missing required input answer or unknown input enum                    | `400` on POST.                                                                                      |
+| Caller supplies a forged identity, score, rank, or 64-hex dataset hash | Ignored; the server projects input and recomputes all output from canonical sources.                |
+| Any canonical source is non-2xx, invalid JSON, or schema-invalid       | `503`; KV is not written.                                                                           |
+| Stored trusted payload canonical sid differs from requested `sid`      | `502`.                                                                                              |
+| Stored body claims verified provenance without trusted KV metadata     | Returned only as normalized `client-unverified` schema v2.                                          |
+| Clipboard denied after a successful POST                               | Endpoint still returns `200`; UI shows a selectable URL fallback.                                   |
+| Trading profile has stale share-blocking inputs                        | UI should not POST until refreshed; the server still recomputes against its current canonical data. |
 
 **Failure modes:**
 
-| Status | When                                                                                                                                                    |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | Body parse error, unsupported JSON, missing required replay fields, malformed recommendation / coverage-warning basics, or semantic validation failure. |
-| 404    | Origin disallowed.                                                                                                                                      |
-| 405    | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment.                                                        |
-| 429    | Best-effort isolate-local write throttle exceeded (10 writes/minute/IP) or durable daily write quota exceeded (100 writes/day/IP).                      |
-| 413    | Payload exceeds 100 KB defensive cap.                                                                                                                   |
-| 500    | `SELECTOR_SNAPSHOTS` KV binding missing.                                                                                                                |
-| 503    | KV write throws transiently, or the D1-backed daily quota store is missing/unavailable.                                                                  |
+| Status | When                                                                                                                               |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | Body parse error, unsupported JSON, missing required selector input, unknown input enum, or structurally unsafe input.             |
+| 404    | Origin disallowed.                                                                                                                 |
+| 405    | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment.                                   |
+| 429    | Best-effort isolate-local write throttle exceeded (10 writes/minute/IP) or durable daily write quota exceeded (100 writes/day/IP). |
+| 413    | Payload exceeds 100 KB defensive cap.                                                                                              |
+| 500    | `SELECTOR_SNAPSHOTS` or `SELECTOR_SNAPSHOT_IP_HASH_SECRET` binding missing.                                                        |
+| 503    | Canonical source/configuration/contract failure, KV write failure, or missing/unavailable D1-backed daily quota store.             |
 
 ---
 
@@ -3658,7 +3807,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
+**Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status/response.ts`, with `shared/types/status.ts` retained as its compatibility barrel. It currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```text
 {
@@ -3802,9 +3951,17 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "activePresetFollowers": 8,
     "avgSubscriptionsPerSubscribedChat": 4.9,
     "pendingDisambiguations": 1,
-    "pendingDeliveries": 6,
+    "pendingDeliveries": 5,
     "oldestPendingDeliveryAgeSec": 240,
-    "pendingDeliveryBacklog": { "due": 4, "deferred": 1, "expired": 1 },
+    "pendingDeliveryBacklog": {
+      "claimable": 4,
+      "due": 4,
+      "deferred": 1,
+      "sending": 0,
+      "executionUnknown": 0,
+      "sentCleanup": 0,
+      "expired": 1
+    },
     "retryErrorClassCounts": { "rate_limit": 2, "server_error": 1 },
     "lastSubscriberActivityAt": 1771856420,
     "customPreferenceChats": 47,
@@ -3952,7 +4109,24 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "readQueries24h": 942012,
     "writeQueries24h": 709241,
     "rowsRead24h": 1633139670,
-    "rowsWritten24h": 1555568
+    "rowsWritten24h": 1555568,
+    "capacity": {
+      "observedAt": 1771856400,
+      "databaseSizeBytes": 1589248000,
+      "maximumSizeBytes": 10000000000,
+      "utilizationRatio": 0.158925,
+      "utilizationPercent": 15.89,
+      "thresholdState": "normal",
+      "crossedThresholdPercent": null,
+      "nextThresholdPercent": 60,
+      "sampleCount": 72,
+      "forecastBasis": "linear-30d",
+      "forecastSpanHours": 71,
+      "growthBytesPerDay": 12000000,
+      "nextThresholdAt": 1803605467,
+      "exhaustionAt": 1832405467,
+      "daysUntilExhaustion": 700.9
+    }
   },
   "liquidityHealth": {
     "lastRunStatus": "degraded",
@@ -4089,7 +4263,11 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
-`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
+`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, 3+ public-impact open circuit groups, and durable alert-broker query/active/delivery failures can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
+
+`alertBroker` reports active, pending, and critical condition counts; failed and missing-target delivery counts; oldest active timestamp; bounded active condition keys; and query health. `/api/health.alertBroker` exposes the same shared facts, so public and admin classification cannot disagree about broker incidents.
+
+`producerHeads` contains every canonical schedule/job/path/kind identity, including shared producer paths and budget-only surfaces. `observed=false` explicitly represents an identity that has not run since the history schema deployed. Observed rows separate `lastInvokedAt`/`lastCompletedAt` from `lastProductiveAt` and `lastPublicationAt`, and include invocation ID, Worker version, outcome/error, and invocation/productive counters.
 
 `crons[*].inFlight` is present when a leased cron is actively reporting `cron_run_progress` and the matching `cron_leases` row is still active for the same owner. It includes `startedAt`, `updatedAt`, `stage`, optional `itemsDone/itemsTotal`, optional `message/metadata`, and a `stale` flag when the heartbeat stops updating. High-SLO jobs such as DEX liquidity, yield publication/supplemental sync, digest generation, and Telegram dispatch include stage metadata with `providerFamily`, `phase`, `countTotals`, and, where relevant, `cursor` / `deferredTail` summaries; `/api/status` reads those summaries from `cron_run_progress` and does not add producer-table scans for them.
 
@@ -4098,6 +4276,14 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 `dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
+
+`telegramBot.deliverySli` is the bounded operational delivery read model from Telegram source-event and authoritative target ledgers. Its envelope is always fail-visible:
+
+- `availability` is `available` only when the complete SLI query succeeds; otherwise it is `unavailable`.
+- `quality` is `complete`, `partial`, or `empty` for an available rollup, and `unavailable` on query failure.
+- `freshness` is `fresh`, `stale`, or `empty` for an available rollup, and `unknown` on query failure.
+- `acceptanceDefinition` is the literal `telegram_bot_api_accepted_not_user_receipt`. Fields such as `planToTelegramAcceptance`, `telegramAccepted`, and `telegramAcceptanceRate` mean Telegram's Bot API accepted a send request. They are not evidence that an end user received, opened, or read the message.
+- `rollup` contains the bounded window, evidence age, detection-to-plan and plan-to-acceptance latency, acceptance-before-TTL coverage, authoritative outcomes, preference-change cancellations, unresolved backlog buckets, observed errors, execution-unknown outcomes, and dead letters. It is `null` on query failure; failure never becomes an all-zero or healthy rollup.
 
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
@@ -4112,7 +4298,7 @@ The same cron metadata also exposes the live safety-alert source contract:
 
 When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `publish-report-card-cache` writes a fresh generation-valid source snapshot and the Telegram lane reseeds its own prior-snapshot cache.
 
-`crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run.
+`crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run, plus `d1CapacityMonitoring` when the dedicated Cloudflare D1 status bindings are configured.
 
 `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` are optional because legacy `status_probe_runs` rows did not persist split-plane details. New rows compare router-dispatched internal self-checks against explicit production-domain HTTP canaries for public API, site API, and ops API routes. Probe-failure and status-divergence alerts include that internal/external comparison.
 
@@ -4124,11 +4310,11 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
-`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
+`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is exposed as optional `d1Capacity` on public health and evaluated by the scheduled status lane through the durable alert broker. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 
-`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, aggregate `yield:supplemental-sources:v1`, per-family `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. `rankingCountDelta` and `previousRankingCount` come from `sync-yield-data` source-coverage metadata, with a fallback to the top-level severe-coverage-guard metadata when publication is blocked before normal source coverage is assembled. Safety coverage is admin-watch unless it falls below `0.75`, supplemental family cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. `yieldHealth.supplemental` reports `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and a `families` map keyed by source family with per-family age/source-count/status; when no per-family rows exist, aggregate supplemental age remains the fallback. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
+`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, aggregate `yield:supplemental-sources:v1`, per-family `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. `rankingCountDelta` and `previousRankingCount` come from `sync-yield-data` source-coverage metadata, with a fallback to the top-level severe-coverage-guard metadata when publication is blocked before normal source coverage is assembled. Safety coverage is admin-watch unless it falls below `0.75`, supplemental family cache age is admin-watch above 6h, and coverage-audit age is admin-watch above 45d. `yieldHealth.benchmarkRegistry` evaluates every benchmark key used by published rows, including row counts and fallback-selection counts; any used fallback is degraded, while a missing or older-than-48h used benchmark is stale. The legacy `yieldHealth.benchmark` field remains the USD-only compatibility view. `yieldHealth.supplemental` reports `familyCount`, `freshFamilyCount`, `degradedFamilyCount`, `staleFamilyCount`, `missingFamilyCount`, and a `families` map keyed by source family with per-family age/source-count/status; when no per-family rows exist, aggregate supplemental age remains the fallback. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
 
 `publicationHealth` is a read-only live supplement over existing publication ledgers. It currently normalizes `dex_liquidity_publication_generations` and `yield_publication_generations` into per-surface `lastPublishedGeneration`, `lastAttemptedGeneration`, `lastFailureReason`, `candidateAgeSec`, and optional dependency watermark fields. Surface loaders settle independently: a failing surface is omitted and listed in the additive `failedSurfaces[]` (`{surface, code, message}`) while successful surfaces stay populated, and `sectionErrors.publicationHealth` is set whenever any surface fails. Loader failures do not change publication behavior or write generic publication rows.
 
@@ -4156,7 +4342,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 `limit` is clamped into `1..200` by the shared query parser.
 
-**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails.
+**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails. `hasMore` reports whether another matching transition exists beyond the returned page: `true` means the selected window is truncated, `false` proves the returned page covers the matching window, and `null` means the transition query failed and completeness is unknown. Consumers must not infer that no transition occurred from a `true` or `null` result.
 
 ### `GET /api/request-source-stats`
 
@@ -4164,7 +4350,7 @@ Admin-only site-vs-external demand attribution summary. Aggregates minute-bucket
 
 The top-line `site` bucket combines:
 
-- same-origin `/_site-data/*` demand recorded by the Pages Function, including Pages cache hits and upstream proxy attempts
+- same-origin `/_site-data/*` upstream attempts recorded by the Pages Function; the retired outer Cache API path may still appear in historical windows
 - `api.pharos.watch` requests attributed to browser evidence (`Origin` / `Referer` / frontend `Accept` marker + same-site fetch metadata)
 - `api.pharos.watch` requests authenticated with API keys explicitly marked `trafficClass="site"`
 
@@ -4188,13 +4374,13 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `generatedAt` — Unix seconds when the response was generated
 - `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, `apiKeyLimit`, and current `retentionDays`
 - `totals` — aggregate `siteRequests`, `externalRequests`, `totalRequests`, `siteSharePct`, `externalSharePct`
-- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits`, `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, `pagesUpstreamErrors`) plus `publicApiSiteRequests`
+- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits` is historical-only; current traffic uses `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, or `pagesUpstreamErrors`) plus `publicApiSiteRequests`
 - `lanes[]` — worker-load split by `lane` (`public-api`, `site-api`) with the same site/external counters
 - `routes[]` — normalized per-route breakdown sorted by total demand volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
-- `scope` — explicit booleans describing that the response counts total site demand, worker load, and Pages proxy cache hits
+- `scope` — explicit booleans describing total site demand, worker load, and whether the selected historical window contains retired Pages cache-hit telemetry
 
 ### `GET /api/yield-source-decisions`
 
@@ -4204,14 +4390,14 @@ Admin-only read-only debug endpoint for the Yield Intelligence publication ledge
 
 **Query parameters**
 
-| Param           | Type      | Default | Description                                                                 |
-| --------------- | --------- | ------- | --------------------------------------------------------------------------- |
-| `limit`         | `integer` | `10`    | Generation summaries to return (`1`-`25`; out-of-range values return `400`) |
-| `decisionLimit` | `integer` | `5`     | Per-stablecoin decision rows to return (`1`-`25`)                           |
-| `generationId`  | `string`  | —       | Optional exact generation ID filter, e.g. `yield-1772000000`                |
-| `state`         | `string`  | —       | Optional generation state: `staged`, `published`, or `failed`               |
-| `stablecoin`    | `string`  | —       | Optional canonical stablecoin ID for selected/rejected source evidence      |
-| `includePublicAlternatives` | `string` | — | Pass `1` with `stablecoin` to include typed rows from `yield_source_decision_alternatives` |
+| Param                       | Type      | Default | Description                                                                                |
+| --------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
+| `limit`                     | `integer` | `10`    | Generation summaries to return (`1`-`25`; out-of-range values return `400`)                |
+| `decisionLimit`             | `integer` | `5`     | Per-stablecoin decision rows to return (`1`-`25`)                                          |
+| `generationId`              | `string`  | —       | Optional exact generation ID filter, e.g. `yield-1772000000`                               |
+| `state`                     | `string`  | —       | Optional generation state: `staged`, `published`, or `failed`                              |
+| `stablecoin`                | `string`  | —       | Optional canonical stablecoin ID for selected/rejected source evidence                     |
+| `includePublicAlternatives` | `string`  | —       | Pass `1` with `stablecoin` to include typed rows from `yield_source_decision_alternatives` |
 
 **Response shape**
 
@@ -4502,7 +4688,9 @@ Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_wo
 
 ### `POST /api/backfill-mint-burn-prices`
 
-Repairs incomplete mint/burn valuation metadata using a historical-first policy. The endpoint now prefers event-day `supply_history` prices for rows with `amount_usd IS NULL` and only derives audit fields for already-valued rows. It no longer bulk-fills historical `amount_usd` from the current `price_cache` snapshot.
+Repairs bounded historical mint/burn NULL-USD debt using exact event-day evidence. The endpoint defaults to `dry-run=true`, accepts `limit=1..500` (default `100`) and optional `stablecoin=<id>`, and never uses current `price_cache` or an adjacent-day price. Source order is exact-day `supply_history`, CoinGecko historical market chart, DefiLlama CoinGecko-identity chart, then an exact configured contract chart. DefiLlama spans are loaded sequentially in up to eight 800-day windows per identity; points are merged before event-day resolution, and an over-budget range or unavailable window keeps unresolved rows retryable rather than falsely irreducible.
+
+Mutation requires `dry-run=false&confirm=historical-mint-prices&bookmark=<fresh-d1-bookmark>` plus an `Idempotency-Key` header. The bookmark and idempotency key are persisted on every attempted row. Rows without a valid point after definitive source responses become explicitly `irreducible`; transient provider failures remain retryable. Recovered rows are finalized only after `mint_burn_hourly` is rebuilt and verified against source events. `retry-irreducible=true` is reserved for reopening classifications after source coverage improves.
 
 Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
 
@@ -4510,21 +4698,33 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 ```json
 {
-  "totalUpdated": 15000,
-  "rowsValued": 14000,
-  "rowsAudited": 1000,
-  "rowsStillUnpriced": 85,
-  "rowsStillMissingAudit": 320,
-  "coins": [
+  "dryRun": true,
+  "limit": 100,
+  "selected": 1,
+  "recovered": 1,
+  "classifiedIrreducible": 0,
+  "deferredForRetry": 0,
+  "aggregateCoinsRebuilt": ["ustb-superstate"],
+  "aggregateVerificationPassed": null,
+  "dispositions": [
     {
-      "id": "usdt-tether",
-      "updated": 49,
-      "valued": 41,
-      "audited": 8,
-      "stillUnpriced": 0,
-      "stillMissingAudit": 2
+      "eventId": "ethereum-0xabc-0",
+      "stablecoinId": "ustb-superstate",
+      "chainId": "ethereum",
+      "timestamp": 1740279479,
+      "disposition": "recover",
+      "price": 10.58,
+      "priceTimestamp": 1740272109,
+      "priceSource": "repair:defillama-gecko-chart-event-day:superstate-short-duration-us-government-securities-fund-ustb",
+      "reason": null
     }
-  ]
+  ],
+  "backlog": {
+    "unclassified": 529,
+    "irreducible": 0,
+    "pendingAggregate": 0,
+    "totalNullUsd": 529
+  }
 }
 ```
 
@@ -4721,7 +4921,9 @@ Unhandled pre-enqueue failures are wrapped by the shared error handler and retur
 
 ### `POST /api/reset-blacklist-sync`
 
-Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
+Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. The action rewinds both typed and compatibility cursor columns, increments the attempt generation to fence late writers, and clears successful-scan freshness. Routed through `worker/src/router.ts`.
+
+This is a global emergency rewind, not the recovery path for a known event manifest. Bounded data recovery must use a reviewed config/event-specific reconciliation so unrelated cursors are not moved.
 
 **Response** (`evmReset` / `tronReset` are row-change counts from the `blacklist_sync_state` UPDATE, not block numbers)
 
@@ -4749,8 +4951,20 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
     "chainName": "Ethereum",
     "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "providerSource": "evm-logs",
+    "cursorKind": "evm_block",
+    "cursorValue": 19500000,
     "lastBlock": 19500000,
     "cursorAgeSec": null,
+    "attemptGeneration": 12,
+    "lastAttemptedAt": 1710503000,
+    "lastSucceededAt": 1710503000,
+    "lastSkippedAt": null,
+    "lastFailedAt": null,
+    "consecutiveSkips": 0,
+    "consecutiveFailures": 0,
+    "lastOutcome": "quiet",
+    "lastObservedSafeHead": 19500000,
+    "lastSafeHeadObservedAt": 1710503000,
     "lastEventAt": 1710500000,
     "lastEventAgeSec": 3600,
     "lastEventBlock": 19499999,
@@ -4973,6 +5187,31 @@ Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered 
 
 **Error responses:** `400` when neither filter is supplied, when both are supplied, or when `older_than_sec` is not a positive integer.
 
+### `POST /api/alert-broker-canary`
+
+Runs the authenticated durable-alert acceptance canary against the configured `ALERT_WEBHOOK_URL`. The request is dry-run by default and never accepts a caller-supplied target, title, or message. The preview reports whether a target is configured and the guards required for live execution without writing broker condition or delivery rows.
+
+Live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus an `Idempotency-Key` header between 8 and 128 characters. It writes one uniquely keyed synthetic incident followed by one recovery, waits for both delivery attempts, reads the exact persisted episode rows back, and returns whether the one-incident/one-recovery contract and delivery contract passed. Failed webhook delivery returns `502`; both failed rows remain retryable and are included in `deliveries`, so operators can verify durable failure visibility before relying on the five-minute retry drain.
+
+**Authentication:** Cloudflare Access admin plus `X-Pharos-Admin: 1`. Live execution additionally requires `Idempotency-Key`.
+
+**Dry-run response**
+
+```json
+{
+  "ok": true,
+  "dryRun": true,
+  "targetConfigured": true,
+  "wouldEmit": ["incident", "recovery"],
+  "executeQuery": "?execute=true&confirm=emit-incident-and-recovery",
+  "requiresIdempotencyKey": true
+}
+```
+
+**Live response:** includes `conditionKey`, the incident and recovery broker results, exactly two persisted `deliveries`, `transitionContractSatisfied`, `deliverySucceeded`, and `failedDeliveryVisible`.
+
+**Error responses:** `400` when confirmation or the idempotency key is missing/invalid; `409` when `ALERT_WEBHOOK_URL` is not configured; `502` when transitions persisted but either webhook delivery failed.
+
 ### `POST /api/reset-cron-lease`
 
 Deletes the `cron_leases` row for the named job so the next scheduled tick can claim it cleanly. Intended for recovering from orphaned locks (e.g., after a worker restart during a run). The cron job name is whitelisted against `CRON_JOB_DEFINITIONS`.
@@ -5013,6 +5252,71 @@ Force-terminates a stale in-flight cron run. Deletes both the `cron_leases` row 
 
 **Error responses:** `400` if params missing or job unknown; `409` if `lease_owner` no longer matches (another run has taken over).
 
+### `POST /api/admin/reserve-recovery-fault-injection`
+
+Arms one preview-only abrupt-interruption drill for the exact uploaded Worker
+version and reserve schedule attempt. The request must target a `workers.dev`
+hostname and carry a valid `Cf-Access-Jwt-Assertion` whose audience matches
+`CF_ACCESS_OPS_API_AUD`. Production hosts return `403` even for an authenticated
+operator.
+
+**Request body**
+
+```json
+{
+  "workerVersion": "preview-version-tag-or-id",
+  "scheduleKey": "fourHourlyReserveSync",
+  "slotStartedAt": 1783671060,
+  "attemptNo": 1,
+  "killPoint": "after_pending_begin",
+  "targetItemKey": "usdc-circle"
+}
+```
+
+`slotStartedAt` must be an exact `11 */4 * * *` UTC slot between five minutes
+in the past and six hours in the future. `workerVersion` must equal the version
+metadata exposed by the executing preview. `attemptNo` is bounded to `1..20`.
+
+Supported `killPoint` values:
+
+- `after_checkpoint`
+- `after_pending_begin` (requires a configured reserve `targetItemKey`)
+- `after_authoritative_write` (requires a configured reserve `targetItemKey`)
+- `before_sync-redemption-backstops`
+- `before_sync-kinesis-supply`
+- `before_reserve-post-sync-watchdog`
+
+The D1 cache control is compare-and-swap consumed when the exact point fires and
+expires after six hours. A second arm for the same schedule/slot/attempt returns
+`409`; this endpoint deliberately uses its own one-shot fence instead of the
+general admin idempotency wrapper. The injected termination bypasses reserve
+domain and checkpoint catch finalization, leaving durable recovery evidence for
+the `reconcile`/`recover` drill.
+
+**Response (`201`)**
+
+```json
+{
+  "ok": true,
+  "armed": true,
+  "fault": {
+    "workerVersion": "preview-version-tag-or-id",
+    "scheduleKey": "fourHourlyReserveSync",
+    "slotStartedAt": 1783671060,
+    "attemptNo": 1,
+    "killPoint": "after_pending_begin",
+    "targetItemKey": "usdc-circle",
+    "armedAt": 1783670400,
+    "expiresAt": 1783692000
+  }
+}
+```
+
+**Error responses:** `400` for malformed identity, schedule, point, or asset;
+`401` without admin authentication; `403` on a non-preview host; `409` for a
+version mismatch or an already armed exact attempt; `503` when Worker version
+metadata is unavailable.
+
 ### `GET /api/status-probe-history`
 
 Returns historical probe-run data for a single endpoint over the last N days (1-30). Reads from `status_probe_runs.details_json` to surface per-probe failure annotations.
@@ -5042,11 +5346,15 @@ Malformed `days` defaults to `7`; out-of-range `days` is clamped to `1..30`.
 
 ### `GET /api/admin-action-log`
 
-Returns the last N admin mutation actions (action name, actor, target, result, HTTP status, details) for post-incident audit.
+Returns the last N audited operator actions (action name, actor, target, result, HTTP status, details) for post-incident review. This includes every endpoint surfaced by the admin action catalog, including read-only inspections and dry-run previews, plus handler-owned audit events outside that catalog.
 
 **Authentication:** admin. **Optional query:** `?limit=<1-200>` (default 50).
 
 Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
+
+Catalog rows contain only allowlisted operational metadata: canonical path/method, configured scope and target, dry-run/live/inspect mode, result status, HTTP status, execution certainty, result mode, replay state, and an opaque SHA-256 idempotency identity when the request supplied a valid key. Request bodies, arbitrary query parameters, authentication headers, raw handler responses, and plaintext tokens are never stored. Keyed catalog intents are unique by action and opaque intent identity; a same-key replay does not create another row, while a distinct key records a new intent. If the first audit write was transiently missing, a replay can backfill it; the original non-replay outcome remains authoritative over an earlier replay placeholder.
+
+For browser actions, `actor` is the normalized email from the signature-verified operator UI Access JWT; browser-supplied actor headers are ignored. Direct service-token tooling without a verified human claim remains attributed to the internal actor. If canonical audit persistence fails after an idempotent result exists, the router returns `503 audit_persistence_failed`; retrying with the same key replays the result and retries the audit write without rerunning the effect.
 
 **Response**
 
@@ -5069,83 +5377,83 @@ Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
 
 ### `GET /api/admin-telegram-chat/:chatId`
 
-Returns the consolidated state PharosWatchBot holds for a single Telegram chat: subscriber row, per-coin and preset subscriptions, any pending ticker disambiguation, pending-alert queue aggregates plus the most recent retry error class, and the quiet-hours / snooze state. Used for incident triage and `/forgetme`-style audits. Each inspection writes a non-PII summary to `admin_action_audit`.
+Returns the versioned, redacted incident-diagnostic contract for one Telegram chat. It includes the current subscriber/default/global intent, reserve flags, timezone, quiet hours, snooze, preference generation, block strikes, every per-coin override marker, preset intent, disambiguation shape, mutually exclusive pending lifecycle counts, bounded recent pending/dead-letter rows, chat delivery diagnostics, and bounded authoritative job/target outcomes. Each inspection writes counts only to `admin_action_audit`.
 
 **Authentication:** admin. **Path param:** `:chatId` (signed integer; negative for groups/supergroups).
 
-Returns `404` with `{ "error": "Not found", "chatId": "<id>" }` when no `telegram_subscribers` row exists.
+The endpoint still returns `200` with `subscriber: null` when a subscriber was deleted but retained queue, dead-letter, diagnostic, or target history exists. It returns `404` only when no current or retained state exists.
 
 **Response**
 
 ```json
 {
+  "contractVersion": 2,
+  "generatedAt": 1700002100,
   "chatId": "12345",
   "subscriber": {
-    "chatId": "12345",
-    "username": "alice",
+    "registered": true,
+    "usernamePresent": true,
     "createdAt": 1700000000,
     "lastActiveAt": 1700001000,
+    "preferenceGeneration": 9,
     "globalAlerts": {
-      "dews": 1,
-      "depeg": 0,
-      "safety": 0,
-      "launch": 1,
+      "dews": true,
+      "depeg": false,
+      "safety": false,
+      "launch": true,
+      "reserve": true,
       "depegWorseningBpsStep": 250
     },
-    "perCoinAlertFlags": { "dews": 1, "depeg": 0, "safety": 1, "launch": 0 },
-    "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
-    "snooze": { "active": true, "untilTs": 1700001600 }
+    "directAlertDefaults": { "dews": true, "depeg": false, "safety": true, "launch": false, "reserve": true },
+    "deliveryControls": {
+      "timezone": "Europe/Belgrade",
+      "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
+      "snooze": { "active": true, "untilTs": 1700001600 },
+      "blockStrikes": { "count": 1, "firstAt": 1700001200 }
+    }
   },
   "subscriptions": [
     {
-      "stablecoin_id": "usdc-circle",
-      "alert_dews": 1,
-      "alert_depeg": 1,
-      "alert_safety": 0,
-      "alert_launch": 0,
-      "dews_min_band": "WARNING",
-      "safety_mode": null,
-      "depeg_worsening_bps_step": 250,
-      "alert_snooze_until_ts": null
+      "stablecoinId": "usdc-circle",
+      "alerts": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
+      "explicitOverrides": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
+      "dewsMinBand": "WARNING",
+      "safetyMode": null,
+      "depegWorseningBpsStep": 250,
+      "snooze": { "active": false, "untilTs": null }
     }
   ],
-  "presets": [
-    {
-      "preset_id": "usd-top25",
-      "alert_dews": 1,
-      "alert_depeg": 1,
-      "alert_safety": 0,
-      "depeg_worsening_bps_step": null,
-      "created_at": 1700000500,
-      "updated_at": 1700000500
-    }
-  ],
-  "pendingDisambiguation": {
-    "alertTypes": "dews",
-    "resolvedIds": "[]",
-    "ambiguousTicker": "USD",
-    "candidates": "[]",
-    "remainingTickers": "[]",
-    "expiresAt": 1700002000,
-    "actionType": "subscribe",
-    "actionPayload": "{}",
-    "initiatorUserId": "user-1"
-  },
+  "presets": [],
+  "pendingDisambiguation": null,
   "pendingAlerts": {
-    "count": 3,
-    "oldestCreatedAt": 1700000100,
-    "newestCreatedAt": 1700000800,
-    "earliestNotBeforeAt": 1700000900,
-    "recentRetryErrorClass": "telegram-429"
+    "lifecycle": {
+      "totalRows": 6,
+      "claimable": 1,
+      "deferred": 1,
+      "sending": 1,
+      "executionUnknown": 1,
+      "sentCleanup": 1,
+      "expired": 1
+    },
+    "recent": []
+  },
+  "deadLetters": { "count": 1, "oldestExpiredAt": 1700000100, "newestExpiredAt": 1700000800, "recent": [] },
+  "deliveryDiagnostics": null,
+  "targetHistory": [],
+  "redaction": {
+    "username": "presence-only",
+    "messageHtml": "length-only",
+    "disambiguationPayloads": "shape-only",
+    "dedupeAndOwnerKeys": "omitted"
   }
 }
 ```
 
-`pendingDisambiguation` is `null` when no pending row exists. `pendingAlerts.count` is `0` and the timestamp fields are `null` when the queue is empty for the chat.
+Recent pending and dead-letter lists are capped at 20 rows; target history is capped at 50 rows. They expose payload length/presence metadata, never message HTML, usernames, dedupe keys, or claim/effect owners.
 
 ### `POST /api/admin-telegram-resend`
 
-Force-resends a single Telegram alert to one chat, bypassing the pending queue. Used for incident triage when a known alert did not reach a subscriber. The handler validates the chat exists, builds a synthetic `ConsolidatedAlerts` from current source data (`stress_signals` for dews, `depeg_events` for depeg, `safety_grade_history` for safety, tracked metadata for launch/reserve), and invokes the same `sendToChat` path as the dispatch cron. Validated resend attempts that reach subscriber lookup, source lookup, or delivery are recorded in `admin_action_audit`; malformed requests and missing configuration can return before audit logging.
+Previews or queues an exact historical authoritative target replay. It never reconstructs current state and never calls Telegram synchronously. The handler verifies the target row against its target-plan JSON and SHA-256 digest; dead letters must resolve through the same authoritative `(source_event_id, pending_dedupe_key)` target. Legacy/incomplete history is refused rather than approximated.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 
@@ -5153,31 +5461,28 @@ Force-resends a single Telegram alert to one chat, bypassing the pending queue. 
 
 ```json
 {
-  "chatId": "12345",
-  "alertType": "dews",
-  "stablecoinId": "usdc-circle"
+  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
+  "dryRun": true
 }
 ```
 
-`alertType` must be one of `dews`, `depeg`, `safety`, `launch`, `reserve`. `stablecoinId` must match a tracked stablecoin ID. `chatId` is a signed integer string.
+Alternatively use `{ "source": { "kind": "dead-letter", "deadLetterId": 42 } }`. `dryRun` defaults to `true`. Live enqueue requires `dryRun: false`, an `Idempotency-Key` header of 8-128 characters, and `operatorReason` of 8-500 characters. Live replay also requires the chat to remain registered. Targets with `accepted` or `execution_unknown` final state are refused until their effect is reconciled separately.
 
 **Response**
 
 ```json
 {
-  "ok": true,
-  "mode": "synthetic_current_state",
-  "chunkCount": 1,
-  "chunksAttempted": 1,
-  "statusCode": 200,
-  "errorClass": null,
-  "retryAfterSec": null
+  "mode": "exact_historical_outbox_replay",
+  "dryRun": true,
+  "enqueued": 0,
+  "chatId": "12345",
+  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
+  "payload": { "sha256": "...", "messageLength": 512, "hasReplyMarkup": true },
+  "historicalOutcome": { "finalDeliveryState": "failed", "finalDeliveryError": "rate_limit" }
 }
 ```
 
-`mode` is always `synthetic_current_state`: the endpoint rebuilds the alert from current source data and does not replay exact historical message HTML. `chunkCount` is the number of rendered Telegram chunks, and `chunksAttempted` stops at the first failed chunk. `errorClass` is one of `blocked`, `rate_limit`, `server_error`, `bad_request`, `auth_error`, `timeout`, `network`, `unknown`, or `null` on success. `retryAfterSec` is populated only when Telegram returned `429` with a `Retry-After` header.
-
-**Error responses:** `400` for invalid body, unknown `alertType`, or unknown `stablecoinId`. `404` when no `telegram_subscribers` row matches `chatId`. `422` when no source data exists to build the requested alert. `500` when `TELEGRAM_BOT_TOKEN` is not configured.
+Live success returns `202` and `enqueued: 1`. The new pending row uses `source_type = "admin_replay"`, a replay-specific dedupe identity, the exact HTML/notification/markup policy, admin delivery pause semantics, and a fresh 45-minute TTL. It never mutates the original target outcome. `404` means the source identity is absent, `422` means exact persisted payload proof is incomplete/corrupt, and `409` covers unsafe terminal state or an unregistered historical chat.
 
 ### `POST /api/admin-telegram-broadcast`
 
@@ -5192,11 +5497,11 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
   "messageHtml": "<b>Pharos maintenance</b>\nThe bot will be offline 10:00-10:15 UTC.",
   "scope": "all",
   "dryRun": true,
-  "acknowledgeBacklogRisk": false
+  "canaryChatId": "123456789"
 }
 ```
 
-`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 30-minute admin TTL window. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts. Dry-run and live requests preflight the supported Telegram HTML subset before target selection or enqueue: `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`, `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`, plus simple named/numeric HTML entities. Live requests require `canaryChatId`, an operator-controlled private-chat ID, and exclude that ID from the fleet enqueue after sending every chunk to it silently with link previews disabled. The legacy optional `acknowledgeBacklogRisk` boolean is accepted for rolling-client compatibility but cannot bypass the TTL-reserve gate.
 
 **Dry-run response (`dryRun: true`)**
 
@@ -5215,43 +5520,120 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
     "oldestPendingAgeSec": null,
     "oldestDuePendingAgeSec": null,
     "estimatedDrainTimeSec": 0,
-    "drainBudgetPerRun": 900,
+    "drainBudgetPerRun": 1800,
     "dispatchIntervalSec": 300
   },
   "deliveryEstimate": {
     "currentPendingActive": 0,
     "projectedPendingMessages": 1247,
-    "drainBudgetPerRun": 900,
-    "adminBroadcastTtlSec": 1800,
-    "estimatedDrainTimeSec": 600,
-    "requiresAcknowledgement": false,
+    "drainBudgetPerRun": 1800,
+    "adminBroadcastTtlSec": 2700,
+    "estimatedDrainTimeSec": 300,
+    "minimumTtlReserveSec": 900,
+    "remainingTtlReserveSec": 2400,
+    "hasMaterialTtlReserve": true,
     "fitsWithinMinutes": {
-      "5": false,
+      "5": true,
       "15": true,
       "30": true,
       "60": true
     }
   },
   "htmlPreflight": "ok",
+  "canary": {
+    "requiredForLive": true,
+    "chatId": "123456789",
+    "wouldSendChunkCount": 1
+  },
   "sample": ["100", "200", "300", "400", "500"]
 }
 ```
 
-`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. No rows are enqueued. Successful dry-runs and HTML preflight failures both write admin audit entries.
+`sample` lists up to the first 5 target chat IDs (sorted ascending) — useful for sanity-checking the scope filter before going live. `targetMessageCount` covers only the fleet rows; when the supplied canary is also in the selected scope, it is excluded from that count. No Bot API call or queue write occurs during dry-run. Successful dry-runs and HTML preflight failures both write admin audit entries.
 
 **Live response (`dryRun: false`)**
 
 ```json
 {
   "enqueued": 1247,
+  "canary": {
+    "chatId": "123456789",
+    "chunksSent": 1
+  },
   "deliveryEstimate": {
     "projectedPendingMessages": 1247,
     "estimatedDrainTimeSec": 600,
-    "requiresAcknowledgement": false
+    "minimumTtlReserveSec": 900,
+    "remainingTtlReserveSec": 2100,
+    "hasMaterialTtlReserve": true
   }
 }
 ```
 
-`enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
+Before enqueue, live execution requires the admin-delivery pause to be inactive and the bot-wide transport circuit to be closed, claims one admin transport permit, and sends the exact chunks to the private canary. A rejected, uncertain, or incomplete canary prevents all fleet enqueue. `enqueued` reports the number of non-canary chat/chunk messages submitted to the pending queue (`fleetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `422` for malformed or unsupported Telegram HTML, with the response body carrying the offending character position. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set; the response includes `targetChatCount`, `chunkCount`, `targetMessageCount`, `pendingCapacity`, and `deliveryEstimate` so operators can rerun as a dry-run or explicitly acknowledge the backlog risk.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure, and `500` means the live Worker has no bot token. Canary failures report `fleetEnqueued: 0`.
+
+### `GET /api/admin-telegram-adoption-report`
+
+Returns the Access-authenticated weekly PharosWatchBot adoption report. The response covers the last seven complete UTC days, identifies the preceding comparison range, groups CTA/start/setup stages by allowlisted placement, reports first-mutation latency buckets, and includes the latest D7/D30 `any`/`direct`/`preset`/`global` active-follow retention snapshots.
+
+Counts from one through four and rates derived from low-count cells are `null`. `quality.ctaClicks` is `best_effort_no_identifier`; CTA and Telegram stages are independent aggregates rather than joined users, so `startPerClickPct` is directional and may exceed 100%. Retention uses durable aggregate first-follow counts as cohort denominators and current surviving active-follow rows as numerators, so `/forget` cannot shrink a historical denominator. Rows identify `on_time_snapshot`, `catchup_current_state`, or `pre_rollout_unavailable` (cohorts before 2026-07-11); an empty instrumented cohort has zero counts and a `null` rate. `freshness` reports the newest funnel and retention timestamps. The route is read-only, `no-store`, unavailable on the public API host, and requires the normal Cloudflare Access operator context.
+
+### `GET|POST /api/admin-telegram-delivery-control`
+
+Reads the authoritative Telegram transport circuit and the independent `fresh`, `pending`, and `admin` operator-pause rows. `GET` is read-only. `POST` creates, replaces, or resumes one expiring pause and writes a handler-owned row to `admin_action_audit`. Webhook command replies are not an admin-delivery mode and are outside these pause controls.
+
+**Authentication:** admin. Mutating requests require `X-Pharos-Admin: 1`; an optional `Idempotency-Key` protects a POST retry.
+
+**Pause body**
+
+```json
+{
+  "action": "pause",
+  "mode": "pending",
+  "expectedGeneration": 0,
+  "durationSec": 900,
+  "reason": "Telegram transport incident"
+}
+```
+
+`durationSec` is 60-86,400. `expectedGeneration` is `0` when the mode has no row and otherwise must equal the current row generation. Pauses become inactive automatically when `expiresAt <= now`; no cleanup job is needed for expiry.
+
+**Resume body**
+
+```json
+{
+  "action": "resume",
+  "mode": "pending",
+  "expectedGeneration": 1
+}
+```
+
+Resume is also generation-fenced. It retains the row as inert audit state, advances its generation, and sets `expiresAt` to the current time. A stale generation returns `409` and does not mutate the active control.
+
+**Response**
+
+```json
+{
+  "now": 1800000000,
+  "circuit": {
+    "state": "closed",
+    "generation": 4,
+    "causeClass": null,
+    "causeScope": null,
+    "nextProbeAt": null
+  },
+  "pauses": [
+    {
+      "mode": "pending",
+      "generation": 2,
+      "active": false,
+      "expiresAt": 1800000000,
+      "reason": "operator resume"
+    }
+  ]
+}
+```
+
+The full circuit response also includes bounded distinct-failure counts, first/last failure and success timestamps, and the owner/generation/expiry fence for any half-open probe. Operator pause rows include actor and created/updated timestamps.

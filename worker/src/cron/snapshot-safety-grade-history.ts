@@ -2,7 +2,6 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
-import { writeReportCardCache } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-cards";
@@ -157,12 +156,6 @@ export async function snapshotSafetyGradeHistory(
   if (stmts.length > 0) {
     await batchExecute(db, stmts, { signal });
   }
-  const cacheResult = await writeReportCardCache(db, snapshot.cards, snapshot.updatedAt, {
-    liquidityStale: snapshot.liquidityStale,
-    redemptionStale: snapshot.redemptionStale,
-    inputFreshness: snapshot.inputFreshness,
-  });
-
   return {
     ...(degradedReportCardInputs ? { status: "degraded" as const } : {}),
     itemCount: stmts.length,
@@ -176,7 +169,7 @@ export async function snapshotSafetyGradeHistory(
       gradeHistorySuppressed: degradedReportCardInputs,
       suppressedSeeds,
       suppressedTransitions,
-      reportCardCacheRows: cacheResult.writtenCount,
+      reportCardCacheOwner: "publish-report-card-cache",
     }),
   };
 }

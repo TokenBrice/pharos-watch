@@ -356,6 +356,24 @@ vi.mock("../../lib/alerts", () => ({
   sendAlert: vi.fn(async () => true),
 }));
 
+// Coverage completeness is exercised in stablecoin-publication-coverage.test.ts.
+// This suite isolates pricing/publication mechanics with intentionally partial fixtures.
+vi.mock("../../lib/stablecoin-publication-coverage", () => ({
+  evaluateStablecoinPublicationCoverage: (ids: Iterable<string>) => {
+    const published = [...new Set(ids)];
+    return {
+      complete: true,
+      expectedActiveCount: published.length,
+      presentActiveCount: published.length,
+      waivedActiveCount: 0,
+      missingActiveIds: [],
+      waivedActiveIds: [],
+      expiredWaiverIds: [],
+      invalidWaiverIds: [],
+    };
+  },
+}));
+
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
@@ -508,7 +526,14 @@ describe("syncStablecoins", () => {
       expect.any(Function),
     );
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(
+      db,
+      expect.any(Array),
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Object),
+    );
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
@@ -1383,6 +1408,8 @@ describe("syncStablecoins", () => {
       expect.anything(),
       "defillama-stablecoins",
       true,
+      undefined,
+      undefined,
     );
     const cacheKeys = cacheWrites.map((write) => write.key);
     expect(cacheKeys).toContain("stablecoins:invalid-last");
@@ -1497,6 +1524,8 @@ describe("syncStablecoins", () => {
       expect.anything(),
       "defillama-stablecoins",
       true,
+      undefined,
+      undefined,
     );
   });
 
@@ -1643,6 +1672,7 @@ describe("syncStablecoins", () => {
       expect.anything(),
       CIRCUIT_SOURCE.DL_STABLECOINS,
       false,
+      undefined,
       undefined,
     );
   });
@@ -2665,7 +2695,14 @@ describe("syncStablecoins", () => {
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(60);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), { peggedUSD: 1 }, undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(
+      db,
+      expect.any(Array),
+      { peggedUSD: 1 },
+      undefined,
+      undefined,
+      undefined,
+    );
 
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
     expect(stablecoinsWrite).toBeDefined();

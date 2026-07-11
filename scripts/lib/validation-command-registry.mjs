@@ -85,6 +85,17 @@ export const VALIDATION_COMMAND_DESCRIPTORS = [
     paths: ["scripts/ci/check-client-registry-imports.mjs"],
   },
   {
+    command: "npm run check:cli-args-policy",
+    tier: "blocking",
+    deployImpact: "validation-only",
+    paths: [
+      "scripts/ci/check-cli-args-policy.mjs",
+      "scripts/lib/cli-argv-policy.mjs",
+      "scripts/lib/cli-args.mjs",
+      "worker/scripts/lib/destructive-operation-guard.ts",
+    ],
+  },
+  {
     command: "npm run check:cron-abort-contract",
     tier: "surface",
     deployImpact: "full",
@@ -113,6 +124,12 @@ export const VALIDATION_COMMAND_DESCRIPTORS = [
     tier: "blocking",
     deployImpact: "full",
     paths: ["scripts/ci/check-cron-schedule-sync.ts"],
+  },
+  {
+    command: "npm run check:worker-config",
+    tier: "blocking",
+    deployImpact: "worker",
+    paths: ["scripts/ci/check-worker-wrangler-config.ts", "worker/wrangler.toml"],
   },
   {
     command: "npm run check:dependency-coverage",

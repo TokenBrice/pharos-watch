@@ -1,7 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, MIN_LENDING_POOL_TVL_USD, USER_AGENT } from "../../lib/constants";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -28,10 +28,13 @@ export type { VaultsFyiSourceResult, VaultsFyiTelemetry } from "./vaults-fyi-typ
 const VAULTS_FYI_API_BASE = "https://api.vaults.fyi/v2";
 const VAULTS_FYI_PAGE_SIZE = 50;
 const VAULTS_FYI_DEFAULT_MAX_PAGES_PER_RUN = 1;
-const VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN = 25;
+const VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN = 13;
 const VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_MONTH = 2_500;
 const VAULTS_FYI_BUDGET_MS = 20_000;
 const VAULTS_FYI_BUDGET_CACHE_PREFIX = "yield:vaultsfyi:budget:v1";
+const VAULTS_FYI_SCHEDULE_INTERVAL_SEC = 4 * 60 * 60;
+const VAULTS_FYI_RESERVATION_TTL_SEC = 20 * 60;
+const VAULTS_FYI_BUDGET_WARNING_RATIO = 0.75;
 
 interface VaultsFyiSourceParams {
   db?: D1Database;
@@ -44,6 +47,8 @@ function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiT
   return {
     enabled: false,
     hasKey: false,
+    consumptionMode: "disabled",
+    consumptionReason: "source-disabled",
     status: "skipped",
     skipReason: "disabled",
     requestCount: 0,
@@ -53,7 +58,14 @@ function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiT
     creditsCap: VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN,
     creditCapReached: false,
     monthlyCreditsEstimated: null,
+    monthlyCreditsReserved: null,
     monthlyCreditsCap: VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_MONTH,
+    monthlyCreditsForecast: null,
+    monthlyUnthrottledForecast: null,
+    monthlyBudgetUtilization: null,
+    monthlyBudgetWarning: false,
+    monthlyRunsRemaining: null,
+    coverageBudgetState: "unavailable",
     rawVaultCount: 0,
     rankableCandidateCount: 0,
     auditOnlyCount: 0,
@@ -75,38 +87,221 @@ function getCurrentMonthBucket(nowSec: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function parseCreditLedger(value: string | null | undefined, bucket: string): number {
-  if (!value) return 0;
+export interface VaultsFyiCreditLedger {
+  generation: number;
+  creditsEstimated: number;
+  creditsReserved: number;
+  reservationId: string | null;
+  reservationExpiresAt: number | null;
+}
+
+interface VaultsFyiCreditReservation extends VaultsFyiCreditLedger {
+  bucket: string;
+  ledgerValue: string;
+}
+
+function emptyCreditLedger(): VaultsFyiCreditLedger {
+  return {
+    generation: 0,
+    creditsEstimated: 0,
+    creditsReserved: 0,
+    reservationId: null,
+    reservationExpiresAt: null,
+  };
+}
+
+function parseCreditLedger(value: string | null | undefined, bucket: string, nowSec: number): VaultsFyiCreditLedger {
+  if (!value) return emptyCreditLedger();
   try {
     const parsed = JSON.parse(value) as unknown;
-    if (!isRecord(parsed) || parsed.bucket !== bucket || typeof parsed.creditsEstimated !== "number") return 0;
-    return Number.isFinite(parsed.creditsEstimated) && parsed.creditsEstimated > 0
+    if (!isRecord(parsed) || parsed.bucket !== bucket || typeof parsed.creditsEstimated !== "number") {
+      return emptyCreditLedger();
+    }
+    const creditsEstimated = Number.isFinite(parsed.creditsEstimated) && parsed.creditsEstimated > 0
       ? Math.trunc(parsed.creditsEstimated)
       : 0;
+    const generation = typeof parsed.generation === "number" && Number.isInteger(parsed.generation) && parsed.generation > 0
+      ? parsed.generation
+      : 0;
+    const reservationExpiresAt = typeof parsed.reservationExpiresAt === "number"
+      ? Math.trunc(parsed.reservationExpiresAt)
+      : null;
+    const creditsReserved = typeof parsed.creditsReserved === "number" && Number.isFinite(parsed.creditsReserved)
+      ? Math.max(0, Math.trunc(parsed.creditsReserved))
+      : 0;
+    const reservationActive =
+      reservationExpiresAt != null
+      && reservationExpiresAt > nowSec
+      && typeof parsed.reservationId === "string";
+    // A crashed owner may have consumed any or all of its reserved credits
+    // before losing the chance to finalize. Once its reservation is no longer
+    // active, charge the full reservation conservatively. A successor CAS
+    // persists this folded value, while repeated reads of the unchanged row do
+    // not accumulate the charge again.
+    const expiredReservationCharge = !reservationActive ? creditsReserved : 0;
+    return {
+      generation,
+      creditsEstimated: creditsEstimated + expiredReservationCharge,
+      creditsReserved: reservationActive ? creditsReserved : 0,
+      reservationId: reservationActive && typeof parsed.reservationId === "string" ? parsed.reservationId : null,
+      reservationExpiresAt: reservationActive ? reservationExpiresAt : null,
+    };
   } catch {
-    return 0;
+    return emptyCreditLedger();
   }
 }
 
-async function readMonthlyCredits(db: D1Database | undefined, bucket: string): Promise<number | null> {
-  if (!db) return null;
-  const cached = await getCache(db, `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`);
-  return parseCreditLedger(cached?.value, bucket);
-}
-
-async function writeMonthlyCredits(
+export async function readMonthlyCredits(
   db: D1Database | undefined,
   bucket: string,
-  creditsEstimated: number,
+  nowSec: number,
+): Promise<VaultsFyiCreditLedger | null> {
+  if (!db) return null;
+  const cached = await getCache(db, `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`);
+  return parseCreditLedger(cached?.value, bucket, nowSec);
+}
+
+function serializeMonthlyCredits(bucket: string, ledger: VaultsFyiCreditLedger): string {
+  return JSON.stringify({ version: 3, bucket, ...ledger });
+}
+
+async function compareAndSwapMonthlyCredits(
+  db: D1Database,
+  bucket: string,
+  expectedValue: string | null,
+  ledger: VaultsFyiCreditLedger,
+  nowSec: number,
   signal?: AbortSignal,
-): Promise<void> {
-  if (!db) return;
-  await setCache(
+): Promise<{ changed: boolean; value: string }> {
+  throwIfAborted(signal);
+  const key = `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`;
+  const value = serializeMonthlyCredits(bucket, ledger);
+  const result = await db
+    .prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at
+       WHERE cache.value IS ?`,
+    )
+    .bind(key, value, nowSec, expectedValue)
+    .run();
+  throwIfAborted(signal);
+  return { changed: (result.meta.changes ?? 0) === 1, value };
+}
+
+function getRunsRemainingInMonth(nowSec: number): number {
+  const now = new Date(nowSec * 1000);
+  const nextMonthSec = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1) / 1000;
+  return Math.max(1, Math.ceil((nextMonthSec - nowSec) / VAULTS_FYI_SCHEDULE_INTERVAL_SEC));
+}
+
+export function buildVaultsFyiBudgetPlan(input: {
+  nowSec: number;
+  creditsEstimated: number;
+  creditsReserved?: number;
+  configuredRunCap: number;
+  monthlyCap: number;
+}) {
+  const creditsReserved = Math.max(0, Math.trunc(input.creditsReserved ?? 0));
+  const creditsEstimated = Math.max(0, Math.trunc(input.creditsEstimated));
+  const runsRemaining = getRunsRemainingInMonth(input.nowSec);
+  const remainingCredits = Math.max(0, input.monthlyCap - creditsEstimated - creditsReserved);
+  const sustainableRunCap = Math.max(
+    0,
+    Math.min(input.configuredRunCap, Math.floor(remainingCredits / runsRemaining)),
+  );
+  const monthlyCreditsForecast = Math.min(
+    input.monthlyCap,
+    creditsEstimated + creditsReserved + sustainableRunCap * runsRemaining,
+  );
+  const monthlyUnthrottledForecast = creditsEstimated + creditsReserved + input.configuredRunCap * runsRemaining;
+  const monthlyBudgetUtilization = input.monthlyCap > 0 ? creditsEstimated / input.monthlyCap : 1;
+  const monthlyBudgetWarning =
+    monthlyBudgetUtilization >= VAULTS_FYI_BUDGET_WARNING_RATIO ||
+    monthlyCreditsForecast / input.monthlyCap >= VAULTS_FYI_BUDGET_WARNING_RATIO;
+  const coverageBudgetState = remainingCredits === 0 || sustainableRunCap === 0
+    ? "exhausted"
+    : sustainableRunCap < input.configuredRunCap
+      ? "throttled"
+      : monthlyBudgetWarning
+        ? "warning"
+        : "within-budget";
+  return {
+    runsRemaining,
+    sustainableRunCap,
+    monthlyCreditsForecast,
+    monthlyUnthrottledForecast,
+    monthlyBudgetUtilization,
+    monthlyBudgetWarning,
+    coverageBudgetState,
+  } as const;
+}
+
+export async function reserveMonthlyCredits(
+  db: D1Database,
+  bucket: string,
+  expectedLedger: VaultsFyiCreditLedger,
+  credits: number,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<VaultsFyiCreditReservation | null> {
+  const cached = await getCache(db, `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`);
+  const ledger = parseCreditLedger(cached?.value, bucket, nowSec);
+  if (
+    ledger.generation !== expectedLedger.generation
+    || ledger.creditsEstimated !== expectedLedger.creditsEstimated
+    || ledger.creditsReserved !== expectedLedger.creditsReserved
+    || ledger.reservationId !== expectedLedger.reservationId
+    || ledger.reservationExpiresAt !== expectedLedger.reservationExpiresAt
+    || ledger.creditsReserved > 0
+    || ledger.reservationId != null
+  ) {
+    return null;
+  }
+  const reservationId = crypto.randomUUID();
+  const nextLedger: VaultsFyiCreditLedger = {
+    generation: ledger.generation + 1,
+    creditsEstimated: ledger.creditsEstimated,
+    creditsReserved: credits,
+    reservationId,
+    reservationExpiresAt: nowSec + VAULTS_FYI_RESERVATION_TTL_SEC,
+  };
+  const claimed = await compareAndSwapMonthlyCredits(
     db,
-    `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`,
-    JSON.stringify({ version: 1, bucket, creditsEstimated }),
+    bucket,
+    cached?.value ?? null,
+    nextLedger,
+    nowSec,
     signal,
   );
+  if (!claimed.changed) return null;
+  return { bucket, ...nextLedger, ledgerValue: claimed.value };
+}
+
+export async function finalizeMonthlyCredits(
+  db: D1Database | undefined,
+  reservation: VaultsFyiCreditReservation | null,
+  creditsSpent: number,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  if (!db || !reservation) return false;
+  const finalized = await compareAndSwapMonthlyCredits(
+    db,
+    reservation.bucket,
+    reservation.ledgerValue,
+    {
+      generation: reservation.generation + 1,
+      creditsEstimated: reservation.creditsEstimated + creditsSpent,
+      creditsReserved: 0,
+      reservationId: null,
+      reservationExpiresAt: null,
+    },
+    Math.floor(Date.now() / 1000),
+    signal,
+  );
+  return finalized.changed;
 }
 
 function getMonthlyCreditsCap(config: VaultsFyiRuntimeConfig): number {
@@ -225,37 +420,17 @@ function canSpendCredits(telemetry: VaultsFyiTelemetry, credits: number): boolea
   );
 }
 
-async function spendCredits(
-  db: D1Database | undefined,
-  bucket: string,
-  telemetry: VaultsFyiTelemetry,
-  credits: number,
-  signal?: AbortSignal,
-): Promise<void> {
+function spendCredits(telemetry: VaultsFyiTelemetry, credits: number): void {
   telemetry.creditsEstimated += credits;
   if (telemetry.monthlyCreditsEstimated != null) {
     telemetry.monthlyCreditsEstimated += credits;
-    await writeMonthlyCredits(db, bucket, telemetry.monthlyCreditsEstimated, signal).catch((error: unknown) => {
-      logWorkerEvent({
-        scope: "lib",
-        level: "warn",
-        event: "vaults_fyi_credit_ledger_write_failed",
-        job: "sync-yield-supplemental",
-        provider: "vaults-fyi",
-        source: "credit-ledger",
-        message: "vaults.fyi credit ledger write failed",
-        error,
-      });
-    });
   }
 }
 
 async function runInventoryProbe(params: {
-  db?: D1Database;
   config: Extract<VaultsFyiRuntimeConfig, { enabled: true }>;
   signal: AbortSignal;
   telemetry: VaultsFyiTelemetry;
-  bucket: string;
 }): Promise<void> {
   const maxPages = getMaxPagesPerRun(params.config);
   for (let page = 0; page < maxPages; page += 1) {
@@ -288,13 +463,7 @@ async function runInventoryProbe(params: {
       params.telemetry.skipReason = "invalid-payload";
       return;
     }
-    await spendCredits(
-      params.db,
-      params.bucket,
-      params.telemetry,
-      detailedVaultListCredits(rows.length),
-      params.signal,
-    );
+    spendCredits(params.telemetry, detailedVaultListCredits(rows.length));
     params.telemetry.rawVaultCount += rows.length;
     params.telemetry.auditOnlyCount += rows.length;
     const nextPage = getResponseNextPage(body.body, page + 1, rows.length, perPage);
@@ -310,11 +479,9 @@ async function runInventoryProbe(params: {
 }
 
 async function fetchAllowlistedVaults(params: {
-  db?: D1Database;
   config: Extract<VaultsFyiRuntimeConfig, { enabled: true }>;
   signal: AbortSignal;
   telemetry: VaultsFyiTelemetry;
-  bucket: string;
   startSec: number;
 }): Promise<ResolvedYieldCandidate[]> {
   const candidates: ResolvedYieldCandidate[] = [];
@@ -351,7 +518,7 @@ async function fetchAllowlistedVaults(params: {
       params.telemetry.skipReason = status.skipReason;
       break;
     }
-    await spendCredits(params.db, params.bucket, params.telemetry, 3, params.signal);
+    spendCredits(params.telemetry, 3);
 
     const row = extractDetailedVault(body.body);
     if (!isRecord(row)) {
@@ -396,6 +563,16 @@ export async function fetchVaultsFyiSources({
   const telemetry = emptyTelemetry({
     enabled,
     hasKey: enabled && Boolean(config?.apiKey),
+    consumptionMode: enabled
+      ? config?.rankableVaults.length
+        ? "rankable"
+        : "probe-only"
+      : "disabled",
+    consumptionReason: enabled
+      ? config?.rankableVaults.length
+        ? "rankable-allowlist-configured"
+        : "rankable-allowlist-empty"
+      : "source-disabled",
     status: enabled ? "ok" : "skipped",
     skipReason: enabled ? null : disabledSkipReason,
     creditsCap: config ? getRunCreditsCap(config) : VAULTS_FYI_DEFAULT_MAX_CREDITS_PER_RUN,
@@ -414,19 +591,57 @@ export async function fetchVaultsFyiSources({
     return { candidates: [], telemetry };
   }
 
-  const bucket = getCurrentMonthBucket(startSec);
-  telemetry.monthlyCreditsEstimated = await readMonthlyCredits(db, bucket);
-  if (telemetry.monthlyCreditsEstimated != null && telemetry.monthlyCreditsEstimated >= telemetry.monthlyCreditsCap) {
-    telemetry.creditCapReached = true;
+  if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.VAULTS_FYI))) {
     telemetry.status = "skipped";
-    telemetry.skipReason = "credit-cap";
+    telemetry.skipReason = "circuit-open";
     telemetry.durationMs = Date.now() - startedAtMs;
     return { candidates: [], telemetry };
   }
 
-  if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.VAULTS_FYI))) {
+  const bucket = getCurrentMonthBucket(startSec);
+  const ledger = await readMonthlyCredits(db, bucket, startSec);
+  let reservation: VaultsFyiCreditReservation | null = null;
+  if (ledger) {
+    const plan = buildVaultsFyiBudgetPlan({
+      nowSec: startSec,
+      creditsEstimated: ledger.creditsEstimated,
+      creditsReserved: ledger.creditsReserved,
+      configuredRunCap: telemetry.creditsCap,
+      monthlyCap: telemetry.monthlyCreditsCap,
+    });
+    telemetry.monthlyCreditsEstimated = ledger.creditsEstimated;
+    telemetry.monthlyCreditsReserved = ledger.creditsReserved;
+    telemetry.monthlyCreditsForecast = plan.monthlyCreditsForecast;
+    telemetry.monthlyUnthrottledForecast = plan.monthlyUnthrottledForecast;
+    telemetry.monthlyBudgetUtilization = plan.monthlyBudgetUtilization;
+    telemetry.monthlyBudgetWarning = plan.monthlyBudgetWarning;
+    telemetry.monthlyRunsRemaining = plan.runsRemaining;
+    telemetry.coverageBudgetState = plan.coverageBudgetState;
+    telemetry.creditsCap = ledger.creditsReserved > 0 ? 0 : plan.sustainableRunCap;
+
+    if (telemetry.creditsCap > 0) {
+      reservation = await reserveMonthlyCredits(
+        db!,
+        bucket,
+        ledger,
+        telemetry.creditsCap,
+        startSec,
+        signal,
+      );
+      if (reservation) {
+        telemetry.monthlyCreditsReserved = telemetry.creditsCap;
+      } else {
+        telemetry.creditsCap = 0;
+        telemetry.monthlyCreditsReserved = null;
+        telemetry.coverageBudgetState = "throttled";
+      }
+    }
+  }
+
+  if (telemetry.creditsCap <= 0) {
+    telemetry.creditCapReached = true;
     telemetry.status = "skipped";
-    telemetry.skipReason = "circuit-open";
+    telemetry.skipReason = "credit-cap";
     telemetry.durationMs = Date.now() - startedAtMs;
     return { candidates: [], telemetry };
   }
@@ -437,20 +652,16 @@ export async function fetchVaultsFyiSources({
   try {
     if (config.rankableVaults.length > 0) {
       candidates = await fetchAllowlistedVaults({
-        db,
         config,
         signal: budget.signal,
         telemetry,
-        bucket,
         startSec,
       });
     } else {
       await runInventoryProbe({
-        db,
         config,
         signal: budget.signal,
         telemetry,
-        bucket,
       });
     }
 
@@ -482,6 +693,31 @@ export async function fetchVaultsFyiSources({
     budget.cleanup();
     telemetry.durationMs = Date.now() - startedAtMs;
     telemetry.budgetExhausted ||= budget.budgetController.signal.aborted;
+    await finalizeMonthlyCredits(db, reservation, telemetry.creditsEstimated).then((finalized) => {
+      if (reservation) telemetry.monthlyCreditsReserved = finalized ? 0 : null;
+      if (reservation && !finalized) {
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "vaults_fyi_credit_reservation_ownership_lost",
+          job: "sync-yield-supplemental",
+          provider: "vaults-fyi",
+          source: "credit-ledger",
+          message: "vaults.fyi credit reservation was superseded before finalization",
+        });
+      }
+    }).catch((error: unknown) => {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "vaults_fyi_credit_ledger_write_failed",
+        job: "sync-yield-supplemental",
+        provider: "vaults-fyi",
+        source: "credit-ledger",
+        message: "vaults.fyi credit reservation could not be finalized",
+        error,
+      });
+    });
     if (db) {
       await recordOutcomeDecision(db, CIRCUIT_SOURCE.VAULTS_FYI, circuitOutcome).catch((error: unknown) => {
         logWorkerEvent({

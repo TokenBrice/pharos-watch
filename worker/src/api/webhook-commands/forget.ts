@@ -6,6 +6,8 @@ import {
   persistPendingForgetConfirm,
 } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 
 /**
  * Inline keyboard markup for the `/forget` two-step confirmation. Mirrors the
@@ -48,14 +50,37 @@ export const handleForget: WebhookCommandHandler = async (ctx) => {
     return;
   }
 
-  const persisted = await persistPendingForgetConfirm(ctx.db, {
-    chatId: ctx.chatId,
-    initiatorUserId: ctx.actorUserId,
-  });
+  const storedExpiresAt = Number(ctx.storedIntent?.payload.expiresAt);
+  const expiresAt = Number.isFinite(storedExpiresAt)
+    ? storedExpiresAt
+    : (ctx.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
+  await ctx.planIntent?.(createTelegramWebhookIntent("command:forget", {
+    stage: "forget-confirm-prompt",
+    expiresAt,
+    clearPending: Boolean(ctx.clearPendingOnMutation),
+  }, "required"));
+  const actionPayload = "{}";
+  const operationStatements = ctx.preparePendingMutationAppliedStatement
+    ? [ctx.preparePendingMutationAppliedStatement({
+        chatId: ctx.chatId,
+        actionType: "forget-confirm",
+        actionPayload,
+        expiresAt,
+      })]
+    : undefined;
+  const persisted = ctx.wasMutationApplied
+    ? true
+    : await persistPendingForgetConfirm(ctx.db, {
+        chatId: ctx.chatId,
+        initiatorUserId: ctx.actorUserId,
+        expiresAt,
+        operationStatements,
+      });
   if (!persisted) {
     await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
     return;
   }
+  if (!ctx.wasMutationApplied && operationStatements) ctx.confirmAtomicMutationApplied?.();
 
   await ctx.replyToChatWithMarkup(FORGET_CONFIRM_MESSAGE, {
     replyMarkup: FORGET_CONFIRM_REPLY_MARKUP,

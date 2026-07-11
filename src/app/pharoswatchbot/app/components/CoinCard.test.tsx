@@ -9,12 +9,16 @@ type GlobalAlerts = TelegramMiniAppState["subscriber"]["globalAlerts"];
 
 const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
 
-function makeCoin(alertTypes: Partial<SubscribedCoin["alertTypes"]>): SubscribedCoin {
+function makeCoin(
+  alertTypes: Partial<SubscribedCoin["alertTypes"]>,
+  alertOverrides: Partial<NonNullable<SubscribedCoin["alertOverrides"]>> = {},
+): SubscribedCoin {
   return {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     name: "USD Coin",
     alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertTypes },
+    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertOverrides },
     dewsMinBand: null,
     depegStepBps: null,
     safetyMode: null,
@@ -56,7 +60,7 @@ describe("CoinCard source chip (C74)", () => {
 
   it("renders a Muted override chip for an all-off row that suppresses a global default", () => {
     const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
-    renderCard({ coin: makeCoin({}), globalAlerts: global });
+    renderCard({ coin: makeCoin({}, { dews: true }), globalAlerts: global });
     expect(screen.getByText("Muted override")).toBeTruthy();
   });
 
@@ -78,5 +82,20 @@ describe("CoinCard source chip (C74)", () => {
     expect(symbol.className).toContain("truncate");
     expect(symbol.parentElement?.className).toContain("flex-wrap");
     expect(screen.getByText("All-stablecoins").className).toContain("truncate");
+  });
+
+  it("keeps remove, snooze, and tune targets at least 44px with visible focus styles", () => {
+    renderCard({ coin: makeCoin({ dews: true }) });
+
+    const remove = screen.getByRole("button", { name: "Remove USDC" });
+    expect(remove.className).toContain("min-h-11");
+    expect(remove.className).toContain("min-w-11");
+
+    for (const label of ["Snooze USDC", "Tune USDC"]) {
+      const summary = screen.getByText(label).closest("summary");
+      expect(summary).toBeTruthy();
+      expect(summary?.className).toContain("min-h-11");
+      expect(summary?.className).toContain("pharos-focus-ring");
+    }
   });
 });

@@ -1,3 +1,5 @@
+import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
+
 // Extend Window to include gtag
 declare global {
   interface Window {
@@ -16,6 +18,29 @@ type EventMap = {
   comparison_preset_selected: { preset: string };
   comparison_exported: { method: string; coin_count: number };
   search_performed: { page: string; query_length: number };
+  // Yield Intelligence decision funnel. Values are bounded enums/ids; raw
+  // search text and free-form provider data must never be sent.
+  yield_risk_budget_selected: { risk_budget: string; result_count: number };
+  yield_preset_selected: { preset: string; action: "applied" | "cleared"; result_count: number };
+  yield_filter_changed: { filter_type: string; filter_value: string; action: "applied" | "cleared" };
+  yield_filters_cleared: { filter_count: number };
+  yield_zero_results: { active_filter_count: number };
+  yield_sort_changed: { sort_by: string; direction: "asc" | "desc" };
+  yield_row_action: {
+    action: "history_opened" | "source_opened" | "provider_opened" | "deep_dive_opened";
+    coin_id: string;
+    warning_count: number;
+  };
+  yield_watchlist_changed: { action: "added" | "removed"; coin_id: string };
+  yield_compare_changed: { action: "added" | "removed" | "cleared"; coin_count: number; coin_id: string };
+  yield_compare_opened: { source: "tray" | "deep_link"; coin_count: number };
+  yield_comparison_shared: {
+    method: "web_share" | "clipboard";
+    coin_count: number;
+    success: boolean;
+  };
+  yield_degraded_exposure: { warning_code: string };
+  yield_exported: { scope: "ranking" | "comparison"; row_count: number };
   // Tier 2 — Feature Engagement
   filter_applied: { page: string; filter_type: string; filter_value: string };
   time_range_changed: { page: string; range: string };
@@ -32,7 +57,16 @@ type EventMap = {
   panel_toggled: { panel: string; action: string };
   // Tier 4 — Web Vitals
   web_vital: {
-    name: "CLS" | "FCP" | "INP" | "LCP" | "TTFB" | "FID" | "Next.js-hydration" | "Next.js-route-change-to-render" | "Next.js-render";
+    name:
+      | "CLS"
+      | "FCP"
+      | "INP"
+      | "LCP"
+      | "TTFB"
+      | "FID"
+      | "Next.js-hydration"
+      | "Next.js-route-change-to-render"
+      | "Next.js-render";
     value: number;
     id: string;
     rating: "good" | "needs-improvement" | "poor";
@@ -46,7 +80,7 @@ type EventMap = {
 // ---------------------------------------------------------------------------
 
 export function trackEvent<K extends keyof EventMap>(name: K, params: EventMap[K]): void {
-  if (typeof window !== "undefined" && window.gtag) {
+  if (typeof window !== "undefined" && !isTelegramMiniAppPath(window.location?.pathname ?? "") && window.gtag) {
     window.gtag("event", name, params);
   }
 }

@@ -1,18 +1,26 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
+import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import { assessYieldOpportunityRisk, deriveYieldOpportunityClass } from "@shared/lib/yield-opportunity-risk";
 import {
   computePysComponents,
   computePysRewardShare,
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
+import type {
+  YieldOpportunityRisk,
+  YieldSafetyProvenance,
+  YieldSafetyReason,
+  YieldSourceInputMeta,
+} from "@shared/types/yield";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import {
-  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  classifyYieldSourceFreshness,
+  getComparisonAnchorStaleThresholdMs,
   computeApyVarianceScore,
   computePYS,
   computeYieldStability,
@@ -22,10 +30,23 @@ import {
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
-import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import {
+  classifyYieldBenchmarkFreshness,
+  resolveBenchmarkForStablecoin,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
 import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
-import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
+import {
+  compareCandidates,
+  getConfidencePriority,
+  getConfidenceTier,
+  relativeDivergence,
+  resolveCalculationMode,
+  resolveEvidenceClass,
+  resolveYieldSourceLabel,
+  resolveYieldTypeLabel,
+} from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 
@@ -35,7 +56,6 @@ export type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation-types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
-const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
 
 function isResolvedYieldEntryWithYield(
   entry: ResolvedYieldEntry,
@@ -49,16 +69,6 @@ function getHistoryRowsForStats(
 ): YieldHistorySnapshotRow[] {
   if (dataSource !== "onchain") return rows;
   return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
-}
-
-export function shouldDegradeForRiskFreeRate(meta: {
-  fallbackMode: string | null;
-  isFallback: boolean;
-  ageSeconds: number | null;
-}): boolean {
-  if (!meta.fallbackMode) return false;
-  if (meta.isFallback) return true;
-  return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -281,6 +291,11 @@ function evaluateYieldSourceGroup(
     let safetyScore = underlyingSafetyScore;
     let safetyGrade = underlyingSafetyGrade;
     let safetyProvenance: YieldSafetyProvenance = usedDefaultSafety ? "default-safety" : "cached-publish";
+    let safetyReason: YieldSafetyReason | null = usedDefaultSafety
+      ? "report-card-score-missing"
+      : underlyingSafetyGrade === "NR"
+        ? "report-card-grade-not-rated"
+        : null;
     let sourceRisk = y.sourceRisk ?? null;
     if (isRoycoDawnTrancheSourceRisk(sourceRisk)) {
       const trancheSafety = computeRoycoDawnTrancheSafetyScore({
@@ -291,6 +306,7 @@ function evaluateYieldSourceGroup(
         safetyScore = trancheSafety.score;
         safetyGrade = scoreToGrade(trancheSafety.score);
         safetyProvenance = "opportunity-safety";
+        safetyReason = usedDefaultSafety ? "underlying-report-card-score-missing" : null;
         sourceRisk = {
           ...sourceRisk,
           underlyingSafetyScore,
@@ -317,10 +333,25 @@ function evaluateYieldSourceGroup(
       ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
       : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
     const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
-    const observationCount30d = historySelection.usedLegacyHistory ? null : samples.length;
+    const observationCount30d = historySelection.usedLegacyHistory
+      ? null
+      : new Set([
+          ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
+          Math.floor(input.startSec / DAY_SECONDS),
+        ]).size;
     const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
+    const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
+    const sourceFreshness = classifyYieldSourceFreshness({
+      dataSource: y.dataSource,
+      sourceKey,
+      sourceAgeSeconds,
+      comparisonAnchorAgeSeconds,
+    });
+    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
+      selectionMode: benchmarkSelection.selectionMode,
+    });
     // Resolve the reviewed venue config from the same identifier stored as
     // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
     // auto-discovered lending rows — not just native/curated families — pick up
@@ -335,6 +366,60 @@ function evaluateYieldSourceGroup(
     const resolvedVenueRiskTier =
       sourceRisk?.venueRiskTier ??
       (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
+    const safetyEvidenceObserved = !usedDefaultSafety && underlyingSafetyGrade !== "NR";
+    // Opportunity-level risk for external opportunities (yield v8.32): the
+    // underlying stablecoin's report card is one component, not the score.
+    // Royco Dawn tranches keep their bespoke market-health model and publish
+    // the same contract; missing critical market evidence produces NR below.
+    const opportunityClass = deriveYieldOpportunityClass(yieldType);
+    let opportunityRisk: YieldOpportunityRisk | null = null;
+    if (opportunityClass != null) {
+      if (safetyProvenance === "opportunity-safety") {
+        opportunityRisk = {
+          opportunityClass,
+          underlyingSafetyScore,
+          opportunitySafetyScore: safetyScore,
+          opportunitySafetyPenalty: sourceRisk?.trancheSafetyPenalty ?? null,
+          venueReviewed: resolvedVenueRiskTier !== "unknown",
+          missingCriticalEvidence: [],
+        };
+      } else {
+        opportunityRisk = assessYieldOpportunityRisk({
+          opportunityClass,
+          underlyingSafetyScore,
+          venueRiskWeighted: resolvedVenueRiskWeighted,
+          sourceTvlUsd: y.sourceTvlUsd,
+          sourceRisk,
+        });
+        if (safetyEvidenceObserved && opportunityRisk.opportunitySafetyScore != null) {
+          safetyScore = opportunityRisk.opportunitySafetyScore;
+          safetyGrade = scoreToGrade(safetyScore);
+          safetyProvenance = "opportunity-safety";
+        }
+      }
+      sourceRisk = {
+        ...(sourceRisk ?? {}),
+        opportunityRisk,
+        underlyingSafetyScore: sourceRisk?.underlyingSafetyScore ?? underlyingSafetyScore,
+      };
+    }
+    const opportunityEvidenceComplete =
+      opportunityRisk == null || opportunityRisk.missingCriticalEvidence.length === 0;
+    const calculationMode = resolveCalculationMode(y);
+    const evidenceClass = resolveEvidenceClass(y);
+    const evidenceAssessment = assessYieldEvidence({
+      evidenceClass,
+      safetyObserved: safetyEvidenceObserved,
+      sourceFreshness,
+      benchmarkFreshness,
+      hasSourceDepth: sourceDepthRatio != null,
+      hasVenueRisk: resolvedVenueRiskTier !== "unknown",
+      hasHistory: !historySelection.usedLegacyHistory && historyRowsForStats.length > 0,
+      hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
+      opportunityEvidenceComplete,
+    });
+    const { evidenceCompleteness, scoreQualification } = evidenceAssessment;
+    const scoreQualified = scoreQualification !== "NR";
     // Reviewer-set cross-venue dependency concentration (yield v8.292): resolve by
     // stablecoin id and attach it so it both penalizes PYS and surfaces on the row.
     const dependencyConcentration =
@@ -361,7 +446,7 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const pharosYieldScore = computePYS({
+    const computedPharosYieldScore = computePYS({
       apy30d,
       safetyScore,
       apyVarianceScore,
@@ -369,7 +454,23 @@ function evaluateYieldSourceGroup(
       benchmarkRate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
-    const pysNullReason = pharosYieldScore > 0
+    const evidenceNullReason = sourceFreshness === "stale"
+      ? "source-stale" as const
+      : sourceFreshness === "unknown"
+        ? "source-freshness-unknown" as const
+      : benchmarkFreshness === "stale"
+        ? "benchmark-stale" as const
+        : !safetyEvidenceObserved
+          ? "safety-unrated" as const
+          : !opportunityEvidenceComplete
+            ? "opportunity-evidence-missing" as const
+        : !scoreQualified
+          ? "safety-unrated" as const
+        : null;
+    const pharosYieldScore = evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
+      ? computedPharosYieldScore
+      : null;
+    const pysNullReason = evidenceNullReason ?? (computedPharosYieldScore > 0
       ? null
       : derivePysNullReason({
           apy30d,
@@ -378,21 +479,36 @@ function evaluateYieldSourceGroup(
           scalingFactor: PYS_SCALING_FACTOR,
           benchmarkRate,
           sourceRiskPenalty: sourceRiskPenaltyInput,
-        });
+        }));
     const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
-    const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
     const anomalies: string[] = [];
     if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
     if (y.sourceTvlUsd != null && y.sourceTvlUsd < LOW_SOURCE_TVL_USD) anomalies.push("low-source-tvl");
     if (historyRows.length > 0 && apy30d > 0 && y.currentApy / apy30d > 2) anomalies.push("source-yield-spike");
     if (historyRows.length > 0 && apy30d > 0.5 && y.currentApy === 0) anomalies.push("source-zero-vs-history");
+    const comparisonAnchorStaleThresholdMs = getComparisonAnchorStaleThresholdMs(y.dataSource, sourceKey);
     if (
       comparisonAnchorAgeSeconds != null &&
-      comparisonAnchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS
+      comparisonAnchorAgeSeconds * 1000 > comparisonAnchorStaleThresholdMs
     ) {
       anomalies.push("anchor-stale");
     }
+    if (sourceFreshness === "stale") anomalies.push("source-stale");
+    if (sourceFreshness === "unknown") anomalies.push("source-freshness-unknown");
+    if (!usedDefaultSafety && underlyingSafetyGrade === "NR") anomalies.push("safety-unrated");
+    if (usedDefaultSafety) anomalies.push("safety-missing");
+    if (benchmarkFreshness === "degraded") anomalies.push("benchmark-degraded");
+    if (benchmarkFreshness === "stale") anomalies.push("benchmark-stale");
+
+    const freshnessWarnings: string[] = [];
+    if (sourceFreshness === "stale") freshnessWarnings.push("data-stale");
+    if (sourceFreshness === "unknown") freshnessWarnings.push("data-freshness-unknown");
+    if (!scoreQualified && sourceFreshness === "fresh" && benchmarkFreshness !== "stale") {
+      freshnessWarnings.push("safety-unrated");
+    }
+    if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
+    if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
 
     return {
       id: stablecoinId,
@@ -426,6 +542,7 @@ function evaluateYieldSourceGroup(
       safetyScore,
       safetyGrade,
       safetyProvenance,
+      safetyReason,
       yieldToRisk,
       excessYield,
       benchmarkKey: benchmarkSelection.key,
@@ -438,17 +555,24 @@ function evaluateYieldSourceGroup(
       benchmarkSelectionMode: benchmarkSelection.selectionMode,
       benchmarkIsProxy: benchmarkMeta.isProxy ?? false,
       benchmarkMeta,
-      pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
+      pharosYieldScore,
       pysNullReason,
+      sourceFreshness,
+      benchmarkFreshness,
+      calculationMode,
+      evidenceClass,
+      evidenceCompleteness,
+      scoreQualification,
+      scoreQualified,
       prevExchangeRate,
       prevTvlUsd,
       sourceDepthRatio,
       observationCount30d,
       sourceSwitchCount30d: null,
       anomalies,
-      warnings: [],
-      confidenceTier: getConfidenceTier(y.dataSource),
-      rejected: false,
+      warnings: freshnessWarnings,
+      confidenceTier: getConfidenceTier(y),
+      rejected: !scoreQualified,
       usedLegacyHistory: historySelection.usedLegacyHistory,
       usedDefaultSafety,
       previousBestSourceKey,
@@ -527,7 +651,7 @@ function evaluateYieldSourceGroup(
 
 function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): EvaluateYieldSourcesResult {
   const bestRows = accumulator.evaluatedSources.filter((source) =>
-    accumulator.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
+    accumulator.bestSourceKeyByCoin.get(source.id) === source.sourceKey && !source.rejected,
   );
   const medianApy = computeTvlWeightedMedianApy(
     bestRows.map((row) => ({
@@ -536,14 +660,14 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
     })),
   );
   for (const source of accumulator.evaluatedSources) {
-    source.warnings = detectWarningSignals({
+    source.warnings = [...new Set([...source.warnings, ...detectWarningSignals({
       currentApy: source.currentApy,
       apy30d: source.apy30d,
       apyReward: source.apyReward,
       medianApy,
       sourceTvlUsd: source.sourceTvlUsd,
       prevTvlUsd: source.prevTvlUsd,
-    });
+    })])];
   }
 
   return {

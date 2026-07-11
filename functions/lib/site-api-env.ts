@@ -1,7 +1,8 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
-import { normalizeOrigin } from "@shared/lib/runtime-origins";
+import { SITE_API_ORIGIN as CANONICAL_SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { resolveTrustedHttpsOrigin } from "./trusted-upstream-origin";
 
 export interface SiteDataProxyEnv {
   DB?: D1Database;
@@ -12,7 +13,7 @@ export interface SiteDataProxyEnv {
 }
 
 export interface SiteDataProxyEnvIssue {
-  code: "site-api-origin-missing" | "site-api-secret-missing" | "site-data-db-missing";
+  code: "site-api-origin-missing" | "site-api-origin-invalid" | "site-api-secret-missing" | "site-data-db-missing";
   message: string;
 }
 
@@ -27,11 +28,7 @@ export function resolveSiteApiOrigin(
   if (!configuredOrigin) {
     return null;
   }
-  try {
-    return normalizeOrigin(configuredOrigin);
-  } catch {
-    return null;
-  }
+  return resolveTrustedHttpsOrigin(configuredOrigin, [CANONICAL_SITE_API_ORIGIN]);
 }
 
 export function validatePagesSiteDataProxyEnv(
@@ -40,10 +37,16 @@ export function validatePagesSiteDataProxyEnv(
   const hasSecret = hasConfiguredValue(env.SITE_API_SHARED_SECRET);
   const issues: SiteDataProxyEnvIssue[] = [];
 
-  if (!getConfiguredValue(env.SITE_API_ORIGIN)) {
+  const configuredOrigin = getConfiguredValue(env.SITE_API_ORIGIN);
+  if (!configuredOrigin) {
     issues.push({
       code: "site-api-origin-missing",
       message: "SITE_API_ORIGIN must be configured for the site-data proxy.",
+    });
+  } else if (!resolveSiteApiOrigin(env)) {
+    issues.push({
+      code: "site-api-origin-invalid",
+      message: `SITE_API_ORIGIN must be the canonical HTTPS origin ${CANONICAL_SITE_API_ORIGIN}.`,
     });
   }
 

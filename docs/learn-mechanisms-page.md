@@ -37,7 +37,7 @@ These pages deliberately depart from the standard `pharos-card-shell + border-l-
 
 Current treatment:
 
-- **Display title:** the `<h1>` uses `.pharos-page-title` — the homepage ABC Whyte Inktrap display face at the fixed `text-3xl/sm:text-4xl` scale (aligned 2026-07-01; previously a bespoke Geist Sans clamp). Section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale so the page title stays the largest type on the page.
+- **Display title:** the `<h1>` uses `.pharos-page-title` — the homepage Bricolage Grotesque display face at the fixed `text-3xl/sm:text-4xl` scale (aligned 2026-07-01; previously a bespoke Geist Sans clamp). Section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale so the page title stays the largest type on the page.
 - **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
 - **Per-archetype accent:** collapsed to neutral per the 2026-07-02 owner ruling — `ARCHETYPE_VISUALS[archetype].kickerClass` is an empty string for all six archetypes, so `.pharos-kicker`'s muted treatment applies uniformly. The visual differentiation between archetypes lives entirely in the diagram itself (return arc for fiat-cash redeem and cdp, dashed reflexive arc for algorithmic, quarterly-redemption arc for rwa-credit-fund, split spot+perp legs for synthetic; tbill is the plain forward three-step flow).

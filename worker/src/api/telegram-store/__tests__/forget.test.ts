@@ -39,112 +39,14 @@ function createSqliteD1(sqlite: DatabaseSync): D1Database {
 
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY,
-      username TEXT,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      global_alert_dews INTEGER NOT NULL DEFAULT 0,
-      global_alert_depeg INTEGER NOT NULL DEFAULT 0,
-      global_alert_safety INTEGER NOT NULL DEFAULT 0,
-      global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
-      quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
-      quiet_hours_start_utc INTEGER,
-      quiet_hours_end_utc INTEGER,
-      global_depeg_worsening_bps_step INTEGER,
-      timezone TEXT,
-      alert_snooze_until_ts INTEGER,
-      consecutive_block_count INTEGER NOT NULL DEFAULT 0,
-      consecutive_block_first_at INTEGER,
-      created_at INTEGER NOT NULL,
-      last_active_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE telegram_subscriptions (
-      chat_id TEXT NOT NULL,
-      stablecoin_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      dews_min_band TEXT,
-      safety_mode TEXT,
-      depeg_worsening_bps_step INTEGER,
-      alert_snooze_until_ts INTEGER,
-      PRIMARY KEY (chat_id, stablecoin_id)
-    );
-
-    CREATE TABLE telegram_preset_subscriptions (
-      chat_id TEXT NOT NULL,
-      preset_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      depeg_worsening_bps_step INTEGER,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      PRIMARY KEY (chat_id, preset_id)
-    );
-
-    CREATE TABLE telegram_pending_disambiguation (
-      chat_id TEXT PRIMARY KEY,
-      alert_types TEXT NOT NULL,
-      resolved_ids TEXT NOT NULL,
-      ambiguous_ticker TEXT NOT NULL,
-      candidates TEXT NOT NULL,
-      remaining_tickers TEXT NOT NULL,
-      expires_at INTEGER NOT NULL,
-      action_type TEXT NOT NULL DEFAULT 'subscribe',
-      action_payload TEXT NOT NULL DEFAULT '{}',
-      initiator_user_id TEXT
-    );
-
-    CREATE TABLE telegram_chat_delivery_diagnostics (
-      chat_id TEXT PRIMARY KEY,
-      last_successful_delivery_at INTEGER,
-      last_successful_reply_at INTEGER,
-      last_delivery_attempt_at INTEGER,
-      recent_failure_class TEXT,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE telegram_pending_alerts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id TEXT NOT NULL,
-      message_html TEXT NOT NULL,
-      dedupe_key TEXT UNIQUE
-    );
-
-    CREATE TABLE telegram_alert_job_targets (
-      job_id TEXT NOT NULL,
-      target_key TEXT NOT NULL,
-      chat_id TEXT NOT NULL,
-      pending_dedupe_key TEXT NOT NULL,
-      PRIMARY KEY (job_id, target_key)
-    );
-
-    CREATE TABLE telegram_alert_dead_letters (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id TEXT
-    );
-
-    CREATE TABLE telegram_processed_updates (
-      update_id INTEGER PRIMARY KEY,
-      chat_id TEXT
-    );
-
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  const migrationDir = join(process.cwd(), "worker/migrations");
+  const migrationFiles = readdirSync(migrationDir)
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
+  for (const file of migrationFiles) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test replays checked-in Worker migrations only.
+    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
+  }
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -173,6 +75,55 @@ function collectTelegramTablesFromSql(history: Array<{ sql: string }>): Set<stri
     }
   }
   return tables;
+}
+
+const CHAT_ROW_MERGE_TABLES = [
+  "telegram_subscribers",
+  "telegram_subscriptions",
+  "telegram_preset_subscriptions",
+  "telegram_pending_disambiguation",
+  "telegram_chat_delivery_diagnostics",
+] as const;
+
+interface SqliteColumnInfo {
+  cid: number;
+  name: string;
+  type: string;
+}
+
+function quoteSqlIdentifier(identifier: string): string {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function schemaSentinelValue(table: string, column: SqliteColumnInfo, oldChatId: string): unknown {
+  if (column.name === "chat_id") return oldChatId;
+  if (column.name === "stablecoin_id") return "schema-parity-coin";
+  if (column.name === "preset_id") return "schema-parity-preset";
+
+  const type = column.type.toUpperCase();
+  if (type.includes("INT")) return 1_000 + column.cid;
+  if (type.includes("REAL") || type.includes("FLOA") || type.includes("DOUB")) {
+    return 1_000.5 + column.cid;
+  }
+  if (type.includes("BLOB")) return new Uint8Array([column.cid % 256, 0x7f]);
+  return `${table}:${column.name}:schema-parity`;
+}
+
+function insertSchemaSentinelRow(
+  sqlite: DatabaseSync,
+  table: (typeof CHAT_ROW_MERGE_TABLES)[number],
+  oldChatId: string,
+): Record<string, unknown> {
+  const columns = sqlite
+    .prepare("SELECT cid, name, type FROM pragma_table_info(?) ORDER BY cid")
+    .all(table) as unknown as SqliteColumnInfo[];
+  const values = columns.map((column) => schemaSentinelValue(table, column, oldChatId));
+  const columnSql = columns.map((column) => quoteSqlIdentifier(column.name)).join(", ");
+  const placeholders = columns.map(() => "?").join(", ");
+  sqlite
+    .prepare(`INSERT INTO ${quoteSqlIdentifier(table)} (${columnSql}) VALUES (${placeholders})`)
+    .run(...(values as never[]));
+  return Object.fromEntries(columns.map((column, index) => [column.name, values[index]]));
 }
 
 describe("unsubscribeAll", () => {
@@ -223,9 +174,16 @@ describe("forgetSubscriber", () => {
       )
       VALUES (?, ?, ?, ?)
     `).run(chatId, "alice", 100, 200);
-    sqlite.prepare("INSERT INTO telegram_alert_job_targets (job_id, target_key, chat_id, pending_dedupe_key) VALUES (?, ?, ?, ?)")
-      .run("job-1", "target-1", chatId, "pending-1");
-    sqlite.prepare("INSERT INTO telegram_alert_dead_letters (chat_id) VALUES (?)").run(chatId);
+    sqlite.prepare(`
+      INSERT INTO telegram_alert_job_targets (
+        job_id, target_key, chat_id, alert_type, pending_dedupe_key, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run("job-1", "target-1", chatId, "depeg", "pending-1", 100);
+    sqlite.prepare(`
+      INSERT INTO telegram_alert_dead_letters (
+        chat_id, message_html, created_at, expired_at, reason
+      ) VALUES (?, ?, ?, ?, ?)
+    `).run(chatId, "expired", 100, 200, "ttl_expired");
     const deletedCacheKeys = [
       `telegram:command-flood:${chatId}`,
       `telegram:command-flood:${chatId}:actor:99`,
@@ -274,6 +232,28 @@ describe("forgetSubscriber", () => {
     });
     expect(sqlite.prepare("SELECT key FROM cache WHERE key != ? ORDER BY key").all("telegram:burst-markers"))
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
+  });
+
+  it("deletes chat-prefixed job-target item lineage while preserving other chats", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const chatId = "42";
+    const insertItem = sqlite.prepare(`
+      INSERT INTO telegram_alert_job_target_items (
+        job_id, target_key, source_event_id, item_key, created_at
+      ) VALUES (?, ?, ?, ?, ?)
+    `);
+    // target_key is chat-prefixed: `<chatId>:v<split>:<chunk>:<hash>`.
+    insertItem.run("job-1", `${chatId}:v3:0:abc`, "evt-1", "item-1", 100);
+    insertItem.run("job-1", `${chatId}:v3:1:def`, "evt-1", "item-2", 100);
+    // Neighbor whose chat id shares the forgotten chat's digits as a prefix.
+    insertItem.run("job-1", "420:v3:0:ghi", "evt-1", "item-3", 100);
+
+    await forgetSubscriber(db, chatId);
+
+    const remaining = sqlite
+      .prepare("SELECT target_key FROM telegram_alert_job_target_items ORDER BY target_key")
+      .all();
+    expect(remaining).toEqual([{ target_key: "420:v3:0:ghi" }]);
   });
 
   it("deletes exact and actor-scoped command-flood keys", async () => {
@@ -329,6 +309,40 @@ describe("migrateTelegramChatId", () => {
 
     const touchedTables = collectTelegramTablesFromSql(db.getHistory());
     expect(chatTables.filter((table) => !touchedTables.has(table))).toEqual([]);
+  });
+
+  it("round-trips every current column in merge-owned chat tables from the latest schema", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const oldChatId = "-123";
+    const newChatId = "-100123";
+    sqlite.exec("PRAGMA ignore_check_constraints = ON");
+
+    const expectedRows = new Map(
+      CHAT_ROW_MERGE_TABLES.map((table) => {
+        const sentinel = insertSchemaSentinelRow(sqlite, table, oldChatId);
+        return [
+          table,
+          {
+            ...sentinel,
+            chat_id: newChatId,
+            ...(table === "telegram_subscribers"
+              ? { preference_generation: Number(sentinel.preference_generation) + 1 }
+              : {}),
+          },
+        ];
+      }),
+    );
+
+    await migrateTelegramChatId(db, oldChatId, newChatId);
+
+    for (const table of CHAT_ROW_MERGE_TABLES) {
+      const actual = sqlite
+        .prepare(`SELECT * FROM ${quoteSqlIdentifier(table)} WHERE chat_id = ?`)
+        .get(newChatId);
+      expect(actual, `${table} migration columns drifted from the latest D1 schema`).toEqual(
+        expectedRows.get(table),
+      );
+    }
   });
 
   it("merges conflicting group rows in SQLite and is idempotent", async () => {
@@ -403,20 +417,36 @@ describe("migrateTelegramChatId", () => {
       250,
     );
 
-    sqlite.prepare(`
+    const insertSubscription = sqlite.prepare(`
       INSERT INTO telegram_subscriptions (
         chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        alert_dews_override, alert_depeg_override, alert_safety_override,
+        alert_launch_override, alert_reserve_override,
         dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(oldChatId, "usdc", 1, 0, 1, 0, 1, "ALERT", "downgrade", 50, 500);
-    sqlite.prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-        dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(newChatId, "usdc", 0, 1, 0, 1, 0, null, null, null, 900);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertSubscription.run(
+      oldChatId,
+      "usdc",
+      1, 0, 1, 0, 1,
+      0, 1, 0, 1, 0,
+      "ALERT", "downgrade", 50, 500,
+    );
+    insertSubscription.run(
+      newChatId,
+      "usdc",
+      0, 1, 0, 1, 0,
+      1, 0, 1, 0, 1,
+      null, null, null, 900,
+    );
+    insertSubscription.run(
+      oldChatId,
+      "dai",
+      0, 0, 0, 0, 0,
+      1, 1, 1, 1, 1,
+      null, null, null, null,
+    );
 
     sqlite.prepare(`
       INSERT INTO telegram_preset_subscriptions (
@@ -463,19 +493,33 @@ describe("migrateTelegramChatId", () => {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(newChatId, 500, null, 750, null, 850);
 
-    sqlite.prepare("INSERT INTO telegram_pending_alerts (chat_id, message_html, dedupe_key) VALUES (?, ?, ?)")
-      .run(oldChatId, "old duplicate", `${oldChatId}:same`);
-    sqlite.prepare("INSERT INTO telegram_pending_alerts (chat_id, message_html, dedupe_key) VALUES (?, ?, ?)")
-      .run(newChatId, "new duplicate", `${newChatId}:same`);
-    sqlite.prepare("INSERT INTO telegram_pending_alerts (chat_id, message_html, dedupe_key) VALUES (?, ?, ?)")
-      .run(oldChatId, "old unique", `${oldChatId}:unique`);
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
+      VALUES (?, ?, ?, ?)
+    `).run(oldChatId, "old duplicate", 100, `${oldChatId}:same`);
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
+      VALUES (?, ?, ?, ?)
+    `).run(newChatId, "new duplicate", 100, `${newChatId}:same`);
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
+      VALUES (?, ?, ?, ?)
+    `).run(oldChatId, "old unique", 100, `${oldChatId}:unique`);
 
     sqlite.prepare(`
-      INSERT INTO telegram_alert_job_targets (job_id, target_key, chat_id, pending_dedupe_key)
-      VALUES (?, ?, ?, ?)
-    `).run("job-old", `${oldChatId}:unique`, oldChatId, `${oldChatId}:unique`);
-    sqlite.prepare("INSERT INTO telegram_alert_dead_letters (chat_id) VALUES (?)").run(oldChatId);
-    sqlite.prepare("INSERT INTO telegram_processed_updates (update_id, chat_id) VALUES (?, ?)").run(700, oldChatId);
+      INSERT INTO telegram_alert_job_targets (
+        job_id, target_key, chat_id, alert_type, pending_dedupe_key, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run("job-old", `${oldChatId}:unique`, oldChatId, "depeg", `${oldChatId}:unique`, 100);
+    sqlite.prepare(`
+      INSERT INTO telegram_alert_dead_letters (
+        chat_id, message_html, created_at, expired_at, reason
+      ) VALUES (?, ?, ?, ?, ?)
+    `).run(oldChatId, "expired", 100, 200, "ttl_expired");
+    sqlite.prepare(`
+      INSERT INTO telegram_processed_updates (update_id, received_at, chat_id)
+      VALUES (?, ?, ?)
+    `).run(700, 100, oldChatId);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
       `telegram:group-welcome:${oldChatId}`,
       "legacy welcome",
@@ -538,6 +582,8 @@ describe("migrateTelegramChatId", () => {
 
     expect(sqlite.prepare(`
       SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+             alert_dews_override, alert_depeg_override, alert_safety_override,
+             alert_launch_override, alert_reserve_override,
              dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
         FROM telegram_subscriptions
        WHERE chat_id = ? AND stablecoin_id = 'usdc'
@@ -547,10 +593,33 @@ describe("migrateTelegramChatId", () => {
       alert_safety: 1,
       alert_launch: 1,
       alert_reserve: 1,
+      alert_dews_override: 1,
+      alert_depeg_override: 1,
+      alert_safety_override: 1,
+      alert_launch_override: 1,
+      alert_reserve_override: 1,
       dews_min_band: "ALERT",
       safety_mode: "downgrade",
       depeg_worsening_bps_step: 50,
       alert_snooze_until_ts: 900,
+    });
+    expect(sqlite.prepare(`
+      SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+             alert_dews_override, alert_depeg_override, alert_safety_override,
+             alert_launch_override, alert_reserve_override
+        FROM telegram_subscriptions
+       WHERE chat_id = ? AND stablecoin_id = 'dai'
+    `).get(newChatId)).toEqual({
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      alert_reserve: 0,
+      alert_dews_override: 1,
+      alert_depeg_override: 1,
+      alert_safety_override: 1,
+      alert_launch_override: 1,
+      alert_reserve_override: 1,
     });
     expect(sqlite.prepare(`
       SELECT alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step, created_at, updated_at

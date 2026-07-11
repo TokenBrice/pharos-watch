@@ -390,6 +390,7 @@ There is currently no dedicated list page or standalone public methodology secti
 | `worker/migrations/0000_baseline.sql`                           | Baseline current + history table schema                            |
 | `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                         |
 | `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                           |
-| `src/lib/stablecoin-detail-view-model.ts`                       | Detail-page composed view model with redemption freshness tracking |
+| `src/lib/stablecoin-detail-view-model.ts`                       | Public detail view-model facade                                      |
+| `src/lib/stablecoin-detail-query-view-model.ts`                 | Detail-page redemption freshness and availability tracking           |
 | `src/lib/coverage/redemption.ts`                                | Coverage-page redemption state mapping                             |
 | `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                     |

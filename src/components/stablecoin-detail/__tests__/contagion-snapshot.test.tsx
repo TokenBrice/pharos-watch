@@ -86,6 +86,7 @@ const RAW_INPUTS_STUB: ReportCard["rawInputs"] = {
   dependencies: [],
   navToken: false,
   collateralFromLive: false,
+  dependencyFromLive: false,
 };
 
 function makeCard(id: string, symbol: string): ReportCard {
@@ -233,6 +234,25 @@ describe("ContagionSnapshot", () => {
     useReportCardsMock.mockReturnValue({ data: undefined });
     const { container } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it("renders unavailable instead of hiding dependency context on query failure", () => {
+    useReportCardsMock.mockReturnValue({
+      data: undefined,
+      error: new Error("report cards failed"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      error: new Error("stablecoins failed"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByRole("alert").textContent).toContain("Dependency graph data is temporarily unavailable");
   });
 
   it("renders right-column dependency context when report cards data is missing", () => {

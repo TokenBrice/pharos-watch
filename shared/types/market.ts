@@ -216,6 +216,33 @@ export const LiquidityEvidenceClassSchema = z.enum([
 ]);
 export type LiquidityEvidenceClass = z.infer<typeof LiquidityEvidenceClassSchema>;
 
+export const DexDeploymentOutcomeSchema = z.enum([
+  "observed_pools",
+  "verified_no_pools",
+  "provider_inaccessible",
+]);
+export type DexDeploymentOutcome = z.infer<typeof DexDeploymentOutcomeSchema>;
+
+const DexDeploymentCoverageSchema = z.object({
+  observedPools: z.number().int().nonnegative(),
+  verifiedNoPools: z.number().int().nonnegative(),
+  providerInaccessible: z.number().int().nonnegative(),
+  deployments: z.array(z.object({
+    chain: z.string(),
+    contractAddress: z.string(),
+    outcome: DexDeploymentOutcomeSchema,
+    providers: z.array(z.string()),
+    reason: z.string(),
+    observedPoolCount: z.number().int().nonnegative(),
+    observedAt: z.number(),
+    waiver: z.object({
+      owner: z.string(),
+      reason: z.string().nullable(),
+      expiresAt: z.number(),
+    }).nullable(),
+  })),
+});
+
 const DexLiquidityDataSchema = z.object({
   totalTvlUsd: z.number(),
   totalVolume24hUsd: z.number(),
@@ -261,6 +288,7 @@ const DexLiquidityDataSchema = z.object({
     .nullable(),
   lockedLiquidityPct: z.number().nullable(),
   methodologyVersion: z.string(),
+  deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
 });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
@@ -539,6 +567,8 @@ export type BlacklistEvent = z.infer<typeof BlacklistEventSchema>;
 export const BlacklistResponseSchema = z.object({
   events: z.array(BlacklistEventSchema),
   total: z.number(),
+  totalExact: z.boolean().optional(),
+  nextCursor: z.string().nullable().optional(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;

@@ -11,6 +11,8 @@ import {
   type SafetyScoresResult,
 } from "./collectors-shared";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
+import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 function parseStressSignalsMap(
   signalsJson: string,
@@ -97,18 +99,21 @@ export async function collectDewsStress(
   degradedReasons?: string[],
 ): Promise<DigestInputData["dewsStress"]> {
   try {
-    const latestDews = await ctx.db
-      .prepare(
-        `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ stablecoin_id: string; score: number; band: string; signals_json: string }>();
+    const publishedDews = await loadPublishedStressSignalGeneration(ctx.db, ctx.nowSec);
+    if (publishedDews.status !== "ok") {
+      markCollectorDegraded(degradedReasons, "dews-published-generation");
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "daily_digest.dews_generation_unavailable",
+        job: "daily-digest",
+        message: "Published DEWS generation unavailable",
+        metadata: { reason: publishedDews.reason },
+      });
+      return undefined;
+    }
 
-    const todayRows = latestDews.results ?? [];
+    const todayRows = publishedDews.rows;
     if (todayRows.length > 0) {
       const yesterdayDews = await ctx.db
         .prepare("SELECT stablecoin_id, score, band FROM stress_signal_history WHERE snapshot_date = ?")

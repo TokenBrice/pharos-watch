@@ -2,13 +2,13 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  MAX_YIELD_COMPARE_IDS,
-  useYieldCompareSelection,
-} from "../use-yield-compare-selection";
+import { MAX_YIELD_COMPARE_IDS, useYieldCompareSelection } from "../use-yield-compare-selection";
 
 describe("useYieldCompareSelection", () => {
+  const gtag = vi.fn();
+
   beforeEach(() => {
+    window.gtag = gtag;
     vi.spyOn(window, "queueMicrotask").mockImplementation((callback) => {
       callback();
     });
@@ -18,6 +18,8 @@ describe("useYieldCompareSelection", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    gtag.mockReset();
+    delete window.gtag;
   });
 
   it("hydrates ids from the ?compare= URL param", () => {
@@ -42,6 +44,16 @@ describe("useYieldCompareSelection", () => {
     act(() => result.current.toggle("usdc-circle"));
     expect(result.current.ids).toEqual(["usdt-tether"]);
     expect(window.location.search).toBe("?compare=usdt-tether");
+    expect(gtag).toHaveBeenCalledWith("event", "yield_compare_changed", {
+      action: "added",
+      coin_count: 1,
+      coin_id: "usdc-circle",
+    });
+    expect(gtag).toHaveBeenCalledWith("event", "yield_compare_changed", {
+      action: "removed",
+      coin_count: 1,
+      coin_id: "usdc-circle",
+    });
   });
 
   it("clears the param when no ids remain", () => {
@@ -84,5 +96,10 @@ describe("useYieldCompareSelection", () => {
     act(() => result.current.clear());
     expect(result.current.ids).toEqual([]);
     expect(window.location.search).toBe("?keep=1");
+    expect(gtag).toHaveBeenCalledWith("event", "yield_compare_changed", {
+      action: "cleared",
+      coin_count: 0,
+      coin_id: "",
+    });
   });
 });

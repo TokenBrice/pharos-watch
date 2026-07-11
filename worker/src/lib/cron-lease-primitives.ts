@@ -16,6 +16,7 @@ export interface CronLeaseOptions {
   abortSignal?: AbortSignal;
   timeoutBudget?: ResolvedCronTimeoutBudget;
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
+  leaseStateObserverMode?: "best-effort" | "required";
 }
 
 export interface CronLeaseStateUpdate {
@@ -46,6 +47,18 @@ export class CronLeaseLostError extends Error {
   constructor(job: string, renewFailures: number) {
     super(`Cron lease lost for "${job}" after ${renewFailures} failed renewals`);
     this.name = "CronLeaseLostError";
+  }
+}
+
+export class CronLeaseStateObserverError extends Error {
+  readonly event: CronLeaseStateUpdate["event"];
+  readonly cause: unknown;
+
+  constructor(job: string, event: CronLeaseStateUpdate["event"], cause: unknown) {
+    super(`Cron lease state observer failed for "${job}" during ${event}`);
+    this.name = "CronLeaseStateObserverError";
+    this.event = event;
+    this.cause = cause;
   }
 }
 
@@ -229,6 +242,9 @@ export async function runCronWithLease<T>(
       });
     } catch (err) {
       console.error(`[cron-lease] Lease state observer failed for ${job} (${event}):`, err);
+      if (opts?.leaseStateObserverMode === "required") {
+        throw new CronLeaseStateObserverError(job, event, err);
+      }
     }
   };
 
@@ -241,7 +257,16 @@ export async function runCronWithLease<T>(
       ...buildLeaseTelemetry(),
     };
   }
-  await notifyLeaseState("acquired", acquisition);
+  try {
+    await notifyLeaseState("acquired", acquisition);
+  } catch (error) {
+    try {
+      await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
+    } catch (releaseError) {
+      console.error(`[cron-lease] Failed to release lease for ${job} after observer failure:`, releaseError);
+    }
+    throw error;
+  }
 
   let renewFailures = 0;
   let leaseRenewAttempts = 0;
@@ -254,6 +279,10 @@ export async function runCronWithLease<T>(
     if (leaseLost) return;
     leaseLost = true;
     leaseController.abort(new CronLeaseLostError(job, failureCount));
+  };
+  const abortForLeaseStateObserverFailure = (error: CronLeaseStateObserverError) => {
+    if (leaseController.signal.aborted) return;
+    leaseController.abort(error);
   };
   const markRenewError = () => {
     renewFailures++;
@@ -268,9 +297,11 @@ export async function runCronWithLease<T>(
     abortForLeaseLoss(renewFailures);
   };
 
+  let renewalInFlight: Promise<void> | null = null;
   const timer = setInterval(() => {
+    if (renewalInFlight) return;
     leaseRenewAttempts++;
-    void runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2, opts?.abortSignal)
+    renewalInFlight = runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 2, opts?.abortSignal)
       .then(async (renewal) => {
         if (!renewal.renewed) {
           markOwnershipLost();
@@ -281,8 +312,15 @@ export async function runCronWithLease<T>(
         renewFailures = 0;
         await notifyLeaseState("renewed", renewal);
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error instanceof CronLeaseStateObserverError) {
+          abortForLeaseStateObserverFailure(error);
+          return;
+        }
         markRenewError();
+      })
+      .finally(() => {
+        renewalInFlight = null;
       });
   }, heartbeatSec * 1000);
 
@@ -373,6 +411,7 @@ export async function runCronWithLease<T>(
     };
   } finally {
     clearHeartbeat();
+    await renewalInFlight;
     if (shouldReleaseLease) {
       try {
         await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);

@@ -33,8 +33,8 @@ describe("worker job attempt ledger", () => {
     });
 
     expect(identity).toEqual({
-      attemptId: "attempt|scheduled-slot|hourlyYieldSync|1775890000|sync-yield-data|1",
-      idempotencyKey: "scheduled-slot|hourlyYieldSync|1775890000|sync-yield-data|1",
+      attemptId: "attempt|scheduled-slot|hourlyYieldSync|hourlyYieldSync|1775890000|sync-yield-data|1",
+      idempotencyKey: "scheduled-slot|hourlyYieldSync|hourlyYieldSync|1775890000|sync-yield-data|1",
       attemptNo: 1,
     });
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO worker_job_attempts"));
@@ -44,7 +44,10 @@ describe("worker job attempt ledger", () => {
       "hourlyYieldSync",
       "sync-yield-data",
       1_775_890_000,
+      "hourlyYieldSync",
       "scheduled-slot",
+      null,
+      null,
       1,
       1_775_890_010,
       1_775_890_010,
@@ -102,7 +105,10 @@ describe("worker job attempt ledger", () => {
           schedule_key: "hourlyYieldSync",
           job: "sync-yield-data",
           slot_started_at: 1_775_890_000,
+          producer_path: "hourlyYieldSync",
           producer_kind: "scheduled-slot",
+          invocation_id: "invocation-a",
+          worker_version: "version-a",
           state: "running",
           status_class: null,
           attempt_no: 1,

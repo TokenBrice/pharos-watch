@@ -44,11 +44,15 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, the ingress flood cap, group-admin gate, and per-command cooldown. The pending gate lets read-only/helpful commands such as `/sample` pass through and lets same-initiator destructive commands such as `/forget` clear stale pending state before running. The flood cap covers commands, callback taps, and pending text replies; private chats use a 20-action / 60 s chat key, while group/supergroup chats use a 20-action / 60 s `(chat_id, actor_user_id)` key plus a higher best-effort chat-wide ceiling. The first-exceed notice is advisory because concurrent deliveries can drop or duplicate it. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Owner/generation-claim the `update_id`, persist a versioned normalized operation intent, atomically prove replay-safe local mutation, and cross the effect fence only immediately before an irreversible Bot API call. Stale unstarted/planned claims are reclaimable; planned takeover resumes stored normalized parameters instead of mutable pending/setup rows. Once effect-start is durable, duplicates are acknowledged without replay and uncertain rows are exposed for operator reconciliation. Hold the dedupe, pending-disambiguation gate, ingress flood cap, group-admin gate, and per-command cooldown.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
+- `worker/src/api/telegram-webhook.ts` (entrypoint: secret validation, claim/fence bootstrap, and per-update-type routing)
 - `worker/src/api/telegram-webhook-auth.ts` (secret validation, group-admin gating)
+- `worker/src/api/telegram-webhook-update-normalization.ts` (pure update-shape helpers: update-type/chat-id resolution and group-to-supergroup migration extraction; no D1, no Bot API)
+- `worker/src/api/telegram-webhook-effect-fence.ts` (the `update_id` claim bootstrap — duplicate/in-flight answering — plus the request-scoped operation-intent effect fence crossed before irreversible Bot API calls)
+- `worker/src/api/telegram-webhook-update-dispatch.ts` (intent dispatch: routes claimed callback taps and message commands through the ingress policy gates and the pending gate into `COMMAND_HANDLERS` / the callback router)
+- `worker/src/api/telegram-webhook-ingress-policy.ts` (ingress flood cap, per-command cooldown, group-admin gate, channel-mutation refusal predicates, and command-usage attribution)
 - `worker/src/api/telegram-webhook-pending-gate.ts` (the pending-disambiguation / setup-step gate decisions run before dispatch: `handleSetupPendingBeforeDispatch`, `handlePendingActionBeforeDispatch`, and the disambiguation-reply helpers)
 - `worker/src/api/telegram-webhook-group-welcome.ts` (the group lifecycle sub-seam: `handleMyChatMember` plus the bot-added/-removed transition checks, welcome message/markup builders, and the local `TelegramChatMemberUpdated` shape)
 - `worker/src/api/telegram-webhook-shared.ts` (types/constants used by both Ingress and Action handlers — see note below)
@@ -153,34 +157,45 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 ## 5. Dispatch / fan-out
 
-**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch / reserve-drift snapshots to detect events, load matching subscribers (direct + preset + global), filter for quiet hours, snooze, explicit per-coin off overrides, dews-min-band, safety-mode, depeg-step. Preset fan-out resolves preset membership before querying subscriber rows and narrows the SQL to presets that intersect the triggered stablecoins. Alert context reads the published report-card snapshot cache instead of rebuilding the report-card corpus inside the five-minute lane. Build per-chat consolidated messages and chunk them. Hand the chunk queue to Queue / rate-limit / retry plus Outbound transport. Persist alert-job manifests and per-target outcomes. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
+**Responsibility.** On the dedicated 5-minute cron slot, diff DEWS / depeg / safety / launch / reserve-drift snapshots into an immutable source event. Resolve dynamic preset pages, freeze the subscriber cohort at the event's detection time, and record one planning outcome per captured chat. Revalidate current direct/preset/global intent and tuning page by page, render bounded versioned plans, and materialize every exact target chunk plus item lineage before transport opens. Atomically hand targets to the pending queue; only after no target remains `planned` may the stored source baseline advance. Target-plan ownership, generation, cursor, immutable page bounds, bounded expiry debt, and final delivery truth are D1-authoritative. Alert context reads the published report-card snapshot cache instead of rebuilding the report-card corpus inside the five-minute lane. When a depeg closes and a new active event for the same coin appears in the same window, dispatch emits only the new detected event and annotates it with the just-ended recovery duration instead of also sending a resolved line for that coin.
 
-**Budget-before-format ordering (C102).** Routing is split into a cheap *plan* phase and an expensive *format* phase to bound worst-case CPU during a market-wide burst. `planSubscriberQueue` orders the routed `alertsByChat` newest-first by `lastActiveAt` and attaches a format-free chunk estimate (`estimateChatChunks`, modelled at `TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE` lines/chunk). `selectChatsToFormat` then caps the ordered candidates against an upper-bound format budget — `TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE` — because the pending drain that runs later can only shrink the real fresh budget. Only the selected slice is run through `formatConsolidatedMessage`/`splitMessage` (`formatPlannedSubscribers`); the overflow tail beyond the budget can never be sent fresh this run and is formatted lazily by Delivery purely to enqueue it after re-checking that the chat still has active subscriber state (no alert is dropped for active subscribers). Candidate metrics (`freshCandidateChats`/`freshCandidateCount`) still cover every routed chat via the cheap estimate, while `perAlertTypeTargets` and the alert-job manifests cover the formatted-selected set; the `fanout-built` progress record additionally emits `formattedChats`. Outcome counts (sent/enqueued/deferred + per-alert-type attribution) are unchanged versus the pre-reorder behavior.
+The post-dispatch capacity/watchdog read model is fail-closed for incident recovery. It reports an explicit available/unknown read state, keeps recent `sending` work separate, promotes sends older than 15 minutes into execution-unknown risk, and samples fresh uncertain effects to a bounded 5,001-row lower bound. Unknown reads preserve existing incident keys. Zero-send streak evaluation is keyed to the authoritative `cron_runs.id`, so rerunning the watchdog against the same dispatch record is idempotent.
+
+The five-minute lane keeps its DB-only operational sidecars independent of Telegram credentials. With a bot token it runs dispatch, watchdog, expired-disambiguation cleanup, and pulse publication serially, then checks all four command/profile/menu/webhook registration units in serial order and drains the alert-broker outbox. Without a token it records dispatch as skipped and registration/transport as an operational error, but still runs the watchdog, cleanup, pulse, and alert-broker drain. Per-unit registration telemetry distinguishes `skipped`, `succeeded`, and `failed` instead of treating a fresh cache/rate-limit skip as a successful Bot API mutation.
+
+Admin recovery paths preserve the same effect and queue boundaries. Chat diagnostics contract v2 redacts payloads and returns only bounded pending/dead-letter/target history, including after the subscriber row has been deleted while retained operational history remains. Resend is an exact authoritative target-plan replay: dry-run is the default, live requests require an idempotency key and operator reason, accepted/execution-unknown effects are refused, and the exact stored payload is enqueued as `admin_replay` rather than sent inline. Broadcasts require a successful private-chat canary and a hard 15-minute reserve inside the 45-minute admin TTL before fleet rows may enter the pending queue.
+
+**Bounded page ordering.** Target planning scans the frozen subscriber ledger in chat-id order and renders only the current bounded page. The versioned plan contract limits payload bytes, items, and chunks before any D1 materialization batch is built. Immutable first/last chat bounds, plan ordinals, expected counts, and payload digests make a partial page resumable without reformatting an already durable target or widening the cohort. Transport handoff is independently bounded and cursorable through target ordinals; the pending drain's send deadline therefore cannot make subscriber discovery or formatting lossy.
 
 **Burst-summary collapse (C128).** `collapseBurstChats` runs between routing and the plan/format phase, so it executes *before* `formatConsolidatedMessage` and therefore also bounds CPU (its C102 dependency). For a chat matching `BURST_EVENT_THRESHOLD`+ distinct coins with global the dominant source (`globalCount > specificCount`, tracked per-entry in `AlertsByChatEntry`), it replaces the chat's `ConsolidatedAlerts` with a single `burst` summary covering only delta coins versus a per-chat marker (`cache["telegram:burst-markers"]`), removing the chat entirely when the delta is empty. Markers prune on read at `BURST_MARKER_TTL_SEC` (anchored to first entry), the shared marker cache row is deleted when no live markers remain, and `/forget` removes the chat's nested marker entry. The threshold ships effectively off; `burstCollapsedChats`/`burstDeltaSuppressed` surface in dispatch metadata.
 
-**Reserve-drift producer/consumer seam (C123).** The reserve-drift family is the one event source whose state is *not* computed inside the dispatch trigger. `checkCollateralDrift` does live reserve-adapter network I/O (`loadFreshIndependentLiveReserveMap`), so calling it from the 5-minute dispatch trigger would consume the per-trigger 6-connection pool. Instead the four-hourly reserve slot (`worker/src/handlers/scheduled/hourly-live-reserves.ts`) persists the current drift id-set to `alert:reserve-snapshot` after its own `checkCollateralDrift` call, and dispatch only *diffs* that set against its own baseline `alert:reserve-dispatched-snapshot`. Dispatch never opens a reserve-adapter connection. Coins that fall back to curated reserves are omitted from the producer set so a transient live-fetch failure cannot read as a drift change; the family fires entering-drift only.
+**Reserve-drift producer/consumer seam (C123).** The reserve-drift family is the one event source whose state is *not* computed inside the dispatch trigger. `checkCollateralDrift` does live reserve-adapter network I/O (`loadFreshIndependentLiveReserveMap`), so calling it from the 5-minute dispatch trigger would consume the per-trigger 6-connection pool. Instead the four-hourly reserve slot (`worker/src/handlers/scheduled/hourly-live-reserves.ts`) persists a versioned source envelope (`generation`, `publishedAt`, `continuous`, `driftIds`) to `alert:reserve-snapshot` after its own `checkCollateralDrift` call, and dispatch only *diffs* an alertable set against its own baseline `alert:reserve-dispatched-snapshot`. Dispatch never opens a reserve-adapter connection. Coins that fall back to curated reserves are omitted from the producer set so a transient live-fetch failure cannot read as a drift change; the family fires entering-drift only. `worker/src/lib/alert-reserve-source-cache.ts` derives the freshness ceiling from two `sync-live-reserves` intervals (8 hours), rejects missing/corrupt/future/wrong-generation state, and marks the first publish after a continuity gap as `recovering`. That recovery publish cold-seeds the dispatch baseline; only the next continuous expected-generation publish can create reserve transitions.
 
 **Owned files.**
-- `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)
+- `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration: circuit gate, source load, path selection, and the preset-failure hook wiring)
+- `worker/src/cron/dispatch-telegram-source-lifecycle.ts` (fanout-free baseline seed plus recovery of an oldest incomplete source event: baseline-committed-before-manifest backfill and bounded source expiry)
+- `worker/src/cron/dispatch-telegram-queue-paths.ts` (fanout-free queue lifecycle paths: circuit-open drain, the eventless fast path, and the source-recovery queue sidecar)
+- `worker/src/cron/dispatch-telegram-authoritative-path.ts`, `dispatch-telegram-authoritative-planning.ts` (source-resolution, page-scoped routing, manifest handoff, baseline gate)
 - `worker/src/cron/dispatch-telegram-alerts-fanout.ts` (parallel loading of subscriber inputs)
 - `worker/src/cron/dispatch-telegram-fanout-plan.ts` (fan-out plan orchestration: routes all five alert families into per-chat bundles, runs the burst collapse, and builds the overflow-aware plan/format split; owns `buildTelegramFanoutPlan`)
 - `worker/src/cron/dispatch-telegram-events.ts` (DEWS/depeg/safety/launch/reserve-drift snapshot diffing into dispatch events; suppressed-safety-at-seed counting)
 - `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
-- `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets and `DispatchResult` shape)
+- `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets, the `DispatchResult` shape, and the shared pending/safety/reserve result-field mappers used by every dispatch path)
 - `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
-- `worker/src/cron/dispatch-telegram-alerts-observability.ts` (systemic fresh-failure observability)
-- `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
+- `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly, the shared dispatch-state handoff to the five-minute lane, and the preset-failure counter)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
-- `worker/src/cron/dispatch-telegram-overflow.ts` (overflow plan cache and lazy format/enqueue of the over-budget tail)
+- `worker/src/cron/dispatch-telegram-overflow.ts` (strict rolling-compatible parser and chat-pruning helpers for the retired overflow cache)
+- `worker/src/cron/telegram-legacy-overflow-import.ts` (strict, cursorable import of the retired overflow cache into synthetic source/target/pending lineage)
+- `worker/src/cron/telegram-alert-target-plans.ts`, `telegram-alert-target-plans/*`, `telegram-alert-target-plan-contract.ts` (planning ownership, frozen subscriber ledger, rendered plans/items/pages, bounded expiry, delivery-open and pending handoff)
+- `worker/src/cron/telegram-alert-job-target-outcomes.ts` (exclusive final-state projection and job counter reconciliation)
 - `worker/src/cron/dispatch-telegram-terminal-targets.ts` (`pruneAlreadyTerminalSubscribers`: drops already-terminal dedupe-key targets before fresh send)
-- `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit)
+- `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts`, `telegram-alert-target-effects.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit and fresh-effect fencing)
 - `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
-- `worker/src/handlers/scheduled/five-minute-telegram.ts` (five-minute lane after dispatch/watchdog: expired disambiguation cleanup and Telegram pulse snapshot publication via `worker/src/api/telegram-pulse.ts`)
+- `worker/src/handlers/scheduled/five-minute-telegram.ts` (token-aware five-minute orchestration: dispatch when configured, token-independent watchdog/cleanup/pulse, all four serial registration checks, then alert-broker drain)
 - `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` (daily 03:00 UTC housekeeping jobs)
-- `worker/src/api/admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`, `admin-telegram-chat.ts` (operator inputs that *write to the pending queue*; they are Dispatch-side because they share queue/TTL semantics, not Ingress)
+- `worker/src/api/admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`, `admin-telegram-chat.ts` (operator broadcast/replay/queue inputs plus redacted retained-history diagnostics; mutations share Dispatch queue/TTL semantics, not Ingress)
 
 **Allowed inbound dependencies.** Worker scheduled-event router, Worker admin route entrypoints. Not Ingress, not Callback routing.
 
@@ -197,12 +212,12 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 ## 6. Queue / rate-limit / retry
 
-**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). A chat-scoped 429 short-circuits later same-chat rows/chunks in the current run and stamps only row/chat backoff. Explicitly global/bot-wide Telegram responses, or ambiguous 429s across at least three distinct chats in one batch, stamp global backoff and stop broader sending. Enforce the 2-strike rule for blocked subscribers, including dead-lettering/deleting sibling pending rows once a chat is disabled. Provide a dedupe key so duplicate chunks never queue.
+**Responsibility.** Own the `telegram_pending_alerts` row lifecycle: enqueue bounded provenance, claim, revalidate current effective preference eligibility, effect-state transition, drain, retry-with-backoff, preference cancellation, dead-letter, expire. `pending -> sending` records an effect owner/generation immediately before the Bot API call. Confirmed HTTP retry responses alone return that exact generation to `pending`; timeout/network ambiguity, owner loss, and expired `sending` claims become `execution_unknown` and are never auto-replayed. Confirmed success becomes `sent`. Pending terminal transitions project the same final delivery state into the authoritative alert-job target before cleanup, and a bounded repair pass closes post-commit/pre-cleanup gaps. Terminal target state also excludes legacy sent rows from candidate selection. Hold per-chat/global backoff and the blocked-subscriber lifecycle.
 
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (enqueue, claim/drain, backoff, capacity, cleanup, dead-letter, dedupe, lifecycle helpers)
-- The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE`, `TELEGRAM_FORMAT_BUDGET_ALLOWANCE`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
+- `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram-constants.ts` re-exports the established Worker import surface.
 
 **Allowed inbound dependencies.** Dispatch (the only legitimate enqueuer for alerts), Admin Telegram routes (`admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram-alerts.ts` keyboard).
 
@@ -210,8 +225,10 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Must NOT.**
 - Be opened by Ingress directly. Ingress should never enqueue.
-- Re-introduce schedule constants outside `telegram-constants.ts`.
+- Re-introduce delivery-policy constants outside `shared/lib/telegram-delivery-policy.ts`.
 - Mutate `telegram_subscribers` alert flags except via the 2-strike block-disable path. Subscription state is owned by State / persistence helpers.
+- Reset or overwrite a `sending`, `sent`, or `execution_unknown` row through dedupe re-enqueue. Only unclaimed/expired `pending` rows may refresh in place.
+- Delete `execution_unknown` through ordinary TTL or disabled-chat cleanup. It remains operator-visible, then moves to idempotent dead-letter audit after the separate 90-day ambiguity-retention window.
 
 ---
 
@@ -219,26 +236,42 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload, the setup-wizard state, and expired-row cleanup), the processed-update idempotency claim, the command-cooldown gate and best-effort cooldown release for transient/throwing handlers, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
-Per-coin subscription writes have two deliberate modes: subscribe-style follows bump alert flags with `MAX(...)`, while settings-style overrides replace exactly one setting and mark the matching `alert_*_override` column. Dispatch treats a per-coin row as an explicit off only when both the alert flag is `0` and the marker is `1`, so default zeroes from partial follow writes do not suppress preset/global fan-out. Settings-style depeg writes share one rule: `depeg on` preserves an existing worsening step, `depeg off` clears it, and `depeg-step <bps>` enables depeg while setting that step. `/subscribe ... depeg-step off` is still a follow with depeg enabled and no worsening-step threshold.
+Per-coin and preset facts are independent. `telegram_subscriptions` owns direct/local per-coin preferences; `telegram_preset_subscriptions` owns dynamic source membership and never materializes its resolved coins into the direct table. Store intent inputs name direct coin IDs separately from preset IDs so command, callback, setup, import, and Mini App callers cannot conflate the two sources. Following or unfollowing a preset changes only its preset row; current preset membership is resolved from the stablecoin cache at dispatch.
+
+Watchlist-token v2 preserves that boundary instead of exporting a flattened effective watchlist. The token stores packed direct/local rows and preset policies separately. Import stages an exact, initiator-owned replacement preview in `telegram_pending_disambiguation`; new chats create the subscriber row before the pending row in the same batch. Confirmation leases `preference_generation`, upserts retained rows without touching their per-coin snooze, removes only previewed rows, cleans expired snooze-only rows, restores the next generation, clears the exact pending preview, and commits the existing webhook mutation marker atomically. Generation mismatch consumes the stale preview and marker but performs no portable-preference writes, making webhook retry report the same terminal outcome rather than replaying replacement work.
+
+Direct subscribe-style follows bump alert flags with `MAX(...)` and mark the matching selected families as local preferences, while settings-style overrides replace exactly one setting and mark its matching `alert_*_override` column. Every enabled direct row is authoritative over preset tuning. Dispatch treats a per-coin row as an explicit off only when both the alert flag is `0` and the marker is `1`, so default zeroes from partial or legacy writes do not suppress preset/global fan-out. Settings-style depeg writes share one rule: `depeg on` preserves an existing worsening step, `depeg off` clears it, and `depeg-step <bps>` enables depeg while setting that step. `/subscribe ... depeg-step off` is still a direct follow with depeg enabled and no worsening-step threshold.
+
+The provenance correction required no D1 migration because these two tables and keys already represented the target model. Existing `telegram_subscriptions` rows may have been created either directly or by the former preset-materialization behavior, so rollout classifies every existing row conservatively as direct/local intent and deletes none. Rolling back to an older Worker can resume materialization, but the corrected Worker remains compatible with those rows and will again retain them as direct intent.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.
 - `worker/src/lib/telegram-chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
 - `worker/src/lib/telegram-usage-analytics.ts` (usage events, lifecycle snapshots, chat delivery diagnostics)
+- `worker/src/lib/telegram-adoption-analytics.ts` (aggregate funnel writes, one-time milestones, bounded D7/D30 catch-up, weekly report)
 - `worker/src/lib/telegram-webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
 - D1 schemas — owned by the migrations themselves (see [`telegram-alerts.md`](./telegram-alerts.md#d1-schema)):
   - `telegram_subscribers` — per-chat state and defaults
-  - `telegram_subscriptions` — per-chat per-coin alert prefs
-  - `telegram_preset_subscriptions` — persistent dynamic preset follows
+  - `telegram_subscriptions` — per-chat direct/local per-coin alert preferences and explicit-off markers
+  - `telegram_preset_subscriptions` — independent persistent dynamic preset follows
   - `telegram_pending_disambiguation` — short-lived disambiguation, bulk-confirm, and setup-wizard state
   - `telegram_pending_alerts` — overflow + retry queue (owned by Queue, but the schema lives here)
   - `telegram_alert_jobs` / `telegram_alert_job_targets` — discovery + delivery audit (Dispatch)
+  - `telegram_alert_source_events` / `telegram_alert_source_resolution_pages` — immutable event and resumable preset-resolution state (Dispatch)
+  - `telegram_alert_source_resolution_memberships` / `telegram_alert_source_resolution_targets` — normalized preset membership/follower page lineage, revalidated against current intent before routing (Dispatch)
+  - `telegram_alert_planning_subscribers` — detection-time subscriber cohort and durable per-chat planning outcomes (Dispatch)
+  - `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` — rendered manifest, immutable page bounds, target counts, and source-item lineage (Dispatch)
+  - `telegram_alert_target_expiry_progress` — bounded source-expiry reconciliation debt (Dispatch)
+  - `telegram_legacy_overflow_state` — strict one-time cache-import state and audit (Dispatch)
+  - `telegram_alert_job_target_items` — normalized source-item coverage for consolidated target chunks (Dispatch)
   - `telegram_alert_dead_letters` — terminal failure audit (Queue)
   - `telegram_processed_updates` — webhook idempotency (Ingress)
   - `telegram_usage_daily` — privacy-preserving aggregates (Action handlers + Dispatch)
+  - `telegram_adoption_daily` / `telegram_adoption_retention_daily` — identifier-free funnel and retention aggregates
+  - `telegram_adoption_ingress_quota` — identifier-free global CTA-ingress ceiling
   - `telegram_watcher_lifecycle_daily` — daily lifecycle snapshots
   - `telegram_chat_delivery_diagnostics` — per-chat diagnostics (Outbound + Dispatch)
-- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:reserve-snapshot` (producer-written current drift set), `alert:reserve-dispatched-snapshot` (dispatch baseline), `alert:safety-source-cache`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, `telegram:re-engagement-warned:<chat_id>`, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
+- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:reserve-snapshot` (producer-written versioned reserve source envelope), `alert:reserve-dispatched-snapshot` (dispatch baseline), `alert:safety-source-cache`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, the 30-minute consumed-on-first-mutation `telegram:adoption-mini-app-session:<chat_id>` key, legacy `telegram:re-engagement-warned:<chat_id>` markers awaiting retention cleanup, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
 
 **Allowed inbound dependencies.** Every other seam may read/write through these helpers.
 
@@ -272,7 +305,7 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 
 ## 9. Mini App surface
 
-**Responsibility.** Serve the Telegram Mini App UI and its two signed `initData` API calls. Load private-user state, expose read-only group/stale-auth state, apply private-user mutations, and return the same state contract the frontend renders. Telegram direct-link launches can report the private user context as `chat_type="sender"`. This seam is intentionally narrow: it does not receive Telegram webhook updates and it does not call the Telegram Bot API.
+**Responsibility.** Serve the Telegram Mini App UI and its two signed `initData` API calls. Load private-user state, expose read-only group/stale-auth state, apply private-user mutations, and return a versioned mutable-state snapshot that the frontend hydrates with its bundled catalog. Telegram direct-link launches can report the private user context as `chat_type="sender"`. This seam is intentionally narrow: it does not receive Telegram webhook updates and it does not call the Telegram Bot API.
 
 **Owned files.**
 - `src/app/pharoswatchbot/app/page.tsx`
@@ -290,17 +323,21 @@ Per-coin subscription writes have two deliberate modes: subscribe-style follows 
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/api/telegram-mini-app-schemas.ts`
 - `worker/src/lib/telegram-mini-app-auth.ts`
+- `shared/lib/telegram-mini-app-contract.ts`
+- `shared/lib/telegram-mini-app-catalog.ts`
+- `shared/lib/telegram-presets.ts`
+- `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
 
 **Allowed inbound dependencies.** The Next.js route `/pharoswatchbot/app/`, Worker route registry entries for `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`, and private-chat Web App buttons generated by Action handlers / Callback routing.
 
-**Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, `telegram-presets` for dynamic preset targets, `telegram-usage-analytics` for validated usage events, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
+**Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, Worker preset resolution for dynamic targets, `telegram-usage-analytics` for validated usage events, the shared Mini App contract/catalog and preset definitions, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
 
 **Must NOT.**
 - Accept mutation auth older than the 5-minute mutation window.
 - Mutate group/supergroup/channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist.
 - Write analytics, aggregate counters, or cooldown rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied Mini App requests must return without D1 writes because the endpoints are public API-key-exempt surfaces.
+- Apply or replay a mutation when the advertised contract/catalog version does not match. Version mismatch must stay a pre-write `409`; the client may refresh its static bundle once but must require a new user action for the mutation.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
 - Use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
@@ -319,6 +356,7 @@ Files any seam may import:
 - `worker/src/lib/telegram-presets.ts` — preset definitions and resolution.
 - `worker/src/lib/telegram-digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
 - `worker/src/lib/telegram-log.ts` — structured logging.
+- `worker/src/lib/telegram-pending-provenance.ts` — bounded target-group scope and markup-policy serialization/parsing shared by Dispatch and Queue.
 
 ---
 

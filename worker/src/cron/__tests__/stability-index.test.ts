@@ -33,6 +33,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeAndStoreStabilityIndex } from "../stability-index";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 interface TestDb extends D1Database {
   runHistory: Array<{ sql: string; binds: unknown[] }>;
@@ -47,6 +48,17 @@ function makeDb(opts: {
   priceCacheRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
 } = {}): TestDb {
   const runHistory: Array<{ sql: string; binds: unknown[] }> = [];
+  const defaultDewsRows = [{
+    stablecoin_id: "usdt-tether",
+    score: 72,
+    band: "WARNING",
+    computed_at: Math.floor(Date.now() / 1000) - 300,
+  }];
+  const configuredDewsRows = opts.dewsRows ?? defaultDewsRows;
+  const hasExplicitPublishedAt = Object.prototype.hasOwnProperty.call(opts, "dewsPublishedAt");
+  const dewsPublishedAt = hasExplicitPublishedAt
+    ? opts.dewsPublishedAt ?? null
+    : configuredDewsRows[0]?.computed_at ?? Math.floor(Date.now() / 1000) - 300;
 
   const stmt = (sql: string, binds: unknown[] = []) => {
     const all = async <T>() => {
@@ -88,22 +100,12 @@ function makeDb(opts: {
           throw new Error("no such table: stress_signals");
         }
         const bound = typeof binds[0] === "number" ? binds[0] : null;
-        const dewsRows = opts.dewsRows ?? [{
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: Math.floor(Date.now() / 1000) - 300,
-        }];
-        // Normal path filters with `computed_at = ?` (exact published generation);
-        // the no-pointer fallback path filters with `computed_at >= ?` (scan-window floor).
-        let filtered = dewsRows;
+        let filtered = configuredDewsRows;
         if (bound != null) {
-          if (sql.includes("computed_at >= ?")) {
-            filtered = dewsRows.filter((row) => row.computed_at >= bound);
-          } else if (sql.includes("computed_at = ?")) {
-            filtered = dewsRows.filter((row) => row.computed_at === bound);
+          if (sql.includes("computed_at = ?")) {
+            filtered = configuredDewsRows.filter((row) => row.computed_at === bound);
           } else {
-            filtered = dewsRows.filter((row) => row.computed_at <= bound);
+            filtered = configuredDewsRows.filter((row) => row.computed_at <= bound);
           }
         }
         return { results: filtered as T[] };
@@ -112,14 +114,24 @@ function makeDb(opts: {
     };
 
     const first = async <T>() => {
-      if (sql.includes("FROM cache WHERE key = ?") && binds[0] === "dews:published-generation" && opts.dewsPublishedAt != null) {
+      if (sql.includes("FROM cache WHERE key = ?") && binds[0] === "dews:published-generation" && dewsPublishedAt != null) {
+        const publishedRows = configuredDewsRows.filter((row) => row.computed_at === dewsPublishedAt);
         return {
           value: JSON.stringify({
-            updatedAt: opts.dewsPublishedAt,
+            updatedAt: dewsPublishedAt,
             source: "compute-dews",
             publishStatus: "published",
+            ...(publishedRows.length > 0
+              ? {
+                  coverageVersion: 2,
+                  expectedRowCount: publishedRows.length,
+                  stablecoinIdsDigest: buildDewsStablecoinIdsDigest(
+                    publishedRows.map((row) => row.stablecoin_id),
+                  ),
+                }
+              : {}),
           }),
-          updated_at: opts.dewsPublishedAt,
+          updated_at: dewsPublishedAt,
         } as T;
       }
       return null as T | null;
@@ -232,7 +244,7 @@ describe("computeAndStoreStabilityIndex", () => {
     };
     expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
-    expect(metadata.dewsFailureReason).toBe("stress_signals returned no latest rows");
+    expect(metadata.dewsFailureReason).toContain("has no rows");
     expect(metadata.dewsRowsRead).toBe(0);
     expect(metadata.preservedCurrentSample).toBe(true);
     expect(
@@ -276,7 +288,7 @@ describe("computeAndStoreStabilityIndex", () => {
     ).toBe(false);
   });
 
-  it("returns degraded when any latest DEWS row is stale", async () => {
+  it("uses only the stale published generation while a fresher generation is staging", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
     const freshComputedAt = nowSec - 60;
@@ -368,20 +380,20 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("usdt-tether");
     expect(metadata.dewsFailureReason).toContain("stale");
-    expect(metadata.dewsLatestComputedAt).toBe(freshComputedAt);
-    expect(metadata.dewsRowsRead).toBe(2);
+    expect(metadata.dewsLatestComputedAt).toBe(staleComputedAt);
+    expect(metadata.dewsRowsRead).toBe(1);
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
     ).toBe(false);
   });
 
-  it("bounds the no-publication-pointer fallback scan to a recent window", async () => {
+  it("fails closed when no DEWS publication pointer is available", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const fallbackWindowSec = CRON_INTERVALS["compute-dews"] * 4;
     const beyondWindowAt = nowSec - fallbackWindowSec - 1;
     const freshAt = nowSec - 300;
     const db = makeDb({
-      // No dewsPublishedAt → readDewsPublishedGeneration resolves null → fallback path.
+      dewsPublishedAt: null,
       dewsRows: [
         {
           stablecoin_id: "usdt-tether",
@@ -404,9 +416,9 @@ describe("computeAndStoreStabilityIndex", () => {
       dewsRowsRead: number;
       dewsLatestComputedAt: number | null;
     };
-    // The row beyond the scan window is excluded by the SQL `computed_at >= ?` floor.
-    expect(metadata.dewsRowsRead).toBe(1);
-    expect(metadata.dewsLatestComputedAt).toBe(freshAt);
+    expect(result.status).toBe("degraded");
+    expect(metadata.dewsRowsRead).toBe(0);
+    expect(metadata.dewsLatestComputedAt).toBeNull();
   });
 
   it("ignores DEWS rows newer than the published generation when computing PSI stress breadth", async () => {

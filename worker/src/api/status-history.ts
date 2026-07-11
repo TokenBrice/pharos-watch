@@ -25,12 +25,15 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
     });
     if (parsed instanceof Response) return parsed;
     const { limit } = parsed;
+    let transitionQueryFailed = false;
 
-    const [{ state, staleness }, probe, streak, transitions, reserveOverviewResult] = await Promise.all([
+    const [{ state, staleness }, probe, streak, transitionRows, reserveOverviewResult] = await Promise.all([
       getStatusStateSnapshot(db, now),
       getLatestStatusProbe(db),
       getDiscrepancyStreak(db),
-      listRecentStatusTransitions(db, limit, { from, to }),
+      listRecentStatusTransitions(db, limit + 1, { from, to }, () => {
+        transitionQueryFailed = true;
+      }),
       computeReserveCompositionOverview(db, now)
         .then((overview) => ({ ok: true as const, overview }))
         .catch((error) => {
@@ -49,6 +52,8 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
 
     const overall = state?.currentStatus ?? "healthy";
     const discrepancy = buildDiscrepancy(overall, probe, now, streak);
+    const hasMore = transitionQueryFailed ? null : transitionRows.length > limit;
+    const transitions = transitionRows.slice(0, limit);
     const reserveComposition = reserveOverviewResult.ok
       ? (() => {
           const reserveAssessment = deriveReserveCompositionStatus({
@@ -71,6 +76,7 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       probe,
       discrepancy,
       transitions,
+      hasMore,
       reserveComposition,
     };
 

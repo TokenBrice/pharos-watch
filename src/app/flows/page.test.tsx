@@ -125,7 +125,7 @@ describe("FlowsPage", () => {
     expect(html).toContain("Live refresh is running behind");
   });
 
-  it("does not show the generic stale-data banner when fresh API metadata is present during a retry error", () => {
+  it("shows the generic stale-data banner when fresh API metadata accompanies a retry error", () => {
     const refreshError = new Error("network");
 
     mockUseMintBurnFlows.mockImplementation((hours = 24) => {
@@ -148,7 +148,7 @@ describe("FlowsPage", () => {
 
     const html = renderToStaticMarkup(<FlowsPage />);
 
-    expect(html).not.toContain("Live refresh is running behind");
+    expect(html).toContain("Live refresh is running behind");
     expect(html).not.toContain("Showing an older snapshot");
   });
 

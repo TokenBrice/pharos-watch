@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { RequestSequence, isRequestCancellation, requestTextWithResponse } from "@/lib/request";
 
 const STYLE_BLOCK = `
 .fiat-world-map{--world-default-fill:oklch(0.79 0.015 248 / 1);--world-stroke:oklch(0.48 0.02 248 / 0.58)}
@@ -37,14 +38,15 @@ export function WorldMap() {
   const hostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const requests = new RequestSequence();
     const host = hostRef.current;
     if (!host) return;
 
-    fetch("/maps/world-countries.svg")
-      .then((response) => response.ok ? response.text() : "")
+    requests
+      .run((signal) => requestTextWithResponse("/maps/world-countries.svg", { signal }))
+      .then(({ data: text }) => text)
       .then((text) => {
-        if (cancelled || !text) return;
+        if (!text) return;
         // Parse via DOMParser into an isolated XML document, sanitize, then
         // adopt the <svg> node. Avoids `dangerouslySetInnerHTML` entirely.
         const doc = new DOMParser().parseFromString(text, "image/svg+xml");
@@ -53,22 +55,20 @@ export function WorldMap() {
         sanitizeSvg(svg);
         host.replaceChildren(host.ownerDocument.importNode(svg, true));
       })
-      .catch(() => {
+      .catch((error) => {
+        if (isRequestCancellation(error)) return;
         // swallow: empty atlas is acceptable fallback
       });
 
     return () => {
-      cancelled = true;
+      requests.cancel();
     };
   }, []);
 
   return (
     <div className="fiat-world-map relative h-full w-full" aria-hidden="true">
       <style>{STYLE_BLOCK}</style>
-      <div
-        ref={hostRef}
-        className="h-full w-full overflow-hidden [&_svg]:block [&_svg]:h-full [&_svg]:w-full"
-      />
+      <div ref={hostRef} className="h-full w-full overflow-hidden [&_svg]:block [&_svg]:h-full [&_svg]:w-full" />
     </div>
   );
 }

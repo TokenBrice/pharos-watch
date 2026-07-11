@@ -43,6 +43,38 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "CF_VERSION_METADATA",
+    valueType: "WorkerVersionMetadata",
+    description: "Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation.",
+    runtimes: {
+      worker: { order: 49, status: "required" },
+    },
+  },
+  {
+    key: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",
+    runtimes: {
+      worker: { order: 62, status: "required" },
+    },
+  },
+  {
+    key: "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare pre-authentication rate limiter for Telegram Mini App session requests.",
+    runtimes: {
+      worker: { order: 63, status: "required" },
+    },
+  },
+  {
+    key: "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare pre-authentication rate limiter for Telegram Mini App mutation requests.",
+    runtimes: {
+      worker: { order: 64, status: "required" },
+    },
+  },
+  {
     key: "CORS_ORIGIN",
     valueType: "string",
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",
@@ -266,7 +298,7 @@ export const ENV_BINDINGS = [
   {
     key: "VAULTS_FYI_MAX_CREDITS_PER_RUN",
     valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run.",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run. Production uses 13 at the four-hour cadence and can lower the effective allowance to keep the UTC-month forecast within the monthly cap.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 52, status: "optional" },
@@ -275,7 +307,7 @@ export const ENV_BINDINGS = [
   {
     key: "VAULTS_FYI_MAX_CREDITS_PER_MONTH",
     valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month.",
+    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month. Fetches reserve credit allowance before provider work; telemetry warns before 75 percent projected or actual utilization.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 53, status: "optional" },
@@ -582,7 +614,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_JOB_LEDGER_MODE",
     valueType: "string",
-    description: "Scheduled Worker job-attempt ledger mode. Unset or `off` disables writes; `shadow` records best-effort telemetry without changing execution; `write` is reserved for later promotion and currently behaves like `shadow`.",
+    description: "Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 45, status: "optional" },
@@ -607,12 +639,30 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_RESERVE_RECOVERY_MODE",
+    valueType: "string",
+    description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 49, status: "optional" },
+    },
+  },
+  {
     key: "WORKER_CANARY_MODE",
     valueType: "string",
-    description: "Worker data-invariant canary mode. Unset or `off` skips writes; `shadow`, `status`, and `alert` record structural canary telemetry without changing producer behavior.",
+    description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 48, status: "optional" },
+    },
+  },
+  {
+    key: "ALERT_BROKER_MODE",
+    valueType: "string",
+    description: "Durable alert broker mode. `off` bypasses persistence, `shadow` records transitions only, `status` also affects health, and `alert` additionally claims and retries webhook delivery.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 50, status: "optional" },
     },
   },
   {
@@ -692,10 +742,20 @@ export const ENV_BINDINGS = [
   {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
-    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; stores content-addressed `s:{sid}` entries. Hashed-IP write-quota counters live in D1 for atomic reservations.",
+    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },
+    },
+  },
+  {
+    key: "SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+    valueType: "string",
+    description: "Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored.",
+    docs: { includeInOperatorOriginAccess: true },
+    example: { section: "pagesSiteDataRequired", value: "" },
+    runtimes: {
+      pagesSiteData: { order: 4, status: "required" },
     },
   },
 ] satisfies readonly EnvBindingDefinition[];

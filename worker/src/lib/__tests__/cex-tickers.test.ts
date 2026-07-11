@@ -15,6 +15,8 @@ import {
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
   fetchBinancePricesDetailed,
+  fetchBinancePricesForRun,
+  createBinanceFetchSession,
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
@@ -258,6 +260,73 @@ describe("fetchBinancePricesDetailed", () => {
     expect(diagnostics).toHaveLength(2);
     expect(diagnostics[0]).toMatchObject({ status: 503, success: false });
     expect(diagnostics[1]).toMatchObject({ status: 200, success: true });
+  });
+});
+
+describe("fetchBinancePricesForRun", () => {
+  function makeAvailabilityDb(row: Record<string, unknown> | null) {
+    const run = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const first = vi.fn(async () => row);
+    return {
+      db: {
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => ({ first, run })),
+        })),
+      } as unknown as D1Database,
+      run,
+    };
+  }
+
+  it("reuses one Binance result across primary and confirmation consumers", async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      JSON.stringify([{ symbol: "USDTUSD", price: "1.0001" }]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { db } = makeAvailabilityDb(null);
+    const session = createBinanceFetchSession();
+
+    const [primary, confirmation] = await Promise.all([
+      fetchBinancePricesForRun(db, session, undefined, 1_000),
+      fetchBinancePricesForRun(db, session, undefined, 1_000),
+    ]);
+
+    expect(primary).toBe(confirmation);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a zero-request synthetic outcome during the environment block TTL", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { db } = makeAvailabilityDb({
+      availability: "blocked",
+      blocked_status: 451,
+      next_probe_at: 2_000,
+    });
+
+    const outcome = await fetchBinancePricesForRun(db, createBinanceFetchSession(), undefined, 1_000);
+    expect(outcome.kind).toBe("blocked");
+    expect(outcome.value.diagnostics[0]).toMatchObject({
+      endpoint: "binance:environment-ttl",
+      status: 451,
+      errorClass: "environment-blocked",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("limits an expired environment block to one probe host", async () => {
+    const fetchMock = vi.fn(async () => new Response("blocked", { status: 451 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { db, run } = makeAvailabilityDb({
+      availability: "blocked",
+      blocked_status: 451,
+      next_probe_at: 1_000,
+    });
+
+    const outcome = await fetchBinancePricesForRun(db, createBinanceFetchSession(), undefined, 1_000);
+    expect(outcome.kind).toBe("blocked");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -126,6 +126,43 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     ).rejects.toThrow(/Invalid table/);
   });
 
+  it("rejects an index that is not allowlisted for the selected table", async () => {
+    await expect(
+      fetchPaginatedEvents<Row, Row>(mockD1([]), {
+        tableName: "blacklist_events",
+        indexName: "idx_untrusted_runtime_input",
+        orderBy: "timestamp DESC, id DESC",
+        conditions: ["suppression_reason IS NULL"],
+        filterBindings: [],
+        limit: 10,
+        offset: 0,
+        mapRow: (r) => r,
+      }),
+    ).rejects.toThrow(/Invalid pagination index/);
+  });
+
+  it("emits an allowlisted index hint for data and count queries", async () => {
+    const db = mockD1([
+      { match: "COUNT(*) as total", rows: [{ total: 0 }] },
+      { match: "FROM blacklist_events INDEXED BY", rows: [] },
+    ]);
+    await fetchPaginatedEvents<Row, Row>(db, {
+      tableName: "blacklist_events",
+      indexName: "idx_blacklist_events_public_date_page",
+      orderBy: "timestamp DESC, id DESC",
+      conditions: ["suppression_reason IS NULL"],
+      filterBindings: [],
+      limit: 10,
+      offset: 0,
+      includeTotal: true,
+      mapRow: (r) => r,
+    });
+
+    const queries = db.getHistory().filter((entry) => entry.sql.includes("FROM blacklist_events"));
+    expect(queries).toHaveLength(2);
+    expect(queries.every((entry) => entry.sql.includes("INDEXED BY idx_blacklist_events_public_date_page"))).toBe(true);
+  });
+
   it("rejects a cursor config referencing a non-allowlisted column", async () => {
     await expect(
       fetchPaginatedEvents<Row, Row>(mockD1([]), {

@@ -3,18 +3,65 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
-const TERMINAL_FAILURE_STATUSES = new Set(["failure", "cancelled", "timed_out", "action_required", "skipped"]);
+import {
+  assertCliUsage,
+  parseCliInteger,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../../scripts/lib/cli-args.mjs";
 
-export function readArg(argv, name, fallback = null) {
-  const index = argv.indexOf(name);
-  if (index === -1) return fallback;
-  return argv[index + 1] ?? fallback;
+const TERMINAL_FAILURE_STATUSES = new Set(["failure", "cancelled", "timed_out", "action_required", "skipped"]);
+const USAGE = `Usage: node .github/scripts/wait-for-workflow-job.mjs --job <name> [options]
+
+Options:
+  --job <name>             Exact workflow job name (required)
+  --attempts <count>       Poll attempts (default: 120)
+  --sleep-sec <seconds>    Delay between attempts (default: 5)
+  --stop-message <text>    Terminal-failure message
+  --timeout-message <text> Exhaustion message
+  -h, --help               Show this help`;
+
+export function parseWorkflowWaitArgs(argv) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      attempts: { type: "string" },
+      job: { type: "string" },
+      "sleep-sec": { type: "string" },
+      "stop-message": { type: "string" },
+      "timeout-message": { type: "string" },
+    },
+  });
+  const help = values.help === true;
+  const jobName = typeof values.job === "string" ? values.job.trim() : "";
+  if (!help) assertCliUsage(Boolean(jobName), "--job is required");
+  return {
+    attempts: typeof values.attempts === "string"
+      ? parseCliInteger(values.attempts, { name: "--attempts", min: 1 })
+      : 120,
+    help,
+    jobName,
+    sleepSec: typeof values["sleep-sec"] === "string"
+      ? parseCliInteger(values["sleep-sec"], { name: "--sleep-sec", min: 0 })
+      : 5,
+    stopMessage: typeof values["stop-message"] === "string" ? values["stop-message"] : null,
+    timeoutMessage: typeof values["timeout-message"] === "string" ? values["timeout-message"] : null,
+  };
 }
 
 function normalizeApiUrl(apiUrl) {
   return apiUrl.replace(/\/+$/g, "");
 }
 
+/**
+ * @param {{
+ *   apiUrl?: string,
+ *   fetchImpl?: (input: string | URL, init?: RequestInit) => Promise<Response>,
+ *   repository?: string,
+ *   runId?: string,
+ *   token?: string,
+ * }} [options]
+ */
 export async function fetchWorkflowJobs({
   apiUrl = "https://api.github.com",
   fetchImpl = fetch,
@@ -107,21 +154,22 @@ export async function waitForWorkflowJob({
 }
 
 export async function runCli(argv = process.argv.slice(2), env = process.env) {
-  const jobName = readArg(argv, "--job");
+  const args = parseWorkflowWaitArgs(argv);
+  if (writeCliHelpIfRequested(args, USAGE)) return;
   await waitForWorkflowJob({
-    attempts: Number(readArg(argv, "--attempts", "120")),
+    attempts: args.attempts,
     env,
-    jobName,
-    sleepSec: Number(readArg(argv, "--sleep-sec", "5")),
-    stopMessage: readArg(argv, "--stop-message", `${jobName} did not succeed; stopping.`),
-    timeoutMessage: readArg(argv, "--timeout-message", `Timed out waiting for ${jobName} to finish.`),
+    jobName: args.jobName,
+    sleepSec: args.sleepSec,
+    stopMessage: args.stopMessage ?? `${args.jobName} did not succeed; stopping.`,
+    timeoutMessage: args.timeoutMessage ?? `Timed out waiting for ${args.jobName} to finish.`,
   });
 }
 
 const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isCliEntrypoint) {
-  runCli().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+  void runCliEntrypoint(() => runCli(), {
+    label: "wait-for-workflow-job",
+    usage: USAGE,
   });
 }

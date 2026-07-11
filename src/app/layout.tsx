@@ -94,18 +94,22 @@ export default function RootLayout({
       >
         {gaId && <GoogleAnalytics measurementId={gaId} />}
         {gaId && <WebVitalsReporter />}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
-        >
-          Skip to main content
-        </a>
-        <a
-          href="#data"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-44 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
-        >
-          Skip to data table
-        </a>
+        <RouteChrome>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+          >
+            Skip to main content
+          </a>
+        </RouteChrome>
+        <RouteChrome>
+          <a
+            href="#data"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-44 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+          >
+            Skip to data table
+          </a>
+        </RouteChrome>
         <Providers>
           <RouteChrome>
             <RegimeBarChrome>

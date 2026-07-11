@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { trackEvent } from "@/lib/analytics";
 
 export const MAX_YIELD_COMPARE_IDS = 4;
 
@@ -58,11 +59,23 @@ export function useYieldCompareSelection(): UseYieldCompareSelectionResult {
   const toggle = useCallback(
     (id: string) => {
       if (idSet.has(id)) {
-        writeIds(ids.filter((existing) => existing !== id));
+        const nextIds = ids.filter((existing) => existing !== id);
+        writeIds(nextIds);
+        trackEvent("yield_compare_changed", {
+          action: "removed",
+          coin_count: nextIds.length,
+          coin_id: id,
+        });
         return;
       }
       if (ids.length >= MAX_YIELD_COMPARE_IDS) return;
-      writeIds([...ids, id]);
+      const nextIds = [...ids, id];
+      writeIds(nextIds);
+      trackEvent("yield_compare_changed", {
+        action: "added",
+        coin_count: nextIds.length,
+        coin_id: id,
+      });
     },
     [ids, idSet, writeIds],
   );
@@ -70,6 +83,11 @@ export function useYieldCompareSelection(): UseYieldCompareSelectionResult {
   const clear = useCallback(() => {
     if (ids.length === 0) return;
     writeIds([]);
+    trackEvent("yield_compare_changed", {
+      action: "cleared",
+      coin_count: 0,
+      coin_id: "",
+    });
   }, [ids.length, writeIds]);
 
   const canAdd = ids.length < MAX_YIELD_COMPARE_IDS;

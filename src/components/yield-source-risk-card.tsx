@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
 import type { YieldRanking } from "@shared/types";
+import { YieldAccessStructure } from "@/components/yield-access-structure";
 
 type YieldSourceRisk = YieldRanking["sourceRisk"];
 
@@ -49,15 +50,7 @@ function formatScore(sourceRisk: YieldSourceRisk): string {
   return score === null ? "n/a" : `${Math.round(score)}/100`;
 }
 
-function RiskMetric({
-  label,
-  value,
-  title,
-}: {
-  label: string;
-  value: string;
-  title?: string;
-}) {
+function RiskMetric({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div className="min-w-0 rounded-md bg-muted/40 px-2.5 py-2" title={title}>
       <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
@@ -91,7 +84,7 @@ export function YieldSourceRiskCard({
   const venueTier = sourceRisk?.venueRiskTier ?? null;
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const dependency = sourceRisk?.dependencyConcentration ?? null;
-  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null : null;
+  const confidenceLabel = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null) : null;
 
   return (
     <section className={cn("rounded-xl border border-border/60 bg-muted/15 p-3", className)}>
@@ -180,6 +173,8 @@ export function YieldSourceRiskCard({
           />
         </div>
       ) : null}
+
+      <YieldAccessStructure sourceRisk={sourceRisk} compact={compact} className="mt-3" />
     </section>
   );
 }

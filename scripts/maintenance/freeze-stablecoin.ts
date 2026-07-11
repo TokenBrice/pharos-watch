@@ -20,9 +20,44 @@
  * epitaph, obituary, sourceUrl, sourceLabel) by hand and reviews the diff.
  */
 import process from "node:process";
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const API_BASE = process.env.PHAROS_API_BASE ?? "https://api.pharos.watch/api";
+const USAGE = `Usage: npx tsx scripts/maintenance/freeze-stablecoin.ts [options] <coinId>
+
+Options:
+  --dry-run     Explicitly mark this read-only plan generation as a preview
+  -h, --help    Show this help`;
+
+export interface FreezeStablecoinCliOptions {
+  coinId: string;
+  dryRun: boolean;
+  help: boolean;
+}
+
+export function parseFreezeStablecoinArgs(argv: string[]): FreezeStablecoinCliOptions {
+  const { positionals, values } = parseStrictCliArgs(argv, {
+    allowPositionals: true,
+    options: {
+      "dry-run": { type: "boolean" },
+    },
+  });
+  const help = values.help === true;
+  if (!help) {
+    assertCliUsage(positionals.length === 1, "exactly one <coinId> positional argument is required");
+  }
+  return {
+    coinId: positionals[0] ?? "",
+    dryRun: values["dry-run"] === true,
+    help,
+  };
+}
 
 interface BuildFreezePlanInput {
   coinId: string;
@@ -100,16 +135,15 @@ async function fetchPeakMcap(coinId: string): Promise<number> {
   return Math.round(max);
 }
 
-async function main() {
-  const coinId = process.argv[2];
-  if (!coinId) {
-    console.error("Usage: npx tsx scripts/maintenance/freeze-stablecoin.ts <coinId>");
-    process.exit(2);
-  }
+export async function runFreezeStablecoin(argv = process.argv.slice(2)) {
+  const options = parseFreezeStablecoinArgs(argv);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+  const { coinId } = options;
   const today = new Date();
   const frozenAt = today.toISOString().slice(0, 10);
   const capturedAt = today.toISOString();
 
+  if (options.dryRun) console.log("Dry run: generating a read-only freeze plan.");
   console.log(`Fetching peggedAssets row for ${coinId}…`);
   const peggedAssetRow = await fetchPeggedAssetRow(coinId);
   console.log(`Computing peakMcap from supply-history…`);
@@ -131,8 +165,8 @@ async function main() {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
+  void runCliEntrypoint(() => runFreezeStablecoin(), {
+    label: "freeze-stablecoin",
+    usage: USAGE,
   });
 }

@@ -16,8 +16,22 @@ import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { getArgValue, isDirectRun } from "../lib/smoke-runtime.mjs";
+import {
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
+
+const USAGE = `Usage: npx tsx scripts/maintenance/sync-depeg-events.ts [options]
+
+Options:
+  --api-url <url>   Depeg API base or endpoint (overrides environment)
+  --output <path>   Output path (default: data/depeg-events.json)
+  --allow-empty     Permit an empty response to replace a non-empty snapshot
+  --dry-run         Fetch and validate without writing the output file
+  -h, --help        Show this help`;
 
 interface DepegEventsResponse {
   events: DepegEvent[];
@@ -27,6 +41,32 @@ interface DepegEventsResponse {
 
 interface DepegEventEntry extends DepegEvent {
   slug: string;
+}
+
+export interface DepegSyncCliOptions {
+  allowEmpty: boolean;
+  apiUrl: string | null;
+  dryRun: boolean;
+  help: boolean;
+  output: string | null;
+}
+
+export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      "allow-empty": { type: "boolean" },
+      "api-url": { type: "string" },
+      "dry-run": { type: "boolean" },
+      output: { type: "string" },
+    },
+  });
+  return {
+    allowEmpty: values["allow-empty"] === true,
+    apiUrl: typeof values["api-url"] === "string" ? values["api-url"] : null,
+    dryRun: values["dry-run"] === true,
+    help: values.help === true,
+    output: typeof values.output === "string" ? values.output : null,
+  };
 }
 
 function symbolToSlugPart(symbol: string): string {
@@ -39,8 +79,7 @@ function baseSlug(event: DepegEvent): string {
   return `${symbolPart}-${formatIsoDate(event.startedAt)}`;
 }
 
-function resolveOutputPath(): URL {
-  const explicit = getArgValue(process.argv, "--output");
+function resolveOutputPath(explicit: string | null): URL {
   if (!explicit) return new URL("../../data/depeg-events.json", import.meta.url);
   return new URL(explicit, `file://${process.cwd()}/`);
 }
@@ -80,14 +119,18 @@ export function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
   return result;
 }
 
-async function main() {
+export async function runDepegSync(argv = process.argv.slice(2)) {
+  const options = parseDepegSyncArgs(argv);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+
   const apiUrl = resolveApiUrl({
     argName: "--api-url",
+    explicitUrl: options.apiUrl,
     envNames: ["DEPEG_EVENTS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"],
     apiPath: "/api/depeg-events",
     scriptName: "sync-depeg-events",
   });
-  const outputPath = resolveOutputPath();
+  const outputPath = resolveOutputPath(options.output);
   const apiKey = (process.env.DEPEG_EVENTS_API_KEY ?? process.env.SMOKE_API_KEY ?? "").trim();
 
   const headers = new Headers();
@@ -95,7 +138,7 @@ async function main() {
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 
-  const { entries, outputFile } = await syncJson<DepegEventEntry>({
+  const { entries, outputFile, written } = await syncJson<DepegEventEntry>({
     writeTo: outputPath,
     parse: async () => {
       const collected: DepegEvent[] = [];
@@ -160,22 +203,22 @@ async function main() {
               `[sync-depeg-events] API returned 0 events but ${existingFile} currently holds ${previous.length}. ` +
                 `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
             );
-            if (!process.argv.includes("--allow-empty")) {
-              process.exit(1);
-            }
+            if (!options.allowEmpty) throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
           }
         }
       }
 
       return computedEntries;
     },
+    write: !options.dryRun,
   });
-  console.log(`[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`);
+  console.log(
+    written
+      ? `[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`
+      : `[sync-depeg-events] Dry run: would write ${entries.length} confirmed events to ${outputFile}`,
+  );
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  void runCliEntrypoint(() => runDepegSync(), { label: "sync-depeg-events", usage: USAGE });
 }

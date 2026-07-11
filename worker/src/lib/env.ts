@@ -1,5 +1,15 @@
+export interface WorkerVersionMetadata {
+  id: string;
+  tag: string;
+  timestamp: string;
+}
+
 export interface Env {
   DB: D1Database;
+  TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
+  TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
+  CF_VERSION_METADATA: WorkerVersionMetadata;
   CORS_ORIGIN: string;
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;
@@ -65,7 +75,9 @@ export interface Env {
   WORKER_JOB_LEDGER_MODE?: string;
   WORKER_JOB_LEDGER_ALLOWLIST?: string;
   WORKER_REPAIR_RUNNER_MODE?: string;
+  WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
+  ALERT_BROKER_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

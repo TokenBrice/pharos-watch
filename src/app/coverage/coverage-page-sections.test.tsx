@@ -6,6 +6,7 @@ import type { AnchorHTMLAttributes, ReactNode } from "react";
 
 import { CoverageMatrixCard, CoverageMobileResults } from "./coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
+import { logosById } from "@/lib/logos";
 import type { StablecoinMeta } from "@shared/types";
 
 type MockLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
@@ -15,7 +16,7 @@ type MockLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: MockLinkProps) => (
-    <a href={typeof href === "string" ? href : href.pathname ?? ""} {...props}>
+    <a href={typeof href === "string" ? href : (href.pathname ?? "")} {...props}>
       {children}
     </a>
   ),
@@ -32,11 +33,14 @@ function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof bui
       name: `Coin ${index}`,
       symbol: `C${index}`,
       flags: {
-        pegCurrency: "peggedUSD",
-        backing: "fiat-backed",
+        pegCurrency: "USD",
+        backing: "rwa-backed",
         governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
       },
-    } as StablecoinMeta,
+    } satisfies StablecoinMeta,
     marketCapUsd: 1_000_000 + index,
     hasPegCoverage: true,
     consensusSources: ["a", "b", "c"],
@@ -44,17 +48,19 @@ function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof bui
     safetyScore: 80,
     dexCoverageClass: "primary",
     hasYieldCoverage: true,
-    flowCoverageStatus: "complete",
+    flowCoverageStatus: "full",
     hasDependencyCoverage: true,
     liveReserveFresh: true,
     ...overrides,
   });
 }
 
-function makeMatrixModel(overrides: Partial<Parameters<typeof CoverageMatrixCard>[0]> = {}) {
+type CoverageMatrixModel = Parameters<typeof CoverageMatrixCard>[0];
+
+function makeMatrixModel(overrides: Partial<CoverageMatrixModel> = {}): CoverageMatrixModel {
   const rows = [makeCoverageRow(1)];
   return {
-    logos: {},
+    logos: logosById,
     rows,
     filter: "all",
     setFilter: () => {},
@@ -68,14 +74,14 @@ function makeMatrixModel(overrides: Partial<Parameters<typeof CoverageMatrixCard
     unavailableFeatures: [],
     dataUpdatedAt: 1_700_000_000_000,
     ...overrides,
-  } satisfies Parameters<typeof CoverageMatrixCard>[0];
+  };
 }
 
 describe("CoverageMobileResults", () => {
   it("batches mobile coverage cards and can collapse back to the first batch", () => {
     const rows = Array.from({ length: 30 }, (_value, index) => makeCoverageRow(index + 1));
 
-    render(<CoverageMobileResults rows={rows} logos={{}} />);
+    render(<CoverageMobileResults rows={rows} logos={logosById} />);
 
     expect(screen.getByText("Showing 24 of 30 matching coins")).toBeTruthy();
     expect(screen.getByText("C24")).toBeTruthy();
@@ -103,9 +109,12 @@ describe("CoverageMatrixCard", () => {
 
     expect(view.getByRole("status").textContent).toContain("Data n/a");
     expect(view.getByRole("status").textContent).toContain("Backstop");
-    expect(view.getAllByLabelText(/Data unavailable\. Redemption backstop coverage data is unavailable/).length)
-      .toBeGreaterThan(0);
-    expect(view.queryByLabelText(/Not covered\. No modeled redemption-backstop route is currently configured/)).toBeNull();
+    expect(
+      view.getAllByLabelText(/Data unavailable\. Redemption backstop coverage data is unavailable/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      view.queryByLabelText(/Not covered\. No modeled redemption-backstop route is currently configured/),
+    ).toBeNull();
   });
 
   it("renders the empty-result state and reset affordance", () => {

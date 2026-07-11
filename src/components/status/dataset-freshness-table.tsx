@@ -118,7 +118,7 @@ export function DatasetFreshnessTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Pipeline Freshness</CardTitle>
+        <CardTitle as="h3" className="text-base">Pipeline Freshness</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-3 text-xs text-muted-foreground">

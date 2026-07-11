@@ -5,7 +5,11 @@ import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, SyncMintBurnStatus, MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
-import { setMintBurnRunState, type MintBurnRunStateRow } from "./run-state";
+import {
+  setMintBurnRunState,
+  type MintBurnAttemptCoverageSummary,
+  type MintBurnRunStateRow,
+} from "./run-state";
 import type { MintBurnConfigSummary } from "./sync-config";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { throwIfAborted } from "../../lib/abort";
@@ -23,7 +27,7 @@ export async function completeMintBurnRun(input: {
   lane: MintBurnLane;
   jobName: string;
   chainHeads: Map<string, number>;
-  startIndex: number;
+  resumeConfigKey: string | null;
   enabledConfigs: MintBurnContractConfig[];
   configs: MintBurnContractConfig[];
   configsDisabled: number;
@@ -53,6 +57,8 @@ export async function completeMintBurnRun(input: {
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
   runtimeBudgetHit: boolean;
+  attemptCoverage: MintBurnAttemptCoverageSummary;
+  runDrilldown: { cacheKey: string; persistenceFailed: boolean };
   signal?: AbortSignal;
 }): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
   const laggingConfigs = input.configs
@@ -77,7 +83,7 @@ export async function completeMintBurnRun(input: {
     input.criticalContractsEnabled > 0 ? input.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const degradedSignal =
     input.lane === "extended"
-      ? input.apiErrors > 1
+      ? input.apiErrors > 1 || input.attemptCoverage.staleAttemptCount > 0
       : criticalCoverageRatio < 1 || input.apiErrors > 1;
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
@@ -92,15 +98,21 @@ export async function completeMintBurnRun(input: {
   } else if (degradedStreak >= input.degradeConsecutiveThreshold) {
     status = "degraded";
   }
+  if (
+    status === "ok"
+    && (
+      input.attemptCoverage.staleAttemptCount > 0
+      || input.attemptCoverage.persistenceFailed
+      || input.runDrilldown.persistenceFailed
+    )
+  ) {
+    status = "degraded";
+  }
 
   throwIfAborted(input.signal);
 
-  // Track the config AT startIndex — stable across additions/removals
-  const lastConfigKey = input.enabledConfigs.length > 0
-    ? mintBurnConfigKey(input.enabledConfigs[input.startIndex % input.enabledConfigs.length])
-    : null;
   const runStatePersisted = await setMintBurnRunState(
-    input.db, input.jobName, degradedStreak, lastConfigKey,
+    input.db, input.jobName, degradedStreak, input.resumeConfigKey,
   );
   const runStatePersistenceFailed = input.runStatePersistenceFailed || !runStatePersisted;
   if (runStatePersistenceFailed && status === "ok") {
@@ -181,6 +193,49 @@ export async function completeMintBurnRun(input: {
 
   const compatibilityChainHead = input.chainHeads.get("ethereum")
     ?? Math.max(0, ...input.chainHeads.values());
+  const skippedReasonCounts: Record<string, number> = {};
+  for (const summary of input.configBreakdown) {
+    if (summary.skippedReason) {
+      skippedReasonCounts[summary.skippedReason] = (skippedReasonCounts[summary.skippedReason] ?? 0) + 1;
+    }
+  }
+  const sampledConfigKeys = new Set<string>();
+  const sampledConfigs = [
+    ...input.configBreakdown.slice(0, 6),
+    ...input.configBreakdown.filter(
+      (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0,
+    ),
+  ].filter((summary) => {
+    if (sampledConfigKeys.has(summary.key)) return false;
+    sampledConfigKeys.add(summary.key);
+    return true;
+  });
+  const configSamples = sampledConfigs
+    .slice(0, 12)
+    .map((summary) => ({
+      key: summary.key,
+      symbol: summary.symbol,
+      chainId: summary.chainId,
+      tier: summary.tier,
+      attempted: summary.attempted,
+      skippedReason: summary.skippedReason,
+      rowsRead: summary.rowsRead,
+      rowsInserted: summary.rowsInserted,
+      rowsDropped: summary.rowsDropped,
+      errors: summary.errors,
+      scanFrom: summary.scanFrom,
+      scanTo: summary.scanTo,
+      advancedTo: summary.advancedTo,
+      coverageFrontier: summary.coverageFrontier,
+      advanceReason: summary.advanceReason,
+      failedEventDefs: summary.failedEventDefs.slice(0, 8),
+      missingTimestampCount: summary.missingTimestampCount,
+      earliestMissingTimestampBlock: summary.earliestMissingTimestampBlock,
+      txContextShortfalls: summary.txContextShortfalls,
+      bridgeClassificationDeferredRows: summary.bridgeClassificationDeferredRows,
+      requestBudgetUsed: summary.requestBudgetUsed,
+      requestBudgetLimit: summary.requestBudgetLimit,
+    }));
 
   const metadata = withBudgetMetadata(input.budget, {
     lane: input.lane,
@@ -222,7 +277,18 @@ export async function completeMintBurnRun(input: {
       contractsUnsatisfied: input.criticalContractsUnsatisfied,
       ratio: criticalCoverageRatio,
     },
-    configBreakdown: input.configBreakdown,
+    configBreakdownSummary: {
+      total: input.configBreakdown.length,
+      attempted: input.configBreakdown.filter((summary) => summary.attempted).length,
+      skipped: input.configBreakdown.filter((summary) => summary.skippedReason != null).length,
+      withErrors: input.configBreakdown.filter((summary) => summary.errors > 0).length,
+      skippedReasonCounts,
+    },
+    configSamples,
+    runDrilldownCacheKey: input.runDrilldown.cacheKey,
+    runDrilldownPersistenceFailed: input.runDrilldown.persistenceFailed,
+    resumeConfigKey: input.resumeConfigKey,
+    attemptCoverage: input.attemptCoverage,
     laggingConfigs,
     coverageRatio,
     runtimeBudgetHit: input.runtimeBudgetHit,

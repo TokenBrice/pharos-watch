@@ -226,8 +226,7 @@ describe("api key handlers", () => {
           runMeta: { changes: 1 },
         },
         {
-          match:
-            "SELECT id, key_prefix, name, owner_email, tier, traffic_class, rate_limit_per_minute, is_active, expires_at",
+          match: "key_prefix,\n       name,\n       owner_email",
           matchBinds: [7],
           first: makeApiKeyRow({
             key_prefix: "fedcba9876543210",
@@ -257,6 +256,56 @@ describe("api key handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body.key.expiresAt).toBe(5_000);
+  });
+
+  it("reports rotation readback failure as unknown without exposing a replacement token", async () => {
+    const db = mockD1(
+      [
+        {
+          match: "key_prefix,\n       name,\n       owner_email",
+          matchBinds: [7],
+          first: null,
+          rows: [],
+        },
+        {
+          match: "key_prefix,\n       secret_hash,\n       name",
+          matchBinds: [7],
+          first: makeApiKeyRow({ owner_email: "ops@pharos.watch" }),
+          rows: [],
+        },
+        {
+          match: "UPDATE api_keys",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "INSERT INTO api_key_audit_log",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    const response = await handleApiKeyRotate(
+      db,
+      7,
+      true,
+      makeApiRequest("/api/api-keys/7/rotate", {
+        method: "POST",
+        adminKey: "secret-key",
+      }),
+      "pepper",
+    );
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(body).toMatchObject({
+      error: "api_key_post_write_readback_failed",
+      recovery: expect.stringMatching(/prior token is revoked/i),
+    });
+    expect(body).not.toHaveProperty("token");
   });
 
   it("rejects expired keys in the real public fetch gate", async () => {

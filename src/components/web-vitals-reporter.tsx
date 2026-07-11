@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useReportWebVitals } from "next/web-vitals";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
 
 type WebVitalMetric = {
   name: "CLS" | "FCP" | "INP" | "LCP" | "TTFB" | "FID" | "Next.js-hydration" | "Next.js-route-change-to-render" | "Next.js-render";
@@ -26,6 +27,8 @@ export function WebVitalsReporter() {
   // ref keeps the callback identity stable across renders while still seeing
   // the latest path at metric-fire time.
   useReportWebVitals((metric: WebVitalMetric) => {
+    if (isTelegramMiniAppPath(pathnameRef.current ?? "")) return;
+
     trackEvent("web_vital", {
       name: metric.name,
       value: metric.value,

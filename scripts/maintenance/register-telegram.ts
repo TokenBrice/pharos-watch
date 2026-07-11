@@ -38,82 +38,106 @@ import {
   TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "../../shared/lib/telegram-bot-registration";
 import { API_ORIGIN } from "../../shared/lib/runtime-origins";
-import { parseCliOptions } from "../lib/smoke-runtime.mjs";
+import {
+  assertCliUsage,
+  parseCliInteger,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-interface CliHandlerContext {
-  arg: string;
-  argv: string[];
-  index: number;
-  readValue: () => string;
-}
-type CliHandler = (ctx: CliHandlerContext) => "value" | number | void;
+const USAGE = `Usage: npx tsx scripts/maintenance/register-telegram.ts [options]
+
+Options:
+  --action <commands|profile|webhook|all>  Registration action (default: commands)
+  --scope <scope>                          Command scope
+  --chat-id <id>                           Chat id when --scope chat is selected
+  --webhook-base-url <url>                 Override WEBHOOK_BASE_URL
+  --dry-run                                Print redacted payloads without Bot API calls
+  --check                                  Legacy alias for --dry-run
+  -h, --help                               Show this help`;
 
 type Action = "commands" | "profile" | "webhook" | "all";
 type CommandScopeKind = "default" | "all_private_chats" | "all_group_chats" | "chat";
 
-interface CliOptions {
+export interface TelegramRegistrationCliOptions {
   action: Action;
   botToken: string | null;
   webhookSecret: string | null;
   webhookBaseUrl: string;
   scope: CommandScopeKind | null;
   chatId: string | null;
-  check: boolean;
+  dryRun: boolean;
+  help: boolean;
 }
 
-function parseOptions(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    action: "commands",
-    botToken: process.env.TELEGRAM_BOT_TOKEN?.trim() || null,
-    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || null,
-    webhookBaseUrl: process.env.WEBHOOK_BASE_URL?.trim() || API_ORIGIN,
-    scope: null,
-    chatId: null,
-    check: false,
-  };
-
-  const handlers: Record<string, CliHandler> = {
-    "--action": ({ readValue }) => {
-      const value = readValue();
-      if (value !== "commands" && value !== "profile" && value !== "webhook" && value !== "all") {
-        throw new Error(`--action must be one of commands|profile|webhook|all (got: ${value})`);
-      }
-      options.action = value;
-      return "value";
+export function parseTelegramRegistrationArgs(
+  argv: string[],
+  env: Record<string, string | undefined> = process.env,
+): TelegramRegistrationCliOptions {
+  const { values } = parseStrictCliArgs(argv, {
+    allowNegativeValues: ["chat-id"],
+    conflicts: [["check", "dry-run"]],
+    options: {
+      action: { type: "string" },
+      "chat-id": { type: "string" },
+      check: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      scope: { type: "string" },
+      "webhook-base-url": { type: "string" },
     },
-    "--webhook-base-url": ({ readValue }) => {
-      options.webhookBaseUrl = readValue();
-      return "value";
-    },
-    "--scope": ({ readValue }) => {
-      const value = readValue();
-      if (
-        value !== "default"
-        && value !== "all_private_chats"
-        && value !== "all_group_chats"
-        && value !== "chat"
-      ) {
-        throw new Error(
-          `--scope must be one of default|all_private_chats|all_group_chats|chat (got: ${value})`,
-        );
-      }
-      options.scope = value;
-      return "value";
-    },
-    "--chat-id": ({ readValue }) => {
-      options.chatId = readValue();
-      return "value";
-    },
-    "--check": () => {
-      options.check = true;
-    },
-  };
-  parseCliOptions(argv, handlers, { allowUnknown: false });
-
-  if (options.scope === "chat" && !options.chatId) {
-    throw new Error("--scope chat requires --chat-id <id>");
+  });
+  const rawAction = values.action ?? "commands";
+  const rawScope = values.scope ?? null;
+  const help = values.help === true;
+  if (!help) {
+    assertCliUsage(
+      rawAction === "commands" || rawAction === "profile" || rawAction === "webhook" || rawAction === "all",
+      `--action must be one of commands|profile|webhook|all (got: ${rawAction})`,
+    );
+    assertCliUsage(
+      rawScope === null || rawScope === "default" || rawScope === "all_private_chats"
+        || rawScope === "all_group_chats" || rawScope === "chat",
+      `--scope must be one of default|all_private_chats|all_group_chats|chat (got: ${rawScope})`,
+    );
+    assertCliUsage(
+      rawScope !== "chat" || typeof values["chat-id"] === "string",
+      "--scope chat requires --chat-id <id>",
+    );
+    assertCliUsage(
+      values["chat-id"] === undefined || rawScope === "chat",
+      "--chat-id requires --scope chat",
+    );
+    assertCliUsage(
+      rawScope === null || rawAction === "commands" || rawAction === "all",
+      "--scope is only valid with --action commands or --action all",
+    );
+    assertCliUsage(
+      values["webhook-base-url"] === undefined || rawAction === "webhook" || rawAction === "all",
+      "--webhook-base-url is only valid with --action webhook or --action all",
+    );
+    if (typeof values["chat-id"] === "string") {
+      parseCliInteger(values["chat-id"], {
+        name: "--chat-id",
+        min: Number.MIN_SAFE_INTEGER,
+        max: Number.MAX_SAFE_INTEGER,
+      });
+    }
   }
-  return options;
+
+  return {
+    action: rawAction as Action,
+    botToken: env.TELEGRAM_BOT_TOKEN?.trim() || null,
+    webhookSecret: env.TELEGRAM_WEBHOOK_SECRET?.trim() || null,
+    webhookBaseUrl: typeof values["webhook-base-url"] === "string"
+      ? values["webhook-base-url"]
+      : env.WEBHOOK_BASE_URL?.trim() || API_ORIGIN,
+    scope: rawScope as CommandScopeKind | null,
+    chatId: typeof values["chat-id"] === "string" ? values["chat-id"] : null,
+    dryRun: values.check === true || values["dry-run"] === true,
+    help,
+  };
 }
 
 interface CommandPayload {
@@ -141,10 +165,11 @@ function buildCommandPayloads(
     return [{ commands: TELEGRAM_BOT_COMMANDS, scope: { type: "default" } }];
   }
   // scope === "chat"
-  const numericChatId = Number.parseInt(chatId ?? "", 10);
-  if (!Number.isFinite(numericChatId)) {
-    throw new Error(`--chat-id must be a number (got: ${chatId ?? ""})`);
-  }
+  const numericChatId = parseCliInteger(chatId, {
+    name: "--chat-id",
+    min: Number.MIN_SAFE_INTEGER,
+    max: Number.MAX_SAFE_INTEGER,
+  });
   return [
     { commands: TELEGRAM_BOT_COMMANDS, scope: { type: "chat", chat_id: numericChatId } },
   ];
@@ -222,10 +247,10 @@ async function callBotApi(
   throw new Error(`${method} rejected: ${(parsed?.description ?? text).slice(0, 300)}`);
 }
 
-async function runCommands(options: CliOptions): Promise<void> {
+async function runCommands(options: TelegramRegistrationCliOptions): Promise<void> {
   const payloads = buildCommandPayloads(options.scope, options.chatId);
   for (const payload of payloads) {
-    if (options.check) {
+    if (options.dryRun) {
       console.log(`DRY-RUN setMyCommands scope=${payload.scope.type}:`);
       console.log(JSON.stringify(payload, null, 2));
       continue;
@@ -238,10 +263,10 @@ async function runCommands(options: CliOptions): Promise<void> {
   }
 }
 
-async function runProfile(options: CliOptions): Promise<void> {
+async function runProfile(options: TelegramRegistrationCliOptions): Promise<void> {
   const calls = buildProfileCalls();
   for (const call of calls) {
-    if (options.check) {
+    if (options.dryRun) {
       console.log(`DRY-RUN ${call.method}:`);
       console.log(JSON.stringify(call.payload, null, 2));
       continue;
@@ -251,12 +276,12 @@ async function runProfile(options: CliOptions): Promise<void> {
   }
 }
 
-async function runWebhook(options: CliOptions): Promise<void> {
+async function runWebhook(options: TelegramRegistrationCliOptions): Promise<void> {
   if (!options.webhookSecret) {
     throw new Error("--action webhook requires TELEGRAM_WEBHOOK_SECRET");
   }
   const payload = buildWebhookPayload(options.webhookBaseUrl, options.webhookSecret);
-  if (options.check) {
+  if (options.dryRun) {
     console.log("DRY-RUN setWebhook:");
     console.log(JSON.stringify({ ...payload, secret_token: "***" }, null, 2));
     return;
@@ -266,9 +291,10 @@ async function runWebhook(options: CliOptions): Promise<void> {
   console.log(`OK: ${response.description ?? "registered"}`);
 }
 
-async function main(): Promise<void> {
-  const options = parseOptions(process.argv.slice(2));
-  if (!options.botToken) {
+export async function runTelegramRegistration(argv = process.argv.slice(2)): Promise<void> {
+  const options = parseTelegramRegistrationArgs(argv);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+  if (!options.dryRun && !options.botToken) {
     throw new Error("TELEGRAM_BOT_TOKEN is required");
   }
 
@@ -283,8 +309,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`Error: ${message}`);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runCliEntrypoint(() => runTelegramRegistration(), {
+    label: "register-telegram",
+    usage: USAGE,
+  });
+}

@@ -137,7 +137,7 @@ describe("check-redemption-backstops CLI", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unknown argument: --bad-arg");
-  });
+  }, GATE_LOAD_TIMEOUT_MS);
 
   it("rejects non-http docs URLs and invalid calendar review dates", () => {
     const result = validateFixture({

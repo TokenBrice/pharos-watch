@@ -35,6 +35,8 @@ export interface FeatureHeroSplitProps {
   children: React.ReactNode;
   /** Accessible group label for the hero card. */
   ariaLabel?: string;
+  /** Put the decision summary before the visual on narrow screens. */
+  mobileSubBeforeVisual?: boolean;
 }
 
 export function FeatureHeroSplit({
@@ -47,6 +49,7 @@ export function FeatureHeroSplit({
   sub,
   children,
   ariaLabel,
+  mobileSubBeforeVisual = false,
 }: FeatureHeroSplitProps): React.JSX.Element {
   const hasSub = subKicker != null || sub != null;
   return (
@@ -67,12 +70,16 @@ export function FeatureHeroSplit({
         </div>
       </div>
 
-      <div className="border-b border-border/50 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-b-0">
+      <div
+        className={`${mobileSubBeforeVisual ? "order-3" : ""} border-b border-border/50 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-b-0`}
+      >
         {children}
       </div>
 
       {hasSub ? (
-        <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
+        <div
+          className={`${mobileSubBeforeVisual ? "order-2" : ""} space-y-2 p-5 sm:p-6 lg:order-none lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7`}
+        >
           {subKicker ? <p className="pharos-kicker">{subKicker}</p> : null}
           {sub}
         </div>

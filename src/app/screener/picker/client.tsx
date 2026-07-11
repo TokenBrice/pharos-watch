@@ -47,6 +47,29 @@ import {
   writeStoredSelectorRun,
 } from "./session-storage";
 import { useSelector } from "./use-selector";
+import { RequestSequence, requestJson } from "@/lib/request";
+import type { SchemaLike } from "@/lib/schema-like";
+
+interface SnapshotWriteResponse {
+  sid: string;
+  ev?: string;
+}
+
+const SnapshotWriteResponseSchema: SchemaLike<SnapshotWriteResponse> = {
+  safeParse(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { success: false, error: { issues: [{ path: [], message: "Expected snapshot response" }] } };
+    }
+    const record = value as { sid?: unknown; ev?: unknown };
+    if (typeof record.sid !== "string") {
+      return { success: false, error: { issues: [{ path: ["sid"], message: "Expected string" }] } };
+    }
+    if (record.ev !== undefined && typeof record.ev !== "string") {
+      return { success: false, error: { issues: [{ path: ["ev"], message: "Expected string" }] } };
+    }
+    return { success: true, data: { sid: record.sid, ...(record.ev ? { ev: record.ev } : {}) } };
+  },
+};
 
 export function SelectorClient() {
   const hydrated = useHydrated();
@@ -58,21 +81,18 @@ export function SelectorClient() {
   const [restoreDismissed, setRestoreDismissed] = useState(false);
   const [sessionRecovered, setSessionRecovered] = useState(false);
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
+  const shareRequests = useRef(new RequestSequence());
 
   const selector = useSelector(input, state.sid);
   const output = "output" in selector ? selector.output : null;
   const renderResult = state.step === "result" || state.sid != null;
   const pegOptions = useMemo(
-    () => state.profile === "yield"
-      ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value))
-      : PEG_OPTIONS,
+    () => (state.profile === "yield" ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value)) : PEG_OPTIONS),
     [state.profile],
   );
   const mobileCompletion = useMemo(() => computeMobileCompletion(state), [state]);
   const restorableRun = useMemo(
-    () => hydrated && !restoreDismissed && isInitialSelectorState(state)
-      ? readStoredSelectorRun()
-      : null,
+    () => (hydrated && !restoreDismissed && isInitialSelectorState(state) ? readStoredSelectorRun() : null),
     [hydrated, restoreDismissed, state],
   );
 
@@ -83,6 +103,8 @@ export function SelectorClient() {
     });
     return () => cancelAnimationFrame(frame);
   }, [state.step, hydrated]);
+
+  useEffect(() => () => shareRequests.current.cancel(), []);
 
   useEffect(() => {
     if (!announceRef.current) return;
@@ -107,6 +129,7 @@ export function SelectorClient() {
   }, [dispatch]);
 
   const handleStartOver = useCallback(() => {
+    shareRequests.current.cancel();
     clearStoredSelectorRun();
     setRestoreDismissed(false);
     setSessionRecovered(false);
@@ -125,26 +148,36 @@ export function SelectorClient() {
     dispatch({ type: "restore-session", state: restorableRun.state });
   }, [dispatch, restorableRun]);
 
-  const handleEditAnswer = useCallback((step: SelectorStep, resultOutput: SelectorOutput) => {
-    setSessionRecovered(false);
-    dispatch({
-      type: "restore-session",
-      state: wizardStateFromOutput(resultOutput, state, step),
-    });
-  }, [dispatch, state]);
+  const handleEditAnswer = useCallback(
+    (step: SelectorStep, resultOutput: SelectorOutput) => {
+      setSessionRecovered(false);
+      dispatch({
+        type: "restore-session",
+        state: wizardStateFromOutput(resultOutput, state, step),
+      });
+    },
+    [dispatch, state],
+  );
 
   const handleCopyShareLink = useCallback(async () => {
     if (!output) throw new Error("No engine output to share");
     setShareFallbackUrl(null);
-    const response = await fetch("/selector-snapshot/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(output),
-    });
-    if (!response.ok) {
-      throw new Error("Share link service unavailable");
+    let payload: SnapshotWriteResponse;
+    try {
+      payload = await shareRequests.current.run((signal) =>
+        requestJson<SnapshotWriteResponse>("/selector-snapshot/", {
+          signal,
+          schema: SnapshotWriteResponseSchema,
+          init: {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ input: output.input }),
+          },
+        }),
+      );
+    } catch (error) {
+      throw new Error("Share link service unavailable", { cause: error });
     }
-    const payload = (await response.json()) as { sid: string; ev?: string };
     if (!isValidSelectorSnapshotId(payload.sid)) {
       throw new Error("Share link service returned an invalid snapshot id");
     }
@@ -156,14 +189,14 @@ export function SelectorClient() {
       await copyToClipboard(shareUrl);
     } catch (error) {
       setShareFallbackUrl(shareUrl);
-      const message = error instanceof Error
-        ? error.message
-        : "Clipboard blocked. Select and copy the share URL below.";
+      const message =
+        error instanceof Error ? error.message : "Clipboard blocked. Select and copy the share URL below.";
       throw new Error(message);
     }
   }, [output]);
 
-  const showMobileForm = hydrated && isMobile && typeof state.step === "number" && state.step >= 2 && state.profile != null;
+  const showMobileForm =
+    hydrated && isMobile && typeof state.step === "number" && state.step >= 2 && state.profile != null;
   const tradingDataStaleExceeded = isTradingDataStale(output);
 
   if (!hydrated) {
@@ -177,13 +210,7 @@ export function SelectorClient() {
 
   return (
     <div className="space-y-6">
-      <div
-        ref={announceRef}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      />
+      <div ref={announceRef} role="status" aria-live="polite" aria-atomic="true" className="sr-only" />
 
       {renderResult ? (
         <ResultPane
@@ -247,10 +274,12 @@ export function SelectorClient() {
           onSetDepeg={(v) => dispatch({ type: "set-depeg", value: v })}
           onSetVenue={(v) => dispatch({ type: "set-venue", value: v })}
           onSetExit={(v) => dispatch({ type: "set-exit", value: v })}
-          onAdjustProfile={() => dispatch({
-            type: "restore-session",
-            state: { ...state, step: 1, sid: null, ev: null },
-          })}
+          onAdjustProfile={() =>
+            dispatch({
+              type: "restore-session",
+              state: { ...state, step: 1, sid: null, ev: null },
+            })
+          }
           onSeeResults={() => dispatch({ type: "advance-to-result" })}
           {...mobileCompletion}
         />
@@ -263,9 +292,7 @@ export function SelectorClient() {
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="Which peg currency should it target?"
           legendSubtext={
-            state.profile === "yield"
-              ? "Yield is limited to pegs with benchmark and source coverage."
-              : undefined
+            state.profile === "yield" ? "Yield is limited to pegs with benchmark and source coverage." : undefined
           }
           helper={QUESTION_HELPER_COPY[2]}
           options={pegOptions}
@@ -438,10 +465,7 @@ function isTradingDataStale(output: SelectorOutput | null): boolean {
   return output.recommended.some((rec) => {
     if (rec.profile !== "trading") return false;
     const staleness = rec.perInputStaleness ?? {};
-    if (
-      enforceAllKeys &&
-      !Object.keys(limits).every((key) => key in staleness)
-    ) {
+    if (enforceAllKeys && !Object.keys(limits).every((key) => key in staleness)) {
       return true;
     }
     return Object.entries(staleness).some(([key, ageSeconds]) => {
@@ -472,7 +496,9 @@ function computeMobileCompletion(state: {
     state.depegTolerance != null,
     state.venue.length > 0,
     skipExit || state.exitSpeed != null,
-  ].slice(0, requiredCount).filter(Boolean).length;
+  ]
+    .slice(0, requiredCount)
+    .filter(Boolean).length;
   return {
     answeredCount,
     requiredCount,

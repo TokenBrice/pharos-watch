@@ -29,6 +29,22 @@ describe("ops env contract", () => {
     expect(resolveOpsApiOrigin({ OPS_API_ORIGIN: undefined })).toBe(DEFAULT_OPS_API_ORIGIN);
   });
 
+  it("rejects non-canonical credential-bearing ops origins", () => {
+    for (const origin of [
+      "http://ops-api.pharos.watch",
+      "ftp://ops-api.pharos.watch",
+      "https://attacker.example",
+      "https://ops-api.pharos.watch/path",
+      "data:text/plain,opaque",
+    ]) {
+      expect(resolveOpsApiOrigin({ OPS_API_ORIGIN: origin })).toBeNull();
+    }
+    expect(validatePagesOpsProxyEnv({ OPS_API_ORIGIN: "https://attacker.example" })).toContainEqual({
+      code: "ops-api-origin-invalid",
+      message: "OPS_API_ORIGIN must be the canonical HTTPS origin https://ops-api.pharos.watch.",
+    });
+  });
+
   it("requires Pages-side Access verification bindings", () => {
     expect(PAGES_FUNCTIONS_REQUIRED_ENV_KEYS).toContain("CF_ACCESS_TEAM_DOMAIN");
     expect(PAGES_FUNCTIONS_REQUIRED_ENV_KEYS).toContain("CF_ACCESS_OPS_UI_AUD");

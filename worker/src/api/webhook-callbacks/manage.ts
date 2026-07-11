@@ -22,9 +22,13 @@ export async function renderManageWatchlistPage(
     subscriptions: SubscriptionRow[];
     requestedPage: number;
     ackText: string;
+    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+    answerCallback?: (options?: { text?: string }) => Promise<void>;
   },
 ): Promise<void> {
   const { chatId, subscriptions, requestedPage, ackText } = params;
+  const answer = params.answerCallback
+    ?? ((options?: { text?: string }) => answerCallbackQuery(cb.id, botToken, options));
   const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
   const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
   const messageId = cb.message?.message_id;
@@ -34,22 +38,24 @@ export async function renderManageWatchlistPage(
     : buildManageWatchlistKeyboard(subscriptions, page);
 
   if (messageId != null) {
+    await params.beforeIrreversibleEffect?.("manage-edit");
     const edited = await editMessage(chatId, messageId, text, botToken, {
       disableWebPagePreview: true,
       replyMarkup,
     });
     if (edited) {
-      await answerCallbackQuery(cb.id, botToken, { text: ackText });
+      await answer({ text: ackText });
       return;
     }
   }
   {
+    await params.beforeIrreversibleEffect?.("manage-reply");
     await sendAuditedTelegramReply(db, chatId, text, botToken, {
       replyMarkup,
       actionDetail: "callback_manage",
     });
   }
-  await answerCallbackQuery(cb.id, botToken, { text: ackText });
+  await answer({ text: ackText });
 }
 
 async function renderManagePage(
@@ -59,6 +65,10 @@ async function renderManagePage(
   chatId: string,
   requestedPage: number,
   ackText: string,
+  effect: {
+    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+    answerCallback?: (options?: { text?: string }) => Promise<void>;
+  } = {},
 ): Promise<void> {
   const subscriptions = await loadSubscriptionRowsByChat(db, chatId);
   await renderManageWatchlistPage(db, botToken, cb, {
@@ -66,6 +76,7 @@ async function renderManagePage(
     subscriptions,
     requestedPage,
     ackText,
+    ...effect,
   });
 }
 
@@ -73,25 +84,33 @@ async function handleManagePage(
   db: D1Database,
   botToken: string,
   cb: TelegramCallbackQuery,
+  effect: {
+    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+    answerCallback?: (options?: { text?: string }) => Promise<void>;
+  } = {},
 ): Promise<void> {
   const chatId = cb.message?.chat?.id?.toString();
   if (!chatId) {
-    await answerCallbackQuery(cb.id, botToken);
+    if (effect.answerCallback) await effect.answerCallback();
+    else await answerCallbackQuery(cb.id, botToken);
     return;
   }
   const pageRaw = (cb.data ?? "").split(":")[2];
   const page = Number(pageRaw);
   if (!Number.isInteger(page) || page < 0) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    if (effect.answerCallback) await effect.answerCallback({ text: "Action not recognized." });
+    else await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
-  await renderManagePage(db, botToken, cb, chatId, page, "");
+  await renderManagePage(db, botToken, cb, chatId, page, "", effect);
 }
 
-export const handleManageCallback: CallbackHandler = async ({ db, botToken, cb, parsed }) => {
+export const handleManageCallback: CallbackHandler = async ({
+  db, botToken, cb, parsed, answerCallback, beforeIrreversibleEffect,
+}) => {
   if (!hasExactParts(parsed.parts, 3) || parsed.arg !== "page") {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await answerCallback({ text: "Action not recognized." });
     return;
   }
-  await handleManagePage(db, botToken, cb);
+  await handleManagePage(db, botToken, cb, { beforeIrreversibleEffect, answerCallback });
 };

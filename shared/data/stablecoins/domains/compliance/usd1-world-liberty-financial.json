@@ -1,0 +1,89 @@
+{
+  "id": "usd1-world-liberty-financial",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USD1 is a U.S. dollar payment stablecoin issued 1:1 via BitGo Trust infrastructure with reserve attestations and public redemption policy — squarely within the apparent-payment-stablecoin definition."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "BitGo Trust Company / BitGo Bank & Trust, N.A. (OCC conditional approval Dec 2025; current issuer); WLTC Holdings LLC / World Liberty Trust Company, N.A. (de novo OCC national trust charter application pending, filed Jan 2026)",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC (BitGo Bank & Trust conditional approval Dec 2025; WLTC Holdings OCC application Jan 2026)",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "USD1 is legally issued by BitGo Trust Company (operating post-conditional-OCC-approval as BitGo Bank & Trust, N.A.); World Liberty Financial Inc. is the brand sponsor/co-founder. In January 2026, WLTC Holdings LLC (a WLFI subsidiary) filed a de novo OCC national trust bank charter application to establish World Liberty Trust Company, N.A., which would take over direct issuance and custody of USD1 if approved. The OCC charter applications are under existing OCC authority — not GENIUS Act PPSI applications. No GENIUS PPSI framework has been finalized; issuer-announced-intent remains the correct status. No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC Dec 12 2025 conditional approval — BitGo Bank & Trust, N.A. national trust charter",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125c.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC digital assets licensing — World Liberty Trust Company application",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/world-liberty-trust-company.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "World Liberty Financial USD1 page",
+        "url": "https://worldlibertyfinancial.com/usd1",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "BitGo USD1 attestations",
+        "url": "https://www.bitgo.com/usd1/attestations/",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "WLTC Holdings OCC charter application announcement (BusinessWire Jan 2026)",
+        "url": "https://www.businesswire.com/news/home/20260107876750/en/World-Liberty-Financial-Announces-that-WLTC-Holdings-LLC-has-Submitted-an-Application-for-a-National-Trust-Bank-Charter-to-Issue-and-Custody-USD1-Stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-01-07",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "WLFI USD1 official documentation — BitGo as legal issuer",
+        "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC digital assets licensing applications page (WLTC filing)",
+        "BitGo national trust and OCC conditional approval materials",
+        "South Dakota trust-company materials",
+        "BitGo USD1 terms and attestations",
+        "World Liberty Financial USD1 issuer disclosures and official docs",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located for USD1. The January 2026 OCC charter filing by WLTC Holdings is a trust-charter application under existing OCC authority, not a GENIUS PPSI application.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

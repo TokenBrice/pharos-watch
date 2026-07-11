@@ -25,73 +25,6 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Switzerland"
   },
-  "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "GLDT is native to the Internet Computer (GLDT ledger canister 6c7su-kiaaa-aaaar-qaira-cai); its Ethereum/Base/Arbitrum deployments share address 0x86856814e74456893cfc8946bedcbb472b5fa856 via deterministic deployment, not an omnichain standard. The verified EVM source is a custom OpenZeppelin ERC20+Ownable+ERC20Permit token with an owner-only payable mint() (proven on-chain: non-owner calls revert with OwnableUnauthorizedAccount) plus withdrawEth and burn1-burn4 functions that emit bytes32 data encoding the ICP destination, with no LayerZero/Wormhole/Axelar/Hyperlane/CCIP imports (no OFT or CCIP selectors in the deployed bytecode). The contract was deployed by 0x475c65F3f34b069d3e8382090e6e17859b194a5e, which then transferred ownership; the live owner/minter on all three EVM chains is the active EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c, a Gold-DAO-controlled off-chain bridge signer. This makes GLDT's EVM supply a centralized issuer-operated lock/mint bridge with a single third-party off-chain control surface and no published settlement/attestation controls.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "explorer",
-        "name": "Custom Ownable ERC-20 minter (Ethereum)",
-        "slug": "custom-lock-mint",
-        "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856#code",
-        "bridgeTypes": ["lock-mint", "issuer-operated", "owner-eoa"],
-        "note": "Verified source: OpenZeppelin ERC20+Ownable+ERC20Permit; owner-only payable mint(), batchMint, withdrawEth, burn1-burn4 emitting bytes32 ICP destination; no OFT/NTT/ITS/Hyperlane imports."
-      },
-      {
-        "source": "explorer",
-        "name": "Same custom contract on Base",
-        "slug": "custom-lock-mint-base",
-        "url": "https://basescan.org/token/0x86856814e74456893cfc8946bedcbb472b5fa856",
-        "bridgeTypes": ["lock-mint", "issuer-operated"],
-        "note": "Identical custom mint/batchMint/burn1-burn4 Ownable token; confirms deterministic same-address deployment across EVM chains, not an omnichain standard."
-      },
-      {
-        "source": "explorer",
-        "name": "Owner / minter EOA",
-        "slug": "gldt-owner-eoa",
-        "url": "https://etherscan.io/address/0x475c65F3f34b069d3e8382090e6e17859b194a5e",
-        "bridgeTypes": ["off-chain-signer", "single-eoa"],
-        "note": "EOA that deployed the EVM contracts and holds owner/mint rights; the off-chain bridge control surface."
-      },
-      {
-        "source": "issuer",
-        "name": "Gold DAO (issuer) docs name no bridge protocol",
-        "slug": "gold-dao-docs",
-        "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology",
-        "bridgeTypes": ["undocumented-route"],
-        "note": "Issuer materials describe cross-chain only as a roadmap goal and document no bridge protocol/validator; GoldDAO GitHub has no EVM/bridge repo."
-      }
-    ],
-    "sources": [
-      {
-        "label": "GLDT Ethereum contract verified source (Etherscan #code)",
-        "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856#code"
-      },
-      {
-        "label": "GLDT Base deployment (BaseScan) - same custom contract",
-        "url": "https://basescan.org/token/0x86856814e74456893cfc8946bedcbb472b5fa856"
-      },
-      {
-        "label": "Owner/minter EOA 0x475c65F3... (Etherscan)",
-        "url": "https://etherscan.io/address/0x475c65F3f34b069d3e8382090e6e17859b194a5e"
-      },
-      {
-        "label": "Gold DAO GitHub org (ICP-only canisters, no EVM/bridge repo)",
-        "url": "https://github.com/GoldDAO/gold-dao"
-      },
-      {
-        "label": "Gold DAO knowledge hub / whitepaper technology page",
-        "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology"
-      },
-      {
-        "label": "GLDT website",
-        "url": "https://gldt.org/"
-      }
-    ]
-  },
   "links": [
     {
       "label": "Website",
@@ -129,18 +62,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "dao-governance",
-  "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sources": [
-      {
-        "label": "Website",
-        "url": "https://gldt.org/"
-      }
-    ],
-    "evidence": "GLDT resolves to Upstream because its backing depends on GLD NFT, vault, and bridge infrastructure; reviewed materials do not document a separate direct holder-balance freeze path for GLDT.",
-    "reviewer": "Codex data addition",
-    "reviewedAt": "2026-05-24"
-  },
   "reserves": [
     {
       "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",

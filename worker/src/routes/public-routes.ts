@@ -1,4 +1,10 @@
-import { handleBluechipRatings, handleStablecoinCharts, handleStablecoins, handleUsdsStatus, handleYieldRankings } from "../api/cache-handlers";
+import {
+  handleBluechipRatings,
+  handleStablecoinCharts,
+  handleStablecoins,
+  handleUsdsStatus,
+  handleYieldRankings,
+} from "../api/cache-handlers";
 import { handleBlacklist } from "../api/blacklist";
 import { handleBlacklistSummary } from "../api/blacklist-summary";
 import { handleDepegEvents } from "../api/depeg-events";
@@ -52,7 +58,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("depeg-resolver", ({ db }) => handleDepegResolver(db)),
   defineStaticRoute("depeg-resolver-review", ({ db }) => handleDepegResolverReview(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
-  defineStaticRoute("yield-rankings", ({ db }) => handleYieldRankings(db)),
+  defineStaticRoute("yield-rankings", ({ db, url }) => handleYieldRankings(db, url)),
   defineStaticRoute("yield-adapter-manifest", () => handleYieldAdapterManifest()),
   defineStaticRoute("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
   defineStaticRoute("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),

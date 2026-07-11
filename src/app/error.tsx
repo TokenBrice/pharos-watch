@@ -7,6 +7,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PageErrorEditorial } from "@/components/page-error-editorial";
 import { buildRequestUrl } from "@/lib/api-url";
 import { isHardReloadableRouteError } from "@/lib/route-error-recovery";
+import { RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
 type HealthState = "unknown" | "ok" | "degraded";
 
@@ -28,22 +29,25 @@ export default function RootError({ error, reset }: RootErrorProps) {
   const shouldHardReload = isHardReloadableRouteError(error);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(buildRequestUrl(API_PATHS.health()), { headers: { Accept: "application/json" } })
-      .then((response) => (response.ok ? response.json() : Promise.reject(response)))
+    const requests = new RequestSequence();
+    requests
+      .run((signal) =>
+        requestJson<unknown>(buildRequestUrl(API_PATHS.health()), {
+          signal,
+          timeoutMs: 5_000,
+          init: { headers: { Accept: "application/json" } },
+        }),
+      )
       .then((data: unknown) => {
-        if (cancelled) return;
         const status =
-          data && typeof data === "object" && "status" in data
-            ? (data as { status?: unknown }).status
-            : null;
+          data && typeof data === "object" && "status" in data ? (data as { status?: unknown }).status : null;
         setHealthState(status === "healthy" ? "ok" : "degraded");
       })
-      .catch(() => {
-        if (!cancelled) setHealthState("unknown");
+      .catch((requestError) => {
+        if (!isRequestCancellation(requestError)) setHealthState("unknown");
       });
     return () => {
-      cancelled = true;
+      requests.cancel();
     };
   }, []);
 
@@ -51,23 +55,14 @@ export default function RootError({ error, reset }: RootErrorProps) {
 
   return (
     <div className="space-y-4">
-      <PageErrorEditorial
-        kicker={kicker}
-        title={title}
-        body={body}
-        error={error}
-        reset={reset}
-      />
+      <PageErrorEditorial kicker={kicker} title={title} body={body} error={error} reset={reset} />
       {healthState === "degraded" ? (
         <div
           role="status"
           className="mx-auto max-w-xl rounded-lg border border-[color:var(--severity-mild)]/50 bg-[color:var(--severity-mild)]/[0.08] px-4 py-3 text-sm"
         >
           <div className="flex items-start gap-2">
-            <ServerCrash
-              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--severity-mild)]"
-              aria-hidden="true"
-            />
+            <ServerCrash className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--severity-mild)]" aria-hidden="true" />
             <p className="text-foreground/90">
               The API is currently degraded.{" "}
               <Link

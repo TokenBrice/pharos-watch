@@ -392,6 +392,54 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBe(21_910_000);
   });
 
+  it("ignores provider logs outside the requested scan range before advancing", async () => {
+    const db = makeDb();
+    const config = MINT_BURN_CONFIGS[0]!;
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ blockNumber: 21_910_000 })],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_910_000, 1_718_650_752]]));
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+      tier: "critical",
+      fromBlock: 21_955_001,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/alchemy-key",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.summary.rowsRead).toBe(1);
+    expect(result.summary.rowsParsed).toBe(1);
+    expect(result.summary.rowsDropped).toBe(0);
+    expect(result.summary.maxBlockSeen).toBe(0);
+    expect(result.summary.advanceReason).toBe("full-success-empty");
+    expect(result.summary.advancedTo).toBe(21_960_000);
+    expect(result.newLastBlock).toBe(21_960_000);
+  });
+
   it("resumes from canonical sync-state progress", async () => {
     const db = makeDb({
       syncRows: [{
@@ -454,7 +502,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.failedEventDefs).toBeTruthy();
     expect(usdt?.advancedTo).toBeNull();
@@ -485,7 +533,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.advancedTo).toBe(21_910_000);
     expect(usdt?.coverageFrontier).toBe(21_910_000);
@@ -513,7 +561,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.missingTimestampCount).toBe(1);
     expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_000);
@@ -544,7 +592,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
     const meta = JSON.parse(result.metadata);
-    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+    const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(resolveBlockTimestamps).not.toHaveBeenCalled();
     expect(usdt?.missingTimestampCount).toBe(0);
@@ -646,7 +694,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    const usdt = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(0);
@@ -740,7 +788,7 @@ describe("syncMintBurn", () => {
 
     expect(fetchedContracts[0]).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
     expect(fetchedContracts).toContain("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(meta.configBreakdown[0].requestBudgetUsed).toBe(meta.configBreakdown[0].requestBudgetLimit);
+    expect(meta.configSamples[0].requestBudgetUsed).toBe(meta.configSamples[0].requestBudgetLimit);
   });
 
   it("stops before starting another config when the runtime budget tail is reserved", async () => {
@@ -759,7 +807,7 @@ describe("syncMintBurn", () => {
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdc = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDC");
+    const usdc = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDC");
 
     expect(meta.runtimeBudgetHit).toBe(true);
     expect(usdc?.attempted).toBe(false);
@@ -775,7 +823,7 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: Array.from({ length: 70 }, (_, index) =>
-          makeMintLog({ txHash: `0xbridge-mint-${index}`, logIndex: index }),
+          makeMintLog({ blockNumber: 21_949_999, txHash: `0xbridge-mint-${index}`, logIndex: index }),
         ),
         complete: true,
         scannedToBlock: 22_000_000,
@@ -784,11 +832,11 @@ describe("syncMintBurn", () => {
       })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_949_999, 1_718_650_752]]));
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
-    const usdt = meta.configBreakdown.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    const usdt = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
 
     expect(usdt?.requestBudgetLimit).toBe(150);
     expect(usdt?.txContextShortfalls).toBe(0);

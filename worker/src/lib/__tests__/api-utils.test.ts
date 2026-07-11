@@ -939,7 +939,20 @@ describe("buildCacheStatuses", () => {
       prepare: (sql: string) => {
         seenSql.push(sql);
         const first = async <T>() => {
-          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+          if (sql.includes("FROM cache WHERE key = ?")) {
+            return {
+              value: JSON.stringify({
+                updatedAt: nowSec - 120,
+                source: "compute-dews",
+                publishStatus: "published",
+                coverageVersion: 2,
+                expectedRowCount: 2,
+                stablecoinIdsDigest: "a".repeat(64),
+              }),
+              updated_at: nowSec - 120,
+            } as T;
+          }
+          if (sql.includes("MAX(updated_at)")) {
             return { age: 120 } as T;
           }
           return null as T | null;
@@ -971,7 +984,7 @@ describe("buildCacheStatuses", () => {
     return { db, seenSql };
   }
 
-  it("queries table-backed freshness using latest timestamps", async () => {
+  it("uses table timestamps for table-backed datasets and the publication pointer for DEWS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const { db, seenSql } = makeDb(nowSec);
 
@@ -979,12 +992,11 @@ describe("buildCacheStatuses", () => {
 
     const dexSql = seenSql.find((s) => s.includes("dex_liquidity"));
     const yieldSql = seenSql.find((s) => s.includes("yield_data"));
-    const dewsSql = seenSql.find((s) => s.includes("stress_signals"));
-
     expect(dexSql).toContain("? - MAX(updated_at)");
     expect(yieldSql).toContain("? - MAX(updated_at)");
     expect(yieldSql).toContain("is_best = 1");
-    expect(dewsSql).toContain("? - MAX(computed_at)");
+    expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM cache WHERE key = ?"))).toBe(true);
   });
 
   it("uses freshness sentinels when present and skips hot-table freshness queries", async () => {
@@ -1080,7 +1092,7 @@ describe("buildCacheStatuses", () => {
     expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
   });
 
-  it("clamps negative table ages to zero", async () => {
+  it("clamps negative table ages to zero without accepting a future DEWS table row", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
       prepare: (sql: string) => {
@@ -1109,17 +1121,14 @@ describe("buildCacheStatuses", () => {
     const { caches } = await buildCacheStatuses(db, nowSec);
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
     expect(caches["yield-data"]?.ageSeconds).toBe(0);
-    expect(caches.dews?.ageSeconds).toBe(0);
+    expect(caches.dews?.ageSeconds).toBeNull();
   });
 
-  it("reports cache freshness query failures instead of throwing", async () => {
+  it("reports missing DEWS publication evidence instead of throwing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
       prepare: (sql: string) => {
         const first = async <T>() => {
-          if (sql.includes("stress_signals")) {
-            throw new Error("stress query failed");
-          }
           if (sql.includes("MAX(updated_at)")) {
             return { age: 60 } as T;
           }
@@ -1147,19 +1156,16 @@ describe("buildCacheStatuses", () => {
       {
         key: "dews",
         source: "table-freshness",
-        message: "stress query failed",
+        message: "DEWS published generation unavailable (no-pointer): publication pointer is missing",
       },
     ]);
   });
 
-  it("falls back to producer cron timestamps when freshness diagnostics fail", async () => {
+  it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
       prepare: (sql: string) => {
         const first = async <T>() => {
-          if (sql.includes("stress_signals")) {
-            throw new Error("stress query failed");
-          }
           return null as T | null;
         };
         return {
@@ -1188,22 +1194,17 @@ describe("buildCacheStatuses", () => {
     } as unknown as D1Database;
 
     const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
-    expect(caches.dews?.ageSeconds).toBe(300);
-    expect(caches.dews?.warning).toBe("dews: freshness table query failed; using cron fallback");
-    expect(diagnostics).toContainEqual({
-      key: "dews",
-      freshnessSource: "cron-fallback",
-      warning: "dews: freshness table query failed; using cron fallback",
-      failureSource: "table-freshness",
-    });
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(caches.dews?.warning).toBeUndefined();
+    expect(diagnostics).not.toContainEqual(expect.objectContaining({ key: "dews" }));
     expect(failures).toEqual([
       {
         key: "dews",
         source: "table-freshness",
-        message: "stress query failed",
+        message: "DEWS published generation unavailable (no-pointer): publication pointer is missing",
       },
     ]);
-    expect(warnings).toContain("dews: freshness table query failed; using cron fallback");
+    expect(warnings).not.toContain("dews: freshness table query failed; using cron fallback");
   });
 
   it("uses table fallback warnings when the cache lookup fails", async () => {
@@ -1392,7 +1393,20 @@ describe("buildCacheStatuses", () => {
     const db = {
       prepare: (sql: string) => {
         const first = async <T>() => {
-          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+          if (sql.includes("FROM cache WHERE key = ?")) {
+            return {
+              value: JSON.stringify({
+                updatedAt: nowSec - 60,
+                source: "compute-dews",
+                publishStatus: "published",
+                coverageVersion: 2,
+                expectedRowCount: 2,
+                stablecoinIdsDigest: "a".repeat(64),
+              }),
+              updated_at: nowSec - 60,
+            } as T;
+          }
+          if (sql.includes("MAX(updated_at)")) {
             return { age: 60 } as T;
           }
           return null as T | null;

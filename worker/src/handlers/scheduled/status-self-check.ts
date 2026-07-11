@@ -2,6 +2,8 @@ import { runCronSlotSweeper } from "../../cron/cron-slot-sweeper";
 import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
 import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
+import { normalizeAlertBrokerMode } from "../../lib/alert-broker";
+import { resolveCloudflareD1StatusConfig } from "../../lib/env";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 
@@ -14,7 +16,12 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-slot-sweeper",
           errorMessage: "[cron] cron-slot-sweeper failed in isolated slot:",
-          run: (signal) => runCronSlotSweeper(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runCronSlotSweeper(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
         {
           job: "status-self-check",
@@ -26,7 +33,9 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               ctx: runtime.ctx,
               mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
               alertWebhookUrl: runtime.alertWebhookUrl,
+              alertBrokerMode: normalizeAlertBrokerMode(runtime.env.ALERT_BROKER_MODE),
               siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
+              d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
             }),
         },
         {
@@ -42,7 +51,12 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
         {
           job: "cron-staleness-watchdog",
           errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
-          run: (signal) => runCronStalenessWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runCronStalenessWatchdog(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
       ],
     },

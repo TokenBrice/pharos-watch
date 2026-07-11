@@ -358,6 +358,15 @@ describe("fetchTbillRate", () => {
     expect(metadata.chfRate).toBe(-0.0539);
     expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+    expect(metadata.gbpResponseAttemptCount).toBe(1);
+    expect(metadata.gbpResponseAttempts).toEqual([
+      expect.objectContaining({
+        provider: "fred-sonia-compounded-index",
+        status: 200,
+        parsed: true,
+        failure: null,
+      }),
+    ]);
     expect(metadata.jpySource).toBe("boj-call-rate");
     expect(metadata.jpyRate).toBe(0.1);
     expect(metadata.audSource).toBe("rba-cash-rate-target");
@@ -413,6 +422,21 @@ describe("fetchTbillRate", () => {
     expect(result.status).toBe("ok");
     expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+    expect(metadata.gbpResponseResolvedProvider).toBe("alfred-sonia-compounded-index");
+    expect(metadata.gbpResponseAttempts).toEqual([
+      expect.objectContaining({
+        provider: "fred-sonia-compounded-index",
+        status: null,
+        parsed: false,
+        failure: "transport-failed",
+      }),
+      expect.objectContaining({
+        provider: "alfred-sonia-compounded-index",
+        status: 200,
+        parsed: true,
+        failure: null,
+      }),
+    ]);
   });
 
   it("falls back to ALFRED when the FRED SONIA index is stale", async () => {
@@ -466,6 +490,11 @@ describe("fetchTbillRate", () => {
     expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
     expect(metadata.gbpRecordDate).toBe("2026-04-01");
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+    expect(metadata.gbpResponseAttempts).toEqual([
+      expect.objectContaining({ provider: "fred-sonia-compounded-index", failure: "parse-failed" }),
+      expect.objectContaining({ provider: "alfred-sonia-compounded-index", failure: "parse-failed" }),
+      expect.objectContaining({ provider: "boe-sonia-compounded-index", parsed: true, failure: null }),
+    ]);
   });
 
   it("falls back to the BoE SONIA index when the St. Louis Fed mirrors are unreachable", async () => {
@@ -516,6 +545,12 @@ describe("fetchTbillRate", () => {
     expect(metadata.gbpRetainedFallbackStreak).toBe(1);
     expect(metadata.gbpRetainedFallbackAlerted).toBe(false);
     expect(metadata.gbpRetainedFallbackWebhookAlerted).toBe(false);
+    expect(metadata.gbpResponseResolvedProvider).toBeNull();
+    expect(metadata.gbpResponseAttempts).toEqual([
+      expect.objectContaining({ provider: "fred-sonia-compounded-index", failure: "transport-failed" }),
+      expect.objectContaining({ provider: "alfred-sonia-compounded-index", failure: "transport-failed" }),
+      expect.objectContaining({ provider: "boe-sonia-compounded-index", failure: "transport-failed" }),
+    ]);
     expect(metadata.fallbackBenchmarkCount).toBe(1);
     expect(metadata.retainedFallbackBenchmarkCount).toBe(1);
     expect(metadata.retainedFallbackBenchmarks).toEqual([
@@ -772,6 +807,8 @@ describe("fetchTbillRate", () => {
       gbpRetainedFallbackActive: false,
       gbpRetainedFallbackStreak: 0,
       gbpRetainedFallbackRecoveredAt: expect.any(Number),
+      gbpFreshPublicationStreak: 1,
+      gbpFreshPublicationVerifiedTwice: false,
     });
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveRetainedRuns: 0,
@@ -791,6 +828,40 @@ describe("fetchTbillRate", () => {
         }),
       }),
     );
+  });
+
+  it("verifies GBP delivery after two consecutive fresh publications", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
+      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
+      ...okExtendedBenchmarkMocks(),
+    });
+    vi.mocked(getCache).mockImplementation(async (_db, key) => key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY
+      ? {
+          value: JSON.stringify({
+            consecutiveRetainedRuns: 0,
+            consecutiveFreshRuns: 1,
+            lastFreshAt: 1774479600,
+            lastFreshSource: "fred-sonia-compounded-index",
+            lastFreshRecordDate: "2026-03-25",
+          }),
+          updatedAt: 1774479600,
+        } as never
+      : null as never);
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(metadata).toMatchObject({
+      gbpFreshPublicationStreak: 2,
+      gbpFreshPublicationVerifiedTwice: true,
+    });
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+      consecutiveFreshRuns: 2,
+      lastFreshSource: "fred-sonia-compounded-index",
+    });
   });
 
   it("falls back to Treasury XML when FRED fails", async () => {

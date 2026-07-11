@@ -3,8 +3,8 @@ import type {
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
   YieldBenchmarkSelectionMode,
-  YieldRanking,
 } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 type YieldBenchmarkLike = {
   benchmarkKey?: YieldBenchmarkKey;
@@ -30,11 +30,15 @@ function getYieldBenchmarkStatusSuffix(value: YieldBenchmarkLike | null | undefi
   return "";
 }
 
-export function getYieldBenchmarkDisplayLabel(value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined): string {
+export function getYieldBenchmarkDisplayLabel(
+  value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined,
+): string {
   return `${getYieldBenchmarkLabel(value)}${getYieldBenchmarkStatusSuffix(value as YieldBenchmarkLike | null | undefined)}`;
 }
 
-export function getYieldBenchmarkReferenceText(value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined): string {
+export function getYieldBenchmarkReferenceText(
+  value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined,
+): string {
   return `vs ${getYieldBenchmarkDisplayLabel(value)}`;
 }
 
@@ -50,11 +54,15 @@ export function getYieldBenchmarkGapUnavailableText(periodLabel = "30d"): string
   return `No ${periodLabel} benchmark gap`;
 }
 
-export function getYieldRankingBenchmarkKey(ranking: YieldRanking): YieldBenchmarkKey {
-  return ranking.benchmarkKey ?? ranking.provenance?.benchmarkKey ?? "USD";
+export function getYieldRankingBenchmarkKey(ranking: YieldWorkbenchRanking): YieldBenchmarkKey {
+  return (
+    ranking.benchmarkKey ??
+    (!("alternateSourceCount" in ranking) ? ranking.provenance?.benchmarkKey : undefined) ??
+    "USD"
+  );
 }
 
-function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkKey[] {
+function getYieldBenchmarkKeys(rankings: YieldWorkbenchRanking[]): YieldBenchmarkKey[] {
   return Array.from(new Set(rankings.map(getYieldRankingBenchmarkKey)));
 }
 
@@ -67,7 +75,7 @@ function getYieldBenchmarkForKey(
 }
 
 export function resolveYieldScatterBenchmarkFrame(params: {
-  rankings: YieldRanking[];
+  rankings: YieldWorkbenchRanking[];
   benchmarks: YieldBenchmarkRegistry | null | undefined;
   fallbackBenchmark?: YieldBenchmarkMeta | null;
 }): {
@@ -80,8 +88,8 @@ export function resolveYieldScatterBenchmarkFrame(params: {
   const hasMixedBenchmarks = visibleBenchmarkKeys.length > 1;
   const sharedBenchmarkKey = visibleBenchmarkKeys.length === 1 ? visibleBenchmarkKeys[0] : null;
   const referenceBenchmark = sharedBenchmarkKey
-    ? getYieldBenchmarkForKey(params.benchmarks, sharedBenchmarkKey) ?? params.fallbackBenchmark ?? null
-    : getYieldBenchmarkForKey(params.benchmarks, "USD") ?? params.fallbackBenchmark ?? null;
+    ? (getYieldBenchmarkForKey(params.benchmarks, sharedBenchmarkKey) ?? params.fallbackBenchmark ?? null)
+    : (getYieldBenchmarkForKey(params.benchmarks, "USD") ?? params.fallbackBenchmark ?? null);
 
   return {
     referenceBenchmark,

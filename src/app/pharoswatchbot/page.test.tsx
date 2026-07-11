@@ -4,7 +4,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PharosWatchBotPage, { metadata } from "./page";
-import { TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
+import {
+  TELEGRAM_ALERT_EXAMPLES,
+  TELEGRAM_COMMAND_GROUPS,
+  TELEGRAM_FAQ,
+  TELEGRAM_PAGE_DESCRIPTION,
+} from "./telegram-content";
 import {
   PHAROSWATCHBOT_BOT_URL,
   RECOMMENDED_SETUP,
@@ -17,11 +22,33 @@ import {
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import {
+  TELEGRAM_BOT_COMMANDS,
+  TELEGRAM_BOT_DESCRIPTION,
+  TELEGRAM_BOT_SHORT_DESCRIPTION,
+} from "@shared/lib/telegram-bot-registration";
+import {
+  TELEGRAM_ALERT_FAMILIES,
+  TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
+} from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
+import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 vi.mock("next/image", () => ({
-  default: ({ alt, ...props }: { alt: string; src: string; width: number; height: number; className?: string }) => (
-    <img alt={alt} {...props} />
-  ),
+  default: ({
+    alt,
+    fill: _fill,
+    priority: _priority,
+    ...props
+  }: {
+    alt: string;
+    src: string;
+    width?: number;
+    height?: number;
+    fill?: boolean;
+    priority?: boolean;
+    className?: string;
+  }) => <img alt={alt} {...props} />,
 }));
 
 vi.mock("./mini-app-screenshot-carousel", () => ({
@@ -47,7 +74,9 @@ vi.mock("@/components/feature-page-shell", () => ({
 }));
 
 vi.mock("@/components/copy-button", () => ({
-  CopyButton: ({ text }: { text: string }) => <button type="button" aria-label={`Copy ${text}`} />,
+  CopyButton: ({ text, className }: { text: string; className?: string }) => (
+    <button type="button" aria-label={`Copy ${text}`} className={className} />
+  ),
 }));
 
 vi.mock("./telegram-pulse-strip", () => ({
@@ -77,9 +106,28 @@ function findJsonLdNode(nodes: readonly JsonLdRecord[], type: string): JsonLdRec
 describe("PharosWatchBotPage", () => {
   it("keeps public metadata and copy current", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
+    // Metadata and registration copy derive from the canonical family manifest.
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
+    expect(TELEGRAM_BOT_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
     expect(TELEGRAM_PAGE_DESCRIPTION).toContain("reasoned safety-grade shifts");
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("pre-launch assets going live");
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("live reserve-mix drift");
     expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
+    expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
+  });
+
+  it("keeps the public alert and command contracts complete", () => {
+    expect(TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.key)).toEqual(["dews", "depeg", "safety", "launch", "reserve"]);
+    // Example bubbles must be the canonical formatter-verified samples.
+    for (const example of TELEGRAM_ALERT_EXAMPLES) {
+      expect(example.content).toBe(TELEGRAM_PUBLIC_ALERT_SAMPLES[example.key].message);
+    }
+
+    const publicCommands = new Set(
+      TELEGRAM_COMMAND_GROUPS.flatMap((group) =>
+        group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
+      ),
+    );
+    expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {
@@ -97,29 +145,32 @@ describe("PharosWatchBotPage", () => {
     expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(RECOMMENDED_SETUP_START_PAYLOAD)).toBe(true);
   });
 
-  it("renders primary CTAs, command reference, tracked count, and JSON-LD", () => {
+  it("renders the distilled decision path, complete reference, and JSON-LD", () => {
     const { container } = render(<PharosWatchBotPage />);
 
     expect(screen.getAllByRole("heading", { name: "PharosWatchBot" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Stablecoin alerts, before you have to check." })).toBeTruthy();
+    expect(container.querySelector('img[src="/featured/telegram-mini-app/home.png"]')).toBeTruthy();
     expect(screen.getByText("Command Reference")).toBeTruthy();
-    expect(screen.getByTestId("pharoswatchbot-command-reference-table").getAttribute("data-table-id")).toBe(
-      "pharoswatchbot-command-reference",
-    );
-    expect(screen.getByRole("table", { name: "PharosWatchBot command reference" }).getAttribute("data-slot")).toBe(
-      "table",
-    );
+    const commandDetails = screen.getByText("Command Reference").closest("details") as HTMLDetailsElement;
+    expect(commandDetails.open).toBe(false);
+    expect(screen.getByLabelText("PharosWatchBot command reference")).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "PharosWatchBot command reference" })).toBeNull();
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/sample").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/forget").length).toBeGreaterThan(0);
     expect(screen.getByText(/\/market is a deprecated compatibility alias/i)).toBeTruthy();
     expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
-    expect(screen.getByText(String(TRACKED_STABLECOIN_COUNT))).toBeTruthy();
-    expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
-    expect(screen.getByText(/Safety alerts include a reason line/i)).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/Safety changes name the score driver/i)).toBeTruthy();
     expect(screen.getAllByText(/Reason: Active depeg peak 7546 bps/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Opens a Telegram confirmation that preloads DEWS and depeg alerts/i)).toBeTruthy();
-    expect(screen.getByText("Control every alert from the Mini App.")).toBeTruthy();
+    expect(screen.getByText(/DEWS and depeg alerts for the current top 25 USD stablecoins/i)).toBeTruthy();
+    expect(screen.getByText("The same alert state, without slash commands")).toBeTruthy();
     expect(screen.getByText("Global alerts")).toBeTruthy();
     expect(screen.getByText("Per-coin tuning")).toBeTruthy();
     expect(screen.getByText("Delivery health")).toBeTruthy();
@@ -127,7 +178,36 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Bot sync")).toBeTruthy();
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
+    expect(screen.getByText("Reserve Drift")).toBeTruthy();
+    expect(screen.getAllByText(/all five families/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
+    // The reliability contract derives its TTLs from the shared delivery policy.
+    const riskTtlClaim = `Risk alerts expire after ${PENDING_TTL_SEC / 3600} hours`;
+    expect(screen.getByText((content) => content.includes(riskTtlClaim))).toBeTruthy();
+    expect(screen.getByText(/reserve drift follows the four-hour live-reserve producer/i)).toBeTruthy();
+    const examples = screen.getByRole("heading", { name: "What lands in your chat" });
+    const setup = screen.getByRole("heading", { name: "Start in two minutes" });
+    const evidence = screen.getByLabelText("Live Telegram adoption metrics");
+    expect(Boolean(examples.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(setup.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    expect(container.textContent).not.toMatch(/no dropped alerts|arrive in order/i);
+    expect(container.textContent).toContain("Depeg Early Warning System");
+
+    const commandStrings = screen.getAllByText(RECOMMENDED_SETUP_COMMAND).filter((node) => node.tagName === "CODE");
+    expect(commandStrings.length).toBeGreaterThan(0);
+    for (const command of commandStrings) {
+      expect(command.className).toContain("whitespace-pre-wrap");
+      expect(command.className).toContain("[overflow-wrap:anywhere]");
+    }
+    for (const copyButton of screen.getAllByRole("button", { name: /^Copy / })) {
+      expect(copyButton.className).toContain("size-11");
+      expect(copyButton.className).toContain("shrink-0");
+    }
 
     const jsonLd = parseJsonLd(container);
     const faq = findJsonLdNode(jsonLd, "FAQPage");
@@ -144,12 +224,14 @@ describe("PharosWatchBotPage", () => {
       operatingSystem: "Telegram",
       url: "https://pharos.watch/pharoswatchbot/",
       installUrl: PHAROSWATCHBOT_BOT_URL,
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, and launch alerts.",
+      description: `Opt-in Telegram bot for stablecoin alerts: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": "https://pharos.watch#organization" },
     });
-    expect(application.featureList).toHaveLength(8);
-    expect(application.featureList).toContain("Safety grade alerts with reason lines for live score drivers");
+    expect(application.featureList).toHaveLength(9);
+    for (const family of TELEGRAM_ALERT_FAMILIES) {
+      expect(application.featureList).toContain(family.featureLine);
+    }
     expect(application.featureList).toContain(
       "Telegram Mini App for visual watchlist, settings, and presets management",
     );

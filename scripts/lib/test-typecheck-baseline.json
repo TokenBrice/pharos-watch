@@ -8,8 +8,8 @@
       "message": "Property 'headers' does not exist on type 'never'.",
       "count": 2,
       "examples": [
-        "257:27",
-        "284:27"
+        "261:27",
+        "288:27"
       ]
     },
     {
@@ -18,8 +18,8 @@
       "message": "Tuple type '[]' of length '0' has no element at index '1'.",
       "count": 2,
       "examples": [
-        "256:14",
-        "283:14"
+        "260:14",
+        "287:14"
       ]
     },
     {
@@ -28,56 +28,7 @@
       "message": "Type '() => Promise<{ meta?: { changes?: number; }; }>' is not assignable to type '<T = Record<string, unknown>>() => Promise<D1Result<T>>'.",
       "count": 1,
       "examples": [
-        "85:9"
-      ]
-    },
-    {
-      "file": "functions/__tests__/site-data-proxy.test.ts",
-      "code": "TS2345",
-      "message": "Argument of type '(key: Request, value: Response) => Promise<void>' is not assignable to parameter of type '() => Promise<undefined>'.",
-      "count": 1,
-      "examples": [
-        "200:33"
-      ]
-    },
-    {
-      "file": "functions/__tests__/site-data-proxy.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'Request' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "185:20"
-      ]
-    },
-    {
-      "file": "functions/__tests__/site-data-proxy.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'RequestInit' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 3,
-      "examples": [
-        "447:23",
-        "496:13",
-        "497:14"
-      ]
-    },
-    {
-      "file": "functions/__tests__/site-data-proxy.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '0'.",
-      "count": 2,
-      "examples": [
-        "185:45",
-        "494:12"
-      ]
-    },
-    {
-      "file": "functions/__tests__/site-data-proxy.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '1'.",
-      "count": 2,
-      "examples": [
-        "447:48",
-        "494:25"
+        "104:9"
       ]
     },
     {
@@ -146,7 +97,7 @@
     {
       "file": "scripts/__tests__/classify-deploy-changes.test.ts",
       "code": "TS2322",
-      "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n-    \\\"zod\\\": \\\"^4.3.5\\\",\\n+    \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
+      "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n- \\\"zod\\\": \\\"^4.3.5\\\",\\n+ \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 1,
       "examples": [
         "363:7"
@@ -313,79 +264,12 @@
       ]
     },
     {
-      "file": "scripts/__tests__/generate-dependency-coverage-audit.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[url: string | URL | Request]' of length '1' has no element at index '1'.",
-      "count": 1,
-      "examples": [
-        "253:19"
-      ]
-    },
-    {
       "file": "scripts/__tests__/lighthouse-static-export.test.ts",
       "code": "TS2345",
       "message": "Argument of type '{ CHROME_PATH: string; LIGHTHOUSE_PACKAGE: string; PATH: string; PHAROS_API_KEY: string; SITE_PROXY_SHARED_SECRET: string; STATIC_EXPORT_HOST: string; }' is not assignable to parameter of type 'ProcessEnv'.",
       "count": 1,
       "examples": [
         "78:42"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/oracle-risk-coverage.test.ts",
-      "code": "TS2322",
-      "message": "Type '\"fiat-backed\"' is not assignable to type '\"rwa-backed\" | \"crypto-backed\" | \"algorithmic\"'.",
-      "count": 1,
-      "examples": [
-        "73:13"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/pharos-change-contract.test.ts",
-      "code": "TS2322",
-      "message": "Type '(url: string, init?: { body?: string; method?: string; }) => Promise<Response>' is not assignable to type '{ (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | URL | Request, init?: RequestInit | undefined): Promise<...>; }'.",
-      "count": 1,
-      "examples": [
-        "652:12"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/pharos-change-contract.test.ts",
-      "code": "TS2322",
-      "message": "Type '(url: string) => Promise<Response>' is not assignable to type '{ (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | URL | Request, init?: RequestInit | undefined): Promise<...>; }'.",
-      "count": 1,
-      "examples": [
-        "620:12"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/pharos-change-contract.test.ts",
-      "code": "TS2339",
-      "message": "Property 'reason' does not exist on type '{ decision: string; hookSpecificOutput: { hookEventName: string; permissionDecision: string; permissionDecisionReason: any; }; reason: any; } | { continue: boolean; }'.",
-      "count": 13,
-      "examples": [
-        "244:19",
-        "260:19",
-        "276:19"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/pharos-change-contract.test.ts",
-      "code": "TS7006",
-      "message": "Parameter 'family' implicitly has an 'any' type.",
-      "count": 4,
-      "examples": [
-        "35:35",
-        "46:35",
-        "56:35"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/pharos-change-contract.test.ts",
-      "code": "TS7006",
-      "message": "Parameter 'file' implicitly has an 'any' type.",
-      "count": 1,
-      "examples": [
-        "92:67"
       ]
     },
     {
@@ -404,35 +288,6 @@
       "count": 1,
       "examples": [
         "31:14"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/rollback-pages-deployment.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'accountId' does not exist in type '{ fetchImpl?: { (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | URL | Request, init?: RequestInit | undefined): Promise<...>; } | undefined; maxAttempts?: number | undefined; retryDelayMs?: number | undefined; timeoutMs?: number | undefined; }'.",
-      "count": 7,
-      "examples": [
-        "13:7",
-        "39:9",
-        "59:9"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/rollback-pages-deployment.test.ts",
-      "code": "TS7006",
-      "message": "Parameter 'attempt' implicitly has an 'any' type.",
-      "count": 1,
-      "examples": [
-        "109:24"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/rollback-pages-deployment.test.ts",
-      "code": "TS7006",
-      "message": "Parameter 'error' implicitly has an 'any' type.",
-      "count": 1,
-      "examples": [
-        "109:33"
       ]
     },
     {
@@ -514,16 +369,6 @@
       "count": 1,
       "examples": [
         "86:11"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/smoke-ui.test.ts",
-      "code": "TS2345",
-      "message": "Argument of type '(url: string) => Promise<Response>' is not assignable to parameter of type '{ (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | URL | Request, init?: RequestInit | undefined): Promise<...>; }'.",
-      "count": 2,
-      "examples": [
-        "597:82",
-        "610:82"
       ]
     },
     {
@@ -676,15 +521,6 @@
     },
     {
       "file": "scripts/__tests__/wait-for-workflow-job.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'repository' does not exist in type '{ apiUrl?: string | undefined; fetchImpl?: { (input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>; (input: string | ... 1 more ... | Request, init?: RequestInit | undefined): Promise<...>; } | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "32:9"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/wait-for-workflow-job.test.ts",
       "code": "TS2741",
       "message": "Property 'NODE_ENV' is missing in type '{ GITHUB_API_URL: string; GITHUB_REPOSITORY: string; GITHUB_RUN_ID: string; GITHUB_TOKEN: string; }' but required in type 'ProcessEnv'.",
       "count": 2,
@@ -716,7 +552,7 @@
     {
       "file": "src/app/about/page.test.tsx",
       "code": "TS7016",
-      "message": "Could not find a declaration file for module 'jsdom'. '/home/ahirice/Documents/git/pharos-watch/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.",
+      "message": "Could not find a declaration file for module 'jsdom'. '<repo>/node_modules/jsdom/lib/api.js' implicitly has an 'any' type.",
       "count": 1,
       "examples": [
         "4:23"
@@ -822,45 +658,6 @@
       ]
     },
     {
-      "file": "src/app/coverage/coverage-page-sections.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"complete\"' is not assignable to type '\"disabled\" | \"unknown\" | \"full\" | \"lagging\" | \"partial-history\" | \"bootstrapping\" | null | undefined'.",
-      "count": 1,
-      "examples": [
-        "47:5"
-      ]
-    },
-    {
-      "file": "src/app/coverage/coverage-page-sections.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ sort: CoverageSortKey; filter: CoverageFilterKey; search: string; rows: CoverageRow[]; dataUpdatedAt: number; logos: {}; hasActiveFilters: boolean; ... 5 more ...; resetFilters: () => void; }' is not assignable to type 'Pick<{ resetFilters: () => void; filter: CoverageFilterKey; setFilter: Dispatch<SetStateAction<CoverageFilterKey>>; ... 19 more ...; staleQueries: { ...; }[]; }, \"sort\" | ... 11 more ... | \"resetFilters\">'.",
-      "count": 4,
-      "examples": [
-        "100:8",
-        "113:8",
-        "127:35"
-      ]
-    },
-    {
-      "file": "src/app/coverage/coverage-page-sections.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type '{ id: string; name: string; symbol: string; flags: { pegCurrency: \"peggedUSD\"; backing: \"fiat-backed\"; governance: \"centralized\"; }; }' to type 'StablecoinMeta' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "30:11"
-      ]
-    },
-    {
-      "file": "src/app/coverage/coverage-page-sections.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 441 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 446 more.",
-      "count": 2,
-      "examples": [
-        "57:5",
-        "78:47"
-      ]
-    },
-    {
       "file": "src/app/dependency-map/client.test.tsx",
       "code": "TS2740",
       "message": "Type '{}' is missing the following properties from type 'Readonly<LogoMap & { \"kusd-kerne\": string; \"cetes-etherfuse\": string; \"usdt-tether\": string; \"usdc-circle\": string; \"ust-terra\": string; \"busd-paxos\": string; \"dai-makerdao\": string; \"frax-frax\": string; ... 441 more ...; \"bils-bitsofgold\": string; }>': \"kusd-kerne\", \"cetes-etherfuse\", \"usdt-tether\", \"usdc-circle\", and 446 more.",
@@ -887,24 +684,6 @@
       "count": 1,
       "examples": [
         "1106:5"
-      ]
-    },
-    {
-      "file": "src/app/pharoswatchbot/telegram-pulse-strip.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type '{ data: { quality: { status: \"partial\"; unavailableFields: string[]; errors: { topCoins: string; }; }; currentSnapshotAt: number; lifecycleHistoryUpdatedAt: number | null; lifecycleHistoryEverySeconds: number; ... 19 more ...; miniAppOpenToFirstMutationP50Sec?: number | ... 1 more ... | undefined; }; isLoading: fals...' to type 'UseQueryResult<{ currentSnapshotAt: number; lifecycleHistoryUpdatedAt: number | null; lifecycleHistoryEverySeconds: number; quality: { status: \"complete\" | \"partial\"; unavailableFields: string[]; errors?: Record<...> | undefined; }; ... 19 more ...; miniAppOpenToFirstMutationP50Sec?: number | ... 1 more ... | undefi...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "238:42"
-      ]
-    },
-    {
-      "file": "src/app/pharoswatchbot/telegram-pulse-strip.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type '{ data: { watcherHistory: never[]; lifecycleHistoryUpdatedAt: null; currentSnapshotAt: number; lifecycleHistoryEverySeconds: number; quality: { status: \"complete\" | \"partial\"; unavailableFields: string[]; errors?: Record<...> | undefined; }; ... 18 more ...; miniAppOpenToFirstMutationP50Sec?: number | ... 1 more ......' to type 'UseQueryResult<{ currentSnapshotAt: number; lifecycleHistoryUpdatedAt: number | null; lifecycleHistoryEverySeconds: number; quality: { status: \"complete\" | \"partial\"; unavailableFields: string[]; errors?: Record<...> | undefined; }; ... 19 more ...; miniAppOpenToFirstMutationP50Sec?: number | ... 1 more ... | undefi...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "193:42"
       ]
     },
     {
@@ -971,68 +750,6 @@
         "61:9",
         "62:9",
         "111:9"
-      ]
-    },
-    {
-      "file": "src/app/yield/reference-rates-strip.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ key: string; label: string; currency: string; rate: number; recordDate: string; fetchedAt: number; ageSeconds: number; source: string; isFallback: boolean; fallbackMode: null; }' is not assignable to type '{ rate: number; recordDate: string | null; fetchedAt: number | null; ageSeconds: number | null; source: string; isFallback: boolean; fallbackMode: string | null; key?: \"USD\" | \"EUR\" | ... 11 more ... | undefined; label?: string | undefined; currency?: string | undefined; isProxy?: boolean | undefined; }'.",
-      "count": 6,
-      "examples": [
-        "24:3",
-        "25:3",
-        "26:3"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/api-key-request-form.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'RequestInit' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 3,
-      "examples": [
-        "91:31",
-        "135:31",
-        "154:31"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/api-key-request-form.test.tsx",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '1'.",
-      "count": 3,
-      "examples": [
-        "90:14",
-        "134:14",
-        "153:14"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ [k: string]: never[]; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", { ...; }[]>': USDC, USDT, PAXG, XAUT, and 31 more.",
-      "count": 1,
-      "examples": [
-        "54:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ [k: string]: number; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", number>': USDC, USDT, PAXG, XAUT, and 31 more.",
-      "count": 4,
-      "examples": [
-        "50:5",
-        "51:5",
-        "52:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/blacklist-stats.test.tsx",
-      "code": "TS2740",
-      "message": "Type '{ USDT: number; USDC: number; USDO: number; PAXG: number; USDG: number; }' is missing the following properties from type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", number>': XAUT, PYUSD, USD1, RLUSD, and 26 more.",
-      "count": 1,
-      "examples": [
-        "42:5"
       ]
     },
     {
@@ -1174,68 +891,12 @@
       ]
     },
     {
-      "file": "src/components/__tests__/peg-distribution-grid.test.tsx",
-      "code": "TS2739",
-      "message": "Type '{ USD: number; EUR: number; GBP: number; CHF: number; BRL: number; JPY: number; KRW: number; MYR: number; SGD: number; TRY: number; AUD: number; ZAR: number; CAD: number; PHP: number; RUB: number; CNY: number; CNH: number; ... 9 more ...; OTHER: number; }' is missing the following properties from type 'Record<\"USD\" | \"EUR\" | \"GBP\" | \"CHF\" | \"BRL\" | \"RUB\" | \"JPY\" | \"KRW\" | \"IDR\" | \"INR\" | \"MYR\" | \"SGD\" | \"HKD\" | \"TRY\" | \"AUD\" | \"ZAR\" | \"CAD\" | \"CNY\" | \"CNH\" | \"PHP\" | \"MXN\" | \"VND\" | \"UAH\" | ... 7 more ... | \"OTHER\", number>': INR, HKD, KGS, NGN",
-      "count": 1,
-      "examples": [
-        "10:7"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/report-card-mini.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; } | { ...; }' is not assignable to type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; } | undefined'.",
-      "count": 1,
-      "examples": [
-        "48:5"
-      ]
-    },
-    {
       "file": "src/components/__tests__/stablecoin-table-logic.test.ts",
       "code": "TS2719",
-      "message": "Type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"/home/ahirice/Documents/git/pharos-watch/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }' is not assignable to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"/home/ahirice/Documents/git/pharos-watch/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }'. Two different types with this name exist, but they are unrelated.",
+      "message": "Type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }' is not assignable to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }'. Two different types with this name exist, but they are unrelated.",
       "count": 1,
       "examples": [
         "26:3"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/stablecoin-table.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"cash\"' is not assignable to type '\"native\" | \"rwa\" | \"eth-lst\" | \"alt-lst-bridged-or-mixed\" | \"exotic\"'.",
-      "count": 1,
-      "examples": [
-        "117:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/stablecoin-table.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"multi-chain\"' is not assignable to type '\"single-chain\" | \"canonical-bridge\" | \"third-party-bridge\" | \"native-multichain\"'.",
-      "count": 1,
-      "examples": [
-        "116:5"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/stablecoin-table.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ [coin.id]: { readonly id: \"usdt-tether\"; readonly name: \"Tether\"; readonly symbol: \"USDT\"; readonly overallGrade: \"B+\"; readonly overallScore: 80; readonly baseScore: 80; readonly dimensions: { readonly pegStability: { ...; }; readonly liquidity: { ...; }; readonly resilience: { ...; }; readonly decentralization: ...' is not assignable to type 'Record<string, { id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number | null; baseScore: number | null; ... 7 more ...; bridgeRouteRisk?: { ...; } | ... 1 more ... | undefined; }>'.",
-      "count": 3,
-      "examples": [
-        "177:9",
-        "199:9",
-        "285:9"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/yield-detail-section.test.tsx",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'method' does not exist in type '{ sourceKey: string; sourceObservedAt: number; sourceAgeSeconds: number; confidenceTier: \"fallback\" | \"deterministic\" | \"curated\" | \"discovered\"; selectionMethod: \"confidence-weighted\"; ... 17 more ...; benchmarkIsProxy?: boolean | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "108:7"
       ]
     },
     {
@@ -1301,24 +962,6 @@
       "count": 1,
       "examples": [
         "21:7"
-      ]
-    },
-    {
-      "file": "src/components/screener/__tests__/screener-table.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"peggedUSD\"' is not assignable to type '\"USD\" | \"EUR\" | \"GBP\" | \"CHF\" | \"BRL\" | \"RUB\" | \"JPY\" | \"KRW\" | \"IDR\" | \"INR\" | \"MYR\" | \"SGD\" | \"HKD\" | \"TRY\" | \"AUD\" | \"ZAR\" | \"CAD\" | \"CNY\" | \"CNH\" | \"PHP\" | \"MXN\" | \"VND\" | \"UAH\" | ... 7 more ... | \"OTHER\"'.",
-      "count": 1,
-      "examples": [
-        "19:3"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/contagion-snapshot.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'dependencyFromLive' is missing in type '{ pegScore: number; activeDepeg: false; activeDepegBps: null; depegEventCount: number; lastEventAt: null; liquidityScore: number; effectiveExitScore: null; redemptionBackstopScore: null; ... 16 more ...; collateralFromLive: false; }' but required in type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "63:7"
       ]
     },
     {
@@ -1406,60 +1049,12 @@
       ]
     },
     {
-      "file": "src/components/stablecoin-detail/__tests__/mobile-risk-snapshot.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'dependencyFromLive' is missing in type '{ pegScore: number; activeDepeg: false; activeDepegBps: null; depegEventCount: number; lastEventAt: null; liquidityScore: number; effectiveExitScore: number; redemptionBackstopScore: null; ... 16 more ...; collateralFromLive: false; }' but required in type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "31:3"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'dependencyFromLive' is missing in type '{ pegScore: number; activeDepeg: false; activeDepegBps: null; depegEventCount: number; lastEventAt: null; liquidityScore: number; effectiveExitScore: number; redemptionBackstopScore: null; ... 16 more ...; collateralFromLive: false; }' but required in type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "65:3"
-      ]
-    },
-    {
       "file": "src/components/stablecoin-detail/__tests__/price-transparency-card.test.tsx",
       "code": "TS2739",
       "message": "Type '{ id: string; name: string; symbol: string; geckoId: null; pegType: string; pegMechanism: string; price: number; priceSource: string; priceConfidence: \"high\"; priceUpdatedAt: number; consensusSources: never[]; ... 7 more ...; chains: string[]; }' is missing the following properties from type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<string, number>; circulatingPrevDay: Record<...>; ... 22 more ...; agreeSources: string[]; }': priceObservedAt, priceObservedAtMode, priceSyncedAt",
       "count": 1,
       "examples": [
         "10:3"
-      ]
-    },
-    {
-      "file": "src/components/status/__tests__/api-key-requests-panel.test.tsx",
-      "code": "TS2352",
-      "message": "Conversion of type 'undefined' to type 'RequestInit' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 4,
-      "examples": [
-        "163:34",
-        "166:31",
-        "218:34"
-      ]
-    },
-    {
-      "file": "src/components/status/__tests__/api-key-requests-panel.test.tsx",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '0'.",
-      "count": 1,
-      "examples": [
-        "217:12"
-      ]
-    },
-    {
-      "file": "src/components/status/__tests__/api-key-requests-panel.test.tsx",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '1'.",
-      "count": 2,
-      "examples": [
-        "162:14",
-        "217:17"
       ]
     },
     {
@@ -1511,24 +1106,6 @@
       ]
     },
     {
-      "file": "src/hooks/__tests__/use-portfolio.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'dependencies' does not exist in type '{ id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number | null; baseScore: number | null; ... 7 more ...; bridgeRouteRisk?: { ...; } | ... 1 more ... | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "56:5"
-      ]
-    },
-    {
-      "file": "src/hooks/__tests__/use-stress-test.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'dependencies' does not exist in type '{ id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number | null; baseScore: number | null; ... 7 more ...; bridgeRouteRisk?: { ...; } | ... 1 more ... | undefined; }'.",
-      "count": 1,
-      "examples": [
-        "53:5"
-      ]
-    },
-    {
       "file": "src/lib/__tests__/alt-peg-sizing.test.ts",
       "code": "TS2345",
       "message": "Argument of type '(marketCapUsd: number, options?: { ceil?: number | undefined; }) => number' is not assignable to parameter of type '(value: number, index: number, array: number[]) => number'.",
@@ -1544,43 +1121,6 @@
       "count": 1,
       "examples": [
         "489:90"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/blacklist-api.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ [k: string]: never[]; }' to type 'Record<\"USDC\" | \"USDT\" | \"PAXG\" | \"XAUT\" | \"PYUSD\" | \"USD1\" | \"USDG\" | \"RLUSD\" | \"U\" | \"USDTB\" | \"A7A5\" | \"FDUSD\" | \"BRZ\" | \"AUSD\" | \"EURI\" | \"USDQ\" | \"USDO\" | \"USDX\" | \"AID\" | \"TGBP\" | ... 14 more ... | \"FIDD\", { ...; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 2,
-      "examples": [
-        "47:26",
-        "190:37"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/blacklist-api.test.ts",
-      "code": "TS2741",
-      "message": "Property 'perCoinRecentEventTypes' is missing in type '{ usdcBlacklisted: number; usdtBlacklisted: number; goldBlacklisted: number; frozenAddresses: number; destroyedTotal: number; activeAddressCount: number; activeFrozenTotal: number; activeAmountGapCount: number; ... 11 more ...; perCoinQuarterlyEventTypes: Record<...>; }' but required in type '{ usdcBlacklisted: number; usdtBlacklisted: number; goldBlacklisted: number; frozenAddresses: number; destroyedTotal: number; activeAddressCount: number; activeFrozenTotal: number; activeAmountGapCount: number; ... 12 more ...; perCoinRecentEventTypes: Record<...>; }'.",
-      "count": 1,
-      "examples": [
-        "53:5"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/blacklist-status-buckets.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ \"usdt-tether\": { rawInputs: { canBeBlacklisted: true; }; }; \"usdp-parallel\": { rawInputs: { canBeBlacklisted: \"inherited\"; }; }; \"lusd-liquity\": { rawInputs: { canBeBlacklisted: false; }; }; }' to type 'Record<string, Pick<{ id: string; name: string; symbol: string; overallGrade: \"NR\" | \"A+\" | \"A\" | \"A-\" | \"B+\" | \"B\" | \"B-\" | \"C+\" | \"C\" | \"C-\" | \"D\" | \"F\"; overallScore: number | null; baseScore: number | null; ... 7 more ...; bridgeRouteRisk?: { ...; } | ... 1 more ... | undefined; }, \"rawInputs\">>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "74:25"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/contagion-layout.test.ts",
-      "code": "TS2739",
-      "message": "Type '{ pegScore: number; activeDepeg: boolean; depegEventCount: number; lastEventAt: null; liquidityScore: number; effectiveExitScore: null; redemptionBackstopScore: null; redemptionRouteFamily: null; ... 12 more ...; navToken: boolean; }' is missing the following properties from type '{ pegScore: number | null; activeDepeg: boolean; activeDepegBps: number | null; depegEventCount: number; lastEventAt: number | null; liquidityScore: number | null; effectiveExitScore: number | null; ... 25 more ...; variantKind?: \"savings-passthrough\" | ... 4 more ... | undefined; }': activeDepegBps, redemptionModelConfidence, redemptionUsedForLiquidity, collateralFromLive, dependencyFromLive",
-      "count": 1,
-      "examples": [
-        "72:5"
       ]
     },
     {
@@ -1641,62 +1181,6 @@
       "count": 1,
       "examples": [
         "17:66"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2345",
-      "message": "Argument of type '{ coin: never; coinData: never; isNavToken: boolean; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; ... 9 more ...; redemptionBackstop: { ...; } | null; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
-      "count": 1,
-      "examples": [
-        "1589:47"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2345",
-      "message": "Argument of type '{ coin: never; coinData: never; isNavToken: false; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; gaugeDeviationBps: number; ... 8 more ...; redemptionBackstop: never; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
-      "count": 1,
-      "examples": [
-        "1469:53"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2345",
-      "message": "Argument of type '{ coin: never; coinData: never; isNavToken: false; mcap: number; supply: number; prevDay: null; prevWeek: null; prevMonth: null; performanceVsUsd1y: null; pegRef: number; deviationBps: number; gaugeDeviationBps: number; ... 8 more ...; redemptionBackstop: null; }' is not assignable to parameter of type 'BuildHeroCardViewModelParams'.",
-      "count": 2,
-      "examples": [
-        "1404:53",
-        "1518:66"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'currentBand' does not exist in type '{ id: string; symbol: string; name: string; pegType: string; pegCurrency: string; governance: string; currentDeviationBps: number | null; pegScore: number | null; pegPct: number; severityScore: number; ... 18 more ...; dexPriceCheck?: { ...; } | ... 1 more ... | undefined; }'.",
-      "count": 2,
-      "examples": [
-        "1217:9",
-        "1355:9"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'source' does not exist in type '{ updatedAt: number; ageSeconds: number; status: \"degraded\" | \"stale\" | \"fresh\"; warning?: string | null | undefined; dependencies?: Record<string, { status: \"degraded\" | \"unavailable\" | \"stale\" | \"fresh\"; updatedAt?: number | ... 1 more ... | undefined; ageSeconds?: number | ... 1 more ... | undefined; reason?: str...'.",
-      "count": 1,
-      "examples": [
-        "151:21"
-      ]
-    },
-    {
-      "file": "src/lib/__tests__/stablecoin-detail-view-model.test.ts",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'source' does not exist in type 'ApiMeta'.",
-      "count": 1,
-      "examples": [
-        "714:21"
       ]
     },
     {

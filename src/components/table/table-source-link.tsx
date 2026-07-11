@@ -12,6 +12,7 @@ export interface TableSourceLinkProps {
   iconClassName?: string;
   title?: string;
   stopPropagation?: boolean;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 }
 
 export function TableSourceLink({
@@ -21,14 +22,18 @@ export function TableSourceLink({
   iconClassName,
   title,
   stopPropagation = false,
+  onClick,
 }: TableSourceLinkProps) {
   if (!href) {
     return <span className={className}>{children}</span>;
   }
 
   const handleClick: MouseEventHandler<HTMLAnchorElement> | undefined = stopPropagation
-    ? (event) => event.stopPropagation()
-    : undefined;
+    ? (event) => {
+        event.stopPropagation();
+        onClick?.(event);
+      }
+    : onClick;
   const handleKeyDown: KeyboardEventHandler<HTMLAnchorElement> | undefined = stopPropagation
     ? (event) => event.stopPropagation()
     : undefined;

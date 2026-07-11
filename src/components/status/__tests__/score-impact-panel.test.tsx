@@ -50,4 +50,19 @@ describe("ScoreImpactPanel", () => {
     expect(screen.getByText("26.0")).toBeTruthy();
     expect(screen.getByText(/Safety Scores may look lower/)).toBeTruthy();
   });
+
+  it("renders absent optional payloads as Unknown instead of zero", () => {
+    const data = makeHealthyStatusResponse();
+
+    render(
+      <ScoreImpactPanel
+        reserveComposition={data.reserveComposition}
+        reserveDrift={undefined}
+        classificationWarnings={undefined}
+      />,
+    );
+
+    expect(screen.getAllByText("Unknown")).toHaveLength(2);
+    expect(screen.getByText("Reserve drift payload is unavailable; no zero count is inferred.")).toBeTruthy();
+  });
 });

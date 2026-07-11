@@ -1,14 +1,44 @@
-import { batchExecute } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import type { PresetSubscriptionRow } from "../telegram-webhook-shared";
-import { unixNow } from "./subscribers";
-import { prepareSubscriberAndSubscriptionStatements } from "./subscriptions";
+import {
+  preparePreferenceGenerationBump,
+  prepareUpsertSubscriberRow,
+  unixNow,
+} from "./subscribers";
+import {
+  prepareRemoveSubscriptionStatements,
+  prepareSubscriberAndSubscriptionStatements,
+} from "./subscriptions";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
+
+export interface SubscribeIntentInput {
+  chatId: string;
+  username: string | null;
+  directStablecoinIds: readonly string[];
+  presetIds?: readonly string[];
+  alertTypes: Set<string>;
+  clearPending?: boolean;
+  depegWorseningBpsStep?: 100 | 250 | 500 | null;
+  operationStatements?: D1PreparedStatement[];
+}
+
+export interface UnsubscribeIntentInput {
+  chatId: string;
+  directStablecoinIds: readonly string[];
+  presetIds?: readonly string[];
+  clearPending?: boolean;
+  operationStatements?: D1PreparedStatement[];
+}
 
 function preparePresetSubscriptionStatements(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],
   alertTypes: Set<string>,
-  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null; operationStatements?: D1PreparedStatement[] },
 ): D1PreparedStatement[] {
   const uniquePresetIds = Array.from(new Set(presetIds));
   if (uniquePresetIds.length === 0) return [];
@@ -54,11 +84,22 @@ export async function upsertPresetSubscriptions(
   chatId: string,
   presetIds: readonly string[],
   alertTypes: Set<string>,
-  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null; operationStatements?: D1PreparedStatement[] },
 ): Promise<void> {
   const statements = preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options);
-  if (statements.length === 0) return;
-  await batchExecute(db, statements);
+  if (statements.length === 0 && (options?.operationStatements?.length ?? 0) === 0) return;
+  const domainStatements = statements.length === 0
+    ? []
+    : [
+        prepareUpsertSubscriberRow(db, {
+          chatId,
+          username: null,
+          nowSec: unixNow(),
+          bumpPreferenceGeneration: true,
+        }),
+        ...statements,
+      ];
+  await executeAtomicBatch(db, appendTelegramOperationStatements(domainStatements, options));
 }
 
 export function prepareSubscriberAndPresetStatements(
@@ -66,14 +107,42 @@ export function prepareSubscriberAndPresetStatements(
   chatId: string,
   username: string | null,
   presetIds: readonly string[],
-  stablecoinIds: string[],
+  directStablecoinIds: string[],
   alertTypes: Set<string>,
   options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   return [
-    ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, stablecoinIds, options),
+    ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, directStablecoinIds, options),
     ...preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options),
   ];
+}
+
+function prepareSubscribeIntentStatements(
+  db: D1Database,
+  input: SubscribeIntentInput,
+): D1PreparedStatement[] {
+  return prepareSubscriberAndPresetStatements(
+    db,
+    input.chatId,
+    input.username,
+    input.presetIds ?? [],
+    [...input.directStablecoinIds],
+    input.alertTypes,
+    {
+      clearPending: input.clearPending,
+      depegWorseningBpsStep: input.depegWorseningBpsStep,
+    },
+  );
+}
+
+export async function applySubscribeIntent(
+  db: D1Database,
+  input: SubscribeIntentInput,
+): Promise<void> {
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements(prepareSubscribeIntentStatements(db, input), input),
+  );
 }
 
 export function prepareRemovePresetSubscriptionStatements(
@@ -90,14 +159,50 @@ export function prepareRemovePresetSubscriptionStatements(
   ];
 }
 
+function prepareUnsubscribeIntentStatements(
+  db: D1Database,
+  input: UnsubscribeIntentInput,
+): D1PreparedStatement[] {
+  const directStablecoinIds = Array.from(new Set(input.directStablecoinIds));
+  const presetIds = Array.from(new Set(input.presetIds ?? []));
+  if (directStablecoinIds.length === 0 && presetIds.length === 0) return [];
+
+  const statements = [
+    ...prepareRemoveSubscriptionStatements(db, input.chatId, directStablecoinIds, { touchSubscriber: false }),
+    ...prepareRemovePresetSubscriptionStatements(db, input.chatId, presetIds),
+    preparePreferenceGenerationBump(db, input.chatId),
+  ];
+  if (input.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(input.chatId),
+    );
+  }
+  return statements;
+}
+
+export async function applyUnsubscribeIntent(
+  db: D1Database,
+  input: UnsubscribeIntentInput,
+): Promise<void> {
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements(prepareUnsubscribeIntentStatements(db, input), input),
+  );
+}
+
 export async function removePresetSubscriptions(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const statements = prepareRemovePresetSubscriptionStatements(db, chatId, presetIds);
-  if (statements.length === 0) return;
-  await db.batch(statements);
+  const domainStatements = statements.length === 0
+    ? []
+    : [...statements, preparePreferenceGenerationBump(db, chatId)];
+  const atomicStatements = appendTelegramOperationStatements(domainStatements, options);
+  if (atomicStatements.length === 0) return;
+  await executeAtomicBatch(db, atomicStatements);
 }
 
 export async function loadPresetSubscriptions(

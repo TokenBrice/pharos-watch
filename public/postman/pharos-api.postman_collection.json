@@ -639,13 +639,19 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/yield-rankings",
+              "raw": "{{apiBaseUrl}}/api/yield-rankings?projection=",
               "host": [
                 "{{apiBaseUrl}}"
               ],
               "path": [
                 "api",
                 "yield-rankings"
+              ],
+              "query": [
+                {
+                  "key": "projection",
+                  "value": ""
+                }
               ]
             },
             "description": "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields."

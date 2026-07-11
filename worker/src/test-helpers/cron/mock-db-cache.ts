@@ -1,8 +1,8 @@
 /**
  * Factory for stubbing `worker/src/lib/db-cache` in cron tests.
  *
- * Captures the common shape used inline by `sync-yield-data.test.ts`,
- * `sync-stablecoins.test.ts`, and `dispatch-telegram-alerts.test.ts`:
+ * Captures the common shape used by `sync-yield-data-*.test.ts`,
+ * `sync-stablecoins.test.ts`, and `dispatch-telegram-alerts-*.test.ts`:
  * benign no-op stubs for `getCache`/`getCaches`/`setCache`/`setCacheMany`/`deleteCache`/
  * `setCacheIfNewer`/`writeFreshnessSentinel`, returned as `vi.fn()` mocks so tests can
  * override per-call via `vi.mocked(getCache).mockImplementation(...)`.

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
 const ISO_DATE = "2026-05-16";
@@ -49,14 +50,14 @@ const PSI_ROW = {
 const STRESS_ROWS = [
   {
     stablecoin_id: "usdc-circle",
-    computed_at: 1779105000,
+    computed_at: NOW_SEC - 600,
     score: 18,
     band: "CALM",
     signals_json: JSON.stringify({ delta: 0.04 }),
   },
   {
     stablecoin_id: "usdt-tether",
-    computed_at: 1779105000,
+    computed_at: NOW_SEC - 600,
     score: 24,
     band: "CALM",
     signals_json: JSON.stringify({ delta: 0.07 }),
@@ -76,8 +77,29 @@ const DEX_ROWS = [
   },
 ];
 
+function publishedDewsPointer(rows = STRESS_ROWS) {
+  const computedAt = rows[0]?.computed_at ?? NOW_SEC - 600;
+  return {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["dews:published-generation"],
+    rows: [{
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: computedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+      }),
+      updated_at: computedAt,
+    }],
+  };
+}
+
 function buildDb(): MockD1Database {
   return mockD1([
+    publishedDewsPointer(),
     {
       match: "FROM cache WHERE key",
       rows: [
@@ -338,8 +360,9 @@ describe("snapshotPublicDataset", () => {
     expect(getInsertBinds(db)).toBeUndefined();
   });
 
-  it("still writes a snapshot when DEWS / liquidity rows are missing", async () => {
+  it("does not seal the dataset when the published DEWS generation is missing", async () => {
     const db = mockD1([
+      publishedDewsPointer(),
       {
         match: "FROM cache WHERE key",
         rows: [
@@ -354,24 +377,46 @@ describe("snapshotPublicDataset", () => {
     ]);
 
     const result = await snapshotPublicDataset(db);
-    expect(result.itemCount).toBe(1);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "public_snapshot_section_read_failed",
+      missingSections: ["dews"],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
 
-    const binds = getInsertBinds(db);
-    const decompressed = await gunzipToText(binds?.[1] as Uint8Array);
-    const envelope = JSON.parse(decompressed) as {
-      psi: { computedAt: number } | null;
-      dews: unknown[];
-      liquidity: unknown[];
-      reportCards: unknown;
-    };
-    expect(envelope.psi?.computedAt).toBe(EXPECTED_PSI_COMPUTED_AT);
-    expect(envelope.dews).toEqual([]);
-    expect(envelope.liquidity).toEqual([]);
-    expect(envelope.reportCards).toEqual(REPORT_CARD_CACHE_PAYLOAD);
+  it("does not seal a mixed DEWS generation while a newer chunk is staging", async () => {
+    const db = mockD1([
+      publishedDewsPointer(),
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+      { match: "FROM stability_index", rows: [], first: PSI_ROW },
+      { match: "pharos:stress-signals:published-exact", rows: [STRESS_ROWS[1]!] },
+      { match: "FROM dex_liquidity", rows: DEX_ROWS },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "public_snapshot_section_read_failed",
+      missingSections: ["dews"],
+      failedSections: [{
+        section: "dews",
+        error: "published generation coverage mismatch: rows=1/2",
+      }],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
   });
 
   it("degrades instead of writing when the DEWS section read fails", async () => {
     const db = mockD1([
+      publishedDewsPointer(),
       {
         match: "FROM cache WHERE key",
         rows: [
@@ -390,13 +435,14 @@ describe("snapshotPublicDataset", () => {
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       reason: "public_snapshot_section_read_failed",
       missingSections: ["dews"],
-      failedSections: [{ section: "dews", error: "D1 read failed" }],
+      failedSections: [{ section: "dews", error: "generation-read-failed:D1 read failed" }],
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });
 
   it("degrades instead of writing when the DEX liquidity section read fails", async () => {
     const db = mockD1([
+      publishedDewsPointer(),
       {
         match: "FROM cache WHERE key",
         rows: [

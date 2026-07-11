@@ -1,165 +1,86 @@
 "use client";
 
-import { useState } from "react";
-import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
-import { adminMutation } from "@/lib/admin-access";
-import { Button } from "@/components/ui/button";
+import { useLayoutEffect, useState } from "react";
+import type { StatusPageAction } from "@shared/lib/api-endpoints";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-
-export interface AdminActionExecution {
-  action: StatusPageAction;
-  ok: boolean;
-  output: string;
-  executedAt: number;
-}
+  type AdminActionExecution,
+  type AdminActionReadinessSource,
+  useAdminActionDialog,
+} from "@/components/status/admin-action-execution-provider";
+import { Button } from "@/components/ui/button";
+import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
 interface AdminActionButtonProps {
   action: StatusPageAction;
   buttonClassName?: string;
+  buttonLabel?: string;
   fullWidth?: boolean;
+  initialDryRun?: boolean;
+  readinessChecks?: readonly ActionReadinessCheck[];
   onFinished?: (execution: AdminActionExecution) => void;
+}
+
+const EMPTY_READINESS_CHECKS: readonly ActionReadinessCheck[] = [];
+
+function createReadinessStore(initialSnapshot: readonly ActionReadinessCheck[]) {
+  let snapshot = initialSnapshot;
+  const listeners = new Set<() => void>();
+  const source: AdminActionReadinessSource = {
+    getSnapshot: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+
+  return {
+    source,
+    update(nextSnapshot: readonly ActionReadinessCheck[]) {
+      if (snapshot === nextSnapshot) return;
+      snapshot = nextSnapshot;
+      listeners.forEach((listener) => listener());
+    },
+  };
 }
 
 export function AdminActionButton({
   action,
   buttonClassName,
+  buttonLabel,
   fullWidth = true,
+  initialDryRun,
+  readinessChecks,
   onFinished,
 }: AdminActionButtonProps) {
-  const isSupplyBackfillAction = action.path === API_PATHS.backfillSupplyHistory();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [stablecoinFilter, setStablecoinFilter] = useState("");
-  const [allowConstantPriceFallback, setAllowConstantPriceFallback] = useState(false);
+  const { execution, openDialog } = useAdminActionDialog(action.path);
+  const loading = execution?.requestInFlight === true;
+  const [readinessStore] = useState(() => createReadinessStore(readinessChecks ?? EMPTY_READINESS_CHECKS));
 
-  const handleConfirm = async () => {
-    setLoading(true);
-    setResult(null);
-    setError(null);
-
-    try {
-      const trimmedFilter = stablecoinFilter.trim();
-      const effectivePath =
-        action.acceptsStablecoinFilter && trimmedFilter
-          ? `${action.path}${action.path.includes("?") ? "&" : "?"}stablecoin=${encodeURIComponent(trimmedFilter)}`
-          : action.path;
-      const effectivePathWithFallback =
-        isSupplyBackfillAction && allowConstantPriceFallback
-          ? `${effectivePath}${effectivePath.includes("?") ? "&" : "?"}allow-constant-price-fallback=true`
-          : effectivePath;
-
-      const response = await adminMutation(effectivePathWithFallback, {
-        method: action.method,
-        idempotencyKey:
-          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${action.path}:${Date.now()}`,
-      });
-      const output = response.formattedBody;
-      setResult(output);
-      onFinished?.({
-        action,
-        ok: true,
-        output,
-        executedAt: Math.floor(Date.now() / 1000),
-      });
-    } catch (err) {
-      const output = err instanceof Error ? err.message : "Unknown error";
-      setError(output);
-      onFinished?.({
-        action,
-        ok: false,
-        output,
-        executedAt: Math.floor(Date.now() / 1000),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  useLayoutEffect(() => {
+    readinessStore.update(readinessChecks ?? EMPTY_READINESS_CHECKS);
+  }, [readinessChecks, readinessStore]);
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (isOpen) {
-          setResult(null);
-          setError(null);
-          setStablecoinFilter("");
-          setAllowConstantPriceFallback(false);
-        }
-      }}
+    <Button
+      type="button"
+      variant={action.destructive ? "destructive" : "outline"}
+      size="sm"
+      className={`min-h-11 ${fullWidth ? "w-full" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`.trim()}
+      disabled={loading}
+      aria-busy={loading}
+      data-execution-status={execution?.status ?? "idle"}
+      onClick={(event) =>
+        openDialog({
+          action,
+          initialDryRun,
+          readinessChecks,
+          readinessSource: readinessStore.source,
+          onFinished,
+          returnFocus: event.currentTarget,
+        })
+      }
     >
-      <DialogTrigger asChild>
-        <Button
-          variant={action.destructive ? "destructive" : "outline"}
-          size="sm"
-          className={`${fullWidth ? "w-full" : ""}${buttonClassName ? ` ${buttonClassName}` : ""}`.trim()}
-        >
-          {action.label}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{action.label}</DialogTitle>
-          <DialogDescription>{action.confirm}</DialogDescription>
-        </DialogHeader>
-        {action.acceptsStablecoinFilter && (
-          <div className="space-y-1">
-            <label htmlFor="stablecoin-filter" className="text-xs font-medium text-muted-foreground">
-              Stablecoin ID <span className="font-normal">(optional — leave empty for batch)</span>
-            </label>
-            <input
-              id="stablecoin-filter"
-              type="text"
-              value={stablecoinFilter}
-              onChange={(e) => setStablecoinFilter(e.target.value)}
-              placeholder="e.g. usdt-tether"
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
-              disabled={loading}
-            />
-          </div>
-        )}
-        {isSupplyBackfillAction && (
-          <label
-            htmlFor="allow-constant-price-fallback"
-            className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <input
-              id="allow-constant-price-fallback"
-              type="checkbox"
-              checked={allowConstantPriceFallback}
-              onChange={(e) => setAllowConstantPriceFallback(e.target.checked)}
-              disabled={loading}
-            />
-            Allow constant-price fallback for non-USD backfill
-          </label>
-        )}
-        {result && <pre className="max-h-60 overflow-auto rounded bg-muted p-3 text-xs">{result}</pre>}
-        {error && (
-          <pre className="max-h-60 overflow-auto rounded bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-400">
-            {error}
-          </pre>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button variant={action.destructive ? "destructive" : "default"} onClick={handleConfirm} disabled={loading} aria-busy={loading}>
-            {loading ? "Running..." : "Confirm"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {loading ? "Running..." : (buttonLabel ?? action.label)}
+    </Button>
   );
 }

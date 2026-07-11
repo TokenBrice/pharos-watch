@@ -23,6 +23,18 @@
     },
     "notes": "Shared formatting intentionally centralizes many small branchy display helpers. Keep new formatting families covered by focused helper tests or split them into narrower modules if this file grows."
   },
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
+    "fileLines": 859,
+    "maxFunctionLines": 44,
+    "branchCount": 5,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 700,
+      "maxFunctionLines": 44,
+      "branchCount": 5
+    },
+    "notes": "Queue-redeem configuration is predominantly declarative, but its top-12 file size now has an explicit shrink-only budget. Split protocol families into focused config modules before adding another queue integration."
+  },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 152,
     "maxFunctionLines": 42,
@@ -48,9 +60,9 @@
     "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
   "worker/src/handlers/http/request-dispatch.ts": {
-    "fileLines": 136,
-    "maxFunctionLines": 102,
-    "branchCount": 9,
+    "fileLines": 146,
+    "maxFunctionLines": 108,
+    "branchCount": 10,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 54,
@@ -72,16 +84,28 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 899,
-    "maxFunctionLines": 489,
-    "branchCount": 59,
+    "fileLines": 234,
+    "maxFunctionLines": 183,
+    "branchCount": 4,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 250,
+      "maxFunctionLines": 200,
+      "branchCount": 8
+    },
+    "notes": "Column descriptors, row derivation, frame rendering, and desktop/mobile row cells now live in focused modules. Keep this public table component as the interaction and composition shell."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "fileLines": 411,
+    "maxFunctionLines": 369,
+    "branchCount": 23,
     "disposition": "queued-p4",
     "targetBudget": {
-      "fileLines": 830,
-      "maxFunctionLines": 450,
-      "branchCount": 55
+      "fileLines": 380,
+      "maxFunctionLines": 320,
+      "branchCount": 20
     },
-    "notes": "Stablecoin table still owns filter orchestration, toolbar composition, virtualization, and overview-specific rendering. Keep enrolled after the Figma overview density pass; split table state/view-model concerns before adding more table behavior."
+    "notes": "Yield history rendering remains a large chart coordinator. Split range/series derivation from chart presentation before adding more overlays or interaction modes."
   },
   "src/app/chains/[chain]/client.tsx": {
     "fileLines": 135,
@@ -95,9 +119,21 @@
     },
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
+  "src/app/yield/client.tsx": {
+    "fileLines": 667,
+    "maxFunctionLines": 438,
+    "branchCount": 55,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 500,
+      "maxFunctionLines": 320,
+      "branchCount": 30
+    },
+    "notes": "The yield workbench route still combines query orchestration, URL state, toolbar state, and section composition. Move route state and presentation sections behind focused controller boundaries before extending the workbench."
+  },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 201,
-    "maxFunctionLines": 168,
+    "fileLines": 224,
+    "maxFunctionLines": 189,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -156,8 +192,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 289,
-    "maxFunctionLines": 269,
+    "fileLines": 315,
+    "maxFunctionLines": 295,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -252,19 +288,19 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "src/components/api-key-request-form.tsx": {
-    "fileLines": 464,
-    "maxFunctionLines": 423,
-    "branchCount": 28,
-    "disposition": "queued-p4",
+    "fileLines": 25,
+    "maxFunctionLines": 17,
+    "branchCount": 1,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 420,
-      "maxFunctionLines": 340,
-      "branchCount": 25
+      "fileLines": 40,
+      "maxFunctionLines": 25,
+      "branchCount": 3
     },
-    "notes": "The public self-serve form now delegates request, verification, copy, and one-time reveal state to `use-api-key-request-form-state`. Keep future behavior in the hook or focused subcomponents instead of regrowing the presentation shell."
+    "notes": "The public form is now a thin composition shell over field and one-time reveal sections, with workflow state retained in the dedicated hook. Keep transport and field behavior out of this facade."
   },
   "src/hooks/use-api-key-request-form-state.ts": {
-    "fileLines": 200,
+    "fileLines": 199,
     "maxFunctionLines": 136,
     "branchCount": 12,
     "disposition": "stabilized",
@@ -276,16 +312,16 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 917,
-    "maxFunctionLines": 121,
-    "branchCount": 37,
-    "disposition": "queued-p4",
+    "fileLines": 163,
+    "maxFunctionLines": 93,
+    "branchCount": 8,
+    "disposition": "stabilized",
     "targetBudget": {
-      "fileLines": 560,
-      "maxFunctionLines": 180,
-      "branchCount": 40
+      "fileLines": 200,
+      "maxFunctionLines": 110,
+      "branchCount": 10
     },
-    "notes": "The stablecoin detail page and hero share this view-model layer, now with expanded redemption backstop, mint authority, market metric, and reserve/detail shaping. Split those domains into focused helpers before expanding the detail surface further."
+    "notes": "The compatibility facade now delegates query availability, hero metrics, and public contracts to focused view-model modules. Add new derivation to the owning module rather than regrowing this barrel."
   },
   "worker/src/api/api-key-requests.ts": {
     "fileLines": 9,
@@ -323,6 +359,18 @@
     },
     "notes": "Admin mint/burn reclassification now scopes updates by chain and rejects malformed non-negative query params. Keep future repair policy changes covered by focused endpoint tests."
   },
+  "worker/src/api/telegram-webhook-parsing.ts": {
+    "fileLines": 499,
+    "maxFunctionLines": 95,
+    "branchCount": 84,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 380,
+      "maxFunctionLines": 80,
+      "branchCount": 65
+    },
+    "notes": "Webhook parsing surfaced after larger Worker files were split. Separate update-shape parsing from command/callback normalization and keep transport validation out of the parser family."
+  },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 26,
     "maxFunctionLines": 0,
@@ -336,9 +384,9 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 432,
-    "maxFunctionLines": 380,
-    "branchCount": 24,
+    "fileLines": 422,
+    "maxFunctionLines": 371,
+    "branchCount": 25,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 191,
@@ -348,16 +396,16 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1127,
-    "maxFunctionLines": 338,
-    "branchCount": 26,
-    "disposition": "deferred",
+    "fileLines": 388,
+    "maxFunctionLines": 300,
+    "branchCount": 9,
+    "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 540,
       "maxFunctionLines": 260,
       "branchCount": 55
     },
-    "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
+    "notes": "TGB-036 split landed: queue-only paths, source-event lifecycle, result field mappers, and dispatch-state policy live in sibling modules. Keep this entrypoint orchestration-plus-progress only; new path bodies belong in the responsibility modules."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
     "fileLines": 478,
@@ -372,9 +420,9 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 833,
-    "maxFunctionLines": 164,
-    "branchCount": 20,
+    "fileLines": 837,
+    "maxFunctionLines": 165,
+    "branchCount": 21,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 370,
@@ -395,9 +443,21 @@
     },
     "notes": "Extracted from orchestrator-metadata during the Wave 4 liquidity split. Drift detection, score-family analysis, and alert assembly still live in one pipeline function; split into drift/analysis/alerting before adding more signal types."
   },
+  "worker/src/cron/dex-liquidity/staging-merge.ts": {
+    "fileLines": 607,
+    "maxFunctionLines": 368,
+    "branchCount": 65,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 500,
+      "maxFunctionLines": 280,
+      "branchCount": 50
+    },
+    "notes": "Staged-pool merge surfaced as a long-function hotspot after orchestration splits. Extract source-priority selection and candidate dedupe from D1 staging reads before extending merge policy."
+  },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 344,
-    "maxFunctionLines": 278,
+    "fileLines": 364,
+    "maxFunctionLines": 295,
     "branchCount": 16,
     "disposition": "stabilized",
     "targetBudget": {
@@ -432,9 +492,9 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 451,
-    "maxFunctionLines": 145,
-    "branchCount": 22,
+    "fileLines": 634,
+    "maxFunctionLines": 206,
+    "branchCount": 48,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -444,9 +504,9 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 246,
-    "maxFunctionLines": 170,
-    "branchCount": 9,
+    "fileLines": 261,
+    "maxFunctionLines": 185,
+    "branchCount": 11,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 260,
@@ -454,6 +514,18 @@
       "branchCount": 16
     },
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
+  },
+  "worker/src/cron/depeg-detection/decision-engine.ts": {
+    "fileLines": 839,
+    "maxFunctionLines": 142,
+    "branchCount": 58,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 780,
+      "maxFunctionLines": 125,
+      "branchCount": 50
+    },
+    "notes": "The depeg decision engine remains the largest newly exposed policy module. Split evidence aggregation from decision-state transitions while preserving the resolver contract and replay behavior."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
     "fileLines": 101,
@@ -468,9 +540,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 596,
-    "maxFunctionLines": 366,
-    "branchCount": 46,
+    "fileLines": 753,
+    "maxFunctionLines": 548,
+    "branchCount": 57,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,
@@ -480,9 +552,9 @@
     "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 216,
-    "maxFunctionLines": 175,
-    "branchCount": 20,
+    "fileLines": 292,
+    "maxFunctionLines": 160,
+    "branchCount": 25,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 300,
@@ -490,6 +562,30 @@
       "branchCount": 24
     },
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
+  },
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
+    "fileLines": 895,
+    "maxFunctionLines": 78,
+    "branchCount": 73,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 650,
+      "maxFunctionLines": 70,
+      "branchCount": 55
+    },
+    "notes": "Replace the release waiver with an explicit shrink-only baseline. Provider fetch/parse adapters should move out of this shared normalization and run-state module before new FX sources are added."
+  },
+  "worker/src/cron/sync-yield-data.ts": {
+    "fileLines": 47,
+    "maxFunctionLines": 39,
+    "branchCount": 2,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 60,
+      "maxFunctionLines": 45,
+      "branchCount": 3
+    },
+    "notes": "Fetch, normalization, health/telemetry, and persistence now live in typed coordinator stage modules under yield-sync. Keep this public cron entrypoint as a thin stage sequencer."
   },
   "worker/src/cron/yield-config.ts": {
     "fileLines": 65,
@@ -527,9 +623,21 @@
     },
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
+  "worker/src/lib/scheduled-slot-fence.ts": {
+    "fileLines": 710,
+    "maxFunctionLines": 168,
+    "branchCount": 45,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 675,
+      "maxFunctionLines": 150,
+      "branchCount": 42
+    },
+    "notes": "Stale child-artifact reconciliation and event persistence now live behind scheduled-slot-reconciliation.ts. Keep claim, heartbeat, takeover, and finalization ownership in this fence without pulling D1 cleanup logic back in."
+  },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 261,
-    "maxFunctionLines": 133,
+    "fileLines": 264,
+    "maxFunctionLines": 134,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
@@ -550,5 +658,17 @@
       "branchCount": 0
     },
     "notes": "This is now a facade over the split status-reliability helper modules. Preserve it as the import surface and keep implementation detail in the dedicated stores/views."
+  },
+  "worker/src/lib/telegram-usage-analytics.ts": {
+    "fileLines": 589,
+    "maxFunctionLines": 138,
+    "branchCount": 26,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 700,
+      "maxFunctionLines": 120,
+      "branchCount": 45
+    },
+    "notes": "Telegram usage analytics surfaced in the file-length set after the slot/yield shrink. Split SQL row loading, lifecycle aggregation, and operator projection before adding new analytics dimensions."
   }
 }

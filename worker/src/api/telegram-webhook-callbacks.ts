@@ -39,6 +39,7 @@ import {
   parseCallbackData,
   SNOOZE_SECONDS,
 } from "./webhook-callbacks/_shared";
+import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import { handleSetupCallback } from "./webhook-callbacks/setup";
 import { handleSettingsInlineCallback } from "./webhook-callbacks/settings";
 
@@ -50,10 +51,26 @@ export async function handleCallbackQuery(
   db: D1Database,
   botToken: string,
   cb: TelegramCallbackQuery,
+  effect: {
+    beforeIrreversibleEffect: (kind: string) => Promise<void>;
+    markMutationApplied: () => Promise<void>;
+    planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+    prepareMutationAppliedStatement?: () => D1PreparedStatement;
+    confirmAtomicMutationApplied?: () => void;
+    storedIntent?: TelegramWebhookOperationIntent | null;
+    wasMutationApplied?: boolean;
+  } = {
+    beforeIrreversibleEffect: async () => undefined,
+    markMutationApplied: async () => undefined,
+  },
 ): Promise<void> {
+  const answer = async (options?: { text?: string }): Promise<void> => {
+    await effect.beforeIrreversibleEffect("callback-ack");
+    await answerCallbackQuery(cb.id, botToken, options);
+  };
   const chatId = cb.message?.chat?.id?.toString();
   if (!chatId) {
-    await answerCallbackQuery(cb.id, botToken);
+    await answer();
     return;
   }
 
@@ -64,12 +81,26 @@ export async function handleCallbackQuery(
   // registry-driven path; keep them as direct calls so the registry stays a
   // pure lookup.
   if (parsed.action === "setup") {
-    await handleSetupCallback(db, botToken, cb, chatId, parsed);
+    await handleSetupCallback(db, botToken, cb, chatId, parsed, {
+      beforeIrreversibleEffect: effect.beforeIrreversibleEffect,
+      planIntent: effect.planIntent,
+      prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
+      confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
+      storedIntent: effect.storedIntent,
+      wasMutationApplied: effect.wasMutationApplied,
+    });
     return;
   }
 
   if (parsed.action === "settings") {
-    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed);
+    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed, {
+      beforeIrreversibleEffect: effect.beforeIrreversibleEffect,
+      planIntent: effect.planIntent,
+      prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
+      confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
+      storedIntent: effect.storedIntent,
+      wasMutationApplied: effect.wasMutationApplied,
+    });
     return;
   }
 
@@ -83,11 +114,25 @@ export async function handleCallbackQuery(
       actionDetail: `callback:${action || "unknown"}`,
       outcome: "unknown",
     });
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await answer({ text: "Action not recognized." });
     return;
   }
 
   const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
   const handler = CALLBACK_HANDLERS[knownParsed.action];
-  await handler({ db, botToken, cb, chatId, parsed: knownParsed });
+  await handler({
+    db,
+    botToken,
+    cb,
+    chatId,
+    parsed: knownParsed,
+    beforeIrreversibleEffect: effect.beforeIrreversibleEffect,
+    answerCallback: answer,
+    markMutationApplied: effect.markMutationApplied,
+    planIntent: effect.planIntent,
+    prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
+    confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
+    storedIntent: effect.storedIntent,
+    wasMutationApplied: effect.wasMutationApplied,
+  });
 }

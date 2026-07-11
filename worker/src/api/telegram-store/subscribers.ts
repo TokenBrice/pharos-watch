@@ -1,5 +1,10 @@
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { executeAtomicBatch } from "../../lib/db";
 import type { SubscriberRow } from "../telegram-webhook-shared";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 export function unixNow(): number {
   return Math.floor(Date.now() / 1000);
@@ -7,6 +12,19 @@ export function unixNow(): number {
 
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
+
+export function prepareEnsureSubscriberExists(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  nowSec: number = unixNow(),
+): D1PreparedStatement {
+  return db.prepare(`
+    INSERT OR IGNORE INTO telegram_subscribers (
+      chat_id, username, created_at, last_active_at
+    ) VALUES (?, ?, ?, ?)
+  `).bind(chatId, username, nowSec, nowSec);
+}
 
 export interface UpsertSubscriberInput {
   chatId: string;
@@ -18,6 +36,8 @@ export interface UpsertSubscriberInput {
   quietHours?:
     | { enabled: true; startHourUtc: number; endHourUtc: number }
     | { enabled: false };
+  /** Increment in the same UPSERT as an intent mutation not inferable from the fields above. */
+  bumpPreferenceGeneration?: boolean;
 }
 
 // Canonical order — indexes here are positionally bound to the alert_*/
@@ -41,6 +61,7 @@ type UpsertSubscriberKind =
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
+      bumpPreferenceGeneration?: boolean;
     }
   | {
       kind: "override";
@@ -51,6 +72,7 @@ type UpsertSubscriberKind =
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
+      bumpPreferenceGeneration?: boolean;
     }
   | {
       kind: "preference";
@@ -61,6 +83,7 @@ type UpsertSubscriberKind =
       timezone?: string | null;
       /** `undefined` = leave existing; explicit `null` = clear snooze. */
       alertSnoozeUntilTs?: number | null;
+      bumpPreferenceGeneration?: boolean;
     };
 
 /**
@@ -88,6 +111,15 @@ export function buildSubscriberUpsert(
     "username = COALESCE(excluded.username, telegram_subscribers.username)",
     "last_active_at = excluded.last_active_at",
   ];
+  const bumpsPreferenceGeneration = kind.bumpPreferenceGeneration === true ||
+    kind.quietHours != null ||
+    (kind.kind === "bump" && (
+      kind.perCoinAlertBumps != null || kind.globalAlertBumps != null
+    )) ||
+    kind.kind === "override";
+  if (bumpsPreferenceGeneration) {
+    updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
+  }
 
   const perCoinRow: Array<0 | 1> = [0, 0, 0, 0, 0];
   if (kind.kind === "bump" && kind.perCoinAlertBumps) {
@@ -141,9 +173,9 @@ export function buildSubscriberUpsert(
         alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-        created_at, last_active_at
+        created_at, last_active_at, preference_generation
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
     `;
   const binds: unknown[] = [
@@ -164,6 +196,7 @@ export function buildSubscriberUpsert(
     quietEnd,
     kind.nowSec,
     kind.nowSec,
+    bumpsPreferenceGeneration ? 1 : 0,
   ];
   return { sql, binds };
 }
@@ -205,6 +238,7 @@ function buildSubscriberPreferenceUpsert(kind: Extract<
     );
   }
   updates.push("last_active_at = excluded.last_active_at");
+  updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
 
   const insertColumns = [
     "chat_id",
@@ -233,8 +267,8 @@ function buildSubscriberPreferenceUpsert(kind: Extract<
     insertValues.push("?");
     binds.push(kind.alertSnoozeUntilTs);
   }
-  insertColumns.push("created_at", "last_active_at");
-  insertValues.push("?", "?");
+  insertColumns.push("created_at", "last_active_at", "preference_generation");
+  insertValues.push("?", "?", "1");
   binds.push(kind.nowSec, kind.nowSec);
 
   const sql = `INSERT INTO telegram_subscribers (
@@ -278,6 +312,7 @@ export function prepareUpsertSubscriberRow(
         nowSec: input.nowSec,
         globalAlertOverrides: input.globalAlertOverrides,
         quietHours: input.quietHours,
+        bumpPreferenceGeneration: input.bumpPreferenceGeneration,
       }
     : {
         kind: "bump",
@@ -287,6 +322,7 @@ export function prepareUpsertSubscriberRow(
         perCoinAlertBumps: input.perCoinAlertBumps,
         globalAlertBumps: input.globalAlertBumps,
         quietHours: input.quietHours,
+        bumpPreferenceGeneration: input.bumpPreferenceGeneration,
       };
   const { sql, binds } = buildSubscriberUpsert(kind);
   return db.prepare(sql).bind(...binds);
@@ -295,8 +331,27 @@ export function prepareUpsertSubscriberRow(
 export async function upsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
-  await prepareUpsertSubscriberRow(db, input).run();
+  await executeAtomicBatch(
+    db,
+    appendTelegramOperationStatements([prepareUpsertSubscriberRow(db, input)], options),
+  );
+}
+
+export function preparePreferenceGenerationBump(
+  db: D1Database,
+  chatId: string,
+  nowSec: number = unixNow(),
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE telegram_subscribers
+          SET preference_generation = preference_generation + 1,
+              last_active_at = ?
+        WHERE chat_id = ?`,
+    )
+    .bind(nowSec, chatId);
 }
 
 export async function loadSubscriberByChat(
@@ -322,6 +377,7 @@ export async function loadSubscriberByChat(
          quiet_hours_end_utc,
          timezone,
          alert_snooze_until_ts,
+         preference_generation,
          consecutive_block_count,
          consecutive_block_first_at
        FROM telegram_subscribers
@@ -336,17 +392,26 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
+  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    globalAlertBumps: {
-      dews: alertTypes.has("dews") ? 1 : 0,
-      depeg: alertTypes.has("depeg") ? 1 : 0,
-      safety: alertTypes.has("safety") ? 1 : 0,
-      launch: alertTypes.has("launch") ? 1 : 0,
-      reserve: alertTypes.has("reserve") ? 1 : 0,
-    },
-  });
+  const statements = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: unixNow(),
+      globalAlertBumps: {
+        dews: alertTypes.has("dews") ? 1 : 0,
+        depeg: alertTypes.has("depeg") ? 1 : 0,
+        safety: alertTypes.has("safety") ? 1 : 0,
+        launch: alertTypes.has("launch") ? 1 : 0,
+        reserve: alertTypes.has("reserve") ? 1 : 0,
+      },
+    }),
+  ];
+  if (options.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    );
+  }
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

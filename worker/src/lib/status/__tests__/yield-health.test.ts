@@ -120,6 +120,96 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.coverageRatio).toBe(0);
   });
 
+  it("degrades aggregate health when a published non-USD benchmark is stale behind fresh USD", async () => {
+    const sourceRisk = {
+      sourceRiskScore: 0,
+      sourceRiskPenalty: 1,
+      sourceDepthRatio: 0.1,
+      rewardShare: 0,
+      sourceAgeSeconds: 60,
+      observationCount30d: 10,
+      venueRiskTier: "low",
+    };
+    const benchmark = (key: string, fetchedAt: number, source: string) => ({
+      key,
+      label: `${key} benchmark`,
+      currency: key,
+      rate: 4,
+      recordDate: "2026-04-20",
+      fetchedAt,
+      ageSeconds: NOW - fetchedAt,
+      source,
+      isFallback: false,
+      fallbackMode: null,
+    });
+    const usd = benchmark("USD", NOW - 3600, "fred-dgs3mo");
+    const gbp = benchmark("GBP", NOW - 49 * 3600, "fred-sonia-compounded-index");
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            updatedAt: NOW - 300,
+            rankings: [
+              { id: "usdc-circle", benchmarkKey: "USD", sourceRisk },
+              { id: "tgbp-tokenised", benchmarkKey: "GBP", sourceRisk },
+            ],
+            benchmarks: { USD: usd, GBP: gbp },
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 1,
+                coveredCount: 2,
+                trackedCount: 2,
+                reason: null,
+              },
+              benchmark: usd,
+              benchmarks: { USD: usd, GBP: gbp },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: JSON.stringify({
+            manifestMissingCount: 0,
+            yieldBearingMissingFromRankingsCount: 0,
+            unmatchedHighTvlPoolCount: 0,
+            missingProtocolCount: 0,
+            nativeExactPoolRecommendationCount: 0,
+            sourceFamilyAdapterRecommendationCount: 0,
+            lendingAllowlistRecommendationCount: 0,
+            venueRiskConfigMissingCount: 0,
+            staleAutoLendingOverrideCount: 0,
+            staleVenueRiskScoreCount: 0,
+          }),
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.status).toBe("degraded");
+    expect(summary.benchmark.status).toBe("healthy");
+    expect(summary.benchmarkRegistry).toMatchObject({
+      status: "degraded",
+      usedBenchmarkCount: 2,
+      healthyBenchmarkCount: 1,
+      staleBenchmarkCount: 1,
+      degradedBenchmarkCount: 0,
+      unknownBenchmarkCount: 0,
+      benchmarks: {
+        USD: { status: "healthy", rowCount: 1 },
+        GBP: { status: "stale", rowCount: 1, ageSec: 49 * 3600 },
+      },
+    });
+  });
+
   it("surfaces comparison-anchor freshness without affecting top-level yield health", async () => {
     const summary = await loadYieldHealthSummary(
       makeDb([

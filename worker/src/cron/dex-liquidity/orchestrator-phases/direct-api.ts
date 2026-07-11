@@ -90,6 +90,7 @@ export interface DirectApiIntegrationResult {
 }
 
 export function buildDexDirectApiFetchers(params: {
+  db?: D1Database;
   graphApiKey: string | null;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
@@ -133,7 +134,7 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API,
       normalizedProtocol: "pancakeswap",
       supportedChains: ["bsc", "ethereum", "base"],
-      fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal),
+      fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal, params.db),
     },
     {
       name: "Meteora",
@@ -154,7 +155,7 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.ORCA_API,
       normalizedProtocol: "orca",
       supportedChains: ["solana"],
-      fn: fetchOrcaPools,
+      fn: (signal) => fetchOrcaPools(signal, params.db),
     },
     {
       name: "Aerodrome Slipstream",

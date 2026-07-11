@@ -5,7 +5,7 @@
  */
 
 import { getCache, setCache } from "./db-cache";
-import { sendAlert } from "./alerts";
+import { deliverOperationalAlert } from "./operational-alert";
 import {
   CIRCUIT_OPEN_THRESHOLD,
   CIRCUIT_PROBE_INTERVAL_SEC,
@@ -209,6 +209,7 @@ export async function recordOutcome(
   source: string,
   success: boolean,
   webhookUrl?: string | null,
+  alertBrokerMode?: string,
 ): Promise<CircuitOutcomeRecord> {
   const record = await getCircuitRecord(db, source);
   const before = { ...record };
@@ -226,11 +227,19 @@ export async function recordOutcome(
       // Awaited (not fire-and-forget) so the webhook fetch is tied to the
       // caller's awaited recordOutcome promise and completes before isolate
       // teardown. sendAlert never throws — it returns false on any failure.
-      await sendAlert(
-        webhookUrl ?? null,
-        `Circuit closed: ${source}`,
-        `Source "${source}" has recovered after being open.`,
-      );
+      await deliverOperationalAlert({
+        db,
+        conditionKey: `circuit:${source}:open`,
+        active: false,
+        severity: "warning",
+        title: `Circuit OPEN: ${source}`,
+        message: `Source "${source}" is healthy.`,
+        recoveryTitle: `Circuit closed: ${source}`,
+        recoveryMessage: `Source "${source}" has recovered after being open.`,
+        fingerprint: { source, condition: "circuit-open" },
+        webhookUrl: webhookUrl ?? null,
+        brokerMode: alertBrokerMode,
+      });
     }
     return { before, after: { ...record } };
   }
@@ -252,11 +261,20 @@ export async function recordOutcome(
     // Awaited (not fire-and-forget) so the webhook fetch is tied to the caller's
     // awaited recordOutcome promise and completes before isolate teardown.
     // sendAlert never throws — it returns false on any failure.
-    await sendAlert(
-      webhookUrl ?? null,
-      `Circuit OPEN: ${source}`,
-      `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
-    );
+    await deliverOperationalAlert({
+      db,
+      conditionKey: `circuit:${source}:open`,
+      active: true,
+      severity: "warning",
+      title: `Circuit OPEN: ${source}`,
+      message: `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
+      recoveryTitle: `Circuit closed: ${source}`,
+      recoveryMessage: `Source "${source}" has recovered after being open.`,
+      fingerprint: { source, condition: "circuit-open" },
+      metadata: { source, consecutiveFailures: record.consecutiveFailures },
+      webhookUrl: webhookUrl ?? null,
+      brokerMode: alertBrokerMode,
+    });
     return { before, after: { ...record } };
   }
 

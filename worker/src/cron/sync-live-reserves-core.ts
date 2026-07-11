@@ -22,6 +22,7 @@ import {
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
+import { isReserveRecoveryFaultInjectionTermination } from "../lib/reserve-recovery-fault-injection";
 
 export type ReserveCoinSyncStatus = "synced" | "failed" | "skipped";
 
@@ -32,6 +33,8 @@ export interface ReserveCoinSyncResult {
   warningMessages: string[];
   hasWarnings: boolean;
   attemptFailureSummaries?: ReserveAttemptFailureSummary[];
+  adapterDurationMs: number;
+  d1DurationMs: number;
 }
 
 export type ReserveAdapterRunner = (
@@ -61,6 +64,9 @@ export async function syncReserveCoin(args: {
   breakerCanFetch: Map<string, boolean>;
   previousState: ReserveSyncStateRecord | null;
   d1FinalizeTimeoutMs: number;
+  onAttemptStarted?: (attemptId: string) => Promise<void>;
+  onAttemptPending?: (attemptId: string) => Promise<void>;
+  onAuthoritativeWrite?: (attemptId: string) => Promise<void>;
 }): Promise<ReserveCoinSyncResult> {
   throwIfAborted(args.signal);
 
@@ -73,16 +79,24 @@ export async function syncReserveCoin(args: {
   const attemptStartedAt = Math.floor(Date.now() / 1000);
   let attemptStarted = false;
   let adapterStartMs: number | null = null;
+  let adapterDurationMs = 0;
+  let d1DurationMs = 0;
 
-  const recordFailure = (
+  const timedResult = (
+    result: Omit<ReserveCoinSyncResult, "adapterDurationMs" | "d1DurationMs">,
+  ): ReserveCoinSyncResult => ({ ...result, adapterDurationMs, d1DurationMs });
+
+  const recordFailure = async (
     status: ReserveSyncStateRecord["lastStatus"],
     lastError: string | null,
     reason: string,
     warnings: ReserveSyncStateRecord["warnings"] = [],
     metadataExtras?: Record<string, unknown>,
-  ) => (
-    attemptStarted
-      ? finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
+  ) => {
+    if (!attemptStarted) return { finalized: false };
+    const d1StartedMs = Date.now();
+    try {
+      return await finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
           stablecoinId: coin.id,
           config,
           breakerKey,
@@ -98,18 +112,31 @@ export async function syncReserveCoin(args: {
             failureCategory: classifyFailure(reason, lastError),
             ...(metadataExtras ?? {}),
           },
-        }))
-      : Promise.resolve({ finalized: false })
-  );
+      }));
+    } finally {
+      d1DurationMs += Date.now() - d1StartedMs;
+    }
+  };
 
-  await beginReserveSyncAttempt(db, {
-    stablecoinId: coin.id,
-    adapterKey: config.adapter,
-    breakerKey,
-    attemptedAt: attemptStartedAt,
-    attemptId,
-  });
+  // Fence the durable scheduler checkpoint before exposing the domain attempt
+  // as pending. A crash in between leaves a harmless checkpoint reference to
+  // a nonexistent attempt; the opposite order could leave an untracked pending
+  // attempt that recovery cannot clear with an exact compare-and-swap.
+  await args.onAttemptStarted?.(attemptId);
+  const beginStartedMs = Date.now();
+  try {
+    await beginReserveSyncAttempt(db, {
+      stablecoinId: coin.id,
+      adapterKey: config.adapter,
+      breakerKey,
+      attemptedAt: attemptStartedAt,
+      attemptId,
+    });
+  } finally {
+    d1DurationMs += Date.now() - beginStartedMs;
+  }
   attemptStarted = true;
+  await args.onAttemptPending?.(attemptId);
 
   try {
     const canFetch = breakerCanFetch.has(breakerKey)
@@ -118,18 +145,19 @@ export async function syncReserveCoin(args: {
     breakerCanFetch.set(breakerKey, canFetch);
     if (!canFetch) {
       await recordFailure("skipped", null, "circuit-open");
-      return { breakerKey, status: "skipped", warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "skipped", warningMessages: [], hasWarnings: false });
     }
 
     if (!adapter) {
       console.warn(`[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       await recordFailure("error", `Unknown adapter: ${config.adapter}`, "unknown-adapter");
-      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     adapterStartMs = Date.now();
     const result = await runAdapter(coin, config, adapter);
     const durationMs = Date.now() - adapterStartMs;
+    adapterDurationMs += durationMs;
     const validation = validateAdapterOutput(result, {
       adapter,
       now: attemptStartedAt,
@@ -139,13 +167,13 @@ export async function syncReserveCoin(args: {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
       console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
       await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
-      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     if (result.slices.length === 0) {
       console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
       await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices", [], { durationMs });
-      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     const warnings = [...(result.warnings ?? []), ...validation.warnings];
@@ -155,7 +183,7 @@ export async function syncReserveCoin(args: {
         .map((warning) => warning.message)
         .join("; ");
       await recordFailure("error", message || "Fatal reserve adapter warning", "fatal-warning", warnings, { durationMs });
-      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     const scoringAllowsUnverifiedFreshness = false;
@@ -204,6 +232,7 @@ export async function syncReserveCoin(args: {
     let finalizeSucceeded = false;
     let historyWriteFailed: string | null = null;
     let failureAlreadyRecorded = false;
+    const finalizeStartedMs = Date.now();
     try {
       const finalizeResult = await raceWithTimeout(
         finalizeReserveSyncSuccess(
@@ -211,6 +240,7 @@ export async function syncReserveCoin(args: {
           compositionRecord,
           successState,
           Date.now() + args.d1FinalizeTimeoutMs,
+          args.onAuthoritativeWrite ? () => args.onAuthoritativeWrite!(attemptId) : undefined,
         ),
         args.d1FinalizeTimeoutMs,
         `D1 write timeout for ${coin.id}`,
@@ -221,6 +251,7 @@ export async function syncReserveCoin(args: {
         console.warn(`[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
       }
     } catch (error) {
+      if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
       if (!(error instanceof Error) || error.message !== timeoutMessage) {
         throw error;
@@ -247,6 +278,8 @@ export async function syncReserveCoin(args: {
         });
         failureAlreadyRecorded = true;
       }
+    } finally {
+      d1DurationMs += Date.now() - finalizeStartedMs;
     }
 
     if (!finalizeSucceeded) {
@@ -259,7 +292,7 @@ export async function syncReserveCoin(args: {
           { uncertainWrite: true, durationMs },
         );
       }
-      return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
+      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     const warningMessages = warnings.map((warning) => `${coin.id}:${warning.code}`);
@@ -267,14 +300,15 @@ export async function syncReserveCoin(args: {
       warningMessages.push(`${coin.id}:history-write-failed`);
     }
 
-    return {
+    return timedResult({
       breakerKey,
       status: "synced",
       breakerOutcome: true,
       warningMessages,
       hasWarnings: warningMessages.length > 0,
-    };
+    });
   } catch (error) {
+    if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
     const extras: Record<string, unknown> = {};
     let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;
@@ -283,7 +317,9 @@ export async function syncReserveCoin(args: {
       attemptFailureSummaries = error.attemptSummaries;
     }
     if (adapterStartMs !== null) {
-      extras.durationMs = Date.now() - adapterStartMs;
+      const elapsed = Date.now() - adapterStartMs;
+      if (adapterDurationMs === 0) adapterDurationMs = elapsed;
+      extras.durationMs = elapsed;
     }
     await recordFailure(
       "error",
@@ -292,13 +328,13 @@ export async function syncReserveCoin(args: {
       [],
       Object.keys(extras).length > 0 ? extras : undefined,
     );
-    return {
+    return timedResult({
       breakerKey,
       status: "failed",
       breakerOutcome: false,
       warningMessages: [],
       hasWarnings: false,
       ...(attemptFailureSummaries ? { attemptFailureSummaries } : {}),
-    };
+    });
   }
 }

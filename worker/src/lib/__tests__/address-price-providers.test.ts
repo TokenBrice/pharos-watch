@@ -634,6 +634,72 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("skips durable DexPaprika 404 negatives without opening a request", async () => {
+    const target = makeDexScreenerTarget(1);
+    const targetKey = `${target.providerChainId}:${target.address.toLowerCase()}`;
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => sql.includes("pricing_provider_runtime_state") ? null : null),
+          all: vi.fn(async () => sql.includes("pricing_provider_negative_cache")
+            ? { results: [{ target_key: targetKey }] }
+            : { results: [] }),
+          run: vi.fn(async () => ({ meta: { changes: 1 } })),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await runDexPaprikaAddressProvider(
+      [target],
+      undefined,
+      Date.now() + 60_000,
+      { db, nowSec: 1_700_000_000 },
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.attemptedRequests).toBe(0);
+    expect(result.diagnostics[0]).toMatchObject({
+      endpoint: "dexpaprika-address:negative-cache",
+      status: 404,
+      candidateCount: 1,
+    });
+  });
+
+  it("honors Retry-After by stopping a DexPaprika run after the first 429", async () => {
+    const fetchMock = vi.fn(async () => new Response("slow down", {
+      status: 429,
+      headers: { "Retry-After": "120" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const writes: unknown[][] = [];
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn((...binds: unknown[]) => ({
+          first: vi.fn(async () => null),
+          all: vi.fn(async () => ({ results: [] })),
+          run: vi.fn(async () => {
+            writes.push([sql, ...binds]);
+            return { meta: { changes: 1 } };
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+
+    const result = await runDexPaprikaAddressProvider(
+      [makeDexScreenerTarget(1), makeDexScreenerTarget(2)],
+      undefined,
+      Date.now() + 60_000,
+      { db, nowSec: 1_700_000_000 },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.diagnostics[0]).toMatchObject({ status: 429, retryAfterSec: 120 });
+    expect(writes.some(([sql]) => String(sql).includes("pricing_provider_runtime_state"))).toBe(true);
+  });
+
   it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

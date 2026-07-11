@@ -13,9 +13,7 @@ describe("loadBlacklistConfigStates", () => {
 
     await loadBlacklistConfigStates(db);
 
-    const syncStateQueries = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("blacklist_sync_state"));
+    const syncStateQueries = db.getHistory().filter((entry) => entry.sql.includes("blacklist_sync_state"));
     expect(syncStateQueries).toHaveLength(1);
   });
 
@@ -42,7 +40,7 @@ describe("loadBlacklistConfigStates", () => {
     const { configStates } = await loadBlacklistConfigStates(db);
 
     expect(attempts).toBe(2);
-    expect(configStates.find((state) => state.configKey === first.configKey)?.lastBlock).toBe(4321);
+    expect(configStates.find((state) => state.configKey === first.configKey)?.cursorValue).toBe(4321);
   });
 
   it("joins last_block per config in-memory and defaults missing configs to 0", async () => {
@@ -57,12 +55,12 @@ describe("loadBlacklistConfigStates", () => {
     const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db);
 
     const firstState = configStates.find((state) => state.configKey === first.configKey);
-    expect(firstState?.lastBlock).toBe(4321);
+    expect(firstState?.cursorValue).toBe(4321);
     expect(zeroCursorConfigs).not.toContain(first.configKey);
     // Every other eligible config has no row → cursor 0.
     for (const state of configStates) {
       if (state.configKey === first.configKey) continue;
-      expect(state.lastBlock).toBe(0);
+      expect(state.cursorValue).toBe(0);
       expect(zeroCursorConfigs).toContain(state.configKey);
     }
   });
@@ -70,22 +68,54 @@ describe("loadBlacklistConfigStates", () => {
   it("matches a row stored under the normalized config key", async () => {
     // Pick a config whose key normalizes to a distinct value (mixed-case
     // contract address, non-tron prefix); skip if none exist in the registry.
-    const target = ELIGIBLE.find(
-      (c) => normalizeBlacklistSyncStateKey(c.configKey) !== c.configKey,
-    );
+    const target = ELIGIBLE.find((c) => normalizeBlacklistSyncStateKey(c.configKey) !== c.configKey);
     if (!target) return;
 
     const db = mockD1([
       {
         match: "FROM blacklist_sync_state",
-        rows: [
-          { config_key: normalizeBlacklistSyncStateKey(target.configKey), last_block: 999 },
-        ],
+        rows: [{ config_key: normalizeBlacklistSyncStateKey(target.configKey), last_block: 999 }],
       },
     ]);
 
     const { configStates } = await loadBlacklistConfigStates(db);
     const state = configStates.find((s) => s.configKey === target.configKey);
-    expect(state?.lastBlock).toBe(999);
+    expect(state?.cursorValue).toBe(999);
+  });
+
+  it("loads typed attempt state while dual-reading legacy last_block", async () => {
+    const first = ELIGIBLE[0];
+    const db = mockD1([
+      {
+        match: "FROM blacklist_sync_state",
+        rows: [
+          {
+            config_key: first.configKey,
+            last_block: 4_321,
+            cursor_value: 4_300,
+            attempt_generation: 7,
+            last_attempted_at: 1_700_000_100,
+            last_succeeded_at: 1_700_000_000,
+            last_skipped_at: 1_699_000_000,
+            last_failed_at: null,
+            consecutive_skips: 0,
+            consecutive_failures: 0,
+            last_outcome: "quiet",
+          },
+        ],
+      },
+    ]);
+
+    const { configStates } = await loadBlacklistConfigStates(db);
+    const state = configStates.find((candidate) => candidate.configKey === first.configKey);
+
+    expect(state).toMatchObject({
+      cursorValue: 4_321,
+      attemptGeneration: 7,
+      lastAttemptedAt: 1_700_000_100,
+      lastSucceededAt: 1_700_000_000,
+      lastOutcome: "quiet",
+    });
+    expect(state?.cursorKind).toBe(first.chain.type === "tron" ? "tron_timestamp_ms" : "evm_block");
   });
 });

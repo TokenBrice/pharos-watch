@@ -1,3 +1,5 @@
+import { TELEGRAM_DISPATCH_TIMEOUT_MS } from "@shared/lib/telegram-delivery-policy";
+
 import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
 
 export const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
@@ -50,6 +52,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "compute-dews": DEFAULT_CRON_TIMEOUT_MS,
   "project-tape": DEFAULT_CRON_TIMEOUT_MS,
   "cron-slot-sweeper": DEFAULT_CRON_TIMEOUT_MS,
+  "reserve-recovery": 13 * 60_000,
   "status-self-check": DEFAULT_CRON_TIMEOUT_MS,
   "data-invariant-canary": DEFAULT_CRON_TIMEOUT_MS,
   "cron-staleness-watchdog": DEFAULT_CRON_TIMEOUT_MS,
@@ -67,7 +70,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   // Telegram alert fan-out targets a 15-minute normal SLO for 5k watchers.
   // Keep the app timeout under Cloudflare's scheduled-event ceiling while
   // leaving room for cron_runs logging and sidecar skips.
-  "dispatch-telegram-alerts": 14 * 60_000,
+  "dispatch-telegram-alerts": TELEGRAM_DISPATCH_TIMEOUT_MS,
   "snapshot-supply": DEFAULT_CRON_TIMEOUT_MS,
   "snapshot-chain-supply": DEFAULT_CRON_TIMEOUT_MS,
   "publish-report-card-cache": DEFAULT_CRON_TIMEOUT_MS,

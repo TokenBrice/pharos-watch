@@ -52,6 +52,10 @@ describe("REGISTRY_BY_LLAMA_ID", () => {
     expect(REGISTRY_BY_LLAMA_ID.get("1")?.symbol).toBe("USDT");
   });
 
+  it("maps the audited Royal Dollar DefiLlama row", () => {
+    expect(REGISTRY_BY_LLAMA_ID.get("415")?.id).toBe("rusd-royal-dollar");
+  });
+
   it("has no duplicate llamaIds", () => {
     const llamaIdCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
       (stablecoin) => stablecoin.llamaId,

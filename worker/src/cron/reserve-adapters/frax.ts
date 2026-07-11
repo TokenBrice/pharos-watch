@@ -73,10 +73,6 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   ETH: { label: "ETH", risk: getCanonicalReserveAssetRisk("ETH") ?? "very-low" },
   FPI: { label: "FPI", risk: "medium" },
   FRAX: { label: "FRAX", risk: getCanonicalReserveAssetRisk("FRAX") ?? "low", coinId: "frax-frax" },
-  // FPI collateral rows for this LP report no tokenSymbol, only a `name` (see
-  // the tokenSymbol-or-name lookup in adaptFraxFpiCollateral); FPIS is FPI's
-  // own governance token, so this is rated like FXS rather than a stable pair.
-  "Fraxswap V2 FRAX/FPIS": { label: "Fraxswap V2 FRAX/FPIS", risk: "high" },
   FXS: { label: "FXS", risk: "high" },
   LFRAX: { label: "LFRAX", risk: "medium" },
   MULTI: { label: "MULTI", risk: "very-high" },
@@ -113,6 +109,15 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   stkcvxFPIFRAX: { label: "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)", risk: "medium" },
   wfrxETH: { label: "wfrxETH", risk: "medium" },
   ZZ: { label: "ZZ", risk: "very-high" },
+};
+
+// FPI collateral rows in this allowlist report no tokenSymbol, only a `name`.
+// Keep them separate from tokenSymbol mappings so arbitrary provider row names
+// cannot collide with trusted symbols such as FRAX, DAI, or USDC.
+const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
+  // FPIS is FPI's own governance token, so this LP is rated like FXS rather
+  // than a stable pair.
+  "Fraxswap V2 FRAX/FPIS": { label: "Fraxswap V2 FRAX/FPIS", risk: "high" },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
@@ -247,6 +252,18 @@ function describeFpiCollateralRow(row: FraxFpiCollateralRow): string {
   return row.key?.trim() || "unlabeled-row";
 }
 
+function getFpiCollateralMappingKey(row: FraxFpiCollateralRow): string | undefined {
+  const symbol = row.tokenSymbol?.trim();
+  if (symbol) return symbol;
+
+  const name = row.name?.trim();
+  return name && FPI_COLLATERAL_NAME_ONLY_DISPLAY[name] ? name : undefined;
+}
+
+function getFpiCollateralDisplayConfig(key: string): TokenDisplayConfig | undefined {
+  return TOKEN_DISPLAY[key] ?? FPI_COLLATERAL_NAME_ONLY_DISPLAY[key];
+}
+
 export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): AdapterResult {
   const assets = payload.assets;
   if (!assets?.length) {
@@ -267,10 +284,8 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
       continue;
     }
 
-    // Some collateral rows (e.g. LP positions) carry only a display `name`,
-    // no tokenSymbol, so fall back to matching TOKEN_DISPLAY by name.
-    const symbol = asset.tokenSymbol?.trim() || asset.name?.trim();
-    const config = symbol ? TOKEN_DISPLAY[symbol] : undefined;
+    const symbol = getFpiCollateralMappingKey(asset);
+    const config = symbol ? getFpiCollateralDisplayConfig(symbol) : undefined;
     if (symbol && config) {
       bySymbol.set(symbol, (bySymbol.get(symbol) ?? 0) + usd);
     } else {
@@ -300,7 +315,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
 
   const slices: ReserveSlice[] = [];
   for (const [symbol, usd] of bySymbol) {
-    const config = TOKEN_DISPLAY[symbol];
+    const config = getFpiCollateralDisplayConfig(symbol);
     if (!config) continue;
     slices.push({
       name: config.label,

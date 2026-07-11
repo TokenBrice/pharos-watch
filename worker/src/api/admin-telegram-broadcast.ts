@@ -1,4 +1,5 @@
 import {
+  adminErrorResponse,
   adminJsonResponse,
   type AdminRouteContext,
   makeIdempotentAdminRoute,
@@ -12,11 +13,20 @@ import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
 } from "../cron/telegram-pending";
-import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
+import {
+  PENDING_NEAR_TTL_WINDOW_SEC,
+  TELEGRAM_ALERT_TTL_SEC,
+} from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
 import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../cron/dispatch-telegram-subscribers";
-import type { BatchMessage } from "../lib/telegram";
+import { sendToChat, type BatchMessage } from "../lib/telegram";
 import { z } from "zod";
+import {
+  claimTelegramTransportPermit,
+  readTelegramDeliveryPause,
+  readTelegramTransportCircuit,
+  recordTelegramTransportOutcomes,
+} from "../lib/telegram-transport-control";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = TelegramBroadcastScope;
@@ -46,6 +56,11 @@ interface BroadcastRequestBody {
   scope: BroadcastScope;
   dryRun: boolean;
   acknowledgeBacklogRisk: boolean;
+  canaryChatId?: string;
+}
+
+interface BroadcastContext extends AdminRouteContext {
+  telegramBotToken?: string;
 }
 
 const BroadcastRequestBodySchema = z.object({
@@ -58,6 +73,7 @@ const BroadcastRequestBodySchema = z.object({
     .boolean({ message: "acknowledgeBacklogRisk must be a boolean when provided" })
     .optional()
     .default(false),
+  canaryChatId: z.string().regex(/^[1-9]\d*$/, "canaryChatId must identify a private Telegram chat").optional(),
 });
 
 async function parseBody(request: Request): Promise<BroadcastRequestBody | Response> {
@@ -74,9 +90,15 @@ async function parseBody(request: Request): Promise<BroadcastRequestBody | Respo
 function preflightTelegramHtml(html: string): { ok: true } | { ok: false; error: string; position: number } {
   const stack: Array<{ tag: string; position: number }> = [];
   const tagPattern = /<[^>]*>/g;
+  let textCursor = 0;
   for (const match of html.matchAll(tagPattern)) {
     const raw = match[0];
     const position = match.index ?? 0;
+    const strayOpen = html.slice(textCursor, position).indexOf("<");
+    if (strayOpen >= 0) {
+      return { ok: false, error: "Raw < must be escaped as &lt; in Telegram HTML", position: textCursor + strayOpen };
+    }
+    textCursor = position + raw.length;
     if (/^<!--/.test(raw) || /^<!\[CDATA\[/i.test(raw) || /^<!DOCTYPE/i.test(raw)) {
       return { ok: false, error: "Comments, CDATA, and doctypes are not supported by Telegram HTML", position };
     }
@@ -112,6 +134,10 @@ function preflightTelegramHtml(html: string): { ok: true } | { ok: false; error:
       stack.push({ tag, position });
     }
   }
+  const trailingStrayOpen = html.slice(textCursor).indexOf("<");
+  if (trailingStrayOpen >= 0) {
+    return { ok: false, error: "Raw < must be escaped as &lt; in Telegram HTML", position: textCursor + trailingStrayOpen };
+  }
   if (stack.length > 0) {
     const last = stack[stack.length - 1];
     return { ok: false, error: `Unclosed Telegram HTML tag <${last.tag}>`, position: last.position };
@@ -131,13 +157,17 @@ function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount:
     TELEGRAM_PENDING_DRAIN_BUDGET,
   );
   const adminBroadcastTtlSec = TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  const minimumTtlReserveSec = PENDING_NEAR_TTL_WINDOW_SEC;
+  const remainingTtlReserveSec = adminBroadcastTtlSec - estimatedDrainTimeSec;
   return {
     currentPendingActive,
     projectedPendingMessages,
     drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
     adminBroadcastTtlSec,
     estimatedDrainTimeSec,
-    requiresAcknowledgement: estimatedDrainTimeSec > adminBroadcastTtlSec,
+    minimumTtlReserveSec,
+    remainingTtlReserveSec,
+    hasMaterialTtlReserve: remainingTtlReserveSec >= minimumTtlReserveSec,
     fitsWithinMinutes: {
       5: estimatedDrainTimeSec <= 5 * 60,
       15: estimatedDrainTimeSec <= 15 * 60,
@@ -147,13 +177,13 @@ function buildDeliveryEstimate(currentPendingActive: number, targetMessageCount:
   };
 }
 
-export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteContext>(
+export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastContext>(
   "route-admin-telegram-broadcast",
   "admin-telegram-broadcast",
-  async ({ db, request }) => {
+  async ({ db, request, telegramBotToken }) => {
     const parsed = await parseBody(request);
     if (parsed instanceof Response) return parsed;
-    const { messageHtml, scope, dryRun } = parsed;
+    const { messageHtml, scope, dryRun, canaryChatId } = parsed;
     const htmlPreflight = preflightTelegramHtml(messageHtml);
     if (!htmlPreflight.ok) {
       await logAdminAction(
@@ -185,7 +215,8 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
 
     const chatIds = await loadBroadcastTargetChatIds(db, scope);
     const chunks = splitMessage(messageHtml);
-    const targetMessageCount = chatIds.length * chunks.length;
+    const fleetChatIds = canaryChatId == null ? chatIds : chatIds.filter((chatId) => chatId !== canaryChatId);
+    const targetMessageCount = fleetChatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);
     const pendingCapacity = await readPendingCapacitySnapshot(db, nowSec);
     const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
@@ -218,13 +249,18 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
           pendingCapacity,
           deliveryEstimate,
           htmlPreflight: "ok",
+          canary: {
+            requiredForLive: true,
+            chatId: canaryChatId ?? null,
+            wouldSendChunkCount: chunks.length,
+          },
           sample: chatIds.slice(0, SAMPLE_SIZE),
         },
         { status: 200 },
       );
     }
 
-    if (deliveryEstimate.requiresAcknowledgement && !parsed.acknowledgeBacklogRisk) {
+    if (!deliveryEstimate.hasMaterialTtlReserve) {
       await logAdminAction(
         db,
         {
@@ -240,14 +276,14 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
             targetMessageCount,
             deliveryEstimate,
             messageLength: messageHtml.length,
-            rejectedReason: "backlog-risk",
+            rejectedReason: "insufficient-ttl-reserve",
           },
         },
         request,
       );
       return adminJsonResponse(
         {
-          error: "Projected admin broadcast backlog exceeds the admin broadcast TTL window",
+          error: "Projected admin broadcast backlog does not retain the required TTL reserve",
           targetChatCount: chatIds.length,
           chunkCount: chunks.length,
           targetMessageCount,
@@ -258,8 +294,105 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
       );
     }
 
+    if (!canaryChatId) {
+      return adminErrorResponse(400, "Live broadcast requires canaryChatId for a private Telegram parse/send canary");
+    }
+    if (!telegramBotToken) {
+      return adminErrorResponse(500, "TELEGRAM_BOT_TOKEN is not configured");
+    }
+
+    const [adminPause, transportCircuit] = await Promise.all([
+      readTelegramDeliveryPause(db, "admin", nowSec),
+      readTelegramTransportCircuit(db),
+    ]);
+    if (adminPause?.active || transportCircuit.state !== "closed") {
+      const rejectedReason = adminPause?.active ? "admin-delivery-paused" : "transport-outage";
+      const deferUntil = adminPause?.active ? adminPause.expiresAt : transportCircuit.nextProbeAt;
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "error",
+          httpStatus: 409,
+          details: {
+            scope,
+            dryRun: false,
+            targetChatCount: chatIds.length,
+            targetMessageCount,
+            rejectedReason,
+            deferUntil,
+          },
+        },
+        request,
+      );
+      return adminJsonResponse(
+        {
+          error: "Telegram admin delivery is temporarily unavailable",
+          reason: rejectedReason,
+          deferUntil,
+        },
+        { status: 409 },
+      );
+    }
+
+    const permit = await claimTelegramTransportPermit(db, {
+      mode: "admin",
+      owner: `admin-broadcast-canary:${crypto.randomUUID()}`,
+      nowSec,
+      requestedDistinctChats: 1,
+    });
+    if (!permit.allowed) {
+      return adminJsonResponse({
+        error: "Telegram canary delivery is temporarily unavailable",
+        reason: permit.reason,
+        deferUntil: permit.deferUntil,
+      }, { status: permit.reason === "operator_pause" ? 409 : 503 });
+    }
+    const canaryResults = [];
+    for (const chunk of chunks) {
+      const result = await sendToChat(canaryChatId, chunk, telegramBotToken, {
+        disableWebPagePreview: true,
+        disableNotification: true,
+      });
+      canaryResults.push(result);
+      if (!result.ok) break;
+    }
+    await recordTelegramTransportOutcomes(
+      db,
+      permit,
+      canaryResults.map((result) => ({ chatId: canaryChatId, result })),
+      Math.floor(Date.now() / 1000),
+    );
+    const canaryFailure = canaryResults.find((result) => !result.ok);
+    if (canaryFailure || canaryResults.length !== chunks.length) {
+      const status = canaryFailure?.errorClass === "bad_request"
+          || canaryFailure?.errorClass === "formatting_error"
+        ? 422
+        : 503;
+      await logAdminAction(db, {
+        action: "admin-telegram-broadcast",
+        target: scope,
+        result: "error",
+        httpStatus: status,
+        details: {
+          scope,
+          dryRun: false,
+          rejectedReason: "telegram-canary-failed",
+          canaryChunksAttempted: canaryResults.length,
+          canaryErrorClass: canaryFailure?.errorClass ?? "incomplete",
+        },
+      }, request);
+      return adminJsonResponse({
+        error: "Telegram rejected the private broadcast canary; fleet fanout was not enqueued",
+        errorClass: canaryFailure?.errorClass ?? "incomplete",
+        canaryChunksAttempted: canaryResults.length,
+        fleetEnqueued: 0,
+      }, { status });
+    }
+
     const messages: BatchMessage[] = [];
-    for (const chatId of chatIds) {
+    for (const chatId of fleetChatIds) {
       for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
         messages.push({
           chatId,
@@ -291,12 +424,18 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<AdminRouteC
           targetMessageCount,
           deliveryEstimate,
           enqueued: messages.length,
+          canaryChatId,
+          canaryChunksSent: canaryResults.length,
           messageLength: messageHtml.length,
         },
       },
       request,
     );
 
-    return adminJsonResponse({ enqueued: messages.length, deliveryEstimate }, { status: 200 });
+    return adminJsonResponse({
+      enqueued: messages.length,
+      deliveryEstimate,
+      canary: { chatId: canaryChatId, chunksSent: canaryResults.length },
+    }, { status: 200 });
   },
 );

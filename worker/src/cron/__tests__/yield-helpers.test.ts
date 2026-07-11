@@ -2,9 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
+  RATE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
@@ -14,6 +16,7 @@ import {
   derivePysNullReason,
   detectWarningSignals,
   getRankingStaleThresholdMs,
+  getComparisonAnchorStaleThresholdMs,
   isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
   findBestLendingPool,
@@ -43,6 +46,10 @@ describe("getRankingStaleThresholdMs", () => {
     expect(getRankingStaleThresholdMs("price-derived", "price-derived")).toBe(PRICE_DERIVED_STALE_THRESHOLD_MS);
   });
 
+  it("uses the daily benchmark window for rate-derived rows", () => {
+    expect(getRankingStaleThresholdMs("rate-derived", "rate-derived")).toBe(RATE_DERIVED_STALE_THRESHOLD_MS);
+  });
+
   it("uses the supplemental threshold for protocol-api rows", () => {
     expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:pendle:ethereum:0xpool")).toBe(
       SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
@@ -60,6 +67,23 @@ describe("getRankingStaleThresholdMs", () => {
 
   it("keeps deterministic onchain rows on the hourly threshold", () => {
     expect(getRankingStaleThresholdMs("onchain", "onchain:sky-ssr")).toBe(STALE_THRESHOLD_MS);
+  });
+});
+
+describe("getComparisonAnchorStaleThresholdMs", () => {
+  it("uses the full intentional anchor window for price and long-horizon NAV sources", () => {
+    expect(getComparisonAnchorStaleThresholdMs("price-derived", "price-derived")).toBe(
+      LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+    );
+    expect(getComparisonAnchorStaleThresholdMs("protocol-api", "protocol-api:midas-mmev-nav-oracle")).toBe(
+      LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+    );
+  });
+
+  it("retains the two-week guard for ordinary exchange-rate anchors", () => {
+    expect(getComparisonAnchorStaleThresholdMs("onchain", "onchain:test")).toBe(
+      COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+    );
   });
 });
 

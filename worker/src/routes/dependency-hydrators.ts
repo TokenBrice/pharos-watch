@@ -1,4 +1,5 @@
 import { ENDPOINT_DEPENDENCY_HYDRATION_POLICIES, type EndpointDependency } from "@shared/lib/api-endpoints";
+import { normalizeWebhookUrl } from "../lib/alerts";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import type { Env } from "../lib/env";
@@ -11,6 +12,9 @@ type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
 export const ROUTE_DEPENDENCY_HYDRATORS = {
   apiKeyHashPepper(routeCtx, env) {
     routeCtx.apiKeyHashPepper = env.API_KEY_HASH_PEPPER;
+  },
+  alertWebhookUrl(routeCtx, env) {
+    routeCtx.alertWebhookUrl = normalizeWebhookUrl(env.ALERT_WEBHOOK_URL);
   },
   alchemyApiKey(routeCtx, env) {
     routeCtx.alchemyApiKey = env.ALCHEMY_API_KEY ?? null;
@@ -50,6 +54,9 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
   },
   mintBurnFreshnessConfig(routeCtx, env) {
     routeCtx.mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
+  },
+  workerVersion(routeCtx, env) {
+    routeCtx.workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
   },
   telegram(routeCtx, env) {
     routeCtx.telegramCreds = buildTelegramCreds(env);

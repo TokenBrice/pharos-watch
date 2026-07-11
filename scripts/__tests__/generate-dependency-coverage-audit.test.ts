@@ -230,7 +230,7 @@ describe("generate-dependency-coverage-audit", () => {
   });
 
   it("sends site-origin headers when fetching prod site-data", async () => {
-    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+    const fetchMock = vi.fn<typeof fetch>(async (url) => {
       const href = String(url);
       return new Response(
         JSON.stringify(href.includes("report-cards")
@@ -239,7 +239,7 @@ describe("generate-dependency-coverage-audit", () => {
         { status: 200 },
       );
     });
-    const fetchImpl = fetchMock as unknown as typeof fetch;
+    const fetchImpl: typeof fetch = fetchMock;
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
     try {

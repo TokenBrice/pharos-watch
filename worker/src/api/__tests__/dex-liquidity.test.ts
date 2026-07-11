@@ -31,6 +31,39 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("hasMeasuredLiquidityEvidence");
     expect(coin).toHaveProperty("trendworthy");
     expect(coin).toHaveProperty("sourceMix");
+    expect(coin).toHaveProperty("deploymentCoverage");
+  });
+
+  it("exposes exact deployment outcome truth", async () => {
+    const db = mockD1([
+      { match: "FROM dex_liquidity\n", rows: [row] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      {
+        match: "dex_deployment_outcomes",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          chain: "ethereum",
+          contract_address: "0x1",
+          outcome: "verified_no_pools",
+          provider_set_json: JSON.stringify(["coingecko", "dexscreener"]),
+          reason: "verified empty",
+          observed_pool_count: 0,
+          observed_at: Math.floor(Date.now() / 1000),
+          waiver_owner: null,
+          waiver_reason: null,
+          waiver_expires_at: null,
+        }],
+      },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["usdt-tether"]?.deploymentCoverage).toMatchObject({
+      observedPools: 0,
+      verifiedNoPools: 1,
+      providerInaccessible: 0,
+    });
   });
 
   it("logs malformed persisted JSON fields and falls back safely", async () => {

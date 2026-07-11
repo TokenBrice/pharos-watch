@@ -21,7 +21,10 @@ export interface CreateWorkerJobAttemptInput {
   scheduleKey: string;
   job: string;
   slotStartedAt: number | null;
+  producerPath?: string;
   producerKind?: string;
+  invocationId?: string | null;
+  workerVersion?: string | null;
   attemptNo?: number;
   nowSec?: number;
 }
@@ -63,7 +66,10 @@ interface WorkerJobAttemptRow {
   schedule_key: string;
   job: string;
   slot_started_at: number | null;
+  producer_path: string | null;
   producer_kind: string;
+  invocation_id: string | null;
+  worker_version: string | null;
   state: WorkerJobAttemptState;
   status_class: WorkerJobAttemptStatusClass | null;
   attempt_no: number;
@@ -105,7 +111,10 @@ const ATTEMPT_COLUMNS = [
   "schedule_key",
   "job",
   "slot_started_at",
+  "producer_path",
   "producer_kind",
+  "invocation_id",
+  "worker_version",
   "state",
   "status_class",
   "attempt_no",
@@ -146,8 +155,9 @@ function nowSec(): number {
 function buildWorkerJobAttemptIdentity(input: CreateWorkerJobAttemptInput): WorkerJobAttemptIdentity {
   const attemptNo = input.attemptNo ?? 1;
   const producerKind = input.producerKind ?? "scheduled-slot";
+  const producerPath = input.producerPath ?? input.scheduleKey;
   const slotKey = input.slotStartedAt == null ? "none" : String(input.slotStartedAt);
-  const idempotencyKey = `${producerKind}|${input.scheduleKey}|${slotKey}|${input.job}|${attemptNo}`;
+  const idempotencyKey = `${producerKind}|${input.scheduleKey}|${producerPath}|${slotKey}|${input.job}|${attemptNo}`;
   return {
     attemptId: `attempt|${idempotencyKey}`,
     idempotencyKey,
@@ -257,7 +267,10 @@ function mapAttemptRow(row: WorkerJobAttemptRow, now: number): WorkerJobAttemptS
     scheduleKey: row.schedule_key,
     job: row.job,
     slotStartedAt: row.slot_started_at,
+    producerPath: row.producer_path,
     producerKind: row.producer_kind,
+    invocationId: row.invocation_id,
+    workerVersion: row.worker_version,
     state: row.state,
     statusClass: row.status_class,
     attemptNo: row.attempt_no,
@@ -288,9 +301,9 @@ export async function createWorkerJobAttempt(
     db
       .prepare(
         `INSERT OR IGNORE INTO worker_job_attempts
-           (attempt_id, idempotency_key, schedule_key, job, slot_started_at, producer_kind, state, status_class,
-            attempt_no, queued_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?)`,
+           (attempt_id, idempotency_key, schedule_key, job, slot_started_at, producer_path, producer_kind,
+            invocation_id, worker_version, state, status_class, attempt_no, queued_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL, ?, ?, ?, ?)`,
       )
       .bind(
         identity.attemptId,
@@ -298,7 +311,10 @@ export async function createWorkerJobAttempt(
         input.scheduleKey,
         input.job,
         input.slotStartedAt,
+        input.producerPath ?? input.scheduleKey,
         producerKind,
+        input.invocationId ?? null,
+        input.workerVersion ?? null,
         identity.attemptNo,
         timestamp,
         timestamp,

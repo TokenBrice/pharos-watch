@@ -207,7 +207,7 @@ export function getYieldSourceRiskDrivers(params: {
     drivers.push({
       key: "limited-history",
       label: "limited history",
-      description: "Observation count is too low for mature confidence.",
+      description: "Fewer than seven distinct UTC observation days are available for mature confidence.",
     });
   }
 

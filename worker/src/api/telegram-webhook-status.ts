@@ -5,6 +5,7 @@ import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "./mint-burn-flows-shared";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
+import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 
 /** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
@@ -13,7 +14,7 @@ const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
  * Data loader for the `/status <ticker>` command.
  *
  * Sources:
- * - `stress_signals`          latest DEWS band + score per coin (timestamp column: `computed_at`)
+ * - published `stress_signals` generation for the latest DEWS band + score per coin
  * - `safety_grade_history`    latest safety grade per coin (timestamp column: `recorded_at`)
  * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
  * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
@@ -61,12 +62,7 @@ export async function loadStatusForCoin(
   const nowSec = Math.floor(Date.now() / 1000);
   const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
   const [dewsRow, safetyRow, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] = await Promise.all([
-    db
-      .prepare(
-        "SELECT band, score, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
-      )
-      .bind(stablecoinId)
-      .first<{ band: string; score: number; computed_at: number }>(),
+    loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
     db
       .prepare(
         "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",

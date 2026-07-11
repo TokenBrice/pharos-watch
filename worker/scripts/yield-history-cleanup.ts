@@ -4,19 +4,39 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseYieldHistoryWriterPause, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../src/lib/yield-history-cleanup";
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../src/lib/yield-history-ownership-handoffs";
 import {
-  parseDestructiveOperationMode,
+  parseDestructiveOperationArgs,
   type DestructiveOperationMode,
 } from "./lib/destructive-operation-guard";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
 const SCRIPT_NAME = "yield-history-cleanup";
+const SCRIPT_USAGE = `Usage: tsx worker/scripts/yield-history-cleanup.ts [options]
+
+Default Wrangler mode is a remote D1 dry-run. Every Wrangler D1 mutation, including
+writer-pause changes, requires --execute --confirm ${SCRIPT_NAME}. SQLite restore remains
+an explicit local-file operation.
+
+Options:
+  --sqlite <path>              Use a local SQLite database file
+  --export <path>              Write a rollback artifact before cleanup
+  --restore <path>             Restore rows from a cleanup artifact
+  --operator <name>            Record the operator in exported pause/artifact metadata
+  --arm-writer-pause           Preview or arm the Wrangler D1 yield writer pause
+  --clear-writer-pause         Preview or clear the Wrangler D1 yield writer pause
+  --execute                    Execute the selected mutation
+  --confirm <script>           Required for live mutation; value must be ${SCRIPT_NAME}
+  --dry-run                    Force dry-run mode
+  --local                      Target local Wrangler D1
+  --remote                     Target remote Wrangler D1 (default)
+  -h, --help                   Show this help`;
 
 const YIELD_HISTORY_COLUMNS = [
   "stablecoin_id",
@@ -70,6 +90,7 @@ export interface YieldHistoryCleanupSummary {
 }
 
 export interface YieldHistoryCleanupCliOptions {
+  help: boolean;
   sqlitePath: string | null;
   exportPath: string | null;
   restorePath: string | null;
@@ -79,6 +100,12 @@ export interface YieldHistoryCleanupCliOptions {
   armWriterPause: boolean;
   clearWriterPause: boolean;
   operationMode: DestructiveOperationMode;
+}
+
+export interface YieldHistoryCleanupCliDependencies {
+  setWriterPause?: (remote: boolean, operator: string | null) => void;
+  clearWriterPause?: (remote: boolean) => void;
+  printJson?: (value: unknown) => void;
 }
 
 function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
@@ -293,69 +320,40 @@ function isYieldWriterActiveInWrangler(remote: boolean): boolean {
   return leaseUntil != null && leaseUntil >= now;
 }
 
-function parseCliArgs(argv: string[]): Map<string, string | true> {
-  const args = new Map<string, string | true>();
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
-
-    const inlineValueIndex = arg.indexOf("=");
-    if (inlineValueIndex > 2) {
-      args.set(arg.slice(0, inlineValueIndex), arg.slice(inlineValueIndex + 1));
-      continue;
-    }
-
-    const next = argv[index + 1];
-    if (next && !next.startsWith("--")) {
-      args.set(arg, next);
-      index++;
-      continue;
-    }
-
-    args.set(arg, true);
-  }
-  return args;
-}
-
-function getCliString(args: Map<string, string | true>, flag: string): string | null {
-  const value = args.get(flag);
-  if (value === true) {
-    throw new Error(`${flag} requires a value`);
-  }
-  if (value === "") {
-    throw new Error(`${flag} requires a non-empty value`);
-  }
-  return typeof value === "string" ? value : null;
-}
-
-function getCliBoolean(args: Map<string, string | true>, flag: string): boolean {
-  return args.has(flag);
-}
-
-function getDestructiveModeArgv(argv: string[], sqlitePath: string | null, restorePath: string | null): string[] {
-  if (!sqlitePath || !restorePath) return argv;
-  return argv.filter((arg) => arg !== "--execute");
-}
-
 export function parseYieldHistoryCleanupCliOptions(argv: string[]): YieldHistoryCleanupCliOptions {
-  const args = parseCliArgs(argv);
-  const sqlitePath = getCliString(args, "--sqlite");
-  const restorePath = getCliString(args, "--restore");
-  const operationMode = parseDestructiveOperationMode({
-    argv: getDestructiveModeArgv(argv, sqlitePath, restorePath),
+  const { mode: operationMode, values } = parseDestructiveOperationArgs({
+    argv,
+    cliOptions: {
+      sqlite: { type: "string" },
+      export: { type: "string" },
+      restore: { type: "string" },
+      operator: { type: "string" },
+      "arm-writer-pause": { type: "boolean" },
+      "clear-writer-pause": { type: "boolean" },
+    },
+    conflicts: [
+      ["arm-writer-pause", "clear-writer-pause", "restore", "export"],
+      ["sqlite", "arm-writer-pause"],
+      ["sqlite", "clear-writer-pause"],
+    ],
     defaultTarget: "--remote",
+    executeAsDryRunWhen: (parsedValues) => (
+      typeof parsedValues.sqlite === "string" && typeof parsedValues.restore === "string"
+    ),
     scriptName: SCRIPT_NAME,
   });
+  const help = values.help === true;
 
   return {
-    sqlitePath,
-    exportPath: getCliString(args, "--export"),
-    restorePath,
-    operator: getCliString(args, "--operator"),
+    help,
+    sqlitePath: typeof values.sqlite === "string" ? values.sqlite : null,
+    exportPath: typeof values.export === "string" ? values.export : null,
+    restorePath: typeof values.restore === "string" ? values.restore : null,
+    operator: typeof values.operator === "string" ? values.operator : null,
     remote: operationMode.remote,
     execute: !operationMode.dryRun,
-    armWriterPause: getCliBoolean(args, "--arm-writer-pause"),
-    clearWriterPause: getCliBoolean(args, "--clear-writer-pause"),
+    armWriterPause: values["arm-writer-pause"] === true,
+    clearWriterPause: values["clear-writer-pause"] === true,
     operationMode,
   };
 }
@@ -364,8 +362,12 @@ function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
 }
 
-async function main(argv: string[]): Promise<void> {
+export async function runYieldHistoryCleanupCli(
+  argv: string[],
+  dependencies: YieldHistoryCleanupCliDependencies = {},
+): Promise<void> {
   const {
+    help,
     sqlitePath,
     exportPath,
     restorePath,
@@ -375,6 +377,8 @@ async function main(argv: string[]): Promise<void> {
     armWriterPause,
     clearWriterPause,
   } = parseYieldHistoryCleanupCliOptions(argv);
+  if (writeCliHelpIfRequested({ help }, SCRIPT_USAGE)) return;
+  const writeJson = dependencies.printJson ?? printJson;
 
   if (armWriterPause && sqlitePath) {
     throw new Error("--arm-writer-pause is only supported with Wrangler D1 mode");
@@ -384,8 +388,18 @@ async function main(argv: string[]): Promise<void> {
   }
 
   if (armWriterPause) {
-    setWriterPauseInWrangler(remote, operator);
-    printJson({
+    if (!execute) {
+      writeJson({
+        action: "arm-writer-pause",
+        mode: "dry-run",
+        key: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
+        operator,
+        remote,
+      });
+      return;
+    }
+    (dependencies.setWriterPause ?? setWriterPauseInWrangler)(remote, operator);
+    writeJson({
       armed: true,
       key: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
       operator,
@@ -395,8 +409,17 @@ async function main(argv: string[]): Promise<void> {
   }
 
   if (clearWriterPause) {
-    clearWriterPauseInWrangler(remote);
-    printJson({
+    if (!execute) {
+      writeJson({
+        action: "clear-writer-pause",
+        mode: "dry-run",
+        key: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
+        remote,
+      });
+      return;
+    }
+    (dependencies.clearWriterPause ?? clearWriterPauseInWrangler)(remote);
+    writeJson({
       cleared: true,
       key: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
       remote,
@@ -422,7 +445,7 @@ async function main(argv: string[]): Promise<void> {
     const artifact = JSON.parse(readFileSync(restorePath, "utf8")) as YieldHistoryCleanupArtifact;
     if (sqlitePath) {
       restoreCleanupRowsToSqlite(sqlitePath, artifact.rows);
-      printJson({
+      writeJson({
         restored: artifact.rows.length,
         mode: "sqlite",
         sqlitePath,
@@ -431,7 +454,7 @@ async function main(argv: string[]): Promise<void> {
     }
 
     restoreCleanupRowsToWrangler(artifact.rows, remote);
-    printJson({
+    writeJson({
       restored: artifact.rows.length,
       mode: remote ? "wrangler-remote" : "wrangler-local",
     });
@@ -448,7 +471,7 @@ async function main(argv: string[]): Promise<void> {
   }
 
   if (!execute) {
-    printJson({
+    writeJson({
       mode: sqlitePath ? "sqlite" : remote ? "wrangler-remote" : "wrangler-local",
       targets: listYieldHistoryCleanupTargets(),
       exportPath,
@@ -476,7 +499,7 @@ async function main(argv: string[]): Promise<void> {
   const afterRows = sqlitePath ? loadCleanupRowsFromSqlite(sqlitePath) : loadCleanupRowsFromWrangler(remote);
   const afterSummary = summarizeYieldHistoryCleanupRows(afterRows);
 
-  printJson({
+  writeJson({
     mode: sqlitePath ? "sqlite" : remote ? "wrangler-remote" : "wrangler-local",
     exportPath,
     before: beforeSummary,
@@ -486,8 +509,8 @@ async function main(argv: string[]): Promise<void> {
 
 const isDirectRun = process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirectRun) {
-  main(process.argv.slice(2)).catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  void runCliEntrypoint(() => runYieldHistoryCleanupCli(process.argv.slice(2)), {
+    label: SCRIPT_NAME,
+    usage: SCRIPT_USAGE,
   });
 }

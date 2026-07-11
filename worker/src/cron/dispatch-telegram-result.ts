@@ -2,7 +2,13 @@ import type { TelegramDispatchCronResult } from "@shared/types";
 import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
-import type { readPendingCapacitySnapshot } from "./telegram-pending";
+import type {
+  readPendingCapacitySnapshot,
+  PendingCapacitySnapshot,
+  PendingDrainResult,
+} from "./telegram-pending";
+import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
+import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
 
 export type PerAlertTypeTargets = Record<TelegramAlertType, { chats: number; chunks: number }>;
 
@@ -30,11 +36,108 @@ export interface DispatchCapacityMetadata {
   burstCollapsedChats?: number;
   /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
   burstDeltaSuppressed?: number;
-  /** True when the producer-written reserve drift snapshot was missing or malformed. */
+  /** True when the reserve producer source is not currently alertable. */
   reserveSourceUnavailable: boolean;
 }
 
 export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
+
+export function pendingTailState(snapshot: PendingCapacitySnapshot | null | undefined): Record<string, unknown> | null {
+  if (!snapshot) return null;
+  return {
+    total: snapshot.total,
+    active: snapshot.active,
+    due: snapshot.due,
+    deferred: snapshot.deferred,
+    expired: snapshot.expired,
+    nearTtl: snapshot.nearTtl,
+    oldestPendingAgeSec: snapshot.oldestPendingAgeSec,
+    estimatedDrainTimeSec: snapshot.estimatedDrainTimeSec,
+  };
+}
+
+export function safetySourceFields(
+  assessment: AlertSafetySourceAssessment,
+  suppressed: boolean,
+) {
+  return {
+    safetyAlertSourceState: assessment.state,
+    safetyAlertSourceAgeSeconds: assessment.ageSeconds,
+    safetyAlertsSuppressed: suppressed,
+    safetyAlertSourceGeneration: assessment.generation,
+  };
+}
+
+export function reserveSourceFields(assessment: AlertReserveSourceAssessment) {
+  return {
+    reserveAlertSourceState: assessment.state,
+    reserveAlertSourceAgeSeconds: assessment.ageSeconds,
+    reserveAlertsSuppressed: assessment.state !== "ok",
+    reserveAlertSourceGeneration: assessment.generation,
+  };
+}
+
+export type PendingDispatchFields = Pick<
+  DispatchResult,
+  | "pendingAttempted"
+  | "pendingDrained"
+  | "pendingSent"
+  | "pendingRetryQueued"
+  | "pendingDropped"
+  | "pendingDroppedTtlExpired"
+  | "pendingDroppedPermanentFailure"
+  | "pendingDroppedMaxAttemptsFallback"
+  | "pendingDeferred"
+  | "pendingRateLimited"
+  | "pendingRetryAfterSec"
+  | "pendingEnqueued"
+  | "pendingExpired"
+>;
+
+export function pendingDispatchFields(
+  drainResult: PendingDrainResult,
+  {
+    expiredCount,
+    pendingEnqueued = 0,
+  }: {
+    expiredCount: number;
+    pendingEnqueued?: number;
+  },
+): PendingDispatchFields {
+  return {
+    pendingAttempted: drainResult.attempted,
+    pendingDrained: drainResult.sent,
+    pendingSent: drainResult.sent,
+    pendingRetryQueued: drainResult.retryQueued,
+    pendingDropped: drainResult.dropped,
+    pendingDroppedTtlExpired: expiredCount,
+    pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+    pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+    pendingDeferred: drainResult.deferred,
+    pendingRateLimited: drainResult.rateLimited,
+    pendingRetryAfterSec: drainResult.retryAfterSec,
+    pendingEnqueued,
+    pendingExpired: expiredCount,
+  };
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
+}
+
+export function shouldRecordTelegramDispatchFailure(
+  error: unknown,
+  signal: AbortSignal | undefined,
+  telegramDeliveryStarted: boolean,
+): boolean {
+  if (signal?.aborted || isAbortError(error)) return false;
+  return telegramDeliveryStarted;
+}
 
 function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
   return {
@@ -65,6 +168,14 @@ function emptyPendingCapacity() {
     deferred: 0,
     expired: 0,
     nearTtl: 0,
+    sending: 0,
+    pendingExecutionUnknown: 0,
+    freshExecutionUnknown: 0,
+    executionUnknown: 0,
+    sentCleanup: 0,
+    oldestExecutionUnknownAgeSec: null,
+    executionUnknownSampleLimit: 5_001,
+    executionUnknownLowerBound: false,
     oldestPendingAgeSec: null,
     oldestDuePendingAgeSec: null,
     estimatedDrainTimeSec: 0,
@@ -129,6 +240,10 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
     safetyAlertSourceAgeSeconds: null,
     safetyAlertsSuppressed: true,
     safetyAlertSourceGeneration: null,
+    reserveAlertSourceState: "missing",
+    reserveAlertSourceAgeSeconds: null,
+    reserveAlertsSuppressed: true,
+    reserveAlertSourceGeneration: null,
     presetQueryFailures: 0,
     presetResolutionFailures: 0,
     presetFailure: false,

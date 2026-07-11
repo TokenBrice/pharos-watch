@@ -1,7 +1,10 @@
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import type { PerAlertTypeDelivery, TelegramAlertType } from "@shared/types/status";
-import { batchExecute } from "../lib/db";
-import { toErrorMessage } from "../lib/error-utils";
+import {
+  executeAtomicBatch,
+  prepareMultiRowInsertStatements,
+} from "../lib/db";
+import { D1_BATCH_SIZE } from "../lib/constants";
 import {
   TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
@@ -16,11 +19,30 @@ import {
   expandSubscriberChunks,
   type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
+import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
+import { reconcileTelegramAlertJobCounters } from "./telegram-alert-job-target-outcomes";
 
 export interface TelegramAlertJobManifest {
   jobId: string;
   alertType: TelegramAlertType;
   targetCount: number;
+  targetKeys: readonly string[];
+}
+
+export function buildFreshTargetJobIdMap(
+  manifests: readonly TelegramAlertJobManifest[],
+): Map<string, string> {
+  const jobIdByTargetKey = new Map<string, string>();
+  for (const manifest of manifests) {
+    for (const targetKey of manifest.targetKeys) {
+      const existing = jobIdByTargetKey.get(targetKey);
+      if (existing && existing !== manifest.jobId) {
+        throw new Error("Telegram fresh target belongs to multiple jobs");
+      }
+      jobIdByTargetKey.set(targetKey, manifest.jobId);
+    }
+  }
+  return jobIdByTargetKey;
 }
 
 function severityForAlertType(alertType: TelegramAlertType): "risk" | "info" {
@@ -35,6 +57,10 @@ export async function persistTelegramAlertJobManifests(
   db: D1Database,
   subscriberQueue: RoutedSubscriberAlert[],
   nowSec: number,
+  options: {
+    sourceEventId?: string;
+    sourceDetectedAt?: number;
+  } = {},
 ): Promise<TelegramAlertJobManifest[]> {
   const manifests: TelegramAlertJobManifest[] = [];
 
@@ -42,13 +68,22 @@ export async function persistTelegramAlertJobManifests(
     const subscribers = subscriberQueue.filter((entry) => entry.alertType === alertType);
     if (subscribers.length === 0) continue;
 
-    const messages = expandSubscriberChunks(subscribers);
+    const messageEntries = subscribers.flatMap((subscriber) =>
+      expandSubscriberChunks([subscriber]).map((message) => ({
+        message,
+        itemKeys: listTelegramAlertItemKeys(subscriber.alerts),
+      })),
+    );
+    const messages = messageEntries.map((entry) => entry.message);
     if (messages.length === 0) continue;
 
     const targetKeys = messages.map((message) => buildDedupeKey(message)).sort();
-    const sourceEventId = `${alertType}:v1:${hashDedupePart(targetKeys.join("|"))}`;
-    const jobId = `telegram:${sourceEventId}`;
-    const expiresAt = nowSec + ttlForAlertType(alertType);
+    const sourceEventId = options.sourceEventId ?? `${alertType}:v1:${hashDedupePart(targetKeys.join("|"))}`;
+    const jobId = options.sourceEventId
+      ? `telegram:${sourceEventId}:${alertType}`
+      : `telegram:${sourceEventId}`;
+    const createdAt = options.sourceDetectedAt ?? nowSec;
+    const expiresAt = createdAt + ttlForAlertType(alertType);
     const lastCursor = targetKeys[targetKeys.length - 1] ?? null;
     const metadata = JSON.stringify({
       rolloutStage: "dual-write-manifest",
@@ -77,7 +112,7 @@ export async function persistTelegramAlertJobManifests(
           alertType,
           sourceEventId,
           severityForAlertType(alertType),
-          nowSec,
+          createdAt,
           expiresAt,
           messages.length,
           lastCursor,
@@ -85,34 +120,74 @@ export async function persistTelegramAlertJobManifests(
         )
         .run();
 
-      await batchExecute(db, messages.map((message) => {
+      const targetUnits = messageEntries.map(({ message, itemKeys }) => {
         const targetKey = buildDedupeKey(message);
-        return db
-          .prepare(
-            `INSERT INTO telegram_alert_job_targets (
-               job_id, target_key, chat_id, chunk_index, alert_type, status,
-               pending_dedupe_key, created_at
-             )
-             VALUES (?, ?, ?, ?, ?, 'planned', ?, ?)
-             ON CONFLICT(job_id, target_key) DO NOTHING`,
-          )
-          .bind(
-            jobId,
-            targetKey,
-            message.chatId,
-            message.chunkIndex ?? 0,
-            alertType,
-            targetKey,
-            nowSec,
+        const statements = [
+          db
+            .prepare(
+              `INSERT INTO telegram_alert_job_targets (
+                 job_id, target_key, chat_id, chunk_index, alert_type, status,
+                 pending_dedupe_key, created_at
+               )
+               VALUES (?, ?, ?, ?, ?, 'planned', ?, ?)
+               ON CONFLICT(job_id, target_key) DO NOTHING`,
+            )
+            .bind(
+              jobId,
+              targetKey,
+              message.chatId,
+              message.chunkIndex ?? 0,
+              alertType,
+              targetKey,
+              createdAt,
+            ),
+        ];
+        if (options.sourceEventId && itemKeys.length > 0) {
+          statements.push(
+            ...prepareMultiRowInsertStatements(
+              db,
+              `INSERT OR IGNORE INTO telegram_alert_job_target_items (
+                 job_id, target_key, source_event_id, item_key, created_at
+               )`,
+              itemKeys.map((itemKey) => [jobId, targetKey, sourceEventId, itemKey, createdAt]),
+            ),
           );
-      }));
+        }
+        return statements;
+      });
+      let statementBatch: D1PreparedStatement[] = [];
+      for (const unit of targetUnits) {
+        if (unit.length > D1_BATCH_SIZE) {
+          throw new Error(`Telegram target lineage exceeds the D1 batch limit (${unit.length})`);
+        }
+        if (statementBatch.length + unit.length > D1_BATCH_SIZE) {
+          await executeAtomicBatch(db, statementBatch);
+          statementBatch = [];
+        }
+        statementBatch.push(...unit);
+      }
+      await executeAtomicBatch(db, statementBatch);
 
-      manifests.push({ jobId, alertType, targetCount: messages.length });
+      const targetCountRow = await db
+        .prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets WHERE job_id = ?")
+        .bind(jobId)
+        .first<{ count: number }>();
+      const targetCount = Number(targetCountRow?.count ?? messages.length);
+      await db
+        .prepare(
+          `UPDATE telegram_alert_jobs
+              SET target_count = ?,
+                  last_cursor = ?
+            WHERE job_id = ?`,
+        )
+        .bind(targetCount, lastCursor, jobId)
+        .run();
+
+      manifests.push({ jobId, alertType, targetCount, targetKeys });
     } catch (error) {
-      const message = toErrorMessage(error);
       logTelegramEvent({
         level: "warn",
-        message: `Failed to persist Telegram alert job manifest: ${message}`,
+        message: "Failed to persist Telegram alert job manifest",
         action: "persist-alert-job-manifest",
         module: "telegram-alert-jobs",
       });
@@ -126,51 +201,21 @@ export async function persistTelegramAlertJobManifests(
 export async function finalizeTelegramAlertJobManifests(
   db: D1Database,
   manifests: TelegramAlertJobManifest[],
-  perAlertType: PerAlertTypeDelivery,
+  _perAlertType: PerAlertTypeDelivery,
   nowSec: number,
 ): Promise<void> {
   if (manifests.length === 0) return;
 
   try {
-    await batchExecute(db, manifests.map((manifest) => {
-      const stats = perAlertType[manifest.alertType];
-      const failedCount = stats.failed + stats.blocked;
-      const status = failedCount > 0
-        ? "degraded"
-        : stats.enqueued > 0
-          ? "queued"
-          : "sent";
-      const metadata = JSON.stringify({
-        finalizedAt: nowSec,
-        sent: stats.sent,
-        enqueued: stats.enqueued,
-        failed: failedCount,
-        targetCount: manifest.targetCount,
-      });
-      return db
-        .prepare(
-          `UPDATE telegram_alert_jobs
-              SET status = ?,
-                  sent_count = ?,
-                  enqueued_count = ?,
-                  failed_count = ?,
-                  metadata = ?
-            WHERE job_id = ?`,
-        )
-        .bind(
-          status,
-          stats.sent,
-          stats.enqueued,
-          failedCount,
-          metadata,
-          manifest.jobId,
-        );
-    }));
-  } catch (error) {
-    const message = toErrorMessage(error);
+    await reconcileTelegramAlertJobCounters(
+      db,
+      manifests.map((manifest) => manifest.jobId),
+      nowSec,
+    );
+  } catch {
     logTelegramEvent({
       level: "warn",
-      message: `Failed to finalize Telegram alert job manifests: ${message}`,
+      message: "Failed to finalize Telegram alert job manifests",
       action: "finalize-alert-job-manifest",
       module: "telegram-alert-jobs",
     });

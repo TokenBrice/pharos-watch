@@ -14,7 +14,7 @@ import {
   throatLabelForCrowding,
 } from "@/components/exit-route-model";
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
-import type { DexLiquidityData } from "@shared/types";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 describe("buildProtocolBreakdown", () => {
@@ -81,7 +81,7 @@ describe("buildLiquidityExitRouteModel", () => {
 
   it("derives exit routes from the global DEX liquidity row", () => {
     const model = buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: {
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
         totalTvlUsd: 10_000,
         totalVolume24hUsd: 2_500,
         protocolTvl: {
@@ -98,7 +98,7 @@ describe("buildLiquidityExitRouteModel", () => {
         concentrationHhi: 0.24,
         weightedBalanceRatio: 0.72,
         organicFraction: 0.63,
-      } as DexLiquidityData,
+      }),
     });
 
     expect(model).toMatchObject({
@@ -131,7 +131,7 @@ describe("buildLiquidityExitRouteModel", () => {
   it("uses total DEX TVL as the route-share denominator when bucket totals drift", () => {
     const model = buildLiquidityExitRouteModel(
       {
-        [DEX_GLOBAL_KEY]: {
+        [DEX_GLOBAL_KEY]: makeDexLiquidityData({
           totalTvlUsd: 10_000,
           totalVolume24hUsd: 2_500,
           protocolTvl: {
@@ -146,7 +146,7 @@ describe("buildLiquidityExitRouteModel", () => {
           concentrationHhi: null,
           weightedBalanceRatio: null,
           organicFraction: null,
-        } as DexLiquidityData,
+        }),
       },
       { avgBalance: 71, avgOrganic: 54 },
     );
@@ -161,7 +161,7 @@ describe("buildLiquidityExitRouteModel", () => {
 
   it("aggregates non-top exit routes into a visible other bucket", () => {
     const model = buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: {
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
         totalTvlUsd: 10_000,
         totalVolume24hUsd: 2_500,
         protocolTvl: {
@@ -179,7 +179,7 @@ describe("buildLiquidityExitRouteModel", () => {
           arbitrum: 1_000,
         },
         poolCount: 42,
-      } as DexLiquidityData,
+      }),
     });
 
     expect(model?.protocolRoutes.map((route) => route.key)).toEqual([
@@ -204,7 +204,7 @@ describe("buildLiquidityExitRouteModel", () => {
     expect(buildLiquidityExitRouteModel({})).toBeNull();
     expect(
       buildLiquidityExitRouteModel({
-        [DEX_GLOBAL_KEY]: { totalTvlUsd: 0 } as DexLiquidityData,
+        [DEX_GLOBAL_KEY]: makeDexLiquidityData({ totalTvlUsd: 0 }),
       }),
     ).toBeNull();
   });
@@ -237,7 +237,7 @@ describe("buildLiquidityExitRouteModel", () => {
 
   it("derives geometry from the model without React state", () => {
     const model = buildLiquidityExitRouteModel({
-      [DEX_GLOBAL_KEY]: {
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({
         totalTvlUsd: 10_000,
         totalVolume24hUsd: 2_500,
         protocolTvl: { curve: 5_000, fluid: 2_500 },
@@ -246,7 +246,7 @@ describe("buildLiquidityExitRouteModel", () => {
         concentrationHhi: 0.42,
         weightedBalanceRatio: 0.61,
         organicFraction: 0.31,
-      } as DexLiquidityData,
+      }),
     });
 
     expect(model).not.toBeNull();

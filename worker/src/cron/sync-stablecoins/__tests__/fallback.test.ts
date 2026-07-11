@@ -128,9 +128,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   });
 
   // -----------------------------------------------------------------------
-  // (a) Primary path passes through unchanged when all phases succeed
+  // (a) A successful fallback write still fails closed when CoinGecko cannot
+  //     cover the exact active registry set.
   // -----------------------------------------------------------------------
-  it("(a) returns ok status and itemCount when all phases succeed", async () => {
+  it("(a) publishes fallback data but degrades incomplete active-set coverage", async () => {
     const cgData = buildRealCgData(200);
     const db = mockD1([]);
 
@@ -141,7 +142,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       NOW_SEC,
     );
 
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
     expect(typeof result.itemCount).toBe("number");
     expect(result.itemCount).toBeGreaterThan(0);
     expect(result.metadata).toBeTruthy();
@@ -150,6 +151,10 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(meta.fallbackMode).toBe("coingecko-supply-fallback");
     expect(meta.upstreamFetchOk).toBe(false);
     expect(meta.payloadAccepted).toBe(true);
+    expect(meta.cacheWriteSucceeded).toBe(true);
+    expect(meta.downstreamSafe).toBe(false);
+    expect(meta.capabilities).toMatchObject({ stablecoinsCache: false });
+    expect(meta.activePublicationCoverage).toMatchObject({ complete: false });
   });
 
   // -----------------------------------------------------------------------
@@ -343,10 +348,11 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       stalenessCheckFailed: true,
       stalenessCheckFailureReason: "malformed-previous-cache",
       cacheWriteSucceeded: true,
-      downstreamSafe: true,
+      downstreamSafe: false,
       capabilities: {
-        stablecoinsCache: true,
+        stablecoinsCache: false,
       },
+      activePublicationCoverage: { complete: false },
     });
   });
 });

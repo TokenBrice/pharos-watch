@@ -1,105 +1,77 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
+
+import {
+  ADMIN_PENDING_TTL_SECONDS,
+  buildSyntheticTelegramFixture,
+  CPU_BUDGET_CEILING_MS,
+  CPU_BUDGET_SAFETY_FRACTION,
+  CRON_INTERVAL_SECONDS,
+  D1_WRITE_MS_PER_MESSAGE,
+  DISPATCH_CPU_MS,
+  DISPATCH_TIMEOUT_SECONDS,
+  EFFECTIVE_SEND_MESSAGES_PER_SECOND,
+  FORMAT_CPU_MS_PER_CHAT,
+  FRESH_ATTEMPTS_PER_RUN,
+  LEGACY_PENDING_PRIORITY,
+  MINIMUM_TTL_MARGIN_FRACTION,
+  NORMAL_SLO_SECONDS,
+  PENDING_DRAIN_ATTEMPTS_PER_RUN,
+  PENDING_TTL_SECONDS,
+  REQUIRED_TARGET,
+  RISK_ALERT_PRIORITY,
+  SEND_CPU_MS_PER_MESSAGE,
+  SEND_LOOP_SOFT_DEADLINE_SECONDS,
+  simulateLoadScenarios,
+  SPIKE_MAX_SECONDS,
+  summarizeFixture,
+  TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
+  TELEGRAM_P95_SEND_LATENCY_MS,
+  WATCHER_TARGETS,
+  type LoadScenarioResult,
+  type SyntheticFixtureSummary,
+  type SyntheticTelegramFixture,
+} from "../lib/telegram-load-scenarios";
+import { parseTelegramLoadTargets, printTelegramLoadReport } from "../lib/telegram-load-report";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
-type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "admin-broadcast" | "telegram-429-storm";
-type SloStatus = "ok" | "slow" | "breach" | "exploratory";
+export { buildSyntheticTelegramFixture, simulateLoadScenarios, summarizeFixture } from "../lib/telegram-load-scenarios";
+export type {
+  LoadScenarioResult,
+  SyntheticFixtureSummary,
+  SyntheticTelegramFixture,
+} from "../lib/telegram-load-scenarios";
+
 type QueryPlanStatus = "ok" | "review" | "fail";
 
-interface AlertFlags {
-  depeg: boolean;
-  dews: boolean;
-  safety: boolean;
-  launch: boolean;
-  reserve: boolean;
-}
-
-interface DirectSubscription {
-  stablecoinId: string;
-  flags: AlertFlags;
-  snoozed: boolean;
-}
-
-interface PresetSubscription {
-  presetId: keyof typeof PRESET_MEMBERS;
-  flags: Omit<AlertFlags, "launch" | "reserve">;
-}
-
-interface SyntheticWatcher {
-  chatId: string;
-  kind: "private" | "group";
-  quietHours: boolean;
-  chatSnoozed: boolean;
-  blocked: boolean;
-  globals: AlertFlags;
-  directSubscriptions: DirectSubscription[];
-  presetSubscriptions: PresetSubscription[];
-}
-
-export interface SyntheticTelegramFixture {
-  activeWatchers: number;
-  watchers: SyntheticWatcher[];
-}
-
-export interface SyntheticFixtureSummary {
-  activeWatchers: number;
-  directSubscriptions: number;
-  globalOptIns: Record<AlertType, number>;
-  presetFollowers: number;
-  groupChats: number;
-  quietHoursChats: number;
-  chatSnoozes: number;
-  perCoinSnoozes: number;
-  blockedChats: number;
-  deliverableWatchers: number;
-}
-
-interface EventSpec {
-  alertType: AlertType;
-  stablecoinId: string;
-}
-
-interface ChatHit {
-  chatId: string;
-  kind: "private" | "group";
-  quietHours: boolean;
-  blocked: boolean;
-  hitKeys: Set<string>;
-}
-
-interface D1OperationEstimate {
-  reads: number;
-  writes: number;
-  notes: string[];
-}
-
-export interface LoadScenarioResult {
-  targetActiveWatchers: number;
-  scenarioId: ScenarioId;
-  scenarioLabel: string;
-  targetChats: number;
-  targetGroups: number;
-  quietHourDeliveries: number;
-  blockedAttempts: number;
-  messageChunks: number;
-  initialFreshAttempts: number;
-  pendingEnqueued: number;
-  pendingDrainRuns: number;
-  estimatedDrainSeconds: number;
-  /** Modelled per-invocation CPU after the C102 budget-before-format reorder. */
-  estimatedCpuMs: number;
-  d1Operations: D1OperationEstimate;
-  sloStatus: SloStatus;
-  exploratory: boolean;
-}
+/**
+ * Reviewed in-memory duration ceiling shared by the status read paths (TGB-043).
+ * Measured 2026-07-10 at the 5,000-watcher planning fixture: every budgeted
+ * query completes in under 10ms; the generous ceiling absorbs CI variance while
+ * still catching an accidental O(n^2) regression at planning scale.
+ */
+export const STATUS_PATH_MAX_DURATION_MS = 250;
+const STATUS_PATH_MEASUREMENT_RUNS = 3;
 
 interface QueryPlanRow {
   id: number;
   parent: number;
   notused: number;
   detail: string;
+}
+
+export interface StatusPathBudget {
+  /**
+   * Tables the reviewed plan fully scans. Their seeded row counts at the
+   * required planning target define the deterministic rows-read cost.
+   */
+  rowsReadTables: string[];
+  /** Reviewed maximum rows-read at the required planning target. */
+  maxRowsRead: number;
+  /** Reviewed maximum in-memory execution duration at the planning target. */
+  maxDurationMs: number;
 }
 
 export interface QueryPlanCheckDefinition {
@@ -109,6 +81,8 @@ export interface QueryPlanCheckDefinition {
   binds: Array<string | number | null>;
   requiredDetails?: string[];
   allowedFullScanTables?: string[];
+  /** TGB-043: reviewed rows-read/duration maxima for status read paths. */
+  budget?: StatusPathBudget;
   note?: string;
 }
 
@@ -119,6 +93,19 @@ export interface QueryPlanCheckResult {
   details: string[];
   missingRequiredDetails: string[];
   unexpectedFullScanTables: string[];
+  note?: string;
+}
+
+export interface StatusPathBudgetResult {
+  id: string;
+  category: QueryPlanCheckDefinition["category"];
+  status: "ok" | "fail";
+  targetActiveWatchers: number;
+  rowsRead: number;
+  maxRowsRead: number;
+  durationMs: number;
+  maxDurationMs: number;
+  seededRowCounts: Record<string, number>;
   note?: string;
 }
 
@@ -134,6 +121,9 @@ export interface TelegramLoadCheckReport {
     effectiveSendMessagesPerSecond: number;
     d1WriteMsPerMessage: number;
     pendingTtlSeconds: number;
+    adminPendingTtlSeconds: number;
+    worstCasePlanningDelaySeconds: number;
+    minimumTtlMarginFraction: number;
     normalSloSeconds: number;
     spikeMaxSeconds: number;
     dispatchCpuMs: number;
@@ -145,76 +135,8 @@ export interface TelegramLoadCheckReport {
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
   queryPlans: QueryPlanCheckResult[];
+  statusPathBudgets: StatusPathBudgetResult[];
 }
-
-const WATCHER_TARGETS = [500, 1_000, 5_000, 10_000] as const;
-const REQUIRED_TARGET = 5_000;
-const EXPLORATORY_TARGET = 10_000;
-
-const FRESH_ATTEMPTS_PER_RUN = 3_600;
-const PENDING_DRAIN_ATTEMPTS_PER_RUN = Math.floor(FRESH_ATTEMPTS_PER_RUN / 4);
-const SEND_BATCH_SIZE = 4;
-const DISPATCH_TIMEOUT_SECONDS = 14 * 60;
-const SEND_LOOP_SOFT_DEADLINE_SECONDS = 4 * 60;
-const TELEGRAM_BROADCAST_MESSAGES_PER_SECOND = 30;
-const TELEGRAM_P95_SEND_LATENCY_MS = 250;
-const D1_WRITE_MS_PER_MESSAGE = 20;
-const RISK_ALERT_PRIORITY = 30;
-const LEGACY_PENDING_PRIORITY = 50;
-const CRON_INTERVAL_SECONDS = 300;
-const PENDING_TTL_SECONDS = 3_600;
-const NORMAL_SLO_SECONDS = 15 * 60;
-const SPIKE_MAX_SECONDS = 60 * 60;
-const ALERTS_PER_MESSAGE_CHUNK = 16;
-const TELEGRAM_429_STORM_SECONDS = 15 * 60;
-
-// ---------- C102: per-invocation CPU budget modelling ----------
-
-/** Documented Worker CPU cap (`worker/wrangler.toml` `cpu_ms`). */
-const DEFAULT_DISPATCH_CPU_MS = 30_000;
-/** Fail when the required-target burst exceeds this fraction of the CPU cap. */
-const CPU_BUDGET_SAFETY_FRACTION = 0.5;
-/**
- * Modelled CPU cost of formatting one candidate chat's consolidated message
- * (`formatConsolidatedMessage` + `splitMessage`). Conservative per-chat estimate.
- */
-const FORMAT_CPU_MS_PER_CHAT = 1.5;
-/** Modelled CPU cost of marshalling/dispatching one delivered message chunk. */
-const SEND_CPU_MS_PER_MESSAGE = 2.0;
-
-/**
- * Read the dispatcher CPU cap from `worker/wrangler.toml`, falling back to the
- * documented constant. Keeps the harness in step with the deployed limit.
- */
-function readDispatchCpuMs(wranglerPath = resolve("worker/wrangler.toml")): number {
-  try {
-    const toml = readFileSync(wranglerPath, "utf8");
-    const match = toml.match(/^\s*cpu_ms\s*=\s*(\d+)/m);
-    if (match) {
-      const parsed = Number(match[1]);
-      if (Number.isFinite(parsed) && parsed > 0) return parsed;
-    }
-  } catch {
-    // fall through to the documented default
-  }
-  return DEFAULT_DISPATCH_CPU_MS;
-}
-
-const DISPATCH_CPU_MS = readDispatchCpuMs();
-const CPU_BUDGET_CEILING_MS = DISPATCH_CPU_MS * CPU_BUDGET_SAFETY_FRACTION;
-
-/**
- * Estimate per-invocation CPU for a scenario AFTER the C102 budget-before-format
- * reorder: at most `FRESH_ATTEMPTS_PER_RUN` chats are formatted on the hot path,
- * and only the fresh-sent chunks incur send cost in the same invocation.
- */
-function estimateCpuMs(args: { messageChunks: number; initialFreshAttempts: number }): number {
-  const formattedChats = Math.min(args.messageChunks, FRESH_ATTEMPTS_PER_RUN);
-  const formatMs = formattedChats * FORMAT_CPU_MS_PER_CHAT;
-  const sendMs = args.initialFreshAttempts * SEND_CPU_MS_PER_MESSAGE;
-  return Math.round(formatMs + sendMs);
-}
-
 /**
  * Required-target scenarios whose modeled per-invocation CPU exceeds the safety
  * fraction of the cap. Exported so the C102 CPU gate is unit-testable without
@@ -227,457 +149,15 @@ export function findCpuBudgetBreaches(report: TelegramLoadCheckReport): LoadScen
       scenario.estimatedCpuMs > report.assumptions.cpuBudgetCeilingMs,
   );
 }
-const EFFECTIVE_SEND_MESSAGES_PER_SECOND = Math.min(
-  TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
-  SEND_BATCH_SIZE / ((TELEGRAM_P95_SEND_LATENCY_MS + D1_WRITE_MS_PER_MESSAGE) / 1000),
-);
 
-const HOT_COIN_IDS = [
-  "usdc-circle",
-  "usdt-tether",
-  "usd1-world-liberty-financial",
-  "rlusd-ripple",
-  "u-united-stables",
-  "usde-ethena",
-  "usdg-paxos",
-  "usds-sky",
-  "pyusd-paypal",
-  "dai-makerdao",
-  "frax-frax",
-  "lusd-liquity",
-  "usdp-paxos",
-  "gusd-gemini",
-  "tusd-trueusd",
-  "fdusd-first-digital",
-  "susde-ethena",
-  "usdy-ondo",
-  "usyc-circle",
-  "eurt-tether",
-  "eurc-circle",
-  "eurs-stasis",
-  "paxg-paxos",
-  "xaut-tether",
-  "gyen-gyen",
-] as const;
-
-const DIRECT_COIN_POOL = [
-  // top-10 coins appear 3x to mimic hot-coin subscription concentration
-  ...HOT_COIN_IDS.slice(0, 10),
-  ...HOT_COIN_IDS.slice(0, 10),
-  ...HOT_COIN_IDS.slice(0, 10),
-  ...HOT_COIN_IDS.slice(10),
-] as const;
-
-const PRESET_MEMBERS = {
-  "usd-top10": HOT_COIN_IDS.slice(0, 10),
-  "usd-top25": HOT_COIN_IDS.slice(0, 25),
-  // Mirrors the production "usd-top50" preset id (worker/src/lib/telegram-presets.ts);
-  // the fixture pool only has 25 hot ids, so this currently resolves to the same set as usd-top25.
-  "usd-top50": HOT_COIN_IDS.slice(0, 25),
-  "eur-top10": ["eurt-tether", "eurc-circle", "eurs-stasis"],
-  "gold-top5": ["paxg-paxos", "xaut-tether"],
-  "mcap-ge-1b": HOT_COIN_IDS.slice(0, 12),
-  "mcap-ge-100m": HOT_COIN_IDS.slice(0, 20),
-} as const;
-
-const PRESET_IDS = Object.keys(PRESET_MEMBERS) as Array<keyof typeof PRESET_MEMBERS>;
-
-function hasAlertFlag(flags: AlertFlags | Omit<AlertFlags, "launch" | "reserve">, alertType: AlertType): boolean {
-  if (alertType === "launch" || alertType === "reserve") return false;
-  return flags[alertType] === true;
-}
-
-function mergeFlags(left: AlertFlags, right: AlertFlags): AlertFlags {
-  return {
-    depeg: left.depeg || right.depeg,
-    dews: left.dews || right.dews,
-    safety: left.safety || right.safety,
-    launch: left.launch || right.launch,
-    reserve: left.reserve || right.reserve,
-  };
-}
-
-function buildDirectFlags(i: number, j: number): AlertFlags {
-  return {
-    depeg: (i + j) % 10 !== 0,
-    dews: (i + 2 * j) % 3 === 0,
-    safety: (i + j) % 4 === 0,
-    launch: (i + j) % 19 === 0,
-    reserve: (i + j) % 23 === 0,
-  };
-}
-
-function buildGlobalFlags(i: number): AlertFlags {
-  return {
-    depeg: i % 2 === 0 || i % 13 === 0,
-    dews: i % 29 === 0,
-    safety: i % 14 === 0,
-    launch: i % 101 === 0,
-    reserve: i % 67 === 0,
-  };
-}
-
-function buildDirectSubscriptions(i: number): DirectSubscription[] {
-  const byCoin = new Map<string, DirectSubscription>();
-  const directCount = 3 + (i % 8);
-  for (let j = 0; j < directCount; j += 1) {
-    const stablecoinId = DIRECT_COIN_POOL[(i * 17 + j * 11) % DIRECT_COIN_POOL.length]!;
-    const next: DirectSubscription = {
-      stablecoinId,
-      flags: buildDirectFlags(i, j),
-      snoozed: (i + j * 3) % 53 === 0,
-    };
-    const existing = byCoin.get(stablecoinId);
-    if (existing) {
-      existing.flags = mergeFlags(existing.flags, next.flags);
-      existing.snoozed = existing.snoozed || next.snoozed;
-    } else {
-      byCoin.set(stablecoinId, next);
-    }
-  }
-  return [...byCoin.values()];
-}
-
-function buildPresetSubscriptions(i: number): PresetSubscription[] {
-  if (i % 12 !== 0) return [];
-  const presetId = PRESET_IDS[(i / 12) % PRESET_IDS.length]!;
-  return [
-    {
-      presetId,
-      flags: {
-        depeg: true,
-        dews: i % 24 === 0,
-        safety: i % 36 === 0,
-      },
-    },
-  ];
-}
-
-export function buildSyntheticTelegramFixture(activeWatchers: number): SyntheticTelegramFixture {
-  const watchers: SyntheticWatcher[] = [];
-  for (let i = 0; i < activeWatchers; i += 1) {
-    watchers.push({
-      chatId: `synthetic-${String(i + 1).padStart(6, "0")}`,
-      kind: i % 7 === 0 ? "group" : "private",
-      quietHours: i % 16 === 0,
-      chatSnoozed: i % 37 === 0,
-      blocked: i % 89 === 0,
-      globals: buildGlobalFlags(i),
-      directSubscriptions: buildDirectSubscriptions(i),
-      presetSubscriptions: buildPresetSubscriptions(i),
-    });
-  }
-  return { activeWatchers, watchers };
-}
-
-function hasDeliverableState(watcher: SyntheticWatcher): boolean {
-  return (
-    watcher.globals.depeg ||
-    watcher.globals.dews ||
-    watcher.globals.safety ||
-    watcher.globals.launch ||
-    watcher.globals.reserve ||
-    watcher.directSubscriptions.some((sub) => sub.flags.depeg || sub.flags.dews || sub.flags.safety || sub.flags.launch || sub.flags.reserve) ||
-    watcher.presetSubscriptions.some((preset) => preset.flags.depeg || preset.flags.dews || preset.flags.safety)
+export function findTtlMarginBreaches(report: TelegramLoadCheckReport): LoadScenarioResult[] {
+  return report.scenarios.filter(
+    (scenario) =>
+      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      !scenario.exploratory &&
+      scenario.ttlMarginFraction < report.assumptions.minimumTtlMarginFraction,
   );
 }
-
-export function summarizeFixture(fixture: SyntheticTelegramFixture): SyntheticFixtureSummary {
-  const globalOptIns: Record<AlertType, number> = { depeg: 0, dews: 0, safety: 0, launch: 0, reserve: 0 };
-  let directSubscriptions = 0;
-  let presetFollowers = 0;
-  let groupChats = 0;
-  let quietHoursChats = 0;
-  let chatSnoozes = 0;
-  let perCoinSnoozes = 0;
-  let blockedChats = 0;
-  let deliverableWatchers = 0;
-
-  for (const watcher of fixture.watchers) {
-    directSubscriptions += watcher.directSubscriptions.length;
-    presetFollowers += watcher.presetSubscriptions.length > 0 ? 1 : 0;
-    groupChats += watcher.kind === "group" ? 1 : 0;
-    quietHoursChats += watcher.quietHours ? 1 : 0;
-    chatSnoozes += watcher.chatSnoozed ? 1 : 0;
-    blockedChats += watcher.blocked ? 1 : 0;
-    deliverableWatchers += hasDeliverableState(watcher) ? 1 : 0;
-    for (const sub of watcher.directSubscriptions) {
-      perCoinSnoozes += sub.snoozed ? 1 : 0;
-    }
-    for (const type of Object.keys(globalOptIns) as AlertType[]) {
-      globalOptIns[type] += watcher.globals[type] ? 1 : 0;
-    }
-  }
-
-  return {
-    activeWatchers: fixture.activeWatchers,
-    directSubscriptions,
-    globalOptIns,
-    presetFollowers,
-    groupChats,
-    quietHoursChats,
-    chatSnoozes,
-    perCoinSnoozes,
-    blockedChats,
-    deliverableWatchers,
-  };
-}
-
-function addHit(hitsByChat: Map<string, ChatHit>, watcher: SyntheticWatcher, event: EventSpec): void {
-  const existing = hitsByChat.get(watcher.chatId) ?? {
-    chatId: watcher.chatId,
-    kind: watcher.kind,
-    quietHours: watcher.quietHours,
-    blocked: watcher.blocked,
-    hitKeys: new Set<string>(),
-  };
-  existing.hitKeys.add(`${event.alertType}:${event.stablecoinId}`);
-  hitsByChat.set(watcher.chatId, existing);
-}
-
-function hasActivePerCoinSnooze(watcher: SyntheticWatcher, stablecoinId: string): boolean {
-  return watcher.directSubscriptions.some((sub) => sub.stablecoinId === stablecoinId && sub.snoozed);
-}
-
-function hasDirectMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
-  return watcher.directSubscriptions.some(
-    (sub) =>
-      sub.stablecoinId === event.stablecoinId &&
-      !sub.snoozed &&
-      sub.flags[event.alertType],
-  );
-}
-
-function hasPresetMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
-  if (event.alertType === "launch" || event.alertType === "reserve") return false;
-  return watcher.presetSubscriptions.some(
-    (preset) => {
-      const presetMembers: readonly string[] = PRESET_MEMBERS[preset.presetId];
-      return hasAlertFlag(preset.flags, event.alertType) && presetMembers.includes(event.stablecoinId);
-    },
-  );
-}
-
-function collectEventHits(fixture: SyntheticTelegramFixture, events: EventSpec[]): Map<string, ChatHit> {
-  const hitsByChat = new Map<string, ChatHit>();
-  for (const watcher of fixture.watchers) {
-    if (watcher.chatSnoozed) continue;
-    for (const event of events) {
-      if (hasActivePerCoinSnooze(watcher, event.stablecoinId)) continue;
-      const specificMatch = hasDirectMatch(watcher, event) || hasPresetMatch(watcher, event);
-      const globalMatch = watcher.globals[event.alertType];
-      if (specificMatch || globalMatch) {
-        addHit(hitsByChat, watcher, event);
-      }
-    }
-  }
-  return hitsByChat;
-}
-
-function estimateMessageChunks(hitsByChat: Map<string, ChatHit>): number {
-  let chunks = 0;
-  for (const hit of hitsByChat.values()) {
-    chunks += Math.max(1, Math.ceil(hit.hitKeys.size / ALERTS_PER_MESSAGE_CHUNK));
-  }
-  return chunks;
-}
-
-function countBlockedMessageChunks(hitsByChat: Map<string, ChatHit>): number {
-  let chunks = 0;
-  for (const hit of hitsByChat.values()) {
-    if (!hit.blocked) continue;
-    chunks += Math.max(1, Math.ceil(hit.hitKeys.size / ALERTS_PER_MESSAGE_CHUNK));
-  }
-  return chunks;
-}
-
-function estimateRiskD1Ops(args: {
-  fanoutReadQueries: number;
-  messages: number;
-  blockedMessages: number;
-  pendingEnqueued: number;
-  pendingDrainRuns: number;
-  alertJobCount: number;
-  stormRetryWrites?: number;
-}): D1OperationEstimate {
-  const sentOrAttempted = args.messages;
-  const successfulResetWrites = Math.max(0, sentOrAttempted - args.blockedMessages);
-  const blockedStrikeWrites = args.blockedMessages;
-  const pendingDeleteBatches = args.pendingDrainRuns;
-  const reads = args.fanoutReadQueries + 1 + args.pendingDrainRuns;
-  const writes =
-    args.messages +
-    args.alertJobCount * 2 +
-    args.pendingEnqueued +
-    successfulResetWrites +
-    blockedStrikeWrites +
-    pendingDeleteBatches +
-    (args.stormRetryWrites ?? 0);
-
-  return {
-    reads,
-    writes,
-    notes: [
-      "Read estimate counts fan-out groups, backoff/pending reads, and one pending SELECT per drain run.",
-      "Write estimate counts alert job/target manifests, pending enqueues, success reset updates, blocked-strike updates, and pending delete batches.",
-    ],
-  };
-}
-
-function classifySlo(targetActiveWatchers: number, scenarioId: ScenarioId, seconds: number): SloStatus {
-  if (targetActiveWatchers === EXPLORATORY_TARGET) return "exploratory";
-  if (scenarioId === "market-wide-burst" || scenarioId === "telegram-429-storm") {
-    return seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
-  }
-  return seconds <= NORMAL_SLO_SECONDS ? "ok" : seconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
-}
-
-function estimateSendSeconds(messageCount: number): number {
-  if (messageCount <= 0) return 0;
-  return Math.ceil(messageCount / EFFECTIVE_SEND_MESSAGES_PER_SECOND);
-}
-
-function buildScenarioResult(args: {
-  fixture: SyntheticTelegramFixture;
-  scenarioId: ScenarioId;
-  scenarioLabel: string;
-  hitsByChat: Map<string, ChatHit>;
-  fanoutReadQueries: number;
-  adminPendingOnly?: boolean;
-  stormSeconds?: number;
-}): LoadScenarioResult {
-  const targetChats = args.hitsByChat.size;
-  const targetGroups = [...args.hitsByChat.values()].filter((hit) => hit.kind === "group").length;
-  const quietHourDeliveries = [...args.hitsByChat.values()].filter((hit) => hit.quietHours).length;
-  const messageChunks = estimateMessageChunks(args.hitsByChat);
-  const alertJobCount = new Set(
-    [...args.hitsByChat.values()].flatMap((hit) =>
-      [...hit.hitKeys]
-        .map((key) => key.split(":")[0])
-        .filter((key): key is AlertType => key === "depeg" || key === "dews" || key === "safety" || key === "launch" || key === "reserve"),
-    ),
-  ).size;
-  const blockedAttempts = countBlockedMessageChunks(args.hitsByChat);
-  const initialFreshAttempts = args.adminPendingOnly || args.stormSeconds ? 0 : Math.min(messageChunks, FRESH_ATTEMPTS_PER_RUN);
-  const pendingEnqueued = args.adminPendingOnly || args.stormSeconds
-    ? messageChunks
-    : Math.max(0, messageChunks - initialFreshAttempts);
-  const pendingDrainRuns = Math.ceil(pendingEnqueued / PENDING_DRAIN_ATTEMPTS_PER_RUN);
-  const stormRuns = args.stormSeconds ? Math.ceil(args.stormSeconds / CRON_INTERVAL_SECONDS) : 0;
-  const initialFreshSeconds = estimateSendSeconds(initialFreshAttempts);
-  const pendingScheduleSeconds = pendingDrainRuns * CRON_INTERVAL_SECONDS;
-  const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
-  const estimatedDrainSeconds = initialFreshSeconds +
-    Math.max(pendingScheduleSeconds, pendingSendSeconds) +
-    stormRuns * CRON_INTERVAL_SECONDS;
-  const stormRetryWrites = args.stormSeconds ? Math.min(messageChunks, stormRuns * PENDING_DRAIN_ATTEMPTS_PER_RUN) : 0;
-  const d1Operations = args.adminPendingOnly
-    ? {
-        reads: 1 + pendingDrainRuns,
-        writes: messageChunks + Math.max(0, messageChunks - blockedAttempts) + blockedAttempts + pendingDrainRuns,
-        notes: [
-          "Admin broadcast estimate counts one target enumeration read, pending enqueue rows, pending success/block updates, and delete batches.",
-          `Telegram pacing assumes ${EFFECTIVE_SEND_MESSAGES_PER_SECOND.toFixed(1)} messages/sec from Bot API broadcast cap, ${SEND_BATCH_SIZE}-wide sends, p95 latency, and D1 write cost.`,
-        ],
-      }
-    : estimateRiskD1Ops({
-        fanoutReadQueries: args.fanoutReadQueries,
-        messages: messageChunks,
-        blockedMessages: blockedAttempts,
-        pendingEnqueued,
-        pendingDrainRuns,
-        alertJobCount,
-        stormRetryWrites,
-      });
-
-  return {
-    targetActiveWatchers: args.fixture.activeWatchers,
-    scenarioId: args.scenarioId,
-    scenarioLabel: args.scenarioLabel,
-    targetChats,
-    targetGroups,
-    quietHourDeliveries,
-    blockedAttempts,
-    messageChunks,
-    initialFreshAttempts,
-    pendingEnqueued,
-    pendingDrainRuns,
-    estimatedDrainSeconds,
-    estimatedCpuMs: estimateCpuMs({ messageChunks, initialFreshAttempts }),
-    d1Operations,
-    sloStatus: classifySlo(args.fixture.activeWatchers, args.scenarioId, estimatedDrainSeconds),
-    exploratory: args.fixture.activeWatchers === EXPLORATORY_TARGET,
-  };
-}
-
-function collectAdminBroadcastHits(fixture: SyntheticTelegramFixture): Map<string, ChatHit> {
-  const hitsByChat = new Map<string, ChatHit>();
-  for (const watcher of fixture.watchers) {
-    if (!hasDeliverableState(watcher)) continue;
-    hitsByChat.set(watcher.chatId, {
-      chatId: watcher.chatId,
-      kind: watcher.kind,
-      quietHours: watcher.quietHours,
-      blocked: watcher.blocked,
-      hitKeys: new Set(["admin-broadcast"]),
-    });
-  }
-  return hitsByChat;
-}
-
-export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadScenarioResult[] {
-  const singleDepegEvents: EventSpec[] = [{ alertType: "depeg", stablecoinId: "usdc-circle" }];
-  const marketWideEvents: EventSpec[] = HOT_COIN_IDS.slice(0, 25).map((stablecoinId) => ({
-    alertType: "depeg",
-    stablecoinId,
-  }));
-  const dewsSafetyEvents: EventSpec[] = [
-    ...HOT_COIN_IDS.slice(0, 12).map((stablecoinId) => ({ alertType: "dews" as const, stablecoinId })),
-    ...HOT_COIN_IDS.slice(5, 15).map((stablecoinId) => ({ alertType: "safety" as const, stablecoinId })),
-    ...HOT_COIN_IDS.slice(10, 20).map((stablecoinId) => ({ alertType: "reserve" as const, stablecoinId })),
-  ];
-
-  return [
-    buildScenarioResult({
-      fixture,
-      scenarioId: "single-depeg",
-      scenarioLabel: "Single USDC depeg",
-      hitsByChat: collectEventHits(fixture, singleDepegEvents),
-      fanoutReadQueries: 5,
-    }),
-    buildScenarioResult({
-      fixture,
-      scenarioId: "market-wide-burst",
-      scenarioLabel: "Market-wide 25-coin depeg burst",
-      hitsByChat: collectEventHits(fixture, marketWideEvents),
-      fanoutReadQueries: 5,
-    }),
-    buildScenarioResult({
-      fixture,
-      scenarioId: "dews-safety-burst",
-      scenarioLabel: "DEWS, safety-grade, and reserve burst",
-      hitsByChat: collectEventHits(fixture, dewsSafetyEvents),
-      fanoutReadQueries: 11,
-    }),
-    buildScenarioResult({
-      fixture,
-      scenarioId: "admin-broadcast",
-      scenarioLabel: "Admin broadcast to deliverable watchers",
-      hitsByChat: collectAdminBroadcastHits(fixture),
-      fanoutReadQueries: 1,
-      adminPendingOnly: true,
-    }),
-    buildScenarioResult({
-      fixture,
-      scenarioId: "telegram-429-storm",
-      scenarioLabel: "Telegram 429 storm against market-wide burst",
-      hitsByChat: collectEventHits(fixture, marketWideEvents),
-      fanoutReadQueries: 5,
-      stormSeconds: TELEGRAM_429_STORM_SECONDS,
-    }),
-  ];
-}
-
 function runExplainQueryPlan(db: DatabaseSync, check: QueryPlanCheckDefinition): QueryPlanCheckResult {
   // Cast: better-sqlite3 .all() returns unknown[]; EXPLAIN QUERY PLAN's row shape is stable per SQLite docs
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${check.sql}`).all(...check.binds) as unknown as QueryPlanRow[];
@@ -693,10 +173,7 @@ function getFullScanTable(detail: string): string | null {
   return table || null;
 }
 
-export function evaluateQueryPlan(
-  check: QueryPlanCheckDefinition,
-  details: string[],
-): QueryPlanCheckResult {
+export function evaluateQueryPlan(check: QueryPlanCheckDefinition, details: string[]): QueryPlanCheckResult {
   const requiredDetails = check.requiredDetails ?? [];
   const missingRequiredDetails = requiredDetails.filter(
     (required) => !details.some((detail) => detail.includes(required)),
@@ -712,11 +189,12 @@ export function evaluateQueryPlan(
     }
   }
 
-  const status: QueryPlanStatus = missingRequiredDetails.length > 0 || unexpectedFullScanTables.size > 0
-    ? "fail"
-    : check.allowedFullScanTables && check.allowedFullScanTables.length > 0
-      ? "review"
-      : "ok";
+  const status: QueryPlanStatus =
+    missingRequiredDetails.length > 0 || unexpectedFullScanTables.size > 0
+      ? "fail"
+      : check.allowedFullScanTables && check.allowedFullScanTables.length > 0
+        ? "review"
+        : "ok";
 
   return {
     id: check.id,
@@ -885,7 +363,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            ) sub ON sub.chat_id = s.chat_id`,
       binds: [],
       allowedFullScanTables: ["s"],
-      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query.",
+      budget: {
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        maxRowsRead: 35_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
     },
     {
       id: "status-top-stablecoins",
@@ -902,7 +385,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
        LIMIT 5`,
       binds: [],
       allowedFullScanTables: ["telegram_subscriptions"],
-      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists.",
+      budget: {
+        rowsReadTables: ["telegram_subscriptions"],
+        maxRowsRead: 30_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists. Measured 2026-07-10 at the 5,000-watcher fixture: 28,334 rows read, ~5ms in-memory; no rollup justified yet.",
     },
     {
       id: "lifecycle-current-active-history",
@@ -920,26 +408,26 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            ORDER BY day ASC`,
       binds: [],
       allowedFullScanTables: ["s"],
-      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated.",
+      budget: {
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        maxRowsRead: 35_000,
+        maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
+      },
+      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
     },
   ];
 }
 
-// Minimum number of migrations expected to seed the in-memory plan database
-// (baseline + all telegram_* migrations). Bump this when a new Telegram
-// migration is added so a future directory-read regression fails loudly
-// instead of silently shrinking the validated schema.
-const MIN_TELEGRAM_PLAN_MIGRATIONS = 15;
+// Telegram migrations depend on shared Worker schema (for example effect
+// fencing depends on scheduler tables), so this fixture replays the same full
+// ordered stream as production instead of guessing dependencies by filename.
+const MIN_TELEGRAM_PLAN_MIGRATIONS = 120;
 
 function selectTelegramPlanMigrations(migrationsDir: string): string[] {
-  // Seed from the baseline plus every Telegram migration discovered on disk so
-  // new telegram_* migrations are picked up automatically (previously this list
-  // was hardcoded and silently went stale; see audit S-001). Mirrors
-  // getMigrationFiles() in check-worker-migrations.mjs, inlined to avoid pulling
-  // that module's top-level await into this tsx-transformed CLI.
+  // Mirrors getMigrationFiles() in check-worker-migrations.mjs, inlined to
+  // avoid pulling that module's top-level await into this tsx-transformed CLI.
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
-    .filter((file) => file.startsWith("0000_baseline") || /telegram/.test(file))
     .sort();
 }
 
@@ -967,13 +455,150 @@ export function runQueryPlanChecks(migrationsDir?: string): QueryPlanCheckResult
   }
 }
 
-export function buildTelegramLoadCheckReport(options: {
-  targets?: readonly number[];
-  skipQueryPlans?: boolean;
-  migrationsDir?: string;
-} = {}): TelegramLoadCheckReport {
+const STATUS_PATH_FIXTURE_BASE_CREATED_AT = 1_735_689_600; // 2025-01-01T00:00:00Z
+const STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS = 180;
+
+/**
+ * Materializes the synthetic watcher fixture into the migrated plan database so
+ * status-path budgets measure real query cost at the planning target instead of
+ * empty-table plans. Created-at values are spread across distinct UTC days so
+ * the lifecycle fallback GROUP BY does representative work.
+ */
+function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixture): void {
+  const insertSubscriber = db.prepare(
+    `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, quiet_hours_enabled,
+       global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+       alert_snooze_until_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertSubscription = db.prepare(
+    `INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
+       alert_launch, alert_reserve, alert_snooze_until_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertPreset = db.prepare(
+    `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  db.exec("BEGIN");
+  try {
+    fixture.watchers.forEach((watcher, index) => {
+      const createdAt = STATUS_PATH_FIXTURE_BASE_CREATED_AT
+        + (index % STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS) * 86_400;
+      const snoozeUntil = createdAt + 999_999_999;
+      insertSubscriber.run(
+        watcher.chatId, createdAt, createdAt + 3_600, watcher.quietHours ? 1 : 0,
+        watcher.globals.dews ? 1 : 0, watcher.globals.depeg ? 1 : 0, watcher.globals.safety ? 1 : 0,
+        watcher.globals.launch ? 1 : 0, watcher.globals.reserve ? 1 : 0,
+        watcher.chatSnoozed ? snoozeUntil : null,
+      );
+      for (const subscription of watcher.directSubscriptions) {
+        insertSubscription.run(
+          watcher.chatId, subscription.stablecoinId,
+          subscription.flags.dews ? 1 : 0, subscription.flags.depeg ? 1 : 0, subscription.flags.safety ? 1 : 0,
+          subscription.flags.launch ? 1 : 0, subscription.flags.reserve ? 1 : 0,
+          subscription.snoozed ? snoozeUntil : null,
+        );
+      }
+      for (const preset of watcher.presetSubscriptions) {
+        insertPreset.run(
+          watcher.chatId, preset.presetId,
+          preset.flags.dews ? 1 : 0, preset.flags.depeg ? 1 : 0, preset.flags.safety ? 1 : 0,
+          createdAt, createdAt,
+        );
+      }
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function countTableRows(db: DatabaseSync, table: string): number {
+  const row = db.prepare(`SELECT COUNT(*) AS n FROM "${table.replaceAll('"', '""')}"`).get() as { n: number };
+  return row.n;
+}
+
+export function evaluateStatusPathBudget(
+  check: QueryPlanCheckDefinition,
+  budget: StatusPathBudget,
+  measurement: { rowsRead: number; durationMs: number; seededRowCounts: Record<string, number> },
+): StatusPathBudgetResult {
+  return {
+    id: check.id,
+    category: check.category,
+    status: measurement.rowsRead <= budget.maxRowsRead && measurement.durationMs <= budget.maxDurationMs
+      ? "ok"
+      : "fail",
+    targetActiveWatchers: REQUIRED_TARGET,
+    rowsRead: measurement.rowsRead,
+    maxRowsRead: budget.maxRowsRead,
+    durationMs: measurement.durationMs,
+    maxDurationMs: budget.maxDurationMs,
+    seededRowCounts: measurement.seededRowCounts,
+    note: check.note,
+  };
+}
+
+/**
+ * TGB-043: enforce reviewed rows-read/duration maxima for the pulse aggregate,
+ * top-coins status, and lifecycle-fallback read paths at the required planning
+ * target. Rows-read is deterministic (the reviewed plans fully scan their base
+ * tables, so seeded row counts are the exact per-refresh read cost); duration
+ * is the fastest of a few in-memory runs to dampen CI jitter.
+ */
+export function runStatusPathBudgetChecks(migrationsDir?: string): StatusPathBudgetResult[] {
+  const budgetedChecks = buildQueryPlanChecks().filter(
+    (check): check is QueryPlanCheckDefinition & { budget: StatusPathBudget } => check.budget != null,
+  );
+  if (budgetedChecks.length === 0) return [];
+
+  const db = createTelegramPlanDatabase(migrationsDir);
+  try {
+    seedStatusPathFixture(db, buildSyntheticTelegramFixture(REQUIRED_TARGET));
+    return budgetedChecks.map((check) => {
+      const seededRowCounts = Object.fromEntries(
+        check.budget.rowsReadTables.map((table) => [table, countTableRows(db, table)]),
+      );
+      const rowsRead = Object.values(seededRowCounts).reduce((sum, count) => sum + count, 0);
+      const statement = db.prepare(check.sql);
+      let durationMs = Number.POSITIVE_INFINITY;
+      for (let run = 0; run < STATUS_PATH_MEASUREMENT_RUNS; run += 1) {
+        const startedAt = performance.now();
+        statement.all(...(check.binds as never[]));
+        durationMs = Math.min(durationMs, performance.now() - startedAt);
+      }
+      return evaluateStatusPathBudget(check, check.budget, {
+        rowsRead,
+        durationMs: Math.round(durationMs * 10) / 10,
+        seededRowCounts,
+      });
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export function buildTelegramLoadCheckReport(
+  options: {
+    targets?: readonly number[];
+    skipQueryPlans?: boolean;
+    migrationsDir?: string;
+  } = {},
+): TelegramLoadCheckReport {
   const targets = options.targets ?? WATCHER_TARGETS;
   const fixtures = targets.map((target) => buildSyntheticTelegramFixture(target));
+  const scenarios = fixtures.flatMap((fixture) => simulateLoadScenarios(fixture));
+  const requiredPlanningScenarios = scenarios.filter((scenario) => scenario.targetActiveWatchers === REQUIRED_TARGET);
+  const worstCasePlanningDelaySeconds = Math.max(
+    0,
+    ...(requiredPlanningScenarios.length > 0 ? requiredPlanningScenarios : scenarios).map(
+      (scenario) => scenario.planningDelaySeconds,
+    ),
+  );
   return {
     assumptions: {
       freshAttemptsPerRun: FRESH_ATTEMPTS_PER_RUN,
@@ -986,6 +611,9 @@ export function buildTelegramLoadCheckReport(options: {
       effectiveSendMessagesPerSecond: Math.round(EFFECTIVE_SEND_MESSAGES_PER_SECOND * 10) / 10,
       d1WriteMsPerMessage: D1_WRITE_MS_PER_MESSAGE,
       pendingTtlSeconds: PENDING_TTL_SECONDS,
+      adminPendingTtlSeconds: ADMIN_PENDING_TTL_SECONDS,
+      worstCasePlanningDelaySeconds,
+      minimumTtlMarginFraction: MINIMUM_TTL_MARGIN_FRACTION,
       normalSloSeconds: NORMAL_SLO_SECONDS,
       spikeMaxSeconds: SPIKE_MAX_SECONDS,
       dispatchCpuMs: DISPATCH_CPU_MS,
@@ -995,68 +623,10 @@ export function buildTelegramLoadCheckReport(options: {
       sendCpuMsPerMessage: SEND_CPU_MS_PER_MESSAGE,
     },
     fixtureSummaries: fixtures.map(summarizeFixture),
-    scenarios: fixtures.flatMap((fixture) => simulateLoadScenarios(fixture)),
+    scenarios,
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
+    statusPathBudgets: options.skipQueryPlans ? [] : runStatusPathBudgetChecks(options.migrationsDir),
   };
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds === 0) return "same run";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
-}
-
-function parseTargets(args: string[]): number[] | null {
-  const index = args.indexOf("--target");
-  if (index === -1) return null;
-  const raw = args[index + 1];
-  if (!raw) throw new Error("--target requires a comma-separated numeric value");
-  const targets = raw.split(",").map((value) => Number(value.trim()));
-  if (targets.some((value) => !Number.isInteger(value) || value <= 0)) {
-    throw new Error(`Invalid --target value: ${raw}`);
-  }
-  return targets;
-}
-
-function printReport(report: TelegramLoadCheckReport): void {
-  console.log("Synthetic Telegram load simulation");
-  console.log(
-    `Assumptions: ${report.assumptions.freshAttemptsPerRun} fresh attempts/run, ${report.assumptions.pendingDrainAttemptsPerRun} pending drain attempts/run, ${report.assumptions.cronIntervalSeconds / 60}m cron, ${report.assumptions.dispatchTimeoutSeconds / 60}m dispatch timeout, ${report.assumptions.sendLoopSoftDeadlineSeconds / 60}m send-loop soft deadline, ${report.assumptions.effectiveSendMessagesPerSecond} effective msg/s, ${report.assumptions.pendingTtlSeconds / 60}m risk pending TTL.`,
-  );
-  console.log(
-    `CPU budget: ${report.assumptions.dispatchCpuMs.toLocaleString()}ms cap, ceiling ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms (${report.assumptions.cpuBudgetSafetyFraction}x), ${report.assumptions.formatCpuMsPerChat}ms/format-chat, ${report.assumptions.sendCpuMsPerMessage}ms/sent-chunk (format-count capped at fresh budget post-C102).`,
-  );
-  console.log("");
-
-  for (const summary of report.fixtureSummaries) {
-    console.log(
-      `Fixture ${summary.activeWatchers.toLocaleString()} active watchers: ${summary.directSubscriptions.toLocaleString()} direct subs, ${summary.presetFollowers.toLocaleString()} preset followers, ${summary.groupChats.toLocaleString()} groups, ${summary.quietHoursChats.toLocaleString()} quiet-hours chats, ${summary.chatSnoozes.toLocaleString()} chat snoozes, ${summary.perCoinSnoozes.toLocaleString()} per-coin snoozes, ${summary.blockedChats.toLocaleString()} blocked chats.`,
-    );
-    console.log(
-      `  Global opt-ins: depeg ${summary.globalOptIns.depeg.toLocaleString()}, dews ${summary.globalOptIns.dews.toLocaleString()}, safety ${summary.globalOptIns.safety.toLocaleString()}, launch ${summary.globalOptIns.launch.toLocaleString()}, reserve ${summary.globalOptIns.reserve.toLocaleString()}.`,
-    );
-  }
-
-  console.log("");
-  console.log("Scenario estimates:");
-  for (const result of report.scenarios) {
-    const slo = result.sloStatus.toUpperCase();
-    console.log(
-      `- ${result.targetActiveWatchers.toLocaleString()} / ${result.scenarioLabel}: ${result.targetChats.toLocaleString()} chats, ${result.messageChunks.toLocaleString()} chunks, ${result.pendingEnqueued.toLocaleString()} pending, drain ${formatDuration(result.estimatedDrainSeconds)}, CPU ~${result.estimatedCpuMs.toLocaleString()}ms, D1 ~${result.d1Operations.reads.toLocaleString()} reads / ${result.d1Operations.writes.toLocaleString()} writes [${slo}]`,
-    );
-  }
-
-  if (report.queryPlans.length > 0) {
-    console.log("");
-    console.log("Query-plan checks:");
-    for (const plan of report.queryPlans) {
-      const suffix = plan.note ? ` (${plan.note})` : "";
-      console.log(`- ${plan.status.toUpperCase()} ${plan.id}: ${plan.details.join(" | ")}${suffix}`);
-    }
-  }
 }
 
 function main(): void {
@@ -1064,16 +634,17 @@ function main(): void {
   const json = args.includes("--json");
   const skipQueryPlans = args.includes("--skip-query-plans");
   const enforceTargetSlo = args.includes("--enforce-target-slo");
-  const targets = parseTargets(args) ?? WATCHER_TARGETS;
+  const targets = parseTelegramLoadTargets(args) ?? WATCHER_TARGETS;
   const report = buildTelegramLoadCheckReport({ targets, skipQueryPlans });
 
   if (json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    printReport(report);
+    printTelegramLoadReport(report);
   }
 
   const failedPlans = report.queryPlans.filter((plan) => plan.status === "fail");
+  const failedStatusPathBudgets = report.statusPathBudgets.filter((budget) => budget.status === "fail");
   const normalTargetSloFailures = report.scenarios.filter(
     (scenario) =>
       enforceTargetSlo &&
@@ -1091,15 +662,25 @@ function main(): void {
   // C102 gate: the required-target burst must stay under the CPU safety fraction
   // of the per-invocation cap. Always enforced (not gated on --enforce-target-slo).
   const cpuBudgetBreaches = findCpuBudgetBreaches(report);
+  const ttlMarginBreaches = enforceTargetSlo ? findTtlMarginBreaches(report) : [];
 
   if (
     failedPlans.length > 0 ||
+    failedStatusPathBudgets.length > 0 ||
     normalTargetSloFailures.length > 0 ||
     spikeTargetSloBreaches.length > 0 ||
-    cpuBudgetBreaches.length > 0
+    cpuBudgetBreaches.length > 0 ||
+    ttlMarginBreaches.length > 0
   ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
+    }
+    if (failedStatusPathBudgets.length > 0) {
+      console.error(
+        `\n${failedStatusPathBudgets.length} status-path budget check(s) exceeded reviewed maxima: ${failedStatusPathBudgets
+          .map((budget) => `${budget.id} rowsRead ${budget.rowsRead.toLocaleString()}/${budget.maxRowsRead.toLocaleString()}, duration ${budget.durationMs}ms/${budget.maxDurationMs}ms`)
+          .join("; ")}.`,
+      );
     }
     if (normalTargetSloFailures.length > 0) {
       console.error(
@@ -1115,6 +696,13 @@ function main(): void {
       console.error(
         `\n${cpuBudgetBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) exceeded the ${report.assumptions.cpuBudgetCeilingMs.toLocaleString()}ms CPU budget ceiling: ${cpuBudgetBreaches
           .map((scenario) => `${scenario.scenarioId} ~${scenario.estimatedCpuMs.toLocaleString()}ms`)
+          .join(", ")}.`,
+      );
+    }
+    if (ttlMarginBreaches.length > 0) {
+      console.error(
+        `\n${ttlMarginBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) missed the ${(MINIMUM_TTL_MARGIN_FRACTION * 100).toFixed(0)}% TTL margin: ${ttlMarginBreaches
+          .map((scenario) => `${scenario.scenarioId} ${(scenario.ttlMarginFraction * 100).toFixed(1)}%`)
           .join(", ")}.`,
       );
     }

@@ -157,6 +157,9 @@ function makeDb(): D1Database {
   const stmt = (sql: string) => {
     let boundArgs: unknown[] = [];
     const all = async <T>() => {
+      if (sql.includes("pharos:dews:stress-history-daily-ids")) {
+        return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
+      }
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
       }
@@ -214,7 +217,7 @@ function makeDb(): D1Database {
       return null as T | null;
     };
 
-    const run = async () => ({ success: true, meta: { changes: 0 } });
+    const run = async () => ({ success: true, meta: { changes: 1 } });
 
     return {
       bind: (...args: unknown[]) => {
@@ -239,7 +242,9 @@ function makeDb(): D1Database {
 
   return {
     prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
+    batch: async (statements: D1PreparedStatement[]) => Promise.all(
+      statements.map((statement) => statement.run()),
+    ),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;

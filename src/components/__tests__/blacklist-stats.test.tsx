@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
 
@@ -10,8 +10,11 @@ afterEach(() => {
   cleanup();
 });
 
-function makePerCoinRecord(defaultValue: number) {
-  return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, defaultValue]));
+function makePerCoinRecord<T>(createValue: (symbol: BlacklistStablecoin) => T): Record<BlacklistStablecoin, T> {
+  return Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, createValue(symbol)])) as Record<
+    BlacklistStablecoin,
+    T
+  >;
 }
 
 function makeSummary(): BlacklistSummaryResponse {
@@ -40,18 +43,25 @@ function makeStats(): BlacklistSummaryResponse["stats"] {
     recentCount24h: 1,
     recoverableGapCount: 0,
     perCoinBlacklistCounts: {
-      ...makePerCoinRecord(0),
+      ...makePerCoinRecord(() => 0),
       USDT: 9_692,
       USDC: 2_325,
       USDO: 340,
       PAXG: 285,
       USDG: 237,
     },
-    perCoinTotalEvents: makePerCoinRecord(0),
-    perCoinFrozenAddressCount: makePerCoinRecord(0),
-    perCoinFrozenTotal: makePerCoinRecord(0),
-    perCoinDestroyedTotal: makePerCoinRecord(0),
-    perCoinQuarterlyEventTypes: Object.fromEntries(BLACKLIST_STABLECOINS.map((symbol) => [symbol, []])),
+    perCoinTotalEvents: makePerCoinRecord(() => 0),
+    perCoinFrozenAddressCount: makePerCoinRecord(() => 0),
+    perCoinFrozenTotal: makePerCoinRecord(() => 0),
+    perCoinDestroyedTotal: makePerCoinRecord(() => 0),
+    perCoinQuarterlyEventTypes: makePerCoinRecord<
+      BlacklistSummaryResponse["stats"]["perCoinQuarterlyEventTypes"][BlacklistStablecoin]
+    >(() => []),
+    perCoinRecentEventTypes: makePerCoinRecord(() => ({
+      freezes: 0,
+      destroys: 0,
+      releases: 0,
+    })),
   };
 }
 

@@ -364,11 +364,13 @@ describe("handleYieldHistory", () => {
   });
 
   it("suppresses all tracked parent handoff source keys in source mode", async () => {
-    expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["avusd-avant"]).toEqual(expect.arrayContaining([
-      "onchain:avusd-avant",
-      "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
-      "c74227a1-e738-4021-bbe1-13363815aecb",
-    ]));
+    expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["avusd-avant"]).toEqual(
+      expect.arrayContaining([
+        "onchain:avusd-avant",
+        "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
+        "c74227a1-e738-4021-bbe1-13363815aecb",
+      ]),
+    );
 
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
       for (const sourceKey of sourceKeys) {
@@ -755,10 +757,24 @@ describe("handleYieldHistory", () => {
   });
 
   it("exposes pysAtPublish / safetyAtPublish / varianceAtPublish snapshot fields on history points", async () => {
+    const pysInputsAtPublish = {
+      schemaVersion: 1,
+      methodologyVersion: "8.31",
+      apy30d: 7.2,
+      safetyScore: 81,
+      varianceScore: 0.18,
+      benchmarkRate: 4.2,
+      sourceRiskPenalty: 1.15,
+      scalingFactor: 16,
+      scoreQualification: "rated",
+      benchmarkKey: "USD",
+      evidenceClass: "direct-onchain",
+    };
     const snapshotRow = makeYieldHistoryRow({
       pys_at_publish: 73.5,
       safety_at_publish: 81,
       variance_at_publish: 0.18,
+      pys_inputs_at_publish: JSON.stringify(pysInputsAtPublish),
     });
     const db = mockD1([{ match: "yield_history", rows: [snapshotRow] }]);
 
@@ -769,11 +785,15 @@ describe("handleYieldHistory", () => {
         pysAtPublish?: number | null;
         safetyAtPublish?: number | null;
         varianceAtPublish?: number | null;
+        pysInputsAtPublish?: typeof pysInputsAtPublish | null;
+        pysReproducibility?: string;
       }>;
     };
     expect(body.history[0]?.pysAtPublish).toBe(73.5);
     expect(body.history[0]?.safetyAtPublish).toBe(81);
     expect(body.history[0]?.varianceAtPublish).toBe(0.18);
+    expect(body.history[0]?.pysInputsAtPublish).toEqual(pysInputsAtPublish);
+    expect(body.history[0]?.pysReproducibility).toBe("exact");
   });
 
   it("returns nullable snapshot fields when not yet populated", async () => {
@@ -791,11 +811,15 @@ describe("handleYieldHistory", () => {
         pysAtPublish?: number | null;
         safetyAtPublish?: number | null;
         varianceAtPublish?: number | null;
+        pysInputsAtPublish?: unknown;
+        pysReproducibility?: string;
       }>;
     };
     expect(body.history[0]?.pysAtPublish).toBeNull();
     expect(body.history[0]?.safetyAtPublish).toBeNull();
     expect(body.history[0]?.varianceAtPublish).toBeNull();
+    expect(body.history[0]?.pysInputsAtPublish).toBeNull();
+    expect(body.history[0]?.pysReproducibility).toBe("legacy-partial");
   });
 
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {

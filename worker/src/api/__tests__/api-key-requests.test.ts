@@ -88,6 +88,9 @@ function setupSqlite(): DatabaseSync {
       response_status INTEGER NOT NULL,
       response_body TEXT NOT NULL,
       created_at INTEGER NOT NULL,
+      reservation_owner TEXT,
+      reservation_generation INTEGER NOT NULL DEFAULT 0,
+      execution_started_at INTEGER,
       PRIMARY KEY (action, idempotency_key)
     );
 

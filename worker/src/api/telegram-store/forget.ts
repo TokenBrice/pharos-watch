@@ -1,16 +1,24 @@
-import { batchExecute } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import { pruneOverflowPlanBacklogForChat } from "../../cron/dispatch-telegram-overflow";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { unixNow } from "./subscribers";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 /**
  * Atomically wipe every subscription, preset follow, and global-alert flag
  * for the chat. Mirrors the inline SQL the bulk-confirm `unsubscribeAll` path
  * (`telegram-webhook-callbacks.ts:1082-1106`) writes today.
  */
-export async function unsubscribeAll(db: D1Database, chatId: string): Promise<void> {
+export async function unsubscribeAll(
+  db: D1Database,
+  chatId: string,
+  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
+): Promise<void> {
   const now = unixNow();
-  await db.batch([
+  const statements = [
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db
@@ -28,30 +36,60 @@ export async function unsubscribeAll(db: D1Database, chatId: string): Promise<vo
                 global_alert_reserve = 0,
                 global_depeg_worsening_bps_step = NULL,
                 alert_snooze_until_ts = NULL,
+                preference_generation = preference_generation + 1,
                 last_active_at = ?
           WHERE chat_id = ?`,
       )
       .bind(now, chatId),
-  ]);
+  ];
+  if (options.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    );
+  }
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
 /**
  * Delete every row this subscriber owns across the Telegram tables. Retains
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
  */
-export async function forgetSubscriber(db: D1Database, chatId: string): Promise<void> {
+export async function forgetSubscriber(
+  db: D1Database,
+  chatId: string,
+  options: TelegramOperationBatchOptions = {},
+): Promise<void> {
   const now = unixNow();
-  await batchExecute(db, [
+  await executeAtomicBatch(db, appendTelegramOperationStatements([
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(chatId),
+    db.prepare(
+      `DELETE FROM telegram_alert_target_plan_items
+        WHERE (source_event_id, plan_generation, plan_key) IN (
+          SELECT source_event_id, plan_generation, plan_key
+            FROM telegram_alert_target_plans
+           WHERE chat_id = ?
+        )`,
+    ).bind(chatId),
     db.prepare("DELETE FROM telegram_alert_job_targets WHERE chat_id = ?").bind(chatId),
+    // Job-target item lineage has no chat_id column, but its target_key is
+    // chat-prefixed (`<chatId>:v<split>:<chunk>:<hash>`), so the rows are
+    // chat-owned audit data and must not survive /forget.
+    db.prepare(
+      `DELETE FROM telegram_alert_job_target_items
+        WHERE ${dedupePrefixPredicate("target_key")}`,
+    ).bind(chatId, chatId, chatId),
+    db.prepare("DELETE FROM telegram_alert_target_plans WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
     ...prepareDeleteTelegramChatCacheStatements(db, chatId),
-  ]);
+  ], options));
   await pruneOverflowPlanBacklogForChat(db, chatId, now);
   await removeChatFromBurstMarkers(db, chatId);
 }
@@ -87,6 +125,8 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `telegram:re-engagement-warned:${chatId}`,
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
+  (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
+  (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [
@@ -176,6 +216,11 @@ const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
       "alert_safety",
       "alert_launch",
       "alert_reserve",
+      "alert_dews_override",
+      "alert_depeg_override",
+      "alert_safety_override",
+      "alert_launch_override",
+      "alert_reserve_override",
       "dews_min_band",
       "safety_mode",
       "depeg_worsening_bps_step",
@@ -190,6 +235,13 @@ const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
         { column: "alert_safety", strategy: "max" },
         { column: "alert_launch", strategy: "max" },
         { column: "alert_reserve", strategy: "max" },
+        // Override markers preserve explicit user intent from either row. Alert
+        // values already merge with MAX, so the matching boolean markers do too.
+        { column: "alert_dews_override", strategy: "max" },
+        { column: "alert_depeg_override", strategy: "max" },
+        { column: "alert_safety_override", strategy: "max" },
+        { column: "alert_launch_override", strategy: "max" },
+        { column: "alert_reserve_override", strategy: "max" },
         { column: "dews_min_band", strategy: "coalesce-old-first" },
         { column: "safety_mode", strategy: "coalesce-old-first" },
         { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
@@ -361,6 +413,11 @@ function preparePendingDedupeMigrationStatements(
       oldChatId,
       newChatId,
     ),
+    db.prepare(`
+        UPDATE OR IGNORE telegram_alert_job_target_items
+           SET target_key = ? || substr(target_key, length(?) + 1)
+         WHERE ${targetKeyPredicate}
+      `).bind(newChatId, oldChatId, oldChatId, oldChatId, oldChatId),
     bindDedupePrefixRewrite(
       db.prepare(`
         UPDATE OR IGNORE telegram_alert_job_targets
@@ -371,6 +428,10 @@ function preparePendingDedupeMigrationStatements(
       oldChatId,
       newChatId,
     ),
+    db.prepare(`
+        DELETE FROM telegram_alert_job_target_items
+         WHERE ${targetKeyPredicate}
+      `).bind(oldChatId, oldChatId, oldChatId),
   ];
 }
 
@@ -390,8 +451,10 @@ export async function migrateTelegramChatId(
   db: D1Database,
   oldChatId: string,
   newChatId: string,
+  options: { operationStatements?: D1PreparedStatement[] } = {},
 ): Promise<void> {
   if (!oldChatId || !newChatId || oldChatId === newChatId) return;
+  const now = unixNow();
 
   const statements: D1PreparedStatement[] = [
     db.prepare(`
@@ -417,7 +480,10 @@ export async function migrateTelegramChatId(
         consecutive_block_count,
         consecutive_block_first_at,
         created_at,
-        last_active_at
+        last_active_at,
+        preference_generation,
+        first_follow_at,
+        first_setup_completed_at
       )
       SELECT
         ?,
@@ -441,7 +507,10 @@ export async function migrateTelegramChatId(
         consecutive_block_count,
         consecutive_block_first_at,
         created_at,
-        last_active_at
+        last_active_at,
+        preference_generation + 1,
+        first_follow_at,
+        first_setup_completed_at
       FROM telegram_subscribers
       WHERE chat_id = ?
       ON CONFLICT(chat_id) DO UPDATE SET
@@ -489,13 +558,47 @@ export async function migrateTelegramChatId(
           ELSE MIN(telegram_subscribers.consecutive_block_first_at, excluded.consecutive_block_first_at)
         END,
         created_at = MIN(telegram_subscribers.created_at, excluded.created_at),
-        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at)
+        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at),
+        preference_generation = MAX(
+          telegram_subscribers.preference_generation,
+          excluded.preference_generation
+        ) + 1,
+        first_follow_at = CASE
+          WHEN telegram_subscribers.first_follow_at IS NULL THEN excluded.first_follow_at
+          WHEN excluded.first_follow_at IS NULL THEN telegram_subscribers.first_follow_at
+          ELSE MIN(telegram_subscribers.first_follow_at, excluded.first_follow_at)
+        END,
+        first_setup_completed_at = CASE
+          WHEN telegram_subscribers.first_setup_completed_at IS NULL THEN excluded.first_setup_completed_at
+          WHEN excluded.first_setup_completed_at IS NULL THEN telegram_subscribers.first_setup_completed_at
+          ELSE MIN(telegram_subscribers.first_setup_completed_at, excluded.first_setup_completed_at)
+        END
     `).bind(newChatId, oldChatId),
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_alert_source_resolution_targets SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_alert_source_resolution_targets WHERE chat_id = ?").bind(oldChatId),
+    db.prepare(
+      `UPDATE telegram_alert_job_targets
+          SET status = 'expired',
+              cancelled_at = COALESCE(cancelled_at, ?),
+              cancellation_reason = COALESCE(cancellation_reason, 'chat_migrated_before_handoff'),
+              final_delivery_state = COALESCE(final_delivery_state, 'cancelled'),
+              final_delivery_at = COALESCE(final_delivery_at, ?),
+              final_delivery_error = COALESCE(final_delivery_error, 'chat_migrated_before_handoff')
+        WHERE chat_id = ? AND status = 'planned'`,
+    ).bind(now, now, oldChatId),
     db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_alert_planning_subscribers SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("UPDATE telegram_alert_target_plans SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE OR IGNORE telegram_transport_failure_observations SET chat_id = ? WHERE chat_id = ?")
+      .bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_transport_failure_observations WHERE chat_id = ?").bind(oldChatId),
     ...preparePendingDedupeMigrationStatements(db, oldChatId, newChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
@@ -505,7 +608,8 @@ export async function migrateTelegramChatId(
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(oldChatId),
     ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),
+    ...(options.operationStatements ?? []),
   ];
 
-  await batchExecute(db, statements);
+  await executeAtomicBatch(db, statements);
 }

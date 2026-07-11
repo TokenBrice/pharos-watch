@@ -1,4 +1,5 @@
 import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-status";
+import { reconcileUnknownFreshTelegramAlertTargets } from "./telegram-alert-target-effects";
 import { buildDedupeKey } from "./telegram-pending";
 import type { RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 
@@ -17,6 +18,7 @@ export async function pruneAlreadyTerminalSubscribers(
   db: D1Database,
   subscriberQueue: RoutedSubscriberAlert[],
 ): Promise<Set<string>> {
+  await reconcileUnknownFreshTelegramAlertTargets(db, Math.floor(Date.now() / 1000));
   const targetKeys = subscriberQueue.flatMap(targetKeysForSubscriber);
   if (targetKeys.length === 0) return new Set();
   const terminalKeys = await loadTerminalTelegramAlertTargetKeys(db, targetKeys);

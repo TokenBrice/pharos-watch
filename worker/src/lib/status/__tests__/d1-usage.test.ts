@@ -87,6 +87,23 @@ describe("getD1UsageSummary", () => {
       writeQueries24h: 709_241,
       rowsRead24h: 1_633_139_670,
       rowsWritten24h: 1_555_568,
+      capacity: {
+        observedAt: NOW,
+        databaseSizeBytes: 1_589_248_000,
+        maximumSizeBytes: 10_000_000_000,
+        utilizationRatio: 0.158925,
+        utilizationPercent: 15.89,
+        thresholdState: "normal",
+        crossedThresholdPercent: null,
+        nextThresholdPercent: 60,
+        sampleCount: 1,
+        forecastBasis: "insufficient-history",
+        forecastSpanHours: 0,
+        growthBytesPerDay: null,
+        nextThresholdAt: null,
+        exhaustionAt: null,
+        daysUntilExhaustion: null,
+      },
     });
   });
 
@@ -113,6 +130,7 @@ describe("getD1UsageSummary", () => {
       writeQueries24h: 0,
       rowsRead24h: 0,
       rowsWritten24h: 0,
+      capacity: null,
     });
   });
 

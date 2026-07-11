@@ -1,5 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
-import { parseDestructiveOperationMode } from "./destructive-operation-guard";
+import { assertCliUsage } from "../../../scripts/lib/cli-args.mjs";
+import { parseDestructiveOperationArgs } from "./destructive-operation-guard";
 
 const DEFAULT_PROVIDER_URL = "https://api.kyc.rip/v1/tools/ban-list";
 const DEFAULT_LIMIT = 1000;
@@ -54,6 +55,7 @@ export type FetchKycRipRowsResult<T> = {
 
 export type KycRipCliOptions = {
   apply: boolean;
+  help?: boolean;
   remote: true;
   database: string;
   timeoutMs: number;
@@ -61,7 +63,7 @@ export type KycRipCliOptions = {
   providerUrl?: string;
 };
 
-type KycRipCliHelpOptions = {
+export type KycRipCliHelpOptions = {
   scriptName: string;
   applyDescription: string;
   minRowsDescription: string;
@@ -75,14 +77,12 @@ class RetryableHttpError extends Error {
 
 export function parsePositiveInteger(value: string, flag: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
-  }
+  assertCliUsage(Number.isInteger(parsed) && parsed > 0, `${flag} must be a positive integer`);
   return parsed;
 }
 
-function printKycRipCliHelp(help: KycRipCliHelpOptions): void {
-  console.log(`Usage: tsx ${help.scriptName} [options]
+export function formatKycRipCliUsage(help: KycRipCliHelpOptions): string {
+  return `Usage: tsx ${help.scriptName} [options]
 
 Default mode is dry-run. Remote D1 writes require --execute --confirm ${help.scriptName}.
 
@@ -96,60 +96,43 @@ Options:
   --min-rows <count>     ${help.minRowsDescription} (default: ${KYC_RIP_DEFAULT_MIN_ROWS})
   --database <name>      D1 database name (default: ${KYC_RIP_DEFAULT_DATABASE})
   --provider-url <url>   Override kyc.rip ban-list URL
-  --help                 Show this help`);
+  -h, --help             Show this help`;
 }
 
 export function parseKycRipCliArgs(argv: string[], help: KycRipCliHelpOptions): KycRipCliOptions {
-  if (argv.includes("--help")) {
-    printKycRipCliHelp(help);
-    process.exit(0);
-  }
-
-  const mode = parseDestructiveOperationMode({
+  const { mode, values } = parseDestructiveOperationArgs({
     argv,
+    cliOptions: {
+      "timeout-ms": { type: "string" },
+      "min-rows": { type: "string" },
+      database: { type: "string" },
+      "provider-url": { type: "string" },
+    },
     defaultTarget: "--remote",
     executeAliases: ["--apply"],
     localAllowed: false,
     scriptName: help.scriptName,
   });
+  const helpRequested = values.help === true;
   const options: KycRipCliOptions = {
     apply: !mode.dryRun,
+    help: helpRequested,
     remote: true,
     database: KYC_RIP_DEFAULT_DATABASE,
     timeoutMs: KYC_RIP_DEFAULT_TIMEOUT_MS,
     minRows: KYC_RIP_DEFAULT_MIN_ROWS,
   };
 
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (
-      arg === "--apply" ||
-      arg === "--execute" ||
-      arg === "--dry-run" ||
-      arg === "--remote" ||
-      arg === "--local" ||
-      arg.startsWith("--confirm=")
-    ) {
-      continue;
-    }
-    if (arg === "--confirm") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
-      index++;
-      continue;
-    }
-    if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
-      if (arg === "--timeout-ms") options.timeoutMs = parsePositiveInteger(value, arg);
-      if (arg === "--min-rows") options.minRows = parsePositiveInteger(value, arg);
-      if (arg === "--database") options.database = value;
-      if (arg === "--provider-url") options.providerUrl = value;
-      index++;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
+  if (helpRequested) return options;
+
+  if (typeof values["timeout-ms"] === "string") {
+    options.timeoutMs = parsePositiveInteger(values["timeout-ms"], "--timeout-ms");
   }
+  if (typeof values["min-rows"] === "string") {
+    options.minRows = parsePositiveInteger(values["min-rows"], "--min-rows");
+  }
+  if (typeof values.database === "string") options.database = values.database;
+  if (typeof values["provider-url"] === "string") options.providerUrl = values["provider-url"];
 
   return options;
 }

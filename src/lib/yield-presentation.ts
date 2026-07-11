@@ -1,8 +1,13 @@
 import type {
+  YieldCalculationMode,
   YieldDecisionReasonCode,
   YieldDecisionRejectionReasonCode,
+  YieldEvidenceClass,
+  YieldOpportunityClass,
+  YieldOpportunityCriticalEvidence,
   YieldPysNullReason,
   YieldRankChangeAttribution,
+  YieldScoreQualification,
 } from "@shared/types";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-risk";
 
@@ -11,6 +16,51 @@ export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark",
   "scaling-invalid": "Scaling factor unavailable",
   "missing-inputs": "Missing inputs",
+  "source-stale": "Source observation stale",
+  "source-freshness-unknown": "Source observation time unavailable",
+  "benchmark-stale": "Benchmark stale",
+  "safety-unrated": "Safety evidence not rated",
+  "opportunity-evidence-missing": "Opportunity risk evidence missing",
+};
+
+export const YIELD_CALCULATION_MODE_LABELS: Record<YieldCalculationMode, string> = {
+  "direct-read": "Direct read",
+  "exchange-rate-math": "Exchange-rate math",
+  "market-api": "Market API",
+  "benchmark-model": "Benchmark model",
+  "price-return": "Price return",
+};
+
+export const YIELD_EVIDENCE_CLASS_LABELS: Record<YieldEvidenceClass, string> = {
+  "direct-first-party": "Direct first-party",
+  "direct-onchain": "Direct onchain",
+  "curated-observation": "Curated observation",
+  "discovered-observation": "Discovered observation",
+  "modeled-proxy": "Modeled proxy",
+  fallback: "Fallback evidence",
+};
+
+export const YIELD_SCORE_QUALIFICATION_LABELS: Record<YieldScoreQualification, string> = {
+  rated: "Rated",
+  estimated: "Estimated",
+  partial: "Partial evidence",
+  NR: "Not rated",
+};
+
+export function formatEvidenceCompleteness(value: number): string {
+  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}% evidence`;
+}
+
+export const YIELD_OPPORTUNITY_CLASS_LABELS: Record<YieldOpportunityClass, string> = {
+  lending: "Lending market",
+  "fixed-yield": "Fixed yield",
+  "structured-tranche": "Structured tranche",
+};
+
+export const YIELD_OPPORTUNITY_EVIDENCE_LABELS: Record<YieldOpportunityCriticalEvidence, string> = {
+  "venue-review": "venue review",
+  "market-size": "market size",
+  "market-status": "market status",
 };
 
 export function formatSignedPysDelta(delta: number): string {

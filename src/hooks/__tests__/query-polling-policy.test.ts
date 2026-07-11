@@ -40,6 +40,14 @@ function mockQueryReturn() {
   });
 }
 
+function queryContext(queryKey: readonly unknown[]) {
+  return {
+    signal: new AbortController().signal,
+    queryKey,
+    meta: undefined,
+  } as never;
+}
+
 function minimalStatusResponse() {
   return {
     timestamp: 1,
@@ -270,6 +278,19 @@ describe("query polling policy", () => {
     expect(init).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
+  it("lets route workspaces disable status polling without changing the shared policy", () => {
+    useStatus({ enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      staleTime: number;
+      refetchInterval: number;
+    };
+
+    expect(options.enabled).toBe(false);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+  });
+
   it("useRequestSourceStats uses the ops proxy and shared polling policy", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
@@ -313,7 +334,7 @@ describe("query polling policy", () => {
       staleTime: number;
       refetchInterval: number;
       queryKey: unknown[];
-      queryFn: () => Promise<unknown[]>;
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown[]>;
     };
 
     expect(options.enabled).toBe(true);
@@ -322,13 +343,28 @@ describe("query polling policy", () => {
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
 
-    await options.queryFn();
+    await options.queryFn(queryContext(options.queryKey));
 
     const [publicCall, adminCall] = fetchMock.mock.calls;
     expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
     expect((publicCall[1] as RequestInit).headers).toBeUndefined();
     expect(adminCall[0]).toBe("/api/admin/status");
     expect((adminCall[1] as RequestInit).headers).toBeUndefined();
+  });
+
+  it("gives critical operator probes a distinct cache key and supports disabling them", () => {
+    useEndpointProbes({ mode: "critical", enabled: false });
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      queryKey: unknown[];
+      staleTime: number;
+      refetchInterval: number;
+    };
+
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy", "critical"]);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
   });
 
   it("gives admin probes a longer timeout budget than public probes", async () => {
@@ -344,10 +380,11 @@ describe("query polling policy", () => {
 
     useEndpointProbes();
     const options = useQueryMock.mock.calls[0][0] as {
-      queryFn: () => Promise<Array<{ error?: string; status: number | null }>>;
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<Array<{ error?: string; status: number | null }>>;
+      queryKey: readonly unknown[];
     };
 
-    const resultPromise = options.queryFn();
+    const resultPromise = options.queryFn(queryContext(options.queryKey));
     const publicSignal = (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal;
     const adminSignal = (fetchMock.mock.calls[1]?.[1] as RequestInit | undefined)?.signal;
 

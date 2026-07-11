@@ -1,0 +1,153 @@
+"use client";
+
+import type { ReactNode, Ref } from "react";
+import { ChartPie } from "lucide-react";
+import { CoinNotices } from "@/components/coin-notice";
+import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
+import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
+import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
+import { LazySection } from "@/components/lazy-section";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
+import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
+import {
+  DEWSDetail,
+  DistributionSection,
+  FlowsSection,
+  KeyInfoCard,
+  MarketDataSection,
+  McapChart,
+  PegStabilityCard,
+  ReportCardDetail,
+  StablecoinDepegResolverCard,
+} from "./detail-lazy-sections";
+
+type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
+
+interface DetailRiskContextSectionsProps {
+  activeBannerId: string;
+  collateralUsageEntries: readonly CollateralUsageEntry[];
+  frozenNote: ReactNode;
+  hasCollateralUsage: boolean;
+  overviewGateRef: Ref<HTMLDivElement>;
+  reservesPanel: ReactNode;
+  variantRelationshipCard: ReactNode;
+  viewModel: ReadyDetailViewModel;
+}
+
+export function DetailRiskContextSections({
+  activeBannerId,
+  collateralUsageEntries,
+  frozenNote,
+  hasCollateralUsage,
+  overviewGateRef,
+  reservesPanel,
+  variantRelationshipCard,
+  viewModel,
+}: DetailRiskContextSectionsProps) {
+  const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
+  const archetypeOverride = viewModel.coin.archetypeOverride === true;
+  const isWrapperVariant = viewModel.isVariant && !archetypeOverride;
+  const parentArchetype = isWrapperVariant && viewModel.variantParent
+    ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
+    : null;
+  const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
+  const showPegChart =
+    viewModel.coin.flags.pegCurrency === "USD"
+    && !viewModel.isNavToken
+    && viewModel.coin.flags.yieldBearing !== true
+    && viewModel.supplyHistory.length > 0;
+  const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
+
+  return (
+    <>
+      <div id="overview" ref={overviewGateRef} className="space-y-6 scroll-mt-32">
+        <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
+          <div className={viewModel.coin.pegMechanism ? "grid gap-6 lg:grid-cols-2" : undefined}>
+            <KeyInfoCard
+              meta={viewModel.coin}
+              resolvedMechanismArchetype={resolvedMechanismArchetype}
+              isWrapper={isWrapperVariant}
+              parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+              parentArchetype={parentArchetype}
+              variantKind={viewModel.coin.variantKind ?? null}
+              contractsBelowXlOnly
+              splitMechanism={Boolean(viewModel.coin.pegMechanism)}
+            />
+            {viewModel.coin.pegMechanism ? (
+              <PegStabilityCard
+                meta={viewModel.coin}
+                resolvedMechanismArchetype={resolvedMechanismArchetype}
+                isWrapper={isWrapperVariant}
+                parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+                parentArchetype={parentArchetype}
+                variantKind={viewModel.coin.variantKind ?? null}
+              />
+            ) : null}
+          </div>
+        </section>
+        <section id="report-card">
+          {viewModel.reportCard ? (
+            <ReportCardDetail
+              card={viewModel.reportCard}
+              liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
+              updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
+              rightColumn={reservesPanel}
+            />
+          ) : null}
+        </section>
+        {!viewModel.reportCard ? reservesPanel : null}
+        {showDepegResolver ? (
+          <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
+        ) : null}
+        {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+        {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
+        {viewModel.hasFlows ? (
+          <>
+            {frozenNote}
+            <LazySection minHeight={320}>
+              <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
+            </LazySection>
+          </>
+        ) : null}
+      </div>
+
+      <div className="space-y-6">
+        <SectionBanner id="context" label="Context" icon={ChartPie} active={activeBannerId === "context"} />
+        <ContagionSnapshot
+          stablecoinId={viewModel.id}
+          variantRelationshipCard={variantRelationshipCard}
+          hasCollateralUsage={hasCollateralUsage}
+          collateralUsageEntries={collateralUsageEntries}
+        />
+        <MintAuthoritySection
+          profile={viewModel.mintAuthority}
+          decentralizationDrag={viewModel.mintAuthorityDecentralizationDrag}
+        />
+        {showPegChart ? (
+          <MarketDataSection
+            stablecoinId={viewModel.id}
+            supplyHistory={viewModel.supplyHistory}
+            pegCurrency={viewModel.coin.flags.pegCurrency}
+            frozenNote={frozenNote}
+          />
+        ) : (
+          <section id="chart">
+            {frozenNote}
+            <LazySection minHeight={420}>
+              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+            </LazySection>
+          </section>
+        )}
+        <section id="distribution">
+          {frozenNote}
+          <SectionErrorBoundary name="distribution">
+            <DistributionSection stablecoinId={viewModel.id} />
+          </SectionErrorBoundary>
+        </section>
+      </div>
+    </>
+  );
+}

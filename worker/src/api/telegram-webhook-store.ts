@@ -9,6 +9,7 @@ export * from "./telegram-store/disambiguation";
 export {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   prepareUpsertSubscriberRow,
+  prepareEnsureSubscriberExists,
   unixNow,
   upsertGlobalAlertTypes,
   upsertSubscriberRow,
@@ -19,3 +20,4 @@ export * from "./telegram-store/subscriptions";
 export * from "./telegram-store/presets";
 export * from "./telegram-store/snooze";
 export * from "./telegram-store/forget";
+export * from "./telegram-store/watchlist-import";

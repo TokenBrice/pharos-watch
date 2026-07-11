@@ -5,6 +5,7 @@ import {
   summarizeThrownScheduledJob,
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
+import { isReserveRecoveryFaultInjectionTermination } from "../../lib/reserve-recovery-fault-injection";
 
 interface RunBestEffortScheduledJobOptions {
   errorMessage?: string;
@@ -31,6 +32,7 @@ export async function runBestEffortScheduledJobWithOutcome(
       summary: summarizeCronResult(job, result),
     };
   } catch (err) {
+    if (isReserveRecoveryFaultInjectionTermination(err)) throw err;
     console.error(options.errorMessage ?? `[cron] ${job} failed in ${slotLabel}:`, err);
     return {
       job,

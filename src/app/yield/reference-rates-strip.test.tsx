@@ -3,9 +3,20 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
-import type { YieldBenchmarkRegistry, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types";
+import type {
+  YieldBenchmarkMeta,
+  YieldBenchmarkRegistry,
+  YieldSafetySnapshotMeta,
+  YieldSourceInputMeta,
+} from "@shared/types";
 
-function makeBenchmark(currency: string, key: string, label: string, rate: number, recordDate: string) {
+function makeBenchmark(
+  currency: string,
+  key: NonNullable<YieldBenchmarkMeta["key"]>,
+  label: string,
+  rate: number,
+  recordDate: string,
+): YieldBenchmarkMeta {
   return {
     key,
     label,
@@ -159,7 +170,7 @@ describe("ReferenceRatesStrip", () => {
   it("renders an SVG flag for known currencies and an ISO fallback for unknown ones", () => {
     const unknownBenchmarks: YieldBenchmarkRegistry = {
       USD: makeBenchmark("USD", "USD", "USD 3M T-Bill", 3.68, "2026-05-18"),
-      XYZ: makeBenchmark("XYZ", "XYZ", "XYZ test benchmark", 1.0, "2026-05-01"),
+      USD_EFFR: makeBenchmark("XYZ", "USD_EFFR", "XYZ test benchmark", 1.0, "2026-05-01"),
     };
 
     render(<ReferenceRatesStrip benchmarks={unknownBenchmarks} />);

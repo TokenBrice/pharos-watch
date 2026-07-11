@@ -11,6 +11,10 @@ import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
 import {
+  evaluateTelegramIngressAbuseGate,
+  recordTelegramIngressHandlerResponse,
+} from "./telegram-ingress-abuse";
+import {
   checkCachedPublicApiReadFastRateLimit,
   evaluateAccessGate,
   evaluateCachedPublicApiReadFastGate,
@@ -45,11 +49,16 @@ export async function handleHttpRequestImpl(
   if (maintenanceResponse) return addCorsHeaders(maintenanceResponse, origin);
 
   const url = new URL(request.url);
-  const edgeCache = createEdgeCacheContext(request, url);
+  const telegramIngressGate = await evaluateTelegramIngressAbuseGate(request, url, env);
+  if (telegramIngressGate.response) {
+    return finalizeResponse(telegramIngressGate.response, origin, ctx);
+  }
+  const routedRequest = telegramIngressGate.request;
+  const edgeCache = createEdgeCacheContext(routedRequest, url);
   let cached: Response | null = null;
   let edgeCacheProbed = false;
   const commonSourceConfig = {
-    request,
+    request: routedRequest,
     db: env.DB,
     execCtx: ctx,
     pathname: url.pathname,
@@ -65,7 +74,7 @@ export async function handleHttpRequestImpl(
   }) {
     return createRequestSourceRecorder({ ...commonSourceConfig, ...gate });
   }
-  const fastGate = await evaluateCachedPublicApiReadFastGate(request, url, env);
+  const fastGate = await evaluateCachedPublicApiReadFastGate(routedRequest, url, env);
   if (fastGate) {
     edgeCacheProbed = true;
     cached = await readEdgeCache(edgeCache);
@@ -90,7 +99,7 @@ export async function handleHttpRequestImpl(
     apiKey,
     requestLane,
     response: gateResponse,
-  } = await evaluateAccessGate(request, url, env);
+  } = await evaluateAccessGate(routedRequest, url, env);
   const recordRequestSource = buildRecorder({
     isAdmin,
     isSiteProxy,
@@ -111,7 +120,7 @@ export async function handleHttpRequestImpl(
     return finalizeResponse(cached, origin, ctx);
   }
 
-  const resolvedRoute = resolveRoute(url, request.method);
+  const resolvedRoute = resolveRoute(url, routedRequest.method);
   if (resolvedRoute == null) {
     recordRequestSource();
     return finalizeResponse(notFoundResponse(), origin, ctx);
@@ -119,7 +128,7 @@ export async function handleHttpRequestImpl(
 
   const response = await route(
     buildRouteContext({
-      request,
+      request: routedRequest,
       url,
       env,
       execCtx: ctx,
@@ -129,6 +138,7 @@ export async function handleHttpRequestImpl(
     resolvedRoute,
   );
 
+  recordTelegramIngressHandlerResponse(routedRequest, url, response);
   recordRequestSource();
   writeEdgeCache(edgeCache, response, ctx);
   return finalizeResponse(response, origin, ctx);

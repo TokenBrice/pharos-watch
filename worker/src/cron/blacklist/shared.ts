@@ -1,4 +1,9 @@
-import type { BlacklistAmountSource, BlacklistAmountStatus, BlacklistEventType, BlacklistStablecoin } from "@shared/types/market";
+import type {
+  BlacklistAmountSource,
+  BlacklistAmountStatus,
+  BlacklistEventType,
+  BlacklistStablecoin,
+} from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
@@ -9,11 +14,7 @@ export function shouldSuppressAsMirrorZero(
   eventType: string,
   amountNative: number | null,
 ): boolean {
-  return (
-    stablecoin === "EURC"
-    && (eventType === "blacklist" || eventType === "unblacklist")
-    && amountNative === 0
-  );
+  return stablecoin === "EURC" && (eventType === "blacklist" || eventType === "unblacklist") && amountNative === 0;
 }
 
 export interface BlacklistRow {
@@ -51,7 +52,18 @@ export interface BlacklistScanResult {
   apiError: boolean;
   incomplete: boolean;
   usedRpcLogs: boolean;
+  scannedToCursor: number | null;
+  safeHead: number | null;
+  coverageOutcome: BlacklistScanCoverageOutcome;
+  topicCount: number;
+  coveredTopicCount: number;
+  providerCalls: number;
+  maxSplitDepth: number;
+  failureSamples: string[];
 }
+
+export type BlacklistScanCoverageOutcome =
+  "complete" | "quiet" | "partial" | "provider_error" | "missing_topic" | "incomplete" | "cursor_ahead";
 
 interface BuildBlacklistRowOptions {
   id: string;
@@ -116,19 +128,23 @@ export function buildBlacklistRow({
 }
 
 function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
-  return buildExplorerUrl({
-    chainType: chain.type,
-    explorerUrl: chain.explorerUrl,
-    entityType: "tx",
-    value: txHash,
-  }) ?? `${chain.explorerUrl}/tx/${txHash}`;
+  return (
+    buildExplorerUrl({
+      chainType: chain.type,
+      explorerUrl: chain.explorerUrl,
+      entityType: "tx",
+      value: txHash,
+    }) ?? `${chain.explorerUrl}/tx/${txHash}`
+  );
 }
 
 function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
-  return buildExplorerUrl({
-    chainType: chain.type,
-    explorerUrl: chain.explorerUrl,
-    entityType: "address",
-    value: address,
-  }) ?? `${chain.explorerUrl}/address/${address}`;
+  return (
+    buildExplorerUrl({
+      chainType: chain.type,
+      explorerUrl: chain.explorerUrl,
+      entityType: "address",
+      value: address,
+    }) ?? `${chain.explorerUrl}/address/${address}`
+  );
 }

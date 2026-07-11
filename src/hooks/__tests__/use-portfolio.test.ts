@@ -53,7 +53,6 @@ function makeCard(
       governanceQuality: "regulated-entity",
       custodyModel: "institutional-regulated",
     }),
-    dependencies: [],
     isDefunct: false,
   };
 }

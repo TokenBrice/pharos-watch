@@ -5,8 +5,22 @@
  */
 
 import { formatIsoDate } from "@shared/lib/format";
-import { getArgValue, parseCheckMode } from "../lib/smoke-runtime.mjs";
+import {
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
+
+const USAGE = `Usage: npx tsx scripts/maintenance/sync-digests.ts [options]
+
+Options:
+  --api-url <url>   Digest API base or endpoint (overrides environment)
+  --output <path>   Output path (default: data/digests.json)
+  --dry-run         Fetch and validate without writing the output file
+  --check           Verify script wiring without network or file writes
+  -h, --help        Show this help`;
 
 interface ApiDigest {
   digestText: string;
@@ -27,8 +41,34 @@ interface DigestEntry {
   editionNumber: number;
 }
 
-function resolveOutputPath(): URL {
-  const explicitOutput = getArgValue(process.argv, "--output");
+export interface DigestSyncCliOptions {
+  apiUrl: string | null;
+  check: boolean;
+  dryRun: boolean;
+  help: boolean;
+  output: string | null;
+}
+
+export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
+  const { values } = parseStrictCliArgs(argv, {
+    conflicts: [["check", "dry-run"]],
+    options: {
+      "api-url": { type: "string" },
+      check: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      output: { type: "string" },
+    },
+  });
+  return {
+    apiUrl: typeof values["api-url"] === "string" ? values["api-url"] : null,
+    check: values.check === true,
+    dryRun: values["dry-run"] === true,
+    help: values.help === true,
+    output: typeof values.output === "string" ? values.output : null,
+  };
+}
+
+function resolveOutputPath(explicitOutput: string | null): URL {
   if (!explicitOutput) {
     return new URL("../../data/digests.json", import.meta.url);
   }
@@ -42,20 +82,24 @@ function cacheBustedUrl(rawUrl: string): string {
   return url.toString();
 }
 
-async function main() {
+export async function runDigestSync(argv = process.argv.slice(2)) {
+  const options = parseDigestSyncArgs(argv);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+
   // --check mode is a smoke test for the script's own wiring (no network).
-  if (parseCheckMode(process.argv)) {
+  if (options.check) {
     console.log("[sync-digests] --check mode: helpers wired OK.");
     return;
   }
 
   const apiUrl = resolveApiUrl({
     argName: "--api-url",
+    explicitUrl: options.apiUrl,
     envNames: ["DIGEST_API_URL", "SMOKE_API_BASE", "API_BASE_URL"],
     apiPath: "/api/digest-archive",
     scriptName: "sync-digests",
   });
-  const outputPath = resolveOutputPath();
+  const outputPath = resolveOutputPath(options.output);
   const digestApiKey = (process.env.DIGEST_API_KEY ?? "").trim();
 
   console.log("Fetching digest archive...");
@@ -68,7 +112,7 @@ async function main() {
     headers.set("X-API-Key", digestApiKey);
   }
 
-  const { entries, outputFile } = await syncJson<DigestEntry>({
+  const { entries, outputFile, written } = await syncJson<DigestEntry>({
     writeTo: outputPath,
     parse: async () => {
       const res = await fetchWithRetry(fetchUrl, { headers }, { logLabel: "sync-digests" });
@@ -87,11 +131,15 @@ async function main() {
         }))
         .sort((a, b) => b.generatedAt - a.generatedAt);
     },
+    write: !options.dryRun,
   });
-  console.log(`Wrote ${entries.length} digests to ${outputFile}`);
+  console.log(
+    written
+      ? `Wrote ${entries.length} digests to ${outputFile}`
+      : `[sync-digests] Dry run: would write ${entries.length} digests to ${outputFile}`,
+  );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runCliEntrypoint(() => runDigestSync(), { label: "sync-digests", usage: USAGE });
+}

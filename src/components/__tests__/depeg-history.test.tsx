@@ -13,7 +13,10 @@ vi.mock("@/hooks/use-depeg-events", () => ({
   useInfiniteDepegEvents: useInfiniteDepegEventsMock,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useInfiniteDepegEventsMock.mockReset();
+});
 
 function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
   return {
@@ -51,6 +54,17 @@ function mockEvents(events: DepegEvent[]) {
 }
 
 describe("DepegHistory provenance badges", () => {
+  it("background-loads every cursor page before computing metrics and local pagination", () => {
+    mockEvents([makeEvent()]);
+
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    expect(useInfiniteDepegEventsMock).toHaveBeenCalledWith({
+      stablecoinId: "usdc-circle",
+      autoLoadAll: true,
+    });
+  });
+
   it("renders pending_reason and confirmation_sources badges when present", () => {
     mockEvents([
       makeEvent({

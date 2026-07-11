@@ -6,15 +6,19 @@ import {
   computeSelectorSnapshotSid,
   isSelectorSnapshotSid,
   validateSelectorSnapshot,
+  validateSelectorSnapshotInput,
+  validateVerifiedSelectorSnapshot,
 } from "@shared/lib/selector/snapshot";
+import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
+import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 
 /**
  * Pages Function: `/selector-snapshot/*`
  *
- * - `POST /selector-snapshot` stores a SelectorOutput JSON under a content-addressed sid.
+ * - `POST /selector-snapshot` recomputes SelectorOutput from canonical sources.
  * - `GET /selector-snapshot/:sid` returns the frozen SelectorOutput or 404.
  *
  * The shared selector snapshot module owns the replay contract, validation,
@@ -30,6 +34,9 @@ const STANDARD_RESPONSE_HEADERS = {
   "X-Robots-Tag": NOINDEX_HEADER_VALUE,
 } as const;
 const SNAPSHOT_BODY_ENCODER = new TextEncoder();
+const SNAPSHOT_BODY_DECODER = new TextDecoder("utf-8", { fatal: true });
+let cachedIpHashSecret: string | null = null;
+let cachedIpHashKey: Promise<CryptoKey> | null = null;
 
 function jsonOk(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -55,23 +62,39 @@ const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 const POST_DAILY_QUOTA_MAX_PER_IP = 100;
 const postTimestampsByIpHash = new Map<string, number[]>();
 
-async function hashClientIp(ip: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", SNAPSHOT_BODY_ENCODER.encode(ip));
-  return Array.from(new Uint8Array(digest).slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
+function getIpHashKey(secret: string): Promise<CryptoKey> {
+  if (cachedIpHashSecret !== secret || cachedIpHashKey === null) {
+    cachedIpHashSecret = secret;
+    cachedIpHashKey = crypto.subtle.importKey(
+      "raw",
+      SNAPSHOT_BODY_ENCODER.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+  }
+  return cachedIpHashKey;
 }
 
-async function getClientIpHash(request: Request): Promise<string | null> {
+async function hashClientIp(ip: string, secret: string): Promise<string> {
+  const digest = await crypto.subtle.sign("HMAC", await getIpHashKey(secret), SNAPSHOT_BODY_ENCODER.encode(ip));
+  return Array.from(new Uint8Array(digest).slice(0, 16), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function getClientIpHash(request: Request, env: SelectorSnapshotEnv): Promise<string | null> {
   const ip = request.headers.get("CF-Connecting-IP");
   if (!ip) return null;
-  return hashClientIp(ip);
+  const secret = env.SELECTOR_SNAPSHOT_IP_HASH_SECRET?.trim();
+  if (!secret) return null;
+  return hashClientIp(ip, secret);
 }
 
 function dailyQuotaDate(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-async function isPostRateLimited(request: Request): Promise<boolean> {
-  const key = await getClientIpHash(request);
+async function isPostRateLimited(request: Request, env: SelectorSnapshotEnv): Promise<boolean> {
+  const key = await getClientIpHash(request, env);
   if (!key) return false;
   const now = Date.now();
   const cutoff = now - POST_RATE_LIMIT_WINDOW_MS;
@@ -91,7 +114,7 @@ async function isPostRateLimited(request: Request): Promise<boolean> {
 }
 
 async function consumeDailyPostQuota(env: SelectorSnapshotEnv, request: Request): Promise<Response | null> {
-  const ipHash = await getClientIpHash(request);
+  const ipHash = await getClientIpHash(request, env);
   if (!ipHash) return null;
   if (!env.DB) return jsonError(503, "Snapshot quota store is not configured");
 
@@ -132,6 +155,15 @@ interface SelectorSnapshotEnv {
   DB?: D1Database;
   SITE_ORIGIN?: string;
   OPS_UI_ORIGIN?: string;
+  SITE_API_ORIGIN?: string;
+  SITE_API_SHARED_SECRET?: string;
+  SELECTOR_SNAPSHOT_IP_HASH_SECRET?: string;
+}
+
+interface SelectorSnapshotKvMetadata {
+  extended?: boolean;
+  legacySid?: string;
+  trust?: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
 }
 
 interface SelectorSnapshotContext {
@@ -173,11 +205,28 @@ async function readSnapshotBody(request: Request): Promise<string | Response> {
   }
 
   try {
-    const raw = await request.text();
-    if (SNAPSHOT_BODY_ENCODER.encode(raw).byteLength > SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES) {
-      return jsonError(413, "Payload too large");
+    if (!request.body) return "";
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES) {
+        await reader.cancel("Payload too large").catch(() => undefined);
+        return jsonError(413, "Payload too large");
+      }
+      chunks.push(value);
     }
-    return raw;
+
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return SNAPSHOT_BODY_DECODER.decode(bytes);
   } catch {
     return jsonError(400, "Could not read request body");
   }
@@ -187,7 +236,7 @@ function responseForValidationFailure(error: "unsafe" | "shape"): Response {
   if (error === "unsafe") {
     return jsonError(400, "Payload nesting or reserved keys not permitted");
   }
-  return jsonError(400, "Invalid selector output shape");
+  return jsonError(400, "Invalid selector input shape");
 }
 
 async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
@@ -197,7 +246,11 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(500, "Selector snapshot store is not configured");
   }
 
-  if (await isPostRateLimited(request)) {
+  if (!env.SELECTOR_SNAPSHOT_IP_HASH_SECRET?.trim()) {
+    return jsonError(500, "Snapshot write limiter is not configured");
+  }
+
+  if (await isPostRateLimited(request, env)) {
     return jsonError(429, "Too many snapshot writes; retry later", { "Retry-After": "60" });
   }
 
@@ -211,38 +264,55 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return jsonError(400, "Invalid JSON payload");
   }
 
-  const validation = validateSelectorSnapshot(parsed);
-  if (!validation.ok) {
-    return responseForValidationFailure(validation.error);
-  }
-
-  const sid = computeSelectorSnapshotSid(validation.snapshot);
-  const kvKey = `s:${sid}`;
-
-  try {
-    const existing = await env.SELECTOR_SNAPSHOTS.get(kvKey, "text");
-    if (existing !== null && existing !== "") {
-      return jsonOk({ sid });
-    }
-  } catch {
-    // Treat read failure as best-effort; proceed to write.
+  const inputValidation = validateSelectorSnapshotInput(parsed);
+  if (!inputValidation.ok) {
+    return responseForValidationFailure(inputValidation.error);
   }
 
   const quotaRejected = await consumeDailyPostQuota(env, request);
   if (quotaRejected) return quotaRejected;
 
+  let snapshot: Awaited<ReturnType<typeof recomputeVerifiedSelectorSnapshot>>;
+  try {
+    snapshot = await recomputeVerifiedSelectorSnapshot(inputValidation.input, request, env);
+  } catch (error) {
+    console.warn("[selector-snapshot] canonical recomputation failure", error);
+    return jsonError(503, "Canonical selector data temporarily unavailable");
+  }
+
+  const sid = computeSelectorSnapshotSid(snapshot);
+  const kvKey = `s:${sid}`;
+
+  try {
+    const existing = await env.SELECTOR_SNAPSHOTS.getWithMetadata<SelectorSnapshotKvMetadata>(kvKey, "text");
+    if (
+      existing.value !== null &&
+      existing.value !== "" &&
+      existing.metadata?.trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND
+    ) {
+      const validation = validateVerifiedSelectorSnapshot(JSON.parse(existing.value) as unknown);
+      if (validation.ok && computeSelectorSnapshotSid(validation.snapshot) === sid) {
+        return jsonOk({ sid, ev: SELECTOR_SNAPSHOT_VERIFICATION_KIND });
+      }
+    }
+  } catch {
+    // Treat malformed values or read failures as best-effort; overwrite with
+    // the freshly recomputed, trusted snapshot below.
+  }
+
   try {
     // Unread snapshots expire on the short TTL; the first successful read
     // extends them to the full retention TTL (see handleGet).
-    await env.SELECTOR_SNAPSHOTS.put(kvKey, JSON.stringify(validation.snapshot), {
+    await env.SELECTOR_SNAPSHOTS.put(kvKey, JSON.stringify(snapshot), {
       expirationTtl: SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
+      metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND },
     });
   } catch (error) {
     console.warn("[selector-snapshot] KV write failure", error);
     return jsonError(503, "Snapshot store temporarily unavailable");
   }
 
-  return jsonOk({ sid });
+  return jsonOk({ sid, ev: SELECTOR_SNAPSHOT_VERIFICATION_KIND });
 }
 
 async function handleGet(context: SelectorSnapshotContext, sid: string): Promise<Response> {
@@ -254,10 +324,15 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   const kvKey = `s:${sid}`;
   let stored: string | null;
   let retentionExtended = false;
+  let recordedLegacySid: string | undefined;
+  let trust: SelectorSnapshotKvMetadata["trust"];
+  let normalizedSid = sid;
   try {
-    const result = await env.SELECTOR_SNAPSHOTS.getWithMetadata<{ extended?: boolean }>(kvKey, "text");
+    const result = await env.SELECTOR_SNAPSHOTS.getWithMetadata<SelectorSnapshotKvMetadata>(kvKey, "text");
     stored = result.value;
     retentionExtended = result.metadata?.extended === true;
+    recordedLegacySid = result.metadata?.legacySid;
+    trust = result.metadata?.trust;
   } catch (error) {
     console.warn("[selector-snapshot] KV read failure", error);
     return jsonError(503, "Snapshot store temporarily unavailable");
@@ -270,14 +345,20 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
   let normalizedStored = stored;
   try {
     const decoded = JSON.parse(stored) as unknown;
-    const validation = validateSelectorSnapshot(decoded);
+    const validation =
+      trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND
+        ? validateVerifiedSelectorSnapshot(decoded)
+        : validateSelectorSnapshot(decoded);
     if (!validation.ok) {
       console.warn("[selector-snapshot] stored payload failed shape check", { sid });
       return jsonError(502, "Snapshot value is malformed");
     }
 
     const storedSid = computeSelectorSnapshotSid(validation.snapshot);
-    if (storedSid !== sid) {
+    normalizedSid = storedSid;
+    const legacyStoredSid = trust === SELECTOR_SNAPSHOT_VERIFICATION_KIND ? null : computeSelectorSnapshotSid(decoded);
+    const isRecognizedLegacySnapshot = recordedLegacySid === sid || legacyStoredSid === sid;
+    if (storedSid !== sid && !isRecognizedLegacySnapshot) {
       console.warn("[selector-snapshot] stored payload sid mismatch", {
         requestedSid: sid,
         storedSid,
@@ -296,16 +377,18 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
     // First successful read: extend the unread TTL to the full retention TTL.
     // Re-put the normalized replay snapshot so legacy debug/prose fields are
     // removed while preserving the content-addressed sid contract.
-    const extension = env.SELECTOR_SNAPSHOTS.put(kvKey, normalizedStored, {
-      expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
-      metadata: { extended: true },
-    }).catch((error) => {
+    try {
+      await env.SELECTOR_SNAPSHOTS.put(kvKey, normalizedStored, {
+        expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
+        metadata: {
+          extended: true,
+          ...(trust ? { trust } : {}),
+          ...(normalizedSid === sid ? {} : { legacySid: sid }),
+        },
+      });
+    } catch (error) {
       console.warn("[selector-snapshot] retention extension failure", error);
-    });
-    if (context.waitUntil) {
-      context.waitUntil(extension);
-    } else {
-      await extension;
+      return jsonError(503, "Snapshot retention could not be extended");
     }
   }
 

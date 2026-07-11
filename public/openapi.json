@@ -1443,7 +1443,20 @@
         "summary": "Yield rankings",
         "description": "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
         "operationId": "yieldRankings",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projection",
+            "in": "query",
+            "required": false,
+            "description": "Returns the compact Yield workbench contract while preserving the detailed response as the default.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "summary"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response. See the public API reference for endpoint-specific payload fields.",

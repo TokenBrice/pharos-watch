@@ -1,9 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { loadSubscriptionRowsByChat, removeSubscriptions } from "../telegram-webhook-store";
 import { isGroupChatType } from "../telegram-webhook-auth";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { renderManageWatchlistPage } from "./manage";
 import {
   callbackChatType,
@@ -12,8 +12,8 @@ import {
   requireAdminForMutatingCallback,
   type CallbackHandler,
   type TelegramCallbackQuery,
+  type CallbackContext,
 } from "./_shared";
-import { toErrorMessage } from "../../lib/error-utils";
 
 // Best-effort: scan the current message's inline keyboard for the latest
 // `manage:page:N` callback (Prev/Next buttons) and infer the active page. The
@@ -50,14 +50,13 @@ function inferCurrentManagePage(cb: TelegramCallbackQuery): number {
 }
 
 async function handleManageUnsub(
-  db: D1Database,
-  botToken: string,
-  cb: TelegramCallbackQuery,
+  ctx: CallbackContext,
   stablecoinId: string,
 ): Promise<void> {
+  const { db, botToken, cb } = ctx;
   const chatId = cb.message?.chat?.id?.toString();
   if (!chatId) {
-    await answerCallbackQuery(cb.id, botToken);
+    await ctx.answerCallback();
     return;
   }
 
@@ -72,6 +71,7 @@ async function handleManageUnsub(
       cb,
       chatId,
       "Only group admins can unsubscribe.",
+      ctx.beforeIrreversibleEffect,
     ))
   ) {
     return;
@@ -83,7 +83,14 @@ async function handleManageUnsub(
   const currentPage = inferCurrentManagePage(cb);
 
   try {
-    await removeSubscriptions(db, chatId, [stablecoinId]);
+    await ctx.planIntent?.(createTelegramWebhookIntent("callback:unsub", { coinId: stablecoinId }, "required"));
+    if (!ctx.wasMutationApplied) {
+      const operationStatements = ctx.prepareMutationAppliedStatement
+        ? [ctx.prepareMutationAppliedStatement()]
+        : undefined;
+      await removeSubscriptions(db, chatId, [stablecoinId], { operationStatements });
+      if (operationStatements) ctx.confirmAtomicMutationApplied?.();
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "callback_unsub",
@@ -92,10 +99,7 @@ async function handleManageUnsub(
   } catch (err) {
     logTelegramEvent({
       message: "unsub callback write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
       action: "unsub",
-      err: toErrorMessage(err),
     });
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
@@ -103,10 +107,7 @@ async function handleManageUnsub(
       outcome: "failure",
       failureClass: "d1_write_failed",
     });
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Could not remove subscription. Please try again.",
-    });
-    return;
+    throw err;
   }
 
   const subscriptions = await loadSubscriptionRowsByChat(db, chatId);
@@ -117,13 +118,16 @@ async function handleManageUnsub(
     subscriptions,
     requestedPage: currentPage,
     ackText,
+    beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+    answerCallback: ctx.answerCallback,
   });
 }
 
-export const handleUnsubCallback: CallbackHandler = async ({ db, botToken, cb, parsed }) => {
+export const handleUnsubCallback: CallbackHandler = async (ctx) => {
+  const { parsed } = ctx;
   if (!hasExactParts(parsed.parts, 2) || !isKnownStablecoinId(parsed.arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await ctx.answerCallback({ text: "Action not recognized." });
     return;
   }
-  await handleManageUnsub(db, botToken, cb, parsed.arg);
+  await handleManageUnsub(ctx, parsed.arg);
 };

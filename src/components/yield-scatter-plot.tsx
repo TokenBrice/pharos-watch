@@ -2,7 +2,15 @@
 
 import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
-import { CHART_AMBER, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE, CHART_TEAL } from "@/lib/chart-colors";
+import {
+  CHART_AMBER,
+  CHART_BLUE,
+  CHART_GREEN,
+  CHART_ORANGE,
+  CHART_RED,
+  CHART_SLATE,
+  CHART_TEAL,
+} from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -13,7 +21,9 @@ import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import type { YieldRanking, YieldType } from "@shared/types";
+import { resolveCompactLogoSrc } from "@/lib/logo-variants";
+import type { YieldType } from "@shared/types";
+import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 interface ScatterDataPoint {
   x: number; // safety score (original, for tooltip)
@@ -37,14 +47,13 @@ interface ScatterDataPoint {
 }
 
 interface YieldScatterPlotProps {
-  rankings: YieldRanking[];
+  rankings: YieldWorkbenchRanking[];
   benchmarkRate: number;
   benchmarkLabel?: string;
   showBenchmarkReference?: boolean;
   benchmarkIsFallback?: boolean;
   usesDefaultBenchmarkFrame?: boolean;
   logos?: Record<string, string>;
-  onDotClick: (id: string) => void;
   compact?: boolean;
   /**
    * "stage" (default) wraps the chart in its own `pharos-chart-stage` frame.
@@ -149,7 +158,14 @@ function sanitizeSvgId(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false, idPrefix = "yield-logo" }: LogoScatterShapeProps) {
+function LogoScatterPoint({
+  cx,
+  cy,
+  payload,
+  emphasized = false,
+  compact = false,
+  idPrefix = "yield-logo",
+}: LogoScatterShapeProps) {
   if (typeof cx !== "number" || typeof cy !== "number" || !payload) return null;
 
   const diameter = compact ? 14 : 16;
@@ -257,13 +273,12 @@ export function YieldScatterPlot({
   benchmarkIsFallback = false,
   usesDefaultBenchmarkFrame = false,
   logos,
-  onDotClick,
   compact = false,
   frame = "stage",
 }: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
   const compactMarker = compact || isMobile;
-  const hideAxisLabels = compact || isMobile;
+  const hideAxisLabels = isMobile;
   const hideQuadrantLabels = isMobile;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
@@ -284,11 +299,11 @@ export function YieldScatterPlot({
           benchmarkIsFallback: r.benchmarkIsFallback,
         }),
         benchmarkRate: r.benchmarkRate ?? benchmarkRate,
-        excessYield: r.excessYield,
+        excessYield: r.benchmarkRate != null ? r.apy30d - r.benchmarkRate : null,
         tvl: r.sourceTvlUsd,
-        logoSrc: logos?.[r.id],
+        logoSrc: resolveCompactLogoSrc(logos?.[r.id], compactMarker ? 14 : 16),
       }));
-  }, [benchmarkLabel, benchmarkRate, logos, rankings]);
+  }, [benchmarkLabel, benchmarkRate, compactMarker, logos, rankings]);
 
   const apyAxis = useMemo(
     () =>
@@ -323,24 +338,8 @@ export function YieldScatterPlot({
         clipThreshold: apyAxis.clipThreshold,
       };
     });
-    return nudgeOverlaps(
-      clipped,
-      safetyDomain,
-      plotYDomain,
-      width || 900,
-      height || 300,
-      isMobile,
-    );
+    return nudgeOverlaps(clipped, safetyDomain, plotYDomain, width || 900, height || 300, isMobile);
   }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile]);
-
-  const handleClick = useCallback(
-    (entry: unknown) => {
-      if (entry && typeof entry === "object" && "id" in entry && typeof (entry as { id: unknown }).id === "string") {
-        onDotClick((entry as { id: string }).id);
-      }
-    },
-    [onDotClick],
-  );
 
   const logoIdPrefix = useSvgId("yield-logo");
 
@@ -350,7 +349,9 @@ export function YieldScatterPlot({
   );
 
   const renderActiveLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} emphasized idPrefix={logoIdPrefix} />,
+    (props: LogoScatterShapeProps) => (
+      <LogoScatterPoint {...props} compact={compactMarker} emphasized idPrefix={logoIdPrefix} />
+    ),
     [compactMarker, logoIdPrefix],
   );
   const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
@@ -362,7 +363,9 @@ export function YieldScatterPlot({
     return (
       <div className="flex flex-col items-center justify-center h-[500px] text-sm text-muted-foreground">
         <p>No scatter data available (safety scores required)</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">Safety scores are calculated daily for tracked stablecoins.</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          Safety scores are calculated daily for tracked stablecoins.
+        </p>
       </div>
     );
   }
@@ -380,7 +383,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Click a logo to open its detail page.`}
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -419,7 +422,12 @@ export function YieldScatterPlot({
                   )
                 : null}
 
-              <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke={CHART_SLATE} strokeOpacity={0.35} strokeDasharray="3 4" />
+              <ReferenceLine
+                x={SAFETY_SCORE_THRESHOLD}
+                stroke={CHART_SLATE}
+                strokeOpacity={0.35}
+                strokeDasharray="3 4"
+              />
 
               {/* Risk-free rate reference line */}
               {showBenchmarkReference ? (
@@ -431,14 +439,14 @@ export function YieldScatterPlot({
                     hideAxisLabels
                       ? undefined
                       : {
-                        value: usesDefaultBenchmarkFrame
-                          ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
-                          : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
-                        position: "right",
-                        fill: CHART_SLATE,
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }
+                          value: usesDefaultBenchmarkFrame
+                            ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
+                            : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
+                          position: "right",
+                          fill: CHART_SLATE,
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }
                   }
                 />
               ) : null}
@@ -495,8 +503,6 @@ export function YieldScatterPlot({
 
               <Scatter
                 data={data}
-                onClick={handleClick}
-                cursor="pointer"
                 shape={renderLogoMarker}
                 activeShape={renderActiveLogoMarker}
               />
@@ -512,9 +518,13 @@ export function YieldScatterPlot({
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             <span className="text-foreground font-medium">Sweet spot</span>
             {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
-              <span className="hidden md:inline">= above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks</span>
+              <span className="hidden md:inline">
+                = above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks
+              </span>
             ) : showBenchmarkReference ? (
-              <span className="hidden md:inline">= above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
+              <span className="hidden md:inline">
+                = above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}
+              </span>
             ) : (
               <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
             )}

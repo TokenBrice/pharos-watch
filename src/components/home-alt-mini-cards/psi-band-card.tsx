@@ -3,8 +3,10 @@
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { CHART_BLUE } from "@/lib/chart-colors";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { buildPsiChartData } from "@shared/lib/psi-view-model";
 
@@ -43,7 +45,8 @@ function StabilityAreaChart({ values, color }: { values: number[]; color: string
 }
 
 export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
-  const { data, isLoading } = useStabilityIndex();
+  const query = useStabilityIndex();
+  const { data, isLoading } = query;
   const current = data?.current ?? null;
   const sparkValues = useMemo(() => {
     const chartData = buildPsiChartData(data?.history ?? [], current);
@@ -55,12 +58,18 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
     return current.score - avg;
   }, [current, sparkValues]);
 
-  const band = (current?.band ?? "STEADY") as ConditionBand;
+  const band = current?.band as ConditionBand | undefined;
   const sparkColor = CHART_BLUE;
-  const bandClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
-  const bandLabel = band.charAt(0) + band.slice(1).toLowerCase();
+  const bandClass = band ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
+  const bandLabel = band ? band.charAt(0) + band.slice(1).toLowerCase() : null;
   const avgDeltaClass =
     avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
+  const state = resolveQueryViewState({
+    hasData: current !== null,
+    isLoading,
+    error: query.error,
+    isEmpty: current === null,
+  });
 
   return (
     <div className={`${embedded ? "h-full min-h-0 gap-3 p-3.5" : "pharos-card-shell gap-4 p-4"} flex flex-col`}>
@@ -70,36 +79,51 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
         label={
           <span className="flex items-center gap-1.5">
             Stability Index
-            <span className={`font-medium ${bandClass}`}>· {bandLabel}</span>
+            {bandLabel ? <span className={`font-medium ${bandClass}`}>· {bandLabel}</span> : null}
           </span>
         }
       />
-      <div className="flex items-center gap-4">
-        <div className="min-w-0 shrink-0">
-          {isLoading || !current ? (
-            <Skeleton className="h-9 w-24" />
-          ) : (
-            <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
-              {current.score.toFixed(2)}
-            </span>
-          )}
-          <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            90D{" "}
-            {avgDelta !== null ? (
-              <span className={`pharos-numeric ${avgDeltaClass}`}>
-                {avgDelta >= 0 ? "+" : ""}
-                {avgDelta.toFixed(1)}
-              </span>
-            ) : (
-              "—"
-            )}{" "}
-            vs avg
-          </p>
+      {state === "unavailable" ? (
+        <QueryStateNotice state={state} label="Stability Index" onRetry={() => void query.refetch()} compact />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {state === "stale-with-data" ? (
+            <QueryStateNotice
+              state={state}
+              label="Stability Index"
+              dataUpdatedAt={query.dataUpdatedAt}
+              onRetry={() => void query.refetch()}
+              compact
+            />
+          ) : null}
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 shrink-0">
+              {state === "loading" ? (
+                <Skeleton className="h-9 w-24" />
+              ) : current ? (
+                <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
+                  {current.score.toFixed(2)}
+                </span>
+              ) : null}
+              <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                90D{" "}
+                {avgDelta !== null ? (
+                  <span className={`pharos-numeric ${avgDeltaClass}`}>
+                    {avgDelta >= 0 ? "+" : ""}
+                    {avgDelta.toFixed(1)}
+                  </span>
+                ) : (
+                  "—"
+                )}{" "}
+                vs avg
+              </p>
+            </div>
+            <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
+              <StabilityAreaChart values={sparkValues} color={sparkColor} />
+            </div>
+          </div>
         </div>
-        <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
-          <StabilityAreaChart values={sparkValues} color={sparkColor} />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

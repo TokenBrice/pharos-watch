@@ -11,11 +11,12 @@ import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-
 vi.mock("next/link", async () => {
   const React = await import("react");
   return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(
-      function MockLink({ href, children, ...rest }, ref) {
-        return React.createElement("a", { ref, href, ...rest }, children);
-      },
-    ),
+    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(function MockLink(
+      { href, children, ...rest },
+      ref,
+    ) {
+      return React.createElement("a", { ref, href, ...rest }, children);
+    }),
   };
 });
 
@@ -133,6 +134,14 @@ describe("SelectorResultSummary", () => {
 });
 
 describe("SelectorSnapshotBanner", () => {
+  it("labels server-recomputed snapshots as Pharos-verified", () => {
+    render(<SelectorSnapshotBanner mode="frozen" trust="verified" capturedAt={1_700_000_000_000} />);
+
+    expect(screen.getByText("Pharos-verified snapshot")).toBeTruthy();
+    expect(screen.getByText(/recomputed this snapshot from canonical source data/i)).toBeTruthy();
+    expect(screen.queryByText("Unverified client snapshot")).toBeNull();
+  });
+
   it("renders snapshot comparison deltas with aria-busy loading support", () => {
     render(
       <SelectorSnapshotBanner
@@ -147,6 +156,8 @@ describe("SelectorSnapshotBanner", () => {
     );
 
     expect(screen.getByText(/Rank order changed/i)).toBeTruthy();
+    expect(screen.getByText("Unverified client snapshot")).toBeTruthy();
+    expect(screen.getByText(/did not reproduce its scores from canonical source data/i)).toBeTruthy();
     expect(screen.getByText(/USDC rank/i)).toBeTruthy();
     expect(screen.getByText(/1 → 2/i)).toBeTruthy();
   });

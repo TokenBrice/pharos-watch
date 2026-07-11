@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   refetchLiquidity: vi.fn(),
   refetchReportCards: vi.fn(),
   refetchRedemptionBackstops: vi.fn(),
+  refetchYieldRankings: vi.fn(),
+  refetchStressSignals: vi.fn(),
   refetchFlows: vi.fn(),
   refetchBlacklist: vi.fn(),
   refetchReserves: vi.fn(),
@@ -68,6 +70,8 @@ function resetRefetchMocks() {
     mocks.refetchLiquidity,
     mocks.refetchReportCards,
     mocks.refetchRedemptionBackstops,
+    mocks.refetchYieldRankings,
+    mocks.refetchStressSignals,
     mocks.refetchFlows,
     mocks.refetchBlacklist,
     mocks.refetchReserves,
@@ -121,8 +125,22 @@ function installQueryMocks() {
     refetch: mocks.refetchRedemptionBackstops,
     meta: null,
   });
-  mocks.useYieldRankings.mockReturnValue({ data: { rankings: [] } });
-  mocks.useStressSignals.mockReturnValue({ data: { signals: {} } });
+  mocks.useYieldRankings.mockReturnValue({
+    data: { rankings: [] },
+    isLoading: false,
+    error: null,
+    dataUpdatedAt: 1,
+    meta: null,
+    refetch: mocks.refetchYieldRankings,
+  });
+  mocks.useStressSignals.mockReturnValue({
+    data: { signals: {} },
+    isLoading: false,
+    error: null,
+    dataUpdatedAt: 1,
+    meta: null,
+    refetch: mocks.refetchStressSignals,
+  });
   mocks.useMintBurnFlows.mockReturnValue({
     data: undefined,
     isLoading: false,
@@ -249,18 +267,21 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledWith(
       expect.objectContaining({
         supplemental: expect.objectContaining({
-          flows: {
+          flows: expect.objectContaining({
             data: undefined,
             isLoading: false,
-          },
-          blacklist: {
+            enabled: false,
+          }),
+          blacklist: expect.objectContaining({
             summary: undefined,
             isLoading: false,
-          },
-          reserves: {
+            enabled: false,
+          }),
+          reserves: expect.objectContaining({
             live: null,
             error: null,
-          },
+            enabled: false,
+          }),
         }),
       }),
     );
@@ -328,6 +349,8 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.refetchLiquidity).toHaveBeenCalled();
     expect(mocks.refetchReportCards).toHaveBeenCalled();
     expect(mocks.refetchRedemptionBackstops).toHaveBeenCalled();
+    expect(mocks.refetchYieldRankings).toHaveBeenCalled();
+    expect(mocks.refetchStressSignals).toHaveBeenCalled();
     expect(mocks.refetchFlows).not.toHaveBeenCalled();
     expect(mocks.refetchBlacklist).not.toHaveBeenCalled();
     expect(mocks.refetchReserves).not.toHaveBeenCalled();

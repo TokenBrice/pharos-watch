@@ -6,6 +6,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const DEFAULT_DATABASE = "stablecoin-db";
+const DEFAULT_CONFIG = "worker/wrangler.toml";
+const DEFAULT_LIMIT = 50;
 const DEFAULT_CAPTURES = [
   { period: "7d", sortBy: "reads" },
   { period: "30d", sortBy: "reads" },
@@ -22,6 +24,8 @@ and captures 7d reads, 30d reads, and 30d time views.
 
 Options:
   --database <name>     D1 database name (default: ${DEFAULT_DATABASE})
+  --config <path>       Wrangler config (default: ${DEFAULT_CONFIG})
+  --limit <n>           Queries returned per capture (default: ${DEFAULT_LIMIT})
   --period <value>      Capture period; repeatable, e.g. 7d or 30d
   --sort-by <value>     Sort key for all provided periods; repeatable
   --output <path>       Output JSON path (default: agents/d1-insights-<timestamp>.json)
@@ -33,6 +37,8 @@ Options:
 function parseArgs(argv) {
   const options = {
     database: DEFAULT_DATABASE,
+    config: DEFAULT_CONFIG,
+    limit: DEFAULT_LIMIT,
     periods: [],
     sortBy: [],
     output: null,
@@ -50,6 +56,16 @@ function parseArgs(argv) {
     }
     if (arg === "--database") {
       options.database = requireValue(argv, ++i, arg);
+      continue;
+    }
+    if (arg === "--config") {
+      options.config = requireValue(argv, ++i, arg);
+      continue;
+    }
+    if (arg === "--limit") {
+      const limit = Number(requireValue(argv, ++i, arg));
+      if (!Number.isInteger(limit) || limit <= 0) throw new Error("--limit must be a positive integer");
+      options.limit = limit;
       continue;
     }
     if (arg === "--period") {
@@ -252,6 +268,8 @@ async function main() {
         "npx", "wrangler", "d1", "insights", options.database,
         "--time-period", capture.period,
         "--sort-by", capture.sortBy,
+        "--limit", String(options.limit),
+        "--config", options.config,
         "--json",
       ].join(" "));
     }
@@ -265,6 +283,8 @@ async function main() {
       "wrangler", "d1", "insights", options.database,
       "--time-period", capture.period,
       "--sort-by", capture.sortBy,
+      "--limit", String(options.limit),
+      "--config", options.config,
       "--json",
     ];
     console.error(`[d1-insights] ${args.join(" ")}`);

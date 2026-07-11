@@ -5,6 +5,26 @@ import {
   mapDiscoveryCandidateRow,
   type DiscoveryCandidateRow,
 } from "../lib/discovery-candidates";
+import { logAdminAction } from "../lib/admin-action-audit";
+
+interface DiscoveryDismissRow {
+  id: number;
+  name: string;
+  symbol: string;
+  source: string;
+  market_cap: number | null;
+  dismissed: number;
+}
+
+function dismissalIdentity(row: DiscoveryDismissRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    symbol: row.symbol,
+    source: row.source,
+    marketCap: row.market_cap,
+  };
+}
 
 function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
   if (value == null) {
@@ -70,8 +90,20 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
 export const handleDismissCandidate = withErrorHandler("dismiss-discovery-candidate", async (
   db: D1Database,
   candidateId: number,
+  request?: Request,
 ): Promise<Response> => {
   const nowSec = Math.floor(Date.now() / 1000);
+  const existing = await db
+    .prepare("SELECT id, name, symbol, source, market_cap, dismissed FROM discovery_candidates WHERE id = ?")
+    .bind(candidateId)
+    .first<DiscoveryDismissRow>();
+
+  if (!existing) {
+    return errorResponse(404, "Discovery candidate not found");
+  }
+  if (existing.dismissed === 1) {
+    return jsonResponse({ ok: true, alreadyDismissed: true, candidate: dismissalIdentity(existing) });
+  }
 
   const result = await db.prepare(`
     UPDATE discovery_candidates
@@ -80,8 +112,33 @@ export const handleDismissCandidate = withErrorHandler("dismiss-discovery-candid
   `).bind(nowSec, candidateId).run();
 
   if ((result.meta.changes ?? 0) === 0) {
-    return errorResponse(404, "Candidate not found or already dismissed");
+    const reconciled = await db
+      .prepare("SELECT id, name, symbol, source, market_cap, dismissed FROM discovery_candidates WHERE id = ?")
+      .bind(candidateId)
+      .first<DiscoveryDismissRow>();
+    if (reconciled?.dismissed === 1) {
+      return jsonResponse({ ok: true, alreadyDismissed: true, candidate: dismissalIdentity(reconciled) });
+    }
+    return errorResponse(409, "Discovery candidate dismissal did not commit");
   }
 
-  return jsonResponse({ ok: true });
+  const candidate = dismissalIdentity(existing);
+  await logAdminAction(db, {
+    action: "dismiss-discovery-candidate",
+    target: `candidate:${candidateId}`,
+    result: "ok",
+    httpStatus: 200,
+    details: {
+      candidate,
+      effect: "removed-from-active-discovery-queue",
+      idempotencyKey: request?.headers.get("Idempotency-Key") ?? null,
+    },
+  }, request);
+
+  return jsonResponse({
+    ok: true,
+    alreadyDismissed: false,
+    candidate,
+    auditAction: "dismiss-discovery-candidate",
+  });
 });

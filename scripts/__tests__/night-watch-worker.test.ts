@@ -3,9 +3,14 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  assertNightWatchRegistryFixture,
+  buildNightWatchCoverage,
+  loadNightWatchCheckpoint,
   parseArgs,
+  persistNightWatchCheckpoint,
   renderNightWatchMarkdown,
   runCli,
+  scheduledMinutesInWindow,
 } from "../maintenance/night-watch-worker.mjs";
 
 const generatedAt = "2026-06-24T10:00:00.000Z";
@@ -154,6 +159,82 @@ describe("night-watch-worker", () => {
     expect(parseArgs(["--admin-api-url", "https://ops.example.test"], new Date(generatedAt)).adminApiUrl)
       .toBe("https://ops.example.test");
     expect(() => parseArgs(["--cycles", "3"], new Date(generatedAt))).toThrow("--cycles must be 1 or 2");
+  });
+
+  it("enumerates exact due cron minutes at UTC boundaries", () => {
+    expect(scheduledMinutesInWindow(
+      "*/15 * * * *",
+      "2026-06-24T10:00:00.000Z",
+      "2026-06-24T10:31:00.000Z",
+    )).toEqual([1_782_295_200, 1_782_296_100, 1_782_297_000]);
+    expect(scheduledMinutesInWindow(
+      "0 6 1 * *",
+      "2026-06-30T23:59:00.000Z",
+      "2026-07-01T06:00:00.000Z",
+    )).toEqual([1_782_885_600]);
+  });
+
+  it("requires explicit fixture updates when canonical registry ownership changes", () => {
+    const matrix = scheduleMatrix();
+    const fixture = {
+      slotKeys: Object.keys(matrix.slotPlans),
+      jobIds: matrix.cronJobs.map((job) => job.job),
+      sharedJobPaths: {},
+      budgetOnlySurfaces: ["digest-trigger-poll"],
+    };
+    expect(() => assertNightWatchRegistryFixture(matrix, fixture)).not.toThrow();
+    expect(() => assertNightWatchRegistryFixture(matrix, { ...fixture, jobIds: [] })).toThrow(
+      "Night Watch registry fixture drift (jobIds)",
+    );
+  });
+
+  it("does not count stale latest rows as in-window coverage", () => {
+    const testEvidence = evidence();
+    const snapshot = testEvidence.snapshots[0]! as Omit<(typeof testEvidence.snapshots)[number], "recentRuns"> & {
+      recentRuns: Array<{ job: string; status: string; started_at: number; slot_started_at: number }>;
+    };
+    snapshot.recentRuns = [{
+      job: "sync-stablecoins",
+      status: "ok",
+      started_at: 1_782_210_000,
+      slot_started_at: 1_782_210_000,
+    }];
+    snapshot.probes.status.payload.crons["data-invariant-canary"].lastRun.startedAt = 1_782_210_000;
+
+    const coverage = buildNightWatchCoverage(
+      testEvidence.scheduleMatrix,
+      testEvidence.snapshots,
+      testEvidence.options,
+    ) as { jobs: Array<{ job: string; observed: boolean; observedSlots: number; evidenceGrade: string }> };
+
+    expect(coverage.jobs.find((job) => job.job === "sync-stablecoins")).toMatchObject({
+      observed: false,
+      observedSlots: 0,
+      evidenceGrade: "code-only",
+    });
+    expect(coverage.jobs.find((job) => job.job === "data-invariant-canary")).toMatchObject({
+      observed: false,
+      evidenceGrade: "code-only",
+    });
+  });
+
+  it("atomically checkpoints redacted samples and resumes only the matching window", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-checkpoint-"));
+    const checkpointPath = relative(process.cwd(), join(dir, "samples.jsonl"));
+    const window = { start: generatedAt, end: "2026-06-24T14:00:00.000Z" };
+    persistNightWatchCheckpoint(checkpointPath, [{
+      version: 1,
+      windowStart: window.start,
+      windowEnd: window.end,
+      targetAt: generatedAt,
+      snapshot: { collectedAt: generatedAt, apiKey: "private", recentRuns: [] },
+    }]);
+
+    const checkpointText = readFileSync(resolve(process.cwd(), checkpointPath), "utf8");
+    expect(checkpointText).not.toContain("private");
+    expect(checkpointText).toContain("[redacted]");
+    expect(loadNightWatchCheckpoint(checkpointPath, window)).toHaveLength(1);
+    expect(loadNightWatchCheckpoint(checkpointPath, { ...window, start: "2026-06-25T10:00:00.000Z" })).toEqual([]);
   });
 
   it("renders coverage, canary findings, and access sections", () => {

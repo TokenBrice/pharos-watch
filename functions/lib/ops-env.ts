@@ -1,7 +1,8 @@
 import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
-import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import { OPS_API_ORIGIN } from "@shared/lib/runtime-origins";
+import { resolveTrustedHttpsOrigin } from "./trusted-upstream-origin";
 
 export const DEFAULT_OPS_API_ORIGIN = OPS_API_ORIGIN;
 
@@ -15,7 +16,7 @@ export interface OpsAdminProxyEnv {
 }
 
 export interface OpsProxyEnvIssue {
-  code: "ops-service-token-incomplete" | "ops-access-ui-incomplete";
+  code: "ops-service-token-incomplete" | "ops-access-ui-incomplete" | "ops-api-origin-invalid";
   message: string;
 }
 
@@ -32,8 +33,8 @@ export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "
 
 export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesOps");
 
-export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string {
-  return resolveOrigin(env.OPS_API_ORIGIN, DEFAULT_OPS_API_ORIGIN);
+export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string | null {
+  return resolveTrustedHttpsOrigin(env.OPS_API_ORIGIN ?? DEFAULT_OPS_API_ORIGIN, [DEFAULT_OPS_API_ORIGIN]);
 }
 
 export function resolvePagesOpsUiAccessConfig(
@@ -49,6 +50,12 @@ export function resolvePagesOpsUiAccessConfig(
 
 export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssue[] {
   const issues: OpsProxyEnvIssue[] = [];
+  if (!resolveOpsApiOrigin(env)) {
+    issues.push({
+      code: "ops-api-origin-invalid",
+      message: `OPS_API_ORIGIN must be the canonical HTTPS origin ${DEFAULT_OPS_API_ORIGIN}.`,
+    });
+  }
   const hasTokenId = hasConfiguredValue(env.OPS_API_SERVICE_TOKEN_ID);
   const hasTokenSecret = hasConfiguredValue(env.OPS_API_SERVICE_TOKEN_SECRET);
 

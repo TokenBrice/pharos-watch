@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import { GT_PROBE_RUN_BUDGET_MS } from "../../lib/constants";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
@@ -67,6 +68,7 @@ interface StablecoinsIntakeStageOptions extends CronStageContext {
   cmcApiKey?: string;
   jupiterApiKey?: string | null;
   alertWebhookUrl?: string | null;
+  alertBrokerMode?: string;
   coingeckoApiKey?: string | null;
   addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -120,6 +122,7 @@ export async function runStablecoinsIntakeStage(
         options.coingeckoApiKey,
         options.reportProgress,
         options.jupiterApiKey,
+        options.alertBrokerMode,
       ),
   });
 
@@ -169,6 +172,7 @@ interface StablecoinsPricingStageOptions extends CronStageContext {
   coingeckoApiKey?: string | null;
   addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  binanceSession?: BinanceFetchSession;
 }
 
 export async function runStablecoinsPricingStage(
@@ -223,6 +227,7 @@ export async function runStablecoinsPricingStage(
     {
       previousAssetsById: options.previousAssetsById,
       addressProvider: options.addressPriceProvider,
+      binanceSession: options.binanceSession,
     },
   );
   const primaryPricedCount = options.assets.length - options.assets.filter(hasMissingPrice).length;

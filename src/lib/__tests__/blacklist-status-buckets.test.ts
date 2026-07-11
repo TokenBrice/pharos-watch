@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard, StablecoinData } from "@shared/types";
 import {
   BLACKLIST_STATUS_BUCKET_ORDER,
@@ -49,9 +50,9 @@ describe("blacklist status buckets", () => {
   });
 
   it("uses report card overrides when resolving a stablecoin bucket", () => {
-    const reportCard = {
-      rawInputs: { canBeBlacklisted: "possible" },
-    } as Pick<ReportCard, "rawInputs">;
+    const reportCard: Pick<ReportCard, "rawInputs"> = {
+      rawInputs: createReportCardRawInputs({ canBeBlacklisted: "possible" }),
+    };
 
     expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("possible");
   });
@@ -71,11 +72,11 @@ describe("blacklist status buckets", () => {
       { id: "usdp-parallel", name: "USD+", symbol: "USDP" },
       { id: "lusd-liquity", name: "Liquity USD", symbol: "LUSD" },
     ] as StablecoinData[];
-    const reportCards = {
-      "usdt-tether": { rawInputs: { canBeBlacklisted: true } },
-      "usdp-parallel": { rawInputs: { canBeBlacklisted: "inherited" } },
-      "lusd-liquity": { rawInputs: { canBeBlacklisted: false } },
-    } as Record<string, Pick<ReportCard, "rawInputs">>;
+    const reportCards: Record<string, Pick<ReportCard, "rawInputs">> = {
+      "usdt-tether": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }) },
+      "usdp-parallel": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: "inherited" }) },
+      "lusd-liquity": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: false }) },
+    };
 
     expect(filterStablecoinsByBlacklistStatus(stablecoins, "yes", reportCards).map((coin) => coin.id)).toEqual([
       "usdt-tether",

@@ -10,8 +10,15 @@ import {
   type AlertSafetySourceAssessment,
   type AlertSafetySourceSnapshot,
 } from "../lib/alert-safety-source-cache";
-import { getCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
+import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
+import type { PendingCapacitySnapshot } from "./telegram-pending";
+import {
+  ALERT_RESERVE_SOURCE_GENERATION,
+  assessAlertReserveSourceCache,
+  type AlertReserveSourceAssessment,
+} from "../lib/alert-reserve-source-cache";
 import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,
@@ -32,6 +39,44 @@ import {
 type CachedValue = { value: string; updatedAt: number } | null;
 
 const TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC = 2 * 3600;
+const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
+
+export interface TelegramDispatchSharedState {
+  pendingCapacitySnapshot?: PendingCapacitySnapshot;
+  safetySourceAssessment?: AlertSafetySourceAssessment;
+}
+
+export function assignSharedDispatchState(
+  sharedState: TelegramDispatchSharedState | undefined,
+  updates: Partial<TelegramDispatchSharedState>,
+): void {
+  if (!sharedState) return;
+  Object.assign(sharedState, updates);
+}
+
+export async function readPresetFailureCount(db: D1Database): Promise<number> {
+  try {
+    const cached = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
+    if (!cached) return 0;
+    const parsed = Number(cached.value);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function writePresetFailureCount(db: D1Database, value: number): Promise<void> {
+  try {
+    await setCache(db, PRESET_QUERY_FAILURE_CACHE_KEY, String(Math.max(0, Math.floor(value))));
+  } catch {
+    logTelegramEvent({
+      level: "warn",
+      message: "failed to persist preset failure count",
+      action: "write-preset-failure-count",
+      module: "dispatch-telegram-alerts",
+    });
+  }
+}
 
 export async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
   return loadTelegramDewsCurrentRows(db, nowSec, {
@@ -48,11 +93,6 @@ function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
   } catch { /* expected: corrupted launch snapshot json */
     return null;
   }
-}
-
-/** Parse a LAUNCH-STYLE id-set snapshot (reserve-drift, C123). */
-function parseReserveSnapshotIds(cached: CachedValue): string[] | null {
-  return parseLaunchSnapshotIds(cached);
 }
 
 export interface ActiveDepegRowWithEventId extends ActiveDepegRow {
@@ -83,6 +123,7 @@ export interface DispatchSnapshotState {
   previousDepegSnapshot: DepegSnapshot | null;
   previousSafetySnapshot: SafetySnapshot | null;
   safetySourceAssessment: AlertSafetySourceAssessment;
+  reserveSourceAssessment: AlertReserveSourceAssessment;
   currentSafetySnapshot: AlertSafetySourceSnapshot | null;
   safetySnapshotNeedsSeed: boolean;
   currentSnapshots: {
@@ -238,16 +279,22 @@ export function buildDispatchSnapshotState(
   // we still seed with the current pre-launch set (no transition to lose).
   const previousLaunchIds = parseLaunchSnapshotIds(sourceData.launchCache);
 
-  // Reserve-drift (C123): the producer (four-hourly reserve slot) owns the
-  // current drift id-set; the dispatcher diffs it against its own last-acted-on
-  // baseline. When the run is a seed (stale dews/depeg) we preserve the prior
-  // baseline so a drift opening during the seed window is not absorbed and
-  // fires on the next healthy run (mirrors the launch P1.7 pattern). When there
-  // is no parseable baseline we seed with the current producer set (no
-  // transition to lose).
-  const parsedCurrentReserveDriftIds = parseReserveSnapshotIds(sourceData.reserveCache);
-  const reserveSourceUnavailable = parsedCurrentReserveDriftIds == null;
-  const previousReserveDispatchedIds = parseReserveSnapshotIds(sourceData.reserveDispatchedCache);
+  // Reserve-drift (C123): the four-hourly producer owns a versioned source
+  // envelope. A missing, corrupt, stale, or wrong-generation source is never
+  // alertable. The first fresh publish after a gap is marked `recovering`; it
+  // cold-seeds the dispatch baseline so changes accumulated during the blind
+  // interval cannot be misreported as fresh transitions.
+  const reserveSourceAssessment = assessAlertReserveSourceCache(sourceData.reserveCache, {
+    expectedGeneration: ALERT_RESERVE_SOURCE_GENERATION,
+    nowSec,
+    producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+  });
+  const reserveSourceUnavailable = reserveSourceAssessment.state !== "ok";
+  const parsedCurrentReserveDriftIds =
+    reserveSourceAssessment.state === "ok" || reserveSourceAssessment.state === "recovering"
+      ? reserveSourceAssessment.envelope?.driftIds ?? null
+      : null;
+  const previousReserveDispatchedIds = parseLaunchSnapshotIds(sourceData.reserveDispatchedCache);
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
@@ -256,6 +303,15 @@ export function buildDispatchSnapshotState(
     isSnapshotMissingOrStale(sourceData.depegCache, nowSec) ||
     previousDewsSnapshot == null ||
     previousDepegSnapshot == null;
+  const reserveNeedsColdSeed =
+    reserveSourceAssessment.state === "recovering" && parsedCurrentReserveDriftIds != null;
+  const reserveDispatched = reserveNeedsColdSeed
+    ? parsedCurrentReserveDriftIds
+    : parsedCurrentReserveDriftIds == null
+      ? (previousReserveDispatchedIds ?? null)
+      : mustSeedSnapshots && previousReserveDispatchedIds != null
+        ? previousReserveDispatchedIds
+        : parsedCurrentReserveDriftIds;
 
   const currentSnapshots = {
     dews: buildDewsSnapshot(sourceData.dewsRows),
@@ -275,19 +331,14 @@ export function buildDispatchSnapshotState(
       mustSeedSnapshots && previousLaunchIds != null
         ? previousLaunchIds
         : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
-    reserveDispatched:
-      reserveSourceUnavailable
-        ? (previousReserveDispatchedIds ?? null)
-        : (
-            mustSeedSnapshots && previousReserveDispatchedIds != null
-              ? previousReserveDispatchedIds
-              : parsedCurrentReserveDriftIds
-          ),
+    reserveDispatched,
   };
-  const previousReserveDriftIds = reserveSourceUnavailable
-    ? (previousReserveDispatchedIds ?? [])
-    : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
-  const currentReserveDriftIds = reserveSourceUnavailable
+  const previousReserveDriftIds = reserveNeedsColdSeed
+    ? parsedCurrentReserveDriftIds
+    : parsedCurrentReserveDriftIds == null
+      ? (previousReserveDispatchedIds ?? [])
+      : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
+  const currentReserveDriftIds = parsedCurrentReserveDriftIds == null
     ? (previousReserveDispatchedIds ?? [])
     : parsedCurrentReserveDriftIds;
 
@@ -298,6 +349,7 @@ export function buildDispatchSnapshotState(
     previousDepegSnapshot,
     previousSafetySnapshot,
     safetySourceAssessment,
+    reserveSourceAssessment,
     currentSafetySnapshot,
     safetySnapshotNeedsSeed,
     currentSnapshots,
