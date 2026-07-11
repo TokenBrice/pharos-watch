@@ -482,7 +482,20 @@ export async function projectTelegramRecapTerminalOutcome(
              THEN ? ELSE last_delivered_local_date END,
            updated_at = ?
      WHERE chat_id = ?
-  `).bind(consumesWindow ? 1 : 0, target.window_end_at, status, target.local_date, atSec, target.chat_id);
+       AND EXISTS (
+         SELECT 1 FROM telegram_recap_targets projected
+          WHERE projected.recap_key = ? AND projected.status = ?
+       )
+  `).bind(
+    consumesWindow ? 1 : 0,
+    target.window_end_at,
+    status,
+    target.local_date,
+    atSec,
+    target.chat_id,
+    recapKey,
+    status,
+  );
   await executeAtomicBatch(db, [targetUpdate, preferenceUpdate]);
   const updated = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
