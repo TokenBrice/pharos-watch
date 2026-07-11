@@ -629,6 +629,57 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     });
   });
 
+  it("publishes opportunity-level risk evidence for selected and alternate sources", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const selectedOpportunityRisk = {
+      opportunityClass: "lending" as const,
+      underlyingSafetyScore: 82,
+      opportunitySafetyScore: 77,
+      opportunitySafetyPenalty: 5,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    };
+    const alternateOpportunityRisk = {
+      opportunityClass: "structured-tranche" as const,
+      underlyingSafetyScore: 74,
+      opportunitySafetyScore: null,
+      opportunitySafetyPenalty: null,
+      venueReviewed: false,
+      missingCriticalEvidence: ["venue-review" as const, "market-size" as const],
+    };
+    const selected = makeEvaluatedSource({
+      sourceKey: "defillama:selected-opportunity",
+      yieldSource: "Selected Opportunity",
+      currentApy: 6,
+      pharosYieldScore: 90,
+      sourceRisk: { opportunityRisk: selectedOpportunityRisk },
+    });
+    const alternate = makeEvaluatedSource({
+      sourceKey: "defillama:alternate-opportunity",
+      yieldSource: "Alternate Opportunity",
+      currentApy: 5,
+      pharosYieldScore: 80,
+      sourceRisk: { opportunityRisk: alternateOpportunityRisk },
+    });
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [selected, alternate],
+      bestSourceKeyByCoin: new Map([[selected.id, selected.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    expect(payload.rankings[0]?.sourceRisk?.opportunityRisk).toEqual(selectedOpportunityRisk);
+    expect(payload.rankings[0]?.altSources[0]?.sourceRisk?.opportunityRisk).toEqual(alternateOpportunityRisk);
+  });
+
   it("publishes golden source-risk rows only under nested public sourceRisk", () => {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const benchmark = makeBenchmarkMeta();
