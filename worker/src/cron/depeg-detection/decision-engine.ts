@@ -83,6 +83,12 @@ const DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRES
 const DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.5;
 const DEPEG_TIERED_CONFIRMATION_SEVERITY_MULTIPLIER = 2;
 
+function isNativePegEvent(event: DepegRow): boolean {
+  return event.source === "live" &&
+    event.peg_reference === 1 &&
+    normalizePegType(event.peg_type) !== "peggedUSD";
+}
+
 type DecisionContextDerivation =
   | { kind: "skip"; decision: DepegAssetDecision }
   | { kind: "context"; ctx: DecisionContext };
@@ -484,11 +490,12 @@ function applyNativeQuoteVeto(
     const decision = emptyDecision(ctx.trackedCoinId);
     if (nativeShowsRecovery) {
       if (existing) {
+        const nativeEvent = isNativePegEvent(existing);
         decision.commands.push({
           type: "close-event",
           id: existing.id,
           endedAt: ctx.now,
-          recoveryPrice: null,
+          recoveryPrice: nativeEvent ? ctx.nativePegPrice : null,
           closeReason: "recovered-native",
         });
       }
@@ -600,6 +607,7 @@ function decideExistingEvent(
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
+  const nativeEvent = isNativePegEvent(existing);
 
   // Direction change: retire the live row only on authoritative contradiction
   // or corroborated same-direction DEX support for the replacement move.
@@ -609,7 +617,7 @@ function decideExistingEvent(
         type: "close-event",
         id: existing.id,
         endedAt: now,
-        recoveryPrice: price,
+        recoveryPrice: nativeEvent ? null : price,
         closeReason: "superseded-direction",
       });
       if (requiresConfirmation) {
@@ -633,16 +641,19 @@ function decideExistingEvent(
 
   // Same direction - event stays open.
   seenEventIds.push(existing.id);
-  const canUpdatePeak =
-    primaryTrust === "authoritative" ||
-    dexSupportsDirection ||
-    (primaryTrust === "confirm_required" && dexSupportsSecondaryBarDirection);
-  if (canUpdatePeak && absBps > Math.abs(existing.peak_deviation_bps)) {
+  const peakSignal = nativeEvent ? ctx.nativeSignal : { bps, absBps, direction };
+  const peakPrice = nativeEvent ? ctx.nativePegPrice : price;
+  const canUpdatePeak = nativeEvent
+    ? peakSignal != null && peakSignal.direction === existing.direction && peakPrice != null
+    : primaryTrust === "authoritative" ||
+      dexSupportsDirection ||
+      (primaryTrust === "confirm_required" && dexSupportsSecondaryBarDirection);
+  if (canUpdatePeak && peakSignal && peakSignal.absBps > Math.abs(existing.peak_deviation_bps)) {
     commands.push({
       type: "update-peak",
       id: existing.id,
-      peakDeviationBps: bps,
-      peakPrice: price,
+      peakDeviationBps: peakSignal.bps,
+      peakPrice,
     });
   }
 
@@ -749,6 +760,18 @@ function decideRecovery(
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
+  const nativeEvent = isNativePegEvent(existing);
+
+  if (nativeEvent && ctx.nativeSignal != null && ctx.nativeSignal.absBps < threshold) {
+    commands.push({
+      type: "close-event",
+      id: existing.id,
+      endedAt: now,
+      recoveryPrice: ctx.nativePegPrice,
+      closeReason: "recovered-native",
+    });
+    return { seenEventIds, commands, diagnostics };
+  }
 
   if (
     primarySupportsRecovery &&
@@ -760,7 +783,7 @@ function decideRecovery(
       type: "close-event",
       id: existing.id,
       endedAt: now,
-      recoveryPrice: price,
+      recoveryPrice: nativeEvent ? null : price,
       closeReason: "recovered-primary",
     });
   } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
@@ -768,7 +791,7 @@ function decideRecovery(
       type: "close-event",
       id: existing.id,
       endedAt: now,
-      recoveryPrice: dexRow.dex_price_usd,
+      recoveryPrice: nativeEvent ? null : dexRow.dex_price_usd,
       closeReason: "recovered-dex",
     });
   } else {

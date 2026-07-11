@@ -459,6 +459,118 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
+  it("closes a native-peg event with the recovered native quote", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.1919,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        direction: "below",
+        peak_deviation_bps: -242,
+        start_price: 0.9758,
+        peak_price: 0.9758,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.992,
+        updatedAt: 1_750_000_840,
+      },
+    });
+
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 7,
+        endedAt: 1_750_000_900,
+        recoveryPrice: 0.992,
+        closeReason: "recovered-native",
+      },
+    ]);
+  });
+
+  it("does not mix a USD recovery price into a native-peg event", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.1919,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        direction: "below",
+        peak_deviation_bps: -242,
+        start_price: 0.9758,
+        peak_price: 0.9758,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+    });
+
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 7,
+        endedAt: 1_750_000_900,
+        recoveryPrice: null,
+        closeReason: "recovered-primary",
+      },
+    ]);
+  });
+
+  it("updates a native-peg event peak from the native quote domain", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.1879,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        direction: "below",
+        peak_deviation_bps: -242,
+        start_price: 0.9758,
+        peak_price: 0.9758,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.97,
+        updatedAt: 1_750_000_840,
+      },
+    });
+
+    expect(decision.commands).toEqual([
+      {
+        type: "update-peak",
+        id: 7,
+        peakDeviationBps: -300,
+        peakPrice: 0.97,
+      },
+    ]);
+  });
+
   it("keeps an existing event open when a high-TVL pool challenger contradicts primary recovery", () => {
     const decision = decideDepegAsset({
       now: 1_780_630_000,
