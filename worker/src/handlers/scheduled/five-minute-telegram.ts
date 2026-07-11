@@ -17,6 +17,7 @@ import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { dispatchPendingAlertBrokerDeliveries } from "../../lib/alert-broker";
+import { parseJsonObject } from "../../lib/json-parse";
 import {
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,
@@ -205,7 +206,10 @@ function buildTelegramSlotGroups(
         const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, { rolloutPolicy: recapRollout });
         return {
           ...planned,
-          metadata: JSON.stringify({ ...JSON.parse(planned.metadata), cleanup }),
+          metadata: JSON.stringify({
+            ...(parseJsonObject<Record<string, unknown>>(planned.metadata, "five-minute-telegram:recap-planner") ?? {}),
+            cleanup,
+          }),
         };
       },
     });

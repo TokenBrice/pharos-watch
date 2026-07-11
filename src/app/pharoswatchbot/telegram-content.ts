@@ -8,7 +8,7 @@ import {
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, and quiet hours in Telegram.";
+  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, quiet hours, and threshold controls in Telegram.";
 
 /**
  * One-line utility blurb per alert family for the hero signal board. Keyed by
