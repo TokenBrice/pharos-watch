@@ -724,6 +724,58 @@ describe("drainPendingQueue", () => {
     sqlite.close();
   });
 
+  it("reports blocked cleanup failures while reconciling results after an abort", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const controller = new AbortController();
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_alerts p",
+        rows: [
+          {
+            id: 805,
+            chat_id: "post-send-abort-blocked",
+            message_html: "<b>Blocked before abort</b>",
+            disable_notification: 0,
+            created_at: now - 60,
+            attempts: 0,
+          },
+        ],
+      },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }],
+      },
+      { match: "SET alert_dews=0", rows: [], throwError: new Error("D1 cleanup failed") },
+      { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+    mockSendToChat.mockImplementation(async () => {
+      controller.abort("slot deadline after Telegram rejected send");
+      return {
+        ok: false,
+        blocked: true,
+        retryable: false,
+        permanentFailure: true,
+        statusCode: 403,
+        errorClass: "blocked",
+        delivery: "blocked",
+        retryAfterSec: null,
+      };
+    });
+
+    const result = await drainPendingQueue(db, "bot-token", 10, controller.signal);
+
+    expect(result).toMatchObject({
+      attempted: 1,
+      blocked: 1,
+      blockedCleanedUp: 0,
+      blockedCleanupFailed: 1,
+    });
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+  });
+
   it("releases claimed rows without sending when the soft deadline has elapsed", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     const now = Math.floor(Date.now() / 1000);
