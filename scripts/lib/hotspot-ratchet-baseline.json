@@ -516,7 +516,7 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/depeg-detection/decision-engine.ts": {
-    "fileLines": 839,
+    "fileLines": 840,
     "maxFunctionLines": 142,
     "branchCount": 58,
     "disposition": "queued-p4",
