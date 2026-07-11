@@ -360,9 +360,9 @@
     "notes": "Admin mint/burn reclassification now scopes updates by chain and rejects malformed non-negative query params. Keep future repair policy changes covered by focused endpoint tests."
   },
   "worker/src/api/telegram-webhook-parsing.ts": {
-    "fileLines": 499,
+    "fileLines": 514,
     "maxFunctionLines": 95,
-    "branchCount": 84,
+    "branchCount": 88,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -396,8 +396,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 388,
-    "maxFunctionLines": 300,
+    "fileLines": 397,
+    "maxFunctionLines": 308,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -516,9 +516,9 @@
     "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/depeg-detection/decision-engine.ts": {
-    "fileLines": 840,
+    "fileLines": 790,
     "maxFunctionLines": 142,
-    "branchCount": 58,
+    "branchCount": 53,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 780,
@@ -660,8 +660,8 @@
     "notes": "This is now a facade over the split status-reliability helper modules. Preserve it as the import surface and keep implementation detail in the dedicated stores/views."
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
-    "fileLines": 589,
-    "maxFunctionLines": 138,
+    "fileLines": 604,
+    "maxFunctionLines": 150,
     "branchCount": 26,
     "disposition": "queued-p4",
     "targetBudget": {

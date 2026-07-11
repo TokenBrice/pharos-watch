@@ -47,6 +47,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "worker/src/api/telegram-mini-app-mutations.ts": {
+    "disposition": "queued-p4",
+    "notes": "Phase 3 added request-local portability and bounded bulk preview/confirm/undo alongside the existing Mini App settings dispatcher. The resulting branch hotspot should be split only after the new generation and fingerprint fences have stabilized under one contract.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
+  },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",
@@ -111,14 +119,6 @@
     "reviewAfter": "2026-10-10",
     "nextAction": "Extract provider fetch/parse adapters from Treasury-rate selection and publication orchestration."
   },
-  "worker/src/cron/yield-sync/vaults-fyi.ts": {
-    "disposition": "queued-p4",
-    "notes": "The Vaults.fyi adapter now includes quota reservation, pagination, normalization, and degradation metadata. Its branch count warrants a focused adapter decomposition after the quota fencing behavior has soaked.",
-    "owner": "yield-intelligence",
-    "createdAt": "2026-07-10",
-    "reviewAfter": "2026-10-10",
-    "nextAction": "Extract quota/pagination state handling from payload normalization and opportunity projection."
-  },
   "worker/src/cron/telegram-pending/drain.ts": {
     "disposition": "queued-p4",
     "notes": "Pending Telegram delivery currently combines stale-send reconciliation, claim lifecycle handling, retry policy, and queue draining. The module is operationally sensitive, so its newly surfaced file, function, and branch hotspots should be reduced in a dedicated behavior-preserving pass.",
@@ -126,6 +126,14 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract stale-send reconciliation and claim/retry state transitions from the queue-drain coordinator behind the existing pending-delivery contracts."
+  },
+  "worker/src/lib/telegram-watchlist-token.ts": {
+    "disposition": "queued-p4",
+    "notes": "The portable watchlist codec now keeps v1 and pw2 reads compatible while pw3 preserves six-family direct rows, preset policy, catalog fingerprints, compression, and integrity checks. This compatibility surface is branch-heavy and should be decomposed without altering emitted tokens.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Split version-specific encode/decode codecs from catalog validation and collision mapping behind the existing watchlist-token API and golden-vector tests."
   },
   "src/lib/status-dashboard-model.ts": {
     "disposition": "queued-p4",
