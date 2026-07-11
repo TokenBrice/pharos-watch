@@ -164,6 +164,9 @@ describe("useChartAnnotations", () => {
     const firstUrl = new URL(firstPath, "https://pharos.test");
     expect(firstUrl.searchParams.get("since")).toBe(String(bucketStart));
     expect(firstUrl.searchParams.get("until")).toBe(String(bucketStart + 30 * DAY_MS));
+    expect(firstUrl.searchParams.get("severityFloor")).toBe("warning");
+    expect(firstUrl.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
+    expect(firstUrl.searchParams.getAll("class")).toEqual(["methodology"]);
 
     rerender({ from: rawFrom + 60_000, to: rawTo + 60_000 });
 
@@ -171,6 +174,23 @@ describe("useChartAnnotations", () => {
     expect(JSON.stringify(secondCall?.[0])).toBe(firstKey);
     expect(secondCall?.[1]).toBe(firstPath);
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
+  });
+
+  it("pushes chart annotation relevance filters into the bucketed API request", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, isLoading: false });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    renderHook(() =>
+      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 0, 2)),
+    );
+
+    const path = useApiQueryWithMetaMock.mock.calls.at(-1)?.[1] as string;
+    const url = new URL(path, "https://pharos.test");
+    expect(url.searchParams.get("severityFloor")).toBe("warning");
+    expect(url.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
+    expect(url.searchParams.getAll("class")).toEqual(["methodology"]);
+    expect(url.searchParams.get("limit")).toBe("200");
   });
 
   it("merges curated + tape sources and dedupes same-day same-kind (curated wins)", () => {

@@ -98,7 +98,7 @@ describe("acquireTelegramMiniAppMutationBurst", () => {
 });
 
 describe("Mini App mutation burst privacy lifecycle", () => {
-  it("deletes the identity-linked counter with the subscriber cache wipe", async () => {
+  it("retains the active mutation burst counter during subscriber cache wipes", async () => {
     const { sqlite, db } = openDb();
     try {
       sqlite.exec(`
@@ -111,6 +111,7 @@ describe("Mini App mutation burst privacy lifecycle", () => {
       await db.batch(prepareDeleteTelegramChatCacheStatements(db, "42"));
 
       expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
+        { key: "telegram:mini-app-mutation-burst:42" },
         { key: "telegram:mini-app-mutation-burst:43" },
       ]);
     } finally {

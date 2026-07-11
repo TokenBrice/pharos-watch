@@ -91,6 +91,30 @@ describe("Telegram transport outage control", () => {
     });
   });
 
+  it("lets fresh handoff seed a replacement probe after a half-open lease expires", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    sqlite.prepare(
+      `UPDATE telegram_transport_circuit
+          SET state = 'half_open',
+              generation = 3,
+              next_probe_at = ?,
+              probe_owner = 'stale-owner',
+              probe_generation = 3,
+              probe_expires_at = ?,
+              probe_limit = 4,
+              probe_attempted = 0,
+              updated_at = ?
+        WHERE singleton_id = 1`,
+    ).run(NOW - 60, NOW - 1, NOW - 30);
+
+    await expect(readTelegramFreshHandoffAllowance(db, NOW, 90)).resolves.toMatchObject({
+      allowed: true,
+      maxTargets: 4,
+      reason: "probe_seed",
+      deferUntil: null,
+    });
+  });
+
   it("opens immediately on auth failure and denies the untouched tail", async () => {
     const { db } = setupLatestSchema();
     const permit = await closedPermit(db);
@@ -203,6 +227,37 @@ describe("Telegram transport outage control", () => {
       { chatId: "chat-2", result: result("blocked", { statusCode: 403, retryable: false, permanentFailure: true }) },
     ], NOW + 11);
     expect(closed).toMatchObject({ state: "closed", probeAttempted: 0, lastSuccessAt: NOW + 11 });
+  });
+
+  it("releases a half-open probe permit when no send is attempted", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const permit = await closedPermit(db);
+    await recordTelegramTransportOutcomes(db, permit, [
+      { chatId: "chat-a", result: result("auth_error", { statusCode: 401 }) },
+    ], NOW);
+    sqlite.prepare("UPDATE telegram_transport_circuit SET next_probe_at = ? WHERE singleton_id = 1").run(NOW + 10);
+
+    const probe = await claimTelegramTransportPermit(db, {
+      mode: "pending",
+      owner: "probe-without-send",
+      nowSec: NOW + 10,
+      requestedDistinctChats: 4,
+    });
+    expect(probe).toMatchObject({ allowed: true, reason: "half_open_probe" });
+
+    const released = await recordTelegramTransportOutcomes(db, probe, [], NOW + 11);
+    expect(released).toMatchObject({
+      state: "open",
+      nextProbeAt: NOW + 11,
+      probeOwner: null,
+      probeGeneration: null,
+      probeAttempted: 0,
+    });
+    await expect(readTelegramFreshHandoffAllowance(db, NOW + 11, 90)).resolves.toMatchObject({
+      allowed: true,
+      maxTargets: 4,
+      reason: "probe_seed",
+    });
   });
 
   it("treats a lone local 429 half-open result as inconclusive", async () => {

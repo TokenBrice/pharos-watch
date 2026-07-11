@@ -392,6 +392,54 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBe(21_910_000);
   });
 
+  it("ignores provider logs outside the requested scan range before advancing", async () => {
+    const db = makeDb();
+    const config = MINT_BURN_CONFIGS[0]!;
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ blockNumber: 21_910_000 })],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_910_000, 1_718_650_752]]));
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+      tier: "critical",
+      fromBlock: 21_955_001,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/alchemy-key",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.summary.rowsRead).toBe(1);
+    expect(result.summary.rowsParsed).toBe(1);
+    expect(result.summary.rowsDropped).toBe(0);
+    expect(result.summary.maxBlockSeen).toBe(0);
+    expect(result.summary.advanceReason).toBe("full-success-empty");
+    expect(result.summary.advancedTo).toBe(21_960_000);
+    expect(result.newLastBlock).toBe(21_960_000);
+  });
+
   it("resumes from canonical sync-state progress", async () => {
     const db = makeDb({
       syncRows: [{
@@ -775,7 +823,7 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: Array.from({ length: 70 }, (_, index) =>
-          makeMintLog({ txHash: `0xbridge-mint-${index}`, logIndex: index }),
+          makeMintLog({ blockNumber: 21_949_999, txHash: `0xbridge-mint-${index}`, logIndex: index }),
         ),
         complete: true,
         scannedToBlock: 22_000_000,
@@ -784,7 +832,7 @@ describe("syncMintBurn", () => {
       })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_949_999, 1_718_650_752]]));
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);

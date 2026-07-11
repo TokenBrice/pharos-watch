@@ -112,6 +112,23 @@ describe("adaptUnitedPorPayload", () => {
     ]);
   });
 
+  it("treats missing or malformed ripcordDetails as undisclosed provider detail", () => {
+    const payload = { ...UNITED_POR_PAYLOAD, ripcord: true, ripcordDetails: null } as unknown as UnitedPorPayload;
+
+    const result = adaptUnitedPorPayload(payload, SLICE);
+
+    expect(result.metadata!.details).toMatchObject({ ripcord: true });
+    expect(result.metadata!.details).not.toHaveProperty("ripcordDetails");
+    expect(result.warnings).toEqual([
+      {
+        code: "united-por-ripcord",
+        message: "United Stables PoR reports a ripcord data-quality alarm: no further detail disclosed",
+        severity: "warning",
+        effect: "degraded",
+      },
+    ]);
+  });
+
   it("emits a coverage-shortfall degraded warning when reserves cover less than 99.5% of token supply", () => {
     const payload: UnitedPorPayload = {
       ...UNITED_POR_PAYLOAD,

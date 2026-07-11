@@ -52,6 +52,8 @@ type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
 
 const TAPE_EVENTS_LIMIT = 200;
 const ANNOTATION_QUERY_BUCKET_MS = 30 * DAY_MS;
+const ANNOTATION_EVENT_TYPES = ["depeg.opened", "depeg.peak_worsened"] as const;
+const ANNOTATION_EVENT_CLASSES = ["methodology"] as const;
 
 function buildAnnotationQueryWindow(fromMs: number, toMs: number): { since: number; until: number } {
   return {
@@ -105,6 +107,27 @@ function isTapeSeverityWorthPlotting(s: TapeEvent["severity"]): boolean {
   return s === "warning" || s === "severe" || s === "critical";
 }
 
+function buildAnnotationEventsPath(
+  stablecoinId: string,
+  queryWindow: { since: number; until: number } | null,
+): string {
+  const params = new URLSearchParams({
+    coin: stablecoinId,
+    severityFloor: "warning",
+    limit: String(TAPE_EVENTS_LIMIT),
+  });
+
+  if (queryWindow) {
+    params.set("since", String(queryWindow.since));
+    params.set("until", String(queryWindow.until));
+  }
+
+  for (const type of ANNOTATION_EVENT_TYPES) params.append("type", type);
+  for (const eventClass of ANNOTATION_EVENT_CLASSES) params.append("class", eventClass);
+
+  return `${API_PATHS.events()}?${params.toString()}`;
+}
+
 export function useChartAnnotations(
   stablecoinId: string,
   fromMs: number | null | undefined,
@@ -119,12 +142,7 @@ export function useChartAnnotations(
   const queryWindow = enabled ? buildAnnotationQueryWindow(fromMs as number, toMs as number) : null;
 
   const path = enabled
-    ? API_PATHS.events({
-        coin: stablecoinId,
-        since: queryWindow?.since,
-        until: queryWindow?.until,
-        limit: TAPE_EVENTS_LIMIT,
-      })
+    ? buildAnnotationEventsPath(stablecoinId, queryWindow)
     : API_PATHS.events();
 
   const query = useApiQueryWithMeta<TapeEventsResponseBody>(
