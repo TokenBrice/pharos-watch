@@ -40,6 +40,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/compute-depeg-resolver.ts",
   "worker/src/cron/compute-depeg-resolver-review.ts",
   "worker/src/cron/depeg-detection/decision-engine.ts",
+  "worker/src/cron/depeg-detection/native-quote-policy.ts",
   "worker/src/cron/depeg-detection/hydration.ts",
   "worker/src/cron/depeg-detection/persistence.ts",
   "worker/src/cron/depeg-detection/repair.ts",

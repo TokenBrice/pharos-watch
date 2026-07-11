@@ -36553,7 +36553,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Currently backed 1:1 by USDC held in an on-chain Peg Stability Module (about 117.85 USDC against 117.735154 kUSD outstanding as of 2026-07-03). By design kUSD is a delta-neutral synthetic dollar: a WETH vault leg paired with an equal short on Hyperliquid (Lido/wstETH staking long plus perpetual funding), but that vault leg is in a disclosed degraded state pending a v2 redeploy and is excluded from published reserves, so live backing is presently the USDC PSM reserve only.",
+    "collateral": "Currently backed 1:1 by USDC split across the on-chain mint and redeem Peg Stability Module contracts (1,115.853006 USDC against 1,114.737154 kUSD outstanding as of 2026-07-11). By design kUSD is a delta-neutral synthetic dollar: a WETH vault leg paired with an equal short on Hyperliquid (Lido/wstETH staking long plus perpetual funding), but that vault leg is in a disclosed degraded state pending a v2 redeploy and is excluded from published reserves, so live backing is presently the combined USDC PSM reserve only.",
     "pegMechanism": "1:1 mint and redemption against USDC through an on-chain Peg Stability Module: minting routes through KUSDPSM v3 (0x07eBb486, 10 bps fee, 10,000,000 USDC cap) which holds the kUSD MINTER_ROLE, and redemptions settle from the redeem-reserve PSM (0xFf3025ec) that holds the USDC backing. The intended steady-state peg pairs the PSM with a delta-neutral basis trade (wstETH staking long, Hyperliquid perpetual short) so holders carry no directional ETH exposure; that hedge leg is currently degraded and excluded.",
     "mechanismArchetype": "synthetic-delta-neutral",
     "proofOfReserves": {
@@ -36692,7 +36692,7 @@
       {
         "type": "info",
         "title": "Genesis beta; pending active runtime price coverage",
-        "message": "kUSD is live on Base but genesis-scale: circulating supply is about 117.735154 kUSD (roughly 118 USD) as of 2026-07-03. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row still has no usable price and CoinGecko does not resolve a Kerne USD coin, so Pharos keeps kUSD in the pre-launch/pre-active tracker until both active runtime gates are satisfied."
+        "message": "kUSD is live on Base but genesis-scale: circulating supply is 1,114.737154 kUSD (roughly 1,115 USD) as of 2026-07-11. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row still has no usable price and CoinGecko does not resolve a Kerne USD coin, so Pharos keeps kUSD in the pre-launch/pre-active tracker until both active runtime gates are satisfied."
       },
       {
         "type": "info",
@@ -36703,7 +36703,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-04",
     "launchPhase": "beta",
-    "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 118 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through the on-chain PSM. Staking wrapper skUSD (ERC-4626, 0xdEd74F7E) is deployed with a published live APY but near-zero third-party stake. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
+    "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,115 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through the combined mint and redeem PSM reserves. Staking wrapper skUSD (ERC-4626, 0xdEd74F7E) is deployed with a published live APY but near-zero third-party stake. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
     "featuredContent": [
       {
         "type": "article",

@@ -39,7 +39,7 @@ export function QueryStateNotice({
         <button
           type="button"
           onClick={onRetry}
-          className="pharos-focus-ring inline-flex shrink-0 items-center gap-1 rounded-sm px-1 font-medium hover:text-foreground"
+          className="pharos-focus-ring inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-sm px-2 font-medium hover:text-foreground"
           aria-label={`Retry ${label.toLowerCase()}`}
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />

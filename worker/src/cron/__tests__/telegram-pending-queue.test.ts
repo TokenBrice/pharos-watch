@@ -8,6 +8,7 @@ import {
 import { applyTelegramTransportControlSchema } from "../../test-helpers/telegram-transport-control-schema";
 
 const mockSendToChat = vi.fn();
+const mockMigrateTelegramChatId = vi.fn();
 const transportMocks = vi.hoisted(() => ({
   claim: vi.fn(),
   readPause: vi.fn(),
@@ -147,7 +148,7 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
 
     CREATE TABLE telegram_alert_dead_letters (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dead_letter_key TEXT UNIQUE,
+      dead_letter_key TEXT,
       pending_id INTEGER,
       chat_id TEXT,
       message_html TEXT,
@@ -172,6 +173,10 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       delivery_completed_at INTEGER,
       delivery_claim_expires_at INTEGER
     );
+
+    CREATE UNIQUE INDEX idx_tadl_dead_letter_key
+      ON telegram_alert_dead_letters(dead_letter_key)
+      WHERE dead_letter_key IS NOT NULL;
 
     CREATE TABLE telegram_chat_delivery_diagnostics (
       chat_id TEXT PRIMARY KEY,
@@ -346,6 +351,9 @@ vi.mock("../../lib/telegram-transport-control", async (importOriginal) => {
     recordTelegramTransportOutcomes: transportMocks.record,
   };
 });
+vi.mock("../../api/telegram-store/forget", () => ({
+  migrateTelegramChatId: mockMigrateTelegramChatId,
+}));
 
 const {
   disableBlockedSubscriber,
@@ -378,6 +386,7 @@ const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
   mockSendToChat.mockReset();
+  mockMigrateTelegramChatId.mockReset().mockResolvedValue(undefined);
   transportMocks.claim.mockReset().mockResolvedValue({
     allowed: true,
     mode: "pending",
@@ -1766,6 +1775,43 @@ describe("drainPendingQueue", () => {
     expect(
       db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_dead_letters")),
     ).toHaveLength(rows.length);
+  });
+
+  it("migrates a group after terminally archiving Telegram's old-chat response", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 400,
+      errorClass: "chat_migrated",
+      delivery: "permanent_failure",
+      retryAfterSec: null,
+      migrateToChatId: "-1001234567890",
+    });
+    const row = {
+      id: 1310,
+      chat_id: "-1234567890",
+      message_html: "migrated group alert",
+      disable_notification: 0,
+      created_at: now - 60,
+      attempts: 0,
+      chunk_index: 0,
+      dedupe_key: "-1234567890:v1:0:test",
+    };
+    const db = mockD1([
+      { match: "FROM telegram_pending_alerts p", rows: [row] },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+    ]);
+
+    await expect(drainPendingQueue(db, "bot-token", 1)).resolves.toMatchObject({
+      attempted: 1,
+      droppedPermanentFailure: 1,
+    });
+    expect(mockMigrateTelegramChatId).toHaveBeenCalledOnce();
+    expect(mockMigrateTelegramChatId).toHaveBeenCalledWith(db, "-1234567890", "-1001234567890");
   });
 
   it("treats a stale first strike (older than 24h) as a fresh first strike", async () => {
