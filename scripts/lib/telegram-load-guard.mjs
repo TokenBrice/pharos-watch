@@ -14,6 +14,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
     paths: [
       ".github/workflows/telegram-load.yml",
       "scripts/ci/check-telegram-load.ts",
+      "scripts/lib/telegram-load-scenarios.ts",
       "scripts/lib/telegram-load-guard.mjs",
       "scripts/maintenance/test-merge-gate.mjs",
       "scripts/__tests__/check-telegram-load.test.ts",
