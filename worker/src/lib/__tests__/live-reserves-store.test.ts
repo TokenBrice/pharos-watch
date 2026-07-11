@@ -33,13 +33,49 @@ describe("live-reserves-store", () => {
   it("treats a missing required reserve state row as infinitely stale", async () => {
     const db = mockD1([
       {
-        match: "SELECT MIN(last_attempted_at) AS oldest_ts",
-        rows: [],
-        first: { oldest_ts: 950, observed_count: 1 },
+        match: "FROM reserve_sync_state",
+        rows: [{
+          stablecoin_id: "coin-a",
+          adapter_key: "test",
+          breaker_key: "test",
+          last_attempted_at: 950,
+          last_success_at: 950,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        }],
       },
     ]);
 
     await expect(getMaxSyncAge(db, 1_000, ["coin-a", "coin-b"])).resolves.toBe(Infinity);
+  });
+
+  it("chunks configured reserve state reads within the D1 bind limit", async () => {
+    const stablecoinIds = Array.from({ length: 181 }, (_, index) => `coin-${index}`);
+    const db = mockD1([
+      {
+        match: "FROM reserve_sync_state",
+        rows: stablecoinIds.map((stablecoinId, index) => ({
+          stablecoin_id: stablecoinId,
+          adapter_key: "test",
+          breaker_key: "test",
+          last_attempted_at: 900 + index,
+          last_success_at: 900 + index,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        })),
+      },
+    ]);
+
+    await expect(getMaxSyncAge(db, 1_000, stablecoinIds)).resolves.toBe(100);
+    const reserveQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM reserve_sync_state"));
+    expect(reserveQueries).toHaveLength(3);
+    expect(reserveQueries.every((entry) => entry.binds.length <= 90)).toBe(true);
   });
 
   it("falls back when reserve composition exists without a matching successful sync state", async () => {

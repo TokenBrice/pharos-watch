@@ -302,6 +302,27 @@ export async function loadReplayPriceCacheForTrustedContinuity(
  */
 export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
 
+export function replaceZeroSupplyPrimaryAssets(
+  primaryAssets: readonly PeggedAsset[],
+  supplementalAssets: readonly PeggedAsset[],
+): { assets: PeggedAsset[]; replacedIds: string[] } {
+  const positiveSupplementalById = new Map(
+    supplementalAssets
+      .filter((asset) => sumPegBuckets(asset.circulating) > 0)
+      .map((asset) => [String(asset.id), asset] as const),
+  );
+  const replacedIds: string[] = [];
+  const assets = primaryAssets.map((asset) => {
+    if (sumPegBuckets(asset.circulating) > 0) return asset;
+    const replacement = positiveSupplementalById.get(String(asset.id));
+    if (!replacement) return asset;
+    replacedIds.push(String(asset.id));
+    return replacement;
+  });
+
+  return { assets, replacedIds: [...new Set(replacedIds)].sort() };
+}
+
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
   const observedAt = normalizeOptionalTimestamp(previous.supplyObservedAt);
   // Rows without provenance get one restore; the cache read path stamps
