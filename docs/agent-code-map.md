@@ -605,6 +605,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/data-invariant-canary.ts` - DataInvariantCanaryOptions, runDataInvariantCanary
 - `worker/src/cron/depeg-detection/decision-engine.ts` - decideDepegAsset, emitDepegDiagnostics
 - `worker/src/cron/depeg-detection/hydration.ts` - hydrateDepegDetection
+- `worker/src/cron/depeg-detection/native-quote-policy.ts` - applyNativeQuoteVeto, recoveryPriceForEvent, resolveDirectRecovery, resolvePeakUpdateCommand
 - `worker/src/cron/depeg-detection/persistence.ts` - persistDepegCommands
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
@@ -634,8 +635,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/hydration.ts` - BlacklistHydration, DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC, DewsSourceCoverage, DexLiquidityHistoryHydration, DexLiquidityHydration
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
-- `worker/src/cron/dex-discovery/crawl-coingecko-tickers.ts` - CoinGeckoTickersStageDependencies, crawlCoinGeckoTickersStage
-- ... 381 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 382 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -699,7 +699,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
 - `worker/src/lib/cadence-bucket.ts` - CadenceBucketClaim, CadenceBucketClaimResult, appendCadenceResultMetadata, cadenceBucketFor, claimCadenceBucket, completeCadenceBucket
-- ... 282 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 283 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

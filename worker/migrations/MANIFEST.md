@@ -138,6 +138,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0192     | `0192_telegram_adoption_analytics.sql`                        | Add aggregate-only adoption funnel and D7/D30 retention telemetry with idempotent subscriber milestones and identifier-free CTA quotas                 |
 | 0193     | `0193_yield_coverage_review_dispositions.sql`                 | Add durable evidence-fingerprinted Yield Intelligence coverage-review dispositions with bounded owner, review, and expiry metadata                      |
 | 0194     | `0194_yield_history_reproducible_pys_inputs.sql`              | Add versioned exact PYS input snapshots to Yield Intelligence history rows                                                                               |
+| 0195     | `0195_brla_native_recovery_price_repair.sql`                   | Clear BRLA event 90509's mixed-unit USD recovery price from its native-BRL quote-domain row                                                               |
 
 ## Retired Individual Migrations
 
@@ -214,6 +215,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0192_telegram_adoption_analytics.sql`: roll back adoption reporting by restoring the prior Worker and Pages versions. Keep aggregate funnel/retention rows and nullable subscriber milestone timestamps; they are inert for older code and contain no raw identifiers.
 - `0193_yield_coverage_review_dispositions.sql`: roll back coverage-review suppression by restoring the prior Worker. Keep the additive disposition rows as operator evidence; older Workers ignore the table and no promotion is applied automatically.
 - `0194_yield_history_reproducible_pys_inputs.sql`: roll back exact PYS history snapshots by restoring the prior Worker. Keep the nullable JSON input column; older Workers ignore it and existing history rows remain readable.
+- `0195_brla_native_recovery_price_repair.sql`: roll back the runtime quote-domain fix by restoring the prior Worker. Keep event 90509's repaired `NULL` recovery price; the discarded USD value was not comparable to the row's native-BRL prices.
 
 ## Rollback Procedure
 

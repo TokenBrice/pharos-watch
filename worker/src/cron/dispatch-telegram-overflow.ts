@@ -24,8 +24,13 @@ import {
   type PendingDrainResult,
 } from "./telegram-pending";
 import { isValidPendingSourceEventId } from "../lib/telegram-pending-provenance";
+import { OVERFLOW_PLAN_CACHE_KEY } from "../lib/telegram-overflow-plan-cache";
 
-export const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
+export {
+  OVERFLOW_PLAN_CACHE_KEY,
+  pruneOverflowPlanBacklogForChat,
+} from "../lib/telegram-overflow-plan-cache";
+
 export const OVERFLOW_PLAN_CACHE_VERSION = 1;
 export const LEGACY_OVERFLOW_MAX_PLAN_COUNT = 5_000;
 
@@ -159,36 +164,6 @@ export async function readOverflowPlanBacklog(
   if (!cached) return [];
   const parsed = parseLegacyOverflowPlanBacklog(cached.value);
   return parsed.kind === "ok" ? parsed.plans.filter((plan) => plan.expiresAt > nowSec) : [];
-}
-
-export async function pruneOverflowPlanBacklogForChat(
-  db: D1Database,
-  chatId: string,
-  nowSec: number,
-): Promise<void> {
-  const cached = await getCache(db, OVERFLOW_PLAN_CACHE_KEY);
-  if (!cached) return;
-  try {
-    const parsed = JSON.parse(cached.value) as unknown;
-    if (!isRecord(parsed) || parsed.version !== OVERFLOW_PLAN_CACHE_VERSION || !Array.isArray(parsed.plans)) {
-      return;
-    }
-    const remainingPlans = parsed.plans
-      .map((plan) => normalizeCachedOverflowPlan(plan, nowSec))
-      .filter((plan): plan is OverflowPlannedSubscriberAlert => plan != null && plan.chatId !== chatId);
-    if (remainingPlans.length === parsed.plans.length) return;
-    await setCache(
-      db,
-      OVERFLOW_PLAN_CACHE_KEY,
-      JSON.stringify({
-        version: OVERFLOW_PLAN_CACHE_VERSION,
-        writtenAt: nowSec,
-        plans: remainingPlans,
-      }),
-    );
-  } catch {
-    return;
-  }
 }
 
 function withOverflowPlanExpiry(plan: PlannedSubscriberAlert, nowSec: number): OverflowPlannedSubscriberAlert {
