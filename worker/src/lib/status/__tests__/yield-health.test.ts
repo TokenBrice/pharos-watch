@@ -120,6 +120,51 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.coverageRatio).toBe(0);
   });
 
+  it("surfaces durable coverage-audit operator queue persistence", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 600,
+          value: JSON.stringify({
+            updatedAt: NOW - 600,
+            rankings: [{ id: "usdc-circle" }],
+          }),
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 600,
+          value: JSON.stringify({
+            operatorQueue: {
+              persistence: "durable",
+              headlineGaps: [
+                {
+                  id: "manifest-missing:eurc",
+                  kind: "manifest-missing",
+                  title: "eurc",
+                  detail: "Yield-bearing tracked asset has no adapter-manifest entry.",
+                  actionHint: "accept",
+                  stablecoinIds: ["eurc"],
+                },
+              ],
+              recommendationCandidates: [],
+            },
+          }),
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.coverageAudit.queuePersistence).toBe("durable");
+    expect(summary.coverageAudit.headlineGaps).toEqual([
+      expect.objectContaining({
+        id: "manifest-missing:eurc",
+        kind: "manifest-missing",
+      }),
+    ]);
+  });
+
   it("degrades aggregate health when a published non-USD benchmark is stale behind fresh USD", async () => {
     const sourceRisk = {
       sourceRiskScore: 0,
