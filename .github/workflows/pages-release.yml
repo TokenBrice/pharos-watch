@@ -217,6 +217,10 @@ jobs:
           SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_UI_OVERFLOW_WORKERS: "6"
           SMOKE_PAGES_ASSET_WORKERS: "3"
+          # Deep Yield routes share this 4-core runner with axe, UI, and mobile
+          # browsers. Keep the assertions strict but allow navigation to settle
+          # under that deliberate contention.
+          SMOKE_PAGES_ASSET_TIMEOUT_MS: "60000"
           SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
           SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
