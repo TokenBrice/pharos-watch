@@ -3943,11 +3943,6 @@
         },
         {
           "authorityType": "eoa",
-          "directMintAbility": "none",
-          "canRaiseCap": true
-        },
-        {
-          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": true
         }
@@ -4357,7 +4352,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "mechanismArchetype": "fiat-cash",
@@ -7395,7 +7390,7 @@
     "id": "gramg-token-teknoloji",
     "name": "Gram Gold",
     "symbol": "GRAMG",
-    "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin from Turkey, backed by one gram of physical gold per token held at Turkish bank custodians.",
+    "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin, minted 1:1 against on-chain PAXG reserves and targeting one gram of gold value per token.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -7410,9 +7405,10 @@
     "commodityOunces": 0.0321507466,
     "reserves": [
       {
-        "name": "Physical gold in Turkish bank custody",
+        "name": "PAXG (Paxos Gold) on-chain reserve wallet",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "paxg-paxos"
       }
     ],
     "collateralQuality": "rwa",
@@ -16739,7 +16735,7 @@
           "canRaiseCap": "unknown"
         },
         {
-          "authorityType": "eoa",
+          "authorityType": "timelock",
           "directMintAbility": "none",
           "canRaiseCap": true
         },
@@ -23752,7 +23748,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },

@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
-  "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
+  "pegMechanism": "KMS Labs' ERC-20 KAG is backed 1:1 by Kinesis-native KAG after compliance onboarding; native KAG is then redeemable for allocated physical silver through Kinesis Cayman. ERC-20 balances do not accrue Kinesis transaction-fee yield.",
   "mechanismArchetype": "fiat-cash",
   "commodityOunces": 1,
   "detailProvider": "commodity",

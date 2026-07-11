@@ -473,7 +473,7 @@
               "0xe9441b34f71659cca2bfe90d98ee0e57d9cad28f",
               "0x4d47a7a89478745200bd51c26ba87664538df541",
               "0x080001dbe12fa46a1d7c03fa0cbf1839e367f155",
-              "0xd55114bfe98a2ca16202aa741bee5717652926160",
+              "0xd55114BfE98a2ca16202Aa741BeE571765292616",
               "0x9edec77dd2651ce062ab17e941347018ad4eaea9"
             ],
             "threshold": 4,
@@ -14950,7 +14950,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA (which also owns the ProxyAdmin). On Base the contract is OP-bridge-integrated; DEFAULT_ADMIN and a custom minter role are held by separate EOAs controlled by the issuer.",
+      "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA (which also owns the ProxyAdmin). On Base, the discontinued OP bridge was replaced on June 30, 2026 by an independently gold-backed native deployment whose MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by the issuer EOA.",
       "controls": [
         {
           "label": "Gold Token SA issuance backend",
@@ -14969,20 +14969,22 @@
           "evidence": "At Ethereum block 25295039: hasRole(MINTER_ROLE, 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d) = true; hasRole(DEFAULT_ADMIN_ROLE, 0xb1c1bc...) = true. eth_getCode on 0xb1c1bc... = 2 bytes (EOA confirmed). DGLD ETH (0xa9299c...) is a TransparentUpgradeableProxy (EIP-1967 implementation = 0x5ee71b30db71cee806f0d5cbbd57bfe1da3b2875 = DGLDTokenV3); proxy admin = OZ ProxyAdmin contract 0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629 whose owner() = same EOA 0xb1c1bc... The same EOA controls minting, role admin, and contract upgrades."
         },
         {
-          "label": "DGLD Base DEFAULT_ADMIN_ROLE — issuer EOA",
-          "role": "minter-admin",
-          "authorityType": "eoa",
-          "directMintAbility": "none",
-          "canRaiseCap": true,
-          "evidence": "At Base block 47200730: DGLD Base (0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9) is an ERC1967Proxy (OP-bridge-integrated, DGLDInitialized with bridge=0x4200...0010). Creation tx granted DEFAULT_ADMIN_ROLE (0x0000) to EOA 0xE003a81a40803FedB701870c589C0A96D14544A0 (eth_getCode = 2 bytes). The contract does not use a proxy admin slot (UUPS or bridge-controlled upgradeability)."
-        },
-        {
-          "label": "DGLD Base custom minter role (0x9a5676...) — issuer EOA",
+          "label": "DGLD Base MINTER_ROLE + DEFAULT_ADMIN_ROLE — issuer EOA",
           "role": "direct-minter",
           "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": true,
-          "evidence": "At Base block 47200730: hasRole(0x9a5676d20ee27a0aa04328121021e5dfd796c72f9121264573c1b9b4af409f1a, 0xf661b59eccd3B56C34C5bd590e31B7e3EBD6EaA2) = true; eth_getCode on 0xf661b5... = 2 bytes (EOA confirmed). This role was granted at contract initialization (creation tx log confirmed). A second custom role (0x90a092...) was granted to EOA 0x5Ce7cC86E8bd3096DEcb6FEc9A1Edc0FB8b1D324 (also confirmed as EOA)."
+          "sources": [
+            {
+              "label": "DGLD post-incident report and Base migration update",
+              "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+            },
+            {
+              "label": "DGLD Base contract",
+              "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A"
+            }
+          ],
+          "evidence": "The former OP-bridge representation at 0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9 was paused and deprecated on June 30, 2026. On the replacement native Base DGLD proxy at 0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a, DEFAULT_ADMIN_ROLE and MINTER_ROLE resolve to issuer EOA 0xE003a81a40803FedB701870c589C0A96D14544A0; both roles were read against the current deployment after the bridge closure."
         }
       ],
       "review": {
@@ -14997,10 +14999,10 @@
           },
           {
             "label": "DGLD Base contract",
-            "url": "https://basescan.org/address/0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9"
+            "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A"
           }
         ],
-        "evidence": "At ETH block 25295039: MINTER_ROLE + DEFAULT_ADMIN_ROLE on DGLDTokenV3 proxy held by EOA 0xb1c1bc... (also owns ProxyAdmin). At Base block 47200730: DEFAULT_ADMIN = EOA 0xE003a8..., custom minter role = EOA 0xf661b5..., both confirmed as EOAs via eth_getCode. DGLD Base is OP-bridge-integrated (bridge=0x4200...0010) but bridge does not hold MINTER_ROLE; issuer EOAs hold direct mint capability.",
+        "evidence": "At ETH block 25295039: MINTER_ROLE + DEFAULT_ADMIN_ROLE on DGLDTokenV3 proxy held by EOA 0xb1c1bc... (also owns ProxyAdmin). The issuer closed the Ethereum-Base bridge on June 30, 2026, paused and deprecated the old Base representation, and redeployed Base as an independently gold-backed native issuance at 0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a. The replacement Base deployment's DEFAULT_ADMIN_ROLE and MINTER_ROLE both resolve to issuer EOA 0xE003a8...",
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11"
       }
@@ -16369,7 +16371,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
@@ -27383,7 +27385,7 @@
     "detailProvider": "commodity",
     "name": "Gram Gold",
     "symbol": "GRAMG",
-    "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin from Turkey, backed by one gram of physical gold per token held at Turkish bank custodians.",
+    "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin, minted 1:1 against on-chain PAXG reserves and targeting one gram of gold value per token.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -27537,9 +27539,10 @@
     },
     "reserves": [
       {
-        "name": "Physical gold in Turkish bank custody",
+        "name": "PAXG (Paxos Gold) on-chain reserve wallet",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "paxg-paxos"
       }
     ],
     "liveReservesConfig": {
@@ -27819,7 +27822,7 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 7/4 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
+      "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
       "inheritedFrom": "usdc-circle",
       "controls": [
         {
@@ -27829,7 +27832,7 @@
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
-          "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 7/4 managing vault parameters only, not minting.",
+          "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 4/7 managing vault parameters only, not minting.",
           "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
@@ -27871,7 +27874,7 @@
             "url": "https://docs.morpho.org/curate/"
           }
         ],
-        "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
+        "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11"
       }
@@ -27999,7 +28002,7 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "confidence": "verified",
-      "summary": "gtUSDCp is an immutable MetaMorpho V2 vault (no proxy on Ethereum); shares minted only against USDC deposits. Vault owner is the same Gauntlet Safe 7/4 (v1.3.0) as gtUSDC. Base USDC inherited from Circle.",
+      "summary": "gtUSDCp is an immutable MetaMorpho V2 vault (no proxy on Ethereum); shares minted only against USDC deposits. Vault owner is the same Gauntlet Safe 4/7 (v1.3.0) as gtUSDC. Base USDC inherited from Circle.",
       "inheritedFrom": "usdc-circle",
       "controls": [
         {
@@ -28009,7 +28012,7 @@
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
-          "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 7/4 managing parameters only.",
+          "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
           "modulesOrGuardsStatus": "none-detected",
           "sources": [
             {
@@ -28021,7 +28024,7 @@
               "url": "https://docs.morpho.org/curate/"
             }
           ],
-          "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 7/4 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
+          "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 4/7 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
         },
         {
           "chain": "ethereum",
@@ -28051,7 +28054,7 @@
             "url": "https://docs.morpho.org/curate/"
           }
         ],
-        "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
+        "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
         "reviewer": "Claude Phase 0c continuation",
         "reviewedAt": "2026-06-11"
       }
@@ -35090,7 +35093,7 @@
       "navToken": false
     },
     "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
-    "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
+    "pegMechanism": "KMS Labs' ERC-20 KAG is backed 1:1 by Kinesis-native KAG after compliance onboarding; native KAG is then redeemable for allocated physical silver through Kinesis Cayman. ERC-20 balances do not accrue Kinesis transaction-fee yield.",
     "mechanismArchetype": "fiat-cash",
     "commodityOunces": 1,
     "geckoId": "kinesis-silver",
@@ -35897,7 +35900,7 @@
       {
         "chain": "bsc",
         "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
-        "decimals": 18
+        "decimals": 0
       },
       {
         "chain": "ethereum",
@@ -58759,8 +58762,8 @@
             "version": "1.4.1",
             "owners": [
               "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88",
-              "0xe45bb0d3cc77702e1310bb621c59c778304a42d",
-              "0x09ce2d1c37772f7ff666b6447a66a5ebd28337990",
+              "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
+              "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
               "0x7b1187106a3ac9d2602f41224a06e247fc12be37",
               "0xe8241facb568e4c880490e8ab4e015f2572e6976",
               "0x8b3641db7737ffab752718fcc772161ec09fad01"
@@ -60614,7 +60617,7 @@
           "address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
           "label": "thBILL DEFAULT_ADMIN TimelockController (minDelay=0)",
           "role": "minter-admin",
-          "authorityType": "eoa",
+          "authorityType": "timelock",
           "directMintAbility": "none",
           "canRaiseCap": true,
           "sources": [
@@ -68703,8 +68706,8 @@
     "notices": [
       {
         "type": "info",
-        "title": "Symbol collision on Solana",
-        "message": "The 'USDH' symbol is also used on Solana by Native Markets and Hermetica — distinct issuers with separate collateral models. This entry tracks the original Hubble Protocol USDH."
+        "title": "Symbol collision (cross-issuer ticker)",
+        "message": "The USDH/USDh ticker collides across issuers: Hubble USDH is on Solana, Native Markets USDH is on Hyperliquid and HyperEVM, and Hermetica USDh is on Stacks. This entry tracks the original Hubble Protocol USDH."
       },
       {
         "type": "info",
@@ -70031,7 +70034,7 @@
     "jurisdiction": {
       "country": "Norway",
       "regulator": "Finanstilsynet",
-      "license": "MiCA E-Money Token (EMT)"
+      "license": "EMI license; MiCA EMT authorization pending"
     },
     "mica": {
       "status": "pending",
@@ -82030,7 +82033,7 @@
           "url": "https://docs.virtue.money/overview/what-is-vusd"
         }
       ],
-      "evidence": "Virtue is a crypto-collateralized protocol, but the IOTA deployment is not yet represented in Pharos contract metadata and available sources do not prove the absence of admin or pause surfaces.",
+      "evidence": "Virtue is a crypto-collateralized protocol with tracked IOTA Move and IOTA EVM deployments. The IOTA Rebased package has a verified AdminCap holder, so Pharos retains Possible while the full holder-facing pause and blacklist surface remains unresolved.",
       "reviewer": "Codex coverage expansion",
       "reviewedAt": "2026-05-12"
     },
@@ -88314,7 +88317,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },

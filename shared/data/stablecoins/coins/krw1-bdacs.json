@@ -19,7 +19,7 @@
     {
       "chain": "bsc",
       "address": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
-      "decimals": 18
+      "decimals": 0
     },
     {
       "chain": "ethereum",

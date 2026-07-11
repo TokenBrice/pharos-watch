@@ -64,7 +64,7 @@
         "url": "https://docs.virtue.money/overview/what-is-vusd"
       }
     ],
-    "evidence": "Virtue is a crypto-collateralized protocol, but the IOTA deployment is not yet represented in Pharos contract metadata and available sources do not prove the absence of admin or pause surfaces.",
+    "evidence": "Virtue is a crypto-collateralized protocol with tracked IOTA Move and IOTA EVM deployments. The IOTA Rebased package has a verified AdminCap holder, so Pharos retains Possible while the full holder-facing pause and blacklist surface remains unresolved.",
     "reviewer": "Codex coverage expansion",
     "reviewedAt": "2026-05-12"
   },

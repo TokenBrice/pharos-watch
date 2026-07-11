@@ -38,7 +38,7 @@
   "jurisdiction": {
     "country": "Norway",
     "regulator": "Finanstilsynet",
-    "license": "MiCA E-Money Token (EMT)"
+    "license": "EMI license; MiCA EMT authorization pending"
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",

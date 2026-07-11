@@ -22,7 +22,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 7/4 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
+    "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -33,7 +33,7 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 7/4 managing vault parameters only, not minting.",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot found — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is a Safe 4/7 managing vault parameters only, not minting.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -74,7 +74,7 @@
           "url": "https://docs.morpho.org/curate/"
         }
       ],
-      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
+      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }

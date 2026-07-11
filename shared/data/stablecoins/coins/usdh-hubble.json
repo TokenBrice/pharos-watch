@@ -80,8 +80,8 @@
   "notices": [
     {
       "type": "info",
-      "title": "Symbol collision on Solana",
-      "message": "The 'USDH' symbol is also used on Solana by Native Markets and Hermetica — distinct issuers with separate collateral models. This entry tracks the original Hubble Protocol USDH."
+      "title": "Symbol collision (cross-issuer ticker)",
+      "message": "The USDH/USDh ticker collides across issuers: Hubble USDH is on Solana, Native Markets USDH is on Hyperliquid and HyperEVM, and Hermetica USDh is on Stacks. This entry tracks the original Hubble Protocol USDH."
     },
     {
       "type": "info",

@@ -129,7 +129,7 @@
       {
         "label": "thBILL DEFAULT_ADMIN TimelockController (minDelay=0)",
         "role": "minter-admin",
-        "authorityType": "eoa",
+        "authorityType": "timelock",
         "address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
         "chain": "ethereum",
         "directMintAbility": "none",

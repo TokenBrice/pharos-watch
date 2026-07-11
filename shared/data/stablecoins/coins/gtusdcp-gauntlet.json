@@ -22,7 +22,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "gtUSDCp is an immutable MetaMorpho V2 vault (no proxy on Ethereum); shares minted only against USDC deposits. Vault owner is the same Gauntlet Safe 7/4 (v1.3.0) as gtUSDC. Base USDC inherited from Circle.",
+    "summary": "gtUSDCp is an immutable MetaMorpho V2 vault (no proxy on Ethereum); shares minted only against USDC deposits. Vault owner is the same Gauntlet Safe 4/7 (v1.3.0) as gtUSDC. Base USDC inherited from Circle.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -33,7 +33,7 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 7/4 managing parameters only.",
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
         "sources": [
           {
             "label": "Morpho vault page",
@@ -44,7 +44,7 @@
             "url": "https://docs.morpho.org/curate/"
           }
         ],
-        "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 7/4 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
+        "evidence": "At Ethereum block 25295157: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (same Gauntlet Safe 4/7 v1.3.0 as gtUSDC, confirmed). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC)."
       },
       {
         "chain": "ethereum",
@@ -74,7 +74,7 @@
           "url": "https://docs.morpho.org/curate/"
         }
       ],
-      "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 7/4 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
+      "evidence": "At Ethereum block 25295157: Ethereum vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Gauntlet Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Base and Arbitrum vaults share same design; covered under the Ethereum primary audit. Shares minted deposit-only.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }
