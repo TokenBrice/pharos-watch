@@ -7409,7 +7409,7 @@
       {
         "name": "PAXG (Paxos Gold) on-chain reserve wallet",
         "pct": 100,
-        "risk": "low",
+        "risk": "medium",
         "coinId": "paxg-paxos"
       }
     ],

@@ -70,7 +70,7 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(262);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(121);
+    expect(outcomes).toHaveLength(261);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(120);
   });
 });

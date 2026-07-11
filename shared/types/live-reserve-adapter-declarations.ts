@@ -796,6 +796,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "retired",
+      rationale:
+        "Native Markets USDH entered the frozen archive on 2026-07-11 after its USDC migration; retain the adapter only for historical review and re-evaluate if the issuer resumes the product.",
+      parkedSince: "2026-07-11",
+      nextReview: "2026-10-11",
+    },
     validation: {
       // Native Markets USDH publishes attestation PDFs monthly; use the 33-day window.
       maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,

@@ -145,7 +145,7 @@ describe("resolveTelegramPresetTargets", () => {
       "usdt-tether": 98_000_000_000,
       "eurc-circle": 5_000_000_000,
       "xaut-tether": 4_000_000_000,
-      "aeur-anchored-coins": 3_000_000_000,
+      "a7a5-old-vector": 3_000_000_000,
     });
 
     const result = await resolveTelegramPresetTargets(db, ["non-usd-top10"]);
@@ -156,7 +156,7 @@ describe("resolveTelegramPresetTargets", () => {
     expect(result.presets[0]?.stablecoinIds.slice(0, 3)).toEqual([
       "eurc-circle",
       "xaut-tether",
-      "aeur-anchored-coins",
+      "a7a5-old-vector",
     ]);
     expect(result.presets[0]?.stablecoinIds).toHaveLength(10);
     expect(result.presets[0]?.stablecoinIds).not.toContain("usdc-circle");

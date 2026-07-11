@@ -39,7 +39,6 @@ const LATE_MONTHLY_SOURCE_AGE_IDS = [
   "kesm-mento",
   "phpm-mento",
   "srusd-reservoir",
-  "usdh-native-markets",
   "usdy-ondo-finance",
   "uty-xsy",
   "wsrusd-reservoir",

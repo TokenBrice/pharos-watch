@@ -26,8 +26,8 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(262);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(121);
+    expect(unsupported).toHaveLength(261);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(120);
     expect(exclusivelyUnsupported).toHaveLength(20);
   });
 

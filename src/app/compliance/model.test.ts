@@ -77,10 +77,10 @@ describe("Compliance model", () => {
       search: "",
     });
 
-    const usdh = watchRows.find((row) => row.id === "usdh-native-markets" && row.regime === "genius");
-    expect(usdh?.primaryFederalRegulator).toBe("OCC");
-    expect(usdh?.latestReportDate).toBe("2026-04-30");
-    expect(usdh?.monthlyAttestationPresent).toBe(true);
+    const pyusd = watchRows.find((row) => row.id === "pyusd-paypal" && row.regime === "genius");
+    expect(pyusd?.primaryFederalRegulator).toBe("OCC");
+    expect(pyusd?.latestReportDate).toBe("2026-04-30");
+    expect(pyusd?.monthlyAttestationPresent).toBe(true);
 
     const cusd = watchRows.find((row) => row.id === "cusd-celo" && row.regime === "genius");
     expect(cusd?.foreignExceptionStatus).toBe("unknown");

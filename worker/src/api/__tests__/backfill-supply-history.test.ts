@@ -486,9 +486,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=aeur-anchored-coins&startDay=2023-11-13&endDay=2023-11-15"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2023-11-13&endDay=2023-11-15"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=aeur-anchored-coins&startDay=2023-11-13&endDay=2023-11-15", {
+      makeApiRequest("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2023-11-13&endDay=2023-11-15", {
         adminKey: "secret",
       }),
     );
