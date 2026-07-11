@@ -972,7 +972,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   },
   "reconciliation": {
     "status": "verified",
-    "runId": "night-watch-usdt-tron-2026-07-09:<bookmark>",
+    "runId": "night-watch-usdt-tron-2026-07-09:apply:1783660000",
     "manifestId": "night-watch-usdt-tron-2026-07-09",
     "manifestSha256": "bc46bbce09a1c7e926499c07e6f968a914ae9df58c8acec552b7ebff1425f917",
     "bookmarkRecorded": true,
