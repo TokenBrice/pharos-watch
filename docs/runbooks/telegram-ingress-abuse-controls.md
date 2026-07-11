@@ -2,7 +2,7 @@
 
 ## Scope
 
-This runbook covers the three unauthenticated public POST entrypoints on `api.pharos.watch` that authenticate with Telegram credentials inside the Worker:
+This runbook covers the three unauthenticated public POST entrypoints that authenticate with Telegram credentials inside the Worker. `api.pharos.watch` uses the canonical limiter budget shown below; requests reaching the same paths on another Worker host use a separate noncanonical-host budget.
 
 | Route                                 | Worker per-colo ceiling | WAF per-IP ceiling | Body cap |
 | ------------------------------------- | ----------------------: | -----------------: | -------: |
@@ -10,7 +10,7 @@ This runbook covers the three unauthenticated public POST entrypoints on `api.ph
 | `POST /api/telegram-mini-app/session` |               1,600/min |            120/min |   16 KiB |
 | `POST /api/telegram-mini-app/mutate`  |               9,600/min |            360/min |   16 KiB |
 
-The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting.
+The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting. Noncanonical hosts share a separate key per route, so preview, site-data, or ops-origin traffic cannot consume the canonical public API budget while still remaining pre-auth rate limited.
 
 The WAF rules are **required operator configuration, not deployed state represented by this repository**. `worker/config/telegram-ingress-abuse-policy.json` is the configuration of record. `wrangler deploy` installs the Worker bindings but does not create zone WAF rules.
 
@@ -18,7 +18,7 @@ The WAF rules are **required operator configuration, not deployed state represen
 
 `worker/src/handlers/http/request-dispatch.ts` applies the ingress guard after CORS preflight and maintenance mode, but before Access/API-key gates, routing, Telegram authentication, D1, request attribution, or usage analytics:
 
-1. Match the canonical public API hostname (`api.pharos.watch`), exact pathname, and `POST` method. Requests for these paths on other Worker hosts skip this pre-auth limiter and continue to the normal host/lane gate.
+1. Match the exact pathname and `POST` method. `api.pharos.watch` uses the canonical route key; every other routed hostname uses the route's shared noncanonical-host key before continuing to the normal host/lane gate.
 2. Reject malformed declared `Content-Length` with `400` and declared oversize bodies with `413`.
 3. Charge the path-specific Rate Limiting binding. Exhaustion returns `429`; a missing or failed binding fails closed with `503` and `Retry-After: 1`.
 4. Read at most the path body cap so chunked or misleading requests cannot bypass the declared-size check.

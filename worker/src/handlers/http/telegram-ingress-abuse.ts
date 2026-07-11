@@ -83,9 +83,14 @@ export interface TelegramIngressAbuseEnv {
 }
 
 function resolvePolicy(request: Request, url: URL): TelegramIngressPolicy | null {
-  if (url.hostname !== API_HOSTNAME) return null;
   if (request.method !== "POST") return null;
   return POLICIES_BY_PATH.get(url.pathname) ?? null;
+}
+
+function resolveRateLimitKey(policy: TelegramIngressPolicy, url: URL): string {
+  return url.hostname === API_HOSTNAME
+    ? policy.rateLimitKey
+    : `${policy.rateLimitKey}:noncanonical-host`;
 }
 
 function resolveRateLimiter(
@@ -266,7 +271,7 @@ export async function evaluateTelegramIngressAbuseGate(
 
   let allowed: boolean;
   try {
-    allowed = (await limiter.limit({ key: policy.rateLimitKey })).success;
+    allowed = (await limiter.limit({ key: resolveRateLimitKey(policy, url) })).success;
   } catch {
     logRejection({
       policy,

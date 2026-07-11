@@ -127,9 +127,14 @@ describe("Telegram ingress abuse gate", () => {
     expect(Object.values(env).every((limiter) => vi.mocked(limiter.limit).mock.calls.length === 0)).toBe(true);
   });
 
-  it("only charges the pre-auth limiter on the public API hostname", async () => {
+  it("isolates noncanonical hosts from the public API limiter budget", async () => {
     const env = createEnv();
     const policy = TELEGRAM_INGRESS_POLICIES.mini_app_session;
+    const canonical = post(policy.path, "{}");
+
+    await expect(evaluateTelegramIngressAbuseGate(canonical, new URL(canonical.url), env)).resolves.toMatchObject({
+      response: null,
+    });
 
     for (const hostname of ["site-api.pharos.watch", "ops-api.pharos.watch", "pharos-watch-preview.workers.dev"]) {
       const request = new Request(`https://${hostname}${policy.path}`, {
@@ -138,11 +143,32 @@ describe("Telegram ingress abuse gate", () => {
       });
       const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
-      expect(result).toEqual({ request, response: null });
-      expect(request.bodyUsed).toBe(false);
+      expect(result.response).toBeNull();
+      await expect(result.request.text()).resolves.toBe("{}");
     }
 
-    expect(env.TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT.limit).not.toHaveBeenCalled();
+    expect(vi.mocked(env.TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT.limit).mock.calls).toEqual([
+      [{ key: policy.rateLimitKey }],
+      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
+      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
+      [{ key: `${policy.rateLimitKey}:noncanonical-host` }],
+    ]);
+  });
+
+  it("rate limits alternate-host webhooks before downstream authentication", async () => {
+    const limiter = createLimiter(async () => ({ success: false }));
+    const env = createEnv({ TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: limiter });
+    const policy = TELEGRAM_INGRESS_POLICIES.webhook;
+    const request = new Request(`https://pharos-watch-preview.workers.dev${policy.path}`, {
+      method: "POST",
+      body: "{}",
+    });
+
+    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+
+    expect(result.response?.status).toBe(429);
+    expect(request.bodyUsed).toBe(false);
+    expect(limiter.limit).toHaveBeenCalledWith({ key: `${policy.rateLimitKey}:noncanonical-host` });
   });
 
   it("rejects declared body violations before spending the rate-limit or downstream auth budget", async () => {
