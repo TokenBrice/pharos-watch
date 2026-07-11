@@ -1,13 +1,14 @@
 import { executeAtomicBatch } from "../lib/db";
-
-export const TELEGRAM_RECAP_PAGE_SIZE = 90;
-export const TELEGRAM_RECAP_PENDING_PRIORITY = 100;
-export const TELEGRAM_RECAP_PENDING_TTL_SEC = 6 * 60 * 60;
-export const TELEGRAM_RECAP_FORMAT_VERSION = 1;
+import {
+  TELEGRAM_RECAP_DUE_PAGE_SIZE,
+  TELEGRAM_RECAP_FORMATTER_VERSION,
+  TELEGRAM_RECAP_PENDING_PRIORITY,
+  TELEGRAM_RECAP_TTL_SEC,
+} from "@shared/lib/telegram-recap-policy";
 
 export function buildTelegramRecapDedupeKey(chatId: string, localDate: string): string {
   if (!chatId || !localDate) throw new Error("Telegram recap dedupe identity is required");
-  return `recap:${chatId}:${localDate}:v${TELEGRAM_RECAP_FORMAT_VERSION}`;
+  return `recap:${chatId}:${localDate}:v${TELEGRAM_RECAP_FORMATTER_VERSION}`;
 }
 
 export type TelegramRecapTargetStatus =
@@ -242,9 +243,9 @@ export async function setTelegramRecapPreference(
 export async function listDueTelegramRecapPreferences(
   db: D1Database,
   nowSec: number,
-  limit: number = TELEGRAM_RECAP_PAGE_SIZE,
+  limit: number = TELEGRAM_RECAP_DUE_PAGE_SIZE,
 ): Promise<DueTelegramRecapPreference[]> {
-  const boundedLimit = Math.max(1, Math.min(TELEGRAM_RECAP_PAGE_SIZE, Math.floor(limit)));
+  const boundedLimit = Math.max(1, Math.min(TELEGRAM_RECAP_DUE_PAGE_SIZE, Math.floor(limit)));
   const rows = await db.prepare(`
     SELECT p.chat_id, p.enabled, p.cadence, p.delivery_hour_local,
            p.next_due_at, p.last_window_end_at, p.last_delivered_local_date,
@@ -338,7 +339,7 @@ export async function queueTelegramRecapTarget(
     input.nowSec,
     input.pendingDedupeKey,
     TELEGRAM_RECAP_PENDING_PRIORITY,
-    input.nowSec + TELEGRAM_RECAP_PENDING_TTL_SEC,
+    input.nowSec + TELEGRAM_RECAP_TTL_SEC,
     input.recapKey,
     input.preferenceGeneration,
     input.markupPolicyJson ?? null,
