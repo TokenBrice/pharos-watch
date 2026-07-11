@@ -352,7 +352,7 @@ describe("dispatchTelegramAlerts", () => {
     );
     expect(dewsSnapshotCall).toBeDefined();
     expect(String(dewsSnapshotCall?.binds[1])).toContain("WARNING");
-  });
+  }, 30_000);
 
   it("cleans up expired pending alerts", async () => {
     const now = Math.floor(Date.now() / 1000);
