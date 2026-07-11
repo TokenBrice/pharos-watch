@@ -885,6 +885,7 @@ export async function drainPendingQueue(
     : limit;
   const pending = await claimDuePendingRows(db, nowSec, claimLimit, claimOwner, maxPriority);
   if (pending.length === 0) {
+    await recordTelegramBotWideTransportOutcomes(db, nextTransportPermit, [], nowSec);
     return emptyDrainResult();
   }
 
@@ -1075,7 +1076,6 @@ export async function drainPendingQueue(
         const attemptedOutcomes = results
           .filter((result) => result.attempted !== false)
           .map((result) => ({ chatId: result.chatId, result }));
-        if (attemptedOutcomes.length === 0) return;
         await recordTelegramBotWideTransportOutcomes(
           db,
           transportPermit,
