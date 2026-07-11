@@ -46,6 +46,11 @@ export const EMPTY_BLACKLIST_RECONCILIATION_STATUS: BlacklistReconciliationStatu
   completedAt: null,
 };
 
+function publicReconciliationRunId(row: ReconciliationRunRow): string {
+  if (!row.time_travel_bookmark || !row.run_id.includes(row.time_travel_bookmark)) return row.run_id;
+  return `${row.manifest_id}:bookmark-redacted`;
+}
+
 export async function loadBlacklistReconciliationStatus(db: D1Database): Promise<BlacklistReconciliationStatus> {
   const row = await db
     .prepare(
@@ -67,7 +72,7 @@ export async function loadBlacklistReconciliationStatus(db: D1Database): Promise
   if (!row) return { ...EMPTY_BLACKLIST_RECONCILIATION_STATUS };
   return {
     status: row.status,
-    runId: row.run_id,
+    runId: publicReconciliationRunId(row),
     manifestId: row.manifest_id,
     manifestSha256: row.manifest_sha256,
     bookmarkRecorded: Boolean(row.time_travel_bookmark),

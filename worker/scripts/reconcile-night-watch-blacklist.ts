@@ -923,7 +923,7 @@ export async function runNightWatchBlacklistReconciliation(
   if (!verifyBookmark(options.database, bookmark)) {
     throw new Error("Provided Time Travel bookmark is not the current D1 bookmark");
   }
-  const runId = `${manifest.manifestId}:${bookmark}`;
+  const runId = `${manifest.manifestId}:apply:${startedAt}`;
   const insertedCount = eventsBefore.missingIds.length;
   const initialBalanceVerification: BalanceVerification = {
     expectedCount: expectations.length,
