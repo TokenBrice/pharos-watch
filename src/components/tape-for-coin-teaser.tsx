@@ -165,11 +165,13 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
 }
 
 export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
-  const { data, isLoading } = useLatestEvents({ coin: coinId, limit: 5 });
+  const { data, dataUpdatedAt, isLoading } = useLatestEvents({ coin: coinId, limit: 5 });
   const events = data?.events ?? [];
-  // Lazy initializer keeps the render pure (react-hooks/purity); freshness
-  // labels only need mount-time "now", matching safety-score-history-section.
+  // Lazy initializer keeps the render pure (react-hooks/purity). TanStack Query
+  // refreshes dataUpdatedAt after successful polling refetches, so keep labels
+  // tied to the latest event payload instead of freezing at mount time.
   const [nowMs] = useState(() => Date.now());
+  const labelNowMs = dataUpdatedAt > 0 ? dataUpdatedAt : nowMs;
 
   if (!isLoading && events.length === 0) {
     return null;
@@ -192,7 +194,7 @@ export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
       ) : (
         <div className="divide-y divide-border/40">
           {events.map((event) => (
-            <NewsEntry key={event.id} event={event} nowMs={nowMs} />
+            <NewsEntry key={event.id} event={event} nowMs={labelNowMs} />
           ))}
         </div>
       )}
