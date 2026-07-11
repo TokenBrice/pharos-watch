@@ -188,7 +188,8 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.d1Capacity?.thresholdState).toBe("warning");
     expect(result.d1CapacityImpactStatus).toBe("degraded");
     expect(result.overallStatus).not.toBe("healthy");
-    expect(result.warnings).toContain("d1-capacity-warning:75");
+    expect(result.warnings).toContain("d1-capacity-warning");
+    expect(result.warnings.join(" ")).not.toContain("75");
   });
 
   it("names unwaived active-universe omissions and degrades public health", async () => {
