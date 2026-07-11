@@ -179,6 +179,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-contagion-graph-drag.ts` - useContagionGraphDrag
 - `src/hooks/use-copy-to-clipboard.ts` - useCopyToClipboard
 - `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
+- `src/hooks/use-credential-lifecycle-summary.ts` - useCredentialLifecycleSummary
 - `src/hooks/use-critical-ops-model.ts` - useCriticalOpsModel
 - `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useActiveDepegEvents, useInfiniteDepegEvents
 - `src/hooks/use-depeg-resolver-surfaces.ts` - useDepegResolverSurfaces
@@ -205,8 +206,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
-- `src/hooks/use-release-metadata.ts` - ReleaseMetadata, ReleaseMetadataState, useReleaseMetadata
-- ... 27 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 28 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -517,7 +517,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/api-key-requests/serialization.ts` - parseJsonStringArray
 - `worker/src/api/api-key-requests/state.ts` - IssuedKeyFailureCompensation, acquireEmailClaim, acquireIssuanceIpCap, compensateIssuedKeyFailure, finalizeRequestIssued, insertPendingRequest
 - `worker/src/api/api-key-requests/types.ts` - ApiKeyRequestAdminRow, ApiKeyRequestDb, ApiKeyRequestRow, ApiKeyRequestStatement, ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema
-- `worker/src/api/api-keys.ts` - handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute, handleApiKeysRoute
+- `worker/src/api/api-keys.ts` - handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute, handleApiKeysRoute, handleCredentialLifecycleSummaryRoute
 - `worker/src/api/audit-depeg-history.ts` - AuditEventsOptions, auditEvents, handleAuditDepegHistory, handleAuditDepegHistoryTrusted
 - `worker/src/api/audit-depeg-history/coingecko-audit.ts` - AuditEventOutcome, AuditedEvent, Verdict, runCoinGeckoAuditBatch
 - `worker/src/api/audit-depeg-history/request.ts` - AuditPaginatedRequest, ParsedAuditRequest, RepairMode, parseAuditRequest

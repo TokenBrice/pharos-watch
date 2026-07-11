@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
-import type { ApiKeyAuditEntry, ApiKeySummary } from "@shared/types";
+import type { ApiKeyAuditEntry, ApiKeySummary, CredentialLifecycleSummaryResponse } from "@shared/types";
 import { Button } from "@/components/ui/button";
-import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
-import { useApiKeys } from "@/hooks/use-api-keys";
+import { useCredentialLifecycleSummary } from "@/hooks/use-credential-lifecycle-summary";
 import { isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
 import { cn } from "@/lib/utils";
 
@@ -91,18 +90,46 @@ export function buildCredentialSummaryItems({
  * the inventory rows, editors, and mutations stay in `/admin-api/` (plan
  * section 7.7). Missing evidence renders as Unknown, never zero.
  */
+function buildCredentialSummaryItemsFromResponse(
+  summary: CredentialLifecycleSummaryResponse | undefined,
+): CredentialSummaryItem[] {
+  return [
+    {
+      label: "Active",
+      value: summary == null ? "Unknown" : String(summary.active),
+      detail: summary == null ? "inventory not loaded" : `of ${summary.totalKeys} total keys`,
+    },
+    {
+      label: "Expiring soon",
+      value: summary == null ? "Unknown" : String(summary.expiringSoon),
+      detail: "active keys inside 7 days",
+      emphasisClassName: summary != null && summary.expiringSoon > 0 ? "text-amber-700 dark:text-amber-300" : undefined,
+    },
+    {
+      label: "Expired",
+      value: summary == null ? "Unknown" : String(summary.expired),
+      detail: "needs rotation or deactivation",
+      emphasisClassName: summary != null && summary.expired > 0 ? "text-red-700 dark:text-red-300" : undefined,
+    },
+    {
+      label: "Non-expiring",
+      value: summary == null ? "Unknown" : String(summary.nonExpiring),
+      detail: "explicit exceptions",
+    },
+    {
+      label: "Audit anomalies",
+      value: summary?.auditAnomalies7d == null ? "Unknown" : String(summary.auditAnomalies7d),
+      detail: "rotations and deactivations, 7 days",
+      emphasisClassName: summary?.auditAnomalies7d != null && summary.auditAnomalies7d > 0
+        ? "text-amber-700 dark:text-amber-300"
+        : undefined,
+    },
+  ];
+}
+
 export function CredentialSummaryCard() {
-  const inventory = useApiKeys();
-  const auditLog = useApiKeyAuditLog("global");
-  // The inventory's generatedAt anchors both expiry and anomaly windows;
-  // without it the anomaly window has no trustworthy "now", so both surfaces
-  // stay Unknown together instead of guessing from an impure render clock.
-  const nowSeconds = inventory.data?.generatedAt ?? null;
-  const items = buildCredentialSummaryItems({
-    keys: inventory.data?.keys ?? null,
-    auditEntries: nowSeconds == null ? null : (auditLog.data?.entries ?? null),
-    nowSeconds: nowSeconds ?? 0,
-  });
+  const summary = useCredentialLifecycleSummary();
+  const items = buildCredentialSummaryItemsFromResponse(summary.data);
 
   return (
     <section aria-labelledby="credential-summary-title" className="rounded-xl border border-border/60 bg-background/35 p-4">
@@ -124,13 +151,13 @@ export function CredentialSummaryCard() {
         </Link>
       </div>
 
-      {inventory.isLoading ? (
+      {summary.isLoading ? (
         <p role="status" aria-live="polite" className="mt-3 border-y border-border/60 py-3 text-sm text-muted-foreground">
           Loading credential summary...
         </p>
       ) : (
         <>
-          {inventory.isError ? (
+          {summary.isError ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
               <span>Credential inventory could not be loaded; counts below are Unknown.</span>
               <Button
@@ -138,7 +165,7 @@ export function CredentialSummaryCard() {
                 size="sm"
                 variant="outline"
                 className="min-h-11"
-                onClick={() => void inventory.refetch()}
+                onClick={() => void summary.refetch()}
               >
                 <RefreshCw className="size-3.5" aria-hidden="true" />
                 Retry

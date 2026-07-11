@@ -247,6 +247,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
+- `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
@@ -3730,7 +3731,7 @@ New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 
 
 Same-origin Pages Function used by allowlisted `/pharoswatchbot/` CTA links. It accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
 
-The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no IP address, IP hash, User-Agent, referrer, cookie, request ID, chat ID, or user ID. An identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
+The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no raw IP address, User-Agent, referrer, cookie, request ID, chat ID, or user ID. A dedicated-pepper HMAC of `CF-Connecting-IP` is used only in the minute-quota table, where a per-client quota admits at most 10 requests per minute before the identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
 
 ### `POST /selector-snapshot`
 
@@ -4445,6 +4446,25 @@ Admin-only read-only debug endpoint for the Yield Intelligence publication ledge
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
+
+
+### `GET /api/api-keys/lifecycle-summary`
+
+Admin-only counts projection for the Triage workspace. Returns aggregate credential lifecycle counts and the 7-day rotate/deactivate anomaly count without exposing API-key row metadata, owner emails, masked tokens, audit actors, or audit detail payloads.
+
+**Response shape:** `CredentialLifecycleSummaryResponse` (defined in `shared/types/api-keys.ts`)
+
+```json
+{
+  "generatedAt": 1710500000,
+  "totalKeys": 12,
+  "active": 10,
+  "expiringSoon": 2,
+  "expired": 1,
+  "nonExpiring": 1,
+  "auditAnomalies7d": 3
+}
+```
 
 ### `GET /api/api-keys/audit-log`
 

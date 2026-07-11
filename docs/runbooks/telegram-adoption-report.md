@@ -34,12 +34,12 @@ The recommended-setup CTA retains its preloaded Telegram subscription behavior a
 - Funnel rows should normally have `freshness.latestEventAt` within the report range when the page or bot was used.
 - Retention refresh runs with the 15-minute heavy Telegram pulse producer and fills at most seven missed measurement days.
 - An empty placement list is valid during a quiet week. A missing freshness timestamp alongside known traffic indicates a write or migration problem.
-- `429` from `/pharoswatchbot-adoption` means the identifier-free global 3,000-request minute ceiling was reached. The page still opens Telegram; telemetry never blocks navigation.
+- `429` from `/pharoswatchbot-adoption` means either the per-client 10-request minute ceiling or the identifier-free global 3,000-request minute ceiling was reached. The page still opens Telegram; telemetry never blocks navigation.
 
 ## Triage
 
 1. Confirm migration `0192_telegram_adoption_analytics.sql` is applied to `stablecoin-db`.
-2. Confirm the Pages project has its required primary `DB` D1 binding.
+2. Confirm the Pages project has its required primary `DB` D1 binding and `TELEGRAM_ADOPTION_IP_HASH_SECRET` pepper.
 3. Check `telegram-retention-cleanup` metadata for adoption table/cache pruning and caps.
 4. Check the Telegram pulse run for `[telegram-adoption] retention refresh failed` warnings.
 5. Verify a catalog link contains a `pw1_*` token no longer than 64 characters; arbitrary tokens are intentionally classified as organic/unknown or rejected.
