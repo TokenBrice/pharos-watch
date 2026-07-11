@@ -102,6 +102,23 @@ describe("handleBackfillMintBurnPrices", () => {
     );
   });
 
+  it("rejects confirmed mutation when the idempotency key exceeds the replay-protected length", async () => {
+    const path =
+      "/api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=bookmark-123";
+    const response = await handleBackfillMintBurnPrices(
+      db,
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "x".repeat(129) } }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining("1 to 128 characters"),
+    });
+  });
+
   it("rejects an unbounded limit", async () => {
     const path = "/api/backfill-mint-burn-prices?limit=501";
     const response = await handleBackfillMintBurnPrices(

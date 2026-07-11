@@ -37,11 +37,13 @@ function createReservationOwner(action: string): string {
   return `admin-idempotency:${action}:${suffix}`;
 }
 
-function getIdempotencyKey(request: Request | undefined): string | null {
+export const MAX_IDEMPOTENCY_KEY_LENGTH = 128;
+
+export function getIdempotencyKey(request: Request | undefined): string | null {
   const raw = request?.headers.get("Idempotency-Key");
   if (!raw) return null;
   const key = raw.trim();
-  if (key.length === 0 || key.length > 128) return null;
+  if (key.length === 0 || key.length > MAX_IDEMPOTENCY_KEY_LENGTH) return null;
   return key;
 }
 
