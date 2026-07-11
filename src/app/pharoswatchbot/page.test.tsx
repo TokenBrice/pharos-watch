@@ -111,11 +111,9 @@ describe("PharosWatchBotPage", () => {
   it("keeps public metadata and copy current", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
     // Metadata and registration copy derive from the canonical family manifest.
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
     expect(TELEGRAM_BOT_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("reasoned safety-grade shifts");
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("live reserve-mix drift");
-    expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("private daily recap");
+    expect(TELEGRAM_PAGE_DESCRIPTION.length).toBeLessThanOrEqual(180);
     expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
   });
 

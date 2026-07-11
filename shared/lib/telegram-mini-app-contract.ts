@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "./telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
+import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-policy";
 
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "4";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
@@ -377,7 +378,7 @@ export const TelegramMiniAppMutableStateSchema = z
           })
           .default({
             enabled: false,
-            deliveryHourLocal: 9,
+            deliveryHourLocal: TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
             timezoneConfirmed: false,
             nextDueAt: null,
             lastWindowEndAt: null,

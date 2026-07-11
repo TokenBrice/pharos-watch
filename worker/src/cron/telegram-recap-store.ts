@@ -1,5 +1,6 @@
 import { executeAtomicBatch } from "../lib/db";
 import {
+  TELEGRAM_RECAP_CADENCE,
   TELEGRAM_RECAP_DUE_PAGE_SIZE,
   TELEGRAM_RECAP_FORMATTER_VERSION,
   TELEGRAM_RECAP_PENDING_PRIORITY,
@@ -117,7 +118,7 @@ function mapPreference(row: PreferenceRow): TelegramRecapPreference {
     chatId: row.chat_id,
     chatKind: "private",
     enabled: Number(row.enabled) === 1,
-    cadence: "daily",
+    cadence: TELEGRAM_RECAP_CADENCE,
     deliveryHourLocal: Number(row.delivery_hour_local),
     nextDueAt: row.next_due_at == null ? null : Number(row.next_due_at),
     lastWindowEndAt: row.last_window_end_at == null ? null : Number(row.last_window_end_at),
@@ -523,13 +524,3 @@ export async function pruneTelegramRecapTargets(
   `).bind(aggregateCutoff, terminalCutoff).run();
   return { deletedTargets: Number(result.meta?.changes ?? 0) };
 }
-
-// Concise aliases make the store convenient to use from planner code and tests.
-export const getRecapPreference = getTelegramRecapPreference;
-export const setRecapPreference = setTelegramRecapPreference;
-export const listDueRecapPreferences = listDueTelegramRecapPreferences;
-export const queueRecapTarget = queueTelegramRecapTarget;
-export const recordRecapSkip = recordTelegramRecapSkip;
-export const projectRecapTerminalOutcome = projectTelegramRecapTerminalOutcome;
-export const pruneRecapTargets = pruneTelegramRecapTargets;
-export const recapDedupeKey = buildTelegramRecapDedupeKey;

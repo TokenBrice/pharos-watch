@@ -7,10 +7,12 @@
  */
 import {
   TELEGRAM_RECAP_DUE_PAGE_SIZE,
+  TELEGRAM_RECAP_FACT_FAMILIES,
   TELEGRAM_RECAP_FACT_TYPES,
   TELEGRAM_RECAP_FIRST_LOOKBACK_SEC,
   TELEGRAM_RECAP_LOOKBACK_SEC,
   TELEGRAM_RECAP_MAX_PAGES_PER_RUN,
+  TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN,
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
   TELEGRAM_RECAP_TAPE_PAGE_LIMIT,
 } from "@shared/lib/telegram-recap-policy";
@@ -34,8 +36,8 @@ import {
 } from "./telegram-recap-store";
 
 /** Read one extra row so a complete fact ledger is never silently truncated. */
-export const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;
-export const TELEGRAM_RECAP_STALE_SKIP_AFTER_SEC = 4 * 60 * 60;
+const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;
+const TELEGRAM_RECAP_STALE_SKIP_AFTER_SEC = 4 * 60 * 60;
 
 interface ProjectTapeRunRow {
   started_at: number;
@@ -334,7 +336,9 @@ export async function planTelegramPersonalizedRecaps(
     factsAdmitted: 0,
     factsRejected: 0,
     factsOmittedByMessageCap: 0,
-    factFamilyOmissions: {} as Record<string, number>,
+    factFamilyOmissions: Object.fromEntries(
+      TELEGRAM_RECAP_FACT_FAMILIES.map((family) => [family, 0]),
+    ) as Record<string, number>,
     oldestDueAgeSec: 0,
     nextDueAt: null as number | null,
   };
@@ -345,6 +349,7 @@ export async function planTelegramPersonalizedRecaps(
       ...counts,
       tapeFreshness,
       wallDurationMs: Math.max(0, Date.now() - startedAtMs),
+      maxRecipientsPerRun: TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN,
       aiCalls: 0,
       externalPlanningFetches: 0,
     }),
@@ -482,5 +487,3 @@ export async function planTelegramPersonalizedRecaps(
   }
   return finish(counts.deferred > 0 ? "degraded" : "ok", "fresh");
 }
-
-export const planTelegramRecaps = planTelegramPersonalizedRecaps;

@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
+import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
@@ -252,7 +253,7 @@ export async function loadTelegramMiniAppState(
       },
       recap: {
         enabled: boolFlag(recap?.enabled),
-        deliveryHourLocal: recap?.delivery_hour_local ?? 9,
+        deliveryHourLocal: recap?.delivery_hour_local ?? TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
         timezoneConfirmed: subscriber?.timezone != null,
         nextDueAt: recap?.next_due_at ?? null,
         lastWindowEndAt: recap?.last_window_end_at ?? null,

@@ -1,4 +1,5 @@
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
+import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
@@ -92,7 +93,7 @@ export const handleRecap: WebhookCommandHandler = async (ctx, args) => {
   ]);
   const deliveryHourLocal = parsed.kind === "time"
     ? parsed.hour
-    : preference?.deliveryHourLocal ?? 9;
+    : preference?.deliveryHourLocal ?? TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL;
   const enabled = parsed.kind === "set" ? parsed.enabled : preference?.enabled ?? false;
 
   if (parsed.kind === "status") {
