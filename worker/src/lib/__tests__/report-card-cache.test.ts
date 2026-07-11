@@ -293,6 +293,19 @@ describe("loadReportCardCache", () => {
 
     expect(result).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
   });
+
+  it("rejects malformed score entries without throwing for completeness checks", async () => {
+    const payload = JSON.parse(exactCachePayload()) as {
+      scores: Record<string, unknown>;
+    };
+    payload.scores[[...ACTIVE_IDS][0]] = null;
+
+    const result = await loadReportCardCache(makeReportCardDb(JSON.stringify(payload)), {
+      requireCompleteness: true,
+    });
+
+    expect(result).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
+  });
 });
 
 describe("writeReportCardCache", () => {

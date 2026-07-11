@@ -332,7 +332,9 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     : allParsedRows;
 
   for (const row of persistableRows) {
-    summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
+    if (row.block_number >= fromBlock && row.block_number <= scanTo) {
+      summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
+    }
   }
   const persistResult = await persistMintBurnRows(db, persistableRows, affectedHours, { signal });
   summary.rowsInserted += persistResult.inserted;

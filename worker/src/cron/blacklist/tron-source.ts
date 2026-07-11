@@ -79,8 +79,8 @@ function buildTronEventsUrl(args: {
   url.searchParams.set("limit", "200");
   url.searchParams.set("order_by", "block_timestamp,asc");
   url.searchParams.set("only_confirmed", "true");
-  if (args.lastTimestampMs > 0) url.searchParams.set("min_timestamp", String(args.lastTimestampMs));
-  url.searchParams.set("max_timestamp", String(args.safeHead));
+  if (args.lastTimestampMs > 0) url.searchParams.set("min_block_timestamp", String(args.lastTimestampMs));
+  url.searchParams.set("max_block_timestamp", String(args.safeHead));
   if (args.fingerprint) url.searchParams.set("fingerprint", args.fingerprint);
   return url.toString();
 }

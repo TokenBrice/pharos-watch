@@ -10,6 +10,7 @@ import {
 } from "../lib/constants";
 import {
   dexPoolIndependentGroupKey,
+  isNativeOriginPending,
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
@@ -345,8 +346,9 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     asset && meta && refreshedPegReferenceIsAuthoritative
       ? getPegReference(pegType, pegRates, meta.commodityOunces)
       : Number.NaN;
+  const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   const pegReference =
-    Number.isFinite(refreshedPegRef) && refreshedPegRef > 0
+    !isNativeOrigin && Number.isFinite(refreshedPegRef) && refreshedPegRef > 0
       ? refreshedPegRef
       : row.peg_reference;
   const outcomeState: PendingDepegState = { ...pendingState, pegReference };
@@ -383,7 +385,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const circuitOpenSources: string[] = [];
   const hardOpposingSources: string[] = [];
   const nativeSourceKey = buildNativeConfirmationKey(nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency);
-  if (nativeSignal != null) {
+  if (nativeSignal != null && !isNativeOrigin) {
     if (nativeSecondaryStatus === "confirm") addSource(confirmingSources, nativeSourceKey);
     if (isOpposingConfirmationStatus(nativeSecondaryStatus)) {
       addSource(opposingSources, nativeSourceKey);

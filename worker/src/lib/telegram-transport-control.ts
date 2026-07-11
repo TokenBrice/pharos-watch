@@ -208,7 +208,12 @@ export async function readTelegramFreshHandoffAllowance(
   if (circuit.state === "closed") {
     return { allowed: true, maxTargets: requested, reason: "closed", deferUntil: null };
   }
-  if (circuit.state === "open" && (circuit.nextProbeAt == null || circuit.nextProbeAt <= nowSec)) {
+  const halfOpenLeaseExpired = circuit.state === "half_open"
+    && (circuit.probeExpiresAt == null || circuit.probeExpiresAt <= nowSec);
+  if (
+    (circuit.state === "open" && (circuit.nextProbeAt == null || circuit.nextProbeAt <= nowSec))
+    || halfOpenLeaseExpired
+  ) {
     return {
       allowed: requested > 0,
       maxTargets: Math.min(4, requested),
@@ -222,6 +227,33 @@ export async function readTelegramFreshHandoffAllowance(
     reason: circuit.state === "half_open" ? "half_open" : "outage_open",
     deferUntil: circuit.probeExpiresAt ?? circuit.nextProbeAt,
   };
+}
+
+async function releaseHalfOpenProbeWithoutAttempt(
+  db: D1Database,
+  permit: TelegramTransportPermit,
+  nowSec: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE telegram_transport_circuit
+          SET state = 'open',
+              generation = generation + 1,
+              next_probe_at = ?,
+              probe_owner = NULL,
+              probe_generation = NULL,
+              probe_expires_at = NULL,
+              probe_limit = NULL,
+              probe_attempted = 0,
+              updated_at = ?
+        WHERE singleton_id = 1
+          AND state = 'half_open'
+          AND generation = ?
+          AND probe_owner = ?
+          AND probe_generation = ?`,
+    )
+    .bind(nowSec, nowSec, permit.circuitGeneration, permit.probeOwner, permit.probeGeneration)
+    .run();
 }
 
 export function telegramTransportPermitSkip(
@@ -703,7 +735,13 @@ export async function recordTelegramTransportOutcomes(
   outcomes: readonly TelegramTransportOutcome[],
   nowSec: number,
 ): Promise<TelegramTransportCircuitSnapshot> {
-  if (!permit.allowed || outcomes.length === 0) return await readTelegramTransportCircuit(db);
+  if (!permit.allowed) return await readTelegramTransportCircuit(db);
+  if (outcomes.length === 0) {
+    if (permit.reason === "half_open_probe") {
+      await releaseHalfOpenProbeWithoutAttempt(db, permit, nowSec);
+    }
+    return await readTelegramTransportCircuit(db);
+  }
   if (permit.reason === "half_open_probe") {
     await completeHalfOpenProbe(db, permit, outcomes, nowSec);
   } else {
