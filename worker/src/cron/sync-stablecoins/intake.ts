@@ -6,6 +6,7 @@ import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { upsertDiscoveryCandidates } from "../discovery-scan";
 import type { PeggedAsset } from "./enrich-prices";
 import {
@@ -28,6 +29,7 @@ import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
+  replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
   type CronResult,
   type TrackedCoverageRestoreResult,
@@ -315,8 +317,22 @@ export async function loadStablecoinsIntake(
     };
   }
 
+  const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
+  const primaryReplacement = replaceZeroSupplyPrimaryAssets(assets, supplementalAssets);
+  assets = primaryReplacement.assets;
+  if (primaryReplacement.replacedIds.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "zero-supply-primary-replacement",
+      job: "sync-stablecoins",
+      message: "Replaced zero-supply primary rows with positive supplemental coverage",
+      metadata: { replacedIds: primaryReplacement.replacedIds },
+    });
+  }
+
   const supplementalResolution = mergeSupplementalLastKnownGood(
-    [...goldTokens, ...silverTokens, ...fiatCgTokens],
+    supplementalAssets,
     previousAssetsById,
     new Set(assets.map((asset) => String(asset.id))),
     input.syncStartSec,

@@ -38,6 +38,7 @@
     "worker/src/cron/compute-depeg-resolver.ts": 98.2,
     "worker/src/cron/compute-depeg-resolver-review.ts": 95.3,
     "worker/src/cron/depeg-detection/decision-engine.ts": 94.9,
+    "worker/src/cron/depeg-detection/native-quote-policy.ts": 90.9,
     "worker/src/cron/depeg-detection/hydration.ts": 100,
     "worker/src/cron/depeg-detection/persistence.ts": 100,
     "worker/src/cron/depeg-detection/repair.ts": 100,

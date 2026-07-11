@@ -68,6 +68,7 @@ import {
   telegramTransportPermitSkip,
   type TelegramTransportPermit,
 } from "../../lib/telegram-transport-control";
+import { migrateTelegramChatId } from "../../api/telegram-store/forget";
 
 export const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
@@ -919,6 +920,7 @@ export async function drainPendingQueue(
   const blockedChatsThisLoop = new Set<string>();
   const chatsToResetOnSuccess = new Set<string>();
   const disabledChatIds = new Set<string>();
+  const migratedChatIds = new Map<string, string>();
   const sendingClaims = new Map<number, PendingDeliveryClaim>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
@@ -1099,6 +1101,9 @@ export async function drainPendingQueue(
     };
     const pendingRow = pendingById.get(result.id);
     const deliveryClaim = sendingClaims.get(result.id);
+    if (result.errorClass === "chat_migrated" && result.migrateToChatId) {
+      migratedChatIds.set(result.chatId, result.migrateToChatId);
+    }
     const pushTargetStatus = (
       status: TelegramAlertTargetStatusUpdate["status"],
       errorClass?: string | null,
@@ -1257,6 +1262,9 @@ export async function drainPendingQueue(
   await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec);
   await persistPendingDeferrals(db, deferUpdates, claimOwner, nowSec);
   await persistPendingRetries(db, retryUpdates, nowSec);
+  for (const [oldChatId, newChatId] of migratedChatIds) {
+    await migrateTelegramChatId(db, oldChatId, newChatId);
+  }
 
   const unfinishedClaimedIds = pending
     .map((row) => row.id)

@@ -47,7 +47,15 @@ export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaive
   owner: "data-platform",
   reason: "DefiLlama stablecoins has no row and CoinGecko reports no positive market cap",
   expiresAt: NIGHT_WATCH_SUPPLY_WAIVER_EXPIRY_SEC,
-}));
+})).concat([
+  "gramg-token-teknoloji",
+  "grams-token-teknoloji",
+].map((stablecoinId) => ({
+  stablecoinId,
+  owner: "data-platform",
+  reason: "DefiLlama has no positive supply row and CoinGecko reports no positive market cap",
+  expiresAt: NIGHT_WATCH_SUPPLY_WAIVER_EXPIRY_SEC,
+})));
 
 function isNonEmpty(value: string): boolean {
   return value.trim().length > 0;

@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.095` (2026-02-18 -> 2026-07-08).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.096` (2026-02-18 -> 2026-07-11).
+
+---
+
+## v6.096 — Native-peg events preserve one quote domain (Jul 11, 2026)
+
+Live events opened from direct native-fiat quotes now keep native prices throughout peak and recovery persistence instead of mixing later USD-domain observations into the row.
+
+- Native-quote events update peaks only from subsequent native quotes against the stored `1.0` peg reference
+- A recovered native quote closes the event with `recovered-native` and the same-domain native recovery price
+- When only a USD primary or DEX recovery is available, the event can still close but persists `recovery_price = NULL` rather than mixing quote units
+- The known BRLA event 90509 mixed-unit recovery value is cleared through guarded migration `0195`
 
 ---
 
