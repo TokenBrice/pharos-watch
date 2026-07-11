@@ -574,6 +574,12 @@ function objectArray(value: unknown): Record<string, unknown>[] {
     : [];
 }
 
+function readQueuePersistence(
+  operatorQueue: Record<string, unknown> | null,
+): YieldHealthSummary["coverageAudit"]["queuePersistence"] {
+  return operatorQueue?.persistence === "durable" ? "durable" : "deferred";
+}
+
 function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
   YieldHealthSummary["coverageAudit"],
   "headlineGaps" | "recommendationCandidates" | "allowedActions" | "queuePersistence"
@@ -586,7 +592,7 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
       headlineGaps: queuedHeadlineGaps.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
       recommendationCandidates: queuedRecommendations.slice(0, COVERAGE_AUDIT_QUEUE_ITEM_LIMIT),
       allowedActions: COVERAGE_AUDIT_QUEUE_ACTIONS,
-      queuePersistence: "deferred",
+      queuePersistence: readQueuePersistence(operatorQueue),
     };
   }
 

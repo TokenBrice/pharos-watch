@@ -27,6 +27,7 @@ import {
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { requireJsonInput } from "./input-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { throwIfAborted } from "../../lib/abort";
 
 type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm" | "XOFm";
 
@@ -544,6 +545,7 @@ const GET_EXCHANGE_IDS_SELECTOR = "0xdc162e36"; // getExchangeIds()
 const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
 // PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
 const POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
+const MENTO_BROKER_POOL_MAX_EXCHANGE_IDS = 64;
 const MENTO_REDEMPTION_TIMEOUT_MS = 8_000;
 
 // mento-protocol/bold (GBPm) is a Liquity v2 fork sharing the ActivePool debt
@@ -625,19 +627,24 @@ function loadMentoPoolExchanges(
       contract: MENTO_BIPOOL_MANAGER_ADDRESS,
       data: GET_EXCHANGE_IDS_SELECTOR,
     });
-    const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw);
+    const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, {
+      maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS,
+    });
     if (!exchangeIds || exchangeIds.length === 0) {
       throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
     }
 
-    const poolExchanges = await Promise.all(
-      exchangeIds.map((exchangeId) => fetchOnchainRawCall({
+    const poolExchanges: MentoPoolExchange[] = [];
+    for (const exchangeId of exchangeIds) {
+      throwIfAborted(callOptions.signal);
+      const poolExchange = decodePoolExchange(await fetchOnchainRawCall({
         ...callOptions,
         contract: MENTO_BIPOOL_MANAGER_ADDRESS,
         data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
-      }).then(decodePoolExchange)),
-    );
-    return poolExchanges.filter((pool): pool is MentoPoolExchange => pool != null);
+      }));
+      if (poolExchange) poolExchanges.push(poolExchange);
+    }
+    return poolExchanges;
   })();
 
   // Keep rejected enumeration promises for this run. Repeating the same 17 RPC
@@ -688,7 +695,6 @@ async function fetchMentoBrokerPoolRedemption(
     const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
     const counterAddress = poolConfig.counterAsset.address.toLowerCase();
     const match = poolExchanges.find((pool) => {
-      if (!pool) return false;
       const asset0 = pool.asset0.toLowerCase();
       const asset1 = pool.asset1.toLowerCase();
       return (
