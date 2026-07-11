@@ -222,11 +222,15 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
    FROM telegram_subscriptions
   GROUP BY chat_id`;
   const activePresetCountsSql = `SELECT chat_id,
-        COUNT(*) AS active_preset_count
+        SUM(
+          CASE
+            WHEN alert_dews = 1
+              OR alert_depeg = 1
+              OR alert_safety = 1
+            THEN 1 ELSE 0
+          END
+        ) AS active_preset_count
    FROM telegram_preset_subscriptions
-  WHERE alert_dews = 1
-     OR alert_depeg = 1
-     OR alert_safety = 1
   GROUP BY chat_id`;
   const activeWatcherCondition = `s.global_alert_dews = 1
   OR s.global_alert_depeg = 1
@@ -380,38 +384,34 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-10 at the 5,000-watcher fixture: 33,751 rows read, ~20ms in-memory; no rollup justified yet.",
+      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-11 at the 5,000-watcher fixture: 33,751 rows read, ~13ms in-memory; no rollup justified yet.",
     },
     {
       id: "status-top-stablecoins",
       category: "pulse-status",
-      sql: `SELECT source_id, COUNT(*) AS subscribers
-        FROM (
-          SELECT stablecoin_id AS source_id, chat_id
-            FROM telegram_subscriptions
-           WHERE alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-              OR alert_launch = 1
-              OR alert_reserve = 1
-          UNION ALL
-          SELECT preset_id AS source_id, chat_id
-            FROM telegram_preset_subscriptions
-           WHERE alert_dews = 1
-              OR alert_depeg = 1
-              OR alert_safety = 1
-        ) follows
-       GROUP BY source_id
-       ORDER BY subscribers DESC, source_id ASC
-       LIMIT 5`,
+      sql: `SELECT stablecoin_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
+        FROM telegram_subscriptions
+       WHERE alert_dews = 1
+          OR alert_depeg = 1
+          OR alert_safety = 1
+          OR alert_launch = 1
+          OR alert_reserve = 1
+       GROUP BY stablecoin_id
+       UNION ALL
+      SELECT preset_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
+        FROM telegram_preset_subscriptions
+       WHERE alert_dews = 1
+          OR alert_depeg = 1
+          OR alert_safety = 1
+       GROUP BY preset_id`,
       binds: [],
-      allowedFullScanTables: ["telegram_subscriptions", "telegram_preset_subscriptions", "follows"],
+      allowedFullScanTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],
       budget: {
         rowsReadTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],
         maxRowsRead: 30_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists. Measured 2026-07-10 at the 5,000-watcher fixture: 28,751 rows read, ~15ms in-memory; no rollup justified yet.",
+      note: "Top-coin status runs separate explicit-coin and preset-follower aggregates before resolving preset targets in memory; reviewed until a dedicated status snapshot exists. Measured 2026-07-11 at the 5,000-watcher fixture: 28,751 rows read, ~8ms in-memory; no rollup justified yet.",
     },
     {
       id: "lifecycle-current-active-history",
@@ -437,7 +437,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-10 at the 5,000-watcher fixture: 33,751 rows read, ~20ms in-memory; no rollup justified yet.",
+      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-11 at the 5,000-watcher fixture: 33,751 rows read, ~15ms in-memory; no rollup justified yet.",
     },
   ];
 }
