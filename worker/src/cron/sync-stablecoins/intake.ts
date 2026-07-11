@@ -28,6 +28,7 @@ import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
+  replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
   type CronResult,
   type TrackedCoverageRestoreResult,
@@ -315,8 +316,18 @@ export async function loadStablecoinsIntake(
     };
   }
 
+  const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
+  const primaryReplacement = replaceZeroSupplyPrimaryAssets(assets, supplementalAssets);
+  assets = primaryReplacement.assets;
+  if (primaryReplacement.replacedIds.length > 0) {
+    console.warn(
+      "[sync-stablecoins] Replaced zero-supply primary row(s) with positive supplemental coverage: " +
+      primaryReplacement.replacedIds.join(", "),
+    );
+  }
+
   const supplementalResolution = mergeSupplementalLastKnownGood(
-    [...goldTokens, ...silverTokens, ...fiatCgTokens],
+    supplementalAssets,
     previousAssetsById,
     new Set(assets.map((asset) => String(asset.id))),
     input.syncStartSec,
