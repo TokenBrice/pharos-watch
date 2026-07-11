@@ -445,6 +445,7 @@ export async function runTelegramRetentionCleanup(
         adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         adoptionIngressQuota: 2,
+        adoptionClientQuota: 2,
         chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
         shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
         miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
