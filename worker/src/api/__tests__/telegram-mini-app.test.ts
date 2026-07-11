@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
+import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -973,6 +974,141 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(await response.json()).toMatchObject({ result: { kind: "watchlist-export", token: expect.stringMatching(/^pw3\./) } });
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "watchlist_export"])).toBe(true);
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied", "watchlist_export"])).toBe(false);
+  });
+
+  it("routes a signed bulk preview through the read-only portability path", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: [] },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      result: { kind: "bulk-watchlist-preview", adds: ["usdt-tether"], removes: [] },
+    });
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "bulk_watchlist_preview"])).toBe(true);
+  });
+
+  it("hydrates state after a confirmed signed watchlist import", async () => {
+    const initData = await privateInitData();
+    const token = await encodeWatchlistTokenV3({
+      registryVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      direct: [{
+        stablecoinId: "usdt-tether",
+        alertDews: true,
+        alertDepeg: true,
+        alertSafety: false,
+        alertLaunch: false,
+        alertReserve: false,
+        alertFreeze: false,
+        overrideDews: true,
+        overrideDepeg: true,
+        overrideSafety: false,
+        overrideLaunch: false,
+        overrideReserve: false,
+        overrideFreeze: false,
+        dewsMinBand: null,
+        safetyMode: null,
+        depegWorseningBpsStep: null,
+      }],
+      presets: [],
+    });
+    const db = mockD1(stateReadTables({
+      subscriptions: [{
+        stablecoin_id: "usdc-circle",
+        alert_dews: 1,
+        alert_depeg: 1,
+        alert_safety: 0,
+        alert_launch: 0,
+        alert_reserve: 0,
+        alert_freeze: 0,
+        alert_dews_override: 1,
+        alert_depeg_override: 1,
+        alert_safety_override: 0,
+        alert_launch_override: 0,
+        alert_reserve_override: 0,
+        alert_freeze_override: 0,
+        dews_min_band: null,
+        safety_mode: null,
+        depeg_worsening_bps_step: null,
+        alert_snooze_until_ts: null,
+      }],
+    }));
+
+    const previewResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "preview-watchlist-import", token },
+    }), BOT_TOKEN);
+    const preview = await previewResponse.json() as { result: { expectedPreferenceGeneration: number; previewFingerprint: string } };
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: {
+        kind: "confirm-watchlist-import",
+        token,
+        expectedPreferenceGeneration: preview.result.expectedPreferenceGeneration,
+        previewFingerprint: preview.result.previewFingerprint,
+      },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ viewer: { chatId: "42" } });
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation", "watchlist_import_confirm"])).toBe(true);
+  });
+
+  it("returns stable portability errors for invalid tokens, empty exports, and stale bulk previews", async () => {
+    const initData = await privateInitData();
+    const invalidToken = await handleTelegramMiniAppMutation(
+      mockD1(stateReadTables()),
+      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-watchlist-import", token: "not-a-watchlist" } }),
+      BOT_TOKEN,
+    );
+    const emptyExport = await handleTelegramMiniAppMutation(
+      mockD1(stateReadTables()),
+      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "export-watchlist" } }),
+      BOT_TOKEN,
+    );
+    const staleBulk = await handleTelegramMiniAppMutation(
+      mockD1(stateReadTables({
+        subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 0, alert_dews_override: 1, alert_depeg_override: 0, alert_safety_override: 0, alert_launch_override: 0, alert_reserve_override: 0, alert_freeze_override: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
+      })),
+      request("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["eurc-circle"] } }),
+      BOT_TOKEN,
+    );
+
+    await expect(invalidToken.json()).resolves.toMatchObject({ code: "invalid-portable-token" });
+    await expect(emptyExport.json()).resolves.toMatchObject({ code: "empty-portable-state" });
+    await expect(staleBulk.json()).resolves.toMatchObject({ code: "stale-bulk-preview" });
+  });
+
+  it("rate-limits repeated read-only portability requests with portable telemetry", async () => {
+    const initData = await privateInitData();
+    const cooldownKey = "telegram:command-cooldown:42:mini-app:session";
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 2],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        matchBinds: [cooldownKey],
+        first: { updated_at: NOW_SEC - 1 },
+        rows: [{ updated_at: NOW_SEC - 1 }],
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "export-watchlist" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toMatchObject({ code: "rate-limited", retryAfterSec: 1 });
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "watchlist_export", "rate_limited"])).toBe(true);
   });
 
   it("applies global alert mutations", async () => {

@@ -22,6 +22,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/telegram-webhook-operation-intents-migration.test.ts",
   "worker/src/api/__tests__/telegram-webhook-setup-adoption.test.ts",
   "worker/src/api/__tests__/telegram-mini-app.test.ts",
+  "worker/src/api/__tests__/telegram-mini-app-portability.test.ts",
   "worker/src/api/__tests__/telegram-mini-app-rate-limit.test.ts",
   "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
   "shared/lib/__tests__/telegram-mini-app-contract.test.ts",

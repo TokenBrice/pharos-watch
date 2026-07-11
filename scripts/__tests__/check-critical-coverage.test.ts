@@ -352,6 +352,7 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/api/telegram-store/__tests__/forget.test.ts",
       "worker/src/api/telegram-store/__tests__/watchlist-import.test.ts",
       "src/app/pharoswatchbot/app/page.test.tsx",
+      "worker/src/api/__tests__/telegram-mini-app-portability.test.ts",
       "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
       "shared/lib/__tests__/telegram-mini-app-contract.test.ts",
       "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
