@@ -343,9 +343,28 @@ jobs:
             exit "$marker_status"
           fi
 
+          run_live_asset_smoke() {
+            local attempt
+            local status=1
+
+            for attempt in 1 2 3; do
+              npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live
+              status=$?
+              if [ "$status" -eq 0 ]; then
+                return 0
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                echo "Yield asset smoke attempt ${attempt}/3 failed; waiting for Pages asset propagation."
+                sleep $((attempt * 10))
+              fi
+            done
+
+            return "$status"
+          }
+
           npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!
-          npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live &
+          run_live_asset_smoke &
           asset_pid=$!
           OPS_SMOKE_CF_ACCESS_CLIENT_ID='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}' \
             OPS_SMOKE_CF_ACCESS_CLIENT_SECRET='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}' \
