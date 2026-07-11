@@ -393,7 +393,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
-- ... 283 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 284 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
