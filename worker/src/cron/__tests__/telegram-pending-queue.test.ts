@@ -679,6 +679,51 @@ describe("drainPendingQueue", () => {
     sqlite.close();
   });
 
+  it("reconciles completed send results even if the signal aborts after Telegram accepts delivery", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    const controller = new AbortController();
+    sqlite.prepare(
+      `INSERT INTO telegram_subscribers (chat_id, preference_generation, global_alert_dews)
+       VALUES ('post-send-abort', 1, 1)`,
+    ).run();
+    insertPendingSqlite(sqlite, {
+      id: 804,
+      chatId: "post-send-abort",
+      html: "<b>Delivered before abort</b>",
+      createdAt: now - 60,
+      expiresAt: now + 600,
+      priority: TELEGRAM_PENDING_PRIORITY.dews,
+      sourceType: "risk_alert",
+      alertType: "dews",
+      dedupeKey: "post-send-abort-key",
+      sourceEventId: "source-post-send-abort",
+      alertScopeJson: serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]),
+      preferenceGeneration: 1,
+      markupPolicyJson: serializePendingMarkupPolicy({}),
+    });
+    mockSendToChat.mockImplementation(async () => {
+      controller.abort("slot deadline after Telegram accepted send");
+      return {
+        ok: true,
+        blocked: false,
+        retryable: false,
+        permanentFailure: false,
+        statusCode: 200,
+        errorClass: null,
+        delivery: "sent",
+        retryAfterSec: null,
+      };
+    });
+
+    const result = await drainPendingQueue(db, "bot-token", 10, controller.signal);
+
+    expect(result).toMatchObject({ attempted: 1, sent: 1, deferred: 0, retryQueued: 0 });
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT id FROM telegram_pending_alerts WHERE id = 804").get()).toBeUndefined();
+    sqlite.close();
+  });
+
   it("releases claimed rows without sending when the soft deadline has elapsed", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     const now = Math.floor(Date.now() / 1000);
