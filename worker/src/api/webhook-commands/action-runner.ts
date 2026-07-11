@@ -183,6 +183,7 @@ const completionHandlers: CompletionHandlerMap = {
       presetIds,
       alertTypes: [...alertTypes].sort(),
       depegWorseningBpsStep: payload.depegWorseningBpsStep ?? null,
+      initiatorUserId: context.initiatorUserId,
       clearPending: options.clearPending,
     });
     if (!context.wasMutationApplied) {
@@ -236,6 +237,7 @@ const completionHandlers: CompletionHandlerMap = {
     const operation = await prepareActionMutation(context, "command:unsubscribe", {
       coinIds: coins.map((coin) => coin.id),
       presetIds,
+      initiatorUserId: context.initiatorUserId,
       clearPending: options.clearPending,
     });
     if (!context.wasMutationApplied) {
@@ -274,6 +276,7 @@ const completionHandlers: CompletionHandlerMap = {
     const operation = await prepareActionMutation(context, "command:set", {
       coinIds: coins.map((coin) => coin.id),
       setting: normalizedSetting,
+      initiatorUserId: context.initiatorUserId,
       clearPending: options.clearPending,
     });
     if (!context.wasMutationApplied) {
@@ -453,6 +456,7 @@ export function makeActionRunner(
           ambiguousTicker: resolution.ticker,
           candidateIds: resolution.candidates.map((coin) => coin.id),
           remainingTickers: resolution.remainingTickers,
+          initiatorUserId: context.initiatorUserId,
           expiresAt,
           clearPending: Boolean(clearPendingOnTerminal),
         };
