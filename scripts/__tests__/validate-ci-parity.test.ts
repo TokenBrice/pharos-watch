@@ -604,10 +604,11 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(consolidatedPagesReleaseJob).toContain("Start local export smoke server");
-    expect(consolidatedPagesReleaseJob).toContain("Run local pre-publish checks in parallel");
+    expect(consolidatedPagesReleaseJob).toContain("Run local pre-publish checks with bounded browser concurrency");
     expect(consolidatedPagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}");
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
+    expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "4"');
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_WORKERS: "3"');
+    expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_TIMEOUT_MS: "60000"');
     expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
     expect(consolidatedPagesReleaseJob).toContain(
       "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
@@ -654,9 +655,12 @@ describe("validate-ci parity", () => {
       "Capture current production Pages deployment id",
       "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
-      "Run local pre-publish checks in parallel",
+      "Run local pre-publish checks with bounded browser concurrency",
       "npm run seo:check",
       "npm run test:a11y",
+      "npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local",
+      "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
+      "npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173",
       "Wait for validation gate",
       "Wait for worker promotion gate",
       "Run local artifact smoke against promoted worker",
@@ -694,7 +698,7 @@ describe("validate-ci parity", () => {
       "Capture current production Pages deployment id",
       "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
-      "Run local pre-publish checks in parallel",
+      "Run local pre-publish checks with bounded browser concurrency",
       "npm run seo:check",
       "npm run test:a11y",
     ]);
