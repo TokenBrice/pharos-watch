@@ -83,10 +83,11 @@ function streamedRequest(path: string, chunks: string[], headers: Record<string,
   } as RequestInit & { duplex: "half" });
 }
 
-async function privateInitData(ageSec = 60): Promise<string> {
+async function privateInitData(ageSec = 60, startParam?: string): Promise<string> {
   return signedInitData({
     auth_date: String(NOW_SEC - ageSec),
     chat_type: "private",
+    ...(startParam ? { start_param: startParam } : {}),
     user: JSON.stringify({ id: 42, username: "alice" }),
   });
 }
@@ -709,6 +710,25 @@ describe("handleTelegramMiniAppSession", () => {
     expect(sessionValidRows).toHaveLength(1);
     // latency_bucket is the sixth bind in the INSERT (see telegram-usage-analytics.ts).
     expect(sessionValidRows[0].binds[5]).toBe("lt_250ms");
+  });
+
+  it("records aggregate recap button actions without storing user identifiers", async () => {
+    const initData = await privateInitData(60, "recap_watchlist");
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(
+      db,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(200);
+    const row = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_usage_daily")
+      && entry.binds.includes("mini_app_session_valid"));
+    expect(row?.binds).toContain("recap_view_watchlist");
+    expect(row?.binds).not.toContain("42");
+    expect(row?.binds).not.toContain("alice");
   });
 });
 

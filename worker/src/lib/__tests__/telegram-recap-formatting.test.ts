@@ -40,6 +40,10 @@ describe("Telegram recap formatter", () => {
     expect(rendered?.body).toContain("ALERT&amp;urgent");
     expect(rendered?.body).toContain("Read the full market digest");
     expect(rendered?.replyMarkup.inline_keyboard[0]?.map((button) => button.text)).toEqual(["View watchlist", "Recap settings"]);
+    expect(rendered?.replyMarkup.inline_keyboard[0]?.map((button) => button.web_app.url)).toEqual([
+      "https://pharos.watch/pharoswatchbot/app/?startapp=recap_watchlist",
+      "https://pharos.watch/pharoswatchbot/app/?startapp=recap_settings",
+    ]);
     expect(fetchSpy).not.toHaveBeenCalled();
     globalThis.fetch = originalFetch;
   });

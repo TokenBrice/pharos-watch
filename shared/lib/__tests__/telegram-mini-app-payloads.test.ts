@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MINI_APP_PAYLOAD_NAMES,
   formatCoinPayload,
   formatCoveragePayload,
   formatWhyPayload,
@@ -29,6 +30,11 @@ describe("telegram mini app payloads", () => {
     expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_watchlist")!)).toBe("watchlist");
     expect(parseMiniAppPayload("pw1_landing_unknown")).toBeNull();
     expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();
+  });
+
+  it("maps recap action tokens to their existing panels", () => {
+    expect(miniAppPayloadIntent(parseMiniAppPayload(MINI_APP_PAYLOAD_NAMES.recapWatchlist)!)).toBe("watchlist");
+    expect(miniAppPayloadIntent(parseMiniAppPayload(MINI_APP_PAYLOAD_NAMES.recapSettings)!)).toBe("settings");
   });
 
   it("rejects empty insight ids and malformed payloads", () => {

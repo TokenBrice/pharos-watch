@@ -183,8 +183,8 @@ export function formatTelegramRecap(input: TelegramRecapFormatInput): TelegramRe
     body,
     replyMarkup: {
       inline_keyboard: [[
-        { text: "View watchlist", web_app: { url: recapMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) } },
-        { text: "Recap settings", web_app: { url: recapMiniAppUrl(MINI_APP_PAYLOAD_NAMES.settings) } },
+        { text: "View watchlist", web_app: { url: recapMiniAppUrl(MINI_APP_PAYLOAD_NAMES.recapWatchlist) } },
+        { text: "Recap settings", web_app: { url: recapMiniAppUrl(MINI_APP_PAYLOAD_NAMES.recapSettings) } },
       ]],
     },
     materialCoinCount: renderedCoins.size,

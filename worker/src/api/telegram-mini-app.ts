@@ -48,6 +48,7 @@ import {
   telegramAdoptionDimensionsForMiniApp,
 } from "../lib/telegram-adoption-analytics";
 import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
+import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
@@ -198,6 +199,12 @@ async function parseMiniAppRequestJson<T>(
 
 function sourceCategory(auth?: TelegramMiniAppAuthContext | null, startParam?: string | null): string {
   return (auth?.startParam ?? startParam)?.trim() ? "startapp" : "menu_or_main_app";
+}
+
+function recapLaunchActionDetail(startParam: string | null | undefined): string | null {
+  if (startParam === MINI_APP_PAYLOAD_NAMES.recapWatchlist) return "recap_view_watchlist";
+  if (startParam === MINI_APP_PAYLOAD_NAMES.recapSettings) return "recap_settings";
+  return null;
 }
 
 async function recordMiniAppEvent(db: D1Database, input: {
@@ -419,7 +426,13 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
 
     const latencyMs = Date.now() - start;
     const sessionEvents: Parameters<typeof recordMiniAppEvents>[1] = [
-      { eventType: "mini_app_session_valid", auth, outcome: "success", latencyMs },
+      {
+        eventType: "mini_app_session_valid",
+        auth,
+        actionDetail: recapLaunchActionDetail(auth.startParam),
+        outcome: "success",
+        latencyMs,
+      },
     ];
     if (!auth.canMutatePrivateChat) {
       sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });

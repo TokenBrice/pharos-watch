@@ -54,6 +54,8 @@ export const MINI_APP_PAYLOAD_NAMES = Object.freeze({
   home: "home",
   settings: "settings",
   watchlist: "watchlist",
+  recapSettings: "recap_settings",
+  recapWatchlist: "recap_watchlist",
   presets: "presets",
   quietHours: "quiet-hours",
   snooze: "snooze",
@@ -179,8 +181,10 @@ export function miniAppPayloadIntent(payload: TelegramMiniAppPayload): TelegramM
     case MINI_APP_PAYLOAD_NAMES.home:
       return "home";
     case MINI_APP_PAYLOAD_NAMES.settings:
+    case MINI_APP_PAYLOAD_NAMES.recapSettings:
       return "settings";
     case MINI_APP_PAYLOAD_NAMES.watchlist:
+    case MINI_APP_PAYLOAD_NAMES.recapWatchlist:
       return "watchlist";
     case MINI_APP_PAYLOAD_NAMES.presets:
       return "presets";
