@@ -1,13 +1,13 @@
 {
   "kusd-kerne": {
     "title": "Genesis Beta, USDC-Backed Today",
-    "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale but still pre-active in Pharos because the runtime price path is not ready. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row reports price=null and CoinGecko does not yet resolve a Kerne USD coin, so Pharos keeps it on the upcoming tracker rather than the active dashboard. Current backing is simple: about 117.85 USDC in the on-chain Peg Stability Module against 117.735154 kUSD outstanding as of July 3, 2026. The more ambitious delta-neutral design, with a WETH vault and Hyperliquid short hedge, is documented as degraded and excluded from reserves pending a v2 redeploy. Admin authority sits with a 2-of-3 Gnosis Safe, and Kerne publishes hourly signed proof-of-reserves data at kerne.fi/verify.",
-    "updatedAt": "2026-07-03",
+    "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale but still pre-active in Pharos because the runtime price path is not ready. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row reports price=null and CoinGecko does not yet resolve a Kerne USD coin, so Pharos keeps it on the upcoming tracker rather than the active dashboard. Current backing is simple: combined USDC reserves in the mint and redeem Peg Stability Module contracts cover outstanding kUSD slightly above 1:1. The more ambitious delta-neutral design, with a WETH vault and Hyperliquid short hedge, is documented as degraded and excluded from reserves pending a v2 redeploy. Admin authority sits with a 2-of-3 Gnosis Safe, and Kerne publishes hourly signed proof-of-reserves data at kerne.fi/verify.",
+    "updatedAt": "2026-07-11",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex pre-launch intake",
-    "reviewedAt": "2026-07-03",
-    "factsAsOf": "2026-07-03"
+    "model": "gpt-5.6-sol",
+    "reviewedBy": "Codex issue #468 verification",
+    "reviewedAt": "2026-07-11",
+    "factsAsOf": "2026-07-11"
   },
   "usdt-tether": {
     "title": "Treasury-Heavy Dollar Base",

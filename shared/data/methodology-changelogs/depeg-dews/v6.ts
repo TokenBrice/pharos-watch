@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.096",
+    title: "Native-peg events preserve one quote domain",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "Live events opened from direct native-fiat quotes now keep native prices throughout peak and recovery persistence instead of mixing later USD-domain observations into the row.",
+    impact: [
+      "Native-quote events update peaks only from subsequent native quotes against the stored `1.0` peg reference",
+      "A recovered native quote closes the event with `recovered-native` and the same-domain native recovery price",
+      "When only a USD primary or DEX recovery is available, the event can still close but persists `recovery_price = NULL` rather than mixing quote units",
+      "The known BRLA event 90509 mixed-unit recovery value is cleared through a guarded data migration",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.095",
     title: "Native-fiat quotes can initiate live non-USD depegs",
     date: "2026-07-08",

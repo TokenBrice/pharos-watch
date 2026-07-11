@@ -122,18 +122,27 @@ export async function getMaxSyncAge(
   stablecoinIds?: readonly string[],
 ): Promise<number> {
   if (stablecoinIds?.length === 0) return Infinity;
-  const configuredFilter = stablecoinIds
-    ? ` WHERE stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})`
-    : "";
+  if (stablecoinIds) {
+    const uniqueIds = [...new Set(stablecoinIds)];
+    const stateById = await loadReserveSyncStateMap(db, uniqueIds);
+    if (stateById.size !== uniqueIds.length) return Infinity;
+
+    let oldestAttemptedAt = Infinity;
+    for (const state of stateById.values()) {
+      if (state.lastAttemptedAt == null) return Infinity;
+      oldestAttemptedAt = Math.min(oldestAttemptedAt, state.lastAttemptedAt);
+    }
+    return now - oldestAttemptedAt;
+  }
+
   const row = await db
     .prepare(
       `SELECT MIN(last_attempted_at) AS oldest_ts,
               COUNT(DISTINCT stablecoin_id) AS observed_count
-         FROM reserve_sync_state${configuredFilter}`,
+         FROM reserve_sync_state`,
     )
-    .bind(...(stablecoinIds ?? []))
+    .bind()
     .first<{ oldest_ts: number | null; observed_count: number }>();
-  if (stablecoinIds && (row?.observed_count ?? 0) !== new Set(stablecoinIds).size) return Infinity;
   if (!row?.oldest_ts) return Infinity;
   return now - row.oldest_ts;
 }
