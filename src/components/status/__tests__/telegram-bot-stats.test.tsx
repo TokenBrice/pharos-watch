@@ -2,7 +2,8 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { TELEGRAM_ALERT_TYPES, type CronStatus, type StatusResponse } from "@shared/types";
+import type { CronStatus, StatusResponse } from "@shared/types";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { TelegramBotStats } from "../telegram-bot-stats";
 
