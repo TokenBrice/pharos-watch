@@ -1,6 +1,6 @@
 # PharosWatchBot and Telegram Alerts
 
-> **Agent navigation** — ~75 KB; Grep the heading you need instead of reading wholesale: Overview · Mini App Launch Entrypoints · Files · Frontend Main Page · Public Pulse Privacy And Freshness · D1 Schema · Secrets and Bindings · Inline Keyboards (Callback Queries) · Inline Mode Status Cards · Webhook Command Flow · Dispatch Cron · Digest Appendices · Admin Visibility · Message Types · Digest vs Subscriber Alerts · Operational Notes · Runbooks.
+> **Agent navigation** — ~75 KB; Grep the heading you need instead of reading wholesale: Overview · Personalized Daily Recap · Mini App Launch Entrypoints · Files · Frontend Main Page · Public Pulse Privacy And Freshness · D1 Schema · Secrets and Bindings · Inline Keyboards (Callback Queries) · Inline Mode Status Cards · Webhook Command Flow · Dispatch Cron · Digest Appendices · Admin Visibility · Message Types · Digest vs Subscriber Alerts · Operational Notes · Runbooks.
 
 ## Overview
 
@@ -12,6 +12,16 @@ The subsystem has four moving parts:
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, safety-grade, launch, and reserve snapshots against cached prior snapshots, and independently drains fresh immutable freeze Tape events through their dedicated cohort outbox before handing every rendered target to the shared pending transport.
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, alert import stability, preset resolution, message formatting, and digest appendices. `worker/src/lib/telegram-alerts.ts` remains the stable import barrel: ticker parsing lives in `telegram-alerts-parser.ts`, alert/message formatting lives in `telegram-alerts-formatting.ts`, Bot API sends and HTML escaping live in `telegram.ts`, and event diffing lives in the dispatch cron modules.
+
+## Personalized Daily Recap
+
+The personalized recap is a separate, opt-in product from the market-wide Daily Digest. It is private-chat-only and sends at most one message per subscriber per local day, only when the subscriber's effective direct, preset, or global-family watchlist matches a material change. It is deterministic: the planner reads canonical `tape_events`, resolves current watchlist intent in D1, ranks and formats the shared facts locally, and hands one exact payload to the existing pending transport. It makes **zero AI calls, zero external planning calls, and no per-recipient network calls**. The Daily Digest keeps its existing editorial generation and cost; a recap may link to an already-published digest but never invokes its AI generator.
+
+The planner (`worker/src/cron/telegram-recap-planner.ts`) runs in the five-minute Telegram serial chain after risk dispatch. It requires a successful `project-tape` run no older than 90 minutes, reads one bounded Tape window per due page, and processes at most 90 due preferences per page and 10 pages (900 recipients) per invocation. A 500-row Tape cap-plus-one scan fails closed and defers the page when the ledger is incomplete. The first window is 24 hours; later windows are bounded to 36 hours. Paused chats skip the local date without a late send, snoozed coins are omitted, and no-change days advance the schedule without creating a pending message.
+
+Recap delivery uses `source_type = 'personalized_recap'`, priority `100` (below risk, legacy, and admin work), a six-hour pending TTL, and dedupe key `recap:<chat_id>:<local_date>:v1`. The planner never sends to Telegram. The normal pending drain revalidates private chat, enabled state, preference generation, target status, pause/block state, dedupe identity, and TTL immediately before the Bot API effect. Sent and `execution_unknown` outcomes project the consumed window to the recap target; expired and permanent failures do not. Retention keeps sent/no-change/paused/stale aggregates for 30 days; cancelled, expired, uncertain, and permanent-failure evidence is retained for 90 days. `/forget` removes recap preferences, targets, pending rows, and dead letters for the chat.
+
+Users configure the feature with `/recap`, `/recap on`, `/recap off`, and `/recap time 0-23`, or the Daily Recap control in the private Mini App Settings panel. Enabling requires an explicitly confirmed IANA timezone; timezone changes recompute the next local delivery atomically. Recap messages are one HTML message with a deterministic cap of 8 coins, 12 fact lines, and 3,500 body characters, plus `View watchlist` and `Recap settings` Mini App buttons. There is no "all quiet" message and no advice, forecast, or portfolio language. The complete load contract is enforced by `npm run check:telegram-load`, including `aiCalls=0` and `externalPlanningFetches=0` for every recap scenario.
 
 The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `/_site-data/telegram-pulse`, which proxies `GET /api/telegram-pulse` through the website-internal lane; it does not call any mutating bot APIs directly. Direct `https://api.pharos.watch/api/telegram-pulse` requests remain API-key protected like other non-exempt public reads. `/pharoswatchbot/` is the canonical public route, and the legacy `/telegram` and `/telegram/*` aliases redirect there. The landing page's alert examples render `shared/lib/telegram-alert-samples.ts` verbatim; `worker/src/lib/__tests__/telegram-alert-samples.test.ts` regenerates each sample (including reserve) through the production formatter so the public examples cannot drift from runtime output, and the page's visible delivery-contract TTLs and dispatch cadence derive from `shared/lib/telegram-delivery-policy.ts`.
 
@@ -49,6 +59,8 @@ BotFather-owned release checklist:
 - `worker/src/api/telegram-webhook-messages.ts`
 - `worker/src/api/telegram-webhook-store.ts`
 - `worker/src/cron/dispatch-telegram-alerts.ts`
+- `worker/src/cron/telegram-recap-planner.ts`
+- `worker/src/cron/telegram-recap-store.ts`
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts`
 - `worker/src/lib/telegram-webhook-registration.ts`
@@ -57,6 +69,9 @@ BotFather-owned release checklist:
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/src/lib/telegram-presets.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
+- `worker/src/lib/telegram-recap-facts.ts`
+- `worker/src/lib/telegram-recap-ranking.ts`
+- `worker/src/lib/telegram-recap-formatting.ts`
 - `worker/src/lib/telegram-mini-app-auth.ts`
 - `src/app/pharoswatchbot/page.tsx`
 - `src/app/pharoswatchbot/app/page.tsx`
@@ -69,10 +84,13 @@ BotFather-owned release checklist:
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
+- `shared/lib/telegram-recap-policy.ts`
+- `shared/lib/iana-local-time.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`
 - `worker/src/lib/telegram-usage-analytics.ts`
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`
+- `worker/migrations/0198_telegram_personalized_recap.sql`
 - `worker/migrations/MANIFEST.md`
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`
 - `npx tsx scripts/maintenance/register-telegram.ts --action commands`
@@ -112,7 +130,7 @@ The public chart labels snapshot-backed history as daily lifecycle snapshots. Du
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and delivery-queue tables are part of `worker/migrations/0000_baseline.sql`. Subsequent Telegram migrations add launch/snooze/preset/retry/audit/claim/retention/reserve fields and indexes. Migration `0172_worker_effect_fencing.sql` adds pending-delivery effect state and processed-update owner/generation/effect fencing; `0183_telegram_fresh_target_effect_fencing.sql` adds the rolling-compatible fresh alert-target lifecycle; `0185_telegram_source_event_resolution.sql` makes source detection and preset target resolution independently durable; `0187_telegram_pending_preference_revalidation.sql` adds monotonic chat-preference generations and pending-risk provenance; `0190_telegram_authoritative_target_plans.sql` makes subscriber capture, rendered plans, target chunks, delivery outcomes, bounded source expiry, and legacy overflow import row-authoritative; `0192_telegram_adoption_analytics.sql` adds aggregate-only adoption/retention reporting and two subscriber milestone timestamps used only for idempotency; `0197_telegram_freeze_alerts.sql` adds opt-in freeze preferences and a dedicated immutable event/target outbox. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) is the complete lineage.
+The Telegram subscriber, disambiguation, and delivery-queue tables are part of `worker/migrations/0000_baseline.sql`. Subsequent Telegram migrations add launch/snooze/preset/retry/audit/claim/retention/reserve fields and indexes. Migration `0172_worker_effect_fencing.sql` adds pending-delivery effect state and processed-update owner/generation/effect fencing; `0183_telegram_fresh_target_effect_fencing.sql` adds the rolling-compatible fresh alert-target lifecycle; `0185_telegram_source_event_resolution.sql` makes source detection and preset target resolution independently durable; `0187_telegram_pending_preference_revalidation.sql` adds monotonic chat-preference generations and pending-risk provenance; `0190_telegram_authoritative_target_plans.sql` makes subscriber capture, rendered plans, target chunks, delivery outcomes, bounded source expiry, and legacy overflow import row-authoritative; `0192_telegram_adoption_analytics.sql` adds aggregate-only adoption/retention reporting and two subscriber milestone timestamps used only for idempotency; `0197_telegram_freeze_alerts.sql` adds opt-in freeze preferences and a dedicated immutable event/target outbox; `0198_telegram_personalized_recap.sql` adds private-chat daily recap preferences and immutable per-local-date recap targets. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) is the complete lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
@@ -120,10 +138,12 @@ The Telegram subscriber, disambiguation, and delivery-queue tables are part of `
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `alert_reserve`, `alert_freeze`, matching `alert_*_override` marker columns, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step`, `alert_snooze_until_ts` |
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch/list time | composite PK `chat_id, preset_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `depeg_worsening_bps_step`, `created_at`, `updated_at` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
-| `telegram_pending_alerts` | Authoritative transport queue for planned risk chunks, retries, and admin work | `id`, `chat_id`, rendered payload, retry/dedupe/priority fields, processing claim, `delivery_state`, delivery owner/generation/timestamps, risk `source_event_id`, `alert_scope_json`, `preference_generation`, `markup_policy_json` |
+| `telegram_pending_alerts` | Authoritative transport queue for planned risk chunks, personalized recaps, retries, and admin work | `id`, `chat_id`, rendered payload, retry/dedupe/priority fields, processing claim, `delivery_state`, delivery owner/generation/timestamps, source `source_event_id`, `source_type`, `alert_scope_json`, `preference_generation`, `markup_policy_json`; recap rows use priority `100` and a six-hour TTL |
 | `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable source-family manifests and exact target delivery truth | source/job identity, exclusive planned/accepted/enqueued/failed/cancelled/expired/execution-unknown counters; target source/plan ordinals, rendered payload, scope/preference/markup provenance, target expiry, pending identity, legacy effect fields, `final_delivery_state` and terminal detail |
 | `telegram_alert_source_events` / `telegram_alert_source_resolution_pages` | Immutable detected event plus cursorable preset resolution and target-plan ownership | exact event/baseline payloads, source status, target-plan state/generation/owner/lease, detection-time subscriber horizon/high-water, capture/planning cursors and counts, terminal timestamps |
 | `telegram_freeze_alert_events` / `telegram_freeze_alert_targets` | Dedicated immutable freeze-event lineage and frozen opt-in recipient cohort | tape and blacklist source identities, captured payload/expiry/status, one-time cohort boundary, chat preference generation, pending dedupe identity, queued/terminal timestamps |
+| `telegram_recap_preferences` | Private opt-in daily recap schedule | `chat_id`, private `chat_kind`, enabled/cadence, local delivery hour, next due time, consumed window, last local delivery date |
+| `telegram_recap_targets` | One immutable personalized recap planning/delivery outcome per chat and local date | recap key, bounded window/high-water/fingerprint/hash, material/omitted counts, pending identity, queued/terminal status and reason |
 | `telegram_alert_source_resolution_memberships` / `telegram_alert_source_resolution_targets` | Normalized preset membership and follower-page lineage | `source_event_id`, `alert_type`, `preset_id`, `stablecoin_id`, `page_key`, `chat_id`; current preset intent and snooze state are revalidated before routing |
 | `telegram_alert_planning_subscribers` | Frozen subscriber cohort and one durable planning decision per chat | source/generation/chat identity, captured preference generation/activity, initial eligibility, current planned generation, `target_planned`/ineligible/newly-eligible/missing/expired outcome |
 | `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` | Cursorable rendered manifest before transport handoff | immutable page bounds and expected/materialized counts; ordered versioned plan JSON plus digest/chunk counts; normalized source-item coverage |
@@ -247,6 +267,8 @@ Current actions:
 - `tz:<IANA zone>` for timezone quick picks
 - `settings:home` / `settings:home:<page>` — re-render the chat-level settings view and page through per-coin settings buttons
 - `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch | reserve` — toggle global alert flag
+- `recap:on` / `recap:off` — enable or disable the private daily recap
+- `recap:h:<0-23>` — set the recap's local delivery hour (timezone is the subscriber's confirmed IANA zone)
 - `settings:q:<1|0>` — enable (22-07 in the chat's configured timezone, UTC when unset) or disable quiet hours
 - `settings:sc` — clear an active snooze
 - `settings:o:<stablecoinId>` — open the per-coin settings view (no mutation)
@@ -341,6 +363,9 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin. The reply keeps the same `[ Why? ] [ Coverage ] [ Subscribe ]` discovery keyboard as `/status`; private chats also include the Mini App button. |
 | `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin. The reply keeps the same `[ Why? ] [ Coverage ] [ Subscribe ]` discovery keyboard as `/status`; private chats also include the Mini App button. |
 | `/health` | Shows self-diagnostics for the current chat: last successful alert delivery, last successful command reply, queued alert count, recent failure class, quiet-hours/snooze state, and alert readiness |
+| `/recap` | Shows private daily watchlist recap status, timezone, local delivery hour, next due time, latest outcome, and controls. Recaps are off by default and never available for group/channel chats. |
+| `/recap on` / `/recap off` | Enables or disables the private recap. Enabling requires an explicitly confirmed timezone; disabling cancels unsent recap intents without deleting audit outcomes. |
+| `/recap time <0-23>` | Changes the hour used in the subscriber's IANA timezone and atomically recomputes the next due time. |
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <targets> depeg-step <value>` | Enables depeg alerts for explicit coins or preset watchlists and stores a depeg severity gate plus worsening-step threshold (`100`, `250`, `500`, or `off`) |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins (always gated; see below) |
@@ -480,6 +505,10 @@ Command, callback, setup, and settings replies use the shared audited reply help
 
 It no longer runs inside the quarter-hourly or daily slots. Safety-grade changes are detected
 within 5 minutes of `publish-report-card-cache` refreshing the live safety source cache.
+
+Immediately after risk dispatch, the same serial chain runs `telegram-personalized-recap-planner` (D1-only, `maxConnections = 0`). This planner claims due private preferences in bounded pages, shares one fresh Tape window across each page, resolves direct and dynamic preset membership, applies the explicit global-family mapping, and enqueues at most one exact recap payload per chat/local date. It never calls the Bot API or any data provider. The pending delivery drain remains responsible for external effects and retains risk-first ordering; recap rows are priority `100` and expire after six hours.
+
+The planner records `skipped_no_changes`, `skipped_paused`, and `skipped_stale` outcomes in `telegram_recap_targets` and advances the local schedule according to `shared/lib/iana-local-time.ts`. A stale `project-tape` success (older than 90 minutes) defers due work without advancing schedules; after the four-hour retry window it records a stale skip. DST gaps resolve to the first valid local instant, repeated hours are sent once by `(chat_id, local_date)` uniqueness, and changing timezone/hour is generation-fenced and recomputes `next_due_at` atomically.
 
 ### Snapshot Inputs
 
@@ -896,6 +925,8 @@ The same bot token can be used for both:
 
 - Channel-style digest posting via `postDigestToTelegram(...)`
 - Direct chat replies and subscriber alerts via `sendToChat(...)`
+
+The Daily Digest is a market-wide editorial edition generated once on its existing schedule. A personalized recap is a private, per-subscriber deterministic view of Tape changes over that subscriber's watchlist window. They do not share an AI request or delivery outbox: recap planning does not call the digest generator, and a missing or stale digest only removes the optional footer link from a valid recap.
 
 Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`.
 

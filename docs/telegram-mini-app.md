@@ -10,6 +10,12 @@ The Mini App is the Telegram-native control panel for managing PharosWatchBot su
 
 Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a fresh admin verification path and group-scoped launch ownership model exist.
 
+## Daily Recap Control
+
+Settings includes one compact **Daily Recap** section for private subscribers. The feature is off by default. The control exposes an enable toggle, an hour selector (`0`–`23`) in the subscriber's confirmed IANA timezone, the next local delivery time, and the latest aggregate outcome. Copy states that a recap is sent only when watched assets materially changed. If no timezone is confirmed, enabling is rejected with `recap-timezone-required`; UTC is valid when explicitly selected. Quiet-hours and recap scheduling use the same subscriber timezone, and changing the timezone recomputes an enabled recap's next due instant atomically.
+
+The Mini App sends `{ kind: "set-recap", enabled, deliveryHourLocal }` through the signed mutation endpoint. The server persists the preference in `telegram_recap_preferences`, advances the shared subscriber preference generation, and returns the refreshed state. Private-chat and stale-auth gates remain authoritative; the client never optimistically flips the toggle. Recap messages link back to the Mini App with `View watchlist` and `Recap settings` buttons. Recap planning itself is DB-only and never invokes an AI or external data provider.
+
 Owned files:
 
 - `src/app/pharoswatchbot/app/page.tsx`
@@ -30,8 +36,11 @@ Owned files:
 - `worker/src/api/telegram-mini-app-rate-limit.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
+- `worker/src/cron/telegram-recap-store.ts`
 - `worker/src/lib/telegram-mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
+- `shared/lib/telegram-recap-policy.ts`
+- `shared/lib/iana-local-time.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`
 - `shared/lib/telegram-presets.ts`
 - `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
@@ -42,7 +51,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 - **Persistent menu button.** The five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/` via `setChatMenuButton`. The cache TTL is 15 minutes, so drift heals within one cache cycle.
 - **Bot profile Main Mini App.** Configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code. See [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md) for the operator-owned state.
-- **Private command replies.** `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, `/why <ticker>`, `/coverage <ticker>`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, and `/forget` attach Web App buttons where the reply can open a matching panel. Quick-subscribe confirmations in private chats also attach a per-coin tuning button. Group and supergroup replies keep their existing command and callback keyboards.
+- **Private command replies.** `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, `/why <ticker>`, `/coverage <ticker>`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/recap`, `/health`, and `/forget` attach Web App buttons where the reply can open a matching panel. Quick-subscribe confirmations in private chats also attach a per-coin tuning button. Group and supergroup replies keep their existing command and callback keyboards.
 - **Direct deep links.** `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context. The stale-auth recovery banner relaunches the app through this surface with a payload matching the user's current panel.
 
 ## Payload Scheme
@@ -112,7 +121,7 @@ The Mini App seam does not receive Telegram webhook updates and does not call th
 
 ## Contract And Catalog Versioning
 
-`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
+`shared/lib/telegram-mini-app-contract.ts` is the single runtime-neutral contract for operation schemas, request and response DTO schemas, error codes, the contract version, the catalog version, and the opaque state revision. Contract version `4` includes the `set-recap` operation and the subscriber `recap` state projection. Worker handlers and the static client both import it directly; there is no Worker/frontend literal mirror to keep synchronized.
 
 The searchable coin catalog is projected by `scripts/build-data/build-client-registry.mjs` into `shared/data/stablecoins/coins.telegram-mini-app.generated.json`. `shared/lib/telegram-mini-app-catalog.ts` combines that slim asset with the shared preset definitions and derives a content version. The catalog is bundled into the fingerprinted static Mini App JavaScript, so its roughly 42 KB minified payload is cached with the Pages asset instead of being returned by every signed API call.
 

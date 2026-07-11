@@ -3542,7 +3542,7 @@ The request schema is strict. Launch context such as `start_param` must come fro
 Key fields:
 
 - `viewer` — Telegram user, optional `chatId`, chat type, `startParam`, and mutation eligibility.
-- `subscriber` — global alert flags, quiet-hours settings, and chat-level snooze.
+- `subscriber` — global alert flags, quiet-hours settings, chat-level snooze, and `recap` state (`enabled`, `deliveryHourLocal`, `timezoneConfirmed`, `nextDueAt`, `lastWindowEndAt`, `lastDeliveredLocalDate`, and latest outcome).
 - `subscriptions` — explicit per-coin follows with alert flags and per-coin thresholds.
 - `presets` — followed preset watchlists.
 - bundled `catalog` — recommended presets and searchable tracked stablecoins; present in the static client (and temporary legacy responses), not routine versioned API responses.
@@ -3591,7 +3591,8 @@ Supported `operation.kind` values:
 - `clear-snooze` — clear chat-level snooze.
 - `set-snooze` — set chat-level snooze for `1h`, `4h`, or `24h`.
 - `set-coin-snooze` — set or clear one explicit coin subscription's snooze.
-- `set-timezone` — set the chat timezone used for quiet-hours display.
+- `set-timezone` — set the chat timezone used for quiet-hours display and local daily-recap scheduling.
+- `set-recap` — enable or disable the private daily watchlist recap and set its local delivery hour (`deliveryHourLocal` from `0` through `23`). Enabling requires a confirmed IANA timezone and persists the preference in the recap schedule; the operation is deterministic and does not invoke an AI or external data provider.
 - `unsubscribe-all` — clear all global, per-coin, and preset alert settings.
 - `forget-me` — delete the private subscriber row and mutable alert settings.
 - `set-coin` — add or tune one explicit coin subscription.
