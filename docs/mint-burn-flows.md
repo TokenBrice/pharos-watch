@@ -585,7 +585,7 @@ Preview one batch:
 POST /api/backfill-mint-burn-prices?dry-run=true&limit=100
 ```
 
-After taking a D1 Time Travel bookmark and reviewing the preview, execute the identical scope with an idempotency key:
+After taking a D1 Time Travel bookmark and reviewing the preview, execute the identical scope with an idempotency key of 1 to 128 trimmed characters:
 
 ```text
 POST /api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=<fresh-d1-bookmark>&limit=100

@@ -1,4 +1,5 @@
 import { jsonResponse } from "../lib/api-utils";
+import { getIdempotencyKey } from "../lib/idempotency";
 import {
   DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT,
   MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT,
@@ -52,7 +53,7 @@ export async function handleBackfillMintBurnPrices(
     async () => {
       try {
         const dryRun = readBoolean(url, ["dry-run", "dryRun"], true);
-        const operatorRunId = request?.headers.get("Idempotency-Key")?.trim() || null;
+        const operatorRunId = getIdempotencyKey(request);
         const timeTravelBookmark = url.searchParams.get("bookmark")?.trim() || null;
         if (
           !dryRun &&
@@ -66,7 +67,7 @@ export async function handleBackfillMintBurnPrices(
               error:
                 `Historical mint/burn price repair defaults to dry-run. ` +
                 `Mutation requires dry-run=false&confirm=${EXECUTION_CONFIRMATION}, ` +
-                `a fresh bookmark query parameter, and an Idempotency-Key header.`,
+                `a fresh bookmark query parameter, and an Idempotency-Key header of 1 to 128 characters.`,
             },
             { status: 400, noStore: true },
           );
