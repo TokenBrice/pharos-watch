@@ -135,7 +135,8 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
         },
       },
     });
-    const details = preview!.result as Extract<typeof preview.result, { kind: "watchlist-import-preview" }>;
+    if (!preview) throw new Error("expected watchlist import preview");
+    const details = preview.result as Extract<typeof preview.result, { kind: "watchlist-import-preview" }>;
 
     await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, {
       kind: "confirm-watchlist-import",
@@ -179,7 +180,8 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
       presets: [],
     });
     const preview = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "preview-watchlist-import", token: unchanged });
-    const details = preview!.result as Extract<typeof preview.result, { kind: "watchlist-import-preview" }>;
+    if (!preview) throw new Error("expected watchlist import preview");
+    const details = preview.result as Extract<typeof preview.result, { kind: "watchlist-import-preview" }>;
     await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, {
       kind: "confirm-watchlist-import",
       token: unchanged,
