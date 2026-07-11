@@ -67,6 +67,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   fiveMinuteTelegramAlerts: {
     jobChains: [[
       "dispatch-telegram-alerts",
+      "telegram-personalized-recap-planner",
       "telegram-degradation-watchdog",
       "telegram-disambiguation-cleanup",
       "telegram-pulse-snapshot",

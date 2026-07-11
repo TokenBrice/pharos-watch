@@ -9,6 +9,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
+import { planTelegramPersonalizedRecaps } from "../../cron/telegram-recap-planner";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
@@ -163,6 +164,11 @@ function buildTelegramSlotGroups(
           reportProgress,
         ),
     });
+    tasks.push({
+      job: "telegram-personalized-recap-planner",
+      errorMessage: "[cron] telegram-personalized-recap-planner failed:",
+      run: (signal) => planTelegramPersonalizedRecaps(runtime.db, signal),
+    });
   }
   tasks.push(
     {
@@ -228,8 +234,9 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         error: "missing-telegram-bot-token",
       },
       summarizeSkippedScheduledJob("dispatch-telegram-alerts", "missing-telegram-bot-token"),
+      summarizeSkippedScheduledJob("telegram-personalized-recap-planner", "missing-telegram-bot-token"),
     ];
-    for (const job of ["dispatch-telegram-alerts"]) {
+    for (const job of ["dispatch-telegram-alerts", "telegram-personalized-recap-planner"]) {
       await logSkippedCronRun(runtime, {
         job,
         reason: "missing-telegram-bot-token",

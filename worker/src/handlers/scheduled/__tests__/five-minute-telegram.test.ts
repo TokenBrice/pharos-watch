@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 
 vi.mock("../../../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
+vi.mock("../../../cron/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
 vi.mock("../../../api/telegram-pulse", () => ({ publishTelegramPulseSnapshotWithOutcome: vi.fn() }));
 vi.mock("../../../cron/telegram-degradation-watchdog", () => ({ runTelegramDegradationWatchdog: vi.fn() }));
 vi.mock("../../../api/telegram-store/disambiguation", () => ({ cleanExpiredDisambiguations: vi.fn() }));
@@ -22,6 +23,7 @@ import { logSkippedCronRun } from "../preflight-skip";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchPendingAlertBrokerDeliveries } from "../../../lib/alert-broker";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
+import { planTelegramPersonalizedRecaps } from "../../../cron/telegram-recap-planner";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../../api/telegram-store/disambiguation";
@@ -55,6 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, "now").mockReturnValue(0);
   vi.mocked(dispatchTelegramAlerts).mockResolvedValue({ itemCount: 1, metadata: "{}" } as never);
+  vi.mocked(planTelegramPersonalizedRecaps).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" } as never);
   vi.mocked(runTelegramDegradationWatchdog).mockResolvedValue({ itemCount: 0, metadata: "{}" } as never);
   vi.mocked(cleanExpiredDisambiguations).mockResolvedValue({ status: "ok", itemCount: 0 } as never);
   vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockResolvedValue({
@@ -79,6 +82,7 @@ describe("runFiveMinuteTelegramSlot", () => {
     const summary = await runFiveMinuteTelegramSlot(runtime);
 
     expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
     expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
     expect(cleanExpiredDisambiguations).toHaveBeenCalledOnce();
     expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
@@ -90,6 +94,7 @@ describe("runFiveMinuteTelegramSlot", () => {
     ]);
     expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
       "dispatch-telegram-alerts",
+      "telegram-personalized-recap-planner",
     ]);
     expect(summary.jobs.map((job) => job.job)).toContain("dispatch-telegram-alerts");
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
@@ -104,6 +109,7 @@ describe("runFiveMinuteTelegramSlot", () => {
   it("runs critical dispatch and sidecars before all registration units", async () => {
     const order: string[] = [];
     vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => { order.push("dispatch"); return { itemCount: 1, metadata: "{}" } as never; });
+    vi.mocked(planTelegramPersonalizedRecaps).mockImplementation(async () => { order.push("recap"); return { itemCount: 0, metadata: "{}", status: "ok" } as never; });
     vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => { order.push("watchdog"); return { itemCount: 0, metadata: "{}" } as never; });
     vi.mocked(cleanExpiredDisambiguations).mockImplementation(async () => { order.push("cleanup"); return { status: "ok", itemCount: 0 } as never; });
     vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockImplementation(async () => {
@@ -133,7 +139,7 @@ describe("runFiveMinuteTelegramSlot", () => {
 
     await runFiveMinuteTelegramSlot(buildRuntime("token"));
 
-    expect(order).toEqual(["dispatch", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook", "broker"]);
+    expect(order).toEqual(["dispatch", "recap", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook", "broker"]);
     expect(reconcileTelegramCommandRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramProfileRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramMenuButton).toHaveBeenCalledOnce();

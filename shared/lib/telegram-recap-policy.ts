@@ -13,6 +13,8 @@ export const TELEGRAM_RECAP_DUE_PAGE_SIZE = 90;
 export const TELEGRAM_RECAP_MAX_PAGES_PER_RUN = 10;
 export const TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN =
   TELEGRAM_RECAP_DUE_PAGE_SIZE * TELEGRAM_RECAP_MAX_PAGES_PER_RUN;
+/** Shared Tape rows loaded per due page; planner reads one extra row to detect truncation. */
+export const TELEGRAM_RECAP_TAPE_PAGE_LIMIT = 500;
 export const TELEGRAM_RECAP_MAX_COINS = 8;
 export const TELEGRAM_RECAP_MAX_FACT_LINES = 12;
 export const TELEGRAM_RECAP_TARGET_BODY_CHARACTERS = 3_500;

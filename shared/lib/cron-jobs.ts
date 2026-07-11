@@ -274,6 +274,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "five-minute-telegram-chain",
   },
   {
+    job: "telegram-personalized-recap-planner",
+    label: "Telegram personalized recap planner",
+    group: "five-minute",
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    triggerMode: "isolated",
+    maxConnections: 0, // D1-only deterministic planning; delivery remains in the pending drain
+    connectionGroup: "five-minute-telegram-chain",
+  },
+  {
     job: "telegram-degradation-watchdog",
     label: "Telegram degradation watchdog",
     group: "five-minute",
