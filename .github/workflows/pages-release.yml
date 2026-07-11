@@ -347,15 +347,15 @@ jobs:
             local attempt
             local status=1
 
-            for attempt in 1 2 3 4 5; do
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
               npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live
               status=$?
               if [ "$status" -eq 0 ]; then
                 return 0
               fi
-              if [ "$attempt" -lt 5 ]; then
-                echo "Yield asset smoke attempt ${attempt}/5 failed; waiting for Pages asset propagation."
-                sleep $((attempt * 10))
+              if [ "$attempt" -lt 10 ]; then
+                echo "Yield asset smoke attempt ${attempt}/10 failed; waiting for Pages asset propagation."
+                sleep 30
               fi
             done
 
