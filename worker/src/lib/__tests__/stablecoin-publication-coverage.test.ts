@@ -15,6 +15,8 @@ const CURRENT_NIGHT_WATCH_OMISSIONS = [
   "jusd-jusd-stable-token",
   "vndc-jade-labs",
   "sofid-sofi",
+  "gramg-token-teknoloji",
+  "grams-token-teknoloji",
 ] as const;
 
 const RESTORED_FROM_DEFILLAMA_ID = "rusd-royal-dollar";
@@ -26,7 +28,7 @@ describe("evaluateStablecoinPublicationCoverage", () => {
   const nowSec = Date.UTC(2026, 6, 10) / 1000;
   const activeIds = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id);
 
-  it("restores Royal Dollar while accounting for the other eight omissions", () => {
+  it("restores Royal Dollar while accounting for the audited omissions", () => {
     const omitted = new Set<string>(CURRENT_NIGHT_WATCH_OMISSIONS);
     const waived = new Set<string>(WAIVED_NIGHT_WATCH_OMISSIONS);
     const beforeRestore = evaluateStablecoinPublicationCoverage(
@@ -48,7 +50,7 @@ describe("evaluateStablecoinPublicationCoverage", () => {
   });
 
   it("keeps the audited waiver roster owned, reasoned, and short-lived", () => {
-    expect(STABLECOIN_PUBLICATION_WAIVERS).toHaveLength(8);
+    expect(STABLECOIN_PUBLICATION_WAIVERS).toHaveLength(10);
     expect(STABLECOIN_PUBLICATION_WAIVERS.map((waiver) => waiver.stablecoinId).sort()).toEqual(
       [...WAIVED_NIGHT_WATCH_OMISSIONS].sort(),
     );
