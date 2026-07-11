@@ -74,6 +74,11 @@ describe("Telegram load guard dependency registry", () => {
       }
     }
 
+    expect(hasTelegramLoadGuardImpact(["scripts/lib/telegram-load-scenarios.ts"])).toBe(true);
+    expect(commandTexts(buildCommandPlan(["scripts/lib/telegram-load-scenarios.ts"]))).toContain(
+      TELEGRAM_LOAD_ADVISORY_COMMAND,
+    );
+
     expect(hasTelegramLoadGuardImpact(["worker/src/api/unrelated.ts"])).toBe(false);
   });
 });

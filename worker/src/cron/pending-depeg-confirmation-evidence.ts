@@ -11,6 +11,7 @@ import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {
   collectDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
+  isNativeOriginPending,
 } from "../lib/depeg-helpers";
 import {
   chooseIndependentOffchainDepegConfirmer,
@@ -216,7 +217,8 @@ export async function collectConfirmationEvidence(
   };
 
   const geckoId = meta?.geckoId;
-  if (nativeSignal != null) {
+  const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  if (nativeSignal != null && !isNativeOrigin) {
     evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
     evidence.offchainSourceKey = nativeSourceKey;
     if (evidence.offchainStatus === "confirm") {
@@ -231,7 +233,7 @@ export async function collectConfirmationEvidence(
       `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
       `bar=${secondaryBar}bps, status=${evidence.offchainStatus}`,
     );
-  } else if (geckoId) {
+  } else if (geckoId && !isNativeOrigin) {
     const result = await evaluateOffchainConfirmer({
       db,
       symbol: row.symbol,

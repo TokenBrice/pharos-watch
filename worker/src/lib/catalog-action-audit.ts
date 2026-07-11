@@ -95,7 +95,9 @@ export async function auditCatalogActionResponse({
   const { target, label: scopeLabel } = getSafeTarget(endpoint.statusPageAction.scope, url);
   const outcome = getOutcome(endpoint, response);
   const executionCertainty = getExecutionCertainty(response, outcome);
-  const idempotentReplay = response.headers.get("X-Idempotent-Replay") === "true";
+  const idempotencyReplayHeader = response.headers.get("X-Idempotent-Replay");
+  const idempotentReplay = idempotencyReplayHeader === "true";
+  const intentWriteMode = idempotencyReplayHeader === "false" ? "authoritative" : "insert-if-missing";
 
   const persisted = await logAdminAction(
     db,
@@ -105,7 +107,7 @@ export async function auditCatalogActionResponse({
       result: outcome === "failed" || outcome === "unknown" ? "error" : "ok",
       httpStatus: response.status,
       intentKey,
-      intentWriteMode: idempotentReplay ? "insert-if-missing" : "authoritative",
+      intentWriteMode,
       details: {
         path: endpoint.path,
         method: request.method.toUpperCase(),
