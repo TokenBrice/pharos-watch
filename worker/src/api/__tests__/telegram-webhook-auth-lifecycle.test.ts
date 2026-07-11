@@ -58,6 +58,24 @@ describe("handleTelegramWebhook", () => {
     );
   });
 
+  it("acknowledges malformed authenticated update bodies without creating an effect fence", async () => {
+    const db = fixtureMockD1([]);
+    const request = new Request("https://x/api/telegram-webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "test-secret",
+      },
+      body: "{",
+    });
+
+    const response = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
   it("accepts the previous webhook secret during the overlap window", async () => {
     const db = fixtureMockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(
@@ -457,6 +475,29 @@ describe("handleTelegramWebhook", () => {
 
     const subscriberMigration = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
     expect(subscriberMigration?.binds.slice(0, 2)).toEqual(["-100123", "-123"]);
+  });
+
+  it("acknowledges a failed migration while emitting bounded error telemetry", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const db = fixtureMockD1([
+      {
+        match: "INSERT INTO telegram_subscribers",
+        rows: [],
+        throwError: new Error("D1 migration write unavailable"),
+      },
+    ]);
+
+    const response = await handleTelegramWebhook(
+      db,
+      makeChatMigrationRequest({ chatId: -123, migrateToChatId: -100123 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(response.status).toBe(200);
+    const record = JSON.parse(String(error.mock.calls[0]?.[0])) as Record<string, unknown>;
+    expect(record).toMatchObject({ action: "chat-migration", errorClass: "d1" });
+    error.mockRestore();
   });
 
   it("returns a retryable status for duplicate update ids still in flight", async () => {

@@ -3,7 +3,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { answerCallbackQuery, buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
+const {
+  answerCallbackQuery,
+  answerInlineQuery,
+  buildTelegramMessage,
+  editMessage,
+  postDigestToTelegram,
+  schedulePerChatBatches,
+  sendToChat,
+  sendBatch,
+} = await import("../telegram");
 
 const digestCreds = {
   botToken: "bot-token",
@@ -205,7 +214,9 @@ describe("sendToChat", () => {
     [{ description: "Bad Request: can't parse entities: unsupported start tag" }, 400, "formatting_error"],
     [{ description: "Bad Request: message is too long" }, 400, "payload_too_large"],
   ] as const)("classifies Telegram JSON failures as %s", async (body, status, errorClass) => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, error_code: status, ...body }), { status }));
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, error_code: status, ...body }), { status }),
+    );
     await expect(sendToChat("12345", "test", "bot-token")).resolves.toMatchObject({
       ok: false,
       errorClass,
@@ -214,12 +225,17 @@ describe("sendToChat", () => {
   });
 
   it("returns the migration target without retrying the old chat", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
-      ok: false,
-      error_code: 400,
-      description: "Bad Request: group chat was upgraded to a supergroup chat",
-      parameters: { migrate_to_chat_id: -1001234567890 },
-    }), { status: 400 }));
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error_code: 400,
+          description: "Bad Request: group chat was upgraded to a supergroup chat",
+          parameters: { migrate_to_chat_id: -1001234567890 },
+        }),
+        { status: 400 },
+      ),
+    );
 
     await expect(sendToChat("-123", "test", "bot-token")).resolves.toMatchObject({
       ok: false,
@@ -291,6 +307,92 @@ describe("answerCallbackQuery", () => {
   });
 });
 
+describe("editMessage", () => {
+  it("edits HTML messages with caller-provided preview and keyboard settings", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await expect(
+      editMessage("12345", 17, "<b>Updated</b>", "bot-token", {
+        disableWebPagePreview: true,
+        replyMarkup: { inline_keyboard: [[{ text: "Open", callback_data: "open" }]] },
+      }),
+    ).resolves.toBe(true);
+
+    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      chat_id: "12345",
+      message_id: 17,
+      text: "<b>Updated</b>",
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    });
+    expect(body.reply_markup).toEqual({ inline_keyboard: [[{ text: "Open", callback_data: "open" }]] });
+  });
+
+  it("treats Telegram's not-modified response as a completed edit", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          description: "Bad Request: message is not modified",
+        }),
+        { status: 400 },
+      ),
+    );
+
+    await expect(editMessage("12345", 17, "same", "bot-token")).resolves.toBe(true);
+  });
+
+  it("returns false for rejected, malformed, and transport-failed edits", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response("upstream unavailable", { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ description: "Bad Request: message cannot be edited" }), { status: 400 }),
+      )
+      .mockRejectedValueOnce(new Error("network unavailable"));
+
+    await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
+    await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
+    await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
+  });
+});
+
+describe("answerInlineQuery", () => {
+  const results = [
+    {
+      type: "article" as const,
+      id: "status:usdc-circle",
+      title: "USDC status",
+      input_message_content: { message_text: "<b>USDC</b>", parse_mode: "HTML" as const },
+    },
+  ];
+
+  it("posts cacheable shared inline results", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await expect(answerInlineQuery("inline-id", "bot-token", results, { cacheTimeSec: 30 })).resolves.toBe(true);
+
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/answerInlineQuery");
+    expect(JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))).toMatchObject({
+      inline_query_id: "inline-id",
+      results,
+      cache_time: 30,
+      is_personal: false,
+    });
+  });
+
+  it("logs a classified failure without retaining the query identifier", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchSpy.mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
+
+    await expect(answerInlineQuery("inline-secret", "bot-token", results, { cacheTimeSec: 5 })).resolves.toBe(false);
+
+    const record = JSON.parse(String(warn.mock.calls[0]?.[0])) as Record<string, unknown>;
+    expect(record).toMatchObject({ action: "answer-inline-query", statusCode: 503, errorClass: "server_error" });
+    expect(JSON.stringify(record)).not.toContain("inline-secret");
+    warn.mockRestore();
+  });
+});
+
 describe("sendBatch", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
@@ -358,12 +460,7 @@ describe("sendBatch", () => {
 
     const sendPromise = sendBatch(messages, "bot-token", 4);
     await vi.waitFor(() => expect(started).toHaveLength(4));
-    expect(started).toEqual([
-      "same-chat:chunk-0",
-      "other-a:only-chunk",
-      "other-b:only-chunk",
-      "other-c:only-chunk",
-    ]);
+    expect(started).toEqual(["same-chat:chunk-0", "other-a:only-chunk", "other-b:only-chunk", "other-c:only-chunk"]);
 
     releases.get("other-a:only-chunk")?.();
     releases.get("other-b:only-chunk")?.();
@@ -484,14 +581,19 @@ describe("sendBatch", () => {
       rateLimitScope: "chat",
       attempted: true,
     });
-    expect(results.slice(1, 4).every((result) =>
-      result.chatId === "same-chat" &&
-      result.errorClass === "rate_limit" &&
-      result.retryAfterSec === 45 &&
-      result.rateLimitScope === "chat" &&
-      result.attempted === false &&
-      result.skippedReason === "predecessor_failure"
-    )).toBe(true);
+    expect(
+      results
+        .slice(1, 4)
+        .every(
+          (result) =>
+            result.chatId === "same-chat" &&
+            result.errorClass === "rate_limit" &&
+            result.retryAfterSec === 45 &&
+            result.rateLimitScope === "chat" &&
+            result.attempted === false &&
+            result.skippedReason === "predecessor_failure",
+        ),
+    ).toBe(true);
     expect(results[4].ok).toBe(true);
   });
 
@@ -499,33 +601,41 @@ describe("sendBatch", () => {
     { status: 500, errorClass: "server_error", delivery: "retryable_failure" },
     { status: 400, errorClass: "bad_request", delivery: "permanent_failure" },
     { status: 403, errorClass: "blocked", delivery: "blocked" },
-  ])("classifies an unattempted same-chat tail from a $status predecessor", async ({
-    status,
-    errorClass,
-    delivery,
-  }) => {
-    fetchSpy
-      .mockResolvedValueOnce(new Response("failed", { status }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  ])(
+    "classifies an unattempted same-chat tail from a $status predecessor",
+    async ({ status, errorClass, delivery }) => {
+      fetchSpy
+        .mockResolvedValueOnce(new Response("failed", { status }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-    const results = await sendBatch([
-      { chatId: "same-chat", html: "chunk-0", disableNotification: false },
-      { chatId: "same-chat", html: "chunk-1", disableNotification: false },
-      { chatId: "same-chat", html: "chunk-2", disableNotification: false },
-      { chatId: "other-chat", html: "other", disableNotification: false },
-    ], "bot-token", 4);
+      const results = await sendBatch(
+        [
+          { chatId: "same-chat", html: "chunk-0", disableNotification: false },
+          { chatId: "same-chat", html: "chunk-1", disableNotification: false },
+          { chatId: "same-chat", html: "chunk-2", disableNotification: false },
+          { chatId: "other-chat", html: "other", disableNotification: false },
+        ],
+        "bot-token",
+        4,
+      );
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(results[0]).toMatchObject({ statusCode: status, errorClass, delivery, attempted: true });
-    expect(results.slice(1, 3).every((result) =>
-      result.statusCode === status &&
-      result.errorClass === errorClass &&
-      result.delivery === delivery &&
-      result.attempted === false &&
-      result.skippedReason === "predecessor_failure"
-    )).toBe(true);
-    expect(results[3]).toMatchObject({ ok: true, attempted: true });
-  });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(results[0]).toMatchObject({ statusCode: status, errorClass, delivery, attempted: true });
+      expect(
+        results
+          .slice(1, 3)
+          .every(
+            (result) =>
+              result.statusCode === status &&
+              result.errorClass === errorClass &&
+              result.delivery === delivery &&
+              result.attempted === false &&
+              result.skippedReason === "predecessor_failure",
+          ),
+      ).toBe(true);
+      expect(results[3]).toMatchObject({ ok: true, attempted: true });
+    },
+  );
 
   it("leaves repeated distinct-chat 429 inference to the durable controller", async () => {
     fetchSpy
@@ -559,7 +669,9 @@ describe("sendBatch", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
-    expect(results.slice(0, 3).every((result) => result.rateLimitScope === "chat" && result.attempted === true)).toBe(true);
+    expect(results.slice(0, 3).every((result) => result.rateLimitScope === "chat" && result.attempted === true)).toBe(
+      true,
+    );
     expect(results.slice(3).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
@@ -702,10 +814,15 @@ describe("sendBatch", () => {
     const controller = new AbortController();
     controller.abort();
 
-    const results = await sendBatch([
-      { chatId: "a", html: "hi", disableNotification: false },
-      { chatId: "b", html: "hi", disableNotification: false },
-    ], "bot-token", 2, controller.signal);
+    const results = await sendBatch(
+      [
+        { chatId: "a", html: "hi", disableNotification: false },
+        { chatId: "b", html: "hi", disableNotification: false },
+      ],
+      "bot-token",
+      2,
+      controller.signal,
+    );
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(results).toHaveLength(2);
@@ -715,17 +832,84 @@ describe("sendBatch", () => {
   it("marks the untouched tail retryable when the soft deadline has elapsed", async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-    const results = await sendBatch([
-      { chatId: "a", html: "hi", disableNotification: false },
-      { chatId: "b", html: "hi", disableNotification: false },
-    ], "bot-token", 2, undefined, { softDeadlineAtMs: Date.now() - 1 });
+    const results = await sendBatch(
+      [
+        { chatId: "a", html: "hi", disableNotification: false },
+        { chatId: "b", html: "hi", disableNotification: false },
+      ],
+      "bot-token",
+      2,
+      undefined,
+      { softDeadlineAtMs: Date.now() - 1 },
+    );
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(results).toHaveLength(2);
-    expect(results.every((result) =>
-      result.retryable &&
-      result.errorClass === "timeout" &&
-      result.attempted === false
-    )).toBe(true);
+    expect(
+      results.every((result) => result.retryable && result.errorClass === "timeout" && result.attempted === false),
+    ).toBe(true);
+  });
+
+  it("stops every queue when the pre-send transport controller closes delivery", async () => {
+    const send = vi.fn();
+    const results = await schedulePerChatBatches([{ chatId: "a" }, { chatId: "a" }, { chatId: "b" }], 2, send, {
+      beforeSendBatch: async (entries) =>
+        new Map(
+          entries.map((entry) => [
+            entry.index,
+            {
+              ok: false,
+              blocked: false,
+              retryable: true,
+              permanentFailure: false,
+              statusCode: null,
+              errorClass: "timeout" as const,
+              delivery: "retryable_failure" as const,
+              retryAfterSec: null,
+              skippedReason: "transport_control" as const,
+            },
+          ]),
+        ),
+    });
+
+    expect(send).not.toHaveBeenCalled();
+    expect(results).toHaveLength(3);
+    expect(results.every((result) => result.attempted === false && result.skippedReason === "transport_control")).toBe(
+      true,
+    );
+  });
+
+  it("defers untouched queues after a globally scoped rate limit", async () => {
+    const results = await schedulePerChatBatches(
+      [{ chatId: "a" }, { chatId: "b" }, { chatId: "c" }],
+      2,
+      async (item) =>
+        item.chatId === "a"
+          ? {
+              ok: false,
+              blocked: false,
+              retryable: true,
+              permanentFailure: false,
+              statusCode: 429,
+              errorClass: "rate_limit",
+              delivery: "retryable_failure",
+              retryAfterSec: 12,
+              rateLimitScope: "global",
+            }
+          : {
+              ok: true,
+              blocked: false,
+              retryable: false,
+              permanentFailure: false,
+              statusCode: 200,
+              errorClass: null,
+              delivery: "sent",
+              retryAfterSec: null,
+            },
+    );
+
+    expect(results[0]).toMatchObject({ attempted: true, rateLimitScope: "global" });
+    expect(results[1]).toMatchObject({ attempted: true, delivery: "sent" });
+    expect(results[2]).toMatchObject({ attempted: false, skippedReason: "global_rate_limit", retryAfterSec: 12 });
   });
 });

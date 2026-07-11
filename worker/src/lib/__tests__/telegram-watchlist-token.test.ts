@@ -18,6 +18,17 @@ function base64url(json: string): string {
   return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function signedEnvelope(prefix: "pw2" | "pw3", compressed: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", compressed));
+  return `${prefix}.${bytesToBase64Url(compressed)}.${bytesToBase64Url(digest.slice(0, 12))}`;
+}
+
 function direct(stablecoinId: string, overrides = false): WatchlistTokenDirectState {
   return {
     stablecoinId,
@@ -59,24 +70,29 @@ describe("watchlist token codec", () => {
   it("round-trips every v2 direct override/tuning field and preset intent", async () => {
     const state: WatchlistTokenV2State = {
       registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
-      direct: [direct("usdc-circle", true), {
-        ...direct("dai-makerdao"),
-        alertDews: false,
-        alertDepeg: false,
-        alertSafety: true,
-        alertLaunch: false,
-        alertReserve: true,
-        dewsMinBand: "DANGER",
-        safetyMode: "upgrade-only",
-        depegWorseningBpsStep: 500,
-      }],
-      presets: [{
-        presetId: "usd-top25",
-        alertDews: true,
-        alertDepeg: false,
-        alertSafety: true,
-        depegWorseningBpsStep: 100,
-      }],
+      direct: [
+        direct("usdc-circle", true),
+        {
+          ...direct("dai-makerdao"),
+          alertDews: false,
+          alertDepeg: false,
+          alertSafety: true,
+          alertLaunch: false,
+          alertReserve: true,
+          dewsMinBand: "DANGER",
+          safetyMode: "upgrade-only",
+          depegWorseningBpsStep: 500,
+        },
+      ],
+      presets: [
+        {
+          presetId: "usd-top25",
+          alertDews: true,
+          alertDepeg: false,
+          alertSafety: true,
+          depegWorseningBpsStep: 100,
+        },
+      ],
     };
     const token = await encodeWatchlistTokenV2(state);
     expect(token).toMatch(/^pw2\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
@@ -107,15 +123,19 @@ describe("watchlist token codec", () => {
     expect(token).toMatch(/^pw3\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
     await expect(decodeWatchlistToken(token)).resolves.toEqual({ ok: true, version: 3, state });
 
-    const legacy = await decodeWatchlistToken(await encodeWatchlistTokenV2({
-      ...state,
-      direct: [{ ...state.direct[0], alertFreeze: false, overrideFreeze: false }],
-    }));
+    const legacy = await decodeWatchlistToken(
+      await encodeWatchlistTokenV2({
+        ...state,
+        direct: [{ ...state.direct[0], alertFreeze: false, overrideFreeze: false }],
+      }),
+    );
     expect(legacy).toMatchObject({
       ok: true,
       version: 2,
       state: { direct: [{ alertFreeze: false, overrideFreeze: false }] },
     });
+
+    await expect(encodeWatchlistTokenV2(state)).rejects.toThrow("pw2 cannot represent freeze alert intent");
   });
 
   it("fits the maximum current subscribable registry in one export code-block line with headroom", async () => {
@@ -150,8 +170,8 @@ describe("watchlist token codec", () => {
     const token = await encodeWatchlistTokenV3(state);
     expect(token).toMatch(/^pw3\./);
     expect(token.length).toBeLessThanOrEqual(MAX_WATCHLIST_TOKEN_CHARS);
-    expect(TELEGRAM_MESSAGE_CHUNK_LIMIT - (`<pre>${token}</pre>`).length).toBeGreaterThanOrEqual(80);
-    expect(4096 - (`/import ${token}`).length).toBeGreaterThanOrEqual(175);
+    expect(TELEGRAM_MESSAGE_CHUNK_LIMIT - `<pre>${token}</pre>`.length).toBeGreaterThanOrEqual(80);
+    expect(4096 - `/import ${token}`.length).toBeGreaterThanOrEqual(175);
     const decoded = await decodeWatchlistToken(token);
     expect(decoded).toEqual({
       ok: true,
@@ -177,15 +197,46 @@ describe("watchlist token codec", () => {
     await expect(decodeWatchlistToken(altered)).resolves.toEqual({ ok: false, error: "integrity" });
   });
 
+  it("rejects corrupt pw3 envelopes without treating them as legacy payloads", async () => {
+    await expect(decodeWatchlistToken("pw3.not-base64.aaaaaaaaaaaaaaaa")).resolves.toEqual({
+      ok: false,
+      error: "integrity",
+    });
+    await expect(decodeWatchlistToken("pw3.aaaa.aaaaaaaaaaaaaaaa")).resolves.toEqual({
+      ok: false,
+      error: "integrity",
+    });
+  });
+
+  it("rejects signed envelopes whose compressed payload cannot be decoded", async () => {
+    const malformedCompressedPayload = new Uint8Array([0x01, 0x02, 0x03]);
+
+    await expect(decodeWatchlistToken(await signedEnvelope("pw2", malformedCompressedPayload))).resolves.toEqual({
+      ok: false,
+      error: "malformed",
+    });
+    await expect(decodeWatchlistToken(await signedEnvelope("pw3", malformedCompressedPayload))).resolves.toEqual({
+      ok: false,
+      error: "malformed",
+    });
+  });
+
   it("rejects empty, malformed, unsupported, and oversized inputs", async () => {
     await expect(decodeWatchlistToken("   ")).resolves.toEqual({ ok: false, error: "empty" });
     await expect(decodeWatchlistToken("!!!not-base64!!!")).resolves.toEqual({ ok: false, error: "malformed" });
-    await expect(decodeWatchlistToken(base64url("not json at all"))).resolves.toEqual({ ok: false, error: "malformed" });
-    await expect(decodeWatchlistToken(base64url(JSON.stringify({ v: 3, c: ["usdc-circle"], t: [], p: [] })))).resolves.toEqual({
+    await expect(decodeWatchlistToken(base64url("not json at all"))).resolves.toEqual({
+      ok: false,
+      error: "malformed",
+    });
+    await expect(
+      decodeWatchlistToken(base64url(JSON.stringify({ v: 3, c: ["usdc-circle"], t: [], p: [] }))),
+    ).resolves.toEqual({
       ok: false,
       error: "unsupported-version",
     });
-    await expect(decodeWatchlistToken(`pw2.${"A".repeat(MAX_WATCHLIST_TOKEN_CHARS)}.AAAAAAAAAAAAAAAA`)).resolves.toEqual({
+    await expect(
+      decodeWatchlistToken(`pw2.${"A".repeat(MAX_WATCHLIST_TOKEN_CHARS)}.AAAAAAAAAAAAAAAA`),
+    ).resolves.toEqual({
       ok: false,
       error: "too-large",
     });
