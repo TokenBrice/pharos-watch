@@ -1,5 +1,6 @@
 import { executeAtomicBatch } from "../lib/db";
 import { getCache, setCache } from "../lib/db-cache";
+import { parseJsonObject } from "../lib/json-parse";
 import {
   buildAlertReplyMarkup,
   formatConsolidatedMessage,
@@ -17,6 +18,18 @@ const FREEZE_CURSOR_KEY = "alert:freeze-tape-cursor";
 
 function isPrivateChat(chatId: string): boolean {
   return Number(chatId) > 0;
+}
+
+function isFreezeAlert(value: unknown): value is FreezeAlert {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<FreezeAlert>;
+  return typeof candidate.stablecoinId === "string"
+    && typeof candidate.symbol === "string"
+    && (candidate.eventType === "blacklist" || candidate.eventType === "unblacklist" || candidate.eventType === "destroy")
+    && typeof candidate.chainName === "string"
+    && (candidate.amountUsdAtEvent === null || (typeof candidate.amountUsdAtEvent === "number" && Number.isFinite(candidate.amountUsdAtEvent)))
+    && typeof candidate.tapeEventId === "string"
+    && typeof candidate.sourceEventId === "string";
 }
 
 /**
@@ -48,12 +61,10 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   ).bind(nowSec).all<{ payload_json: string }>();
   const queuedByTapeId = new Map<string, FreezeAlert>();
   for (const row of resumable.results ?? []) {
-    try {
-      const event = JSON.parse(row.payload_json) as FreezeAlert;
-      if (typeof event.tapeEventId === "string" && typeof event.stablecoinId === "string") {
-        queuedByTapeId.set(event.tapeEventId, event);
-      }
-    } catch { /* malformed durable payload remains visible for operator repair */ }
+    const event = parseJsonObject(row.payload_json, "telegram durable freeze payload");
+    if (isFreezeAlert(event)) {
+      queuedByTapeId.set(event.tapeEventId, event);
+    }
   }
   for (const event of loaded.alerts) queuedByTapeId.set(event.tapeEventId, event);
   let queued = 0;

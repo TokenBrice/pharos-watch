@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { parseJsonObject } from "../lib/json-parse";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
 const TAPE_FRESHNESS_SEC = 60 * 60;
@@ -31,42 +32,33 @@ function stablecoinIdForSymbol(symbol: string): string | null {
 }
 
 function parseFreezeRow(row: FreezeTapeRow): FreezeAlert | null {
-  try {
-    const payload = JSON.parse(row.payload_json) as {
-      stablecoin?: unknown;
-      stablecoinId?: unknown;
-      chainName?: unknown;
-      amountUsdAtEvent?: unknown;
-      sourceEventId?: unknown;
-    };
-    if (
-      typeof payload.stablecoin !== "string" ||
-      typeof payload.chainName !== "string" ||
-      typeof payload.sourceEventId !== "string"
-    ) return null;
-    const stablecoinId = typeof payload.stablecoinId === "string" && TRACKED_META_BY_ID.has(payload.stablecoinId)
-      ? payload.stablecoinId
-      : stablecoinIdForSymbol(payload.stablecoin);
-    if (!stablecoinId) return null;
-    const eventType = row.type === "freeze.blocked"
-      ? "blacklist"
-      : row.type === "freeze.unblocked"
-        ? "unblacklist"
-        : "destroy";
-    return {
-      stablecoinId,
-      symbol: payload.stablecoin,
-      eventType,
-      chainName: payload.chainName,
-      amountUsdAtEvent: typeof payload.amountUsdAtEvent === "number" && Number.isFinite(payload.amountUsdAtEvent)
-        ? payload.amountUsdAtEvent
-        : null,
-      tapeEventId: row.event_id,
-      sourceEventId: payload.sourceEventId,
-    };
-  } catch {
-    return null;
-  }
+  const payload = parseJsonObject(row.payload_json, "telegram freeze Tape payload");
+  if (
+    !payload ||
+    typeof payload.stablecoin !== "string" ||
+    typeof payload.chainName !== "string" ||
+    typeof payload.sourceEventId !== "string"
+  ) return null;
+  const stablecoinId = typeof payload.stablecoinId === "string" && TRACKED_META_BY_ID.has(payload.stablecoinId)
+    ? payload.stablecoinId
+    : stablecoinIdForSymbol(payload.stablecoin);
+  if (!stablecoinId) return null;
+  const eventType = row.type === "freeze.blocked"
+    ? "blacklist"
+    : row.type === "freeze.unblocked"
+      ? "unblacklist"
+      : "destroy";
+  return {
+    stablecoinId,
+    symbol: payload.stablecoin,
+    eventType,
+    chainName: payload.chainName,
+    amountUsdAtEvent: typeof payload.amountUsdAtEvent === "number" && Number.isFinite(payload.amountUsdAtEvent)
+      ? payload.amountUsdAtEvent
+      : null,
+    tapeEventId: row.event_id,
+    sourceEventId: payload.sourceEventId,
+  };
 }
 
 export async function loadFreshFreezeAlerts(
