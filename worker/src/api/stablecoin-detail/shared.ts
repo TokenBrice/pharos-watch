@@ -4,12 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-utils";
-import {
-  claimDetailCacheGeneration,
-  publishDetailCacheGeneration,
-  type DetailCacheGenerationClaim,
-} from "../../lib/detail-cache-generation";
-import { toErrorMessage } from "../../lib/error-utils";
+import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
@@ -123,14 +118,6 @@ export function createDetailResponseHelpers(config: {
   execCtx: ExecutionContext;
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
-  const requestStartedAtMs = Date.now();
-  const generationClaim = claimDetailCacheGeneration(config.db, config.stablecoinId, {
-    claimedAtMs: requestStartedAtMs,
-  }).then(
-    (claim) => ({ claim, error: null as string | null }),
-    (error) => ({ claim: null as DetailCacheGenerationClaim | null, error: toErrorMessage(error) }),
-  );
-
   // Failed/oversized cache writes used to vanish into sampled console logs,
   // leaving flagship coins on a synchronous-refetch-per-request path for
   // weeks. A small marker row makes the failure visible to the staleness
@@ -159,11 +146,8 @@ export function createDetailResponseHelpers(config: {
           return;
         }
         try {
-          const claimed = await generationClaim;
-          if (!claimed.claim) {
-            throw new Error(claimed.error ?? "detail cache generation claim failed");
-          }
-          const write = await publishDetailCacheGeneration(config.db, cacheKey, body, claimed.claim);
+          const claim = await claimDetailCacheGeneration(config.db, config.stablecoinId);
+          const write = await publishDetailCacheGeneration(config.db, cacheKey, body, claim);
           if (!write.written) {
             logWorkerEvent({
               scope: "api",

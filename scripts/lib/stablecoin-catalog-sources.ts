@@ -215,7 +215,10 @@ function mergeStablecoinSidecars(
   sidecars: StablecoinDomainSidecarEntry[],
 ): StablecoinSourceEntry {
   if (sidecars.length === 0) {
-    return entry;
+    return {
+      ...entry,
+      coin: parseSingleAssetValue(entry.coin, entry.file),
+    };
   }
 
   const patch: Record<string, unknown> = {};
