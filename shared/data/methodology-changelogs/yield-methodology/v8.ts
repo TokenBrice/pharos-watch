@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.34",
+    title: "Estimated Scores for Incomplete Evidence",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "Fresh yield rows retain a numeric PYS as an estimate when the conservative 40 / NR safety fallback or external-opportunity market evidence is incomplete. Stale source and benchmark evidence remains PYS-ineligible.",
+    impact: [
+      "Rows without a live Report Card score keep the conservative 40-point safety input and publish an estimated PYS with the explicit `safety-unrated` warning instead of disappearing from the ranking",
+      "External opportunities missing a venue review, market-size input, or required tranche status keep an estimated PYS with `opportunity-evidence-missing`; the warning does not claim the underlying stablecoin is unrated",
+      "`scoreQualification` is `estimated` for these rows, preserving the distinction from rated and partial evidence without treating incomplete inputs as an exact opportunity-risk assessment",
+      "Unknown or stale source freshness and stale benchmarks remain NR with a null PYS; the formula weights, safety fallback value, benchmark rates, and source-risk calibration are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.33",
     title: "Distinct-Day History Maturity",
     date: "2026-07-11",

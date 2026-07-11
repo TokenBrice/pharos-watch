@@ -10,6 +10,7 @@ describe("formatYieldWarningSignal", () => {
   it("returns the mapped label for known signals", () => {
     expect(formatYieldWarningSignal("yield-spike")).toBe("Yield spike");
     expect(formatYieldWarningSignal("tvl-outflow")).toBe("TVL outflow");
+    expect(formatYieldWarningSignal("opportunity-evidence-missing")).toBe("Opportunity evidence incomplete");
   });
 
   it("converts unknown signals from kebab-case to space-separated", () => {

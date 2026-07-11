@@ -411,7 +411,7 @@ describe("handleYieldRankings", () => {
       _meta: { ageSeconds: number };
     };
     expect(body.rankings).toHaveLength(3);
-    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["rated-coin", "orphan-coin", "nr-coin"]);
+    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["rated-coin", "nr-coin", "orphan-coin"]);
 
     const rankedById = new Map(body.rankings.map((row) => [row.id, row]));
     const orphan = rankedById.get("orphan-coin");
@@ -444,10 +444,10 @@ describe("handleYieldRankings", () => {
     expect(unrated?.provenance?.safetyProvenance).toBe("default-safety");
     expect(unrated?.safetyReason).toBe("report-card-score-missing");
     expect(unrated?.provenance?.safetyReason).toBe("report-card-score-missing");
-    expect(unrated?.pharosYieldScore).toBeNull();
+    expect(unrated?.pharosYieldScore).toBeGreaterThan(0);
     expect(unrated?.provenance).toMatchObject({
-      scoreQualification: "NR",
-      scoreQualified: false,
+      scoreQualification: "estimated",
+      scoreQualified: true,
     });
 
     expect(body.provenance.safetySnapshot).toEqual({
@@ -804,7 +804,7 @@ describe("handleYieldRankings", () => {
     }));
   });
 
-  it("does not requalify an external opportunity with missing critical market evidence", async () => {
+  it("keeps an external opportunity estimated when critical market evidence is missing", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const payload = {
       ...v748RankingsPayload,
@@ -837,9 +837,11 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
     const row = body.rankings[0];
 
-    expect(row?.pharosYieldScore).toBeNull();
-    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
-    expect(row?.provenance?.scoreQualification).toBe("NR");
+    expect(row?.pharosYieldScore).toBeGreaterThan(0);
+    expect(row?.pysNullReason).toBeNull();
+    expect(row?.provenance?.scoreQualification).toBe("estimated");
+    expect(row?.warningSignals).toContain("opportunity-evidence-missing");
+    expect(row?.warningSignals).not.toContain("safety-unrated");
     expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
       underlyingSafetyScore: 66,
       opportunitySafetyScore: null,

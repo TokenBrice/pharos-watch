@@ -460,12 +460,6 @@ function evaluateYieldSourceGroup(
         ? "source-freshness-unknown" as const
       : benchmarkFreshness === "stale"
         ? "benchmark-stale" as const
-        : !safetyEvidenceObserved
-          ? "safety-unrated" as const
-          : !opportunityEvidenceComplete
-            ? "opportunity-evidence-missing" as const
-        : !scoreQualified
-          ? "safety-unrated" as const
         : null;
     const pharosYieldScore = evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
       ? computedPharosYieldScore
@@ -504,9 +498,8 @@ function evaluateYieldSourceGroup(
     const freshnessWarnings: string[] = [];
     if (sourceFreshness === "stale") freshnessWarnings.push("data-stale");
     if (sourceFreshness === "unknown") freshnessWarnings.push("data-freshness-unknown");
-    if (!scoreQualified && sourceFreshness === "fresh" && benchmarkFreshness !== "stale") {
-      freshnessWarnings.push("safety-unrated");
-    }
+    if (!safetyEvidenceObserved) freshnessWarnings.push("safety-unrated");
+    if (!opportunityEvidenceComplete) freshnessWarnings.push("opportunity-evidence-missing");
     if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
 

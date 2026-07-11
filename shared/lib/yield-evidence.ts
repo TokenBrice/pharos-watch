@@ -37,16 +37,13 @@ export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldE
   ].filter(Boolean).length;
   const evidenceCompleteness = Number((measuredFieldCount / EVIDENCE_FIELD_COUNT).toFixed(4));
 
-  if (
-    !input.safetyObserved ||
-    input.sourceFreshness !== "fresh" ||
-    input.benchmarkFreshness === "stale" ||
-    input.opportunityEvidenceComplete === false
-  ) {
+  if (input.sourceFreshness !== "fresh" || input.benchmarkFreshness === "stale") {
     return { evidenceCompleteness, scoreQualification: "NR" };
   }
 
   if (
+    !input.safetyObserved ||
+    input.opportunityEvidenceComplete === false ||
     input.evidenceClass === "modeled-proxy" ||
     input.evidenceClass === "fallback" ||
     input.benchmarkFreshness === "degraded"

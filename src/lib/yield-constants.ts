@@ -10,6 +10,8 @@ export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "data-stale": "Data stale",
   "benchmark-degraded": "Benchmark degraded",
   "benchmark-stale": "Benchmark stale",
+  "safety-unrated": "Safety unrated",
+  "opportunity-evidence-missing": "Opportunity evidence incomplete",
   "zero-yield": "Zero yield",
   "low-source-tvl": "Low source TVL",
 };
@@ -23,6 +25,8 @@ const WARNING_SIGNAL_DESCRIPTIONS: Record<string, string> = {
   "data-stale": "Latest source observation is older than expected. Treat APY as stale until the source refreshes.",
   "benchmark-degraded": "The row uses a retained or fallback benchmark. Treat benchmark-relative comparisons with caution.",
   "benchmark-stale": "The selected benchmark is older than its scoring window, so PYS is unavailable until it refreshes.",
+  "safety-unrated": "This estimated PYS uses the conservative 40-point safety fallback until a Report Card score is available.",
+  "opportunity-evidence-missing": "This estimated PYS is missing a venue review or market-size input, so it cannot be treated as an exact opportunity-risk rating.",
   "zero-yield": "Current source reports zero yield. Verify whether the program paused or the source failed.",
   "low-source-tvl": "Venue TVL is small. Use the depth lens and retained alternates before comparing this APY with deeper venues.",
 };

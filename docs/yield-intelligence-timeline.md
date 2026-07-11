@@ -1,10 +1,20 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.33`.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.34`.
 
 ---
 
 > Older entries are archived in [yield-intelligence-timeline-archive.md](./yield-intelligence-timeline-archive.md); this file keeps the 10 most recent versioned entries.
+
+## v8.34 - Estimated Scores for Incomplete Evidence (July 11, 2026)
+
+- Restores numeric PYS for fresh rows on the conservative `40 / NR` safety fallback, qualified as `estimated` and carrying `safety-unrated`
+- Restores numeric PYS for fresh external opportunities with missing venue review, market size, or required market-status evidence, qualified as `estimated` and carrying `opportunity-evidence-missing`
+- Corrects the warning contract so opportunity evidence debt is never labeled as an unrated underlying stablecoin
+- Retains the hard NR/null-PYS gates for stale or unknown source freshness and stale benchmark evidence
+- Leaves PYS formula weights, the 40-point safety fallback, benchmark rates, and source-risk calibration unchanged
+
+---
 
 ## v8.33 - Distinct-Day History Maturity (July 11, 2026)
 

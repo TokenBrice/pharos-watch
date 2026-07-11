@@ -59,7 +59,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score (safety defaults to 40 / NR if live report-card hydration is missing and publishes an explicit missing/default reason; missing source-risk penalty resolves to neutral 1)",
+                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score. A fresh row with 40 / NR fallback safety or incomplete external-opportunity evidence retains an explicitly estimated PYS and warning; missing source-risk penalty resolves to neutral 1",
                     },
                   ]}
                 />
@@ -280,8 +280,8 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     NAV-appreciating tokens (e.g.&nbsp;sDAI, wUSDM, BUIDL) use live report-card scores when the safety
                     framework has enough data for them, including NAV-aware report-card coverage. The default safety baseline
-                    of 40 (NR) is only a missing-safety fallback and carries an explicit provenance reason, so a NAV
-                    token&apos;s PYS can still reflect a full safety assessment when report-card hydration succeeds.
+                    of 40 (NR) is a conservative missing-safety fallback with an explicit provenance reason; fresh rows
+                    retain an estimated PYS until report-card hydration supplies a full safety assessment.
                   </p>
                   <YieldNavTokenMechanismLinks />
                 </div>
@@ -296,6 +296,10 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       History before v8.31 lacks the full benchmark, source-risk, and scaling input snapshot and is labeled
                       legacy-partial; later points store versioned inputs for exact PYS recomputation
+                    </li>
+                    <li>
+                      Rows carrying `safety-unrated` or `opportunity-evidence-missing` remain estimated until the missing
+                      safety or market-risk evidence is reviewed; stale source and benchmark evidence remains PYS NR
                     </li>
                     <li>
                       Some DeFiLlama and protocol-native surfaces still depend on upstream asset metadata completeness; the

@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.33`
+- **Current methodology version:** `v8.34`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.34 restores a numeric PYS as an **estimated** score for fresh rows whose Report Card safety is still on the conservative `40 / NR` fallback or whose external-opportunity contract lacks venue/market evidence. The row retains the precise `safety-unrated` or `opportunity-evidence-missing` warning and cannot be represented as an exact opportunity-risk assessment. Unknown/stale source freshness and stale benchmarks remain NR with a null PYS. PYS weights, the 40-point safety fallback, benchmark rates, and source-risk calibration are unchanged.
 
 Yield v8.33 makes history maturity cadence-aware at the day boundary: `sourceRisk.observationCount30d` counts distinct UTC observation days, including the current publication day, rather than raw hourly samples. The existing limited-history penalty remains active until seven distinct days are represented, so a few hours of dense observations cannot appear mature. APY windows, PYS weights, and the penalty magnitude are unchanged.
 
@@ -822,9 +824,9 @@ GBP attempts additionally write bounded cron metadata for every FRED, ALFRED, an
 
 ### `GET /api/yield-rankings`
 
-Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from current report-card data at API read time. The API first uses the exact published `report-cards:snapshot` and computes a report-card fallback when that snapshot is unavailable. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report card, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from current report-card data at API read time. The API first uses the exact published `report-cards:snapshot` and computes a report-card fallback when that snapshot is unavailable. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report card, the API retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage; fresh rows retain an estimated PYS plus `safety-unrated`, never an exact safety claim. `safetyReason` explains missing/default and explicit-NR states with a stable value: `report-card-score-missing`, `report-card-grade-not-rated`, or (for an opportunity row) `underlying-report-card-score-missing`; otherwise it is `null`.
 
-For v8.32 external opportunities, read-time hydration recomputes the opportunity-level safety contract from the live underlying Report Card plus the published venue and market evidence. It preserves `opportunity-evidence-missing` and an NR qualification when critical market evidence is absent; hydration cannot replace market-level safety with the underlying stablecoin score or requalify an NR opportunity. Pre-v8.32 cached rows without an `opportunityRisk` contract retain their legacy compatibility behavior.
+For v8.32 external opportunities, read-time hydration recomputes the opportunity-level safety contract from the live underlying Report Card plus the published venue and market evidence. When critical evidence is absent, v8.34 preserves `opportunity-evidence-missing` as an explicit warning and returns an estimated PYS rather than mislabeling the underlying stablecoin as unrated; hydration cannot invent market-level safety. Pre-v8.32 cached rows without an `opportunityRisk` contract retain their legacy compatibility behavior.
 
 The two top-level safety provenance fields have different clocks. `provenance.safetySnapshot` is immutable publish-time evidence: it names the exact compact report-card generation used by the hourly cron to compute the cached rankings. Read-time hydration never overwrites it. Optional `provenance.liveSafetyHydration` instead reports the current hydration `kind`, row coverage counts/ratio, reason, source (`report-cards:snapshot` or `computed-report-cards`), publication generation, methodology, and publish time. Hydration is marked degraded when DEX-liquidity/redemption inputs are stale, the full report-card snapshot is over age, or live row coverage is below 0.75; the API appends the `yield-safety-hydration-degraded` body warning and emits HTTP `Warning: 199`. A hydration exception returns the cached published safety fields with the same warning code/header.
 
@@ -1249,7 +1251,7 @@ Use `--out <path>` to write deterministic JSON, `--horizons 7,30,90` to select f
 
 - **First sync (no history):** `apy7d` and `apy30d` equal `currentApy`. PYS still computed.
 - **On-chain rate bootstrapping:** When a Tier 1 vault has no previous exchange rate in history (first 7 days after config is added), the sync emits a seed row with `currentApy: 0` and the current `exchangeRate`. This persists the rate in `yield_history` so future cycles can compute APY once a 7-day-old reference point exists.
-- **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Most NAV tokens hit this path since the report card framework doesn't grade them yet.
+- **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Fresh rows retain an estimated PYS with the `safety-unrated` warning until the report card framework grades them; stale source or benchmark evidence still produces PYS NR.
 - **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped. The API preserves the hourly `safetySnapshot`, reports the read-time state under `liveSafetyHydration`, and emits body warning `yield-safety-hydration-degraded` plus HTTP `Warning: 199` for stale inputs/snapshot age, low coverage, or a hydration failure.
 - **All tiers fail:** Coin is recorded with `yield: null` and skipped in the write phase. No PYS computed. Logged as warning.
 - **Negative APY:** Stored and displayed. PYS returns 0 for `apy30d <= 0`.

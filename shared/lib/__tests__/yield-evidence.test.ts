@@ -38,13 +38,18 @@ describe("assessYieldEvidence", () => {
   });
 
   it.each([
-    { safetyObserved: false },
     { sourceFreshness: "unknown" as const },
     { sourceFreshness: "stale" as const },
     { benchmarkFreshness: "stale" as const },
-    { opportunityEvidenceComplete: false },
-  ])("does not rate missing critical evidence: $safetyObserved$sourceFreshness$benchmarkFreshness$opportunityEvidenceComplete", (gap) => {
+  ])("does not rate missing freshness evidence: $sourceFreshness$benchmarkFreshness", (gap) => {
     expect(assessYieldEvidence(completeEvidence(gap)).scoreQualification).toBe("NR");
+  });
+
+  it.each([
+    { safetyObserved: false },
+    { opportunityEvidenceComplete: false },
+  ])("marks incomplete safety or opportunity evidence as estimated", (gap) => {
+    expect(assessYieldEvidence(completeEvidence(gap)).scoreQualification).toBe("estimated");
   });
 
   it("keeps complete opportunity evidence rated without changing completeness", () => {

@@ -389,9 +389,10 @@ function hydrateYieldRankingsWithLiveSafety(
       const opportunityEvidenceComplete =
         hydratedSafety.sourceRisk?.opportunityRisk == null ||
         hydratedSafety.sourceRisk.opportunityRisk.missingCriticalEvidence.length === 0;
+      const safetyObserved = !hydratedSafety.usedDefaultSafety && hydratedSafety.grade !== "NR";
       const evidenceAssessment = assessYieldEvidence({
         evidenceClass,
-        safetyObserved: !hydratedSafety.usedDefaultSafety && hydratedSafety.grade !== "NR",
+        safetyObserved,
         sourceFreshness,
         benchmarkFreshness,
         hasSourceDepth: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio) != null,
@@ -401,18 +402,24 @@ function hydrateYieldRankingsWithLiveSafety(
         hasYieldDecomposition: row.apyBase != null || row.apyReward != null,
         opportunityEvidenceComplete,
       });
+      const warningSignals = row.warningSignals.filter((signal) =>
+        (signal !== "safety-unrated" || !safetyObserved) &&
+        (signal !== "opportunity-evidence-missing" || !opportunityEvidenceComplete),
+      );
+      if (!safetyObserved && !warningSignals.includes("safety-unrated")) {
+        warningSignals.push("safety-unrated");
+      }
+      if (!opportunityEvidenceComplete && !warningSignals.includes("opportunity-evidence-missing")) {
+        warningSignals.push("opportunity-evidence-missing");
+      }
       const evidenceNullReason =
-        sourceFreshness === "stale" || row.warningSignals.includes("data-stale")
+        sourceFreshness === "stale" || warningSignals.includes("data-stale")
           ? ("source-stale" as const)
           : sourceFreshness === "unknown"
             ? ("source-freshness-unknown" as const)
-            : benchmarkFreshness === "stale" || row.warningSignals.includes("benchmark-stale")
+            : benchmarkFreshness === "stale" || warningSignals.includes("benchmark-stale")
               ? ("benchmark-stale" as const)
-              : !opportunityEvidenceComplete
-                ? ("opportunity-evidence-missing" as const)
-              : evidenceAssessment.scoreQualification === "NR"
-                ? ("safety-unrated" as const)
-                : null;
+              : null;
       const recomputedPharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
       const pharosYieldScore = evidenceNullReason == null ? recomputedPharosYieldScore : null;
       const pysNullReason =
@@ -438,6 +445,7 @@ function hydrateYieldRankingsWithLiveSafety(
           safetyReason: hydratedSafety.reason,
           pharosYieldScore,
           pysNullReason,
+          warningSignals,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           sourceRisk: hydratedSafety.sourceRisk,
           altSources: hydrateAltSourcesWithLiveSafety(row, underlyingSafetyScore),

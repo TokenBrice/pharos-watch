@@ -286,10 +286,11 @@ describe("evaluateYieldSources", () => {
       safetyGrade: "NR",
       usedDefaultSafety: true,
       safetyReason: "report-card-score-missing",
-      scoreQualification: "NR",
-      pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      scoreQualification: "estimated",
+      pysNullReason: null,
     });
+    expect(missing?.pharosYieldScore).toBeGreaterThan(0);
+    expect(missing?.warnings).toContain("safety-unrated");
 
     const notRated = evaluateYieldSources(baseEvaluationInput({
       resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
@@ -299,10 +300,11 @@ describe("evaluateYieldSources", () => {
       safetyGrade: "NR",
       usedDefaultSafety: false,
       safetyReason: "report-card-grade-not-rated",
-      scoreQualification: "NR",
-      pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      scoreQualification: "estimated",
+      pysNullReason: null,
     });
+    expect(notRated?.pharosYieldScore).toBeGreaterThan(0);
+    expect(notRated?.warnings).toContain("safety-unrated");
   });
 
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
@@ -1079,7 +1081,7 @@ describe("opportunity-level risk (yield v8.32)", () => {
     expect(source?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBe(source?.safetyScore);
   });
 
-  it("withholds the exact PYS when an external opportunity's venue is unreviewed", () => {
+  it("publishes an estimated PYS when an external opportunity's venue is unreviewed", () => {
     const [source] = evaluateYieldSources(baseEvaluationInput({
       resolved: [{
         id: "coin-a",
@@ -1095,10 +1097,11 @@ describe("opportunity-level risk (yield v8.32)", () => {
     expect(source).toMatchObject({
       safetyScore: 80,
       safetyProvenance: "cached-publish",
-      scoreQualification: "NR",
-      pharosYieldScore: null,
-      pysNullReason: "opportunity-evidence-missing",
+      scoreQualification: "estimated",
+      pysNullReason: null,
     });
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.warnings).toContain("opportunity-evidence-missing");
     expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
       opportunitySafetyScore: null,
       venueReviewed: false,
@@ -1106,7 +1109,7 @@ describe("opportunity-level risk (yield v8.32)", () => {
     });
   });
 
-  it("treats unknown market size as missing critical evidence", () => {
+  it("keeps an estimated PYS when market size is unavailable", () => {
     const [source] = evaluateYieldSources(baseEvaluationInput({
       resolved: [{
         id: "coin-a",
@@ -1121,10 +1124,11 @@ describe("opportunity-level risk (yield v8.32)", () => {
     })).evaluatedSources;
 
     expect(source).toMatchObject({
-      pharosYieldScore: null,
-      pysNullReason: "opportunity-evidence-missing",
-      scoreQualification: "NR",
+      pysNullReason: null,
+      scoreQualification: "estimated",
     });
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.warnings).toContain("opportunity-evidence-missing");
     expect(source?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["market-size"]);
   });
 
