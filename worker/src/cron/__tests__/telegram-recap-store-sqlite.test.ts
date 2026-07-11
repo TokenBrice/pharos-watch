@@ -19,7 +19,9 @@ const dbs: DatabaseSync[] = [];
 function setup(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
   const dir = process.cwd().endsWith("/worker") ? join(process.cwd(), "migrations") : join(process.cwd(), "worker/migrations");
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration directory only.
   for (const file of readdirSync(dir).filter((entry) => entry.endsWith(".sql")).sort()) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration replay only.
     sqlite.exec(readFileSync(join(dir, file), "utf8"));
   }
   dbs.push(sqlite);

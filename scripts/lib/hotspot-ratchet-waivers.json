@@ -55,13 +55,13 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
   },
-  "worker/src/cron/blacklist/amount-recovery.ts": {
+  "worker/src/api/telegram-mini-app.ts": {
     "disposition": "queued-p4",
-    "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
+    "notes": "The Telegram Mini App API coordinates authenticated session reads, mutation routing, action telemetry, and recap settings under one versioned contract. Keep it together while the v4 recap contract stabilizes, then separate session and mutation concerns.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-11",
+    "reviewAfter": "2026-10-11",
+    "nextAction": "Split authenticated session loading and mutation/action routing behind the stable Mini App v4 response contract."
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",

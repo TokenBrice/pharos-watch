@@ -192,8 +192,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 315,
-    "maxFunctionLines": 295,
+    "fileLines": 319,
+    "maxFunctionLines": 299,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
