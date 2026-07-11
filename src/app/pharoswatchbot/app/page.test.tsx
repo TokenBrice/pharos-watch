@@ -20,6 +20,7 @@ const baseState: TelegramMiniAppState = {
     exists: true,
     globalAlerts: { dews: true, depeg: true, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: 250 },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
+    recap: { enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
     snoozeUntilTs: null,
   },
   presets: [],
@@ -929,6 +930,77 @@ describe("PharosWatchBotMiniAppPage", () => {
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-timezone", timezone: "Europe/Paris" } }),
     }));
+  });
+
+  it("configures a timezone-gated personalized daily recap", async () => {
+    const enabledState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        recap: {
+          ...baseState.subscriber.recap,
+          enabled: true,
+          deliveryHourLocal: 9,
+          nextDueAt: 1_720_018_800,
+          lastOutcome: "skipped_no_changes",
+        },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => enabledState })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...enabledState,
+          subscriber: {
+            ...enabledState.subscriber,
+            recap: { ...enabledState.subscriber.recap, deliveryHourLocal: 14 },
+          },
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Daily recap" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 } }),
+    }));
+
+    fireEvent.change(screen.getByLabelText("Delivery hour"), { target: { value: "14" } });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 } }),
+    }));
+    expect(screen.getByText("No material changes")).toBeTruthy();
+  });
+
+  it("requires an explicitly confirmed timezone before enabling a recap", async () => {
+    const state: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: null },
+        recap: { ...baseState.subscriber.recap, timezoneConfirmed: false },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => state }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
+    expect(screen.getByText("Confirm a timezone below before enabling your recap.")).toBeTruthy();
   });
 
   it("offers a compact timezone picker plus searchable full coverage and confirmed recent zones", async () => {

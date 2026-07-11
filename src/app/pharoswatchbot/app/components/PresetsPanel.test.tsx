@@ -26,6 +26,7 @@ const state: TelegramMiniAppState = {
       depegStepBps: 250,
     },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
+    recap: { enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
     snoozeUntilTs: null,
   },
   presets: [

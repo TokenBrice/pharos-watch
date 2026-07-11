@@ -79,6 +79,10 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
     }
     case "set-timezone":
       return operation.timezone == null ? "Timezone cleared." : `Timezone set to ${operation.timezone}.`;
+    case "set-recap":
+      return operation.enabled
+        ? `Daily recap scheduled for ${String(operation.deliveryHourLocal).padStart(2, "0")}:00.`
+        : "Daily recap disabled.";
     case "unsubscribe-all":
       return "All subscriptions cleared.";
     case "forget-me":

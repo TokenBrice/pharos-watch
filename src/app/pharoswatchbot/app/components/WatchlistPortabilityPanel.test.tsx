@@ -22,6 +22,7 @@ const state: TelegramMiniAppState = {
     exists: true,
     globalAlerts: { dews: true, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
+    recap: { enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
     snoozeUntilTs: null,
   },
   presets: [],
