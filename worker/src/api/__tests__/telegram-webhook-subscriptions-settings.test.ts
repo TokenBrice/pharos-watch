@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -137,7 +138,8 @@ describe("handleTelegramWebhook", () => {
     const subscriberUpsert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
     expect(subscriberUpsert).toBeDefined();
     expect(subscriberUpsert!.sql).toContain("global_alert_reserve = MAX");
-    expect(subscriberUpsert!.binds[11]).toBe(1);
+    const globalReserveBindIndex = 2 + TELEGRAM_ALERT_TYPES.length + TELEGRAM_ALERT_TYPES.indexOf("reserve");
+    expect(subscriberUpsert!.binds[globalReserveBindIndex]).toBe(1);
   });
 
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {

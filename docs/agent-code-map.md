@@ -393,7 +393,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
 - `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrV2CoverageInput, DdrrV2InvalidatedPredictionInput
 - `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
-- ... 281 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 283 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -551,7 +551,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/depeg-resolver.ts` - handleDepegResolver
 - `worker/src/api/dex-liquidity-evidence.ts` - LiquidityEvidenceClassification, classifyLiquidityEvidence, isTrendworthyLiquiditySnapshot
 - `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
-- ... 136 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 138 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -635,7 +635,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/hydration.ts` - BlacklistHydration, DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC, DewsSourceCoverage, DexLiquidityHistoryHydration, DexLiquidityHydration
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
-- ... 384 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 387 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -699,7 +699,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/budget-surface-telemetry.ts` - BudgetSurfaceOutcome, BudgetSurfaceTelemetryInput, loadBudgetOnlySurfaceStatuses, recordBudgetSurfaceTelemetry
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
 - `worker/src/lib/cadence-bucket.ts` - CadenceBucketClaim, CadenceBucketClaimResult, appendCadenceResultMetadata, cadenceBucketFor, claimCadenceBucket, completeCadenceBucket
-- ... 283 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 286 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -763,4 +763,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
 - `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/generated-artifact-entrypoints.test.ts`
-- ... 251 more files omitted; use `rg --files scripts` for the full list.
+- ... 252 more files omitted; use `rg --files scripts` for the full list.
