@@ -221,12 +221,20 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         ) AS active_sub_count
    FROM telegram_subscriptions
   GROUP BY chat_id`;
+  const activePresetCountsSql = `SELECT chat_id,
+        COUNT(*) AS active_preset_count
+   FROM telegram_preset_subscriptions
+  WHERE alert_dews = 1
+     OR alert_depeg = 1
+     OR alert_safety = 1
+  GROUP BY chat_id`;
   const activeWatcherCondition = `s.global_alert_dews = 1
   OR s.global_alert_depeg = 1
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
   OR s.global_alert_reserve = 1
-  OR COALESCE(sub.active_sub_count, 0) > 0`;
+  OR COALESCE(sub.active_sub_count, 0) > 0
+  OR COALESCE(preset.active_preset_count, 0) > 0`;
 
   return [
     {
@@ -353,6 +361,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
                    OR s.global_alert_launch = 1
                    OR s.global_alert_reserve = 1
                    OR COALESCE(sub.active_sub_count, 0) > 0
+                   OR COALESCE(preset.active_preset_count, 0) > 0
                  THEN 1 ELSE 0 END) AS active_watchers
            FROM telegram_subscribers s
            LEFT JOIN (
@@ -360,37 +369,49 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
                     SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 THEN 1 ELSE 0 END) AS active_sub_count
                FROM telegram_subscriptions
               GROUP BY chat_id
-           ) sub ON sub.chat_id = s.chat_id`,
+           ) sub ON sub.chat_id = s.chat_id
+           LEFT JOIN (
+             ${activePresetCountsSql}
+           ) preset ON preset.chat_id = s.chat_id`,
       binds: [],
       allowedFullScanTables: ["s"],
       budget: {
-        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions", "telegram_preset_subscriptions"],
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
+      note: "Pulse common path serves telegram:pulse:snapshot from cache; this reviews the refresh/fallback aggregate query. Measured 2026-07-10 at the 5,000-watcher fixture: 33,751 rows read, ~20ms in-memory; no rollup justified yet.",
     },
     {
       id: "status-top-stablecoins",
       category: "pulse-status",
-      sql: `SELECT stablecoin_id, COUNT(*) AS subscribers
-        FROM telegram_subscriptions
-       WHERE alert_dews = 1
-          OR alert_depeg = 1
-          OR alert_safety = 1
-          OR alert_launch = 1
-          OR alert_reserve = 1
-       GROUP BY stablecoin_id
-       ORDER BY subscribers DESC, stablecoin_id ASC
+      sql: `SELECT source_id, COUNT(*) AS subscribers
+        FROM (
+          SELECT stablecoin_id AS source_id, chat_id
+            FROM telegram_subscriptions
+           WHERE alert_dews = 1
+              OR alert_depeg = 1
+              OR alert_safety = 1
+              OR alert_launch = 1
+              OR alert_reserve = 1
+          UNION ALL
+          SELECT preset_id AS source_id, chat_id
+            FROM telegram_preset_subscriptions
+           WHERE alert_dews = 1
+              OR alert_depeg = 1
+              OR alert_safety = 1
+        ) follows
+       GROUP BY source_id
+       ORDER BY subscribers DESC, source_id ASC
        LIMIT 5`,
       binds: [],
-      allowedFullScanTables: ["telegram_subscriptions"],
+      allowedFullScanTables: ["telegram_subscriptions", "telegram_preset_subscriptions", "follows"],
       budget: {
-        rowsReadTables: ["telegram_subscriptions"],
+        rowsReadTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],
         maxRowsRead: 30_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists. Measured 2026-07-10 at the 5,000-watcher fixture: 28,334 rows read, ~5ms in-memory; no rollup justified yet.",
+      note: "Top-coin status is still an aggregate over current subscriptions; reviewed until a dedicated status snapshot exists. Measured 2026-07-10 at the 5,000-watcher fixture: 28,751 rows read, ~15ms in-memory; no rollup justified yet.",
     },
     {
       id: "lifecycle-current-active-history",
@@ -403,17 +424,20 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
            LEFT JOIN (
              ${activeSubscriptionCountsSql}
            ) sub ON sub.chat_id = s.chat_id
+           LEFT JOIN (
+             ${activePresetCountsSql}
+           ) preset ON preset.chat_id = s.chat_id
            WHERE ${activeWatcherCondition}
            GROUP BY day
            ORDER BY day ASC`,
       binds: [],
       allowedFullScanTables: ["s"],
       budget: {
-        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions"],
+        rowsReadTables: ["telegram_subscribers", "telegram_subscriptions", "telegram_preset_subscriptions"],
         maxRowsRead: 35_000,
         maxDurationMs: STATUS_PATH_MAX_DURATION_MS,
       },
-      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-10 at the 5,000-watcher fixture: 33,334 rows read, ~7ms in-memory; no rollup justified yet.",
+      note: "Legacy fallback history still scans subscribers only when lifecycle snapshots are missing; production history uses telegram_watcher_lifecycle_daily once populated. Measured 2026-07-10 at the 5,000-watcher fixture: 33,751 rows read, ~20ms in-memory; no rollup justified yet.",
     },
   ];
 }

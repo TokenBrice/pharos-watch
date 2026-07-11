@@ -230,6 +230,13 @@ describe("Telegram status-path budgets", () => {
       expect(check.budget?.rowsReadTables.length).toBeGreaterThan(0);
       expect(check.budget?.maxRowsRead).toBeGreaterThan(0);
       expect(check.budget?.maxDurationMs).toBeGreaterThan(0);
+      if (
+        check.id === "pulse-aggregate" ||
+        check.id === "status-top-stablecoins" ||
+        check.id === "lifecycle-current-active-history"
+      ) {
+        expect(check.budget?.rowsReadTables).toContain("telegram_preset_subscriptions");
+      }
     }
   });
 
