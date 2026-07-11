@@ -1,6 +1,5 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
-import type { D1CapacityAssessment } from "@shared/types/status";
 import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
@@ -9,7 +8,12 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
-import type { CacheStatus, HealthResponse, StablecoinPublicationHealth } from "@shared/types/status";
+import type {
+  CacheStatus,
+  D1CapacityAssessment,
+  HealthResponse,
+  StablecoinPublicationHealth,
+} from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
