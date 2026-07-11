@@ -1,4 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { jsonResponse } from "../../lib/api-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
 
@@ -82,6 +83,7 @@ export interface TelegramIngressAbuseEnv {
 }
 
 function resolvePolicy(request: Request, url: URL): TelegramIngressPolicy | null {
+  if (url.hostname !== API_HOSTNAME) return null;
   if (request.method !== "POST") return null;
   return POLICIES_BY_PATH.get(url.pathname) ?? null;
 }
@@ -152,10 +154,7 @@ async function cancelReader(reader: ReadableStreamDefaultReader<Uint8Array>): Pr
   }
 }
 
-async function readBoundedBody(
-  request: Request,
-  policy: TelegramIngressPolicy,
-): Promise<Uint8Array | Response> {
+async function readBoundedBody(request: Request, policy: TelegramIngressPolicy): Promise<Uint8Array | Response> {
   if (!request.body) return new Uint8Array();
 
   const reader = request.body.getReader();
@@ -305,11 +304,7 @@ const HANDLER_REJECTIONS = {
   429: "handler_rate_limited",
 } as const satisfies Partial<Record<TelegramIngressRejectionStatus, TelegramIngressTelemetryReason>>;
 
-export function recordTelegramIngressHandlerResponse(
-  request: Request,
-  url: URL,
-  response: Response,
-): void {
+export function recordTelegramIngressHandlerResponse(request: Request, url: URL, response: Response): void {
   const policy = resolvePolicy(request, url);
   if (!policy) return;
   const reason = HANDLER_REJECTIONS[response.status as keyof typeof HANDLER_REJECTIONS];

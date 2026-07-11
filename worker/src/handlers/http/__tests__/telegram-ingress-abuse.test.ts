@@ -19,6 +19,7 @@ import {
 
 type PolicyArtifact = {
   deploymentState: string;
+  protectedHostname: string;
   workerBindings: Array<{
     route: string;
     method: string;
@@ -105,18 +106,43 @@ describe("Telegram ingress abuse gate", () => {
       await expect(result.request.text()).resolves.toBe("{}");
       expect(env[policy.binding].limit).toHaveBeenCalledOnce();
       expect(env[policy.binding].limit).toHaveBeenCalledWith({ key: policy.rateLimitKey });
-      const calls = Object.values(env).reduce((total, limiter) => total + vi.mocked(limiter.limit).mock.calls.length, 0);
+      const calls = Object.values(env).reduce(
+        (total, limiter) => total + vi.mocked(limiter.limit).mock.calls.length,
+        0,
+      );
       expect(calls).toBe(1);
     }
 
     const env = createEnv();
     const wrongMethod = new Request(`https://api.pharos.watch${TELEGRAM_INGRESS_POLICIES.webhook.path}`);
     const nearMatch = post(`${TELEGRAM_INGRESS_POLICIES.webhook.path}/extra`);
-    await expect(evaluateTelegramIngressAbuseGate(wrongMethod, new URL(wrongMethod.url), env))
-      .resolves.toEqual({ request: wrongMethod, response: null });
-    await expect(evaluateTelegramIngressAbuseGate(nearMatch, new URL(nearMatch.url), env))
-      .resolves.toEqual({ request: nearMatch, response: null });
+    await expect(evaluateTelegramIngressAbuseGate(wrongMethod, new URL(wrongMethod.url), env)).resolves.toEqual({
+      request: wrongMethod,
+      response: null,
+    });
+    await expect(evaluateTelegramIngressAbuseGate(nearMatch, new URL(nearMatch.url), env)).resolves.toEqual({
+      request: nearMatch,
+      response: null,
+    });
     expect(Object.values(env).every((limiter) => vi.mocked(limiter.limit).mock.calls.length === 0)).toBe(true);
+  });
+
+  it("only charges the pre-auth limiter on the public API hostname", async () => {
+    const env = createEnv();
+    const policy = TELEGRAM_INGRESS_POLICIES.mini_app_session;
+
+    for (const hostname of ["site-api.pharos.watch", "ops-api.pharos.watch", "pharos-watch-preview.workers.dev"]) {
+      const request = new Request(`https://${hostname}${policy.path}`, {
+        method: "POST",
+        body: "{}",
+      });
+      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+
+      expect(result).toEqual({ request, response: null });
+      expect(request.bodyUsed).toBe(false);
+    }
+
+    expect(env.TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT.limit).not.toHaveBeenCalled();
   });
 
   it("rejects declared body violations before spending the rate-limit or downstream auth budget", async () => {
@@ -140,7 +166,7 @@ describe("Telegram ingress abuse gate", () => {
   it("returns 429 before reading the request body when the pre-auth budget is exhausted", async () => {
     const limiter = createLimiter(async () => ({ success: false }));
     const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
-    const request = streamedPost(TELEGRAM_INGRESS_POLICIES.mini_app_session.path, ["{\"initData\":\"invalid\"}"]);
+    const request = streamedPost(TELEGRAM_INGRESS_POLICIES.mini_app_session.path, ['{"initData":"invalid"}']);
 
     const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
@@ -180,11 +206,13 @@ describe("Telegram ingress abuse gate", () => {
 
     expect(env.TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT.limit).toHaveBeenCalledOnce();
     expect(result.response?.status).toBe(400);
-    expect(mocks.logWorkerEvent).toHaveBeenLastCalledWith(expect.objectContaining({
-      route: "webhook",
-      status: 400,
-      metadata: { stage: "body_stream", reason: "body_read_failed" },
-    }));
+    expect(mocks.logWorkerEvent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        route: "webhook",
+        status: 400,
+        metadata: { stage: "body_stream", reason: "body_read_failed" },
+      }),
+    );
   });
 
   it("fails closed with bounded 503 telemetry when the fleet limiter is unavailable", async () => {
@@ -255,13 +283,13 @@ describe("Telegram ingress abuse gate", () => {
 describe("Telegram ingress checked-in policy", () => {
   it("keeps runtime, Wrangler bindings, and required operator policy budgets aligned", () => {
     const root = process.cwd();
-    const artifact = JSON.parse(readFileSync(
-      join(root, "worker/config/telegram-ingress-abuse-policy.json"),
-      "utf8",
-    )) as PolicyArtifact;
+    const artifact = JSON.parse(
+      readFileSync(join(root, "worker/config/telegram-ingress-abuse-policy.json"), "utf8"),
+    ) as PolicyArtifact;
     const wrangler = readFileSync(join(root, "worker/wrangler.toml"), "utf8");
 
     expect(artifact.deploymentState).toBe("required-operator-configuration-not-deployed-by-repo");
+    expect(artifact.protectedHostname).toBe("api.pharos.watch");
     expect(artifact.waf.deploymentState).toBe("required-operator-configuration-not-deployed-by-repo");
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
       const configured = artifact.workerBindings.find((entry) => entry.route === policy.route);
@@ -282,10 +310,9 @@ describe("Telegram ingress checked-in policy", () => {
   });
 
   it("requires exact-path WAF rules and excludes them from the broad API rule", () => {
-    const artifact = JSON.parse(readFileSync(
-      join(process.cwd(), "worker/config/telegram-ingress-abuse-policy.json"),
-      "utf8",
-    )) as PolicyArtifact;
+    const artifact = JSON.parse(
+      readFileSync(join(process.cwd(), "worker/config/telegram-ingress-abuse-policy.json"), "utf8"),
+    ) as PolicyArtifact;
     const paths = Object.values(TELEGRAM_INGRESS_POLICIES).map((policy) => policy.path);
     const expectedWafBudgets = new Map([
       [TELEGRAM_INGRESS_POLICIES.webhook.path, 2_400],
@@ -293,19 +320,21 @@ describe("Telegram ingress checked-in policy", () => {
       [TELEGRAM_INGRESS_POLICIES.mini_app_mutation.path, 360],
     ]);
 
-    expect(artifact.waf.broadApiRule.requiredExpression)
-      .toContain("and not (http.request.uri.path in {");
+    expect(artifact.waf.broadApiRule.requiredExpression).toContain("and not (http.request.uri.path in {");
+    expect(artifact.waf.broadApiRule.requiredExpression).toContain(`http.host eq "${artifact.protectedHostname}"`);
     for (const path of paths) {
       expect(artifact.waf.broadApiRule.requiredExcludedExactPaths).toContain(path);
       expect(artifact.waf.broadApiRule.requiredExpression).toContain(`"${path}"`);
-      const exactRule = artifact.waf.exactPathRules.find((rule) =>
-        rule.expression.includes(`http.request.uri.path eq "${path}"`)
-        && rule.expression.includes("http.request.method eq \"POST\""),
+      const exactRule = artifact.waf.exactPathRules.find(
+        (rule) =>
+          rule.expression.includes(`http.request.uri.path eq "${path}"`) &&
+          rule.expression.includes('http.request.method eq "POST"'),
       );
       expect(exactRule).toMatchObject({
         requestsPerPeriod: expectedWafBudgets.get(path),
         periodSec: 60,
       });
+      expect(exactRule?.expression).toContain(`http.host eq "${artifact.protectedHostname}"`);
     }
   });
 });
